@@ -18,6 +18,7 @@ export const Route = createFileRoute("/career-center/$profession")({
     }
     const title = `${p.titleEn} — CQrityjob`;
     const desc = p.description.en;
+    const url = `https://trust-path-recruitment.lovable.app/career-center/${p.slug}`;
     return {
       meta: [
         { title },
@@ -25,10 +26,10 @@ export const Route = createFileRoute("/career-center/$profession")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "article" },
-        { property: "og:url", content: `/career-center/${p.slug}` },
+        { property: "og:url", content: url },
         { name: "twitter:card", content: "summary_large_image" },
       ],
-      links: [{ rel: "canonical", href: `/career-center/${p.slug}` }],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   component: ProfessionPage,
