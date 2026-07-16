@@ -241,6 +241,15 @@ export function computeMatches(answers: AnswerMap): EngineResult {
     const gatePassed = checkGate(profile, vector);
     const sim = similarity(profile, vector);
     let raw = sim.raw;
+
+    // Evidence scaling: profiles whose important dimensions received little
+    // real signal from the user are dampened so a neutral answer sheet cannot
+    // ride mid-range target values into a top slot.
+    const minEv = profile.minRelevantEvidence ?? 3;
+    const evidenceScale =
+      0.6 + 0.4 * Math.min(1, sim.importantWithEvidence / Math.max(1, minEv));
+    raw = raw * evidenceScale;
+
     if (!gatePassed) raw = Math.min(raw, settings.gateFailCap);
 
     const confidence = confidenceFor(profile, vector, sim.importantWithEvidence);
