@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trust-path-recruitment.lovable.app/sitemap.xml
