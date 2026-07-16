@@ -8,10 +8,15 @@ export function SiteFooter() {
   const { t } = useT();
   const year = new Date().getFullYear();
 
-  const platform = [
-    { to: "/services", label: t("nav.services") },
+  const individuals = [
+    { to: "/careers", label: t("nav.careers") },
+    { to: "/jobs", label: t("nav.jobs") },
+    { to: "/assessment", label: t("nav.assessment") },
+  ] as const;
+  const orgs = [
     { to: "/employers", label: t("nav.employers") },
-    { to: "/candidates", label: t("nav.candidates") },
+    { to: "/assessment", label: t("nav.assessment") },
+    { to: "/contact", label: t("nav.contact") },
   ] as const;
   const company = [
     { to: "/about", label: t("nav.about") },
@@ -21,7 +26,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-background">
       <Container className="py-16">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-5">
           <div className="md:col-span-2">
             <Link
               to="/"
@@ -40,11 +45,25 @@ export function SiteFooter() {
 
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-              {t("footer.platform")}
+              {t("footer.for_individuals")}
             </h3>
             <ul className="mt-4 space-y-2 text-sm">
-              {platform.map((l) => (
+              {individuals.map((l) => (
                 <li key={l.to}>
+                  <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
+              {t("footer.for_orgs")}
+            </h3>
+            <ul className="mt-4 space-y-2 text-sm">
+              {orgs.map((l) => (
+                <li key={`${l.to}-org`}>
                   <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
                     {l.label}
                   </Link>
@@ -58,7 +77,7 @@ export function SiteFooter() {
             </h3>
             <ul className="mt-4 space-y-2 text-sm">
               {company.map((l) => (
-                <li key={l.to}>
+                <li key={`${l.to}-co`}>
                   <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
                     {l.label}
                   </Link>

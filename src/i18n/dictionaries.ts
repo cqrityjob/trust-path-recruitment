@@ -2,10 +2,10 @@ export type Lang = "sv" | "en";
 
 export const dictionaries = {
   sv: {
-    "nav.home": "Hem",
-    "nav.services": "Tjänster",
-    "nav.employers": "För arbetsgivare",
-    "nav.candidates": "För kandidater",
+    "nav.careers": "Karriärer",
+    "nav.jobs": "Jobb",
+    "nav.employers": "Arbetsgivare",
+    "nav.assessment": "Bedömning",
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
@@ -14,94 +14,183 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
 
-    "cta.primary": "Boka en demo",
-    "cta.secondary": "Läs mer",
+    "cta.assessment": "Gör karriärbedömningen",
+    "cta.careers": "Utforska karriärer inom säkerhet",
     "cta.contact": "Kontakta oss",
+    "cta.talk": "Prata med oss",
+    "cta.notify": "Meddela mig vid lansering",
+    "cta.learn_more": "Läs mer",
+    "cta.all_careers": "Se alla karriärer",
 
-    "home.eyebrow": "Rekrytering för säkerhetsbranschen",
-    "home.hero.title": "Där förtroende kommer först.",
+    "home.hero.eyebrow": "Karriär · Rekrytering · Bedömning",
+    "home.hero.title": "Bygg din framtid inom säkerhet.",
     "home.hero.subtitle":
-      "CQrityjob är den moderna plattformen för att rekrytera, verifiera och bedöma säkerhetspersonal — byggd uteslutande för säkerhetsbranschen.",
-    "home.pillars.title": "En plattform. Hela säkerhetsbranschen.",
+      "Upptäck karriärer inom säkerhet, mät din kompetens, utvecklas professionellt och möt arbetsgivare som värdesätter rätt kunskap.",
+    "home.hero.note": "Kostnadsfri karriärbedömning · Inget konto krävs för att börja",
+
+    "home.pillars.title": "Tre sätt vi stöttar din utveckling",
     "home.pillars.subtitle":
-      "Vi kombinerar rekrytering, verifiering och bedömning i ett flöde utformat för branscher där kvalitet inte kan kompromissas.",
-    "home.pillar.trust.title": "Verifierat förtroende",
-    "home.pillar.trust.desc":
-      "Kvalitetssäkring och bakgrundskontroll av säkerhetspersonal — inbyggt i rekryteringsflödet.",
-    "home.pillar.quality.title": "Bedömd kompetens",
-    "home.pillar.quality.desc":
-      "Strukturerade bedömningar som visar verklig kompetens, inte bara CV.",
-    "home.pillar.scale.title": "Byggd att skala",
-    "home.pillar.scale.desc":
-      "Lanseras i Sverige, designad för internationell expansion från dag ett.",
-    "home.segments.title": "Byggd för branscher där säkerhet är kritiskt",
-    "home.segments.security": "Säkerhetsföretag",
-    "home.segments.gov": "Myndigheter",
-    "home.segments.infra": "Kritisk infrastruktur",
-    "home.segments.data": "Datacenter",
-    "home.segments.corp": "Företagens säkerhetsavdelningar",
-    "home.capabilities.title": "Vad plattformen kommer att erbjuda",
-    "home.capabilities.subtitle": "Vi bygger stegvis. Detta är vägen framåt.",
-    "home.cta.title": "Vill du bli tidig partner?",
-    "home.cta.subtitle":
-      "Vi arbetar med utvalda kunder och kandidater under uppbyggnaden av plattformen.",
+      "En plattform för karriärutveckling, professionell utveckling och rekrytering — helt fokuserad på säkerhetsbranschen.",
+    "home.pillar.discover.title": "Upptäck",
+    "home.pillar.discover.desc":
+      "Lär dig om yrken inom säkerhet, kompetenskrav och möjliga karriärvägar.",
+    "home.pillar.develop.title": "Utvecklas",
+    "home.pillar.develop.desc":
+      "Förstå dina styrkor och identifiera nästa steg i din karriär.",
+    "home.pillar.hired.title": "Bli anställd",
+    "home.pillar.hired.desc":
+      "Möt arbetsgivare och uppdrag inom hela säkerhetsbranschen.",
 
-    "cap.recruitment": "Rekryteringstjänster",
-    "cap.jobboard": "Jobbportal",
-    "cap.interim": "Interim & konsult",
-    "cap.employer": "Arbetsgivarens dashboard",
-    "cap.candidate": "Kandidatens dashboard",
-    "cap.assessment": "Bedömningsplattform",
-    "cap.ai": "AI-assisterad rekrytering",
-    "cap.verify": "Verifiering & kvalitetssäkring",
-    "cap.status.available": "Under utveckling",
-    "cap.status.soon": "Kommer snart",
+    "home.paths.title": "Byggd för individer och organisationer",
+    "home.paths.subtitle":
+      "En plattform, två tydliga vägar. Välj den ingång som passar dig.",
+    "home.paths.individuals.label": "För individer",
+    "home.paths.individuals.title": "Väx i din karriär inom säkerhet",
+    "home.paths.individuals.item1": "Karriärutforskning",
+    "home.paths.individuals.item2": "Kompetensutveckling",
+    "home.paths.individuals.item3": "Jobb inom säkerhet",
+    "home.paths.individuals.item4": "Karriärutveckling",
+    "home.paths.individuals.cta": "Utforska karriärer",
+    "home.paths.orgs.label": "För organisationer",
+    "home.paths.orgs.title": "Rekrytera, bedöm och utveckla er personal",
+    "home.paths.orgs.item1": "Rekrytering",
+    "home.paths.orgs.item2": "Kandidatbedömning",
+    "home.paths.orgs.item3": "Kompetensutveckling",
+    "home.paths.orgs.item4": "Kompetensverifiering",
+    "home.paths.orgs.cta": "För arbetsgivare",
 
-    "about.title": "Vår mission",
-    "about.lead":
-      "Vi bygger den ledande plattformen där arbetsgivare kan rekrytera, verifiera och bedöma säkerhetspersonal — och där kandidater kan hitta karriärmöjligheter och visa sin kompetens.",
-    "about.mission.title": "Uppdraget",
-    "about.mission.body":
-      "Säkerhetsbranschen förtjänar verktyg byggda specifikt för dess krav. Vi förenar rekrytering, verifiering och bedömning i en enda betrodd plattform.",
-    "about.vision.title": "Visionen",
-    "about.vision.body":
-      "Att bli den globala standarden för rekrytering och kvalitetssäkring inom säkerhet — med start i Sverige.",
-    "about.why.title": "Varför enbart säkerhet",
-    "about.why.body":
-      "Generella jobbportaler förstår inte licenskrav, bakgrundskontroller eller de kompetenser som skiljer en bra väktare från en utmärkt. Det gör vi.",
-    "about.expansion.title": "Från Sverige till världen",
-    "about.expansion.body":
-      "Plattformen är designad flerspråkig och regulatoriskt anpassningsbar från grunden.",
+    "home.careers.eyebrow": "Utvalda yrken",
+    "home.careers.title": "Utforska roller i säkerhetsbranschen",
+    "home.careers.subtitle":
+      "Från operativa roller till specialist- och ledarskapsspår. Detaljerade yrkesguider är under uppbyggnad.",
+    "home.careers.cta": "Se alla karriärer",
 
-    "services.title": "Tjänster",
-    "services.lead":
-      "En sammanhållen plattform som byggs stegvis. Varje modul är designad för säkerhetsbranschens verklighet.",
+    "home.assessment.eyebrow": "Första strategiska produkten",
+    "home.assessment.title": "Karriärbedömning inom säkerhet",
+    "home.assessment.subtitle":
+      "En kostnadsfri karriärbedömning som hjälper dig utforska vilka roller inom säkerhet som kan passa dig — och nästa steg för att komma dit.",
+    "home.assessment.point.free": "Kostnadsfri",
+    "home.assessment.point.time": "Cirka fem minuter",
+    "home.assessment.point.guidance": "Karriärvägledning — inte ett lämplighetsbeslut",
+    "home.assessment.point.matches": "Föreslår möjliga karriärvägar",
+    "home.assessment.point.next": "Rekommenderar nästa steg",
+    "home.assessment.cta": "Gör bedömningen",
+    "home.assessment.note":
+      "Under utveckling. Bedömningen är inte tillgänglig än — hör av dig för att bli informerad vid lansering.",
+
+    "home.employers.eyebrow": "För arbetsgivare",
+    "home.employers.title":
+      "Rekrytera och utveckla säkerhetspersonal med större säkerhet",
+    "home.employers.subtitle":
+      "Praktiskt stöd genom hela kompetensresan — från rekrytering till löpande utveckling.",
+    "home.employers.item.recruit.title": "Rekrytera",
+    "home.employers.item.recruit.desc":
+      "Publicera roller eller få hjälp att hitta rätt kandidater inom säkerhet.",
+    "home.employers.item.assess.title": "Bedöm",
+    "home.employers.item.assess.desc":
+      "Strukturerade kandidatbedömningar som ger jämförbart beslutsstöd.",
+    "home.employers.item.develop.title": "Utveckla",
+    "home.employers.item.develop.desc":
+      "Identifiera kompetensgap i befintlig personal och planera utveckling.",
+    "home.employers.item.verify.title": "Verifiera",
+    "home.employers.item.verify.desc":
+      "Mät kompetens mot definierade organisatoriska krav över tid.",
+    "home.employers.cta": "Prata med oss",
+
+    "home.platform.eyebrow": "Framtida kapacitet",
+    "home.platform.title": "Bedömningsplattform",
+    "home.platform.subtitle":
+      "Strukturerat beslutsstöd för rekrytering, kompetensverifiering och kompetensutveckling.",
+    "home.platform.point1": "Rollspecifika bedömningar för säkerhetsyrken",
+    "home.platform.point2": "Individ-, grupp- och organisationsrapporter",
+    "home.platform.point3": "Gapanalys mot definierade krav",
+    "home.platform.point4": "Uppföljande bedömningar över tid",
+    "home.platform.disclaimer":
+      "CQrityjobs bedömningar är beslutsstöd — de ersätter inte mänskligt omdöme. Arbetsgivaren fattar alltid det slutliga beslutet.",
+
+    "careers.title": "Karriärer inom säkerhet",
+    "careers.lead":
+      "En karriär inom säkerhet omfattar många roller — från operativa positioner till specialist- och ledarskapsspår. Utforska vägarna framåt.",
+    "careers.professions.title": "Utvalda yrken",
+    "careers.professions.subtitle":
+      "Detaljerade yrkesguider är under uppbyggnad. Nedan finns en förhandsvisning.",
+    "careers.disclaimer":
+      "Yrkesguider är utbildningsmaterial. De är inte ett beslut om professionell lämplighet.",
+
+    "jobs.title": "Jobb inom säkerhet",
+    "jobs.lead":
+      "En jobbportal utformad för säkerhetsbranschen — under utveckling.",
+    "jobs.coming_soon.title": "Kommer snart",
+    "jobs.coming_soon.body":
+      "Vi bygger en jobbupplevelse som är utformad för säkerhetsbranschens verklighet — med rollspecifika krav, tydliga kompetensbehov och seriösa arbetsgivare.",
 
     "employers.title": "För arbetsgivare",
     "employers.lead":
-      "Rekrytera säkerhetspersonal ni faktiskt kan lita på. Verifierad kompetens, strukturerad bedömning, snabbare beslut.",
-    "employers.point1.title": "Verifierade kandidater",
-    "employers.point1.body":
-      "Licenser, bakgrund och tidigare uppdrag valideras innan ni går vidare.",
-    "employers.point2.title": "Strukturerad bedömning",
-    "employers.point2.body":
-      "Standardiserade tester och scenariobaserade utvärderingar för verklig kompetens.",
-    "employers.point3.title": "Byggd för er sektor",
-    "employers.point3.body":
-      "Utformad för säkerhetsföretag, myndigheter, kritisk infrastruktur, datacenter och företagens säkerhetsavdelningar.",
+      "Rekrytera, bedöm och utveckla säkerhetspersonal med strukturerat beslutsstöd — utformat för säkerhetsbranschens verklighet.",
+    "employers.offer.recruit.title": "Rekrytering",
+    "employers.offer.recruit.body":
+      "Publicera jobb eller få hjälp med sökning, headhunting och rekryteringsuppdrag inom säkerhet.",
+    "employers.offer.assess.title": "Kandidatbedömning",
+    "employers.offer.assess.body":
+      "Strukturerade, rollrelevanta bedömningar som ger jämförbart underlag för rekryteringsbeslut.",
+    "employers.offer.develop.title": "Kompetensutveckling",
+    "employers.offer.develop.body":
+      "Bedöm befintlig personal, identifiera kompetensgap och planera utbildning utifrån dokumenterade behov.",
+    "employers.offer.verify.title": "Kompetensverifiering",
+    "employers.offer.verify.body":
+      "Mät kompetens mot definierade krav och följ utveckling över tid.",
+    "employers.disclaimer":
+      "CQrityjob stödjer arbetsgivarens beslut. Arbetsgivaren fattar alltid det slutliga rekryterings- eller kompetensbeslutet.",
 
-    "candidates.title": "För säkerhetspersonal",
-    "candidates.lead":
-      "Visa din verkliga kompetens. Hitta arbetsgivare som värdesätter kvalitet, inte bara CV.",
-    "candidates.point1.title": "Bygg en verifierad profil",
-    "candidates.point1.body":
-      "Samla licenser, utbildning och erfarenhet på ett ställe — bevisat och redo att delas.",
-    "candidates.point2.title": "Bedöm din kompetens",
-    "candidates.point2.body":
-      "Genomför strukturerade bedömningar och gör din kompetens synlig.",
-    "candidates.point3.title": "Möt rätt arbetsgivare",
-    "candidates.point3.body":
-      "Endast seriösa aktörer inom säkerhetsbranschen. Inga generiska annonser.",
+    "assessment.eyebrow": "Två tydligt separerade nivåer",
+    "assessment.title": "Bedömning på CQrityjob",
+    "assessment.lead":
+      "CQrityjob erbjuder bedömning på två tydligt separerade nivåer. Karriärbedömning för individer och professionell bedömning för organisationer.",
+    "assessment.career.eyebrow": "Nivå 1 — Individ",
+    "assessment.career.title": "Karriärbedömning",
+    "assessment.career.body":
+      "För individer som utforskar eller utvecklar en karriär inom säkerhet. Kostnadsfri, ungefär fem till tio minuter, och erbjuds som karriärvägledning — inte som ett beslut om professionell lämplighet.",
+    "assessment.pro.eyebrow": "Nivå 2 — Organisation",
+    "assessment.pro.title": "Professionell bedömning",
+    "assessment.pro.body":
+      "För organisationer som bedömer kandidater och befintlig personal. Rollspecifik, strukturerad och jämförbar över team och över tid.",
+    "assessment.safeguards.title": "Ansvarsfull användning",
+    "assessment.safeguards.item1":
+      "Bedömningar ger beslutsstöd — aldrig automatiskt godkännande eller avslag.",
+    "assessment.safeguards.item2":
+      "Resultat är proportionerliga mot ett tydligt definierat syfte.",
+    "assessment.safeguards.item3":
+      "Karriärvägledning presenteras inte som en psykologisk eller medicinsk diagnos.",
+    "assessment.safeguards.item4":
+      "Arbetsgivarbeslut inkluderar alltid mänsklig granskning.",
+    "assessment.status":
+      "Under utveckling. Hör av dig om ni vill vara med och forma den första versionen.",
+
+    "about.title": "Vår mission",
+    "about.lead":
+      "CQrityjob är karriär-, rekryterings- och bedömningsplattformen för säkerhetsbranschen. Vi hjälper människor att bygga sin karriär inom säkerhet och organisationer att rekrytera och utveckla rätt kompetens.",
+    "about.pillars.title": "Tre sammankopplade områden",
+    "about.pillars.career.title": "Karriärutveckling",
+    "about.pillars.career.body":
+      "Vi hjälper individer att upptäcka roller, förstå kompetenskrav och navigera sin långsiktiga professionella utveckling.",
+    "about.pillars.recruit.title": "Rekrytering",
+    "about.pillars.recruit.body":
+      "Vi kopplar samman seriösa arbetsgivare med kvalificerade kandidater — med både digital självbetjäning och professionella rekryteringsuppdrag.",
+    "about.pillars.assessment.title": "Bedömning och verifiering",
+    "about.pillars.assessment.body":
+      "Vi tillhandahåller strukturerat beslutsstöd för rekrytering, kompetensverifiering och löpande utveckling.",
+    "about.mission.title": "Uppdraget",
+    "about.mission.body":
+      "Vi bygger en betrodd digital destination där människor kan utforska en karriär inom säkerhet — och där organisationer kan rekrytera, bedöma och utveckla rätt personal.",
+    "about.vision.title": "Visionen",
+    "about.vision.body":
+      "Att bli den ledande karriär-, rekryterings- och bedömningsplattformen för säkerhetsbranschen — med start i Sverige och byggd för internationell expansion.",
+    "about.why.title": "Varför enbart säkerhet",
+    "about.why.body":
+      "Generella plattformar förstår inte säkerhetsbranschens krav på kompetens, licenser och kvalitet. Genom att fokusera uteslutande på säkerhet kan vi bygga verkligt användbara verktyg.",
+    "about.expansion.title": "Från Sverige till världen",
+    "about.expansion.body":
+      "Plattformen är flerspråkig från grunden och utformad för att anpassas till olika marknader och regelverk.",
 
     "contact.title": "Kontakta oss",
     "contact.lead":
@@ -114,8 +203,41 @@ export const dictionaries = {
     "contact.form.message": "Meddelande",
     "contact.form.submit": "Skicka",
 
+    "profession.police.title": "Polis",
+    "profession.police.desc":
+      "Grundläggande utredning, ordning och rättsvård — inom myndighetsutövning.",
+    "profession.security_officer.title": "Väktare / Skyddsvakt",
+    "profession.security_officer.desc":
+      "Operativa bevaknings- och skyddsuppdrag inom civila och skyddsklassade miljöer.",
+    "profession.security_manager.title": "Säkerhetschef",
+    "profession.security_manager.desc":
+      "Strategiskt ansvar för säkerhet, riskhantering och kontinuitet i en organisation.",
+    "profession.security_technician.title": "Säkerhetstekniker",
+    "profession.security_technician.desc":
+      "Installation, drift och underhåll av tekniska säkerhetssystem.",
+    "profession.risk_manager.title": "Risk Manager",
+    "profession.risk_manager.desc":
+      "Identifiering, analys och hantering av operativa och organisatoriska risker.",
+    "profession.aml.title": "AML-specialist",
+    "profession.aml.desc":
+      "Motverkan av penningtvätt, finansiell brottslighet och regelefterlevnad.",
+    "profession.close_protection.title": "Livvakt",
+    "profession.close_protection.desc":
+      "Personskydd för utsatta individer i olika miljöer och riskbilder.",
+    "profession.datacenter.title": "Datacentersäkerhet",
+    "profession.datacenter.desc":
+      "Fysisk och operativ säkerhet för datacenter och kritisk digital infrastruktur.",
+    "profession.emergency.title": "Krishantering & beredskap",
+    "profession.emergency.desc":
+      "Planering och ledning av kris- och incidenthantering på organisationsnivå.",
+
+    "status.coming_soon": "Kommer snart",
+    "status.in_development": "Under utveckling",
+    "status.preview": "Förhandsvisning",
+
     "footer.tagline": "Där förtroende kommer först.",
-    "footer.platform": "Plattform",
+    "footer.for_individuals": "För individer",
+    "footer.for_orgs": "För organisationer",
     "footer.company": "Företag",
     "footer.legal": "Juridiskt",
     "footer.legal.privacy": "Integritetspolicy",
@@ -126,10 +248,10 @@ export const dictionaries = {
     "lang.switch": "Språk",
   },
   en: {
-    "nav.home": "Home",
-    "nav.services": "Services",
-    "nav.employers": "For employers",
-    "nav.candidates": "For candidates",
+    "nav.careers": "Careers",
+    "nav.jobs": "Jobs",
+    "nav.employers": "Employers",
+    "nav.assessment": "Assessment",
     "nav.about": "About",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
@@ -138,94 +260,179 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
 
-    "cta.primary": "Request a demo",
-    "cta.secondary": "Learn more",
+    "cta.assessment": "Take the Security Career Assessment",
+    "cta.careers": "Explore Security Careers",
     "cta.contact": "Contact us",
+    "cta.talk": "Talk to our team",
+    "cta.notify": "Notify me at launch",
+    "cta.learn_more": "Learn more",
+    "cta.all_careers": "See all careers",
 
-    "home.eyebrow": "Recruitment for the security industry",
-    "home.hero.title": "Where trust comes first.",
+    "home.hero.eyebrow": "Career · Recruitment · Assessment",
+    "home.hero.title": "Build your future in security.",
     "home.hero.subtitle":
-      "CQrityjob is the modern platform to recruit, verify and assess security professionals — built exclusively for the security industry.",
-    "home.pillars.title": "One platform. Built for the entire security industry.",
-    "home.pillars.subtitle":
-      "We combine recruitment, verification and assessment into a single workflow designed for industries where quality cannot be compromised.",
-    "home.pillar.trust.title": "Verified trust",
-    "home.pillar.trust.desc":
-      "Quality assurance and background verification for security personnel — built into the recruitment flow.",
-    "home.pillar.quality.title": "Assessed competence",
-    "home.pillar.quality.desc":
-      "Structured assessments that reveal real capability, not just a CV.",
-    "home.pillar.scale.title": "Built to scale",
-    "home.pillar.scale.desc":
-      "Launching in Sweden, designed for international expansion from day one.",
-    "home.segments.title": "Built for industries where security is critical",
-    "home.segments.security": "Security companies",
-    "home.segments.gov": "Government agencies",
-    "home.segments.infra": "Critical infrastructure",
-    "home.segments.data": "Data centers",
-    "home.segments.corp": "Corporate security departments",
-    "home.capabilities.title": "What the platform will deliver",
-    "home.capabilities.subtitle": "We build in small, testable iterations. This is the roadmap.",
-    "home.cta.title": "Want to be an early partner?",
-    "home.cta.subtitle":
-      "We work with a select group of employers and candidates while the platform is being built.",
+      "Discover security careers, measure your competence, develop professionally and connect with employers who value the right skills.",
+    "home.hero.note": "Free career assessment · No account required to start",
 
-    "cap.recruitment": "Recruitment services",
-    "cap.jobboard": "Job board",
-    "cap.interim": "Interim & consulting",
-    "cap.employer": "Employer dashboard",
-    "cap.candidate": "Candidate dashboard",
-    "cap.assessment": "Assessment platform",
-    "cap.ai": "AI-assisted recruitment",
-    "cap.verify": "Verification & quality assurance",
-    "cap.status.available": "In development",
-    "cap.status.soon": "Coming soon",
+    "home.pillars.title": "Three ways CQrityjob supports your journey",
+    "home.pillars.subtitle":
+      "One platform for career discovery, professional development and recruitment — focused entirely on the security industry.",
+    "home.pillar.discover.title": "Discover",
+    "home.pillar.discover.desc":
+      "Learn about security careers, required skills and professional pathways.",
+    "home.pillar.develop.title": "Develop",
+    "home.pillar.develop.desc":
+      "Understand your strengths and identify your next career step.",
+    "home.pillar.hired.title": "Get hired",
+    "home.pillar.hired.desc":
+      "Connect with employers and opportunities across the security industry.",
+
+    "home.paths.title": "Built for individuals and organizations",
+    "home.paths.subtitle": "One platform, two clear paths. Pick the entry point that fits you.",
+    "home.paths.individuals.label": "For individuals",
+    "home.paths.individuals.title": "Grow your career in security",
+    "home.paths.individuals.item1": "Career discovery",
+    "home.paths.individuals.item2": "Competence development",
+    "home.paths.individuals.item3": "Security jobs",
+    "home.paths.individuals.item4": "Career progression",
+    "home.paths.individuals.cta": "Explore careers",
+    "home.paths.orgs.label": "For organizations",
+    "home.paths.orgs.title": "Recruit, assess and develop your workforce",
+    "home.paths.orgs.item1": "Recruitment",
+    "home.paths.orgs.item2": "Candidate assessment",
+    "home.paths.orgs.item3": "Workforce development",
+    "home.paths.orgs.item4": "Competence verification",
+    "home.paths.orgs.cta": "For employers",
+
+    "home.careers.eyebrow": "Featured professions",
+    "home.careers.title": "Explore roles across the security industry",
+    "home.careers.subtitle":
+      "From operational positions to specialist and leadership tracks. Detailed profession guides are being built.",
+    "home.careers.cta": "See all careers",
+
+    "home.assessment.eyebrow": "First strategic product",
+    "home.assessment.title": "Security Career Assessment",
+    "home.assessment.subtitle":
+      "A free career assessment that helps you explore which security roles may suit you — and the steps to get there.",
+    "home.assessment.point.free": "Free to take",
+    "home.assessment.point.time": "About five minutes",
+    "home.assessment.point.guidance": "Career guidance — not a suitability decision",
+    "home.assessment.point.matches": "Suggests possible career paths",
+    "home.assessment.point.next": "Recommends next steps",
+    "home.assessment.cta": "Take the assessment",
+    "home.assessment.note":
+      "Under development. The assessment is not live yet — get in touch to be notified at launch.",
+
+    "home.employers.eyebrow": "For employers",
+    "home.employers.title": "Recruit and develop security professionals with greater confidence",
+    "home.employers.subtitle":
+      "Practical support across the full talent lifecycle — from recruitment to ongoing development.",
+    "home.employers.item.recruit.title": "Recruit",
+    "home.employers.item.recruit.desc":
+      "Publish roles or get help sourcing the right security candidates.",
+    "home.employers.item.assess.title": "Assess",
+    "home.employers.item.assess.desc":
+      "Structured candidate assessments that produce comparable decision support.",
+    "home.employers.item.develop.title": "Develop",
+    "home.employers.item.develop.desc":
+      "Identify competence gaps in existing personnel and plan targeted development.",
+    "home.employers.item.verify.title": "Verify",
+    "home.employers.item.verify.desc":
+      "Measure competence against defined organisational requirements over time.",
+    "home.employers.cta": "Talk to our team",
+
+    "home.platform.eyebrow": "Future capability",
+    "home.platform.title": "Assessment platform",
+    "home.platform.subtitle":
+      "Structured decision support for recruitment, competence verification and workforce development.",
+    "home.platform.point1": "Role-specific assessments for security professions",
+    "home.platform.point2": "Individual, group and organisation-level reports",
+    "home.platform.point3": "Gap analysis against defined requirements",
+    "home.platform.point4": "Follow-up assessments to measure development over time",
+    "home.platform.disclaimer":
+      "CQrityjob assessments provide decision support — they do not replace human judgment. The employer always makes the final decision.",
+
+    "careers.title": "Security Careers",
+    "careers.lead":
+      "A career in security spans many roles — from operational positions to specialist and leadership tracks. Explore the paths ahead.",
+    "careers.professions.title": "Featured professions",
+    "careers.professions.subtitle":
+      "Detailed profession guides are being built. Below is a preview.",
+    "careers.disclaimer":
+      "Profession guides are educational. They are not a determination of professional suitability.",
+
+    "jobs.title": "Security Jobs",
+    "jobs.lead": "A dedicated job experience designed for the security industry — in development.",
+    "jobs.coming_soon.title": "Coming soon",
+    "jobs.coming_soon.body":
+      "We are building a job experience designed for the security industry — with role-specific requirements, clear competence needs and serious employers.",
+
+    "employers.title": "For Employers",
+    "employers.lead":
+      "Recruit, assess and develop security personnel with structured decision support — built for the reality of the security industry.",
+    "employers.offer.recruit.title": "Recruitment",
+    "employers.offer.recruit.body":
+      "Publish jobs or get support with sourcing, headhunting and full recruitment assignments in the security industry.",
+    "employers.offer.assess.title": "Candidate assessment",
+    "employers.offer.assess.body":
+      "Structured, role-relevant assessments that produce comparable evidence for hiring decisions.",
+    "employers.offer.develop.title": "Workforce development",
+    "employers.offer.develop.body":
+      "Assess existing personnel, identify competence gaps and plan training based on documented needs.",
+    "employers.offer.verify.title": "Competence verification",
+    "employers.offer.verify.body":
+      "Measure competence against defined requirements and track development over time.",
+    "employers.disclaimer":
+      "CQrityjob supports employer decisions. The employer always makes the final hiring or competence decision.",
+
+    "assessment.eyebrow": "Two clearly separated levels",
+    "assessment.title": "Assessment at CQrityjob",
+    "assessment.lead":
+      "CQrityjob provides assessment on two clearly separated levels — career assessment for individuals and professional assessment for organizations.",
+    "assessment.career.eyebrow": "Level 1 — Individual",
+    "assessment.career.title": "Career Assessment",
+    "assessment.career.body":
+      "For individuals exploring or advancing a career in security. Free, approximately five to ten minutes, and offered as career guidance — not a professional suitability determination.",
+    "assessment.pro.eyebrow": "Level 2 — Organization",
+    "assessment.pro.title": "Professional Assessment",
+    "assessment.pro.body":
+      "For organizations assessing candidates and existing personnel. Role-specific, structured and comparable across teams and over time.",
+    "assessment.safeguards.title": "Responsible use",
+    "assessment.safeguards.item1":
+      "Assessments provide decision support — never automatic acceptance or rejection.",
+    "assessment.safeguards.item2":
+      "Results are proportionate to a clearly defined purpose.",
+    "assessment.safeguards.item3":
+      "Career guidance is not presented as a psychological or medical diagnosis.",
+    "assessment.safeguards.item4": "Employer decisions always involve human review.",
+    "assessment.status":
+      "In development. Contact us if you want to help shape the first release.",
 
     "about.title": "Our mission",
     "about.lead":
-      "We are building the leading platform where employers can recruit, verify and assess security professionals — and where candidates can find career opportunities and demonstrate real competence.",
+      "CQrityjob is the career, recruitment and assessment platform for the security industry. We help individuals build a career in security and help organizations recruit and develop the right competence.",
+    "about.pillars.title": "Three connected areas",
+    "about.pillars.career.title": "Career development",
+    "about.pillars.career.body":
+      "We help individuals discover roles, understand competence requirements and navigate their long-term professional development.",
+    "about.pillars.recruit.title": "Recruitment",
+    "about.pillars.recruit.body":
+      "We connect serious employers with qualified candidates — through both digital self-service and professional recruitment assignments.",
+    "about.pillars.assessment.title": "Assessment and verification",
+    "about.pillars.assessment.body":
+      "We provide structured decision support for recruitment, competence verification and ongoing development.",
     "about.mission.title": "The mission",
     "about.mission.body":
-      "The security industry deserves tools built specifically for its demands. We bring recruitment, verification and assessment together in a single trusted platform.",
+      "We are building a trusted digital destination where people can explore a career in security — and where organizations can recruit, assess and develop the right personnel.",
     "about.vision.title": "The vision",
     "about.vision.body":
-      "To become the global standard for recruitment and quality assurance in security — starting in Sweden.",
+      "To become the leading career, recruitment and assessment platform for the security industry — starting in Sweden and built for international expansion.",
     "about.why.title": "Why security only",
     "about.why.body":
-      "Generic job boards do not understand licensing, background checks or the skills that separate a good officer from an excellent one. We do.",
+      "Generic platforms do not understand the competence, licensing and quality demands of the security industry. Focusing exclusively on security lets us build tools that are genuinely useful.",
     "about.expansion.title": "From Sweden to the world",
     "about.expansion.body":
-      "The platform is designed multilingual and regulatory-adaptable from the ground up.",
-
-    "services.title": "Services",
-    "services.lead":
-      "A single platform, delivered in small iterations. Every module is designed for the reality of the security industry.",
-
-    "employers.title": "For employers",
-    "employers.lead":
-      "Recruit security professionals you can actually trust. Verified competence, structured assessment, faster decisions.",
-    "employers.point1.title": "Verified candidates",
-    "employers.point1.body":
-      "Licenses, background and prior assignments are validated before you move forward.",
-    "employers.point2.title": "Structured assessment",
-    "employers.point2.body":
-      "Standardised tests and scenario-based evaluations for real-world capability.",
-    "employers.point3.title": "Built for your sector",
-    "employers.point3.body":
-      "Designed for security companies, government agencies, critical infrastructure, data centers and corporate security departments.",
-
-    "candidates.title": "For security professionals",
-    "candidates.lead":
-      "Show your real capability. Find employers that value quality, not just a CV.",
-    "candidates.point1.title": "Build a verified profile",
-    "candidates.point1.body":
-      "Bring licenses, training and experience into one place — proven and ready to share.",
-    "candidates.point2.title": "Assess your competence",
-    "candidates.point2.body":
-      "Complete structured assessments and make your capability visible.",
-    "candidates.point3.title": "Meet the right employers",
-    "candidates.point3.body":
-      "Only serious operators from the security industry. No generic listings.",
+      "The platform is multilingual from the ground up and designed to adapt to different markets and regulations.",
 
     "contact.title": "Contact us",
     "contact.lead":
@@ -238,8 +445,41 @@ export const dictionaries = {
     "contact.form.message": "Message",
     "contact.form.submit": "Send",
 
+    "profession.police.title": "Police Officer",
+    "profession.police.desc":
+      "Investigation, public order and law enforcement within government authority.",
+    "profession.security_officer.title": "Security Officer",
+    "profession.security_officer.desc":
+      "Operational guarding and protective duties across civilian and protected environments.",
+    "profession.security_manager.title": "Security Manager",
+    "profession.security_manager.desc":
+      "Strategic responsibility for security, risk management and continuity within an organisation.",
+    "profession.security_technician.title": "Security Technician",
+    "profession.security_technician.desc":
+      "Installation, operation and maintenance of technical security systems.",
+    "profession.risk_manager.title": "Risk Manager",
+    "profession.risk_manager.desc":
+      "Identification, analysis and management of operational and organisational risk.",
+    "profession.aml.title": "AML Specialist",
+    "profession.aml.desc":
+      "Anti-money-laundering, financial crime prevention and regulatory compliance.",
+    "profession.close_protection.title": "Close Protection",
+    "profession.close_protection.desc":
+      "Personal protection for exposed individuals across varied environments and threat profiles.",
+    "profession.datacenter.title": "Data Center Security",
+    "profession.datacenter.desc":
+      "Physical and operational security for data centers and critical digital infrastructure.",
+    "profession.emergency.title": "Emergency & Crisis Management",
+    "profession.emergency.desc":
+      "Planning and leading incident, crisis and business continuity response.",
+
+    "status.coming_soon": "Coming soon",
+    "status.in_development": "In development",
+    "status.preview": "Preview",
+
     "footer.tagline": "Where trust comes first.",
-    "footer.platform": "Platform",
+    "footer.for_individuals": "For individuals",
+    "footer.for_orgs": "For organizations",
     "footer.company": "Company",
     "footer.legal": "Legal",
     "footer.legal.privacy": "Privacy policy",
