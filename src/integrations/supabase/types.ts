@@ -14,16 +14,211 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assessment_versions: {
+        Row: {
+          assessment_id: string
+          disclaimer_version: string
+          id: string
+          model_version: string
+          notes: string | null
+          published_at: string
+          retired_at: string | null
+        }
+        Insert: {
+          assessment_id: string
+          disclaimer_version: string
+          id?: string
+          model_version: string
+          notes?: string | null
+          published_at?: string
+          retired_at?: string | null
+        }
+        Update: {
+          assessment_id?: string
+          disclaimer_version?: string
+          id?: string
+          model_version?: string
+          notes?: string | null
+          published_at?: string
+          retired_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_versions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          kind: string
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          at: string
+          id: string
+          ip_hash: string | null
+          metadata: Json
+          org_id: string | null
+          subject_id: string | null
+          subject_type: string | null
+          ua_hash: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          at?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          org_id?: string | null
+          subject_id?: string | null
+          subject_type?: string | null
+          ua_hash?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          at?: string
+          id?: string
+          ip_hash?: string | null
+          metadata?: Json
+          org_id?: string | null
+          subject_id?: string | null
+          subject_type?: string | null
+          ua_hash?: string | null
+        }
+        Relationships: []
+      }
+      consent_records: {
+        Row: {
+          granted_at: string
+          id: string
+          metadata: Json
+          policy_version: string
+          purpose: string
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          policy_version: string
+          purpose: string
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          metadata?: Json
+          policy_version?: string
+          purpose?: string
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          country: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          locale: string
+          updated_at: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          locale?: string
+          updated_at?: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          locale?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "superadmin"
+        | "admin"
+        | "content_editor"
+        | "assessment_editor"
+        | "support"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +345,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "superadmin",
+        "admin",
+        "content_editor",
+        "assessment_editor",
+        "support",
+      ],
+    },
   },
 } as const
