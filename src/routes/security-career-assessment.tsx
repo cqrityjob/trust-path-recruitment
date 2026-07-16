@@ -32,9 +32,13 @@ import {
   gapsExplanation,
   matchIndicatorLabel,
   matchTooltip,
+  placeholderProfessionNotice,
+  researchedProfessionNotice,
+  unansweredReducesEvidence,
   whyThisResult,
   type MatchResult,
 } from "@/lib/career-assessment";
+import { questions as sourceQuestions } from "@/lib/assessment-content";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -333,6 +337,12 @@ function Results({
   const activeTitle = active ? titleOf(active) : { sv: "", en: "" };
   const why = active ? whyThisResult(active, activeTitle) : { sv: "", en: "" };
   const gaps = active ? gapsExplanation(active.gaps) : { sv: "", en: "" };
+  const unansweredCount = sourceQuestions.length - engine.answeredCount;
+  const isPlaceholder = active?.professionContentStatus === "placeholder";
+  const isResearched =
+    active?.professionContentStatus === "researched" ||
+    active?.professionContentStatus === "reviewed" ||
+    active?.professionContentStatus === "published";
 
   return (
     <AssessmentLayout>
@@ -405,6 +415,24 @@ function Results({
               {pickText(why, lang)}
             </p>
             <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              {pickText(active.confidenceReason, lang)}
+            </p>
+            {unansweredCount > 0 && (
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {pickText(unansweredReducesEvidence, lang)}
+              </p>
+            )}
+            {isPlaceholder && (
+              <p className="mt-3 rounded-md border border-border/60 bg-background/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                {pickText(placeholderProfessionNotice, lang)}
+              </p>
+            )}
+            {isResearched && (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                {pickText(researchedProfessionNotice, lang)}
+              </p>
+            )}
+            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/80">
               {pickText(matchTooltip, lang)}
             </p>
           </div>
