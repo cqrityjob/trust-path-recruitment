@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "cqrityjob-mcp",
+      "version": "0.1.0",
+      "title": "CQrityjob Career Assessment"
+    },
+    "tools": [
+      {
+        "name": "list_dimensions",
+        "title": "List guidance dimensions",
+        "description": "List the 14 guidance dimensions used by the Security Career Assessment matching engine (id, bilingual name and description, content status).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_assessment_questions",
+        "title": "List assessment questions",
+        "description": "List the 16 Security Career Assessment questions. Each question includes id, type (single | multi | rating), bilingual prompt and topic, options (for single/multi) and scale bounds (for rating). Answer IDs from this list are what `compute_career_matches` accepts as input.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_professions",
+        "title": "List professions",
+        "description": "List the pilot security-industry professions supported by the Career Center and matching engine. Returns id, slug, bilingual titles, family, content status, whether the role is regulated, and the profile status. Use `get_profession` for full detail.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_profession",
+        "title": "Get profession",
+        "description": "Return the full Career Center record plus the matching-engine target profile for one profession, looked up by id or slug (e.g. 'security-manager', 'ordningsvakt'). Includes bilingual titles, description, responsibilities, competencies, target dimensions, gate, and regulatory notes.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The profession id or slug, e.g. 'security-officer' or 'security-manager'."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "compute_career_matches",
+        "title": "Compute career matches",
+        "description": "Run the Security Career Assessment matching engine against a set of answers and return ranked career matches. Input is a map from question id (q1..q16) to an answer value: option id string, array of option ids, 1..5 rating, or null. Use `list_assessment_questions` to discover valid ids. Results include displayed match indicator (0..100), confidence (limited | moderate | stronger), top contributing dimensions, gaps, and the user dimension vector. The indicator is guidance only, not a probability of professional success or eligibility.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "answers": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": "Object keyed by question id (e.g. 'q1') with answer values."
+            },
+            "topN": {
+              "type": "integer",
+              "description": "How many top matches to return (default 5). Values below 1 or above the profile count are clamped."
+            }
+          },
+          "required": [
+            "answers"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
