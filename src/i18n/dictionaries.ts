@@ -277,6 +277,7 @@ export const dictionaries = {
     "status.coming_soon": "Kommer snart",
     "status.in_development": "Under utveckling",
     "status.preview": "Förhandsvisning",
+    "status.available": "Tillgänglig nu",
 
     "footer.tagline": "Där förtroende kommer först.",
     "footer.for_individuals": "För individer",
@@ -859,6 +860,7 @@ export const dictionaries = {
     "status.coming_soon": "Coming soon",
     "status.in_development": "In development",
     "status.preview": "Preview",
+    "status.available": "Available now",
 
     "footer.tagline": "Where trust comes first.",
     "footer.for_individuals": "For individuals",
