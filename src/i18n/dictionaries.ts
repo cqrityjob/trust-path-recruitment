@@ -90,9 +90,9 @@ export const dictionaries = {
     "home.employers.item.assess.title": "Bedöm",
     "home.employers.item.assess.desc":
       "Strukturerade kandidatbedömningar som ger jämförbart beslutsstöd.",
-    "home.employers.item.develop.title": "Utveckla",
+    "home.employers.item.develop.title": "Testa befintlig personal",
     "home.employers.item.develop.desc":
-      "Identifiera kompetensgap i befintlig personal och planera utveckling.",
+      "Kompetenstest av egen eller upphandlad säkerhetspersonal mot definierade rollkrav.",
     "home.employers.item.verify.title": "Verifiera",
     "home.employers.item.verify.desc":
       "Mät kompetens mot definierade organisatoriska krav över tid.",
@@ -134,9 +134,9 @@ export const dictionaries = {
     "employers.offer.assess.title": "Kandidatbedömning",
     "employers.offer.assess.body":
       "Strukturerade, rollrelevanta bedömningar som ger jämförbart underlag för rekryteringsbeslut.",
-    "employers.offer.develop.title": "Kompetensutveckling",
+    "employers.offer.develop.title": "Kompetenstest av befintlig personal",
     "employers.offer.develop.body":
-      "Bedöm befintlig personal, identifiera kompetensgap och planera utbildning utifrån dokumenterade behov.",
+      "Testa egen eller upphandlad säkerhetspersonal mot definierade rollkrav, identifiera kunskaps- och kompetensgap och planera utveckling.",
     "employers.offer.verify.title": "Kompetensverifiering",
     "employers.offer.verify.body":
       "Mät kompetens mot definierade krav och följ utveckling över tid.",
@@ -674,9 +674,9 @@ export const dictionaries = {
     "home.employers.item.assess.title": "Assess",
     "home.employers.item.assess.desc":
       "Structured candidate assessments that produce comparable decision support.",
-    "home.employers.item.develop.title": "Develop",
+    "home.employers.item.develop.title": "Test existing personnel",
     "home.employers.item.develop.desc":
-      "Identify competence gaps in existing personnel and plan targeted development.",
+      "Competence testing of in-house or contracted security personnel against defined role requirements.",
     "home.employers.item.verify.title": "Verify",
     "home.employers.item.verify.desc":
       "Measure competence against defined organisational requirements over time.",
@@ -717,9 +717,9 @@ export const dictionaries = {
     "employers.offer.assess.title": "Candidate assessment",
     "employers.offer.assess.body":
       "Structured, role-relevant assessments that produce comparable evidence for hiring decisions.",
-    "employers.offer.develop.title": "Workforce development",
+    "employers.offer.develop.title": "Existing-personnel competence testing",
     "employers.offer.develop.body":
-      "Assess existing personnel, identify competence gaps and plan training based on documented needs.",
+      "Test in-house or contracted security personnel against defined role requirements, identify knowledge and competence gaps and plan targeted development.",
     "employers.offer.verify.title": "Competence verification",
     "employers.offer.verify.body":
       "Measure competence against defined requirements and track development over time.",
@@ -740,7 +740,7 @@ export const dictionaries = {
     "assessment.individuals.point.account": "No account required",
     "assessment.individuals.point.guidance": "Personalized career guidance",
     "assessment.individuals.point.links": "Links to profession guides and next steps",
-    "assessment.individuals.cta": "Take the Security Career Assessment",
+    "assessment.individuals.cta": "Take the career test",
 
     "assessment.orgs.eyebrow": "FOR ORGANIZATIONS",
     "assessment.orgs.title": "Assess and develop security personnel",
@@ -802,9 +802,9 @@ export const dictionaries = {
     "about.pillars.recruit.title": "Recruitment",
     "about.pillars.recruit.body":
       "We connect serious employers with qualified candidates — through both digital self-service and professional recruitment assignments.",
-    "about.pillars.assessment.title": "Assessment and verification",
+    "about.pillars.assessment.title": "Assessments and verification",
     "about.pillars.assessment.body":
-      "We provide structured decision support for recruitment, competence verification and ongoing development.",
+      "A free career test for individuals and role-based competence assessments for organizations — as decision support during recruitment and for developing existing personnel.",
     "about.mission.title": "The mission",
     "about.mission.body":
       "We are building a trusted digital destination where people can explore a career in security — and where organizations can recruit, assess and develop the right personnel.",
