@@ -3,42 +3,48 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpen,
-  Briefcase,
   CheckCircle2,
   Clock,
   Compass,
   Info,
-  RotateCcw,
   ShieldCheck,
-  UserPlus,
 } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { AssessmentProgress } from "@/components/assessment/AssessmentProgress";
 import { AssessmentQuestion, type Answer } from "@/components/assessment/AssessmentQuestion";
-import { CareerMatchCard } from "@/components/assessment/CareerMatchCard";
-import { ResultSection } from "@/components/assessment/ResultSection";
-import { FutureRecommendation } from "@/components/assessment/FutureRecommendation";
-import { PrimaryButton, PrimaryLink } from "@/components/site/PrimaryButton";
+import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { pickText, questions } from "@/lib/assessment-content";
+import { questions } from "@/lib/assessment-content";
 import { getProfession } from "@/lib/career-center";
 import {
+  buildActionPlan,
+  buildCareerPathway,
+  buildCompareRows,
+  buildResultSession,
   computeMatches,
-  confidenceLabel,
-  dimensionById,
-  earlyModelNote,
-  formalRequirementsNote,
-  gapsExplanation,
-  matchIndicatorLabel,
-  matchTooltip,
-  placeholderProfessionNotice,
-  researchedProfessionNotice,
-  unansweredReducesEvidence,
-  whyThisResult,
+  relatedFamilyIds,
+  type ExperienceBackground,
   type MatchResult,
 } from "@/lib/career-assessment";
-import { questions as sourceQuestions } from "@/lib/assessment-content";
+import {
+  CareerActionPlan,
+  CareerComparison,
+  CareerFamilyExploration,
+  CareerGuidanceProfile,
+  CareerMatchOverview,
+  CareerPathPosition,
+  CertificationRecommendation,
+  ContinueJourney,
+  DevelopmentInsight,
+  EducationRecommendation,
+  ExperienceBackgroundSelector,
+  ResultHero,
+  ResultStickyNav,
+  ResultTransparency,
+  ShareSummaryPreview,
+  StrengthInsight,
+  WhyThisResult,
+} from "@/components/assessment/result";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
