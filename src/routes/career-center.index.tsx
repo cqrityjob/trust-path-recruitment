@@ -355,3 +355,35 @@ function CareerCenterIndex() {
     </>
   );
 }
+
+function EntryPathCard({
+  icon,
+  eyebrow,
+  title,
+  body,
+  to,
+  ctaLabel,
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  body: string;
+  to: string;
+  ctaLabel: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group flex flex-col rounded-lg border border-border bg-background p-6 transition-colors hover:bg-muted/40"
+    >
+      <span className="text-accent">{icon}</span>
+      <p className="mt-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">{eyebrow}</p>
+      <h3 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+      <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-accent group-hover:text-foreground">
+        {ctaLabel}
+        <ArrowRight className="h-4 w-4" />
+      </span>
+    </Link>
+  );
+}
