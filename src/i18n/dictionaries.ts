@@ -6,7 +6,7 @@ export const dictionaries = {
     "nav.career_center": "Säkerhetskarriärcenter",
     "nav.jobs": "Jobb",
     "nav.employers": "Arbetsgivare",
-    "nav.assessment": "Bedömning",
+    "nav.assessment": "Tester",
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
@@ -143,29 +143,71 @@ export const dictionaries = {
     "employers.disclaimer":
       "CQrityjob stödjer arbetsgivarens beslut. Arbetsgivaren fattar alltid det slutliga rekryterings- eller kompetensbeslutet.",
 
-    "assessment.eyebrow": "Två tydligt separerade nivåer",
-    "assessment.title": "Bedömning på CQrityjob",
+    "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
+    "assessment.title": "Tester för karriär och säkerhetskompetens",
     "assessment.lead":
-      "CQrityjob erbjuder bedömning på två tydligt separerade nivåer. Karriärbedömning för individer och professionell bedömning för organisationer.",
-    "assessment.career.eyebrow": "Nivå 1 — Individ",
-    "assessment.career.title": "Karriärbedömning",
-    "assessment.career.body":
-      "För individer som utforskar eller utvecklar en karriär inom säkerhet. Kostnadsfri, ungefär fem till tio minuter, och erbjuds som karriärvägledning — inte som ett beslut om professionell lämplighet.",
-    "assessment.pro.eyebrow": "Nivå 2 — Organisation",
-    "assessment.pro.title": "Professionell bedömning",
-    "assessment.pro.body":
-      "För organisationer som bedömer kandidater och befintlig personal. Rollspecifik, strukturerad och jämförbar över team och över tid.",
-    "assessment.safeguards.title": "Ansvarsfull användning",
-    "assessment.safeguards.item1":
-      "Bedömningar ger beslutsstöd — aldrig automatiskt godkännande eller avslag.",
-    "assessment.safeguards.item2":
-      "Resultat är proportionerliga mot ett tydligt definierat syfte.",
-    "assessment.safeguards.item3":
-      "Karriärvägledning presenteras inte som en psykologisk eller medicinsk diagnos.",
-    "assessment.safeguards.item4":
-      "Arbetsgivarbeslut inkluderar alltid mänsklig granskning.",
+      "CQrityjob erbjuder kostnadsfri karriärvägledning för individer och rollbaserade kompetenstest för organisationer som vill bedöma kandidater eller utveckla befintlig säkerhetspersonal.",
+
+    "assessment.individuals.eyebrow": "FÖR INDIVIDER",
+    "assessment.individuals.title": "Hitta din väg inom säkerhet",
+    "assessment.individuals.body":
+      "Utforska vilka säkerhetsyrken som kan passa dina intressen, jämför karriärvägar och få konkreta förslag på nästa steg. Testet ger vägledning och avgör inte om du är behörig eller professionellt lämplig för ett visst yrke.",
+    "assessment.individuals.point.time": "Cirka fem minuter",
+    "assessment.individuals.point.free": "Kostnadsfritt",
+    "assessment.individuals.point.account": "Inget konto krävs",
+    "assessment.individuals.point.guidance": "Personlig karriärvägledning",
+    "assessment.individuals.point.links": "Länkar till yrkesguider och nästa steg",
+    "assessment.individuals.cta": "Gör säkerhetskarriärtestet",
+
+    "assessment.orgs.eyebrow": "FÖR ORGANISATIONER",
+    "assessment.orgs.title": "Bedöm och utveckla säkerhetspersonal",
+    "assessment.orgs.body":
+      "Rollbaserade kompetenstest för organisationer som vill få bättre beslutsunderlag vid rekrytering, kontrollera kunskap hos befintlig personal, identifiera kompetensgap och planera utvecklingsinsatser.",
+    "assessment.orgs.usecaseA.title": "Kandidatbedömning vid rekrytering",
+    "assessment.orgs.usecaseA.body":
+      "Bjud in kandidater till rollspecifika tester och få ett strukturerat beslutsunderlag inför intervju, referenstagning och fortsatt urval.",
+    "assessment.orgs.usecaseB.title": "Kompetenstest av befintlig personal",
+    "assessment.orgs.usecaseB.body":
+      "Testa egen eller upphandlad säkerhetspersonal mot definierade rollkrav, identifiera kunskaps- och kompetensgap och följ utveckling över tid.",
+    "assessment.orgs.customers.title": "Exempel på organisationer",
+    "assessment.orgs.customers.1": "Bevaknings- och säkerhetsföretag",
+    "assessment.orgs.customers.2": "Myndigheter",
+    "assessment.orgs.customers.3": "Datacenter",
+    "assessment.orgs.customers.4": "Kritisk infrastruktur",
+    "assessment.orgs.customers.5": "Företagens säkerhetsavdelningar",
+    "assessment.orgs.customers.6": "Organisationer som upphandlar säkerhetstjänster",
+    "assessment.orgs.cta": "Utforska lösningen för organisationer",
+    "assessment.orgs.status": "Under utveckling — förhandstitt på kommande produkt.",
+
+    "assessment.compare.title": "Skillnaden mellan vägledning och kompetenstest",
+    "assessment.compare.guidance.title": "Karriärvägledning",
+    "assessment.compare.guidance.1": "Utformad för individer",
+    "assessment.compare.guidance.2": "Utforskar intressen och möjliga karriärvägar",
+    "assessment.compare.guidance.3": "Inget anställningsbeslut",
+    "assessment.compare.guidance.4": "Ingen bedömning av behörighet",
+    "assessment.compare.guidance.5": "Kostnadsfri ingångsprodukt",
+    "assessment.compare.pro.title": "Professionellt kompetenstest",
+    "assessment.compare.pro.1": "Beställs av en organisation",
+    "assessment.compare.pro.2": "Kopplad till en definierad roll och ett tydligt syfte",
+    "assessment.compare.pro.3": "Kan innehålla kunskap, situationsbedömning och praktiska scenarier",
+    "assessment.compare.pro.4": "Ger strukturerat beslutsstöd för människor",
+    "assessment.compare.pro.5": "Kan användas för kandidater eller befintlig personal",
+    "assessment.compare.pro.6": "Godkänner, avvisar eller rangordnar aldrig personer för anställning automatiskt",
+
+    "assessment.workflow.title": "Så tänker vi kring arbetsflödet för organisationer",
+    "assessment.workflow.subtitle": "Förhandsvisning av kommande produkt — inte aktiv funktionalitet.",
+    "assessment.workflow.step1": "Välj roll eller kompetensområde",
+    "assessment.workflow.step2": "Bjud in kandidater eller anställda",
+    "assessment.workflow.step3": "Genomför rollspecifikt test",
+    "assessment.workflow.step4": "Granska resultat per delområde",
+    "assessment.workflow.step5": "Identifiera kompetensgap",
+    "assessment.workflow.step6": "Planera intervju, utbildning eller uppföljning",
+
+    "assessment.responsible.title": "Ansvarsfull användning",
+    "assessment.responsible.body":
+      "CQrityjobs professionella kompetenstest stödjer mänskliga beslut. Organisationen ansvarar för slutliga beslut om rekrytering, behörighet, anställning, utbildning och personal.",
     "assessment.status":
-      "Under utveckling. Hör av dig om ni vill vara med och forma den första versionen.",
+      "Karriärtestet är tillgängligt idag. Lösningen för organisationer är under utveckling.",
 
     "about.title": "Vår mission",
     "about.lead":
