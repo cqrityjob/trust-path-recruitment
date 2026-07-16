@@ -323,254 +323,128 @@ function Results({
 }) {
   const { t, lang } = useT();
 
-  // Compute matches from the answers using the transparent engine.
   const engine = useMemo(() => computeMatches(answers), [answers]);
+  const [background, setBackground] = useState<ExperienceBackground | undefined>(undefined);
+  const session = useMemo(
+    () => buildResultSession({ engine, background }),
+    [engine, background],
+  );
   const topMatches = engine.matches.slice(0, 5);
-
-  const professionOf = (m: MatchResult) => getProfession(m.professionId);
-  const titleOf = (m: MatchResult) => {
-    const p = professionOf(m);
-    if (p) return { sv: p.titleSv, en: p.titleEn };
-    return { sv: m.professionId, en: m.professionId };
-  };
-
-  const [activeId, setActiveId] = useState(topMatches[0]?.professionId ?? "");
-  const active = useMemo<MatchResult>(
+  const [activeId, setActiveId] = useState<string>(topMatches[0]?.professionId ?? "");
+  const active = useMemo<MatchResult | undefined>(
     () => topMatches.find((m) => m.professionId === activeId) ?? topMatches[0],
     [activeId, topMatches],
   );
-  const activeProfession = active ? professionOf(active) : undefined;
-  const activeTitle = active ? titleOf(active) : { sv: "", en: "" };
-  const why = active ? whyThisResult(active, activeTitle) : { sv: "", en: "" };
-  const gaps = active ? gapsExplanation(active.gaps) : { sv: "", en: "" };
-  const unansweredCount = sourceQuestions.length - engine.answeredCount;
+  const activeProfession = active ? getProfession(active.professionId) : undefined;
   const isPlaceholder = active?.professionContentStatus === "placeholder";
-  const isResearched =
-    active?.professionContentStatus === "researched" ||
-    active?.professionContentStatus === "reviewed" ||
-    active?.professionContentStatus === "published";
+  const isRegulated = Boolean(active?.regulated ?? activeProfession?.regulated);
+  const compareRows = useMemo(() => buildCompareRows(topMatches, 3), [topMatches]);
+  const pathway = useMemo(() => buildCareerPathway(active), [active]);
+  const relatedFamilies = useMemo(
+    () => relatedFamilyIds(active, topMatches),
+    [active, topMatches],
+  );
+
+  const actionPlan = useMemo(
+    () =>
+      buildActionPlan({
+        top: active,
+        matches: topMatches,
+        developmentDimensions: session.developmentDimensionIds,
+        developmentCompetencies: session.developmentCompetencyIds,
+        background,
+        isPlaceholder,
+        isRegulated,
+        educationIds: session.educationIds,
+        certificationIds: session.certificationIds,
+        hasPathway: pathway.length > 1,
+      }),
+    [active, topMatches, session, background, isPlaceholder, isRegulated, pathway.length],
+  );
+
+  if (!active) {
+    return (
+      <AssessmentLayout>
+        <p className="text-sm text-muted-foreground">
+          {lang === "sv" ? "Inga resultat att visa ännu." : "No results to display yet."}
+        </p>
+      </AssessmentLayout>
+    );
+  }
 
   return (
     <AssessmentLayout>
-      <div className="max-w-3xl">
-        <p className="text-xs font-medium uppercase tracking-widest text-accent">
-          {t("sca.results.eyebrow")}
-        </p>
-        <h1
-          className="mt-4 text-4xl font-semibold tracking-tight text-foreground md:text-5xl"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {t("sca.results.title")}
-        </h1>
-        <p className="mt-4 text-muted-foreground">{t("sca.results.subtitle")}</p>
-      </div>
+      <ResultStickyNav />
 
-      <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-5">
-        <aside className="lg:col-span-2">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {t("sca.results.section.top")}
-          </p>
-          <div className="mt-4 flex flex-col gap-3">
-            {topMatches.map((m, i) => (
-              <CareerMatchCard
-                key={m.professionId}
-                title={titleOf(m)}
-                score={m.displayedMatch}
-                confidence={m.confidence}
-                rank={i + 1}
-                active={m.professionId === activeId}
-                onSelect={() => setActiveId(m.professionId)}
-              />
-            ))}
-          </div>
-        </aside>
+      <div id="result" className="space-y-8 md:space-y-10">
+        <ResultHero session={session} active={active} lang={lang} />
 
-        <div className="lg:col-span-3">
-          {active && (
-          <>
-          <div className="rounded-lg border border-border bg-muted/30 p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <p
-                  className="text-xs font-medium uppercase tracking-widest text-accent"
-                  title={pickText(matchTooltip, lang)}
-                >
-                  {pickText(matchIndicatorLabel, lang)}
-                </p>
-                <h2
-                  className="mt-2 text-3xl font-semibold tracking-tight text-foreground"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  {pickText(activeTitle, lang)}
-                </h2>
-                <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
-                  {pickText(confidenceLabel[active.confidence], lang)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-4xl font-semibold tracking-tight text-foreground tabular-nums">
-                  {active.displayedMatch}
-                  <span className="ml-0.5 text-lg text-muted-foreground">%</span>
-                </p>
-                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
-                  {pickText(matchIndicatorLabel, lang)}
-                </p>
-              </div>
-            </div>
-            <p className="mt-6 text-sm leading-relaxed text-foreground">
-              {pickText(why, lang)}
-            </p>
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              {pickText(active.confidenceReason, lang)}
-            </p>
-            {unansweredCount > 0 && (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                {pickText(unansweredReducesEvidence, lang)}
-              </p>
-            )}
-            {isPlaceholder && (
-              <p className="mt-3 rounded-md border border-border/60 bg-background/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                {pickText(placeholderProfessionNotice, lang)}
-              </p>
-            )}
-            {isResearched && (
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                {pickText(researchedProfessionNotice, lang)}
-              </p>
-            )}
-            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/80">
-              {pickText(matchTooltip, lang)}
-            </p>
-          </div>
+        <CareerMatchOverview
+          matches={topMatches}
+          activeId={activeId}
+          onSelect={setActiveId}
+          lang={lang}
+        />
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ResultSection title={t("sca.results.section.strengths")}>
-              {active.topDimensions.length ? (
-                <ul className="space-y-2">
-                  {active.topDimensions.map((d) => (
-                    <li key={d} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-                      <span>{pickText(dimensionById[d].name, lang)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground">
-                  {lang === "sv"
-                    ? "Inga tydliga styrkedimensioner ännu."
-                    : "No clear dimensional strengths yet."}
-                </p>
-              )}
-            </ResultSection>
-            <ResultSection title={t("sca.results.section.develop")}>
-              {active.gaps.length ? (
-                <ul className="space-y-2">
-                  {active.gaps.map((d) => (
-                    <li key={d} className="flex items-start gap-2">
-                      <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-                      <span>{pickText(dimensionById[d].name, lang)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground">{pickText(gaps, lang)}</p>
-              )}
-            </ResultSection>
-            <ResultSection title={t("sca.results.section.formal")}>
-              <p className="text-muted-foreground">
-                {pickText(formalRequirementsNote, lang)}
-              </p>
-              {active.regulated && (
-                <p className="mt-2 text-xs uppercase tracking-widest text-accent">
-                  {t("sca.results.regulated")}
-                </p>
-              )}
-            </ResultSection>
-            <ResultSection title={t("sca.results.section.why")}>
-              <p>{pickText(why, lang)}</p>
-            </ResultSection>
-            <ResultSection title={t("sca.results.related_jobs")}>
-              <p className="text-muted-foreground">{t("sca.results.related_jobs.hint")}</p>
-            </ResultSection>
-            <ResultSection title={t("sca.results.section.model_note")}>
-              <p className="text-muted-foreground">{pickText(earlyModelNote, lang)}</p>
-            </ResultSection>
-          </div>
+        <WhyThisResult match={active} lang={lang} />
 
-          <div className="mt-4">
-            <ResultSection title={t("sca.results.profession_guide")}>
-              {(() => {
-                if (activeProfession) {
-                  return (
-                    <PrimaryLink to={`/career-center/${activeProfession.slug}`} variant="ghost">
-                      {t("cc.cta.explore")}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </PrimaryLink>
-                  );
-                }
-                return (
-                  <p className="text-muted-foreground">
-                    {t("sca.results.profession_guide.hint")}
-                  </p>
-                );
-              })()}
-            </ResultSection>
-          </div>
-          </>
-          )}
+        <div id="profile">
+          <CareerGuidanceProfile vector={engine.userVector} lang={lang} />
         </div>
-      </div>
 
-      <div className="mt-14 flex items-start gap-3 rounded-md border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
-        <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-        <p>{t("sca.results.disclaimer")}</p>
-      </div>
+        <CareerComparison rows={compareRows} lang={lang} />
 
-      {/* Continue your journey */}
-      <div className="mt-20 border-t border-border pt-16">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {t("sca.next.title")}
-        </h2>
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <FutureRecommendation
-            icon={<Compass className="h-5 w-5" strokeWidth={1.5} />}
-            title={t("sca.next.explore.title")}
-            body={t("sca.next.explore.body")}
-            to="/career-center"
+        <ExperienceBackgroundSelector
+          value={background}
+          onChange={setBackground}
+          lang={lang}
+        />
+
+        <CareerPathPosition pathway={pathway} lang={lang} />
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <StrengthInsight
+            dimensionIds={session.strengthDimensionIds}
+            competencyIds={session.strengthCompetencyIds}
+            lang={lang}
           />
-          <FutureRecommendation
-            icon={<Briefcase className="h-5 w-5" strokeWidth={1.5} />}
-            title={t("sca.next.jobs.title")}
-            body={t("sca.next.jobs.body")}
-            to="/jobs"
-          />
-          <FutureRecommendation
-            icon={<BookOpen className="h-5 w-5" strokeWidth={1.5} />}
-            title={t("sca.next.guide.title")}
-            body={t("sca.next.guide.body")}
-            to="/career-center"
-          />
-          <FutureRecommendation
-            icon={<UserPlus className="h-5 w-5" strokeWidth={1.5} />}
-            title={t("sca.next.profile.title")}
-            body={t("sca.next.profile.body")}
-            soon
+          <DevelopmentInsight
+            dimensionIds={session.developmentDimensionIds}
+            competencyIds={session.developmentCompetencyIds}
+            lang={lang}
           />
         </div>
 
-        <div className="mt-12 flex flex-wrap items-center gap-4">
-          <PrimaryLink to="/career-center" variant="ghost">
-            {t("cta.all_careers")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </PrimaryLink>
-          <button
-            type="button"
-            onClick={onRetake}
-            className="inline-flex h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <RotateCcw className="h-4 w-4" />
-            {t("sca.next.retake")}
-          </button>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <EducationRecommendation
+            ids={session.educationIds}
+            lang={lang}
+            isPlaceholder={isPlaceholder}
+          />
+          <CertificationRecommendation
+            ids={session.certificationIds}
+            lang={lang}
+            isPlaceholder={isPlaceholder}
+          />
+        </div>
+
+        <CareerActionPlan plan={actionPlan} lang={lang} />
+
+        <CareerFamilyExploration
+          topFamily={activeProfession?.family ?? active.family}
+          relatedFamilies={relatedFamilies}
+          lang={lang}
+        />
+
+        <ContinueJourney onRetake={onRetake} topSlug={activeProfession?.slug} />
+
+        <ShareSummaryPreview session={session} lang={lang} />
+
+        <ResultTransparency lang={lang} />
+
+        <div className="flex items-start gap-3 rounded-md border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
+          <p>{t("sca.disclaimer.footer")}</p>
         </div>
       </div>
     </AssessmentLayout>
