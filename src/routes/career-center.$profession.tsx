@@ -16,8 +16,8 @@ export const Route = createFileRoute("/career-center/$profession")({
         ],
       };
     }
-    const title = `${p.title.en} — CQrityjob`;
-    const desc = p.short.en;
+    const title = `${p.titleEn} — CQrityjob`;
+    const desc = p.description.en;
     return {
       meta: [
         { title },
