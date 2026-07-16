@@ -15,7 +15,7 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
 
-    "cta.assessment": "Gör karriärbedömningen",
+    "cta.assessment": "Gör karriärtestet",
     "cta.careers": "Utforska karriärer inom säkerhet",
     "cta.contact": "Kontakta oss",
     "cta.talk": "Prata med oss",
@@ -23,11 +23,11 @@ export const dictionaries = {
     "cta.learn_more": "Läs mer",
     "cta.all_careers": "Se alla karriärer",
 
-    "home.hero.eyebrow": "Karriär · Rekrytering · Bedömning",
+    "home.hero.eyebrow": "Karriär · Rekrytering · Tester",
     "home.hero.title": "Bygg din framtid inom säkerhet.",
     "home.hero.subtitle":
       "Upptäck karriärer inom säkerhet, mät din kompetens, utvecklas professionellt och möt arbetsgivare som värdesätter rätt kunskap.",
-    "home.hero.note": "Kostnadsfri karriärbedömning · Inget konto krävs för att börja",
+    "home.hero.note": "Kostnadsfritt karriärtest · Inget konto krävs för att börja",
 
     "home.pillars.title": "Tre sätt vi stöttar din utveckling",
     "home.pillars.subtitle":
@@ -66,18 +66,18 @@ export const dictionaries = {
       "Från operativa roller till specialist- och ledarskapsspår. Detaljerade yrkesguider är under uppbyggnad.",
     "home.careers.cta": "Se alla karriärer",
 
-    "home.assessment.eyebrow": "Första strategiska produkten",
-    "home.assessment.title": "Karriärbedömning inom säkerhet",
+    "home.assessment.eyebrow": "För individer",
+    "home.assessment.title": "Kostnadsfritt karriärtest inom säkerhet",
     "home.assessment.subtitle":
-      "En kostnadsfri karriärbedömning som hjälper dig utforska vilka roller inom säkerhet som kan passa dig — och nästa steg för att komma dit.",
+      "Ett kostnadsfritt karriärtest som hjälper dig utforska vilka roller inom säkerhet som kan passa dig — och nästa steg för att komma dit. Karriärtestet är tillgängligt idag.",
     "home.assessment.point.free": "Kostnadsfri",
     "home.assessment.point.time": "Cirka fem minuter",
-    "home.assessment.point.guidance": "Karriärvägledning — inte ett lämplighetsbeslut",
+    "home.assessment.point.guidance": "Karriärvägledning — inte ett behörighets- eller lämplighetsbeslut",
     "home.assessment.point.matches": "Föreslår möjliga karriärvägar",
     "home.assessment.point.next": "Rekommenderar nästa steg",
-    "home.assessment.cta": "Gör bedömningen",
+    "home.assessment.cta": "Starta karriärtestet",
     "home.assessment.note":
-      "Under utveckling. Bedömningen är inte tillgänglig än — hör av dig för att bli informerad vid lansering.",
+      "Karriärtestet är tillgängligt idag. Kostnadsfritt, cirka fem minuter, inget konto krävs. Resultatet är vägledning, inte ett behörighetsbeslut.",
 
     "home.employers.eyebrow": "För arbetsgivare",
     "home.employers.title":
@@ -98,16 +98,16 @@ export const dictionaries = {
       "Mät kompetens mot definierade organisatoriska krav över tid.",
     "home.employers.cta": "Prata med oss",
 
-    "home.platform.eyebrow": "Framtida kapacitet",
-    "home.platform.title": "Bedömningsplattform",
+    "home.platform.eyebrow": "För organisationer",
+    "home.platform.title": "Rollbaserade kompetenstest för organisationer",
     "home.platform.subtitle":
-      "Strukturerat beslutsstöd för rekrytering, kompetensverifiering och kompetensutveckling.",
-    "home.platform.point1": "Rollspecifika bedömningar för säkerhetsyrken",
-    "home.platform.point2": "Individ-, grupp- och organisationsrapporter",
-    "home.platform.point3": "Gapanalys mot definierade krav",
-    "home.platform.point4": "Uppföljande bedömningar över tid",
+      "Rollbaserade kompetenstest för kandidatbedömning vid rekrytering och för att testa och utveckla befintlig säkerhetspersonal. Under utveckling — förhandstitt på kommande produkt.",
+    "home.platform.point1": "Kandidatbedömning vid rekrytering",
+    "home.platform.point2": "Kompetenstest av befintlig säkerhetspersonal",
+    "home.platform.point3": "Rollspecifika bedömningar och gapanalys mot definierade krav",
+    "home.platform.point4": "Uppföljning av kompetens över tid",
     "home.platform.disclaimer":
-      "CQrityjobs bedömningar är beslutsstöd — de ersätter inte mänskligt omdöme. Arbetsgivaren fattar alltid det slutliga beslutet.",
+      "CQrityjobs kompetenstest är beslutsstöd — de ersätter inte mänskligt omdöme och godkänner, avvisar eller rangordnar aldrig personer automatiskt. Organisationen fattar alltid det slutliga beslutet.",
 
     "careers.title": "Karriärer inom säkerhet",
     "careers.lead":
@@ -219,9 +219,9 @@ export const dictionaries = {
     "about.pillars.recruit.title": "Rekrytering",
     "about.pillars.recruit.body":
       "Vi kopplar samman seriösa arbetsgivare med kvalificerade kandidater — med både digital självbetjäning och professionella rekryteringsuppdrag.",
-    "about.pillars.assessment.title": "Bedömning och verifiering",
+    "about.pillars.assessment.title": "Tester och verifiering",
     "about.pillars.assessment.body":
-      "Vi tillhandahåller strukturerat beslutsstöd för rekrytering, kompetensverifiering och löpande utveckling.",
+      "Kostnadsfritt karriärtest för individer och rollbaserade kompetenstest för organisationer — som beslutsstöd vid rekrytering och för att utveckla befintlig personal.",
     "about.mission.title": "Uppdraget",
     "about.mission.body":
       "Vi bygger en betrodd digital destination där människor kan utforska en karriär inom säkerhet — och där organisationer kan rekrytera, bedöma och utveckla rätt personal.",
@@ -450,7 +450,7 @@ export const dictionaries = {
     "cc.hero.eyebrow": "Säkerhetskarriärcenter",
     "cc.hero.title": "Din karriär inom säkerhet börjar här.",
     "cc.hero.lead": "Utforska yrken, karriärvägar, kompetens och utbildning inom hela säkerhetsbranschen — samlat på ett ställe.",
-    "cc.hero.cta.assessment": "Gör karriärbedömningen",
+    "cc.hero.cta.assessment": "Gör karriärtestet",
     "cc.hero.cta.browse": "Bläddra bland yrken",
 
     "cc.featured.title": "Utvalda yrken",
@@ -466,8 +466,8 @@ export const dictionaries = {
     "cc.certs.title": "Certifikat",
     "cc.certs.subtitle": "Erkända certifieringar och specialiseringar per yrke.",
     "cc.certs.placeholder": "Certifikatsdatabasen är under uppbyggnad.",
-    "cc.assessment.title": "Karriärbedömning",
-    "cc.assessment.body": "Osäker på var du passar in? Gör den kostnadsfria karriärbedömningen och få vägledning.",
+    "cc.assessment.title": "Karriärtest",
+    "cc.assessment.body": "Osäker på var du passar in? Gör det kostnadsfria karriärtestet och få vägledning.",
     "cc.articles.title": "Senaste artiklar",
     "cc.articles.subtitle": "Artiklar och guider byggs upp löpande.",
     "cc.articles.placeholder": "Redaktionellt innehåll är under uppbyggnad.",
@@ -573,7 +573,7 @@ export const dictionaries = {
     "start.audience.specialist": "Jag vill bli specialist eller ledare",
     "start.audience.specialist.desc": "Söker fördjupning inom ett specifikt område.",
     "start.next.title": "Föreslagna nästa steg",
-    "start.next.assessment.title": "Gör karriärbedömningen",
+    "start.next.assessment.title": "Gör karriärtestet",
     "start.next.assessment.body": "Cirka 5 minuter. Kostnadsfri. Inget konto krävs.",
     "start.next.families.title": "Utforska yrkesfamiljer",
     "start.next.families.body": "Bläddra bland områden inom säkerhetsbranschen.",
@@ -601,7 +601,7 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
 
-    "cta.assessment": "Take the Security Career Assessment",
+    "cta.assessment": "Take the career test",
     "cta.careers": "Explore Security Careers",
     "cta.contact": "Contact us",
     "cta.talk": "Talk to our team",
@@ -609,11 +609,11 @@ export const dictionaries = {
     "cta.learn_more": "Learn more",
     "cta.all_careers": "See all careers",
 
-    "home.hero.eyebrow": "Career · Recruitment · Assessment",
+    "home.hero.eyebrow": "Career · Recruitment · Assessments",
     "home.hero.title": "Build your future in security.",
     "home.hero.subtitle":
       "Discover security careers, measure your competence, develop professionally and connect with employers who value the right skills.",
-    "home.hero.note": "Free career assessment · No account required to start",
+    "home.hero.note": "Free career test · No account required to start",
 
     "home.pillars.title": "Three ways CQrityjob supports your journey",
     "home.pillars.subtitle":
@@ -651,18 +651,18 @@ export const dictionaries = {
       "From operational positions to specialist and leadership tracks. Detailed profession guides are being built.",
     "home.careers.cta": "See all careers",
 
-    "home.assessment.eyebrow": "First strategic product",
-    "home.assessment.title": "Security Career Assessment",
+    "home.assessment.eyebrow": "For individuals",
+    "home.assessment.title": "Free security career test",
     "home.assessment.subtitle":
-      "A free career assessment that helps you explore which security roles may suit you — and the steps to get there.",
+      "A free career test that helps you explore which security roles may suit you — and the steps to get there. The career test is live today.",
     "home.assessment.point.free": "Free to take",
     "home.assessment.point.time": "About five minutes",
-    "home.assessment.point.guidance": "Career guidance — not a suitability decision",
+    "home.assessment.point.guidance": "Career guidance — not an eligibility or suitability decision",
     "home.assessment.point.matches": "Suggests possible career paths",
     "home.assessment.point.next": "Recommends next steps",
-    "home.assessment.cta": "Take the assessment",
+    "home.assessment.cta": "Start the career test",
     "home.assessment.note":
-      "Under development. The assessment is not live yet — get in touch to be notified at launch.",
+      "The career test is live today. Free, about five minutes, no account required. Results are guidance, not an eligibility decision.",
 
     "home.employers.eyebrow": "For employers",
     "home.employers.title": "Recruit and develop security professionals with greater confidence",
@@ -682,16 +682,16 @@ export const dictionaries = {
       "Measure competence against defined organisational requirements over time.",
     "home.employers.cta": "Talk to our team",
 
-    "home.platform.eyebrow": "Future capability",
-    "home.platform.title": "Assessment platform",
+    "home.platform.eyebrow": "For organizations",
+    "home.platform.title": "Role-based competence assessments for organizations",
     "home.platform.subtitle":
-      "Structured decision support for recruitment, competence verification and workforce development.",
-    "home.platform.point1": "Role-specific assessments for security professions",
-    "home.platform.point2": "Individual, group and organisation-level reports",
-    "home.platform.point3": "Gap analysis against defined requirements",
-    "home.platform.point4": "Follow-up assessments to measure development over time",
+      "Role-based competence assessments for candidate assessment during recruitment and for testing and developing existing security personnel. In development — a preview of the coming product.",
+    "home.platform.point1": "Candidate assessment during recruitment",
+    "home.platform.point2": "Competence testing of existing security personnel",
+    "home.platform.point3": "Role-specific assessments and gap analysis against defined requirements",
+    "home.platform.point4": "Follow-up on competence over time",
     "home.platform.disclaimer":
-      "CQrityjob assessments provide decision support — they do not replace human judgment. The employer always makes the final decision.",
+      "CQrityjob competence assessments provide decision support — they do not replace human judgment and never automatically approve, reject or rank people. The organization always makes the final decision.",
 
     "careers.title": "Security Careers",
     "careers.lead":
