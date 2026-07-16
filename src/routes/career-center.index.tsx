@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, BookOpen, Award, Info } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, Award, Info, Compass, Users, Building2 } from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import {
   categories,
   professions,
+  professionFamilies,
+  filterProfessions,
+  icon,
   L,
   type CategoryId,
-  type ExperienceLevel,
 } from "@/lib/career-center";
 import { CareerHero } from "@/components/career-center/CareerHero";
 import { ProfessionCard } from "@/components/career-center/ProfessionCard";
@@ -45,27 +47,19 @@ function CareerCenterIndex() {
   const { t, lang } = useT();
   const [filters, setFilters] = useState<CareerSearchFilters>({
     query: "",
+    family: "all",
     category: "all",
     level: "all",
+    regulated: "all",
+    sector: "all",
+    orientation: "all",
+    region: "all",
   });
 
-  const filtered = useMemo(() => {
-    const q = filters.query.trim().toLowerCase();
-    return professions.filter((p) => {
-      if (filters.category !== "all" && p.category !== filters.category) return false;
-      if (filters.level !== "all" && p.level !== filters.level) return false;
-      if (!q) return true;
-      const hay = [
-        L(p.title, lang),
-        L(p.short, lang),
-        p.category,
-        ...p.skills,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [filters, lang]);
+  const filtered = useMemo(
+    () => filterProfessions(professions, filters, lang),
+    [filters, lang],
+  );
 
   const featured = professions.slice(0, 6);
   const roadmap = [
@@ -98,6 +92,42 @@ function CareerCenterIndex() {
         }
       />
 
+      {/* Three entry paths */}
+      <Section>
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            {t("cc.paths.title")}
+          </h2>
+          <p className="mt-3 text-muted-foreground">{t("cc.paths.subtitle")}</p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <EntryPathCard
+            icon={<Compass className="h-5 w-5" strokeWidth={1.5} />}
+            eyebrow={t("cc.paths.explore.eyebrow")}
+            title={t("cc.paths.explore.title")}
+            body={t("cc.paths.explore.body")}
+            to="/career-center/start"
+            ctaLabel={t("cta.learn_more")}
+          />
+          <EntryPathCard
+            icon={<Users className="h-5 w-5" strokeWidth={1.5} />}
+            eyebrow={t("cc.paths.professional.eyebrow")}
+            title={t("cc.paths.professional.title")}
+            body={t("cc.paths.professional.body")}
+            to="/career-center#browse"
+            ctaLabel={t("cc.hero.cta.browse")}
+          />
+          <EntryPathCard
+            icon={<Building2 className="h-5 w-5" strokeWidth={1.5} />}
+            eyebrow={t("cc.paths.employer.eyebrow")}
+            title={t("cc.paths.employer.title")}
+            body={t("cc.paths.employer.body")}
+            to="/employers"
+            ctaLabel={t("home.paths.orgs.cta")}
+          />
+        </div>
+      </Section>
+
       {/* Featured professions */}
       <Section>
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -113,9 +143,10 @@ function CareerCenterIndex() {
             <ProfessionCard
               key={p.slug}
               slug={p.slug}
-              title={L(p.title, lang)}
-              description={L(p.short, lang)}
-              icon={p.icon}
+              title={lang === "sv" ? p.titleSv : p.titleEn}
+              description={L(p.description, lang)}
+              icon={icon(p.icon)}
+              tag={p.status === "placeholder" ? t("cc.status.developing") : undefined}
             />
           ))}
         </div>
@@ -133,7 +164,7 @@ function CareerCenterIndex() {
           {categories.map((c) => (
             <CategoryCard
               key={c.id}
-              icon={c.icon}
+              icon={icon(c.icon)}
               name={L(c.name, lang)}
               desc={L(c.desc, lang)}
               active={filters.category === c.id}
@@ -160,9 +191,7 @@ function CareerCenterIndex() {
         <div className="mt-8">
           <CareerSearch
             value={filters}
-            onChange={(next: { query: string; category: CategoryId | "all"; level: ExperienceLevel | "all" }) =>
-              setFilters(next)
-            }
+            onChange={setFilters}
           />
         </div>
         <div className="mt-8">
@@ -176,13 +205,34 @@ function CareerCenterIndex() {
                 <ProfessionCard
                   key={p.slug}
                   slug={p.slug}
-                  title={L(p.title, lang)}
-                  description={L(p.short, lang)}
-                  icon={p.icon}
+                  title={lang === "sv" ? p.titleSv : p.titleEn}
+                  description={L(p.description, lang)}
+                  icon={icon(p.icon)}
+                  tag={p.status === "placeholder" ? t("cc.status.developing") : undefined}
                 />
               ))}
             </div>
           )}
+        </div>
+      </Section>
+
+      {/* Profession families */}
+      <Section bordered className="bg-muted/40">
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            {t("start.families.title")}
+          </h2>
+          <p className="mt-3 text-muted-foreground">{t("start.families.subtitle")}</p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {professionFamilies
+            .filter((f) => !f.isEntryPath)
+            .map((f) => (
+              <div key={f.id} className="rounded-lg border border-border bg-background p-5">
+                <p className="text-sm font-semibold tracking-tight text-foreground">{L(f.name, lang)}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{L(f.description, lang)}</p>
+              </div>
+            ))}
         </div>
       </Section>
 
