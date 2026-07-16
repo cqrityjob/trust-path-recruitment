@@ -162,7 +162,7 @@ function Index() {
                 {t("cta.assessment")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
-              <PrimaryLink to="/careers" variant="ghost">
+              <PrimaryLink to="/career-center" variant="ghost">
                 {t("cta.careers")}
               </PrimaryLink>
             </div>
@@ -206,7 +206,7 @@ function Index() {
             title={t("home.paths.individuals.title")}
             items={individuals}
             ctaLabel={t("home.paths.individuals.cta")}
-            to="/careers"
+            to="/career-center"
           />
           <PathCard
             label={t("home.paths.orgs.label")}
@@ -231,7 +231,7 @@ function Index() {
             <p className="mt-4 text-muted-foreground">{t("home.careers.subtitle")}</p>
           </div>
           <Link
-            to="/careers"
+            to="/career-center"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-foreground"
           >
             {t("home.careers.cta")}
@@ -242,7 +242,7 @@ function Index() {
           {professions.map((p) => (
             <Link
               key={p.id}
-              to="/careers"
+              to="/career-center"
               className="group flex flex-col gap-4 bg-background p-6 transition-colors hover:bg-muted/40"
             >
               <div className="flex items-start justify-between">

@@ -425,7 +425,7 @@ function Results({ onRetake }: { onRetake: () => void }) {
             icon={<Compass className="h-5 w-5" strokeWidth={1.5} />}
             title={t("sca.next.explore.title")}
             body={t("sca.next.explore.body")}
-            to="/careers"
+            to="/career-center"
           />
           <FutureRecommendation
             icon={<Briefcase className="h-5 w-5" strokeWidth={1.5} />}
@@ -437,7 +437,7 @@ function Results({ onRetake }: { onRetake: () => void }) {
             icon={<BookOpen className="h-5 w-5" strokeWidth={1.5} />}
             title={t("sca.next.guide.title")}
             body={t("sca.next.guide.body")}
-            to="/careers"
+            to="/career-center"
           />
           <FutureRecommendation
             icon={<UserPlus className="h-5 w-5" strokeWidth={1.5} />}
@@ -448,7 +448,7 @@ function Results({ onRetake }: { onRetake: () => void }) {
         </div>
 
         <div className="mt-12 flex flex-wrap items-center gap-4">
-          <PrimaryLink to="/careers" variant="ghost">
+          <PrimaryLink to="/career-center" variant="ghost">
             {t("cta.all_careers")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </PrimaryLink>
