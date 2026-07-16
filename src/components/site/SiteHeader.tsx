@@ -11,7 +11,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   const nav = [
-    { to: "/careers", label: t("nav.careers") },
+    { to: "/career-center", label: t("nav.career_center") },
     { to: "/jobs", label: t("nav.jobs") },
     { to: "/employers", label: t("nav.employers") },
     { to: "/assessment", label: t("nav.assessment") },
