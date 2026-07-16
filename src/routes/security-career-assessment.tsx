@@ -21,8 +21,20 @@ import { ResultSection } from "@/components/assessment/ResultSection";
 import { FutureRecommendation } from "@/components/assessment/FutureRecommendation";
 import { PrimaryButton, PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { careerMatches, pickList, pickText, questions } from "@/lib/assessment-content";
+import { pickText, questions } from "@/lib/assessment-content";
 import { getProfession } from "@/lib/career-center";
+import {
+  computeMatches,
+  confidenceLabel,
+  dimensionById,
+  earlyModelNote,
+  formalRequirementsNote,
+  gapsExplanation,
+  matchIndicatorLabel,
+  matchTooltip,
+  whyThisResult,
+  type MatchResult,
+} from "@/lib/career-assessment";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -74,7 +86,7 @@ function AssessmentApp() {
         onBack={() => setPhase("intro")}
       />
     );
-  return <Results onRetake={reset} />;
+  return <Results answers={answers} onRetake={reset} />;
 }
 
 /* -------------------------------- Landing -------------------------------- */
