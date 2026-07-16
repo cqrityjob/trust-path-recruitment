@@ -591,7 +591,7 @@ export const dictionaries = {
     "nav.career_center": "Security Career Center",
     "nav.jobs": "Jobs",
     "nav.employers": "Employers",
-    "nav.assessment": "Assessment",
+    "nav.assessment": "Assessments",
     "nav.about": "About",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
@@ -725,28 +725,71 @@ export const dictionaries = {
     "employers.disclaimer":
       "CQrityjob supports employer decisions. The employer always makes the final hiring or competence decision.",
 
-    "assessment.eyebrow": "Two clearly separated levels",
-    "assessment.title": "Assessment at CQrityjob",
+    "assessment.eyebrow": "TWO SEPARATE SOLUTIONS",
+    "assessment.title": "Career and Security Competence Assessments",
     "assessment.lead":
-      "CQrityjob provides assessment on two clearly separated levels — career assessment for individuals and professional assessment for organizations.",
-    "assessment.career.eyebrow": "Level 1 — Individual",
-    "assessment.career.title": "Career Assessment",
-    "assessment.career.body":
-      "For individuals exploring or advancing a career in security. Free, approximately five to ten minutes, and offered as career guidance — not a professional suitability determination.",
-    "assessment.pro.eyebrow": "Level 2 — Organization",
-    "assessment.pro.title": "Professional Assessment",
-    "assessment.pro.body":
-      "For organizations assessing candidates and existing personnel. Role-specific, structured and comparable across teams and over time.",
-    "assessment.safeguards.title": "Responsible use",
-    "assessment.safeguards.item1":
-      "Assessments provide decision support — never automatic acceptance or rejection.",
-    "assessment.safeguards.item2":
-      "Results are proportionate to a clearly defined purpose.",
-    "assessment.safeguards.item3":
-      "Career guidance is not presented as a psychological or medical diagnosis.",
-    "assessment.safeguards.item4": "Employer decisions always involve human review.",
+      "CQrityjob offers free career guidance for individuals and role-based competence assessments for organizations that want to evaluate candidates or develop existing security personnel.",
+
+    "assessment.individuals.eyebrow": "FOR INDIVIDUALS",
+    "assessment.individuals.title": "Find your path in security",
+    "assessment.individuals.body":
+      "Explore which security professions may fit your interests, compare career paths and get concrete suggestions for next steps. The test provides guidance and does not determine whether you are eligible or professionally suitable for a specific role.",
+    "assessment.individuals.point.time": "About five minutes",
+    "assessment.individuals.point.free": "Free",
+    "assessment.individuals.point.account": "No account required",
+    "assessment.individuals.point.guidance": "Personalized career guidance",
+    "assessment.individuals.point.links": "Links to profession guides and next steps",
+    "assessment.individuals.cta": "Take the Security Career Assessment",
+
+    "assessment.orgs.eyebrow": "FOR ORGANIZATIONS",
+    "assessment.orgs.title": "Assess and develop security personnel",
+    "assessment.orgs.body":
+      "Role-based competence assessments for organizations that want stronger decision support during recruitment, verify knowledge among existing personnel, identify competence gaps and plan development activities.",
+    "assessment.orgs.usecaseA.title": "Candidate assessment during recruitment",
+    "assessment.orgs.usecaseA.body":
+      "Invite candidates to role-specific tests and receive structured decision support ahead of interviews, references and further selection.",
+    "assessment.orgs.usecaseB.title": "Competence testing of existing personnel",
+    "assessment.orgs.usecaseB.body":
+      "Test in-house or contracted security personnel against defined role requirements, identify knowledge and competence gaps and track development over time.",
+    "assessment.orgs.customers.title": "Example organizations",
+    "assessment.orgs.customers.1": "Security and guarding companies",
+    "assessment.orgs.customers.2": "Government agencies",
+    "assessment.orgs.customers.3": "Data centers",
+    "assessment.orgs.customers.4": "Critical infrastructure",
+    "assessment.orgs.customers.5": "Corporate security departments",
+    "assessment.orgs.customers.6": "Organizations purchasing security services",
+    "assessment.orgs.cta": "Explore the solution for organizations",
+    "assessment.orgs.status": "In development — preview of an upcoming product.",
+
+    "assessment.compare.title": "The difference between guidance and competence testing",
+    "assessment.compare.guidance.title": "Career guidance",
+    "assessment.compare.guidance.1": "Designed for individuals",
+    "assessment.compare.guidance.2": "Explores interests and possible career paths",
+    "assessment.compare.guidance.3": "No employment decision",
+    "assessment.compare.guidance.4": "No eligibility determination",
+    "assessment.compare.guidance.5": "Free entry product",
+    "assessment.compare.pro.title": "Professional competence assessment",
+    "assessment.compare.pro.1": "Commissioned by an organization",
+    "assessment.compare.pro.2": "Linked to a defined role and purpose",
+    "assessment.compare.pro.3": "May include knowledge, situational judgement and practical scenarios",
+    "assessment.compare.pro.4": "Provides structured human decision support",
+    "assessment.compare.pro.5": "Can be used for candidates or existing personnel",
+    "assessment.compare.pro.6": "Never automatically approves, rejects or ranks people for employment",
+
+    "assessment.workflow.title": "How we think about the organizational workflow",
+    "assessment.workflow.subtitle": "Preview of an upcoming product — not active functionality.",
+    "assessment.workflow.step1": "Select role or competence area",
+    "assessment.workflow.step2": "Invite candidates or employees",
+    "assessment.workflow.step3": "Complete role-specific test",
+    "assessment.workflow.step4": "Review section-level results",
+    "assessment.workflow.step5": "Identify competence gaps",
+    "assessment.workflow.step6": "Plan interview, training or follow-up",
+
+    "assessment.responsible.title": "Responsible use",
+    "assessment.responsible.body":
+      "CQrityjob's professional assessments support human decisions. The organization remains responsible for final recruitment, authorization, employment, training and personnel decisions.",
     "assessment.status":
-      "In development. Contact us if you want to help shape the first release.",
+      "The career test is available today. The organization solution is under development.",
 
     "about.title": "Our mission",
     "about.lead":
