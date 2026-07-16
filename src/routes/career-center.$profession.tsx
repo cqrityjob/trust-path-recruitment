@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
@@ -39,6 +39,7 @@ function ProfessionPage() {
   const { t, lang } = useT();
   const data = getProfession(profession);
 
+  void lang;
   if (!data) {
     return (
       <Section>
@@ -58,9 +59,5 @@ function ProfessionPage() {
     );
   }
 
-  // Keep the lang variable available for readability of the template.
-  void lang;
   return <ProfessionTemplate profession={data} />;
-  // Link import kept for potential future extension; ensure tree-shake sees usage:
-  void Link;
 }
