@@ -18,6 +18,7 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
+import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
 
 const SecurityCareerAssessmentRoute =
@@ -66,6 +67,11 @@ const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CareerCenterRoute,
 } as any)
+const CareerCenterStartRoute = CareerCenterStartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => CareerCenterRoute,
+} as any)
 const CareerCenterProfessionRoute = CareerCenterProfessionRouteImport.update({
   id: '/$profession',
   path: '/$profession',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/jobs': typeof JobsRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
+  '/career-center/start': typeof CareerCenterStartRoute
   '/career-center/': typeof CareerCenterIndexRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/jobs': typeof JobsRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
+  '/career-center/start': typeof CareerCenterStartRoute
   '/career-center': typeof CareerCenterIndexRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/jobs': typeof JobsRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
+  '/career-center/start': typeof CareerCenterStartRoute
   '/career-center/': typeof CareerCenterIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/security-career-assessment'
     | '/career-center/$profession'
+    | '/career-center/start'
     | '/career-center/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/security-career-assessment'
     | '/career-center/$profession'
+    | '/career-center/start'
     | '/career-center'
   id:
     | '__root__'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/security-career-assessment'
     | '/career-center/$profession'
+    | '/career-center/start'
     | '/career-center/'
   fileRoutesById: FileRoutesById
 }
@@ -222,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCenterIndexRouteImport
       parentRoute: typeof CareerCenterRoute
     }
+    '/career-center/start': {
+      id: '/career-center/start'
+      path: '/start'
+      fullPath: '/career-center/start'
+      preLoaderRoute: typeof CareerCenterStartRouteImport
+      parentRoute: typeof CareerCenterRoute
+    }
     '/career-center/$profession': {
       id: '/career-center/$profession'
       path: '/$profession'
@@ -234,11 +253,13 @@ declare module '@tanstack/react-router' {
 
 interface CareerCenterRouteChildren {
   CareerCenterProfessionRoute: typeof CareerCenterProfessionRoute
+  CareerCenterStartRoute: typeof CareerCenterStartRoute
   CareerCenterIndexRoute: typeof CareerCenterIndexRoute
 }
 
 const CareerCenterRouteChildren: CareerCenterRouteChildren = {
   CareerCenterProfessionRoute: CareerCenterProfessionRoute,
+  CareerCenterStartRoute: CareerCenterStartRoute,
   CareerCenterIndexRoute: CareerCenterIndexRoute,
 }
 
