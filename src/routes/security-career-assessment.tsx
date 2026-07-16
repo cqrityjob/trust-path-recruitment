@@ -21,8 +21,20 @@ import { ResultSection } from "@/components/assessment/ResultSection";
 import { FutureRecommendation } from "@/components/assessment/FutureRecommendation";
 import { PrimaryButton, PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { careerMatches, pickList, pickText, questions } from "@/lib/assessment-content";
+import { pickText, questions } from "@/lib/assessment-content";
 import { getProfession } from "@/lib/career-center";
+import {
+  computeMatches,
+  confidenceLabel,
+  dimensionById,
+  earlyModelNote,
+  formalRequirementsNote,
+  gapsExplanation,
+  matchIndicatorLabel,
+  matchTooltip,
+  whyThisResult,
+  type MatchResult,
+} from "@/lib/career-assessment";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -74,7 +86,7 @@ function AssessmentApp() {
         onBack={() => setPhase("intro")}
       />
     );
-  return <Results onRetake={reset} />;
+  return <Results answers={answers} onRetake={reset} />;
 }
 
 /* -------------------------------- Landing -------------------------------- */
@@ -292,13 +304,35 @@ function Questions({
 
 /* -------------------------------- Results -------------------------------- */
 
-function Results({ onRetake }: { onRetake: () => void }) {
+function Results({
+  answers,
+  onRetake,
+}: {
+  answers: Record<string, Answer>;
+  onRetake: () => void;
+}) {
   const { t, lang } = useT();
-  const [activeId, setActiveId] = useState(careerMatches[0].id);
-  const active = useMemo(
-    () => careerMatches.find((m) => m.id === activeId) ?? careerMatches[0],
-    [activeId],
+
+  // Compute matches from the answers using the transparent engine.
+  const engine = useMemo(() => computeMatches(answers), [answers]);
+  const topMatches = engine.matches.slice(0, 5);
+
+  const professionOf = (m: MatchResult) => getProfession(m.professionId);
+  const titleOf = (m: MatchResult) => {
+    const p = professionOf(m);
+    if (p) return { sv: p.titleSv, en: p.titleEn };
+    return { sv: m.professionId, en: m.professionId };
+  };
+
+  const [activeId, setActiveId] = useState(topMatches[0]?.professionId ?? "");
+  const active = useMemo<MatchResult>(
+    () => topMatches.find((m) => m.professionId === activeId) ?? topMatches[0],
+    [activeId, topMatches],
   );
+  const activeProfession = active ? professionOf(active) : undefined;
+  const activeTitle = active ? titleOf(active) : { sv: "", en: "" };
+  const why = active ? whyThisResult(active, activeTitle) : { sv: "", en: "" };
+  const gaps = active ? gapsExplanation(active.gaps) : { sv: "", en: "" };
 
   return (
     <AssessmentLayout>
@@ -321,96 +355,120 @@ function Results({ onRetake }: { onRetake: () => void }) {
             {t("sca.results.section.top")}
           </p>
           <div className="mt-4 flex flex-col gap-3">
-            {careerMatches.map((m, i) => (
+            {topMatches.map((m, i) => (
               <CareerMatchCard
-                key={m.id}
-                match={m}
+                key={m.professionId}
+                title={titleOf(m)}
+                score={m.displayedMatch}
+                confidence={m.confidence}
                 rank={i + 1}
-                active={m.id === activeId}
-                onSelect={() => setActiveId(m.id)}
+                active={m.professionId === activeId}
+                onSelect={() => setActiveId(m.professionId)}
               />
             ))}
           </div>
         </aside>
 
         <div className="lg:col-span-3">
+          {active && (
+          <>
           <div className="rounded-lg border border-border bg-muted/30 p-8">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-accent">
-                  {t("sca.results.match.label")}
+                <p
+                  className="text-xs font-medium uppercase tracking-widest text-accent"
+                  title={pickText(matchTooltip, lang)}
+                >
+                  {pickText(matchIndicatorLabel, lang)}
                 </p>
                 <h2
                   className="mt-2 text-3xl font-semibold tracking-tight text-foreground"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  {pickText(active.title, lang)}
+                  {pickText(activeTitle, lang)}
                 </h2>
+                <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
+                  {pickText(confidenceLabel[active.confidence], lang)}
+                </p>
               </div>
               <div className="text-right">
                 <p className="text-4xl font-semibold tracking-tight text-foreground tabular-nums">
-                  {active.score}
+                  {active.displayedMatch}
                   <span className="ml-0.5 text-lg text-muted-foreground">%</span>
+                </p>
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  {pickText(matchIndicatorLabel, lang)}
                 </p>
               </div>
             </div>
             <p className="mt-6 text-sm leading-relaxed text-foreground">
-              {pickText(active.why, lang)}
+              {pickText(why, lang)}
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              {pickText(matchTooltip, lang)}
             </p>
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <ResultSection title={t("sca.results.section.strengths")}>
-              <ul className="space-y-2">
-                {pickList(active.strengths, lang).map((s) => (
-                  <li key={s} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
+              {active.topDimensions.length ? (
+                <ul className="space-y-2">
+                  {active.topDimensions.map((d) => (
+                    <li key={d} className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
+                      <span>{pickText(dimensionById[d].name, lang)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">
+                  {lang === "sv"
+                    ? "Inga tydliga styrkedimensioner ännu."
+                    : "No clear dimensional strengths yet."}
+                </p>
+              )}
             </ResultSection>
             <ResultSection title={t("sca.results.section.develop")}>
-              <ul className="space-y-2">
-                {pickList(active.develop, lang).map((s) => (
-                  <li key={s} className="flex items-start gap-2">
-                    <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
+              {active.gaps.length ? (
+                <ul className="space-y-2">
+                  {active.gaps.map((d) => (
+                    <li key={d} className="flex items-start gap-2">
+                      <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
+                      <span>{pickText(dimensionById[d].name, lang)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">{pickText(gaps, lang)}</p>
+              )}
             </ResultSection>
-            <ResultSection title={t("sca.results.section.education")}>
-              <p>{pickText(active.education, lang)}</p>
+            <ResultSection title={t("sca.results.section.formal")}>
+              <p className="text-muted-foreground">
+                {pickText(formalRequirementsNote, lang)}
+              </p>
+              {active.regulated && (
+                <p className="mt-2 text-xs uppercase tracking-widest text-accent">
+                  {t("sca.results.regulated")}
+                </p>
+              )}
             </ResultSection>
-            <ResultSection title={t("sca.results.section.certs")}>
-              <div className="flex flex-wrap gap-2">
-                {pickList(active.certifications, lang).map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </ResultSection>
-            <ResultSection title={t("sca.results.section.next")}>
-              <p>{pickText(active.nextStep, lang)}</p>
+            <ResultSection title={t("sca.results.section.why")}>
+              <p>{pickText(why, lang)}</p>
             </ResultSection>
             <ResultSection title={t("sca.results.related_jobs")}>
               <p className="text-muted-foreground">{t("sca.results.related_jobs.hint")}</p>
+            </ResultSection>
+            <ResultSection title={t("sca.results.section.model_note")}>
+              <p className="text-muted-foreground">{pickText(earlyModelNote, lang)}</p>
             </ResultSection>
           </div>
 
           <div className="mt-4">
             <ResultSection title={t("sca.results.profession_guide")}>
               {(() => {
-                // Try to link the top career match to a real profession guide.
-                const guide = getProfession(active.id.replace(/_/g, "-"));
-                if (guide) {
+                if (activeProfession) {
                   return (
-                    <PrimaryLink to={`/career-center/${guide.slug}`} variant="ghost">
+                    <PrimaryLink to={`/career-center/${activeProfession.slug}`} variant="ghost">
                       {t("cc.cta.explore")}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </PrimaryLink>
@@ -424,6 +482,8 @@ function Results({ onRetake }: { onRetake: () => void }) {
               })()}
             </ResultSection>
           </div>
+          </>
+          )}
         </div>
       </div>
 

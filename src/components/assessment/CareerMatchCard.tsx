@@ -1,15 +1,21 @@
 import { useT } from "@/i18n/context";
-import type { CareerMatch } from "@/lib/assessment-content";
-import { pickText } from "@/lib/assessment-content";
+import type { Bi } from "@/lib/career-center/types";
+import { pickBi } from "@/lib/career-center/selectors";
 import { cn } from "@/lib/utils";
+import { confidenceLabel } from "@/lib/career-assessment";
+import type { ConfidenceLevel } from "@/lib/career-assessment";
 
 export function CareerMatchCard({
-  match,
+  title,
+  score,
+  confidence,
   rank,
   active,
   onSelect,
 }: {
-  match: CareerMatch;
+  title: Bi;
+  score: number;
+  confidence: ConfidenceLevel;
   rank: number;
   active?: boolean;
   onSelect?: () => void;
@@ -33,16 +39,16 @@ export function CareerMatchCard({
             className="text-base font-semibold tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            {pickText(match.title, lang)}
+            {pickBi(title, lang)}
           </p>
           <p className="mt-0.5 text-xs uppercase tracking-widest text-muted-foreground">
-            {t("sca.results.match.label")}
+            {t("sca.results.match.label")} · {pickBi(confidenceLabel[confidence], lang)}
           </p>
         </div>
       </div>
       <div className="text-right">
         <p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
-          {match.score}
+          {score}
           <span className="ml-0.5 text-sm text-muted-foreground">%</span>
         </p>
       </div>
