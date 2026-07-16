@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Recruit, verify and assess security professionals on a platform designed for the security industry.",
+          "The modern recruitment, verification and assessment platform built exclusively for the security industry.",
       },
       { property: "og:url", content: "/" },
     ],
