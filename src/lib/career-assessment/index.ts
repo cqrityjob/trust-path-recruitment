@@ -6,6 +6,7 @@ export * from "./matching-engine";
 export * from "./explanations";
 export * from "./test-personas";
 export * from "./validation";
+export * from "./result-session";
 
 // Dev-mode console report.
 import { reportOnce } from "./validation";
