@@ -18,9 +18,9 @@ export const Route = createFileRoute("/about")({
         content:
           "Our mission, vision and why we build exclusively for the security industry.",
       },
-      { property: "og:url", content: "/about" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/about" },
     ],
-    links: [{ rel: "canonical", href: "/about" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/about" }],
   }),
   component: AboutPage,
 });

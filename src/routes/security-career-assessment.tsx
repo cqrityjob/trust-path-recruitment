@@ -64,10 +64,10 @@ export const Route = createFileRoute("/security-career-assessment")({
           "Discover which security careers may suit you. Free, about 5 minutes, no account required.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/security-career-assessment" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/security-career-assessment" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/security-career-assessment" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/security-career-assessment" }],
   }),
   component: AssessmentApp,
 });

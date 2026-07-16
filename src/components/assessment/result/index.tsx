@@ -610,7 +610,8 @@ export function CareerComparison({
 
             {r.slug && (
               <Link
-                to={`/career-center/${r.slug}`}
+                to="/career-center/$profession"
+                params={{ profession: r.slug }}
                 className="mt-auto inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline"
               >
                 {t("cc.cta.explore")} <ArrowUpRight className="h-3.5 w-3.5" />
@@ -1054,7 +1055,8 @@ export function ContinueJourney({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {topSlug && (
           <Link
-            to={`/career-center/${topSlug}`}
+            to="/career-center/$profession"
+            params={{ profession: topSlug }}
             className="group flex flex-col gap-3 rounded-md border border-border bg-background p-5 transition-colors hover:border-accent/60"
           >
             <BookOpen className="h-5 w-5 text-accent" strokeWidth={1.5} />

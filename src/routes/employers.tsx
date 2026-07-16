@@ -28,10 +28,10 @@ export const Route = createFileRoute("/employers")({
           "Recruitment, candidate assessment, workforce development and competence verification for security industry employers.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/employers" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/employers" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/employers" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/employers" }],
   }),
   component: EmployersPage,
 });

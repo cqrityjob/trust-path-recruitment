@@ -22,10 +22,10 @@ export const Route = createFileRoute("/assessment")({
           "Two separated solutions: free career guidance for individuals and role-based competence assessments for organizations.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/assessment" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/assessment" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/assessment" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/assessment" }],
   }),
   component: AssessmentPage,
 });

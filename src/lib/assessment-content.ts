@@ -2,7 +2,6 @@ import type { Lang } from "@/i18n/dictionaries";
 
 export type QuestionType = "single" | "multi" | "rating";
 type Bi = { sv: string; en: string };
-type BiList = { sv: string[]; en: string[] };
 
 export type Question = {
   id: string;
@@ -114,60 +113,4 @@ export const questions: Question[] = [
     scaleLabels: { min: { sv: "Osäker", en: "Unsure" }, max: { sv: "Väldigt tydligt mål", en: "Very clear goal" } } },
 ];
 
-export type CareerMatch = {
-  id: string;
-  score: number;
-  title: Bi;
-  why: Bi;
-  strengths: BiList;
-  develop: BiList;
-  education: Bi;
-  certifications: BiList;
-  nextStep: Bi;
-};
-
-export const careerMatches: CareerMatch[] = [
-  { id: "security_manager", score: 92,
-    title: { sv: "Säkerhetschef", en: "Security Manager" },
-    why: { sv: "Din profil visar tydligt intresse för strategiskt tänkande, planering och att leda andra — kärnegenskaper för en säkerhetschef.", en: "Your profile shows a clear interest in strategic thinking, planning and leading others — core qualities for a Security Manager." },
-    strengths: { sv: ["Strategiskt tänkande", "Struktur och planering", "Kommunikation i team"], en: ["Strategic thinking", "Structure and planning", "Team communication"] },
-    develop: { sv: ["Fördjupning i riskmetodik", "Erfarenhet av budgetansvar"], en: ["Deeper risk methodology", "Budget-ownership experience"] },
-    education: { sv: "Eftergymnasial utbildning inom säkerhet, risk eller ledarskap.", en: "Post-secondary education in security, risk or leadership." },
-    certifications: { sv: ["CPP", "PSP", "ISO 22301 Lead Implementer"], en: ["CPP", "PSP", "ISO 22301 Lead Implementer"] },
-    nextStep: { sv: "Utforska yrkesguiden för säkerhetschef och identifiera en mentor.", en: "Explore the Security Manager profession guide and identify a mentor." } },
-  { id: "risk_manager", score: 87,
-    title: { sv: "Risk Manager", en: "Risk Manager" },
-    why: { sv: "Din analytiska förmåga och riskmedvetenhet gör dig särskilt lämpad för att identifiera och hantera organisatoriska risker.", en: "Your analytical ability and risk awareness make you well-suited to identifying and managing organisational risk." },
-    strengths: { sv: ["Analytiskt tänkande", "Riskbedömning", "Långsiktig planering"], en: ["Analytical thinking", "Risk assessment", "Long-term planning"] },
-    develop: { sv: ["Kvantitativa metoder", "Regulatorisk expertis"], en: ["Quantitative methods", "Regulatory expertise"] },
-    education: { sv: "Akademisk bakgrund inom risk management, ekonomi eller säkerhet.", en: "Academic background in risk management, finance or security." },
-    certifications: { sv: ["ISO 31000", "CRISC", "FRM"], en: ["ISO 31000", "CRISC", "FRM"] },
-    nextStep: { sv: "Läs mer om riskhantering och sök en junior risk-roll.", en: "Read up on risk management and target a junior risk role." } },
-  { id: "police", score: 78,
-    title: { sv: "Polis", en: "Police Officer" },
-    why: { sv: "Ditt intresse för att skydda samhället, hantera situationer under press och arbeta med tydliga rutiner speglar polisyrkets kärna.", en: "Your interest in protecting communities, handling pressure and following clear procedures reflects the core of police work." },
-    strengths: { sv: ["Stresstålighet", "Beslutsfattande under press", "Möten med människor"], en: ["Stress tolerance", "Decision-making under pressure", "Public interaction"] },
-    develop: { sv: ["Fysisk träning", "Rättslig grundkunskap"], en: ["Physical training", "Foundational legal knowledge"] },
-    education: { sv: "Polisutbildningen (Polismyndigheten).", en: "National police academy programme." },
-    certifications: { sv: ["Nationell polisutbildning"], en: ["National police academy"] },
-    nextStep: { sv: "Utforska antagningskrav och prova en ride-along om möjligt.", en: "Explore admission requirements and try a ride-along if available." } },
-  { id: "security_technician", score: 74,
-    title: { sv: "Säkerhetstekniker", en: "Security Technician" },
-    why: { sv: "Ditt tekniska intresse och praktiska lärstil passar en roll där du bygger, driftar och utvecklar tekniska säkerhetssystem.", en: "Your technical curiosity and hands-on learning style fit a role building, operating and improving technical security systems." },
-    strengths: { sv: ["Tekniskt intresse", "Praktiskt lärande", "Systemtänk"], en: ["Technical interest", "Hands-on learning", "Systems thinking"] },
-    develop: { sv: ["Nätverksgrunder", "Certifikat inom passersystem"], en: ["Networking fundamentals", "Access-control certifications"] },
-    education: { sv: "Yrkesutbildning inom säkerhetsteknik eller elektronik.", en: "Vocational training in security technology or electronics." },
-    certifications: { sv: ["SBSC", "ONVIF-relaterade certifikat"], en: ["Manufacturer certifications", "ONVIF-related credentials"] },
-    nextStep: { sv: "Praktisera med en installatör eller genomför en grundkurs i CCTV.", en: "Apprentice with an installer or take an introductory CCTV course." } },
-  { id: "aml", score: 69,
-    title: { sv: "AML-specialist", en: "AML Specialist" },
-    why: { sv: "Din nyfikenhet på mönster, regelefterlevnad och analys skulle komma till nytta i arbete mot finansiell brottslighet.", en: "Your interest in patterns, compliance and analysis translates well to fighting financial crime." },
-    strengths: { sv: ["Mönsterigenkänning", "Noggrannhet", "Regelverk"], en: ["Pattern recognition", "Attention to detail", "Regulatory literacy"] },
-    develop: { sv: ["Finansmarknadskunskap", "Erfarenhet av transaktionsövervakning"], en: ["Financial-markets literacy", "Transaction-monitoring exposure"] },
-    education: { sv: "Utbildning inom ekonomi, juridik eller compliance.", en: "Education in economics, law or compliance." },
-    certifications: { sv: ["CAMS", "ICA Diploma"], en: ["CAMS", "ICA Diploma"] },
-    nextStep: { sv: "Läs om AML-ramverket och sök en analytikerroll som ingång.", en: "Read up on the AML framework and target an analyst role as an entry point." } },
-];
-
 export function pickText(v: Bi, lang: Lang): string { return v[lang]; }
-export function pickList(v: BiList, lang: Lang): string[] { return v[lang]; }

@@ -88,12 +88,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "CQrityjob" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:title", content: "CQrityjob — Where trust comes first." },
-      { name: "twitter:title", content: "CQrityjob — Where trust comes first." },
-      { property: "og:description", content: "The modern recruitment, verification and assessment platform built exclusively for the security industry." },
-      { name: "twitter:description", content: "The modern recruitment, verification and assessment platform built exclusively for the security industry." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c21b9e37-3c42-4bee-aeca-573b102762d8/id-preview-4bc17463--9ec625ef-34a1-4b4b-8cbb-712cae168579.lovable.app-1784203708063.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/c21b9e37-3c42-4bee-aeca-573b102762d8/id-preview-4bc17463--9ec625ef-34a1-4b4b-8cbb-712cae168579.lovable.app-1784203708063.png" },
     ],
     links: [
       {

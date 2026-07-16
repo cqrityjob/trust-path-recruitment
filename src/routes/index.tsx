@@ -17,7 +17,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { professions } from "@/lib/professions";
+import { professions as allProfessions, icon, L } from "@/lib/career-center";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute("/")({
@@ -36,10 +36,10 @@ export const Route = createFileRoute("/")({
           "Career discovery, professional development, recruitment and assessment — built exclusively for the security industry.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -59,7 +59,11 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { t } = useT();
+  const { t, lang } = useT();
+
+  const featuredProfessions = allProfessions
+    .filter((p) => p.status === "researched")
+    .slice(0, 6);
 
   const pillars = [
     {
@@ -162,7 +166,7 @@ function Index() {
                 {t("cta.assessment")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
-              <PrimaryLink to="/career-center" variant="ghost">
+            <PrimaryLink to="/career-center" variant="ghost">
                 {t("cta.careers")}
               </PrimaryLink>
             </div>
@@ -239,26 +243,30 @@ function Index() {
           </Link>
         </div>
         <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
-          {professions.map((p) => (
-            <Link
-              key={p.id}
-              to="/career-center"
-              className="group flex flex-col gap-4 bg-background p-6 transition-colors hover:bg-muted/40"
-            >
-              <div className="flex items-start justify-between">
-                <p.icon className="h-5 w-5 text-accent" strokeWidth={1.5} />
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  {t(p.titleKey as TranslationKey)}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {t(p.descKey as TranslationKey)}
-                </p>
-              </div>
-            </Link>
-          ))}
+          {featuredProfessions.map((p) => {
+            const Icon = icon(p.icon);
+            return (
+              <Link
+                key={p.id}
+                to="/career-center/$profession"
+                params={{ profession: p.slug }}
+                className="group flex flex-col gap-4 bg-background p-6 transition-colors hover:bg-muted/40"
+              >
+                <div className="flex items-start justify-between">
+                  <Icon className="h-5 w-5 text-accent" strokeWidth={1.5} />
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold tracking-tight text-foreground">
+                    {lang === "sv" ? p.titleSv : p.titleEn}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {L(p.description, lang)}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </Section>
 
@@ -281,8 +289,8 @@ function Index() {
                 {t("home.assessment.cta")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
-              <span className="inline-flex items-center rounded-full border border-border px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                {t("status.in_development")}
+              <span className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-accent">
+                {t("status.available")}
               </span>
             </div>
             <p className="mt-6 max-w-md text-xs text-muted-foreground">
