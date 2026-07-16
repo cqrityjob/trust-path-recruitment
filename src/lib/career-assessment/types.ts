@@ -1,8 +1,11 @@
-import type { Bi } from "@/lib/career-center/types";
+import type { Bi, ContentStatus as CareerCenterStatus } from "@/lib/career-center/types";
 
 export type { Bi };
+export type { CareerCenterStatus };
 
-// Content lifecycle (mirrors career-center convention).
+// Assessment-side content lifecycle for target profiles.
+// Provisional = hypothesis in the matching engine, not the same as Career Center
+// content status (placeholder | researched | reviewed | published).
 export type ContentStatus = "placeholder" | "provisional" | "researched" | "reviewed";
 
 // -------- Dimensions --------
@@ -92,6 +95,7 @@ export interface DimensionScore {
   raw: number;
   normalized: number; // 0..100
   evidence: number;   // number of questions that contributed
+  observed: boolean;  // false when no answered question contributed
 }
 
 export interface MatchResult {
@@ -100,18 +104,27 @@ export interface MatchResult {
   rawSimilarity: number;    // 0..1
   displayedMatch: number;   // 0..100 after caps
   confidence: ConfidenceLevel;
+  confidenceReason: Bi;
   gatePassed: boolean;
   gateNote?: Bi;
   topDimensions: DimensionId[];
   gaps: DimensionId[];
+  unobservedImportant: DimensionId[];
   contributingImportantCount: number;
+  importantDimensionCount: number;
+  mismatchPenalty: number;
+  distinguishingCoverage: number; // 0..1
   regulated?: boolean;
-  status: ContentStatus;
+  status: ContentStatus;                       // profile hypothesis status
+  professionContentStatus?: CareerCenterStatus; // Career Center content lifecycle
 }
 
 export interface EngineResult {
   userVector: DimensionScore[];
   matches: MatchResult[]; // sorted by displayedMatch desc
+  answeredCount: number;
+  observedDimensions: DimensionId[];
+  unobservedDimensions: DimensionId[];
 }
 
 // -------- Answers --------

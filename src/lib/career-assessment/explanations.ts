@@ -57,3 +57,21 @@ export const earlyModelNote: Bi = {
   sv: "Det här är en tidig karriärvägledningsmodell. Resultatet kan förändras när dina intressen och erfarenheter utvecklas.",
   en: "This is an early career-guidance model. Results may change as your interests and experience develop.",
 };
+
+// Notice shown when the top matched profession is still a Career Center
+// placeholder — the match is real, but the underlying profession guide is
+// still being developed and should not be presented as verified.
+export const placeholderProfessionNotice: Bi = {
+  sv: "Yrkesprofilen och rekommendationerna för den här rollen är fortfarande under utveckling. Matchningen är vägledande — detaljerad guide och källor tillkommer.",
+  en: "The profession profile and recommendations for this role are still being developed. The match is indicative — a detailed guide and sources are on the way.",
+};
+
+export const researchedProfessionNotice: Bi = {
+  sv: "Yrkesguiden bygger på insamlad information och pågående granskning.",
+  en: "The profession guide is based on sourced information and ongoing review.",
+};
+
+export const unansweredReducesEvidence: Bi = {
+  sv: "Obesvarade frågor bidrar inte med underlag och kan sänka säkerheten i matchningen.",
+  en: "Unanswered questions provide no evidence and can lower the confidence of a match.",
+};

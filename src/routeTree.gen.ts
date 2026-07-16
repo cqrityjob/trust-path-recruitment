@@ -20,6 +20,7 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
+import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -82,6 +83,12 @@ const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CareerCenterRoute,
 } as any)
+const DevCareerAssessmentCalibrationRoute =
+  DevCareerAssessmentCalibrationRouteImport.update({
+    id: '/dev/career-assessment-calibration',
+    path: '/dev/career-assessment-calibration',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CareerCenterStartRoute = CareerCenterStartRouteImport.update({
   id: '/start',
   path: '/start',
@@ -126,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
+  '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
+  '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -162,6 +171,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
+  '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/career-center/$profession'
     | '/career-center/start'
+    | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/career-center/$profession'
     | '/career-center/start'
+    | '/dev/career-assessment-calibration'
     | '/career-center'
     | '/.mcp/invoke-tool/$tool'
   id:
@@ -217,6 +229,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/career-center/$profession'
     | '/career-center/start'
+    | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
@@ -234,6 +247,7 @@ export interface RootRouteChildren {
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -316,6 +330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCenterIndexRouteImport
       parentRoute: typeof CareerCenterRoute
     }
+    '/dev/career-assessment-calibration': {
+      id: '/dev/career-assessment-calibration'
+      path: '/dev/career-assessment-calibration'
+      fullPath: '/dev/career-assessment-calibration'
+      preLoaderRoute: typeof DevCareerAssessmentCalibrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/career-center/start': {
       id: '/career-center/start'
       path: '/start'
@@ -384,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport

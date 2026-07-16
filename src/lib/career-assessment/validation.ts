@@ -1,9 +1,10 @@
 import { questions } from "@/lib/assessment-content";
 import { allDimensionIds } from "./dimensions";
-import { computeMatches } from "./matching-engine";
+import { computeMatches, computeUserVector } from "./matching-engine";
 import { professionProfileById, professionProfiles } from "./profession-profiles";
 import { questionMappingById } from "./question-mappings";
 import { testPersonas } from "./test-personas";
+import type { DimensionId, ProfessionMatchGate } from "./types";
 
 export interface ValidationIssue {
   code: string;
@@ -69,6 +70,81 @@ export function runValidation(): ValidationIssue[] {
     if (!exercised.has(d))
       issues.push({ code: "DIM_UNUSED", message: `Dimension ${d} is not exercised by any question`, severity: "warning" });
 
+  // 4. Gates must reference known dimensions and profiles must include the
+  // dimensions their gate reads.
+  const gateDeps: Record<ProfessionMatchGate, DimensionId[]> = {
+    leadership_strategic: ["leadership_orientation", "strategic_orientation"],
+    technical: ["technical_orientation"],
+    investigative_analytical: ["investigation_orientation", "analytical_orientation"],
+    operational: ["operational_orientation"],
+    none: [],
+  };
+  for (const p of professionProfiles) {
+    for (const d of gateDeps[p.gate]) {
+      if (!allDimensionIds.includes(d)) {
+        issues.push({
+          code: "GATE_UNKNOWN_DIM",
+          message: `${p.professionId}: gate references unknown dimension '${d}'`,
+          severity: "error",
+        });
+      }
+    }
+  }
+
+  // 5. Unobserved dimensions must not default to 50 in a vector when no answer
+  // was provided (observed=false regardless of normalized display value).
+  const emptyVector = computeUserVector({});
+  for (const v of emptyVector) {
+    if (v.observed) {
+      issues.push({
+        code: "EMPTY_ANSWER_OBSERVED",
+        message: `Empty answer set marks '${v.dimension}' as observed`,
+        severity: "error",
+      });
+    }
+  }
+  // With an empty answer set no profession should have raw evidence for its
+  // important dims.
+  const emptyMatches = computeMatches({});
+  for (const m of emptyMatches.matches) {
+    if (m.contributingImportantCount > 0) {
+      issues.push({
+        code: "EMPTY_IMPORTANT_EVIDENCE",
+        message: `${m.professionId}: reports evidence for empty answers`,
+        severity: "error",
+      });
+    }
+    if (m.confidence === "stronger") {
+      issues.push({
+        code: "EMPTY_STRONG_CONFIDENCE",
+        message: `${m.professionId}: reports 'stronger' confidence for empty answers`,
+        severity: "error",
+      });
+    }
+  }
+
+  // 6. Persona uniqueness and expectation sanity.
+  const seenIds = new Set<string>();
+  for (const persona of testPersonas) {
+    if (seenIds.has(persona.id)) {
+      issues.push({
+        code: "PERSONA_DUPLICATE",
+        message: `Duplicate persona id '${persona.id}'`,
+        severity: "error",
+      });
+    }
+    seenIds.add(persona.id);
+    for (const disallowed of persona.disallowedTop ?? []) {
+      if (!professionProfileById[disallowed]) {
+        issues.push({
+          code: "PERSONA_UNKNOWN_PROFESSION",
+          message: `${persona.id}: disallowedTop references unknown profession '${disallowed}'`,
+          severity: "error",
+        });
+      }
+    }
+  }
+
   return issues;
 }
 
@@ -99,7 +175,7 @@ export function runPersonaTests(): { outcomes: PersonaTestOutcome[]; diversityPa
   });
 
   const distinctTops = new Set(outcomes.map((o) => o.top5[0]?.professionId));
-  const diversityPassed = distinctTops.size >= 4;
+  const diversityPassed = distinctTops.size >= 5;
   return { outcomes, diversityPassed };
 }
 
