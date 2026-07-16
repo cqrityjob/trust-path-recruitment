@@ -1,14 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SiteHeader() {
   const { t } = useT();
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) setSignedIn(Boolean(data.session));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+        setSignedIn(Boolean(session));
+      }
+    });
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function onSignOut() {
+    await supabase.auth.signOut();
+  }
 
   const nav = [
     { to: "/career-center", label: t("nav.career_center") },
@@ -47,13 +69,22 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-3 md:flex">
           <LanguageSwitcher />
-          <span
-            className="cursor-not-allowed rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-            title={t("nav.signin.tooltip")}
-            aria-disabled="true"
-          >
-            {t("nav.signin")}
-          </span>
+          {signedIn ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              {t("auth.signout")}
+            </button>
+          ) : (
+            <Link
+              to="/auth"
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              {t("nav.signin")}
+            </Link>
+          )}
         </div>
 
         <button
@@ -82,12 +113,23 @@ export function SiteHeader() {
           ))}
           <div className="mt-3 flex items-center justify-between">
             <LanguageSwitcher />
-            <span
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-              title={t("nav.signin.tooltip")}
-            >
-              {t("nav.signin")}
-            </span>
+            {signedIn ? (
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+              >
+                {t("auth.signout")}
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setOpen(false)}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+              >
+                {t("nav.signin")}
+              </Link>
+            )}
           </div>
         </Container>
       </div>
