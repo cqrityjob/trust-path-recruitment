@@ -35,10 +35,10 @@ export const Route = createFileRoute("/career-center/")({
           "Profession guides, career paths, skills and education across the security industry.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/career-center" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/career-center" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/career-center" }],
   }),
   component: CareerCenterIndex,
 });

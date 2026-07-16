@@ -18,9 +18,9 @@ export const Route = createFileRoute("/contact")({
         property: "og:description",
         content: "Reach out about partnering with CQrityjob.",
       },
-      { property: "og:url", content: "/contact" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/contact" },
     ],
-    links: [{ rel: "canonical", href: "/contact" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/contact" }],
   }),
   component: ContactPage,
 });

@@ -36,10 +36,10 @@ export const Route = createFileRoute("/career-center/start")({
           "Explore security careers by describing where you are today — students, career changers, existing professionals, or former police/military.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/career-center/start" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center/start" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/career-center/start" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/career-center/start" }],
   }),
   component: StartPage,
 });

@@ -21,10 +21,10 @@ export const Route = createFileRoute("/jobs")({
           "A dedicated job experience designed for the security industry — coming soon.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/jobs" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/jobs" }],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
   }),
   component: JobsPage,
 });
