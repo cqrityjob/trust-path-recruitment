@@ -22,6 +22,7 @@ import { FutureRecommendation } from "@/components/assessment/FutureRecommendati
 import { PrimaryButton, PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { careerMatches, pickList, pickText, questions } from "@/lib/assessment-content";
+import { getProfession } from "@/lib/career-center";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -404,7 +405,23 @@ function Results({ onRetake }: { onRetake: () => void }) {
 
           <div className="mt-4">
             <ResultSection title={t("sca.results.profession_guide")}>
-              <p className="text-muted-foreground">{t("sca.results.profession_guide.hint")}</p>
+              {(() => {
+                // Try to link the top career match to a real profession guide.
+                const guide = getProfession(active.id.replace(/_/g, "-"));
+                if (guide) {
+                  return (
+                    <PrimaryLink to={`/career-center/${guide.slug}`} variant="ghost">
+                      {t("cc.cta.explore")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </PrimaryLink>
+                  );
+                }
+                return (
+                  <p className="text-muted-foreground">
+                    {t("sca.results.profession_guide.hint")}
+                  </p>
+                );
+              })()}
             </ResultSection>
           </div>
         </div>
