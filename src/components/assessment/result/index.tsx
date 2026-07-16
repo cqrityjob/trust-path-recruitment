@@ -121,7 +121,8 @@ export function ResultHero({
   const isResearched = status === "researched" || status === "reviewed" || status === "published";
   const unansweredCount = session.unobservedDimensions.length; // rough proxy — used only for wording
 
-  const familyLabel = getFamily(profession?.family ?? (active.family as ReturnType<typeof getFamily> extends undefined ? never : never))?.name;
+  const familyId = profession?.family ?? active.family;
+  const familyLabel = getFamily(familyId)?.name;
 
   return (
     <section className="rounded-lg border border-border bg-gradient-to-br from-muted/40 via-background to-background p-8 md:p-10">
