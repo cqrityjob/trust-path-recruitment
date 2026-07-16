@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SecurityCareerAssessmentRouteImport } from './routes/security-career-assessment'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as EmployersRouteImport } from './routes/employers'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -17,6 +18,12 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SecurityCareerAssessmentRoute =
+  SecurityCareerAssessmentRouteImport.update({
+    id: '/security-career-assessment',
+    path: '/security-career-assessment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRoute
+  '/security-career-assessment': typeof SecurityCareerAssessmentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +78,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRoute
+  '/security-career-assessment': typeof SecurityCareerAssessmentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +89,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRoute
+  '/security-career-assessment': typeof SecurityCareerAssessmentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/employers'
     | '/jobs'
+    | '/security-career-assessment'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/employers'
     | '/jobs'
+    | '/security-career-assessment'
   id:
     | '__root__'
     | '/'
@@ -109,6 +121,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/employers'
     | '/jobs'
+    | '/security-career-assessment'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,10 +132,18 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   EmployersRoute: typeof EmployersRoute
   JobsRoute: typeof JobsRoute
+  SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/security-career-assessment': {
+      id: '/security-career-assessment'
+      path: '/security-career-assessment'
+      fullPath: '/security-career-assessment'
+      preLoaderRoute: typeof SecurityCareerAssessmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs': {
       id: '/jobs'
       path: '/jobs'
@@ -183,6 +204,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   EmployersRoute: EmployersRoute,
   JobsRoute: JobsRoute,
+  SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

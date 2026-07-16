@@ -96,10 +96,15 @@ function AssessmentPage() {
           <p>{t("assessment.status")}</p>
         </div>
         <div className="mt-8">
-          <PrimaryLink to="/contact">
-            {t("cta.talk")}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </PrimaryLink>
+          <div className="flex flex-wrap items-center gap-4">
+            <PrimaryLink to="/security-career-assessment">
+              {t("cta.assessment")}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </PrimaryLink>
+            <PrimaryLink to="/contact" variant="ghost">
+              {t("cta.talk")}
+            </PrimaryLink>
+          </div>
         </div>
       </Section>
     </SiteLayout>

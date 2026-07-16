@@ -158,7 +158,7 @@ function Index() {
               {t("home.hero.subtitle")}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
-              <PrimaryLink to="/assessment">
+              <PrimaryLink to="/security-career-assessment">
                 {t("cta.assessment")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
@@ -277,7 +277,7 @@ function Index() {
             </h2>
             <p className="mt-4 text-muted-foreground">{t("home.assessment.subtitle")}</p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <PrimaryLink to="/assessment">
+              <PrimaryLink to="/security-career-assessment">
                 {t("home.assessment.cta")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </PrimaryLink>
