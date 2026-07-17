@@ -24,6 +24,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
+import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
@@ -115,6 +116,11 @@ const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CareerCenterRoute,
+} as any)
+const JobsSlugRoute = JobsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => JobsRoute,
 } as any)
 const DevCareerAssessmentCalibrationRoute =
   DevCareerAssessmentCalibrationRouteImport.update({
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/jobs/$slug': typeof JobsSlugRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/jobs/$slug'
     | '/career-center'
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -522,6 +534,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/career-center/'
       preLoaderRoute: typeof CareerCenterIndexRouteImport
       parentRoute: typeof CareerCenterRoute
+    }
+    '/jobs/$slug': {
+      id: '/jobs/$slug'
+      path: '/$slug'
+      fullPath: '/jobs/$slug'
+      preLoaderRoute: typeof JobsSlugRouteImport
+      parentRoute: typeof JobsRoute
     }
     '/dev/career-assessment-calibration': {
       id: '/dev/career-assessment-calibration'
@@ -711,12 +730,14 @@ const CareerCenterRouteWithChildren = CareerCenterRoute._addFileChildren(
 )
 
 interface JobsRouteChildren {
+  JobsSlugRoute: typeof JobsSlugRoute
   JobsIndexRoute: typeof JobsIndexRoute
   JobsFamilyFamilyIdRoute: typeof JobsFamilyFamilyIdRoute
   JobsProfessionProfessionSlugRoute: typeof JobsProfessionProfessionSlugRoute
 }
 
 const JobsRouteChildren: JobsRouteChildren = {
+  JobsSlugRoute: JobsSlugRoute,
   JobsIndexRoute: JobsIndexRoute,
   JobsFamilyFamilyIdRoute: JobsFamilyFamilyIdRoute,
   JobsProfessionProfessionSlugRoute: JobsProfessionProfessionSlugRoute,
