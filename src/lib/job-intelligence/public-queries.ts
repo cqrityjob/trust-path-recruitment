@@ -30,7 +30,18 @@ export type PublicJobCard = {
   published_at: string | null;
   deadline_at: string | null;
   employer_id: string;
-  employer?: { name: string; slug: string } | null;
+  employer?: PublicEmployer | null;
+};
+
+export type PublicEmployer = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  website: string | null;
+  country: string | null;
+  description_sv: string | null;
+  description_en: string | null;
 };
 
 export type PublicJobDetail = PublicJobCard & {
@@ -68,16 +79,18 @@ export type JobsQueryArgs = {
 
 async function attachEmployers<T extends { employer_id: string }>(
   rows: T[],
-): Promise<Array<T & { employer: { name: string; slug: string } | null }>> {
+): Promise<Array<T & { employer: PublicEmployer | null }>> {
   const ids = Array.from(new Set(rows.map((r) => r.employer_id).filter(Boolean)));
   if (ids.length === 0) return rows.map((r) => ({ ...r, employer: null }));
   const { data, error } = await supabase
     .from("employers")
-    .select("id, name, slug")
+    .select(
+      "id, name, slug, logo_url, website, country, description_sv, description_en",
+    )
     .in("id", ids);
   if (error) throw error;
-  const byId: Record<string, { name: string; slug: string }> = {};
-  for (const e of data ?? []) byId[e.id as string] = { name: e.name, slug: e.slug };
+  const byId: Record<string, PublicEmployer> = {};
+  for (const e of (data ?? []) as PublicEmployer[]) byId[e.id] = e;
   return rows.map((r) => ({ ...r, employer: byId[r.employer_id] ?? null }));
 }
 
@@ -133,4 +146,60 @@ export async function getPublicJobBySlug(
   if (!data) return null;
   const [withEmployer] = await attachEmployers([data as any]);
   return withEmployer as unknown as PublicJobDetail;
+}
+
+/** Related jobs: same profession first, then same family. Excludes the
+ * current job. All returned rows are already RLS-filtered to active. */
+export async function listRelatedPublicJobs(args: {
+  excludeId: string;
+  professionSlug: string | null;
+  familyId: string | null;
+  limit?: number;
+}): Promise<PublicJobCard[]> {
+  const limit = args.limit ?? 4;
+  const seen = new Set<string>([args.excludeId]);
+  const out: PublicJobCard[] = [];
+
+  const runQuery = async (
+    key: "profession_slug" | "family_id",
+    value: string,
+  ) => {
+    const { data, error } = await supabase
+      .from("jobs")
+      .select(CARD_COLUMNS)
+      .eq("status", "published")
+      .eq(key, value)
+      .order("published_at", { ascending: false })
+      .limit(limit + 1);
+    if (error) throw error;
+    return (data ?? []) as any[];
+  };
+
+  if (args.professionSlug) {
+    for (const r of await runQuery("profession_slug", args.professionSlug)) {
+      if (seen.has(r.id) || out.length >= limit) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+  }
+  if (out.length < limit && args.familyId) {
+    for (const r of await runQuery("family_id", args.familyId)) {
+      if (seen.has(r.id) || out.length >= limit) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+  }
+
+  return (await attachEmployers(out)) as any;
+}
+
+/** Best-effort check that a public job is still open for applications. */
+export function isJobExpired(job: {
+  deadline_at: string | null;
+  published_at: string | null;
+}): boolean {
+  if (!job.deadline_at) return false;
+  const d = new Date(job.deadline_at).getTime();
+  if (!Number.isFinite(d)) return false;
+  return d < Date.now();
 }
