@@ -375,7 +375,7 @@ function Chip({
   icon?: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 capitalize">
+    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5">
       {icon && <span aria-hidden="true">{icon}</span>}
       {children}
     </span>
