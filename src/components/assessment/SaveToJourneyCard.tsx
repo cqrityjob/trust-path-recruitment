@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate, Link } from "@tanstack/react-router";
@@ -19,10 +19,9 @@ export function SaveToJourneyCard({ professionId, professionTitle, resultSummary
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  useState(() => {
+  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    return 0;
-  });
+  }, []);
 
   const mut = useMutation({
     mutationFn: async () => {
