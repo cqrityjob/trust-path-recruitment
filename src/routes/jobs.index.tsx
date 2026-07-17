@@ -18,13 +18,13 @@ import { professionFamilies } from "@/lib/career-center/profession-families";
 import { useState, useEffect } from "react";
 
 type JobSearch = {
-  q: string;
-  location: string;
-  family: string;
-  employment: string;
-  workplace: string;
-  experience: string;
-  country: string;
+  q?: string;
+  location?: string;
+  family?: string;
+  employment?: string;
+  workplace?: string;
+  experience?: string;
+  country?: string;
 };
 
 function coerceString(v: unknown): string {
@@ -33,15 +33,17 @@ function coerceString(v: unknown): string {
 
 export const Route = createFileRoute("/jobs/")({
   ssr: false,
-  validateSearch: (raw: Record<string, unknown>): JobSearch => ({
-    q: coerceString(raw.q),
-    location: coerceString(raw.location),
-    family: coerceString(raw.family),
-    employment: coerceString(raw.employment),
-    workplace: coerceString(raw.workplace),
-    experience: coerceString(raw.experience),
-    country: coerceString(raw.country),
-  }),
+  validateSearch: (raw: Record<string, unknown>): JobSearch => {
+    const out: JobSearch = {};
+    const q = coerceString(raw.q); if (q) out.q = q;
+    const location = coerceString(raw.location); if (location) out.location = location;
+    const family = coerceString(raw.family); if (family) out.family = family;
+    const employment = coerceString(raw.employment); if (employment) out.employment = employment;
+    const workplace = coerceString(raw.workplace); if (workplace) out.workplace = workplace;
+    const experience = coerceString(raw.experience); if (experience) out.experience = experience;
+    const country = coerceString(raw.country); if (country) out.country = country;
+    return out;
+  },
   component: JobsDiscoveryPage,
 });
 
@@ -54,12 +56,12 @@ function JobsDiscoveryPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
-  const [qInput, setQInput] = useState(search.q);
-  const [locInput, setLocInput] = useState(search.location);
+  const [qInput, setQInput] = useState(search.q ?? "");
+  const [locInput, setLocInput] = useState(search.location ?? "");
 
   useEffect(() => {
-    setQInput(search.q);
-    setLocInput(search.location);
+    setQInput(search.q ?? "");
+    setLocInput(search.location ?? "");
   }, [search.q, search.location]);
 
   const jobsQuery = useQuery({
@@ -76,31 +78,27 @@ function JobsDiscoveryPage() {
       }),
   });
 
-  const setParam = (key: keyof typeof search, value: string) =>
+  const setParam = (key: keyof JobSearch, value: string) =>
     navigate({
-      search: (prev: JobSearch) => ({ ...prev, [key]: value }),
+      search: (prev: JobSearch) => ({ ...prev, [key]: value || undefined }),
       replace: true,
     });
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     navigate({
-      search: (prev: JobSearch) => ({ ...prev, q: qInput.trim(), location: locInput.trim() }),
+      search: (prev: JobSearch) => ({
+        ...prev,
+        q: qInput.trim() || undefined,
+        location: locInput.trim() || undefined,
+      }),
       replace: true,
     });
   };
 
   const reset = () =>
     navigate({
-      search: () => ({
-        q: "",
-        location: "",
-        family: "",
-        employment: "",
-        workplace: "",
-        experience: "",
-        country: "",
-      }),
+      search: () => ({}),
       replace: true,
     });
 
@@ -153,35 +151,35 @@ function JobsDiscoveryPage() {
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <FilterSelect
               label={t("jobs.filter.family")}
-              value={search.family}
+              value={search.family ?? ""}
               onChange={(v) => setParam("family", v)}
               options={professionFamilies.map((f) => ({ value: f.id, label: f.name[lang] }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.employment_type")}
-              value={search.employment}
+              value={search.employment ?? ""}
               onChange={(v) => setParam("employment", v)}
               options={EMPLOYMENT_TYPES.map((v) => ({ value: v, label: v.replace("_", " ") }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.workplace_type")}
-              value={search.workplace}
+              value={search.workplace ?? ""}
               onChange={(v) => setParam("workplace", v)}
               options={WORKPLACE_TYPES.map((v) => ({ value: v, label: v }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.experience_level")}
-              value={search.experience}
+              value={search.experience ?? ""}
               onChange={(v) => setParam("experience", v)}
               options={EXPERIENCE_LEVELS.map((v) => ({ value: v, label: v }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.country")}
-              value={search.country}
+              value={search.country ?? ""}
               onChange={(v) => setParam("country", v)}
               options={[
                 { value: "SE", label: "Sverige / Sweden" },
