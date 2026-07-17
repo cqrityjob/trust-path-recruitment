@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /journey
+Disallow: /auth
 
 Sitemap: https://trust-path-recruitment.lovable.app/sitemap.xml

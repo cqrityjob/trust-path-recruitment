@@ -15,17 +15,11 @@ export const Route = createFileRoute("/jobs")({
         content:
           "Search active security jobs — filter by role, location, family and employer.",
       },
-      { property: "og:title", content: "Security Jobs — CQrityjob" },
-      {
-        property: "og:description",
-        content:
-          "Active roles from employers in the security industry.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
+    // canonical + og:url are set on leaf routes (jobs.index, jobs.$slug,
+    // jobs.family.$familyId, jobs.profession.$professionSlug) to avoid the
+    // duplicate-canonical issue caused by non-deduped `links` merging.
   }),
   component: JobsLayout,
 });

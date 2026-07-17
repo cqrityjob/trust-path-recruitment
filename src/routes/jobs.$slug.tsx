@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -38,6 +39,22 @@ import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/$slug")({
   ssr: false,
+  head: ({ params }) => {
+    const url = `https://trust-path-recruitment.lovable.app/jobs/${params.slug}`;
+    return {
+      meta: [
+        { title: "Security job — CQrityjob" },
+        {
+          name: "description",
+          content:
+            "Role details, requirements and how to apply — from a vetted employer in the security industry.",
+        },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: JobDetailPage,
   errorComponent: ({ error }) => <ErrorState message={error.message} />,
   notFoundComponent: () => <NotFoundState />,
@@ -144,6 +161,21 @@ function JobDetailPage() {
         familyId: q.data!.family_id,
       }),
   });
+
+  // Client-side dynamic <title>: head() is static because this route
+  // uses ssr: false and reads data via TanStack Query. Update
+  // document.title once the job is loaded so tabs and history reflect it.
+  const dynamicTitle = q.data
+    ? `${pickLocalized(q.data.title_sv, q.data.title_en, lang) || "Security job"} — CQrityjob`
+    : null;
+  useEffect(() => {
+    if (!dynamicTitle) return;
+    const prev = document.title;
+    document.title = dynamicTitle;
+    return () => {
+      document.title = prev;
+    };
+  }, [dynamicTitle]);
 
   if (q.isLoading) {
     return (

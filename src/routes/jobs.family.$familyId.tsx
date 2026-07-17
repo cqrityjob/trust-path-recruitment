@@ -10,6 +10,27 @@ import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/family/$familyId")({
   ssr: false,
+  head: ({ params }) => {
+    const area = careerAreaLabels.find((f) => f.id === params.familyId);
+    const url = `https://trust-path-recruitment.lovable.app/jobs/family/${params.familyId}`;
+    const title = area
+      ? `${area.name.en} jobs — CQrityjob`
+      : "Security jobs by career area — CQrityjob";
+    const desc = area
+      ? area.description.en
+      : "Active security roles filtered by career area.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   beforeLoad: ({ params }) => {
     if (!careerAreaLabels.some((f) => f.id === params.familyId)) {
       throw notFound();
