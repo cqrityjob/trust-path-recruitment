@@ -2,6 +2,27 @@
 
 All Sprint 09C changes are **additive**. No existing Sprint 08 / 09B tables, columns, policies, or code paths were modified. Rollback is therefore clean and does not risk user data.
 
+## Phase D — Career Intelligence Engine v1
+
+Phase D is **code-only**. No database migrations, no schema changes, no
+RLS changes. Rollback is a file-level revert:
+
+1. Remove the engine directory:
+   ```
+   rm -rf src/lib/career-intelligence-engine
+   rm scripts/cie-check.ts
+   rm docs/career-intelligence/engine-v1.md
+   ```
+2. Remove the `cie:check` script from `package.json`.
+3. The legacy assessment engine (`src/lib/career-assessment/*`) and the
+   existing result page are **unchanged** — no downstream restoration
+   needed.
+
+If a downstream feature has begun consuming
+`computeCareerIntelligenceMatches`, revert those call sites to the
+legacy `computeMatches` from `@/lib/career-assessment` first. There is
+no environment variable, feature flag, or DB toggle to reset.
+
 ## Activation state
 
 - `GRAPH_ACTIVATION_STATE` in `src/lib/knowledge-graph/graph-meta.ts` is `'legacy'` until Phase E.
