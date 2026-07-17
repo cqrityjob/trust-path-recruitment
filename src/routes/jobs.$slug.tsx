@@ -32,6 +32,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
 import { JobCard } from "@/components/jobs/JobCard";
+import { JobRelevancePanel } from "@/components/jobs/JobRelevancePanel";
+import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
+import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/$slug")({
   ssr: false,
@@ -123,6 +126,8 @@ function JobDetailPage() {
       return job;
     },
   });
+
+  const profileState = useCareerProfileForJobs();
 
   const related = useQuery({
     queryKey: [
@@ -360,6 +365,13 @@ function JobDetailPage() {
 
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
             <ApplySidebar job={job} expired={expired} />
+            {profileState.status === "ready" && (
+              <JobRelevancePanel job={job} profile={profileState.data.profile} />
+            )}
+            {(profileState.status === "anonymous" ||
+              profileState.status === "no_profile") && (
+              <AssessmentInvite variant="sidebar" />
+            )}
           </aside>
         </div>
       </Section>

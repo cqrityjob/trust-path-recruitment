@@ -6,6 +6,7 @@ import { useT } from "@/i18n/context";
 import { getProfession } from "@/lib/career-center/professions";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
+import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/profession/$professionSlug")({
   ssr: false,
@@ -16,6 +17,9 @@ function JobsByProfession() {
   const { professionSlug } = Route.useParams();
   const { t, lang } = useT();
   const profession = getProfession(professionSlug);
+  const profileState = useCareerProfileForJobs();
+  const profile =
+    profileState.status === "ready" ? profileState.data.profile : undefined;
 
   const q = useQuery({
     queryKey: ["public-jobs", "profession", professionSlug],
@@ -54,6 +58,7 @@ function JobsByProfession() {
           isLoading={q.isLoading}
           isError={q.isError}
           lang={lang}
+          profile={profile}
         />
       </Section>
     </SiteLayout>

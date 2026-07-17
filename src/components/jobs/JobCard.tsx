@@ -4,6 +4,8 @@ import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { employmentTypeLabel, workplaceTypeLabel } from "@/lib/job-intelligence/enum-labels";
+import { JobRelevanceBadge } from "./JobRelevanceBadge";
+import type { RelevanceForJob } from "@/lib/job-intelligence/personal-relevance";
 
 function pickTitle(job: PublicJobCard, lang: "sv" | "en"): string {
   const primary = lang === "sv" ? job.title_sv : job.title_en;
@@ -24,7 +26,15 @@ function daysSince(iso: string | null): number | null {
   return Math.max(0, Math.floor((Date.now() - d) / 86_400_000));
 }
 
-export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }) {
+export function JobCard({
+  job,
+  lang,
+  relevance,
+}: {
+  job: PublicJobCard;
+  lang: "sv" | "en";
+  relevance?: RelevanceForJob;
+}) {
   const { t } = useT();
   const title = pickTitle(job, lang) || t("jobs.card.untitled");
   const location = locationLabel(job);
@@ -78,6 +88,11 @@ export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }
 
       {area && (
         <p className="mt-3 text-xs text-muted-foreground">{area.name[lang]}</p>
+      )}
+      {relevance && relevance.band !== "none" && (
+        <div className="mt-3">
+          <JobRelevanceBadge band={relevance.band} basis={relevance.basis} />
+        </div>
       )}
     </Link>
   );
