@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -176,6 +177,18 @@ function JobDetailPage() {
   const job = q.data;
   const title =
     pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
+  // Client-side dynamic title: head() is static because this route uses
+  // ssr: false and reads data via TanStack Query. Update document.title
+  // once the job is loaded so tabs, history and the browser share the
+  // real job title.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const prev = document.title;
+    document.title = `${title} — CQrityjob`;
+    return () => {
+      document.title = prev;
+    };
+  }, [title]);
   const description = pickLocalized(job.description_sv, job.description_en, lang);
   const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
   const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
