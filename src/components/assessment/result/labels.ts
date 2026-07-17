@@ -160,6 +160,112 @@ export function confidenceLabelBi(c: ConfidenceLevel): Bi {
   return { sv: "Begränsat underlag", en: "Limited evidence" };
 }
 
+// -------------------- Phase D.2.1: Overall evidence status --------------------
+//
+// A single, user-facing evidence level shown in the hero. It re-uses the
+// deterministic overallEvidenceScore (0..100) already produced by the
+// engine. No scoring changes — pure presentation mapping.
+
+export type OverallEvidenceLevel = "strong" | "moderate" | "limited";
+
+export function overallEvidenceLevel(score: number): OverallEvidenceLevel {
+  if (score >= 70) return "strong";
+  if (score >= 45) return "moderate";
+  return "limited";
+}
+
+export function overallEvidenceLabel(level: OverallEvidenceLevel): Bi {
+  switch (level) {
+    case "strong":
+      return { sv: "Tydligt underlag", en: "Strong evidence" };
+    case "moderate":
+      return { sv: "Måttligt underlag", en: "Moderate evidence" };
+    case "limited":
+    default:
+      return { sv: "Begränsat underlag", en: "Limited evidence" };
+  }
+}
+
+export const overallEvidenceHelp: Bi = {
+  sv: "Underlagsnivån beskriver hur mycket relevant och samstämmig information som kunde utläsas ur dina svar. Den bedömer inte din förmåga eller lämplighet.",
+  en: "The evidence level describes how much relevant and consistent information was found in your answers. It does not measure your ability or suitability.",
+};
+
+// -------------------- Phase D.2.1: Qualitative fit / potential --------------------
+//
+// The engine keeps producing the same numeric currentFit / potential. The
+// hero presents them qualitatively so users do not read them as
+// probabilities of suitability, competence or employment.
+
+export type FitBand = "strong" | "promising" | "exploratory" | "limited";
+
+export function currentFitBand(
+  currentFit: number,
+  confidence: ConfidenceLevel,
+): FitBand {
+  if (confidence === "limited") return "limited";
+  if (currentFit >= 70) return "strong";
+  if (currentFit >= 55) return "promising";
+  if (currentFit >= 40) return "exploratory";
+  return "limited";
+}
+
+export function currentFitLabel(band: FitBand): Bi {
+  switch (band) {
+    case "strong":
+      return { sv: "Stark matchning", en: "Strong alignment" };
+    case "promising":
+      return { sv: "Lovande matchning", en: "Promising alignment" };
+    case "exploratory":
+      return { sv: "Utforskande matchning", en: "Exploratory alignment" };
+    case "limited":
+    default:
+      return { sv: "Begränsat underlag", en: "Limited current evidence" };
+  }
+}
+
+export function potentialBand(
+  potential: number,
+  confidence: ConfidenceLevel,
+): FitBand {
+  if (confidence === "limited") return "limited";
+  if (potential >= 70) return "strong";
+  if (potential >= 55) return "promising";
+  if (potential >= 40) return "exploratory";
+  return "limited";
+}
+
+export function potentialLabel(band: FitBand): Bi {
+  switch (band) {
+    case "strong":
+      return { sv: "Stark utvecklingspotential", en: "Strong development potential" };
+    case "promising":
+      return { sv: "God utvecklingspotential", en: "Good development potential" };
+    case "exploratory":
+      return { sv: "Möjlig utvecklingsväg", en: "Possible development path" };
+    case "limited":
+    default:
+      return { sv: "Begränsat underlag", en: "Limited evidence" };
+  }
+}
+
+export const guidanceSignalHelp: Bi = {
+  sv: "Detta är en vägledande karriärsignal baserad på dina svar. Det är inte en sannolikhet för framgång eller ett mått på yrkesmässig lämplighet.",
+  en: "This is a career-guidance signal based on your answers. It is not a probability of success or a measure of professional suitability.",
+};
+
+// -------------------- Phase D.2.1: Insufficient-evidence copy --------------------
+
+export const insufficientEvidenceLabel: Bi = {
+  sv: "Otillräckligt underlag",
+  en: "Insufficient evidence",
+};
+
+export const insufficientEvidenceHelp: Bi = {
+  sv: "Dina svar gav inte tillräckligt med information för att visa en tillförlitlig signal inom detta område.",
+  en: "Your answers did not provide enough information to present a reliable signal for this dimension.",
+};
+
 // -------------------- Level / regulated wording --------------------
 
 export function levelLabel(level: string | undefined): Bi | undefined {
@@ -177,7 +283,17 @@ export function levelLabel(level: string | undefined): Bi | undefined {
   }
 }
 
-export const regulatedLabel: Bi = { sv: "Reglerat yrke", en: "Regulated profession" };
+// Phase D.2.1: replaces the previous "Regulated profession" wording. The
+// badge must never imply the user has been verified or found eligible.
+export const regulatedLabel: Bi = {
+  sv: "Formella krav gäller",
+  en: "Formal requirements apply",
+};
+
+export const regulatedHelp: Bi = {
+  sv: "Yrket har formella krav, exempelvis på utbildning, godkännande eller förordnande. Testet verifierar inte att du uppfyller kraven.",
+  en: "This profession has formal requirements such as approved training, authorisation or appointment. The assessment does not verify that you meet these requirements.",
+};
 
 // -------------------- Score tooltips --------------------
 
