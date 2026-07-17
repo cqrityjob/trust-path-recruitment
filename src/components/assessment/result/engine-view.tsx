@@ -163,14 +163,19 @@ function ScoreWithHelp({
   value,
   interpretation,
   tone = "accent",
+  insufficient = false,
+  insufficientHelp,
 }: {
   label: string;
   help: string;
   value: number | string;
   interpretation?: string;
   tone?: "accent" | "muted";
+  insufficient?: boolean;
+  insufficientHelp?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const effectiveHelp = insufficient && insufficientHelp ? insufficientHelp : help;
   return (
     <div className="rounded-md border border-border/60 bg-background p-4">
       <div className="flex items-center justify-between gap-2">
@@ -181,7 +186,7 @@ function ScoreWithHelp({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label={`${label}: ${help}`}
+          aria-label={`${label}: ${effectiveHelp}`}
           className="rounded-full p-1 text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.75} />
@@ -193,7 +198,11 @@ function ScoreWithHelp({
           tone === "accent" ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {typeof value === "number" ? (
+        {insufficient ? (
+          <span className="text-sm font-medium normal-case tracking-normal text-muted-foreground">
+            {insufficientHelp ? "—" : "—"}
+          </span>
+        ) : typeof value === "number" ? (
           <>
             {value}
             <span className="ml-0.5 text-base text-muted-foreground">%</span>
@@ -202,14 +211,19 @@ function ScoreWithHelp({
           <span className="text-lg">{value}</span>
         )}
       </p>
-      {interpretation && (
+      {insufficient ? (
+        <p className="mt-1 text-[11px] font-medium leading-relaxed text-foreground">
+          {/* Insufficient evidence label is provided via `interpretation` when present. */}
+          {interpretation}
+        </p>
+      ) : interpretation ? (
         <p className="mt-1 text-[11px] font-medium leading-relaxed text-foreground">
           {interpretation}
         </p>
-      )}
+      ) : null}
       {open && (
         <p className="mt-2 border-t border-border/60 pt-2 text-[11px] leading-relaxed text-muted-foreground">
-          {help}
+          {effectiveHelp}
         </p>
       )}
     </div>
