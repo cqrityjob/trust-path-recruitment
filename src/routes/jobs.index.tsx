@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { professionFamilies } from "@/lib/career-center/profession-families";
+import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
 import { useState, useEffect } from "react";
 
 type JobSearch = {
@@ -153,7 +153,7 @@ function JobsDiscoveryPage() {
               label={t("jobs.filter.family")}
               value={search.family ?? ""}
               onChange={(v) => setParam("family", v)}
-              options={professionFamilies.map((f) => ({ value: f.id, label: f.name[lang] }))}
+              options={careerAreaLabels.map((f) => ({ value: f.id, label: f.name[lang] }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
@@ -217,7 +217,7 @@ function JobsDiscoveryPage() {
             {t("jobs.browse.families.subtitle")}
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {professionFamilies.map((f) => (
+            {careerAreaLabels.map((f) => (
               <Link
                 key={f.id}
                 to="/jobs/family/$familyId"
