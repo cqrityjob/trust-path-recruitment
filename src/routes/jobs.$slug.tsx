@@ -24,6 +24,11 @@ import {
 } from "@/lib/job-intelligence/public-queries";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { getProfession } from "@/lib/career-center/professions";
+import {
+  employmentTypeLabel,
+  workplaceTypeLabel,
+  experienceLevelLabel,
+} from "@/lib/job-intelligence/enum-labels";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
 import { JobCard } from "@/components/jobs/JobCard";
@@ -219,17 +224,17 @@ function JobDetailPage() {
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {job.employment_type && (
               <Chip icon={<Briefcase className="h-3 w-3" />}>
-                {job.employment_type.replace(/_/g, " ")}
+                {employmentTypeLabel(job.employment_type, lang)}
               </Chip>
             )}
             {job.workplace_type && (
               <Chip icon={<HomeIcon className="h-3 w-3" />}>
-                {job.workplace_type}
+                {workplaceTypeLabel(job.workplace_type, lang)}
               </Chip>
             )}
             {job.experience_level && (
               <Chip icon={<Award className="h-3 w-3" />}>
-                {job.experience_level}
+                {experienceLevelLabel(job.experience_level, lang)}
               </Chip>
             )}
             {job.regulated && (
