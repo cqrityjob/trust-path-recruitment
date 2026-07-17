@@ -28,10 +28,6 @@ export function SiteHeader() {
     };
   }, []);
 
-  async function onSignOut() {
-    await supabase.auth.signOut();
-  }
-
   const nav = [
     { to: "/career-center", label: t("nav.career_center") },
     { to: "/jobs", label: t("nav.jobs") },
@@ -70,13 +66,13 @@ export function SiteHeader() {
         <div className="hidden items-center gap-3 md:flex">
           <LanguageSwitcher />
           {signedIn ? (
-            <button
-              type="button"
-              onClick={onSignOut}
+            <Link
+              to="/my-career"
               className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              activeProps={{ className: "bg-muted" }}
             >
-              {t("auth.signout")}
-            </button>
+              {t("nav.my_career")}
+            </Link>
           ) : (
             <Link
               to="/auth"
@@ -114,13 +110,13 @@ export function SiteHeader() {
           <div className="mt-3 flex items-center justify-between">
             <LanguageSwitcher />
             {signedIn ? (
-              <button
-                type="button"
-                onClick={onSignOut}
+              <Link
+                to="/my-career"
+                onClick={() => setOpen(false)}
                 className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
               >
-                {t("auth.signout")}
-              </button>
+                {t("nav.my_career")}
+              </Link>
             ) : (
               <Link
                 to="/auth"
