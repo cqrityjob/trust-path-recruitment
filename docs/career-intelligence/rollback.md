@@ -90,6 +90,42 @@ Both must exit 0.
 
 Same as above — activation is still `'legacy'`, so dropping CIG tables does not affect the UI. If Phase D UI refactors have landed, revert those commits first, then run the drop block above.
 
+### Data-only rollback (keep schema, drop Phase C seed)
+
+Removes every row inserted under graph version `cig-2026.07-09C.1`. Schema, hardening constraints, and columns are untouched.
+
+```sql
+BEGIN;
+DELETE FROM public.cig_profession_source_references     WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_knowledge_req         WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_sector_rel            WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_work_environment_rel  WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_employer_type_rel     WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_certification_rel     WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_education_pathways    WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_competency_req        WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_formal_requirements   WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_family_rel            WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_career_transitions               WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_specialisations       WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_aliases               WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_professions                      WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_source_references                WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_formal_requirements              WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_certifications                   WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_education_pathways               WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_experience_types                 WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_knowledge_areas                  WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_skills                           WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_competencies                     WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_work_preferences                 WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_work_environments                WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_employer_types                   WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_sectors                          WHERE graph_version = 'cig-2026.07-09C.1';
+DELETE FROM public.cig_profession_families              WHERE graph_version = 'cig-2026.07-09C.1';
+COMMIT;
+```
+
 ## Rollback: after Phase E activation
 
 1. Set `GRAPH_ACTIVATION_STATE = 'legacy'` in `graph-meta.ts` and redeploy — UI immediately reverts to the TS seed.
