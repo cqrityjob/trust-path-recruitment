@@ -108,3 +108,16 @@ Type-check: pass. Migration: applied. Linter warnings after migration are pre-ex
 - `docs/career-intelligence/rollback.md`: additive-only rollback for Phase A + hardening, Phase C, and post-Phase-E activation.
 
 **Awaiting approval before Phase C.**
+
+## Phase C — Content seed (applied)
+
+- Seed migration applied under `graph_version='cig-2026.07-09C.1'`.
+- Entities: 13 families, 67 professions (20 Level A published, 21 Level B published, 26 Level B draft), 11 sectors, 9 employer types, 7 work environments, 8 work preferences, 18 competencies, 14 skills, 10 knowledge areas, 6 experience types, 11 education pathways, 8 certifications, 8 formal requirements, 17 source references.
+- Relationships: 67 profession→family, 12 profession→formal-req, 23 profession→source, 49 profession→competency, 14 profession→education, 9 profession→certification, 24 profession→employer, 22 profession→work-env, 20 profession→sector, 13 profession→knowledge, 14 aliases, 12 specialisations (police/armed-forces internal), 23 career transitions.
+- Validation: 0 duplicate slugs, 0 orphan families, 0 invalid country codes, 0 self-loop transitions, 100 % bilingual titles, 0 published law-enforcement/defence rows without disclaimer.
+- SSYK / ESCO fields intentionally left NULL — verification is a separate content task.
+- Type-check pass. Security linter: 3 pre-existing findings only, unrelated to Phase C (see `docs/career-intelligence/phase-c-seed-report.md` §"Pre-existing security-linter findings").
+- Assessment / auth / legacy TS seed / existing UI unchanged. `GRAPH_ACTIVATION_STATE` still `'legacy'`.
+- Full report: `docs/career-intelligence/phase-c-seed-report.md`. Data-only rollback documented in `rollback.md`.
+
+**Stop. Awaiting approval before Phase D.**
