@@ -1,11 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
-import { useI18n } from "@/i18n/context";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
 import { Input } from "@/components/ui/input";
@@ -20,19 +17,31 @@ import {
 import { professionFamilies } from "@/lib/career-center/profession-families";
 import { useState, useEffect } from "react";
 
-const searchSchema = z.object({
-  q: fallback(z.string(), "").default(""),
-  location: fallback(z.string(), "").default(""),
-  family: fallback(z.string(), "").default(""),
-  employment: fallback(z.string(), "").default(""),
-  workplace: fallback(z.string(), "").default(""),
-  experience: fallback(z.string(), "").default(""),
-  country: fallback(z.string(), "").default(""),
-});
+type JobSearch = {
+  q: string;
+  location: string;
+  family: string;
+  employment: string;
+  workplace: string;
+  experience: string;
+  country: string;
+};
+
+function coerceString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
 
 export const Route = createFileRoute("/jobs/")({
   ssr: false,
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (raw: Record<string, unknown>): JobSearch => ({
+    q: coerceString(raw.q),
+    location: coerceString(raw.location),
+    family: coerceString(raw.family),
+    employment: coerceString(raw.employment),
+    workplace: coerceString(raw.workplace),
+    experience: coerceString(raw.experience),
+    country: coerceString(raw.country),
+  }),
   component: JobsDiscoveryPage,
 });
 
@@ -41,8 +50,7 @@ const WORKPLACE_TYPES = ["onsite", "hybrid", "remote"];
 const EXPERIENCE_LEVELS = ["entry", "mid", "senior", "lead"];
 
 function JobsDiscoveryPage() {
-  const { t } = useT();
-  const { lang } = useI18n();
+  const { t, lang } = useT();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -70,14 +78,14 @@ function JobsDiscoveryPage() {
 
   const setParam = (key: keyof typeof search, value: string) =>
     navigate({
-      search: (prev) => ({ ...prev, [key]: value }),
+      search: (prev: JobSearch) => ({ ...prev, [key]: value }),
       replace: true,
     });
 
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     navigate({
-      search: (prev) => ({ ...prev, q: qInput.trim(), location: locInput.trim() }),
+      search: (prev: JobSearch) => ({ ...prev, q: qInput.trim(), location: locInput.trim() }),
       replace: true,
     });
   };
