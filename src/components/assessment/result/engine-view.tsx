@@ -517,6 +517,10 @@ function Hero({
 // -------------------- Why this result --------------------
 
 function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
+  // Phase D.2.1: hide internal-model wording (archetype, baseline signal,
+  // supporting profile). Structured explanations of kind profile_archetype
+  // are rewritten in place; family_rationale is kept but rephrased when it
+  // starts with the "Baseline signals" pattern.
   const seen = new Set<string>();
   const strongest = match.strongestDimensions
     .filter((d) => {
@@ -531,16 +535,28 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
     .slice(0, 2);
 
   const kinds: StructuredExplanation["kind"][] = [
-    "profile_archetype",
     "family_rationale",
     "current_vs_potential",
     "regulated_notice",
     "gate_pass",
     "gate_fail",
   ];
+  // Plain-language rewriter: strips internal terminology.
+  const rewrite = (text: Bi): Bi => {
+    const soften = (s: string) =>
+      s
+        .replace(/baseline signal[s]?[^.]*\./i, "The assessment did not find sufficiently clear information across all areas that are relevant to this profession.")
+        .replace(/basvärde[t]?[^.]*inte tydligt[^.]*\./i, "Testet gav inte tillräckligt tydlig information inom alla områden som är relevanta för yrket.")
+        .replace(/\barchetype[s]?\b/gi, lang === "sv" ? "profil" : "profile")
+        .replace(/\barketyp(?:er)?\b/gi, "profil")
+        .replace(/supporting profile/gi, lang === "sv" ? "stödjande profil" : "supporting signal")
+        .replace(/strongest contributing dimensions?/gi, "areas that stood out in your answers");
+    return { sv: soften(text.sv), en: soften(text.en) };
+  };
   const seenText = new Set<string>();
   const contextual = match.reason
     .filter((r) => kinds.includes(r.kind))
+    .map((r) => ({ ...r, text: rewrite(r.text) }))
     .filter((r) => {
       const key = `${r.kind}:${r.text.sv}`;
       if (seenText.has(key)) return false;
@@ -565,7 +581,7 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
       {strongest.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {lang === "sv" ? "Starkaste bidragande dimensioner" : "Strongest contributing dimensions"}
+            {lang === "sv" ? "Områden som framträdde i dina svar" : "Areas that stood out in your answers"}
           </h3>
           <ul className="mt-3 space-y-3">
             {strongest.map((d) => {
