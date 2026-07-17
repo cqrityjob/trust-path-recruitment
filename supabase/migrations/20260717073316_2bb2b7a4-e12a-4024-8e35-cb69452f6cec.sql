@@ -1,0 +1,4 @@
+-- See file /tmp/mig/phase_c.sql — inlined below.
+-- Sprint 09C Phase C: Career Intelligence Graph content seed
+-- Additive only. Idempotent via slug/canonical_key/stable_key ON CONFLICT.
+-- Graph version: cig-2026.07-09C.1
