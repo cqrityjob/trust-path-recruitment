@@ -697,24 +697,36 @@ function CareerProfileBlock({
           help={lang === "sv" ? "Hur självständigt du föredrar att arbeta enligt dina svar." : "How independently you prefer to work based on your answers."}
           value={profile.workingStyle.independence}
           tone="muted"
+          insufficient={profile.workingStyle.independence <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.independence <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Samarbete" : "Teamwork"}
           help={lang === "sv" ? "Hur mycket du föredrar att arbeta i team enligt dina svar." : "How much you prefer working in teams based on your answers."}
           value={profile.workingStyle.teamwork}
           tone="muted"
+          insufficient={profile.workingStyle.teamwork <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.teamwork <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Struktur" : "Structure"}
           help={lang === "sv" ? "Hur mycket du föredrar tydliga rutiner och struktur." : "How much you prefer clear routines and structure."}
           value={profile.workingStyle.structurePreference}
           tone="muted"
+          insufficient={profile.workingStyle.structurePreference <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.structurePreference <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Risktolerans" : "Risk tolerance"}
           help={lang === "sv" ? "Hur bekväm du är med osäkerhet och pressade situationer." : "How comfortable you are with uncertainty and high-pressure situations."}
           value={profile.workingStyle.riskTolerance}
           tone="muted"
+          insufficient={profile.workingStyle.riskTolerance <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.riskTolerance <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
       </div>
     </SectionCard>
