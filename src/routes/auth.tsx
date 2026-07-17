@@ -46,7 +46,7 @@ function AuthPage() {
   useEffect(() => {
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive && data.session) navigate({ to: "/" });
+      if (alive && data.session) navigate({ to: "/my-career" });
     });
     return () => {
       alive = false;
@@ -79,7 +79,7 @@ function AuthPage() {
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
-        navigate({ to: "/" });
+        navigate({ to: "/my-career" });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -97,7 +97,7 @@ function AuthPage() {
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
-      navigate({ to: "/" });
+      navigate({ to: "/my-career" });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
