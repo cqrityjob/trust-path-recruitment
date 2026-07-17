@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ArrowRight, Briefcase } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 
 export const Route = createFileRoute("/jobs")({
   head: () => ({
@@ -12,13 +13,13 @@ export const Route = createFileRoute("/jobs")({
       {
         name: "description",
         content:
-          "A dedicated job experience for the security industry — in development. Get notified when the job board launches.",
+          "Search active security jobs — filter by role, location, family and employer.",
       },
       { property: "og:title", content: "Security Jobs — CQrityjob" },
       {
         property: "og:description",
         content:
-          "A dedicated job experience designed for the security industry — coming soon.",
+          "Active roles from employers in the security industry.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
@@ -26,10 +27,17 @@ export const Route = createFileRoute("/jobs")({
     ],
     links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
   }),
-  component: JobsPage,
+  component: JobsLayout,
 });
 
-function JobsPage() {
+function JobsLayout() {
+  // Release-control flag: while off, always show the coming-soon page.
+  // Not a security boundary — RLS still gates all data server-side.
+  if (!jobsEnabled()) return <ComingSoonPage />;
+  return <Outlet />;
+}
+
+function ComingSoonPage() {
   const { t } = useT();
   return (
     <SiteLayout>
