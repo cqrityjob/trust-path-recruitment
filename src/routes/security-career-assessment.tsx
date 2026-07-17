@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,37 +17,9 @@ import { AssessmentQuestion, type Answer } from "@/components/assessment/Assessm
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { questions } from "@/lib/assessment-content";
-import { getProfession } from "@/lib/career-center";
-import {
-  buildActionPlan,
-  buildCareerPathway,
-  buildCompareRows,
-  buildResultSession,
-  computeMatches,
-  relatedFamilyIds,
-  type ExperienceBackground,
-  type MatchResult,
-} from "@/lib/career-assessment";
-import {
-  CareerActionPlan,
-  CareerComparison,
-  CareerFamilyExploration,
-  CareerGuidanceProfile,
-  CareerMatchOverview,
-  CareerPathPosition,
-  CertificationRecommendation,
-  ContinueJourney,
-  DevelopmentInsight,
-  EducationRecommendation,
-  ExperienceBackgroundSelector,
-  ResultHero,
-  ResultStickyNav,
-  ResultTransparency,
-  ShareSummaryPreview,
-  StrengthInsight,
-  WhyThisResult,
-} from "@/components/assessment/result";
-import { SaveToJourneyCard } from "@/components/assessment/SaveToJourneyCard";
+import { computeCareerIntelligenceMatches } from "@/lib/career-intelligence-engine/compute.functions";
+import { EngineResultView } from "@/components/assessment/result/engine-view";
+import type { AnswerMap } from "@/lib/career-assessment/types";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -322,145 +296,77 @@ function Results({
   answers: Record<string, Answer>;
   onRetake: () => void;
 }) {
-  const { t, lang } = useT();
+  const { lang } = useT();
+  const compute = useServerFn(computeCareerIntelligenceMatches);
 
-  const engine = useMemo(() => computeMatches(answers), [answers]);
-  const [background, setBackground] = useState<ExperienceBackground | undefined>(undefined);
-  const session = useMemo(
-    () => buildResultSession({ engine, background }),
-    [engine, background],
-  );
-  const topMatches = engine.matches.slice(0, 5);
-  const [activeId, setActiveId] = useState<string>(topMatches[0]?.professionId ?? "");
-  const active = useMemo<MatchResult | undefined>(
-    () => topMatches.find((m) => m.professionId === activeId) ?? topMatches[0],
-    [activeId, topMatches],
-  );
-  const activeProfession = active ? getProfession(active.professionId) : undefined;
-  const isPlaceholder = active?.professionContentStatus === "placeholder";
-  const isRegulated = Boolean(active?.regulated ?? activeProfession?.regulated);
-  const compareRows = useMemo(() => buildCompareRows(topMatches, 3), [topMatches]);
-  const pathway = useMemo(() => buildCareerPathway(active), [active]);
-  const relatedFamilies = useMemo(
-    () => relatedFamilyIds(active, topMatches),
-    [active, topMatches],
-  );
+  const answerMap = answers as AnswerMap;
 
-  const actionPlan = useMemo(
-    () =>
-      buildActionPlan({
-        top: active,
-        matches: topMatches,
-        developmentDimensions: session.developmentDimensionIds,
-        developmentCompetencies: session.developmentCompetencyIds,
-        background,
-        isPlaceholder,
-        isRegulated,
-        educationIds: session.educationIds,
-        certificationIds: session.certificationIds,
-        hasPathway: pathway.length > 1,
-      }),
-    [active, topMatches, session, background, isPlaceholder, isRegulated, pathway.length],
-  );
+  const query = useQuery({
+    queryKey: ["cie-v1", answerMap],
+    queryFn: () => compute({ data: { answers: answerMap, topN: 5 } }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
-  if (!active) {
+  if (query.isLoading) {
+    return (
+      <AssessmentLayout>
+        <div className="animate-pulse space-y-6">
+          <div className="h-40 rounded-lg border border-border bg-muted/40" />
+          <div className="h-64 rounded-lg border border-border bg-muted/30" />
+          <div className="h-64 rounded-lg border border-border bg-muted/30" />
+        </div>
+        <p className="mt-6 text-sm text-muted-foreground">
+          {lang === "sv"
+            ? "Beräknar din karriärintelligens…"
+            : "Computing your career intelligence…"}
+        </p>
+      </AssessmentLayout>
+    );
+  }
+
+  if (query.isError || !query.data) {
+    return (
+      <AssessmentLayout>
+        <div className="rounded-lg border border-border bg-background p-6">
+          <p className="text-sm text-foreground">
+            {lang === "sv"
+              ? "Vi kunde inte beräkna ditt resultat just nu. Försök igen."
+              : "We couldn't compute your result right now. Please try again."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <PrimaryButton onClick={() => query.refetch()}>
+              {lang === "sv" ? "Försök igen" : "Try again"}
+            </PrimaryButton>
+            <PrimaryButton onClick={onRetake} variant="ghost">
+              {lang === "sv" ? "Gör om testet" : "Retake"}
+            </PrimaryButton>
+          </div>
+        </div>
+      </AssessmentLayout>
+    );
+  }
+
+  const result = query.data;
+  if (result.matches.length === 0) {
     return (
       <AssessmentLayout>
         <p className="text-sm text-muted-foreground">
           {lang === "sv" ? "Inga resultat att visa ännu." : "No results to display yet."}
         </p>
+        <div className="mt-4">
+          <PrimaryButton onClick={onRetake} variant="ghost">
+            {lang === "sv" ? "Gör om testet" : "Retake"}
+          </PrimaryButton>
+        </div>
       </AssessmentLayout>
     );
   }
 
   return (
     <AssessmentLayout>
-      <ResultStickyNav />
-
-      <div id="result" className="space-y-8 md:space-y-10">
-        <ResultHero session={session} active={active} lang={lang} />
-
-        <CareerMatchOverview
-          matches={topMatches}
-          activeId={activeId}
-          onSelect={setActiveId}
-          lang={lang}
-        />
-
-        <WhyThisResult match={active} lang={lang} />
-
-        <div id="profile">
-          <CareerGuidanceProfile vector={engine.userVector} lang={lang} />
-        </div>
-
-        <CareerComparison rows={compareRows} lang={lang} />
-
-        <ExperienceBackgroundSelector
-          value={background}
-          onChange={setBackground}
-          lang={lang}
-        />
-
-        <CareerPathPosition pathway={pathway} lang={lang} />
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <StrengthInsight
-            dimensionIds={session.strengthDimensionIds}
-            competencyIds={session.strengthCompetencyIds}
-            lang={lang}
-          />
-          <DevelopmentInsight
-            dimensionIds={session.developmentDimensionIds}
-            competencyIds={session.developmentCompetencyIds}
-            lang={lang}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <EducationRecommendation
-            ids={session.educationIds}
-            lang={lang}
-            isPlaceholder={isPlaceholder}
-          />
-          <CertificationRecommendation
-            ids={session.certificationIds}
-            lang={lang}
-            isPlaceholder={isPlaceholder}
-          />
-        </div>
-
-        <CareerActionPlan plan={actionPlan} lang={lang} />
-
-        <CareerFamilyExploration
-          topFamily={activeProfession?.family ?? active.family}
-          relatedFamilies={relatedFamilies}
-          lang={lang}
-        />
-
-        <ContinueJourney onRetake={onRetake} topSlug={activeProfession?.slug} />
-
-        {activeProfession && (
-          <SaveToJourneyCard
-            professionId={activeProfession.id}
-            professionTitle={lang === "sv" ? activeProfession.titleSv : activeProfession.titleEn}
-            resultSummary={{
-              topProfessionId: activeProfession.id,
-              strengths: session.strengthDimensionIds,
-              matches: topMatches.slice(0, 5).map((m) => ({ id: m.professionId, match: m.displayedMatch })),
-            }}
-            lang={lang}
-          />
-        )}
-
-        <ShareSummaryPreview session={session} lang={lang} />
-
-        <ResultTransparency lang={lang} />
-
-        <div className="flex items-start gap-3 rounded-md border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
-          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} />
-          <p>{t("sca.disclaimer.footer")}</p>
-        </div>
-      </div>
+      <EngineResultView result={result} lang={lang} onRetake={onRetake} />
     </AssessmentLayout>
   );
 }
