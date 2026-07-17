@@ -153,3 +153,21 @@ COMMIT;
 2. Then, at leisure, drop CIG tables as above.
 
 No user-owned data lives in the `cig_*` tables (they are catalogue-only), so no data migration is ever required to roll back.
+
+## Rollback: Phase D.1 (engine-driven result page)
+
+Phase D.1 replaced the legacy assessment result composition with the
+`EngineResultView` powered by `computeCareerIntelligenceMatches`. No database
+or schema changes were introduced.
+
+To roll back to the legacy result UI:
+
+1. In `src/routes/security-career-assessment.tsx`, restore the previous
+   `Results` function (git history contains the full block importing from
+   `@/components/assessment/result`, `@/lib/career-assessment`, and
+   `SaveToJourneyCard`). Re-add the removed imports at the top of the file.
+2. Optionally remove the new file `src/components/assessment/result/engine-view.tsx`.
+3. Keep `src/lib/career-intelligence-engine/**` untouched — the engine remains
+   available for other consumers (MCP tool, tests).
+
+No migrations to reverse. No data loss risk.
