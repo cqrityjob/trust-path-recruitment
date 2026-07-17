@@ -45,6 +45,7 @@ import {
   StrengthInsight,
   WhyThisResult,
 } from "@/components/assessment/result";
+import { SaveToJourneyCard } from "@/components/assessment/SaveToJourneyCard";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
