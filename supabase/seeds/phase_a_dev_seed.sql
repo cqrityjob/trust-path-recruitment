@@ -62,7 +62,7 @@ INSERT INTO public.jobs (
   profession_slug, family_id,
   title_sv, title_en, description_sv, description_en,
   location_text, country, city, workplace_type, employment_type, experience_level,
-  regulated, application_method, application_url,
+  regulated, application_method, application_url, application_email,
   status, published_at, deadline_at
 )
 SELECT * FROM (VALUES
@@ -72,7 +72,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Väktare — Stockholm','[TEST DATA] Security Officer — Stockholm',
    '[TEST DATA] Fiktiv annons för väktartjänst.','[TEST DATA] Fictional listing for a security-officer role.',
    'Stockholm, Sverige','SE','Stockholm','onsite','full_time','entry',
-   true,'external','https://example.com/apply/1',
+   true,'external','https://example.com/apply/1',NULL,
    'published', now() - interval '3 days', now() + interval '27 days'),
 
   ('aurora-corporate-security-demo-sakerhetschef-goteborg-demo0002','DEMO0002',
@@ -81,7 +81,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Säkerhetschef — Göteborg','[TEST DATA] Head of Security — Gothenburg',
    '[TEST DATA] Fiktiv annons för säkerhetschef.','[TEST DATA] Fictional listing for a head-of-security role.',
    'Göteborg, Sverige','SE','Göteborg','hybrid','full_time','senior',
-   false,'external','https://example.com/apply/2',
+   false,'external','https://example.com/apply/2',NULL,
    'published', now() - interval '5 days', now() + interval '25 days'),
 
   ('fjord-cyber-sentinel-demo-soc-analytiker-malmo-demo0003','DEMO0003',
@@ -90,7 +90,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] SOC-analytiker — Malmö','[TEST DATA] SOC Analyst — Malmö',
    '[TEST DATA] Fiktiv annons för SOC-analytiker.','[TEST DATA] Fictional SOC-analyst listing.',
    'Malmö, Sverige','SE','Malmö','remote','full_time','mid',
-   false,'external','https://example.com/apply/3',
+   false,'external','https://example.com/apply/3',NULL,
    'published', now() - interval '1 day', now() + interval '30 days'),
 
   ('sentinel-public-safety-demo-polis-uppsala-demo0004','DEMO0004',
@@ -99,7 +99,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Polisassistent — Uppsala','[TEST DATA] Police Assistant — Uppsala',
    '[TEST DATA] Fiktiv annons för polistjänst.','[TEST DATA] Fictional police-role listing.',
    'Uppsala, Sverige','SE','Uppsala','onsite','full_time','entry',
-   true,'external','https://example.com/apply/4',
+   true,'external','https://example.com/apply/4',NULL,
    'published', now() - interval '7 days', now() + interval '21 days'),
 
   ('karnkraft-skyddscentrum-demo-sakerhetstekniker-linkoping-demo0005','DEMO0005',
@@ -108,7 +108,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Säkerhetstekniker — Linköping','[TEST DATA] Security Technician — Linköping',
    '[TEST DATA] Fiktiv annons för säkerhetstekniker.','[TEST DATA] Fictional security-technician listing.',
    'Linköping, Sverige','SE','Linköping','onsite','full_time','mid',
-   false,'email',NULL,
+   false,'email',NULL,'demo-apply@example.com',
    'published', now() - interval '2 days', now() + interval '28 days'),
 
   ('nordic-guarding-demo-skyddsvakt-stockholm-demo0006','DEMO0006',
@@ -117,7 +117,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Skyddsvakt — Stockholm','[TEST DATA] Protective Guard — Stockholm',
    '[TEST DATA] Fiktiv annons för skyddsvakt.','[TEST DATA] Fictional protective-guard listing.',
    'Stockholm, Sverige','SE','Stockholm','onsite','part_time','entry',
-   true,'external','https://example.com/apply/6',
+   true,'external','https://example.com/apply/6',NULL,
    'published', now() - interval '4 days', NULL),
 
   ('sentinel-public-safety-demo-ordningsvakt-stockholm-demo0007','DEMO0007',
@@ -126,7 +126,7 @@ SELECT * FROM (VALUES
    '[TEST DATA] Ordningsvakt — Stockholm','[TEST DATA] Public-Order Guard — Stockholm',
    '[TEST DATA] Fiktiv annons för ordningsvakt.','[TEST DATA] Fictional public-order-guard listing.',
    'Stockholm, Sverige','SE','Stockholm','onsite','full_time','entry',
-   true,'external','https://example.com/apply/7',
+   true,'external','https://example.com/apply/7',NULL,
    'published', now() - interval '6 days', now() + interval '24 days'),
 
   ('aurora-corporate-security-demo-livvakt-stockholm-demo0008','DEMO0008',
@@ -135,24 +135,14 @@ SELECT * FROM (VALUES
    '[TEST DATA] Livvakt — Stockholm','[TEST DATA] Close-Protection Officer — Stockholm',
    '[TEST DATA] Fiktiv annons för livvakt.','[TEST DATA] Fictional close-protection listing.',
    'Stockholm, Sverige','SE','Stockholm','onsite','full_time','senior',
-   true,'external','https://example.com/apply/8',
+   true,'external','https://example.com/apply/8',NULL,
    'published', now() - interval '10 days', now() + interval '20 days')
 ) AS v(slug, short_id, source_id, employer_id, profession_slug, family_id,
        title_sv, title_en, description_sv, description_en,
        location_text, country, city, workplace_type, employment_type, experience_level,
-       regulated, application_method, application_url,
+       regulated, application_method, application_url, application_email,
        status, published_at, deadline_at)
--- Fill in the application_email for the row that uses application_method='email'
--- and let ON CONFLICT skip re-inserts.
 ON CONFLICT (slug) DO NOTHING;
-
--- Post-fill: give the 'email' seed row a valid application_email so the
--- publication trigger accepts it. (The VALUES list above cannot vary column
--- shape row-by-row.)
-UPDATE public.jobs
-   SET application_email = 'demo-apply@example.com'
- WHERE slug = 'karnkraft-skyddscentrum-demo-sakerhetstekniker-linkoping-demo0005'
-   AND application_email IS NULL;
 
 COMMIT;
 
