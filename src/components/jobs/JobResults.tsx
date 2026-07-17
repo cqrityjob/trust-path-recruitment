@@ -1,17 +1,21 @@
 import { useT } from "@/i18n/context";
 import { JobCard } from "./JobCard";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
+import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
+import { relevanceForJob } from "@/lib/job-intelligence/personal-relevance";
 
 export function JobResults({
   jobs,
   isLoading,
   isError,
   lang,
+  profile,
 }: {
   jobs: PublicJobCard[] | undefined;
   isLoading: boolean;
   isError: boolean;
   lang: "sv" | "en";
+  profile?: CareerProfileForJobsV1;
 }) {
   const { t } = useT();
 
@@ -67,7 +71,12 @@ export function JobResults({
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} lang={lang} />
+          <JobCard
+            key={job.id}
+            job={job}
+            lang={lang}
+            relevance={profile ? relevanceForJob(job, profile) : undefined}
+          />
         ))}
       </div>
     </>

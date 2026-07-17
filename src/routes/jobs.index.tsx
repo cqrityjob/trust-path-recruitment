@@ -24,6 +24,8 @@ import {
   EXPERIENCE_LEVEL_VALUES,
 } from "@/lib/job-intelligence/enum-labels";
 import { useState, useEffect } from "react";
+import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
+import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
 
 type JobSearch = {
   q?: string;
@@ -85,6 +87,12 @@ function JobsDiscoveryPage() {
         country: search.country || undefined,
       }),
   });
+
+  const profileState = useCareerProfileForJobs();
+  const profile =
+    profileState.status === "ready" ? profileState.data.profile : undefined;
+  const showInvite =
+    profileState.status === "anonymous" || profileState.status === "no_profile";
 
   const setParam = (key: keyof JobSearch, value: string) =>
     navigate({
@@ -217,7 +225,10 @@ function JobsDiscoveryPage() {
           isLoading={jobsQuery.isLoading}
           isError={jobsQuery.isError}
           lang={lang}
+          profile={profile}
         />
+
+        {showInvite && <AssessmentInvite />}
 
         <section className="mt-16 border-t border-border pt-10">
           <h2 className="text-2xl font-semibold">{t("jobs.browse.families.title")}</h2>

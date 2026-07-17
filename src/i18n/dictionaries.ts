@@ -196,6 +196,38 @@ export const dictionaries = {
     "jobs.detail.badge.vetting": "Säkerhetsprövning nämnd",
     "jobs.detail.badge.driving": "Körkort krävs",
 
+    "jobs.relevance.invite.title": "Få personliga karriärinsikter",
+    "jobs.relevance.invite.body":
+      "Gör Security Career Assessment för att få personliga karriärinsikter och se vilka jobb som bäst matchar din profil.",
+    "jobs.relevance.invite.cta": "Gör Security Career Assessment",
+    "jobs.relevance.badge.strong": "Nära din profil",
+    "jobs.relevance.badge.promising": "Relevant för din profil",
+    "jobs.relevance.badge.exploratory": "Värd att utforska",
+    "jobs.relevance.badge.family": "Inom ett yrkesområde som passar din profil",
+    "jobs.relevance.panel.title": "Din profil och den här rollen",
+    "jobs.relevance.panel.why.title": "Varför den här rollen kan passa dig",
+    "jobs.relevance.panel.strengths.title": "Styrkor som är relevanta för rollen",
+    "jobs.relevance.panel.develop.title": "Områden att utveckla",
+    "jobs.relevance.panel.competencies.title": "Relaterade kompetenser",
+    "jobs.relevance.panel.transitions.title": "Möjliga karriärsteg",
+    "jobs.relevance.panel.career_center.cta": "Läs mer om yrket i Karriärcentret",
+    "jobs.relevance.panel.disclaimer":
+      "Vägledningen är baserad på din Career Profile. Kontrollera alltid arbetsgivarens formella krav innan du ansöker.",
+    "jobs.relevance.panel.family_only.body":
+      "Den här rollen ligger inom ett yrkesområde som ligger nära din profil. Vi har ingen specifik yrkesguide att jämföra mot ännu — läs annonsen och arbetsgivarens formella krav noggrant.",
+    "jobs.relevance.panel.no_match.body":
+      "Vi hittade ingen tydlig koppling mellan den här rollen och din profil. Det betyder inte att du inte passar — säkerhetsbranschen är bred. Utforska yrket i Karriärcentret om det intresserar dig.",
+    "jobs.relevance.why.archetype":
+      "Din profil {archetype} har en tydlig koppling till hur den här rollen ser ut.",
+    "jobs.relevance.why.strong_dims":
+      "Dina svar tyder på styrkor inom {dims}, vilket ofta är centralt i rollen.",
+    "jobs.relevance.why.promising":
+      "Rollen ligger nära din profil på flera områden — det finns tydliga öppningar att utveckla.",
+    "jobs.relevance.why.exploratory":
+      "Rollen kan vara värd att utforska. Din profil har både överlapp och tydliga områden att utveckla.",
+    "jobs.relevance.why.family":
+      "Rollen ligger inom ett yrkesområde som ligger nära din profil.",
+
     "employers.title": "För arbetsgivare",
     "employers.lead":
       "Rekrytera, bedöm och utveckla säkerhetspersonal med strukturerat beslutsstöd — utformat för säkerhetsbranschens verklighet.",
@@ -868,6 +900,38 @@ export const dictionaries = {
     "jobs.detail.badge.regulated": "Regulated role",
     "jobs.detail.badge.vetting": "Security vetting mentioned",
     "jobs.detail.badge.driving": "Driving licence required",
+
+    "jobs.relevance.invite.title": "Get personalised career insights",
+    "jobs.relevance.invite.body":
+      "Complete the Security Career Assessment to receive personalised career insights and discover jobs that match your profile.",
+    "jobs.relevance.invite.cta": "Take the Security Career Assessment",
+    "jobs.relevance.badge.strong": "Close to your profile",
+    "jobs.relevance.badge.promising": "Relevant to your profile",
+    "jobs.relevance.badge.exploratory": "Worth exploring",
+    "jobs.relevance.badge.family": "Within a career area that fits your profile",
+    "jobs.relevance.panel.title": "Your profile and this role",
+    "jobs.relevance.panel.why.title": "Why this role may suit you",
+    "jobs.relevance.panel.strengths.title": "Strengths relevant to this role",
+    "jobs.relevance.panel.develop.title": "Areas to develop",
+    "jobs.relevance.panel.competencies.title": "Related competencies",
+    "jobs.relevance.panel.transitions.title": "Possible career steps",
+    "jobs.relevance.panel.career_center.cta": "Learn more about this role in the Career Center",
+    "jobs.relevance.panel.disclaimer":
+      "This guidance is based on your Career Profile. Always review the employer's formal requirements before applying.",
+    "jobs.relevance.panel.family_only.body":
+      "This role sits in a career area that is close to your profile. We do not yet have a specific profession guide to compare against — read the advert and the employer's formal requirements carefully.",
+    "jobs.relevance.panel.no_match.body":
+      "We could not find a clear link between this role and your profile. That does not mean it is a poor fit — the security sector is broad. Explore the role in the Career Center if it interests you.",
+    "jobs.relevance.why.archetype":
+      "Your profile {archetype} aligns clearly with how this role is typically shaped.",
+    "jobs.relevance.why.strong_dims":
+      "Your answers suggest strengths in {dims}, which are often central to this role.",
+    "jobs.relevance.why.promising":
+      "This role sits close to your profile across several areas — there are clear openings to grow into it.",
+    "jobs.relevance.why.exploratory":
+      "This role may be worth exploring. Your profile shows both overlap and clear areas to develop.",
+    "jobs.relevance.why.family":
+      "This role sits within a career area that is close to your profile.",
 
     "employers.title": "For Employers",
     "employers.lead":

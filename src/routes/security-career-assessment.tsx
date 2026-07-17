@@ -20,6 +20,7 @@ import { questions } from "@/lib/assessment-content";
 import { computeCareerIntelligenceMatches } from "@/lib/career-intelligence-engine/compute.functions";
 import { EngineResultView } from "@/components/assessment/result/engine-view";
 import type { AnswerMap } from "@/lib/career-assessment/types";
+import { CareerProfileForJobsSaver } from "@/components/assessment/CareerProfileForJobsSaver";
 
 type Phase = "landing" | "intro" | "questions" | "results";
 
@@ -366,6 +367,7 @@ function Results({
 
   return (
     <AssessmentLayout>
+      <CareerProfileForJobsSaver answers={answerMap} lang={lang} />
       <EngineResultView result={result} lang={lang} onRetake={onRetake} />
     </AssessmentLayout>
   );

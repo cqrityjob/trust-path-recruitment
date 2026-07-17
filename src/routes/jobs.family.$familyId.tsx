@@ -6,6 +6,7 @@ import { useT } from "@/i18n/context";
 import { getCareerAreaLabel, careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
+import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/family/$familyId")({
   ssr: false,
@@ -22,6 +23,9 @@ function JobsByFamily() {
   const { familyId } = Route.useParams();
   const { t, lang } = useT();
   const area = getCareerAreaLabel(familyId)!;
+  const profileState = useCareerProfileForJobs();
+  const profile =
+    profileState.status === "ready" ? profileState.data.profile : undefined;
 
   const q = useQuery({
     queryKey: ["public-jobs", "family", familyId],
@@ -48,6 +52,7 @@ function JobsByFamily() {
           isLoading={q.isLoading}
           isError={q.isError}
           lang={lang}
+          profile={profile}
         />
       </Section>
     </SiteLayout>
