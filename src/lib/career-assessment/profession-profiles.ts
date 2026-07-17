@@ -61,7 +61,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "security-manager",
-    family: "corporate",
+    family: "security_leadership_governance",
     status: "provisional",
     gate: "leadership_strategic",
     targets: {
@@ -79,7 +79,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "security-technician",
-    family: "physical_technical",
+    family: "security_technology",
     status: "provisional",
     gate: "technical",
     targets: {
@@ -95,7 +95,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "risk-manager",
-    family: "risk_crisis",
+    family: "risk_management",
     status: "provisional",
     gate: "none",
     targets: {
@@ -112,7 +112,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "aml-specialist",
-    family: "financial_crime",
+    family: "financial_crime_compliance",
     status: "provisional",
     gate: "investigative_analytical",
     targets: {
@@ -127,7 +127,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "data-center-security",
-    family: "critical_infra",
+    family: "critical_infrastructure_security",
     status: "provisional",
     gate: "operational",
     targets: {
@@ -142,7 +142,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "crisis-continuity-manager",
-    family: "risk_crisis",
+    family: "crisis_management",
     status: "provisional",
     gate: "leadership_strategic",
     targets: {
@@ -159,7 +159,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "close-protection",
-    family: "defence_protective",
+    family: "protective_operations",
     status: "provisional",
     gate: "operational",
     targets: {
@@ -177,7 +177,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   // Placeholder professions with provisional profiles
   {
     professionId: "soc-analyst",
-    family: "cyber_infosec",
+    family: "cyber_information_security",
     status: "placeholder",
     gate: "technical",
     targets: {
@@ -192,7 +192,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "intelligence-analyst",
-    family: "investigations_intel",
+    family: "investigations_intelligence",
     status: "placeholder",
     gate: "investigative_analytical",
     targets: {
@@ -206,7 +206,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "fraud-investigator",
-    family: "investigations_intel",
+    family: "investigations_intelligence",
     status: "placeholder",
     gate: "investigative_analytical",
     targets: {
@@ -220,7 +220,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "security-investigator",
-    family: "investigations_intel",
+    family: "investigations_intelligence",
     status: "placeholder",
     gate: "investigative_analytical",
     targets: {
@@ -235,7 +235,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "security-consultant",
-    family: "consulting_specialist",
+    family: "security_leadership_governance",
     status: "placeholder",
     gate: "none",
     targets: {
@@ -252,7 +252,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "security-coordinator",
-    family: "corporate",
+    family: "security_leadership_governance",
     status: "placeholder",
     gate: "none",
     targets: {
