@@ -125,6 +125,50 @@ export const dictionaries = {
     "jobs.coming_soon.body":
       "Vi bygger en jobbupplevelse som är utformad för säkerhetsbranschens verklighet — med rollspecifika krav, tydliga kompetensbehov och seriösa arbetsgivare.",
 
+    "jobs.discover.title": "Hitta jobb inom säkerhet",
+    "jobs.discover.lead":
+      "Aktuella jobb från arbetsgivare inom säkerhetsbranschen. Sök på nyckelord, plats, familj eller yrke.",
+    "jobs.search.keyword_placeholder": "Roll, kompetens eller nyckelord",
+    "jobs.search.location_placeholder": "Ort, region eller land",
+    "jobs.search.submit": "Sök",
+    "jobs.search.reset": "Rensa filter",
+    "jobs.filter.family": "Familj",
+    "jobs.filter.employment_type": "Anställningsform",
+    "jobs.filter.workplace_type": "Arbetsplats",
+    "jobs.filter.experience_level": "Erfarenhet",
+    "jobs.filter.country": "Land",
+    "jobs.filter.any": "Alla",
+    "jobs.browse.families.title": "Bläddra efter karriärfamilj",
+    "jobs.browse.families.subtitle":
+      "13 karriärfamiljer täcker hela säkerhetsbranschen — från operativt skydd till cyber.",
+    "jobs.results.count_one": "{n} jobb",
+    "jobs.results.count_other": "{n} jobb",
+    "jobs.results.empty.title": "Inga jobb matchar",
+    "jobs.results.empty.body":
+      "Prova andra nyckelord eller ta bort filter. Nya jobb publiceras löpande.",
+    "jobs.results.error.title": "Något gick fel",
+    "jobs.results.error.body":
+      "Vi kunde inte hämta jobb just nu. Försök igen om en stund.",
+    "jobs.results.loading": "Laddar jobb…",
+    "jobs.card.untitled": "Utan titel",
+    "jobs.card.today": "Idag",
+    "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
+    "jobs.detail.back": "← Alla jobb",
+    "jobs.detail.apply_external": "Ansök hos arbetsgivaren",
+    "jobs.detail.apply_email": "Ansök via e-post",
+    "jobs.detail.apply_unavailable":
+      "Ansökan är för närvarande inte tillgänglig via CQrityjob.",
+    "jobs.detail.deadline": "Sista ansökningsdag",
+    "jobs.detail.published": "Publicerad",
+    "jobs.detail.responsibilities": "Arbetsuppgifter",
+    "jobs.detail.requirements": "Kvalifikationer",
+    "jobs.detail.benefits": "Vi erbjuder",
+    "jobs.detail.not_found.title": "Jobbet är inte tillgängligt",
+    "jobs.detail.not_found.body":
+      "Annonsen kan ha tagits bort eller passerat sista ansökningsdag.",
+    "jobs.family.header": "Jobb inom {family}",
+    "jobs.profession.header": "Jobb som {profession}",
+
     "employers.title": "För arbetsgivare",
     "employers.lead":
       "Rekrytera, bedöm och utveckla säkerhetspersonal med strukturerat beslutsstöd — utformat för säkerhetsbranschens verklighet.",
