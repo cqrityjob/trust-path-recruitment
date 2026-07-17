@@ -27,6 +27,7 @@ import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
 import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
@@ -123,6 +124,11 @@ const AuthenticatedJourneyRoute = AuthenticatedJourneyRouteImport.update({
   path: '/journey',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin': typeof AuthenticatedAdminRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin'
     | '/journey'
     | '/career-center/$profession'
     | '/career-center/start'
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin'
     | '/journey'
     | '/career-center/$profession'
     | '/career-center/start'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/admin'
     | '/_authenticated/journey'
     | '/career-center/$profession'
     | '/career-center/start'
@@ -438,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJourneyRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -481,10 +500,12 @@ const AuthenticatedJourneyRouteWithChildren =
   AuthenticatedJourneyRoute._addFileChildren(AuthenticatedJourneyRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
 }
 
