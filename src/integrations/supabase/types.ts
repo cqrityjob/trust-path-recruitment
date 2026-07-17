@@ -307,6 +307,1583 @@ export type Database = {
           },
         ]
       }
+      cig_assessment_dimensions: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_assessment_signals: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          dimension_id: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          dimension_id?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          dimension_id?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_assessment_signals_dimension_id_fkey"
+            columns: ["dimension_id"]
+            isOneToOne: false
+            referencedRelation: "cig_assessment_dimensions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_career_transitions: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          from_profession_id: string
+          graph_version: string
+          id: string
+          rationale_en: string | null
+          rationale_sv: string | null
+          to_profession_id: string
+          transition_kind: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          from_profession_id: string
+          graph_version: string
+          id?: string
+          rationale_en?: string | null
+          rationale_sv?: string | null
+          to_profession_id: string
+          transition_kind?: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          from_profession_id?: string
+          graph_version?: string
+          id?: string
+          rationale_en?: string | null
+          rationale_sv?: string | null
+          to_profession_id?: string
+          transition_kind?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_career_transitions_from_profession_id_fkey"
+            columns: ["from_profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_career_transitions_to_profession_id_fkey"
+            columns: ["to_profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_certifications: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          issuer_en: string | null
+          issuer_sv: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          issuer_en?: string | null
+          issuer_sv?: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          issuer_en?: string | null
+          issuer_sv?: string | null
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_competencies: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_education_pathways: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          typical_duration_months: number | null
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          typical_duration_months?: number | null
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          typical_duration_months?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_employer_types: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_experience_types: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_formal_requirements: {
+        Row: {
+          authority_en: string | null
+          authority_sv: string | null
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          country: string | null
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          jurisdiction: string | null
+          legal_basis: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          authority_en?: string | null
+          authority_sv?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          jurisdiction?: string | null
+          legal_basis?: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          authority_en?: string | null
+          authority_sv?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          jurisdiction?: string | null
+          legal_basis?: string | null
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_knowledge_areas: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_profession_aliases: {
+        Row: {
+          alias_en: string | null
+          alias_kind: Database["public"]["Enums"]["cig_alias_kind"]
+          alias_sv: string | null
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          alias_en?: string | null
+          alias_kind?: Database["public"]["Enums"]["cig_alias_kind"]
+          alias_sv?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          alias_en?: string | null
+          alias_kind?: Database["public"]["Enums"]["cig_alias_kind"]
+          alias_sv?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_aliases_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_assessment_signals: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          profession_id: string
+          signal_id: string
+          signal_polarity: number
+          signal_weight: number
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          profession_id: string
+          signal_id: string
+          signal_polarity?: number
+          signal_weight?: number
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          signal_id?: string
+          signal_polarity?: number
+          signal_weight?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_assessment_signals_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_assessment_signals_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "cig_assessment_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_certification_rel: {
+        Row: {
+          certification_id: string
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id: string
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          certification_id: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id?: string
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          certification_id?: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_certification_rel_certification_id_fkey"
+            columns: ["certification_id"]
+            isOneToOne: false
+            referencedRelation: "cig_certifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_certification_rel_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_competency_req: {
+        Row: {
+          competency_id: string
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          competency_id: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          competency_id?: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_competency_req_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "cig_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_competency_req_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_education_pathways: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          education_pathway_id: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          education_pathway_id: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          education_pathway_id?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_education_pathways_education_pathway_id_fkey"
+            columns: ["education_pathway_id"]
+            isOneToOne: false
+            referencedRelation: "cig_education_pathways"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_education_pathways_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_employer_type_rel: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          employer_type_id: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          employer_type_id: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          employer_type_id?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_employer_type_rel_employer_type_id_fkey"
+            columns: ["employer_type_id"]
+            isOneToOne: false
+            referencedRelation: "cig_employer_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_employer_type_rel_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_experience_req: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          experience_type_id: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          experience_type_id: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          experience_type_id?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_experience_req_experience_type_id_fkey"
+            columns: ["experience_type_id"]
+            isOneToOne: false
+            referencedRelation: "cig_experience_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_experience_req_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_families: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          last_verified: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+          valid_from: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          last_verified?: string | null
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+          valid_from?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          last_verified?: string | null
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+          valid_from?: string
+        }
+        Relationships: []
+      }
+      cig_profession_family_rel: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          family_id: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          family_id: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          family_id?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_family_rel_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "cig_profession_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_family_rel_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_formal_requirements: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          country: string | null
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          formal_requirement_id: string
+          graph_version: string
+          id: string
+          jurisdiction: string | null
+          legal_blocker: boolean
+          notes: Json
+          profession_id: string
+          source_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          formal_requirement_id: string
+          graph_version: string
+          id?: string
+          jurisdiction?: string | null
+          legal_blocker?: boolean
+          notes?: Json
+          profession_id: string
+          source_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          formal_requirement_id?: string
+          graph_version?: string
+          id?: string
+          jurisdiction?: string | null
+          legal_blocker?: boolean
+          notes?: Json
+          profession_id?: string
+          source_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_formal_requirements_formal_requirement_id_fkey"
+            columns: ["formal_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "cig_formal_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_formal_requirements_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_formal_requirements_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "cig_source_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_knowledge_req: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id: string
+          importance: number
+          knowledge_area_id: string
+          profession_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id?: string
+          importance?: number
+          knowledge_area_id: string
+          profession_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version?: string
+          id?: string
+          importance?: number
+          knowledge_area_id?: string
+          profession_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_knowledge_req_knowledge_area_id_fkey"
+            columns: ["knowledge_area_id"]
+            isOneToOne: false
+            referencedRelation: "cig_knowledge_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_knowledge_req_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_sector_rel: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          sector_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          sector_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          sector_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_sector_rel_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_sector_rel_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "cig_sectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_skill_req: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          criticality: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          skill_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          skill_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["cig_relationship_criticality"]
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          skill_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_skill_req_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_skill_req_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "cig_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_source_references: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          profession_id: string
+          purpose: string | null
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          profession_id: string
+          purpose?: string | null
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          purpose?: string | null
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_source_references_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_source_references_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "cig_source_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_specialisations: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          graph_version: string
+          id: string
+          profession_id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version: string
+          id?: string
+          profession_id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_specialisations_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_work_environment_rel: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+          work_environment_id: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+          work_environment_id: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+          work_environment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_work_environment_rel_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_work_environment_rel_work_environment_id_fkey"
+            columns: ["work_environment_id"]
+            isOneToOne: false
+            referencedRelation: "cig_work_environments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_work_preferences: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          importance: number
+          profession_id: string
+          updated_at: string
+          work_preference_id: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          importance?: number
+          profession_id: string
+          updated_at?: string
+          work_preference_id: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          importance?: number
+          profession_id?: string
+          updated_at?: string
+          work_preference_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_work_preferences_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cig_profession_work_preferences_work_preference_id_fkey"
+            columns: ["work_preference_id"]
+            isOneToOne: false
+            referencedRelation: "cig_work_preferences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_professions: {
+        Row: {
+          canonical_key: string
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          country: string | null
+          created_at: string
+          disclaimer_en: string | null
+          disclaimer_sv: string | null
+          graph_version: string
+          id: string
+          is_regulated: boolean
+          jurisdiction: string | null
+          last_verified: string | null
+          notes: Json
+          overview_en: string | null
+          overview_sv: string | null
+          primary_family_id: string | null
+          quality_level: Database["public"]["Enums"]["cig_quality_level"]
+          slug: string
+          summary_en: string | null
+          summary_sv: string | null
+          title_en: string
+          title_sv: string
+          updated_at: string
+          valid_from: string
+        }
+        Insert: {
+          canonical_key: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          disclaimer_en?: string | null
+          disclaimer_sv?: string | null
+          graph_version: string
+          id?: string
+          is_regulated?: boolean
+          jurisdiction?: string | null
+          last_verified?: string | null
+          notes?: Json
+          overview_en?: string | null
+          overview_sv?: string | null
+          primary_family_id?: string | null
+          quality_level?: Database["public"]["Enums"]["cig_quality_level"]
+          slug: string
+          summary_en?: string | null
+          summary_sv?: string | null
+          title_en: string
+          title_sv: string
+          updated_at?: string
+          valid_from?: string
+        }
+        Update: {
+          canonical_key?: string
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          country?: string | null
+          created_at?: string
+          disclaimer_en?: string | null
+          disclaimer_sv?: string | null
+          graph_version?: string
+          id?: string
+          is_regulated?: boolean
+          jurisdiction?: string | null
+          last_verified?: string | null
+          notes?: Json
+          overview_en?: string | null
+          overview_sv?: string | null
+          primary_family_id?: string | null
+          quality_level?: Database["public"]["Enums"]["cig_quality_level"]
+          slug?: string
+          summary_en?: string | null
+          summary_sv?: string | null
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+          valid_from?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_professions_primary_family_id_fkey"
+            columns: ["primary_family_id"]
+            isOneToOne: false
+            referencedRelation: "cig_profession_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_sectors: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_skills: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          esco_uri: string | null
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          esco_uri?: string | null
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          esco_uri?: string | null
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_source_references: {
+        Row: {
+          accessed_at: string | null
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          jurisdiction: string | null
+          language: string | null
+          last_checked_at: string | null
+          link_status: Database["public"]["Enums"]["cig_link_status"]
+          notes: string | null
+          organisation: string
+          replacement_source_id: string | null
+          source_type: Database["public"]["Enums"]["cig_source_type"]
+          stable_key: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          jurisdiction?: string | null
+          language?: string | null
+          last_checked_at?: string | null
+          link_status?: Database["public"]["Enums"]["cig_link_status"]
+          notes?: string | null
+          organisation: string
+          replacement_source_id?: string | null
+          source_type?: Database["public"]["Enums"]["cig_source_type"]
+          stable_key: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          accessed_at?: string | null
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          jurisdiction?: string | null
+          language?: string | null
+          last_checked_at?: string | null
+          link_status?: Database["public"]["Enums"]["cig_link_status"]
+          notes?: string | null
+          organisation?: string
+          replacement_source_id?: string | null
+          source_type?: Database["public"]["Enums"]["cig_source_type"]
+          stable_key?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_source_references_replacement_source_id_fkey"
+            columns: ["replacement_source_id"]
+            isOneToOne: false
+            referencedRelation: "cig_source_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_work_environments: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cig_work_preferences: {
+        Row: {
+          content_status: Database["public"]["Enums"]["cig_content_status"]
+          created_at: string
+          graph_version: string
+          id: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at: string
+        }
+        Insert: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version: string
+          id?: string
+          slug: string
+          title_en: string
+          title_sv: string
+          updated_at?: string
+        }
+        Update: {
+          content_status?: Database["public"]["Enums"]["cig_content_status"]
+          created_at?: string
+          graph_version?: string
+          id?: string
+          slug?: string
+          title_en?: string
+          title_sv?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       consent_records: {
         Row: {
           granted_at: string
@@ -622,6 +2199,22 @@ export type Database = {
         | "content_editor"
         | "assessment_editor"
         | "support"
+      cig_alias_kind:
+        | "alias"
+        | "specialisation"
+        | "seniority"
+        | "context"
+        | "destination"
+      cig_content_status: "draft" | "published" | "archived"
+      cig_link_status: "healthy" | "redirected" | "failed" | "needs_check"
+      cig_quality_level: "A" | "B" | "C"
+      cig_relationship_criticality: "mandatory" | "preferred" | "informative"
+      cig_source_type:
+        | "official"
+        | "primary"
+        | "secondary"
+        | "community"
+        | "internal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -755,6 +2348,24 @@ export const Constants = {
         "content_editor",
         "assessment_editor",
         "support",
+      ],
+      cig_alias_kind: [
+        "alias",
+        "specialisation",
+        "seniority",
+        "context",
+        "destination",
+      ],
+      cig_content_status: ["draft", "published", "archived"],
+      cig_link_status: ["healthy", "redirected", "failed", "needs_check"],
+      cig_quality_level: ["A", "B", "C"],
+      cig_relationship_criticality: ["mandatory", "preferred", "informative"],
+      cig_source_type: [
+        "official",
+        "primary",
+        "secondary",
+        "community",
+        "internal",
       ],
     },
   },
