@@ -7,7 +7,7 @@ const BASE_URL = "https://trust-path-recruitment.lovable.app";
 
 interface SitemapEntry {
   path: string;
-  changefreq?: "weekly" | "monthly" | "yearly";
+  changefreq?: "daily" | "weekly" | "monthly" | "yearly";
   priority?: string;
 }
 
