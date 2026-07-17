@@ -9,7 +9,7 @@ its data model, guardrails, and delivery phases.
 | Phase | Scope | Status |
 |---|---|---|
 | A | Foundation, schema, RLS, feature flag, rollback docs | Delivered |
-| B | Admin moderation | Not started |
+| B | Admin moderation (MVP: internal console) | Delivered |
 | C | Public Jobs discovery (landing, search, filters, listings) | Not started |
 | D | Job detail experience | Not started |
 | E | Candidate personal relevance | Not started |
