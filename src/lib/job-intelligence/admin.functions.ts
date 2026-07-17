@@ -39,8 +39,8 @@ async function writeAudit(params: {
     job_slug_snapshot: params.slugSnapshot,
     actor_id: params.actorId,
     action: params.action,
-    before: params.before ?? null,
-    after: params.after ?? null,
+    before: (params.before ?? null) as any,
+    after: (params.after ?? null) as any,
   });
 }
 
