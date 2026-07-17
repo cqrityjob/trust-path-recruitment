@@ -1108,6 +1108,8 @@ export type Database = {
       }
       cig_profession_families: {
         Row: {
+          archived_at: string | null
+          canonical_id: string | null
           content_status: Database["public"]["Enums"]["cig_content_status"]
           created_at: string
           description_en: string | null
@@ -1115,6 +1117,7 @@ export type Database = {
           graph_version: string
           id: string
           last_verified: string | null
+          resolves_to_canonical: string | null
           slug: string
           title_en: string
           title_sv: string
@@ -1122,6 +1125,8 @@ export type Database = {
           valid_from: string
         }
         Insert: {
+          archived_at?: string | null
+          canonical_id?: string | null
           content_status?: Database["public"]["Enums"]["cig_content_status"]
           created_at?: string
           description_en?: string | null
@@ -1129,6 +1134,7 @@ export type Database = {
           graph_version: string
           id?: string
           last_verified?: string | null
+          resolves_to_canonical?: string | null
           slug: string
           title_en: string
           title_sv: string
@@ -1136,6 +1142,8 @@ export type Database = {
           valid_from?: string
         }
         Update: {
+          archived_at?: string | null
+          canonical_id?: string | null
           content_status?: Database["public"]["Enums"]["cig_content_status"]
           created_at?: string
           description_en?: string | null
@@ -1143,6 +1151,7 @@ export type Database = {
           graph_version?: string
           id?: string
           last_verified?: string | null
+          resolves_to_canonical?: string | null
           slug?: string
           title_en?: string
           title_sv?: string
