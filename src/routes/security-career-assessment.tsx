@@ -445,7 +445,7 @@ function Results({
             resultSummary={{
               topProfessionId: activeProfession.id,
               strengths: session.strengthDimensionIds,
-              matches: topMatches.slice(0, 5).map((m) => ({ id: m.professionId, score: m.score })),
+              matches: topMatches.slice(0, 5).map((m) => ({ id: m.professionId, match: m.displayedMatch })),
             }}
             lang={lang}
           />
