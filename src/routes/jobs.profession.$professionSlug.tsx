@@ -22,7 +22,11 @@ function JobsByProfession() {
     queryFn: () => listPublicJobs({ professionSlug }),
   });
 
-  const displayName = profession ? profession.name[lang] : professionSlug;
+  const displayName = profession
+    ? lang === "sv"
+      ? profession.titleSv
+      : profession.titleEn
+    : professionSlug;
 
   return (
     <SiteLayout>
@@ -42,7 +46,7 @@ function JobsByProfession() {
             params={{ profession: profession.slug }}
             className="mt-2 inline-block text-sm text-primary hover:underline"
           >
-            {profession.name[lang]} — Career Center →
+            {displayName} — Career Center →
           </Link>
         )}
         <JobResults
