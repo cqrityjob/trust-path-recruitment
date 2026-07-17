@@ -438,6 +438,19 @@ function Results({
 
         <ContinueJourney onRetake={onRetake} topSlug={activeProfession?.slug} />
 
+        {activeProfession && (
+          <SaveToJourneyCard
+            professionId={activeProfession.id}
+            professionTitle={lang === "sv" ? activeProfession.titleSv : activeProfession.titleEn}
+            resultSummary={{
+              topProfessionId: activeProfession.id,
+              strengths: session.strengthDimensionIds,
+              matches: topMatches.slice(0, 5).map((m) => ({ id: m.professionId, score: m.score })),
+            }}
+            lang={lang}
+          />
+        )}
+
         <ShareSummaryPreview session={session} lang={lang} />
 
         <ResultTransparency lang={lang} />
