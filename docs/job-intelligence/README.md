@@ -10,7 +10,7 @@ its data model, guardrails, and delivery phases.
 |---|---|---|
 | A | Foundation, schema, RLS, feature flag, rollback docs | Delivered |
 | B | Admin moderation (MVP: internal console) | Delivered |
-| C | Public Jobs discovery (landing, search, filters, listings) | Not started |
+| C | Public Jobs discovery (landing, search, filters, listings) | Delivered |
 | D | Job detail experience | Not started |
 | E | Candidate personal relevance | Not started |
 | F | Launch hardening (SEO, a11y, analytics, security review) | Not started |
