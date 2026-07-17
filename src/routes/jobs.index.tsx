@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
+import {
+  employmentTypeLabel,
+  workplaceTypeLabel,
+  experienceLevelLabel,
+  EMPLOYMENT_TYPE_VALUES,
+  WORKPLACE_TYPE_VALUES,
+  EXPERIENCE_LEVEL_VALUES,
+} from "@/lib/job-intelligence/enum-labels";
 import { useState, useEffect } from "react";
 
 type JobSearch = {
@@ -47,9 +55,9 @@ export const Route = createFileRoute("/jobs/")({
   component: JobsDiscoveryPage,
 });
 
-const EMPLOYMENT_TYPES = ["full_time", "part_time", "contract", "temporary", "internship"];
-const WORKPLACE_TYPES = ["onsite", "hybrid", "remote"];
-const EXPERIENCE_LEVELS = ["entry", "mid", "senior", "lead"];
+const EMPLOYMENT_TYPES = EMPLOYMENT_TYPE_VALUES;
+const WORKPLACE_TYPES = WORKPLACE_TYPE_VALUES;
+const EXPERIENCE_LEVELS = EXPERIENCE_LEVEL_VALUES;
 
 function JobsDiscoveryPage() {
   const { t, lang } = useT();
@@ -160,21 +168,21 @@ function JobsDiscoveryPage() {
               label={t("jobs.filter.employment_type")}
               value={search.employment ?? ""}
               onChange={(v) => setParam("employment", v)}
-              options={EMPLOYMENT_TYPES.map((v) => ({ value: v, label: v.replace("_", " ") }))}
+              options={EMPLOYMENT_TYPES.map((v) => ({ value: v, label: employmentTypeLabel(v, lang) }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.workplace_type")}
               value={search.workplace ?? ""}
               onChange={(v) => setParam("workplace", v)}
-              options={WORKPLACE_TYPES.map((v) => ({ value: v, label: v }))}
+              options={WORKPLACE_TYPES.map((v) => ({ value: v, label: workplaceTypeLabel(v, lang) }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
               label={t("jobs.filter.experience_level")}
               value={search.experience ?? ""}
               onChange={(v) => setParam("experience", v)}
-              options={EXPERIENCE_LEVELS.map((v) => ({ value: v, label: v }))}
+              options={EXPERIENCE_LEVELS.map((v) => ({ value: v, label: experienceLevelLabel(v, lang) }))}
               anyLabel={t("jobs.filter.any")}
             />
             <FilterSelect
@@ -260,7 +268,7 @@ function FilterSelect({
         <SelectContent>
           <SelectItem value="__any__">{anyLabel}</SelectItem>
           {options.map((o) => (
-            <SelectItem key={o.value} value={o.value} className="capitalize">
+            <SelectItem key={o.value} value={o.value}>
               {o.label}
             </SelectItem>
           ))}
