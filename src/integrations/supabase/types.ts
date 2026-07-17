@@ -1923,6 +1923,83 @@ export type Database = {
         }
         Relationships: []
       }
+      employer_admin_meta: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employer_id: string
+          updated_at: string
+          updated_by: string | null
+          verification_notes: string | null
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employer_id: string
+          updated_at?: string
+          updated_by?: string | null
+          verification_notes?: string | null
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          verification_notes?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_admin_meta_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: true
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employers: {
+        Row: {
+          country: string | null
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          slug: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          slug: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       evidence_items: {
         Row: {
           created_at: string
@@ -2033,6 +2110,289 @@ export type Database = {
           },
         ]
       }
+      job_admin_meta: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duplicate_of: string | null
+          imported_at: string | null
+          job_id: string
+          moderation_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duplicate_of?: string | null
+          imported_at?: string | null
+          job_id: string
+          moderation_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duplicate_of?: string | null
+          imported_at?: string | null
+          job_id?: string
+          moderation_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_admin_meta_duplicate_of_fkey"
+            columns: ["duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_admin_meta_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          id: string
+          job_id: string | null
+          job_slug_snapshot: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_slug_snapshot?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_slug_snapshot?: string | null
+        }
+        Relationships: []
+      }
+      job_import_sources: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          terms_of_use: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          terms_of_use?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          terms_of_use?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          application_email: string | null
+          application_method: string
+          application_url: string | null
+          benefits: Json | null
+          canonical_url: string | null
+          city: string | null
+          content_hash: string | null
+          country: string | null
+          created_at: string
+          deadline_at: string | null
+          description_en: string | null
+          description_sv: string | null
+          driving_licence_required: boolean
+          employer_id: string
+          employer_type: string | null
+          employment_type: string | null
+          experience_level: string | null
+          expires_at: string | null
+          family_id: string | null
+          formal_requirement_ids: string[]
+          id: string
+          language_requirements: string[]
+          location_text: string | null
+          night_work: boolean | null
+          profession_slug: string | null
+          published_at: string | null
+          region: string | null
+          regulated: boolean
+          related_profession_slugs: string[]
+          requirements: Json | null
+          responsibilities: Json | null
+          sector: string | null
+          security_vetting_mentioned: boolean
+          shift_work: boolean | null
+          short_id: string
+          slug: string
+          source_id: string | null
+          source_job_id: string | null
+          source_url: string | null
+          status: string
+          title_en: string | null
+          title_sv: string | null
+          travel_required: boolean | null
+          updated_at: string
+          workplace_type: string | null
+        }
+        Insert: {
+          application_email?: string | null
+          application_method: string
+          application_url?: string | null
+          benefits?: Json | null
+          canonical_url?: string | null
+          city?: string | null
+          content_hash?: string | null
+          country?: string | null
+          created_at?: string
+          deadline_at?: string | null
+          description_en?: string | null
+          description_sv?: string | null
+          driving_licence_required?: boolean
+          employer_id: string
+          employer_type?: string | null
+          employment_type?: string | null
+          experience_level?: string | null
+          expires_at?: string | null
+          family_id?: string | null
+          formal_requirement_ids?: string[]
+          id?: string
+          language_requirements?: string[]
+          location_text?: string | null
+          night_work?: boolean | null
+          profession_slug?: string | null
+          published_at?: string | null
+          region?: string | null
+          regulated?: boolean
+          related_profession_slugs?: string[]
+          requirements?: Json | null
+          responsibilities?: Json | null
+          sector?: string | null
+          security_vetting_mentioned?: boolean
+          shift_work?: boolean | null
+          short_id: string
+          slug: string
+          source_id?: string | null
+          source_job_id?: string | null
+          source_url?: string | null
+          status?: string
+          title_en?: string | null
+          title_sv?: string | null
+          travel_required?: boolean | null
+          updated_at?: string
+          workplace_type?: string | null
+        }
+        Update: {
+          application_email?: string | null
+          application_method?: string
+          application_url?: string | null
+          benefits?: Json | null
+          canonical_url?: string | null
+          city?: string | null
+          content_hash?: string | null
+          country?: string | null
+          created_at?: string
+          deadline_at?: string | null
+          description_en?: string | null
+          description_sv?: string | null
+          driving_licence_required?: boolean
+          employer_id?: string
+          employer_type?: string | null
+          employment_type?: string | null
+          experience_level?: string | null
+          expires_at?: string | null
+          family_id?: string | null
+          formal_requirement_ids?: string[]
+          id?: string
+          language_requirements?: string[]
+          location_text?: string | null
+          night_work?: boolean | null
+          profession_slug?: string | null
+          published_at?: string | null
+          region?: string | null
+          regulated?: boolean
+          related_profession_slugs?: string[]
+          requirements?: Json | null
+          responsibilities?: Json | null
+          sector?: string | null
+          security_vetting_mentioned?: boolean
+          shift_work?: boolean | null
+          short_id?: string
+          slug?: string
+          source_id?: string | null
+          source_job_id?: string | null
+          source_url?: string | null
+          status?: string
+          title_en?: string | null
+          title_sv?: string | null
+          travel_required?: boolean | null
+          updated_at?: string
+          workplace_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_profession_slug_fkey"
+            columns: ["profession_slug"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "jobs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "job_import_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           country: string | null
@@ -2117,6 +2477,32 @@ export type Database = {
           },
         ]
       }
+      saved_jobs: {
+        Row: {
+          job_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          job_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          job_id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       target_professions: {
         Row: {
           chosen_at: string
@@ -2193,10 +2579,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      job_is_active: {
+        Args: {
+          p_deadline_at: string
+          p_expires_at: string
+          p_published_at: string
+          p_status: string
         }
         Returns: boolean
       }
