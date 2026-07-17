@@ -7,7 +7,7 @@ import type { ProfessionTargetProfile } from "./types";
 export const professionProfiles: ProfessionTargetProfile[] = [
   {
     professionId: "security-officer",
-    family: "guarding",
+    family: "protective_operations",
     status: "provisional",
     gate: "operational",
     targets: {
@@ -27,7 +27,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "ordningsvakt",
-    family: "police_public",
+    family: "public_safety_justice",
     status: "provisional",
     gate: "operational",
     targets: {
@@ -45,7 +45,7 @@ export const professionProfiles: ProfessionTargetProfile[] = [
   },
   {
     professionId: "skyddsvakt",
-    family: "defence_protective",
+    family: "protective_operations",
     status: "provisional",
     gate: "operational",
     targets: {
