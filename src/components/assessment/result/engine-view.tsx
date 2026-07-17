@@ -46,15 +46,25 @@ import {
   backgroundOptions,
   buildActionPlan,
   careerProfileLabel,
-  confidenceLabelBi,
+  currentFitBand,
+  currentFitLabel,
   emptyCertificationsCopy,
   emptyEducationCopy,
+  guidanceSignalHelp,
+  insufficientEvidenceHelp,
+  insufficientEvidenceLabel,
   levelLabel,
   matchStrengthBand,
   matchStrengthLabel,
   methodologyBullets,
+  overallEvidenceHelp,
+  overallEvidenceLabel,
+  overallEvidenceLevel,
   pick,
+  potentialBand,
+  potentialLabel,
   regulatedLabel,
+  regulatedHelp,
   scoreTooltips,
   type BackgroundKey,
   type Bi,
@@ -153,14 +163,19 @@ function ScoreWithHelp({
   value,
   interpretation,
   tone = "accent",
+  insufficient = false,
+  insufficientHelp,
 }: {
   label: string;
   help: string;
   value: number | string;
   interpretation?: string;
   tone?: "accent" | "muted";
+  insufficient?: boolean;
+  insufficientHelp?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const effectiveHelp = insufficient && insufficientHelp ? insufficientHelp : help;
   return (
     <div className="rounded-md border border-border/60 bg-background p-4">
       <div className="flex items-center justify-between gap-2">
@@ -171,7 +186,7 @@ function ScoreWithHelp({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label={`${label}: ${help}`}
+          aria-label={`${label}: ${effectiveHelp}`}
           className="rounded-full p-1 text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.75} />
@@ -183,7 +198,11 @@ function ScoreWithHelp({
           tone === "accent" ? "text-foreground" : "text-muted-foreground",
         )}
       >
-        {typeof value === "number" ? (
+        {insufficient ? (
+          <span className="text-sm font-medium normal-case tracking-normal text-muted-foreground">
+            {insufficientHelp ? "—" : "—"}
+          </span>
+        ) : typeof value === "number" ? (
           <>
             {value}
             <span className="ml-0.5 text-base text-muted-foreground">%</span>
@@ -192,14 +211,19 @@ function ScoreWithHelp({
           <span className="text-lg">{value}</span>
         )}
       </p>
-      {interpretation && (
+      {insufficient ? (
+        <p className="mt-1 text-[11px] font-medium leading-relaxed text-foreground">
+          {/* Insufficient evidence label is provided via `interpretation` when present. */}
+          {interpretation}
+        </p>
+      ) : interpretation ? (
         <p className="mt-1 text-[11px] font-medium leading-relaxed text-foreground">
           {interpretation}
         </p>
-      )}
+      ) : null}
       {open && (
         <p className="mt-2 border-t border-border/60 pt-2 text-[11px] leading-relaxed text-muted-foreground">
-          {help}
+          {effectiveHelp}
         </p>
       )}
     </div>
@@ -306,9 +330,23 @@ function Hero({
   onRetake: () => void;
 }) {
   const profileLbl = careerProfileLabel(profile);
-  const band = matchStrengthBand(primary.currentFit, primary.confidence);
-  const bandLbl = matchStrengthLabel(band);
-
+  const evidenceLevel = overallEvidenceLevel(result.overallEvidenceScore);
+  const evidenceLbl = overallEvidenceLabel(evidenceLevel);
+  const fitBand = currentFitBand(primary.currentFit, primary.confidence);
+  const fitLbl = currentFitLabel(fitBand);
+  const potBand = potentialBand(primary.potential, primary.confidence);
+  const potLbl = potentialLabel(potBand);
+  const insufficientFit = primary.confidence === "limited" || primary.currentFit <= 0;
+  const insufficientPot = primary.confidence === "limited" || primary.potential <= 0;
+  const primaryHref = primary.legacySlug ? `/career-center/${primary.legacySlug}` : "/career-center";
+  const [regOpen, setRegOpen] = useState(false);
+  const [evOpen, setEvOpen] = useState(false);
+  const scrollTo = (id: string) => {
+    if (typeof document !== "undefined") {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
   return (
     <section className="rounded-lg border border-border bg-gradient-to-br from-muted/40 via-background to-background p-8 md:p-10">
       <div className="flex flex-wrap items-center gap-2">
@@ -316,10 +354,48 @@ function Hero({
           <Sparkles className="mr-1 h-3 w-3" strokeWidth={2} />
           {lang === "sv" ? "Karriärvägledning" : "Career guidance"}
         </TokenBadge>
-        <TokenBadge>{pick(bandLbl, lang)}</TokenBadge>
-        <TokenBadge>{pick(confidenceLabelBi(primary.confidence), lang)}</TokenBadge>
+        {/* Phase D.2.1: single overall evidence status with tooltip. */}
+        <span className="relative inline-flex">
+          <button
+            type="button"
+            onClick={() => setEvOpen((v) => !v)}
+            aria-expanded={evOpen}
+            aria-label={`${pick(evidenceLbl, lang)}: ${pick(overallEvidenceHelp, lang)}`}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {pick(evidenceLbl, lang)}
+            <HelpCircle className="h-3 w-3" strokeWidth={1.75} />
+          </button>
+          {evOpen && (
+            <span
+              role="tooltip"
+              className="absolute left-0 top-full z-10 mt-1 w-72 rounded-md border border-border bg-background p-3 text-[11px] normal-case tracking-normal leading-relaxed text-muted-foreground shadow-lg"
+            >
+              {pick(overallEvidenceHelp, lang)}
+            </span>
+          )}
+        </span>
         {primary.regulated && (
-          <TokenBadge tone="warn">{pick(regulatedLabel, lang)}</TokenBadge>
+          <span className="relative inline-flex">
+            <button
+              type="button"
+              onClick={() => setRegOpen((v) => !v)}
+              aria-expanded={regOpen}
+              aria-label={`${pick(regulatedLabel, lang)}: ${pick(regulatedHelp, lang)}`}
+              className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-amber-700 hover:text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-amber-300"
+            >
+              {pick(regulatedLabel, lang)}
+              <HelpCircle className="h-3 w-3" strokeWidth={1.75} />
+            </button>
+            {regOpen && (
+              <span
+                role="tooltip"
+                className="absolute left-0 top-full z-10 mt-1 w-72 rounded-md border border-border bg-background p-3 text-[11px] normal-case tracking-normal leading-relaxed text-muted-foreground shadow-lg"
+              >
+                {pick(regulatedHelp, lang)}
+              </span>
+            )}
+          </span>
         )}
         {result.dataStatus === "cig_enrichment_missing" && (
           <TokenBadge tone="warn">
@@ -372,20 +448,26 @@ function Hero({
             {familyLabel(primary.family.key, lang)}
           </p>
           <p className="mt-3 text-sm font-medium text-foreground">
-            {pick(bandLbl, lang)}
+            {insufficientFit ? pick(insufficientEvidenceLabel, lang) : pick(fitLbl, lang)}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:w-64">
           <ScoreWithHelp
             label={pick(scoreTooltips.currentFit.label, lang)}
-            help={pick(scoreTooltips.currentFit.help, lang)}
-            value={primary.currentFit}
+            help={`${pick(guidanceSignalHelp, lang)} ${pick(scoreTooltips.currentFit.help, lang)} (${lang === "sv" ? "internt värde" : "internal value"}: ${primary.currentFit}%)`}
+            value={insufficientFit ? pick(insufficientEvidenceLabel, lang) : pick(fitLbl, lang)}
+            insufficient={insufficientFit}
+            insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+            interpretation={insufficientFit ? pick(insufficientEvidenceLabel, lang) : undefined}
           />
           <ScoreWithHelp
             label={pick(scoreTooltips.potential.label, lang)}
-            help={pick(scoreTooltips.potential.help, lang)}
-            value={primary.potential}
+            help={`${pick(guidanceSignalHelp, lang)} ${pick(scoreTooltips.potential.help, lang)} (${lang === "sv" ? "internt värde" : "internal value"}: ${primary.potential}%)`}
+            value={insufficientPot ? pick(insufficientEvidenceLabel, lang) : pick(potLbl, lang)}
             tone="muted"
+            insufficient={insufficientPot}
+            insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+            interpretation={insufficientPot ? pick(insufficientEvidenceLabel, lang) : undefined}
           />
         </div>
       </div>
@@ -396,11 +478,37 @@ function Hero({
           : "The result is guidance for career choices. It does not determine eligibility, competence or employment. Formal requirements must always be verified separately."}
       </p>
 
+      {/* Phase D.2.1: Discover → Understand → Grow action hierarchy. */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PrimaryButton onClick={onRetake} variant="ghost">
-          <RotateCcw className="mr-2 h-4 w-4" />
+        <a
+          href={primaryHref}
+          className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <Target className="mr-2 h-4 w-4" strokeWidth={1.75} />
+          {lang === "sv" ? "Utforska yrket" : "Explore this profession"}
+        </a>
+        <button
+          type="button"
+          onClick={() => scrollTo("compare")}
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          {lang === "sv" ? "Jämför karriärvägar" : "Compare career paths"}
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollTo("action-plan")}
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          {lang === "sv" ? "Se din utvecklingsplan" : "View your action plan"}
+        </button>
+        <button
+          type="button"
+          onClick={onRetake}
+          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
           {lang === "sv" ? "Gör om testet" : "Retake assessment"}
-        </PrimaryButton>
+        </button>
       </div>
     </section>
   );
@@ -409,6 +517,10 @@ function Hero({
 // -------------------- Why this result --------------------
 
 function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
+  // Phase D.2.1: hide internal-model wording (archetype, baseline signal,
+  // supporting profile). Structured explanations of kind profile_archetype
+  // are rewritten in place; family_rationale is kept but rephrased when it
+  // starts with the "Baseline signals" pattern.
   const seen = new Set<string>();
   const strongest = match.strongestDimensions
     .filter((d) => {
@@ -423,16 +535,28 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
     .slice(0, 2);
 
   const kinds: StructuredExplanation["kind"][] = [
-    "profile_archetype",
     "family_rationale",
     "current_vs_potential",
     "regulated_notice",
     "gate_pass",
     "gate_fail",
   ];
+  // Plain-language rewriter: strips internal terminology.
+  const rewrite = (text: Bi): Bi => {
+    const soften = (s: string) =>
+      s
+        .replace(/baseline signal[s]?[^.]*\./i, "The assessment did not find sufficiently clear information across all areas that are relevant to this profession.")
+        .replace(/basvärde[t]?[^.]*inte tydligt[^.]*\./i, "Testet gav inte tillräckligt tydlig information inom alla områden som är relevanta för yrket.")
+        .replace(/\barchetype[s]?\b/gi, lang === "sv" ? "profil" : "profile")
+        .replace(/\barketyp(?:er)?\b/gi, "profil")
+        .replace(/supporting profile/gi, lang === "sv" ? "stödjande profil" : "supporting signal")
+        .replace(/strongest contributing dimensions?/gi, "areas that stood out in your answers");
+    return { sv: soften(text.sv), en: soften(text.en) };
+  };
   const seenText = new Set<string>();
   const contextual = match.reason
     .filter((r) => kinds.includes(r.kind))
+    .map((r) => ({ ...r, text: rewrite(r.text) }))
     .filter((r) => {
       const key = `${r.kind}:${r.text.sv}`;
       if (seenText.has(key)) return false;
@@ -457,7 +581,7 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
       {strongest.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {lang === "sv" ? "Starkaste bidragande dimensioner" : "Strongest contributing dimensions"}
+            {lang === "sv" ? "Områden som framträdde i dina svar" : "Areas that stood out in your answers"}
           </h3>
           <ul className="mt-3 space-y-3">
             {strongest.map((d) => {
@@ -573,24 +697,36 @@ function CareerProfileBlock({
           help={lang === "sv" ? "Hur självständigt du föredrar att arbeta enligt dina svar." : "How independently you prefer to work based on your answers."}
           value={profile.workingStyle.independence}
           tone="muted"
+          insufficient={profile.workingStyle.independence <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.independence <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Samarbete" : "Teamwork"}
           help={lang === "sv" ? "Hur mycket du föredrar att arbeta i team enligt dina svar." : "How much you prefer working in teams based on your answers."}
           value={profile.workingStyle.teamwork}
           tone="muted"
+          insufficient={profile.workingStyle.teamwork <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.teamwork <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Struktur" : "Structure"}
           help={lang === "sv" ? "Hur mycket du föredrar tydliga rutiner och struktur." : "How much you prefer clear routines and structure."}
           value={profile.workingStyle.structurePreference}
           tone="muted"
+          insufficient={profile.workingStyle.structurePreference <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.structurePreference <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Risktolerans" : "Risk tolerance"}
           help={lang === "sv" ? "Hur bekväm du är med osäkerhet och pressade situationer." : "How comfortable you are with uncertainty and high-pressure situations."}
           value={profile.workingStyle.riskTolerance}
           tone="muted"
+          insufficient={profile.workingStyle.riskTolerance <= 0}
+          insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+          interpretation={profile.workingStyle.riskTolerance <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
         />
       </div>
     </SectionCard>
