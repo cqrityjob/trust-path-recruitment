@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Clock, Building2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
-import { getFamily } from "@/lib/career-center/profession-families";
+import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 
 function pickTitle(job: PublicJobCard, lang: "sv" | "en"): string {
   const primary = lang === "sv" ? job.title_sv : job.title_en;
@@ -28,7 +28,7 @@ export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }
   const title = pickTitle(job, lang) || t("jobs.card.untitled");
   const location = locationLabel(job);
   const days = daysSince(job.published_at);
-  const family = job.family_id ? getFamily(job.family_id) : undefined;
+  const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
 
   return (
     <Link
@@ -73,8 +73,8 @@ export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }
         {job.workplace_type && <span className="capitalize">{job.workplace_type}</span>}
       </div>
 
-      {family && (
-        <p className="mt-3 text-xs text-muted-foreground">{family.name[lang]}</p>
+      {area && (
+        <p className="mt-3 text-xs text-muted-foreground">{area.name[lang]}</p>
       )}
     </Link>
   );

@@ -46,7 +46,7 @@ function JobsByProfession() {
             params={{ profession: profession.slug }}
             className="mt-2 inline-block text-sm text-primary hover:underline"
           >
-            {displayName} — Career Center →
+            {t("jobs.detail.career.explore")}
           </Link>
         )}
         <JobResults

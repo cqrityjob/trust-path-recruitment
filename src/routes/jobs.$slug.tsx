@@ -22,7 +22,7 @@ import {
   type PublicJobDetail,
   type PublicEmployer,
 } from "@/lib/job-intelligence/public-queries";
-import { getFamily } from "@/lib/career-center/profession-families";
+import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { getProfession } from "@/lib/career-center/professions";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
@@ -151,7 +151,7 @@ function JobDetailPage() {
   const title =
     pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
   const description = pickLocalized(job.description_sv, job.description_en, lang);
-  const family = job.family_id ? getFamily(job.family_id) : undefined;
+  const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
   const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
   const location = [job.location_text, job.city, job.region, job.country]
     .filter(Boolean)
@@ -331,10 +331,10 @@ function JobDetailPage() {
               <EmployerCard employer={employer} description={employerDesc} />
             )}
 
-            {(family || profession) && (
+            {(area || profession) && (
               <CareerContext
-                familyId={family?.id ?? null}
-                familyName={family ? family.name[lang] : null}
+                familyId={area?.id ?? null}
+                familyName={area ? area.name[lang] : null}
                 professionSlug={profession?.slug ?? null}
                 professionName={
                   profession
