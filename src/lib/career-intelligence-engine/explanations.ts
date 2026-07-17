@@ -4,6 +4,7 @@
 // Bi-text pair (sv/en). The UI renders these; the engine composes them.
 
 import { dimensionById } from "@/lib/career-assessment/dimensions";
+import { getFamily } from "@/lib/career-center/profession-families";
 import type {
   Bi,
   CareerProfile,
@@ -182,13 +183,16 @@ export function explainCareerProfile(profile: CareerProfile): StructuredExplanat
 }
 
 export function explainFamily(entry: FamilyRankingEntry): StructuredExplanation[] {
+  const fam = getFamily(entry.familyKey);
+  const nameSv = fam?.name.sv ?? entry.familyKey;
+  const nameEn = fam?.name.en ?? entry.familyKey;
   return [
     {
       kind: "family_rationale",
       data: { familyKey: entry.familyKey },
       text: {
-        sv: `Yrkesfamiljen "${entry.familyKey}" ligger närmast baserat på svaren i denna kategori.`,
-        en: `The "${entry.familyKey}" career family aligns most closely with your responses.`,
+        sv: `Yrkesfamiljen "${nameSv}" ligger närmast baserat på dina svar inom detta område.`,
+        en: `The Career Family "${nameEn}" is the closest match based on your answers in this area.`,
       },
     },
   ];
