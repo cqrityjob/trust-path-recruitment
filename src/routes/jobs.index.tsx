@@ -43,6 +43,26 @@ function coerceString(v: unknown): string {
 
 export const Route = createFileRoute("/jobs/")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Security Jobs — CQrityjob" },
+      {
+        name: "description",
+        content:
+          "Search active security jobs from vetted employers. Filter by career area, employment type, workplace, experience level and location.",
+      },
+      { property: "og:title", content: "Security Jobs — CQrityjob" },
+      {
+        property: "og:description",
+        content:
+          "Active security roles from serious employers — searchable by career area, location and experience.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
+  }),
   validateSearch: (raw: Record<string, unknown>): JobSearch => {
     const out: JobSearch = {};
     const q = coerceString(raw.q); if (q) out.q = q;
