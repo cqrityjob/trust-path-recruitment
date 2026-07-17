@@ -771,6 +771,50 @@ export const dictionaries = {
     "jobs.coming_soon.body":
       "We are building a job experience designed for the security industry — with role-specific requirements, clear competence needs and serious employers.",
 
+    "jobs.discover.title": "Find security jobs",
+    "jobs.discover.lead":
+      "Active roles from employers in the security industry. Search by keyword, location, family or profession.",
+    "jobs.search.keyword_placeholder": "Role, skill or keyword",
+    "jobs.search.location_placeholder": "City, region or country",
+    "jobs.search.submit": "Search",
+    "jobs.search.reset": "Clear filters",
+    "jobs.filter.family": "Family",
+    "jobs.filter.employment_type": "Employment",
+    "jobs.filter.workplace_type": "Workplace",
+    "jobs.filter.experience_level": "Experience",
+    "jobs.filter.country": "Country",
+    "jobs.filter.any": "Any",
+    "jobs.browse.families.title": "Browse by career family",
+    "jobs.browse.families.subtitle":
+      "13 career families cover the full security industry — from operational protection to cyber.",
+    "jobs.results.count_one": "{n} job",
+    "jobs.results.count_other": "{n} jobs",
+    "jobs.results.empty.title": "No jobs match",
+    "jobs.results.empty.body":
+      "Try different keywords or remove filters. New jobs are published continuously.",
+    "jobs.results.error.title": "Something went wrong",
+    "jobs.results.error.body":
+      "We could not load jobs right now. Please try again in a moment.",
+    "jobs.results.loading": "Loading jobs…",
+    "jobs.card.untitled": "Untitled",
+    "jobs.card.today": "Today",
+    "jobs.card.posted_days_ago": "Posted {n} days ago",
+    "jobs.detail.back": "← All jobs",
+    "jobs.detail.apply_external": "Apply on the employer's site",
+    "jobs.detail.apply_email": "Apply by email",
+    "jobs.detail.apply_unavailable":
+      "Applications are not currently available via CQrityjob.",
+    "jobs.detail.deadline": "Application deadline",
+    "jobs.detail.published": "Published",
+    "jobs.detail.responsibilities": "Responsibilities",
+    "jobs.detail.requirements": "Qualifications",
+    "jobs.detail.benefits": "What we offer",
+    "jobs.detail.not_found.title": "This job is not available",
+    "jobs.detail.not_found.body":
+      "The listing may have been removed or the application deadline may have passed.",
+    "jobs.family.header": "Jobs in {family}",
+    "jobs.profession.header": "Jobs as {profession}",
+
     "employers.title": "For Employers",
     "employers.lead":
       "Recruit, assess and develop security personnel with structured decision support — built for the reality of the security industry.",
