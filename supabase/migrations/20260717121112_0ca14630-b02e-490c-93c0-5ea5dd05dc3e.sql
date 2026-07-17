@@ -1,0 +1,1 @@
+-- one-off: cannot use insert tool for update semantics via psql access grants; do minimal via migration
