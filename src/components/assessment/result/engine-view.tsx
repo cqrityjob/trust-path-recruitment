@@ -330,9 +330,23 @@ function Hero({
   onRetake: () => void;
 }) {
   const profileLbl = careerProfileLabel(profile);
-  const band = matchStrengthBand(primary.currentFit, primary.confidence);
-  const bandLbl = matchStrengthLabel(band);
-
+  const evidenceLevel = overallEvidenceLevel(result.overallEvidenceScore);
+  const evidenceLbl = overallEvidenceLabel(evidenceLevel);
+  const fitBand = currentFitBand(primary.currentFit, primary.confidence);
+  const fitLbl = currentFitLabel(fitBand);
+  const potBand = potentialBand(primary.potential, primary.confidence);
+  const potLbl = potentialLabel(potBand);
+  const insufficientFit = primary.confidence === "limited" || primary.currentFit <= 0;
+  const insufficientPot = primary.confidence === "limited" || primary.potential <= 0;
+  const primaryHref = primary.legacySlug ? `/career-center/${primary.legacySlug}` : "/career-center";
+  const [regOpen, setRegOpen] = useState(false);
+  const [evOpen, setEvOpen] = useState(false);
+  const scrollTo = (id: string) => {
+    if (typeof document !== "undefined") {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
   return (
     <section className="rounded-lg border border-border bg-gradient-to-br from-muted/40 via-background to-background p-8 md:p-10">
       <div className="flex flex-wrap items-center gap-2">
@@ -340,10 +354,48 @@ function Hero({
           <Sparkles className="mr-1 h-3 w-3" strokeWidth={2} />
           {lang === "sv" ? "Karriärvägledning" : "Career guidance"}
         </TokenBadge>
-        <TokenBadge>{pick(bandLbl, lang)}</TokenBadge>
-        <TokenBadge>{pick(confidenceLabelBi(primary.confidence), lang)}</TokenBadge>
+        {/* Phase D.2.1: single overall evidence status with tooltip. */}
+        <span className="relative inline-flex">
+          <button
+            type="button"
+            onClick={() => setEvOpen((v) => !v)}
+            aria-expanded={evOpen}
+            aria-label={`${pick(evidenceLbl, lang)}: ${pick(overallEvidenceHelp, lang)}`}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {pick(evidenceLbl, lang)}
+            <HelpCircle className="h-3 w-3" strokeWidth={1.75} />
+          </button>
+          {evOpen && (
+            <span
+              role="tooltip"
+              className="absolute left-0 top-full z-10 mt-1 w-72 rounded-md border border-border bg-background p-3 text-[11px] normal-case tracking-normal leading-relaxed text-muted-foreground shadow-lg"
+            >
+              {pick(overallEvidenceHelp, lang)}
+            </span>
+          )}
+        </span>
         {primary.regulated && (
-          <TokenBadge tone="warn">{pick(regulatedLabel, lang)}</TokenBadge>
+          <span className="relative inline-flex">
+            <button
+              type="button"
+              onClick={() => setRegOpen((v) => !v)}
+              aria-expanded={regOpen}
+              aria-label={`${pick(regulatedLabel, lang)}: ${pick(regulatedHelp, lang)}`}
+              className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-amber-700 hover:text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-amber-300"
+            >
+              {pick(regulatedLabel, lang)}
+              <HelpCircle className="h-3 w-3" strokeWidth={1.75} />
+            </button>
+            {regOpen && (
+              <span
+                role="tooltip"
+                className="absolute left-0 top-full z-10 mt-1 w-72 rounded-md border border-border bg-background p-3 text-[11px] normal-case tracking-normal leading-relaxed text-muted-foreground shadow-lg"
+              >
+                {pick(regulatedHelp, lang)}
+              </span>
+            )}
+          </span>
         )}
         {result.dataStatus === "cig_enrichment_missing" && (
           <TokenBadge tone="warn">
@@ -396,20 +448,26 @@ function Hero({
             {familyLabel(primary.family.key, lang)}
           </p>
           <p className="mt-3 text-sm font-medium text-foreground">
-            {pick(bandLbl, lang)}
+            {insufficientFit ? pick(insufficientEvidenceLabel, lang) : pick(fitLbl, lang)}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:w-64">
           <ScoreWithHelp
             label={pick(scoreTooltips.currentFit.label, lang)}
-            help={pick(scoreTooltips.currentFit.help, lang)}
-            value={primary.currentFit}
+            help={`${pick(guidanceSignalHelp, lang)} ${pick(scoreTooltips.currentFit.help, lang)} (${lang === "sv" ? "internt värde" : "internal value"}: ${primary.currentFit}%)`}
+            value={insufficientFit ? pick(insufficientEvidenceLabel, lang) : pick(fitLbl, lang)}
+            insufficient={insufficientFit}
+            insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+            interpretation={insufficientFit ? pick(insufficientEvidenceLabel, lang) : undefined}
           />
           <ScoreWithHelp
             label={pick(scoreTooltips.potential.label, lang)}
-            help={pick(scoreTooltips.potential.help, lang)}
-            value={primary.potential}
+            help={`${pick(guidanceSignalHelp, lang)} ${pick(scoreTooltips.potential.help, lang)} (${lang === "sv" ? "internt värde" : "internal value"}: ${primary.potential}%)`}
+            value={insufficientPot ? pick(insufficientEvidenceLabel, lang) : pick(potLbl, lang)}
             tone="muted"
+            insufficient={insufficientPot}
+            insufficientHelp={pick(insufficientEvidenceHelp, lang)}
+            interpretation={insufficientPot ? pick(insufficientEvidenceLabel, lang) : undefined}
           />
         </div>
       </div>
@@ -420,11 +478,37 @@ function Hero({
           : "The result is guidance for career choices. It does not determine eligibility, competence or employment. Formal requirements must always be verified separately."}
       </p>
 
+      {/* Phase D.2.1: Discover → Understand → Grow action hierarchy. */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <PrimaryButton onClick={onRetake} variant="ghost">
-          <RotateCcw className="mr-2 h-4 w-4" />
+        <a
+          href={primaryHref}
+          className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <Target className="mr-2 h-4 w-4" strokeWidth={1.75} />
+          {lang === "sv" ? "Utforska yrket" : "Explore this profession"}
+        </a>
+        <button
+          type="button"
+          onClick={() => scrollTo("compare")}
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          {lang === "sv" ? "Jämför karriärvägar" : "Compare career paths"}
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollTo("action-plan")}
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          {lang === "sv" ? "Se din utvecklingsplan" : "View your action plan"}
+        </button>
+        <button
+          type="button"
+          onClick={onRetake}
+          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
           {lang === "sv" ? "Gör om testet" : "Retake assessment"}
-        </PrimaryButton>
+        </button>
       </div>
     </section>
   );
