@@ -13,6 +13,13 @@ import {
   Sparkles,
   MapPin,
   Building2,
+  CheckCircle2,
+  Circle,
+  Target,
+  TrendingUp,
+  Award,
+  Flame,
+  Eye,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -24,19 +31,21 @@ import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { getProfession } from "@/lib/career-center/professions";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { employmentTypeLabel } from "@/lib/job-intelligence/enum-labels";
+import { dimensionLabel } from "@/lib/job-intelligence/personal-relevance";
+import type { CareerProfileForJobsV1 } from "@/lib/career-intelligence-engine/profile-for-jobs";
+import type { ConfidenceLevel } from "@/lib/career-intelligence-engine/types";
 
 /**
- * Phase F.1 — /my-career
+ * Phase F.2 — /my-career (polished).
  *
- * Authenticated landing page ("My Career"). Composes existing surfaces:
+ * The dashboard is a composition of existing surfaces:
  *   - Assessment runs (journey.functions.listAssessmentRuns)
- *   - Career Profile for Jobs (useCareerProfileForJobs, Phase E)
- *   - Public jobs (listPublicJobs, Phase C)
- *   - Career Center (profession registry)
+ *   - Career Profile for Jobs (Phase E)
+ *   - Public jobs (Phase C)
+ *   - Career Center registry
  *
- * No new scoring, no schema changes. All copy is inline bilingual so the
- * page reflects the current `lang` without extending the i18n dictionary
- * for one-off dashboard strings.
+ * No new scoring, no schema changes. Confidence is exposed as
+ * Low/Medium/High only — the raw score never surfaces.
  */
 export const Route = createFileRoute("/_authenticated/my-career")({
   ssr: false,
@@ -46,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/my-career")({
       {
         name: "description",
         content:
-          "Your personal career home — assessment status, career profile, recommended professions and jobs.",
+          "Your personal career home — assessment summary, career profile, recommended professions and jobs.",
       },
       { name: "robots", content: "noindex, nofollow" },
     ],
@@ -59,6 +68,42 @@ const c = (sv: string, en: string): Copy => ({ sv, en });
 function L(v: Copy, lang: "sv" | "en") {
   return v[lang];
 }
+
+// -----------------------------------------------------------------
+// Derived helpers
+// -----------------------------------------------------------------
+
+function pickTopFamily(profile: CareerProfileForJobsV1) {
+  return Object.entries(profile.familyScores)
+    .sort(
+      ([, a], [, b]) =>
+        (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
+    )
+    .map(([id]) => id)[0];
+}
+
+function pickTopProfessions(profile: CareerProfileForJobsV1, n: number) {
+  return Object.entries(profile.slugScores)
+    .map(([slug, s]) => ({ slug, ...s, prof: getProfession(slug) }))
+    .filter((r) => !!r.prof)
+    .sort(
+      (a, b) =>
+        (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
+    )
+    .slice(0, n);
+}
+
+function confidenceBand(level: ConfidenceLevel, lang: "sv" | "en") {
+  if (level === "stronger")
+    return { label: lang === "sv" ? "Hög" : "High", tone: "high" as const };
+  if (level === "moderate")
+    return { label: lang === "sv" ? "Medel" : "Medium", tone: "medium" as const };
+  return { label: lang === "sv" ? "Låg" : "Low", tone: "low" as const };
+}
+
+// -----------------------------------------------------------------
+// Page
+// -----------------------------------------------------------------
 
 function MyCareerPage() {
   const { lang } = useT();
@@ -94,16 +139,9 @@ function MyCareerPage() {
   const profile =
     profileState.status === "ready" ? profileState.data.profile : undefined;
 
-  // Top family (career area) inferred from the profile — used to seed the
-  // "relevant jobs" list. Falls back to an unfiltered list.
-  const topFamilyId = profile
-    ? Object.entries(profile.familyScores)
-        .sort(
-          ([, a], [, b]) =>
-            (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
-        )
-        .map(([id]) => id)[0]
-    : undefined;
+  const topFamilyId = profile ? pickTopFamily(profile) : undefined;
+  const topProfessions = profile ? pickTopProfessions(profile, 3) : [];
+  const topProfession = topProfessions[0];
 
   const jobsQ = useQuery({
     queryKey: ["my-career", "jobs", topFamilyId ?? "all"],
@@ -111,35 +149,50 @@ function MyCareerPage() {
     staleTime: 60_000,
   });
 
-  // Top 3 slug-level recommendations from the profile, filtered to slugs
-  // that resolve against the Career Center registry.
-  const topProfessions = profile
-    ? Object.entries(profile.slugScores)
-        .map(([slug, s]) => ({ slug, ...s, prof: getProfession(slug) }))
-        .filter((r) => !!r.prof)
-        .sort(
-          (a, b) =>
-            (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
-        )
-        .slice(0, 3)
-    : [];
+  const jobsForTopFamilyQ = useQuery({
+    queryKey: ["my-career", "family-job-counts", topProfessions.map((p) => p.slug)],
+    queryFn: async () => {
+      // Small parallel probe to know which recommended professions have
+      // at least one open role. Cheap: each call is limited to 1 row.
+      const results = await Promise.all(
+        topProfessions.map(async (p) => ({
+          slug: p.slug,
+          hasJobs:
+            (await listPublicJobs({ professionSlug: p.slug, limit: 1 })).length >
+            0,
+        })),
+      );
+      return Object.fromEntries(results.map((r) => [r.slug, r.hasJobs] as const));
+    },
+    enabled: topProfessions.length > 0,
+    staleTime: 60_000,
+  });
 
   const latestRun = runsQ.data?.[0];
-  const hasProfile = profileState.status === "ready";
+  const hasCompletedAssessment = !!latestRun && latestRun.status === "completed";
+  const hasProfile = profileState.status === "ready" && !!profile;
   const noAssessment =
-    (runsQ.data && runsQ.data.length === 0) ||
-    profileState.status === "no_profile";
+    runsQ.status === "success" &&
+    (runsQ.data.length === 0 || profileState.status === "no_profile");
 
   async function onSignOut() {
     await supabase.auth.signOut();
-    // The _authenticated layout listener redirects to /auth on SIGNED_OUT.
   }
 
-  const greeting = L(c("Välkommen", "Welcome back"), lang);
+  const greeting = L(c("Välkommen tillbaka", "Welcome back"), lang);
+  const topAreaLabel = topFamilyId
+    ? getCareerAreaLabel(topFamilyId)?.name[lang]
+    : undefined;
+  const topProfTitle = topProfession
+    ? lang === "sv"
+      ? topProfession.prof!.titleSv
+      : topProfession.prof!.titleEn
+    : undefined;
 
   return (
     <SiteLayout>
       <Section>
+        {/* ---------------- Hero ---------------- */}
         <header className="max-w-3xl">
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             {L(c("Min karriär", "My career"), lang)}
@@ -152,36 +205,52 @@ function MyCareerPage() {
             {displayName ? `, ${displayName}` : ""}.
           </h1>
           <p className="mt-3 text-muted-foreground">
-            {L(
-              c(
-                "Din personliga karriärstartsida. Här ser du din senaste bedömning, din karriärprofil, rekommenderade yrken och relevanta jobb.",
-                "Your personal career home — assessment status, career profile, recommended professions and jobs.",
-              ),
-              lang,
-            )}
+            {hasProfile
+              ? L(
+                  c(
+                    "Här är din personliga karriärsöversikt — din profil, rekommenderade yrken och relevanta jobb.",
+                    "Here is your personal career overview — your profile, recommended professions and relevant jobs.",
+                  ),
+                  lang,
+                )
+              : L(
+                  c(
+                    "Din personliga karriärstartsida. Slutför säkerhetstestet för att låsa upp rekommendationer.",
+                    "Your personal career home. Complete the assessment to unlock recommendations.",
+                  ),
+                  lang,
+                )}
           </p>
         </header>
 
+        {/* ---------------- Career Journey ---------------- */}
+        <div className="mt-8">
+          <CareerJourney
+            lang={lang}
+            steps={{
+              assessment: hasCompletedAssessment,
+              profile: hasProfile,
+              explore: hasProfile && topProfessions.length > 0,
+              apply: false,
+              develop: false,
+            }}
+          />
+        </div>
+
         {/* Onboarding — no assessment yet */}
         {noAssessment && (
-          <div className="mt-10 rounded-lg border border-primary/30 bg-primary/5 p-6 md:p-8">
+          <div className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8">
             <div className="flex items-start gap-4">
-              <Sparkles
-                className="mt-0.5 h-6 w-6 shrink-0 text-primary"
-                aria-hidden="true"
-              />
+              <Sparkles className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-foreground">
-                  {L(
-                    c("Börja med säkerhetstestet", "Start with the assessment"),
-                    lang,
-                  )}
+                  {L(c("Börja med säkerhetstestet", "Start with the assessment"), lang)}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {L(
                     c(
-                      "Vi behöver några minuter för att förstå dina styrkor och motivationer. Sedan visar vi rekommenderade yrken, utvecklingsvägar och relevanta jobb baserat på din profil.",
-                      "We need a few minutes to understand your strengths and motivations. Then we'll show you recommended professions, development paths and relevant jobs based on your profile.",
+                      "Testet tar cirka fem minuter. Efteråt visar vi din karriärprofil, rekommenderade yrken, utvecklingsvägar och relevanta jobb.",
+                      "It takes about five minutes. Afterwards we present your career profile, recommended professions, development paths and relevant jobs.",
                     ),
                     lang,
                   )}
@@ -190,10 +259,7 @@ function MyCareerPage() {
                   to="/security-career-assessment"
                   className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  {L(
-                    c("Gör säkerhetstestet", "Take the assessment"),
-                    lang,
-                  )}
+                  {L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </div>
@@ -201,13 +267,13 @@ function MyCareerPage() {
           </div>
         )}
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          {/* Main column */}
+        {/* ---------------- Main grid ---------------- */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-6">
-            {/* Latest assessment */}
+            {/* Assessment summary */}
             <DashboardCard
               icon={<ClipboardCheck className="h-5 w-5" />}
-              title={L(c("Senaste bedömning", "Latest assessment"), lang)}
+              title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
             >
               {runsQ.isLoading && (
                 <p className="text-sm text-muted-foreground">
@@ -218,8 +284,8 @@ function MyCareerPage() {
                 <p className="text-sm text-destructive">
                   {L(
                     c(
-                      "Kunde inte hämta bedömningar just nu. Försök igen senare.",
-                      "Couldn't load your assessments right now. Try again later.",
+                      "Kunde inte hämta din bedömning just nu. Försök igen om en stund.",
+                      "Couldn't load your assessment right now. Please try again shortly.",
                     ),
                     lang,
                   )}
@@ -229,42 +295,30 @@ function MyCareerPage() {
                 <EmptyState
                   what={L(
                     c(
-                      "Här visas resultaten från säkerhetstestet.",
-                      "This is where your assessment results appear.",
+                      "Här visas din bedömningssammanfattning så snart testet är klart.",
+                      "Your assessment summary appears here as soon as the test is complete.",
                     ),
                     lang,
                   )}
                   why={L(
                     c(
-                      "Bedömningen är grunden för dina rekommendationer.",
-                      "The assessment is the foundation of every recommendation.",
+                      "Bedömningen är grunden för alla rekommendationer på plattformen.",
+                      "The assessment is the foundation of every recommendation on the platform.",
                     ),
                     lang,
                   )}
-                  ctaLabel={L(c("Gör testet", "Take it now"), lang)}
+                  ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
                   ctaTo="/security-career-assessment"
                 />
               )}
               {latestRun && (
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0 text-sm">
-                    <p className="font-medium text-foreground">
-                      {new Date(
-                        latestRun.completed_at ?? latestRun.started_at,
-                      ).toLocaleString(lang === "sv" ? "sv-SE" : "en-GB")}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {L(c("Status", "Status"), lang)}: {latestRun.status}
-                    </p>
-                  </div>
-                  <Link
-                    to="/security-career-assessment"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-                  >
-                    <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                    {L(c("Gör om testet", "Retake"), lang)}
-                  </Link>
-                </div>
+                <AssessmentSummary
+                  lang={lang}
+                  completedAt={latestRun.completed_at ?? latestRun.started_at}
+                  profile={profile}
+                  topProfession={topProfTitle}
+                  topArea={topAreaLabel}
+                />
               )}
             </DashboardCard>
 
@@ -272,50 +326,14 @@ function MyCareerPage() {
             {hasProfile && profile && (
               <DashboardCard
                 icon={<UserIcon className="h-5 w-5" />}
-                title={L(c("Karriärprofil", "Career profile"), lang)}
+                title={L(c("Din karriärprofil", "Your career profile"), lang)}
               >
-                <div className="space-y-3 text-sm">
-                  {profile.archetype && (
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                        {L(c("Din stil", "Your style"), lang)}
-                      </p>
-                      <p className="mt-1 font-medium text-foreground">
-                        {lang === "sv"
-                          ? profile.archetype.labelSv
-                          : profile.archetype.labelEn}
-                      </p>
-                    </div>
-                  )}
-                  {profile.motivations.length > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                        {L(c("Vad driver dig", "What drives you"), lang)}
-                      </p>
-                      <ul className="mt-1 flex flex-wrap gap-1.5">
-                        {profile.motivations.map((m) => (
-                          <li
-                            key={m.key}
-                            className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-foreground"
-                          >
-                            {lang === "sv" ? m.labelSv : m.labelEn}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {topFamilyId && (
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                        {L(c("Starkast område", "Strongest area"), lang)}
-                      </p>
-                      <p className="mt-1 font-medium text-foreground">
-                        {getCareerAreaLabel(topFamilyId)?.name[lang] ??
-                          topFamilyId}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <CareerProfileBlock
+                  lang={lang}
+                  profile={profile}
+                  topFamilyId={topFamilyId}
+                  topSlug={topProfession?.slug}
+                />
               </DashboardCard>
             )}
 
@@ -323,39 +341,57 @@ function MyCareerPage() {
             {hasProfile && topProfessions.length > 0 && (
               <DashboardCard
                 icon={<Compass className="h-5 w-5" />}
-                title={L(
-                  c("Rekommenderade yrken", "Recommended professions"),
-                  lang,
-                )}
+                title={L(c("Rekommenderade yrken", "Recommended professions"), lang)}
               >
-                <ul className="divide-y divide-border">
-                  {topProfessions.map((r) => (
-                    <li
-                      key={r.slug}
-                      className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <Link
-                          to="/career-center/$profession"
-                          params={{ profession: r.slug }}
-                          className="text-sm font-medium text-foreground hover:underline"
-                        >
-                          {lang === "sv" ? r.prof!.titleSv : r.prof!.titleEn}
-                        </Link>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {getCareerAreaLabel(r.familyKey)?.name[lang] ??
-                            r.familyKey}
-                        </p>
-                      </div>
-                      <Link
-                        to="/jobs/profession/$professionSlug"
-                        params={{ professionSlug: r.slug }}
-                        className="shrink-0 text-xs text-primary hover:underline"
+                <ul className="grid gap-3 sm:grid-cols-1">
+                  {topProfessions.map((r) => {
+                    const areaLabel =
+                      getCareerAreaLabel(r.familyKey)?.name[lang] ?? r.familyKey;
+                    const summary =
+                      (lang === "sv"
+                        ? r.prof!.description.sv
+                        : r.prof!.description.en) || "";
+                    const hasJobs = jobsForTopFamilyQ.data?.[r.slug];
+                    return (
+                      <li
+                        key={r.slug}
+                        className="rounded-lg border border-border bg-background p-4"
                       >
-                        {L(c("Se jobb", "See jobs"), lang)}
-                      </Link>
-                    </li>
-                  ))}
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <h3 className="text-base font-semibold text-foreground">
+                            {lang === "sv" ? r.prof!.titleSv : r.prof!.titleEn}
+                          </h3>
+                          <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                            {areaLabel}
+                          </span>
+                        </div>
+                        {summary && (
+                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            {summary}
+                          </p>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Link
+                            to="/career-center/$profession"
+                            params={{ profession: r.slug }}
+                            className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                          >
+                            {L(c("Utforska yrke", "Explore profession"), lang)}
+                            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Link>
+                          {hasJobs && (
+                            <Link
+                              to="/jobs/profession/$professionSlug"
+                              params={{ professionSlug: r.slug }}
+                              className="inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                            >
+                              {L(c("Visa jobb", "View jobs"), lang)}
+                            </Link>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </DashboardCard>
             )}
@@ -363,12 +399,9 @@ function MyCareerPage() {
             {/* Relevant jobs */}
             <DashboardCard
               icon={<Briefcase className="h-5 w-5" />}
-              title={L(c("Relevanta jobb", "Relevant jobs"), lang)}
+              title={L(c("Relevanta jobb för dig", "Relevant jobs for you"), lang)}
               action={
-                <Link
-                  to="/jobs"
-                  className="text-xs text-primary hover:underline"
-                >
+                <Link to="/jobs" className="text-xs text-primary hover:underline">
                   {L(c("Alla jobb", "All jobs"), lang)} →
                 </Link>
               }
@@ -383,19 +416,24 @@ function MyCareerPage() {
                   what={L(
                     c(
                       "Just nu finns inga öppna roller som matchar din profil.",
-                      "No open roles match your profile right now.",
+                      "We don't currently have open roles matching your profile.",
                     ),
                     lang,
                   )}
                   why={L(
                     c(
-                      "Nya roller publiceras regelbundet av verifierade arbetsgivare.",
-                      "New roles are published regularly by verified employers.",
+                      "Utforska alla säkerhetsjobb eller upptäck närliggande yrken medan nya möjligheter läggs till.",
+                      "Explore all security jobs or discover related professions while new opportunities are added.",
                     ),
                     lang,
                   )}
                   ctaLabel={L(c("Bläddra alla jobb", "Browse all jobs"), lang)}
                   ctaTo="/jobs"
+                  secondaryLabel={L(
+                    c("Utforska yrken", "Explore professions"),
+                    lang,
+                  )}
+                  secondaryTo="/career-center"
                 />
               )}
               {jobsQ.data && jobsQ.data.length > 0 && (
@@ -415,7 +453,7 @@ function MyCareerPage() {
                         <Link
                           to="/jobs/$slug"
                           params={{ slug: j.slug }}
-                          className="block group"
+                          className="group block"
                         >
                           <p className="text-sm font-medium text-foreground group-hover:underline">
                             {title}
@@ -429,10 +467,7 @@ function MyCareerPage() {
                             )}
                             {j.employment_type && (
                               <span className="inline-flex items-center gap-1">
-                                <Building2
-                                  className="h-3 w-3"
-                                  aria-hidden="true"
-                                />
+                                <Building2 className="h-3 w-3" aria-hidden="true" />
                                 {employmentTypeLabel(j.employment_type, lang)}
                               </span>
                             )}
@@ -448,125 +483,49 @@ function MyCareerPage() {
 
           {/* Sidebar */}
           <aside className="space-y-6">
-            {/* Personal Job Relevance summary */}
-            {hasProfile && (
-              <DashboardCard
-                icon={<Sparkles className="h-5 w-5" />}
-                title={L(
-                  c("Din jobbrelevans", "Your job relevance"),
-                  lang,
-                )}
-              >
-                <p className="text-sm text-muted-foreground">
-                  {L(
-                    c(
-                      "Vi jämför öppna roller mot din karriärprofil och lyfter det som matchar dig — utan att någon annan ser dina svar.",
-                      "We compare open roles against your career profile and surface what fits — without exposing your answers to anyone else.",
-                    ),
-                    lang,
-                  )}
-                </p>
-                <Link
-                  to="/jobs"
-                  className="mt-3 inline-flex items-center text-sm text-primary hover:underline"
-                >
-                  {L(
-                    c("Utforska relevanta jobb", "Explore relevant jobs"),
-                    lang,
-                  )}
-                  <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
-              </DashboardCard>
-            )}
-
-            {/* Recommended next step */}
             <DashboardCard
-              icon={<ArrowRight className="h-5 w-5" />}
+              icon={<Target className="h-5 w-5" />}
               title={L(c("Nästa steg", "Recommended next step"), lang)}
             >
-              {noAssessment ? (
-                <NextStep
-                  body={L(
-                    c(
-                      "Slutför säkerhetstestet så låser du upp rekommendationer.",
-                      "Complete the assessment to unlock recommendations.",
-                    ),
-                    lang,
-                  )}
-                  ctaTo="/security-career-assessment"
-                  ctaLabel={L(c("Starta testet", "Start assessment"), lang)}
-                />
-              ) : topProfessions.length > 0 ? (
-                <NextStep
-                  body={L(
-                    c(
-                      "Utforska ditt topprekommenderade yrke i Karriärcentret.",
-                      "Explore your top recommended profession in the Career Center.",
-                    ),
-                    lang,
-                  )}
-                  ctaTo="/career-center/$profession"
-                  ctaParams={{ profession: topProfessions[0].slug }}
-                  ctaLabel={
-                    lang === "sv"
-                      ? topProfessions[0].prof!.titleSv
-                      : topProfessions[0].prof!.titleEn
-                  }
-                />
-              ) : (
-                <NextStep
-                  body={L(
-                    c(
-                      "Bläddra Karriärcentret för att välja ett målprofession.",
-                      "Browse the Career Center to pick a target profession.",
-                    ),
-                    lang,
-                  )}
-                  ctaTo="/career-center"
-                  ctaLabel={L(
-                    c("Öppna Karriärcentret", "Open Career Center"),
-                    lang,
-                  )}
-                />
-              )}
+              <NextStep
+                lang={lang}
+                noAssessment={noAssessment}
+                topAreaLabel={topAreaLabel}
+                topProfTitle={topProfTitle}
+                topSlug={topProfession?.slug}
+              />
             </DashboardCard>
 
-            {/* Quick links */}
-            <DashboardCard title={L(c("Snabbåtkomst", "Quick access"), lang)}>
+            <DashboardCard title={L(c("Snabbåtgärder", "Quick actions"), lang)}>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link
+                  <QuickLink
+                    to="/my-career"
+                    hash="career-profile"
+                    label={L(c("Min karriärprofil", "My career profile"), lang)}
+                  />
+                </li>
+                <li>
+                  <QuickLink
                     to="/career-center"
-                    className="text-foreground hover:underline"
-                  >
-                    {L(c("Karriärcenter", "Career Center"), lang)}
-                  </Link>
+                    label={L(c("Utforska yrken", "Explore professions"), lang)}
+                  />
                 </li>
                 <li>
-                  <Link to="/jobs" className="text-foreground hover:underline">
-                    {L(c("Jobb", "Jobs"), lang)}
-                  </Link>
+                  <QuickLink
+                    to="/jobs"
+                    label={L(c("Bläddra jobb", "Browse jobs"), lang)}
+                  />
                 </li>
                 <li>
-                  <Link
+                  <QuickLink
                     to="/security-career-assessment"
-                    className="text-foreground hover:underline"
-                  >
-                    {L(c("Säkerhetstestet", "Security Career Assessment"), lang)}
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/journey"
-                    className="text-foreground hover:underline"
-                  >
-                    {L(c("Karriärresa (beta)", "Career Journey (beta)"), lang)}
-                  </Link>
+                    label={L(c("Gör om testet", "Retake assessment"), lang)}
+                  />
                 </li>
               </ul>
             </DashboardCard>
 
-            {/* Account */}
             <DashboardCard
               icon={<UserIcon className="h-5 w-5" />}
               title={L(c("Konto", "Account"), lang)}
@@ -575,14 +534,12 @@ function MyCareerPage() {
                 {displayName && (
                   <p className="font-medium text-foreground">{displayName}</p>
                 )}
-                {email && (
-                  <p className="text-xs text-muted-foreground">{email}</p>
-                )}
+                {email && <p className="text-xs text-muted-foreground">{email}</p>}
                 <p className="text-xs text-muted-foreground">
                   {L(
                     c(
-                      "Byt språk i sidfoten. Kontoinställningar kommer i en framtida version.",
-                      "Change language in the footer. Full account settings arrive in a future release.",
+                      "Byt språk längst ner på sidan. Fler kontoinställningar kommer snart.",
+                      "Change language at the bottom of the page. More account settings coming soon.",
                     ),
                     lang,
                   )}
@@ -604,6 +561,567 @@ function MyCareerPage() {
   );
 }
 
+// -----------------------------------------------------------------
+// Career Journey — horizontal stepper
+// -----------------------------------------------------------------
+
+function CareerJourney({
+  lang,
+  steps,
+}: {
+  lang: "sv" | "en";
+  steps: {
+    assessment: boolean;
+    profile: boolean;
+    explore: boolean;
+    apply: boolean;
+    develop: boolean;
+  };
+}) {
+  const stages: Array<{ key: keyof typeof steps; label: string }> = [
+    {
+      key: "assessment",
+      label: L(c("Genomför bedömning", "Complete assessment"), lang),
+    },
+    {
+      key: "profile",
+      label: L(c("Skapa karriärprofil", "Create career profile"), lang),
+    },
+    {
+      key: "explore",
+      label: L(c("Utforska yrken", "Explore professions"), lang),
+    },
+    { key: "apply", label: L(c("Sök en roll", "Apply for a role"), lang) },
+    {
+      key: "develop",
+      label: L(c("Fortsätt utvecklas", "Continue developing"), lang),
+    },
+  ];
+
+  return (
+    <nav
+      aria-label={L(c("Karriärresa", "Career journey"), lang)}
+      className="rounded-xl border border-border bg-background p-4 md:p-5"
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground">
+          {L(c("Din karriärresa", "Your career journey"), lang)}
+        </h2>
+      </div>
+      <ol className="grid gap-3 sm:grid-cols-5">
+        {stages.map((s, i) => {
+          const done = steps[s.key];
+          return (
+            <li
+              key={s.key}
+              className={
+                "flex items-start gap-2 rounded-lg border p-3 text-xs " +
+                (done
+                  ? "border-primary/40 bg-primary/5 text-foreground"
+                  : "border-border bg-muted/40 text-muted-foreground")
+              }
+            >
+              <span className="mt-0.5 shrink-0">
+                {done ? (
+                  <CheckCircle2
+                    className="h-4 w-4 text-primary"
+                    aria-label={L(c("Klart", "Done"), lang)}
+                  />
+                ) : (
+                  <Circle
+                    className="h-4 w-4"
+                    aria-label={L(c("Kvar", "Upcoming"), lang)}
+                  />
+                )}
+              </span>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {L(c("Steg", "Step"), lang)} {i + 1}
+                </p>
+                <p className="mt-0.5 font-medium leading-snug">{s.label}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+// -----------------------------------------------------------------
+// Assessment summary — rich card
+// -----------------------------------------------------------------
+
+function AssessmentSummary({
+  lang,
+  completedAt,
+  profile,
+  topProfession,
+  topArea,
+}: {
+  lang: "sv" | "en";
+  completedAt: string;
+  profile: CareerProfileForJobsV1 | undefined;
+  topProfession: string | undefined;
+  topArea: string | undefined;
+}) {
+  const date = new Date(completedAt).toLocaleDateString(
+    lang === "sv" ? "sv-SE" : "en-GB",
+    { year: "numeric", month: "long", day: "numeric" },
+  );
+  const primaryMotivation =
+    profile && profile.motivations[0]
+      ? lang === "sv"
+        ? profile.motivations[0].labelSv
+        : profile.motivations[0].labelEn
+      : undefined;
+  const style = profile?.archetype
+    ? lang === "sv"
+      ? profile.archetype.labelSv
+      : profile.archetype.labelEn
+    : undefined;
+  const topSlug =
+    profile &&
+    Object.entries(profile.slugScores)
+      .sort(
+        ([, a], [, b]) =>
+          (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
+      )
+      .map(([slug]) => slug)[0];
+  const confidence =
+    topSlug && profile ? profile.slugScores[topSlug].confidence : undefined;
+  const band = confidence ? confidenceBand(confidence, lang) : undefined;
+
+  return (
+    <div>
+      <dl className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label={L(c("Genomförd", "Completed"), lang)}
+          value={date}
+          icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+        />
+        <Field
+          label={L(c("Karriärprofil", "Career profile"), lang)}
+          value={style ?? L(c("Ej tillgänglig", "Not available"), lang)}
+          icon={<UserIcon className="h-3.5 w-3.5" />}
+        />
+        <Field
+          label={L(c("Toppyrke", "Top recommended profession"), lang)}
+          value={topProfession ?? L(c("Ej tillgänglig", "Not available"), lang)}
+          icon={<Award className="h-3.5 w-3.5" />}
+        />
+        <Field
+          label={L(c("Karriärområde", "Career area"), lang)}
+          value={topArea ?? L(c("Ej tillgänglig", "Not available"), lang)}
+          icon={<Compass className="h-3.5 w-3.5" />}
+        />
+        <Field
+          label={L(c("Konfidensnivå", "Confidence"), lang)}
+          value={
+            band ? (
+              <ConfidenceBadge lang={lang} tone={band.tone} label={band.label} />
+            ) : (
+              L(c("Ej tillgänglig", "Not available"), lang)
+            )
+          }
+          icon={<TrendingUp className="h-3.5 w-3.5" />}
+        />
+        <Field
+          label={L(c("Primär drivkraft", "Primary motivation"), lang)}
+          value={
+            primaryMotivation ?? L(c("Ej tillgänglig", "Not available"), lang)
+          }
+          icon={<Flame className="h-3.5 w-3.5" />}
+        />
+      </dl>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <Link
+          to="/security-career-assessment"
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+          {L(c("Visa fullständiga resultat", "View full results"), lang)}
+        </Link>
+        <Link
+          to="/security-career-assessment"
+          className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+        >
+          <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+          {L(c("Gör om bedömningen", "Retake assessment"), lang)}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+        {icon && <span className="text-primary/70">{icon}</span>}
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function ConfidenceBadge({
+  lang,
+  tone,
+  label,
+}: {
+  lang: "sv" | "en";
+  tone: "low" | "medium" | "high";
+  label: string;
+}) {
+  const styles: Record<typeof tone, string> = {
+    low: "bg-muted text-foreground",
+    medium: "bg-primary/10 text-primary",
+    high: "bg-primary text-primary-foreground",
+  };
+  const tip =
+    tone === "high"
+      ? L(
+          c(
+            "Baserat på tydliga signaler i dina svar.",
+            "Based on strong signals in your answers.",
+          ),
+          lang,
+        )
+      : tone === "medium"
+        ? L(
+            c(
+              "Baserat på delvis tydliga signaler.",
+              "Based on partially clear signals.",
+            ),
+            lang,
+          )
+        : L(
+            c(
+              "Baserat på ett fåtal signaler; gör gärna om testet senare.",
+              "Based on limited signals; consider retaking the assessment later.",
+            ),
+            lang,
+          );
+  return (
+    <span
+      title={tip}
+      className={
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium " +
+        styles[tone]
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
+// -----------------------------------------------------------------
+// Career Profile — visual block
+// -----------------------------------------------------------------
+
+function CareerProfileBlock({
+  lang,
+  profile,
+  topFamilyId,
+  topSlug,
+}: {
+  lang: "sv" | "en";
+  profile: CareerProfileForJobsV1;
+  topFamilyId: string | undefined;
+  topSlug: string | undefined;
+}) {
+  const workingStyle = profile.archetype
+    ? lang === "sv"
+      ? profile.archetype.labelSv
+      : profile.archetype.labelEn
+    : undefined;
+  const motivations = profile.motivations.map((m) =>
+    lang === "sv" ? m.labelSv : m.labelEn,
+  );
+  const domain = topFamilyId
+    ? getCareerAreaLabel(topFamilyId)?.name[lang]
+    : undefined;
+
+  const slugScore = topSlug ? profile.slugScores[topSlug] : undefined;
+  const strongDims = slugScore
+    ? slugScore.strongDims.slice(0, 4).map((d) => dimensionLabel(d, lang))
+    : [];
+  const developDims = slugScore
+    ? slugScore.developDims.slice(0, 4).map((d) => dimensionLabel(d, lang))
+    : [];
+
+  return (
+    <div id="career-profile" className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <ProfileTile
+          icon={<UserIcon className="h-4 w-4" />}
+          label={L(c("Arbetsstil", "Working style"), lang)}
+          value={workingStyle}
+          fallback={L(c("Analyseras…", "Being analysed…"), lang)}
+        />
+        <ProfileTile
+          icon={<Compass className="h-4 w-4" />}
+          label={L(c("Föredraget område", "Preferred security domain"), lang)}
+          value={domain}
+          fallback={L(c("Ej fastställt", "Not determined"), lang)}
+        />
+      </div>
+
+      <div>
+        <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          {L(c("Främsta drivkrafter", "Main motivations"), lang)}
+        </p>
+        {motivations.length > 0 ? (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {motivations.map((m, i) => (
+              <li
+                key={i}
+                className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+              >
+                {m}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {L(
+              c(
+                "Inga tydliga drivkrafter i det här testet.",
+                "No clear motivations in this test.",
+              ),
+              lang,
+            )}
+          </p>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+            {L(c("Starkaste kompetenser", "Strongest competencies"), lang)}
+          </p>
+          {strongDims.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {strongDims.map((d, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <CheckCircle2
+                    className="h-3.5 w-3.5 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="text-foreground">{d}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {L(c("Analyseras…", "Being analysed…"), lang)}
+            </p>
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+            {L(c("Utvecklingsområden", "Development areas"), lang)}
+          </p>
+          {developDims.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {developDims.map((d, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <TrendingUp
+                    className="h-3.5 w-3.5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="text-foreground">{d}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {L(
+                c(
+                  "Inga tydliga utvecklingsområden framkom.",
+                  "No clear development areas identified.",
+                ),
+                lang,
+              )}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileTile({
+  icon,
+  label,
+  value,
+  fallback,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | undefined;
+  fallback: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+        <span className="text-primary/70">{icon}</span>
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-foreground">
+        {value ?? fallback}
+      </p>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------
+// Next step + helpers
+// -----------------------------------------------------------------
+
+function NextStep({
+  lang,
+  noAssessment,
+  topAreaLabel,
+  topProfTitle,
+  topSlug,
+}: {
+  lang: "sv" | "en";
+  noAssessment: boolean;
+  topAreaLabel: string | undefined;
+  topProfTitle: string | undefined;
+  topSlug: string | undefined;
+}) {
+  if (noAssessment) {
+    return (
+      <StepBody
+        why={L(
+          c(
+            "Testet är grunden för alla rekommendationer på plattformen.",
+            "The assessment is the foundation of every recommendation on the platform.",
+          ),
+          lang,
+        )}
+        gain={L(
+          c(
+            "Efteråt får du en personlig karriärprofil, rekommenderade yrken och relevanta jobb.",
+            "Afterwards you get a personal career profile, recommended professions and relevant jobs.",
+          ),
+          lang,
+        )}
+        ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
+        cta={
+          <Link
+            to="/security-career-assessment"
+            className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            {L(c("Starta testet", "Start assessment"), lang)}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        }
+      />
+    );
+  }
+
+  if (topSlug && topProfTitle && topAreaLabel) {
+    return (
+      <StepBody
+        why={L(
+          c(
+            `Din profil pekar mot stark potential inom ${topAreaLabel}.`,
+            `Your profile indicates strong potential within ${topAreaLabel}.`,
+          ),
+          lang,
+        )}
+        gain={L(
+          c(
+            `Utforska ${topProfTitle} för att förstå kompetenskrav, certifieringar och tillgängliga möjligheter.`,
+            `Explore ${topProfTitle} to understand required skills, certifications and available opportunities.`,
+          ),
+          lang,
+        )}
+        ctaLabel={topProfTitle}
+        cta={
+          <Link
+            to="/career-center/$profession"
+            params={{ profession: topSlug }}
+            className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            {L(c("Utforska yrket", "Explore profession"), lang)}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        }
+      />
+    );
+  }
+
+  return (
+    <StepBody
+      why={L(
+        c(
+          "Att välja ett målprofession fokuserar din utveckling och gör rekommendationerna skarpare.",
+          "Choosing a target profession focuses your development and sharpens every recommendation.",
+        ),
+        lang,
+      )}
+      gain={L(
+        c(
+          "Du får skräddarsydd vägledning och tydligare nästa steg.",
+          "You'll get tailored guidance and clearer next steps.",
+        ),
+        lang,
+      )}
+      ctaLabel={L(c("Öppna Karriärcentret", "Open Career Center"), lang)}
+      cta={
+        <Link
+          to="/career-center"
+          className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          {L(c("Öppna Karriärcentret", "Open Career Center"), lang)}
+          <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      }
+    />
+  );
+}
+
+function StepBody({
+  why,
+  gain,
+  cta,
+}: {
+  why: string;
+  gain: string;
+  ctaLabel: string;
+  cta: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-sm leading-relaxed text-foreground">{why}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        {gain}
+      </p>
+      {cta}
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------
+// Small components
+// -----------------------------------------------------------------
+
 function DashboardCard({
   icon,
   title,
@@ -616,7 +1134,7 @@ function DashboardCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-background p-5 md:p-6">
+    <section className="rounded-xl border border-border bg-background p-5 md:p-6">
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {icon && <span className="text-primary">{icon}</span>}
@@ -636,53 +1154,61 @@ function EmptyState({
   why,
   ctaLabel,
   ctaTo,
+  secondaryLabel,
+  secondaryTo,
 }: {
   what: string;
   why: string;
   ctaLabel: string;
   ctaTo: "/security-career-assessment" | "/jobs" | "/career-center";
+  secondaryLabel?: string;
+  secondaryTo?: "/security-career-assessment" | "/jobs" | "/career-center";
 }) {
   return (
     <div>
       <p className="text-sm text-foreground">{what}</p>
       <p className="mt-1 text-sm text-muted-foreground">{why}</p>
-      <Link
-        to={ctaTo}
-        className="mt-3 inline-flex items-center text-sm text-primary hover:underline"
-      >
-        {ctaLabel}
-        <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-      </Link>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          to={ctaTo}
+          className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          {ctaLabel}
+          <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+        {secondaryLabel && secondaryTo && (
+          <Link
+            to={secondaryTo}
+            className="inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+          >
+            {secondaryLabel}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
-function NextStep({
-  body,
-  ctaTo,
-  ctaParams,
-  ctaLabel,
+function QuickLink({
+  to,
+  hash,
+  label,
 }: {
-  body: string;
-  ctaTo: string;
-  ctaParams?: Record<string, string>;
-  ctaLabel: string;
+  to: "/my-career" | "/career-center" | "/jobs" | "/security-career-assessment";
+  hash?: string;
+  label: string;
 }) {
   return (
-    <div>
-      <p className="text-sm text-muted-foreground">{body}</p>
-      <Link
-        // The router's typed <Link> is unhappy with dynamic string routes.
-        // Cast is safe: all call sites in this file pass known route
-        // literals ("/security-career-assessment", "/career-center",
-        // "/career-center/$profession").
-        to={ctaTo as never}
-        params={ctaParams as never}
-        className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-      >
-        {ctaLabel}
-        <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-      </Link>
-    </div>
+    <Link
+      to={to}
+      hash={hash}
+      className="flex items-center justify-between rounded-md px-2 py-1.5 text-foreground hover:bg-accent"
+    >
+      <span>{label}</span>
+      <ArrowRight
+        className="h-3.5 w-3.5 text-muted-foreground"
+        aria-hidden="true"
+      />
+    </Link>
   );
 }
