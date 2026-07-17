@@ -1,6 +1,12 @@
-# Phase D.1 — Public Jobs Terminology Pass (Report)
+# Phase D.1 — Public Jobs Terminology Pass (Completion Report)
 
-Status: **Implemented**. Awaiting approval before Phase E.
+Status: **Complete**. Awaiting approval before Phase E (Personal Job
+Relevance MVP). Phase D.1 covers two additive copy/presentation passes:
+
+1. Public terminology alignment with the CQrityjob Content, UX &
+   Terminology Standard.
+2. Enum display mapping — no raw enum tokens (`full_time`, `remote`,
+   …) appear in the public interface.
 
 ## Scope
 
@@ -136,3 +142,108 @@ to import from `@/lib/career-center/profession-families`, and delete
 impact.
 
 Stop here. Awaiting approval before Phase E.
+
+---
+
+## D.1 — Enum Display Mapping (follow-up)
+
+Presentation-only mapping of raw enum tokens to Swedish + English public
+labels on every public jobs surface. Stored enum values, filter query
+parameters, database logic, RLS and admin surfaces are unchanged.
+
+### New module
+
+`src/lib/job-intelligence/enum-labels.ts` — pure display helpers:
+
+- `employmentTypeLabel(value, lang)`
+- `workplaceTypeLabel(value, lang)`
+- `experienceLevelLabel(value, lang)`
+- `jobStatusLabel(value, lang)`
+
+Unknown values fall back to a humanised form of the raw token (spaces
+for underscores, capital first letter) so no `snake_case` ever reaches
+the UI, even for future enum values added before this table is updated.
+
+### Mapping table
+
+**Employment type**
+
+| Value | SV | EN |
+|---|---|---|
+| `full_time` | Heltid | Full-time |
+| `part_time` | Deltid | Part-time |
+| `contract` | Konsultuppdrag | Contract |
+| `temporary` | Vikariat | Temporary |
+| `internship` | Praktik | Internship |
+
+**Workplace type**
+
+| Value | SV | EN |
+|---|---|---|
+| `onsite` | På plats | On-site |
+| `hybrid` | Hybrid | Hybrid |
+| `remote` | Distans | Remote |
+
+**Experience level**
+
+| Value | SV | EN |
+|---|---|---|
+| `entry` | Junior | Entry level |
+| `mid` | Erfaren | Mid level |
+| `senior` | Senior | Senior |
+| `lead` | Ledande befattning | Lead |
+
+**Job status** (used where a status is surfaced publicly; expired
+listings continue to use the existing "Stängd / Closed" copy from
+`jobs.detail.expired.badge`)
+
+| Value | SV | EN |
+|---|---|---|
+| `draft` | Utkast | Draft |
+| `pending_review` | Under granskning | Pending review |
+| `published` | Publicerad | Published |
+| `closed` | Stängd | Closed |
+| `expired` | Stängd | Closed |
+| `archived` | Arkiverad | Archived |
+
+### Call sites updated
+
+- `src/components/jobs/JobCard.tsx` — employment/workplace chips.
+- `src/routes/jobs.$slug.tsx` — employment/workplace/experience chips
+  in the job-detail header; removed `capitalize` class from the `Chip`
+  wrapper so pre-cased labels ("På plats", "Full-time") render as
+  authored.
+- `src/routes/jobs.index.tsx` — employment/workplace/experience filter
+  dropdown options; enum value lists now come from
+  `EMPLOYMENT_TYPE_VALUES` / `WORKPLACE_TYPE_VALUES` /
+  `EXPERIENCE_LEVEL_VALUES` in the new module so labels and filter
+  values stay in sync; removed `capitalize` class from `SelectItem`.
+
+### What was NOT changed
+
+- Stored enum values in the database.
+- URL query parameters (`?employment=full_time`, `?workplace=remote`,
+  …) — bookmarkable filter URLs are preserved.
+- Filter, search or relevance logic.
+- Admin surfaces (admin lists intentionally still show raw enum values
+  where useful for moderation; that is not a public surface).
+
+### Verification
+
+- `tsgo --noEmit` — clean.
+- `bun cie:check` — PASS (unchanged output from Phase D.1 baseline).
+- Public-surface audit — no `snake_case` tokens visible on `/jobs`,
+  `/jobs/$slug`, `/jobs/family/$familyId`, `/jobs/profession/$slug`,
+  job cards, filter dropdowns, or related-jobs list.
+
+### Rollback
+
+Fully additive. Revert the four call sites to their previous inline
+rendering and delete `src/lib/job-intelligence/enum-labels.ts`. No data
+or schema impact.
+
+---
+
+Phase D.1 is now complete end-to-end (terminology + enum display).
+Awaiting explicit approval before starting Phase E — Personal Job
+Relevance MVP.
