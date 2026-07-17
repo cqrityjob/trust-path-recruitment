@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -60,6 +62,22 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { t, lang } = useT();
+  const navigate = useNavigate();
+
+  // Phase F.1 — authenticated visitors land on their personal dashboard.
+  // Runs client-side only; SSR still serves the public landing page for
+  // crawlers and signed-out users.
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive && data.session) {
+        navigate({ to: "/my-career", replace: true });
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [navigate]);
 
   const featuredProfessions = allProfessions
     .filter((p) => p.status === "researched")
