@@ -32,6 +32,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
+import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -153,6 +154,11 @@ const AuthenticatedJourneyTargetIdRoute =
     path: '/$targetId',
     getParentRoute: () => AuthenticatedJourneyRoute,
   } as any)
+const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
+  id: '/jobs',
+  path: '/jobs',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/jobs'
     | '/journey/$targetId'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -282,6 +292,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/career-center'
     | '/.mcp/invoke-tool/$tool'
+    | '/admin/jobs'
     | '/journey/$targetId'
     | '/admin'
   id:
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/admin/jobs'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJourneyTargetIdRouteImport
       parentRoute: typeof AuthenticatedJourneyRoute
     }
+    '/_authenticated/admin/jobs': {
+      id: '/_authenticated/admin/jobs'
+      path: '/jobs'
+      fullPath: '/admin/jobs'
+      preLoaderRoute: typeof AuthenticatedAdminJobsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -506,10 +525,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
