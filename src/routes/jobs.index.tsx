@@ -268,7 +268,7 @@ function FilterSelect({
         <SelectContent>
           <SelectItem value="__any__">{anyLabel}</SelectItem>
           {options.map((o) => (
-            <SelectItem key={o.value} value={o.value} className="capitalize">
+            <SelectItem key={o.value} value={o.value}>
               {o.label}
             </SelectItem>
           ))}
