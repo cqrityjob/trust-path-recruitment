@@ -27,18 +27,20 @@ export const Route = createFileRoute("/_authenticated/admin/jobs/$id")({
 });
 
 const FAMILY_IDS = [
-  "exploring",
-  "guarding",
-  "police_public",
-  "defence_protective",
-  "corporate",
-  "physical_technical",
-  "risk_crisis",
-  "investigations_intel",
-  "financial_crime",
-  "critical_infra",
-  "cyber_infosec",
-  "consulting_specialist",
+  "protective_operations",
+  "public_safety_justice",
+  "corrections_secure_transport",
+  "defence_national_security",
+  "corporate_security",
+  "critical_infrastructure_security",
+  "risk_management",
+  "crisis_management",
+  "business_continuity_resilience",
+  "cyber_information_security",
+  "financial_crime_compliance",
+  "security_technology",
+  "security_leadership_governance",
+  "investigations_intelligence",
 ];
 
 type FormState = {

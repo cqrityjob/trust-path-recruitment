@@ -15,99 +15,115 @@ export type CareerAreaLabel = {
 
 export const careerAreaLabels: readonly CareerAreaLabel[] = [
   {
-    id: "exploring",
-    name: { sv: "Utforska säkerhetsyrken", en: "Explore security careers" },
+    id: "protective_operations",
+    name: { sv: "Bevakning och operativt skydd", en: "Protective Operations" },
     description: {
-      sv: "För dig som vill upptäcka olika yrken och karriärvägar inom säkerhetsområdet.",
-      en: "For people exploring roles and career paths across the security sector.",
+      sv: "Operativa bevaknings-, ordnings- och personskyddsroller.",
+      en: "Operational guarding, order and close-protection roles.",
     },
   },
   {
-    id: "guarding",
-    name: { sv: "Bevakning och operativ säkerhet", en: "Protective services and operational security" },
+    id: "public_safety_justice",
+    name: { sv: "Samhällsskydd och rättsväsende", en: "Public Safety & Justice" },
     description: {
-      sv: "Yrken inom bevakning, ordning, skydd och operativ säkerhet.",
-      en: "Roles in guarding, public order, protection and operational security.",
+      sv: "Yrken inom polis, ordning, gränskontroll och rättsvård.",
+      en: "Roles across policing, public order, border control and justice.",
     },
   },
   {
-    id: "police_public",
-    name: { sv: "Polis och samhällsskydd", en: "Policing and public protection" },
+    id: "corrections_secure_transport",
+    name: { sv: "Kriminalvård och säker transport", en: "Corrections & Secure Transport" },
     description: {
-      sv: "Yrken inom brottsbekämpning, ordning, rättsväsende och samhällsskydd.",
-      en: "Roles in law enforcement, public order, justice and public protection.",
+      sv: "Kriminalvård, transportsäkerhet och värdetransport.",
+      en: "Correctional services, transport security and cash-in-transit.",
     },
   },
   {
-    id: "defence_protective",
-    name: { sv: "Försvar och personskydd", en: "Defence and close protection" },
+    id: "defence_national_security",
+    name: { sv: "Försvar och nationell säkerhet", en: "Defence & National Security" },
     description: {
-      sv: "Yrken inom försvar, personskydd och skydd av personer och skyddsvärda verksamheter.",
-      en: "Roles in defence, close protection and the protection of people and sensitive operations.",
+      sv: "Militär säkerhet och roller kopplade till försvar och nationell säkerhet.",
+      en: "Military security roles connected to defence and national security.",
     },
   },
   {
-    id: "corporate",
-    name: { sv: "Företagssäkerhet och säkerhetsledning", en: "Corporate security and security leadership" },
+    id: "corporate_security",
+    name: { sv: "Företagssäkerhet", en: "Corporate Security" },
     description: {
-      sv: "Yrken inom strategisk säkerhet, styrning, samordning och ledarskap.",
-      en: "Roles in security strategy, governance, coordination and leadership.",
+      sv: "Interna säkerhetsfunktioner inom företag och organisationer.",
+      en: "In-house security functions within companies and organisations.",
     },
   },
   {
-    id: "physical_technical",
-    name: { sv: "Fysisk och teknisk säkerhet", en: "Physical and electronic security" },
+    id: "critical_infrastructure_security",
+    name: { sv: "Kritisk infrastruktur och datacenter", en: "Critical Infrastructure Security" },
     description: {
-      sv: "Yrken inom säkerhetsteknik, installation, drift och fysiskt skydd.",
-      en: "Roles in security systems, installation, operations and physical protection.",
+      sv: "Skydd av samhällsviktig verksamhet, hamnar, flygplatser och datacenter.",
+      en: "Protection of essential services, ports, airports and data centres.",
     },
   },
   {
-    id: "risk_crisis",
-    name: { sv: "Risk, kris och kontinuitet", en: "Risk, crisis and business continuity" },
+    id: "risk_management",
+    name: { sv: "Riskhantering", en: "Risk Management" },
     description: {
-      sv: "Yrken inom riskhantering, krisberedskap och kontinuitetsplanering.",
-      en: "Roles in risk management, crisis management and business continuity.",
+      sv: "Identifiering, analys och hantering av operativa och organisatoriska risker.",
+      en: "Identification, analysis and management of operational and organisational risk.",
     },
   },
   {
-    id: "investigations_intel",
-    name: { sv: "Utredning, underrättelse och analys", en: "Investigations, intelligence and analysis" },
+    id: "crisis_management",
+    name: { sv: "Krishantering och räddning", en: "Crisis Management & Emergency Response" },
     description: {
-      sv: "Yrken inom utredning, informationsinhämtning, underrättelse och analys.",
-      en: "Roles in investigations, intelligence gathering and analysis.",
+      sv: "Krisberedskap, incidentledning och räddningstjänst.",
+      en: "Crisis preparedness, incident command and emergency response.",
     },
   },
   {
-    id: "financial_crime",
-    name: { sv: "AML, compliance och finansiell brottslighet", en: "AML, compliance and financial crime" },
+    id: "business_continuity_resilience",
+    name: { sv: "Kontinuitet och motståndskraft", en: "Business Continuity & Resilience" },
     description: {
-      sv: "Yrken inom penningtvätt, bedrägeribekämpning, regelefterlevnad och finansiella utredningar.",
-      en: "Roles in anti-money laundering, fraud prevention, compliance and financial investigations.",
+      sv: "Kontinuitetsplanering och organisatorisk motståndskraft.",
+      en: "Continuity planning and organisational resilience.",
     },
   },
   {
-    id: "critical_infra",
-    name: { sv: "Kritisk infrastruktur och datacenter", en: "Critical infrastructure and data centres" },
+    id: "cyber_information_security",
+    name: { sv: "Cyber- och informationssäkerhet", en: "Cyber & Information Security" },
     description: {
-      sv: "Yrken som skyddar samhällsviktig verksamhet, kritisk infrastruktur och datacenter.",
-      en: "Roles protecting essential services, critical infrastructure and data centres.",
+      sv: "Digital säkerhet, incidenthantering och informationsskydd.",
+      en: "Digital security, incident response and information protection.",
     },
   },
   {
-    id: "cyber_infosec",
-    name: { sv: "Cyber- och informationssäkerhet", en: "Cybersecurity and information security" },
+    id: "financial_crime_compliance",
+    name: { sv: "Finansiell brottslighet och compliance", en: "Financial Crime & Compliance" },
     description: {
-      sv: "Yrken inom cybersäkerhet, informationssäkerhet och incidenthantering.",
-      en: "Roles in cybersecurity, information security and incident response.",
+      sv: "AML, bedrägeribekämpning och regelefterlevnad.",
+      en: "Anti-money-laundering, fraud prevention and compliance.",
     },
   },
   {
-    id: "consulting_specialist",
-    name: { sv: "Säkerhetskonsulter och specialister", en: "Security consultants and specialists" },
+    id: "security_technology",
+    name: { sv: "Säkerhetsteknik", en: "Security Technology" },
     description: {
-      sv: "Konsult- och specialistyrken med rådgivande, fördjupad eller tvärgående kompetens.",
-      en: "Advisory and specialist roles requiring advanced or cross-functional expertise.",
+      sv: "Installation, drift och integration av tekniska säkerhetssystem.",
+      en: "Installation, operation and integration of technical security systems.",
+    },
+  },
+  {
+    id: "security_leadership_governance",
+    name: { sv: "Säkerhetsledning och styrning", en: "Security Leadership & Governance" },
+    description: {
+      sv: "Strategisk säkerhet, ledarskap, rådgivning och styrning.",
+      en: "Strategic security leadership, advisory and governance.",
+    },
+  },
+  {
+    id: "investigations_intelligence",
+    name: { sv: "Utredning och underrättelse", en: "Investigations & Intelligence" },
+    description: {
+      sv: "Utredning, underrättelse och analys inom offentlig och privat sektor.",
+      en: "Investigations, intelligence and analysis across public and private sectors.",
     },
   },
 ] as const;
