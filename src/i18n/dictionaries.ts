@@ -11,6 +11,7 @@ export const dictionaries = {
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
     "nav.signin.tooltip": "Kommer snart",
+    "nav.my_career": "Min karriär",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
@@ -719,6 +720,7 @@ export const dictionaries = {
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
     "nav.signin.tooltip": "Coming soon",
+    "nav.my_career": "My career",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
