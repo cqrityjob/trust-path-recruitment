@@ -32,6 +32,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
@@ -158,6 +159,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const JobsProfessionProfessionSlugRoute =
+  JobsProfessionProfessionSlugRouteImport.update({
+    id: '/profession/$professionSlug',
+    path: '/profession/$professionSlug',
+    getParentRoute: () => JobsRoute,
+  } as any)
 const JobsFamilyFamilyIdRoute = JobsFamilyFamilyIdRouteImport.update({
   id: '/family/$familyId',
   path: '/family/$familyId',
@@ -226,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
+  '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -253,6 +261,7 @@ export interface FileRoutesByTo {
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
+  '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
@@ -286,6 +295,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
+  '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/journey/$targetId'
     | '/jobs/family/$familyId'
+    | '/jobs/profession/$professionSlug'
     | '/admin/'
     | '/admin/jobs/$id'
     | '/admin/jobs/'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/admin/employers'
     | '/journey/$targetId'
     | '/jobs/family/$familyId'
+    | '/jobs/profession/$professionSlug'
     | '/admin'
     | '/admin/jobs/$id'
     | '/admin/jobs'
@@ -378,6 +390,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/jobs'
     | '/_authenticated/journey/$targetId'
     | '/jobs/family/$familyId'
+    | '/jobs/profession/$professionSlug'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/admin/jobs/'
@@ -566,6 +579,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/jobs/profession/$professionSlug': {
+      id: '/jobs/profession/$professionSlug'
+      path: '/profession/$professionSlug'
+      fullPath: '/jobs/profession/$professionSlug'
+      preLoaderRoute: typeof JobsProfessionProfessionSlugRouteImport
+      parentRoute: typeof JobsRoute
+    }
     '/jobs/family/$familyId': {
       id: '/jobs/family/$familyId'
       path: '/family/$familyId'
@@ -693,11 +713,13 @@ const CareerCenterRouteWithChildren = CareerCenterRoute._addFileChildren(
 interface JobsRouteChildren {
   JobsIndexRoute: typeof JobsIndexRoute
   JobsFamilyFamilyIdRoute: typeof JobsFamilyFamilyIdRoute
+  JobsProfessionProfessionSlugRoute: typeof JobsProfessionProfessionSlugRoute
 }
 
 const JobsRouteChildren: JobsRouteChildren = {
   JobsIndexRoute: JobsIndexRoute,
   JobsFamilyFamilyIdRoute: JobsFamilyFamilyIdRoute,
+  JobsProfessionProfessionSlugRoute: JobsProfessionProfessionSlugRoute,
 }
 
 const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
