@@ -35,6 +35,7 @@ import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedAdminJobsIndexRouteImport } from './routes/_authenticated.admin.jobs.index'
+import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenticated.admin.jobs.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -172,6 +173,12 @@ const AuthenticatedAdminJobsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAdminJobsRoute,
   } as any)
+const AuthenticatedAdminJobsIdRoute =
+  AuthenticatedAdminJobsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminJobsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -222,6 +230,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRoutesById {
@@ -251,6 +260,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRouteTypes {
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/journey/$targetId'
     | '/admin/'
+    | '/admin/jobs/$id'
     | '/admin/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -304,6 +315,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/journey/$targetId'
     | '/admin'
+    | '/admin/jobs/$id'
     | '/admin/jobs'
   id:
     | '__root__'
@@ -332,6 +344,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/jobs'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/admin/'
+    | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/admin/jobs/'
   fileRoutesById: FileRoutesById
 }
@@ -539,15 +552,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminJobsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminJobsRoute
     }
+    '/_authenticated/admin/jobs/$id': {
+      id: '/_authenticated/admin/jobs/$id'
+      path: '/$id'
+      fullPath: '/admin/jobs/$id'
+      preLoaderRoute: typeof AuthenticatedAdminJobsIdRouteImport
+      parentRoute: typeof AuthenticatedAdminJobsRoute
+    }
   }
 }
 
 interface AuthenticatedAdminJobsRouteChildren {
+  AuthenticatedAdminJobsIdRoute: typeof AuthenticatedAdminJobsIdRoute
   AuthenticatedAdminJobsIndexRoute: typeof AuthenticatedAdminJobsIndexRoute
 }
 
 const AuthenticatedAdminJobsRouteChildren: AuthenticatedAdminJobsRouteChildren =
   {
+    AuthenticatedAdminJobsIdRoute: AuthenticatedAdminJobsIdRoute,
     AuthenticatedAdminJobsIndexRoute: AuthenticatedAdminJobsIndexRoute,
   }
 
