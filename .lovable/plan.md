@@ -87,3 +87,24 @@ Halt before: any change to `career-assessment/*` scoring; any destructive change
 ## Approval
 
 Proceeding with Phase A now — starting with the additive foundation migration.
+
+---
+
+## Phase A hardening (applied post-review)
+
+Pre-Phase-B micro-migration + refactor applied:
+
+- `cig_career_transitions`: `CHECK (from_profession_id <> to_profession_id)` self-loop guard.
+- `cig_assessment_dimensions`: new nullable `category text` (Behavioural Traits readiness).
+- `cig_professions`: new nullable `esco_uri text`, `ssyk_code text`; index `cig_professions_ssyk_idx` on `ssyk_code`.
+- ISO-3166 alpha-2 CHECKs on `country` for `cig_professions`, `cig_formal_requirements`, `cig_profession_formal_requirements`.
+- Extracted `serverPublicClient()` into `src/integrations/supabase/public-server.ts`; `read-v2.functions.ts` now imports it.
+
+Type-check: pass. Migration: applied. Linter warnings after migration are pre-existing (unrelated to this hardening: `has_role` SECURITY DEFINER exposure and an RLS-enabled-no-policy note on a legacy table). No new SECURITY DEFINER function was added and no new table was created without policies.
+
+## Phase B — Normalisation manifest (delivered, docs only)
+
+- `docs/career-intelligence/normalisation-manifest.md`: 13 families, 20 Level A, 47 Level B, Level C discovery list, alias/specialisation/destination rules, seed career transitions, country-code discipline, Police + Armed Forces disclaimers, source policy, out-of-scope list.
+- `docs/career-intelligence/rollback.md`: additive-only rollback for Phase A + hardening, Phase C, and post-Phase-E activation.
+
+**Awaiting approval before Phase C.**

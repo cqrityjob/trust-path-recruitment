@@ -309,6 +309,7 @@ export type Database = {
       }
       cig_assessment_dimensions: {
         Row: {
+          category: string | null
           content_status: Database["public"]["Enums"]["cig_content_status"]
           created_at: string
           description_en: string | null
@@ -321,6 +322,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           content_status?: Database["public"]["Enums"]["cig_content_status"]
           created_at?: string
           description_en?: string | null
@@ -333,6 +335,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           content_status?: Database["public"]["Enums"]["cig_content_status"]
           created_at?: string
           description_en?: string | null
@@ -1597,6 +1600,7 @@ export type Database = {
           created_at: string
           disclaimer_en: string | null
           disclaimer_sv: string | null
+          esco_uri: string | null
           graph_version: string
           id: string
           is_regulated: boolean
@@ -1608,6 +1612,7 @@ export type Database = {
           primary_family_id: string | null
           quality_level: Database["public"]["Enums"]["cig_quality_level"]
           slug: string
+          ssyk_code: string | null
           summary_en: string | null
           summary_sv: string | null
           title_en: string
@@ -1622,6 +1627,7 @@ export type Database = {
           created_at?: string
           disclaimer_en?: string | null
           disclaimer_sv?: string | null
+          esco_uri?: string | null
           graph_version: string
           id?: string
           is_regulated?: boolean
@@ -1633,6 +1639,7 @@ export type Database = {
           primary_family_id?: string | null
           quality_level?: Database["public"]["Enums"]["cig_quality_level"]
           slug: string
+          ssyk_code?: string | null
           summary_en?: string | null
           summary_sv?: string | null
           title_en: string
@@ -1647,6 +1654,7 @@ export type Database = {
           created_at?: string
           disclaimer_en?: string | null
           disclaimer_sv?: string | null
+          esco_uri?: string | null
           graph_version?: string
           id?: string
           is_regulated?: boolean
@@ -1658,6 +1666,7 @@ export type Database = {
           primary_family_id?: string | null
           quality_level?: Database["public"]["Enums"]["cig_quality_level"]
           slug?: string
+          ssyk_code?: string | null
           summary_en?: string | null
           summary_sv?: string | null
           title_en?: string
