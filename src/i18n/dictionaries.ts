@@ -125,6 +125,50 @@ export const dictionaries = {
     "jobs.coming_soon.body":
       "Vi bygger en jobbupplevelse som är utformad för säkerhetsbranschens verklighet — med rollspecifika krav, tydliga kompetensbehov och seriösa arbetsgivare.",
 
+    "jobs.discover.title": "Hitta jobb inom säkerhet",
+    "jobs.discover.lead":
+      "Aktuella jobb från arbetsgivare inom säkerhetsbranschen. Sök på nyckelord, plats, familj eller yrke.",
+    "jobs.search.keyword_placeholder": "Roll, kompetens eller nyckelord",
+    "jobs.search.location_placeholder": "Ort, region eller land",
+    "jobs.search.submit": "Sök",
+    "jobs.search.reset": "Rensa filter",
+    "jobs.filter.family": "Familj",
+    "jobs.filter.employment_type": "Anställningsform",
+    "jobs.filter.workplace_type": "Arbetsplats",
+    "jobs.filter.experience_level": "Erfarenhet",
+    "jobs.filter.country": "Land",
+    "jobs.filter.any": "Alla",
+    "jobs.browse.families.title": "Bläddra efter karriärfamilj",
+    "jobs.browse.families.subtitle":
+      "13 karriärfamiljer täcker hela säkerhetsbranschen — från operativt skydd till cyber.",
+    "jobs.results.count_one": "{n} jobb",
+    "jobs.results.count_other": "{n} jobb",
+    "jobs.results.empty.title": "Inga jobb matchar",
+    "jobs.results.empty.body":
+      "Prova andra nyckelord eller ta bort filter. Nya jobb publiceras löpande.",
+    "jobs.results.error.title": "Något gick fel",
+    "jobs.results.error.body":
+      "Vi kunde inte hämta jobb just nu. Försök igen om en stund.",
+    "jobs.results.loading": "Laddar jobb…",
+    "jobs.card.untitled": "Utan titel",
+    "jobs.card.today": "Idag",
+    "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
+    "jobs.detail.back": "← Alla jobb",
+    "jobs.detail.apply_external": "Ansök hos arbetsgivaren",
+    "jobs.detail.apply_email": "Ansök via e-post",
+    "jobs.detail.apply_unavailable":
+      "Ansökan är för närvarande inte tillgänglig via CQrityjob.",
+    "jobs.detail.deadline": "Sista ansökningsdag",
+    "jobs.detail.published": "Publicerad",
+    "jobs.detail.responsibilities": "Arbetsuppgifter",
+    "jobs.detail.requirements": "Kvalifikationer",
+    "jobs.detail.benefits": "Vi erbjuder",
+    "jobs.detail.not_found.title": "Jobbet är inte tillgängligt",
+    "jobs.detail.not_found.body":
+      "Annonsen kan ha tagits bort eller passerat sista ansökningsdag.",
+    "jobs.family.header": "Jobb inom {family}",
+    "jobs.profession.header": "Jobb som {profession}",
+
     "employers.title": "För arbetsgivare",
     "employers.lead":
       "Rekrytera, bedöm och utveckla säkerhetspersonal med strukturerat beslutsstöd — utformat för säkerhetsbranschens verklighet.",
@@ -726,6 +770,50 @@ export const dictionaries = {
     "jobs.coming_soon.title": "Coming soon",
     "jobs.coming_soon.body":
       "We are building a job experience designed for the security industry — with role-specific requirements, clear competence needs and serious employers.",
+
+    "jobs.discover.title": "Find security jobs",
+    "jobs.discover.lead":
+      "Active roles from employers in the security industry. Search by keyword, location, family or profession.",
+    "jobs.search.keyword_placeholder": "Role, skill or keyword",
+    "jobs.search.location_placeholder": "City, region or country",
+    "jobs.search.submit": "Search",
+    "jobs.search.reset": "Clear filters",
+    "jobs.filter.family": "Family",
+    "jobs.filter.employment_type": "Employment",
+    "jobs.filter.workplace_type": "Workplace",
+    "jobs.filter.experience_level": "Experience",
+    "jobs.filter.country": "Country",
+    "jobs.filter.any": "Any",
+    "jobs.browse.families.title": "Browse by career family",
+    "jobs.browse.families.subtitle":
+      "13 career families cover the full security industry — from operational protection to cyber.",
+    "jobs.results.count_one": "{n} job",
+    "jobs.results.count_other": "{n} jobs",
+    "jobs.results.empty.title": "No jobs match",
+    "jobs.results.empty.body":
+      "Try different keywords or remove filters. New jobs are published continuously.",
+    "jobs.results.error.title": "Something went wrong",
+    "jobs.results.error.body":
+      "We could not load jobs right now. Please try again in a moment.",
+    "jobs.results.loading": "Loading jobs…",
+    "jobs.card.untitled": "Untitled",
+    "jobs.card.today": "Today",
+    "jobs.card.posted_days_ago": "Posted {n} days ago",
+    "jobs.detail.back": "← All jobs",
+    "jobs.detail.apply_external": "Apply on the employer's site",
+    "jobs.detail.apply_email": "Apply by email",
+    "jobs.detail.apply_unavailable":
+      "Applications are not currently available via CQrityjob.",
+    "jobs.detail.deadline": "Application deadline",
+    "jobs.detail.published": "Published",
+    "jobs.detail.responsibilities": "Responsibilities",
+    "jobs.detail.requirements": "Qualifications",
+    "jobs.detail.benefits": "What we offer",
+    "jobs.detail.not_found.title": "This job is not available",
+    "jobs.detail.not_found.body":
+      "The listing may have been removed or the application deadline may have passed.",
+    "jobs.family.header": "Jobs in {family}",
+    "jobs.profession.header": "Jobs as {profession}",
 
     "employers.title": "For Employers",
     "employers.lead":
