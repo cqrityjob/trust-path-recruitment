@@ -4,7 +4,7 @@
 import { professions as _professions } from "@/lib/career-center/professions";
 import { getProfession as _getProfession } from "@/lib/career-center/selectors";
 import { competencies } from "@/lib/career-center/competencies";
-import { educations } from "@/lib/career-center/education";
+import { education as educations } from "@/lib/career-center/education";
 import { certifications } from "@/lib/career-center/certifications";
 import type { Profession, ProfessionId, CompetencyId, EducationId, CertificationId, SourceRef } from "@/lib/career-center/types";
 
@@ -72,10 +72,10 @@ export function getCompetencyName(id: CompetencyId): { sv: string; en: string } 
 }
 
 export function getEducationName(id: EducationId): { sv: string; en: string } | undefined {
-  const e = educations.find((x) => x.id === id);
+  const e = educations.find((x: { id: string }) => x.id === id);
   return e ? e.name : undefined;
 }
 
 export function getCertification(id: CertificationId) {
-  return certifications.find((x) => x.id === id);
+  return certifications.find((x: { id: string }) => x.id === id);
 }
