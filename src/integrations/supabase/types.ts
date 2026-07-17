@@ -705,6 +705,27 @@ export type Database = {
         }
         Relationships: []
       }
+      cig_governance_settings: {
+        Row: {
+          id: boolean
+          lifecycle_enforced: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          lifecycle_enforced?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          lifecycle_enforced?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       cig_knowledge_areas: {
         Row: {
           content_status: Database["public"]["Enums"]["cig_content_status"]
@@ -1292,6 +1313,56 @@ export type Database = {
           },
           {
             foreignKeyName: "cig_profession_knowledge_req_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cig_profession_reviews: {
+        Row: {
+          created_at: string
+          graph_version: string
+          id: string
+          next_review_due: string | null
+          profession_id: string
+          review_date: string
+          review_notes: string | null
+          review_scope: string
+          reviewer_id: string | null
+          reviewer_label: string
+          source_reference: string | null
+        }
+        Insert: {
+          created_at?: string
+          graph_version: string
+          id?: string
+          next_review_due?: string | null
+          profession_id: string
+          review_date?: string
+          review_notes?: string | null
+          review_scope: string
+          reviewer_id?: string | null
+          reviewer_label: string
+          source_reference?: string | null
+        }
+        Update: {
+          created_at?: string
+          graph_version?: string
+          id?: string
+          next_review_due?: string | null
+          profession_id?: string
+          review_date?: string
+          review_notes?: string | null
+          review_scope?: string
+          reviewer_id?: string | null
+          reviewer_label?: string
+          source_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cig_profession_reviews_profession_id_fkey"
             columns: ["profession_id"]
             isOneToOne: false
             referencedRelation: "cig_professions"
@@ -2110,6 +2181,36 @@ export type Database = {
           },
         ]
       }
+      graph_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          published_at: string | null
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          published_at?: string | null
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          published_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       job_admin_meta: {
         Row: {
           created_at: string
@@ -2580,6 +2681,7 @@ export type Database = {
     }
     Functions: {
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      cig_lifecycle_enforced: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2610,7 +2712,13 @@ export type Database = {
         | "seniority"
         | "context"
         | "destination"
-      cig_content_status: "draft" | "published" | "archived"
+      cig_content_status:
+        | "draft"
+        | "researched"
+        | "awaiting_human_review"
+        | "reviewed"
+        | "published"
+        | "archived"
       cig_link_status: "healthy" | "redirected" | "failed" | "needs_check"
       cig_quality_level: "A" | "B" | "C"
       cig_relationship_criticality: "mandatory" | "preferred" | "informative"
@@ -2761,7 +2869,14 @@ export const Constants = {
         "context",
         "destination",
       ],
-      cig_content_status: ["draft", "published", "archived"],
+      cig_content_status: [
+        "draft",
+        "researched",
+        "awaiting_human_review",
+        "reviewed",
+        "published",
+        "archived",
+      ],
       cig_link_status: ["healthy", "redirected", "failed", "needs_check"],
       cig_quality_level: ["A", "B", "C"],
       cig_relationship_criticality: ["mandatory", "preferred", "informative"],
