@@ -1,433 +1,106 @@
 
-# Sprint 07 — Production Backend, Authentication & Platform Architecture
+# Sprint 09B — Final Corrections (planning only, no code changed)
 
-Planning only. No files modified. No backend enabled until this plan is approved.
-
----
-
-## 1. Executive recommendation
-
-**Adopt Lovable Cloud as the primary backend.** Lovable Cloud runs on Supabase under the hood (Postgres + Auth + Storage + Edge/Server functions + RLS) with EU-region projects available, so it satisfies every hard requirement (GDPR, EU residency, RLS, RBAC, storage, audit) while giving this small team the fastest path to launch and the lowest operational overhead. The existing TanStack Start app already uses the Lovable Cloud client patterns (`requireSupabaseAuth`, server functions, RLS-first data model), so adoption is additive rather than a rewrite.
-
-Portability is preserved: schema lives in versioned SQL migrations, code lives in GitHub, and the underlying Supabase project can be exported or self-hosted later if needed. Direct Supabase and hybrid setups add operational cost (separate dashboards, key management, billing) with no meaningful capability gain at this stage. Reject option B and C.
-
-**Next Build sprint (Sprint 08):** enable Lovable Cloud, ship the MVP schema in §4, wire authentication (email/password + Google) and the `_authenticated` gate, add candidate profile stub + saved-assessment persistence. Nothing else.
+The revised Career Intelligence Graph plan stands as previously approved, with the following mandatory corrections applied. Nothing else changes.
 
 ---
 
-## 2. Recommended architecture
+## 1. Corrected regulated-role seed table
 
-- **Frontend:** existing TanStack Start app (SSR on public routes, `_authenticated` layout for gated routes).
-- **Backend:** Lovable Cloud (Postgres 15, Supabase Auth, Storage, RLS, server functions via `createServerFn`).
-- **Server logic:** `createServerFn` for app-internal reads/writes; `src/routes/api/public/*` for webhooks and cron only.
-- **AI (future):** Lovable AI Gateway; all AI actions logged to `ai_actions` with grounding sources and human-review status.
-- **Email (future):** Lovable Email for transactional + invitations.
-- **Environments:** dev (Lovable preview) → staging (published preview) → production (`cqrityjob.com`).
-- **Region:** EU (Frankfurt or Stockholm) for GDPR residency.
+### 1.1 Väktare (Security Officer)
 
----
+| Stable id | SV label | EN label | Subtype | Applies to | Authority | Legal blocker | Source anchor |
+|---|---|---|---|---|---|---|---|
+| `fr.se.vaktare.company-authorization` | Auktorisation av bevakningsföretag | Authorization of security company | `company_authorization` | organization | Länsstyrelsen | yes (org must be authorized) | Lag (1974:191) om bevakningsföretag; Förordning (1989:149) |
+| `fr.se.vaktare.training` | Föreskriven väktarutbildning | Prescribed security-guard training | `mandatory_training` | person | Auktoriserat bevakningsföretag under Polismyndighetens tillsyn (FAP 573-1) | yes | RPSFS / PMFS FAP 573-1 |
+| `fr.se.vaktare.personnel-approval` | Länsstyrelsens godkännande som väktare | County Administrative Board personnel approval as security officer | `personnel_approval` | person | Länsstyrelsen | yes | Lag (1974:191); Förordning (1989:149) |
 
-## 3. Architecture diagram (text)
+**Removed:** `fr.se.vaktare.employment` (employment/engagement in an authorized company is a future employment/assignment relationship, not a candidate qualification).
 
-```text
-                       ┌────────────────────────────┐
-                       │  Public web (cqrityjob.com)│
-                       │  TanStack Start SSR        │
-                       └──────────────┬─────────────┘
-                                      │
-                 ┌────────────────────┼─────────────────────┐
-                 │                    │                     │
-        Public routes         _authenticated/*        /api/public/*
-        (career center,        (candidate,             (webhooks,
-         assessment,            employer,               cron, MCP)
-         jobs list,             admin)
-         SEO)                          │
-                 │                    │                     │
-                 └─────── createServerFn (RPC) ──────────────┘
-                                      │
-                        Lovable Cloud (Supabase, EU)
-        ┌─────────────┬───────────────┬────────────┬──────────────┐
-        │   Auth      │   Postgres    │  Storage   │  Server fns  │
-        │  (email,    │   + RLS       │  (CVs,     │  (edge)      │
-        │   Google,   │               │  logos)    │              │
-        │   MFA)      │               │            │              │
-        └─────────────┴───────┬───────┴────────────┴──────────────┘
-                              │
-                    Audit log · Backups · PITR
-                              │
-                        Lovable AI Gateway (later)
-```
+### 1.2 Ordningsvakt (Public Order Officer)
+
+| Stable id | SV | EN | Subtype | Applies to | Authority | Blocker | Source anchor |
+|---|---|---|---|---|---|---|---|
+| `fr.se.ordningsvakt.training` | Ordningsvaktsgrundutbildning | Public order officer basic training | `mandatory_training` | person | Polismyndigheten | yes | Ordningsvaktslag (2023:421); PMFS |
+| `fr.se.ordningsvakt.appointment` | Förordnande som ordningsvakt | Appointment as public order officer | `government_appointment` | person | Polismyndigheten | yes | Ordningsvaktslag (2023:421) |
+| `fr.se.ordningsvakt.appointment.renewal` | Förnyelse och giltighet av förordnande | Appointment renewal and validity | `government_appointment` (renewal facet) | person | Polismyndigheten | yes on expiry | Ordningsvaktslag (2023:421); PMFS |
+
+### 1.3 Skyddsvakt (Protective Security Guard)
+
+| Stable id | SV | EN | Subtype | Applies to | Authority | Blocker | Source anchor |
+|---|---|---|---|---|---|---|---|
+| `fr.se.skyddsvakt.training` | Skyddsvaktsutbildning | Protective security guard training | `mandatory_training` | person | Utbildning enligt Polismyndighetens föreskrifter (PMFS) | yes | Skyddslag (2010:305); Skyddsförordning (2010:523) |
+| `fr.se.skyddsvakt.approval` | Godkännande som skyddsvakt | Approval as protective security guard | `government_approval` | person | **Länsstyrelsen** (ordinary approval); **Försvarsmakten** only for personnel appointed within the Swedish Armed Forces | yes | **Skyddsförordning (2010:523) 6 §** |
+
+**Removed:** `fr.se.skyddsvakt.scope` (`employer_authorization`). Object/assignment scope is not modelled as a canonical candidate qualification. A future entity `ProtectiveGuardAssignment` will link an approved skyddsvakt to a specific employer, principal or protected-object assignment; **out of scope for Sprint 09B**.
+
+### 1.4 Cross-cutting SE requirements (corrected)
+
+Retained: `fr.common.age-18`, `fr.se.residency-eligible-to-work`, `fr.common.driving-licence-b` (only where actually required), `fr.common.medical-fitness-basic` (only where actually required), `fr.eu.gdpr-training` (non-blocking).
+
+**Removed:** `fr.se.criminal-record-check` as a separate candidate-visible requirement. Personnel approval and appointment processes (Länsstyrelsen for väktare/skyddsvakt, Polismyndigheten for ordningsvakt, Försvarsmakten for Armed-Forces skyddsvakt) already include suitability and background checks. The graph may describe that the authority performs these checks; **the candidate is never asked to upload criminal-record documentation.**
+
+`fr.se.security-screening.basic` (`security_screening_requirement`) is kept only for roles where a formal `säkerhetsprövning` under Säkerhetsskyddslagen (2018:585) is documented (e.g. Data Center Security Specialist in scope, some Skyddsvakt objects) — never as a duplicate of a personnel-approval background check.
 
 ---
 
-## 4. MVP database schema
+## 2. Updated Sprint 09B scope
 
-Legend: **[MVP]** ship Sprint 08–11 · **[P2]** ship with jobs/employer · **[Later]** professional assessment, AI, reporting.
+All items from the previously approved Sprint 09B stand, with the following overrides.
 
-Identity & tenancy
-- `profiles` **[MVP]** — 1:1 with `auth.users`. Fields: `id`, `display_name`, `locale`, `country`, `created_at`. PII: low.
-- `user_roles` **[MVP]** — platform-level roles (`superadmin`, `admin`, `content_editor`, `assessment_editor`, `support`). Separate table (never on profiles) with `has_role()` SECURITY DEFINER.
-- `organizations` **[P2]** — `id`, `slug`, `name`, `country`, `status` (`pending|approved|suspended`), `type` (`employer|customer`), `created_at`.
-- `organization_members` **[P2]** — `(org_id, user_id, role)` where role ∈ `owner|admin|recruiter|hiring_manager|reviewer|workforce_manager|viewer`. Enables multi-org membership.
-- `organization_invitations` **[P2]** — `org_id`, `email`, `role`, `token_hash`, `expires_at`, `accepted_at`.
+**Included (unchanged from prior plan):**
+1. `src/lib/knowledge-graph/` module with `types.ts`, `graph-meta.ts`, `read.ts`, `entities/*`, `relationships/*`, `integrity.ts`.
+2. Ten-profession pilot populated per the approved plan, using the corrected regulated-role seed above.
+3. FormalRequirement seed exactly as §1; misfiled entries removed from `Certification`.
+4. SourceReference records for all Sprint 09B claims (Skyddslag 2010:305, Skyddsförordning 2010:523 §6, Lag 1974:191, Förordning 1989:149, Ordningsvaktslag 2023:421, PMFS/FAP 573-1, etc.).
+5. Explicit relationship records (`ProfessionCompetencyRequirement`, `…Skill…`, `…Knowledge…`, `…Formal…`, `…Education…`, `…Certification…`, `…Experience…`, `…AssessmentSignal`, `CareerTransition`).
+6. Backward-compat barrel at `src/lib/career-center/index.ts` re-exporting from `knowledge-graph`.
+7. Additive migrations for CIP tables: `assessment_runs`, `assessment_responses`, `target_professions`, `evidence_items`, `gap_snapshots`, `career_plans`, `career_milestones`, `recommendation_instances` — each with GRANTs (authenticated + service_role, no anon), RLS enabled, policies scoped to `auth.uid()`.
+8. `assessments` product-row seed `career-guidance` and initial `assessment_versions` row `2026.07.1`.
+9. Server functions (`requireSupabaseAuth`): assessment run lifecycle, target management, evidence CRUD, gap snapshot, milestones — as previously listed.
+10. Gap engine v1 (competence + formal + experience) as a pure function.
+11. Career Center refactor to read via the graph contract, showing legal-blocker requirements distinct from development recommendations.
+12. Assessment result screen: Requirements, Development, Sources, Set-as-target.
+13. Career Journey MVP at `_authenticated/journey/`.
+14. Beta caveat banner on `researched` (not-yet-`reviewed`) tiles.
+15. `bun run kg:check` integrity script; vitest tests for gap engine, RLS, read contract.
 
-Career Center (mostly static, seeded from code today)
-- `professions`, `competencies`, `education`, `certifications`, `career_paths` **[MVP-seed]** — migrated from `src/lib/career-center/*` in a later phase. In MVP the code remains the source of truth; DB mirror is created when admin editing is needed. PII: none.
+**Overrides for the weekend beta UI (mandatory):**
 
-Assessment engine
-- `assessments` **[MVP]** — enum: `security_career_guidance`, later `professional_*`.
-- `assessment_versions` **[MVP]** — `MODEL_VERSION`, `DISCLAIMER_VERSION`, published_at.
-- `questions`, `question_options`, `question_dimension_mappings`, `profession_target_profiles` **[P2 — DB mirror]** — code remains source until admin editing.
-- `assessment_runs` **[MVP]** — `id`, `user_id` (nullable for anon), `assessment_id`, `version_id`, `started_at`, `completed_at`, `locale`.
-- `assessment_answers` **[MVP]** — `run_id`, `question_id`, `value_json`. PII: sensitive.
-- `assessment_results` **[MVP]** — `run_id`, `top_matches_json`, `confidence`, `model_version`, `disclaimer_version`. PII: sensitive.
-- `result_explanations` **[Later]** — persisted human/AI explanations tied to a result.
+- The Sprint 09B beta UI **will not** include any of the following, even though the underlying schema supports them: document uploads, identity documents, criminal-record documents, medical documents, government decisions, employer verification, manual verification workflows, revocation workflows.
+- `evidence_items` remains defined per the approved schema, but the only `evidence_type` values written from the beta UI are: `self_assessment`, `career_guidance_dimension`, and self-reported formal-requirement acknowledgements. All other evidence types remain schema-only for later sprints.
+- Beta flow, end-to-end: **assessment → saved result → target profession → profession requirements → legal vs. developmental distinction → competencies → education and certifications → career pathway → next-action milestone**. Nothing beyond this in the beta UI.
+- Formal-gap presentation uses exactly four statuses in the UI: **required**, **self-reported as met**, **not provided**, **not applicable**. No "verified" / "expiring" / "revoked" chips in the beta.
+- Competence information derived from the Career Guidance Assessment is presented as **guidance signals, strengths, or development areas** — never as verified demonstrated competence. Copy is updated accordingly.
+- **No readiness percentage anywhere.** No combined score across competence / formal / experience.
+- No candidate-facing criminal-record upload, prompt, or checklist item. Where authority checks apply, the UI states that the authority performs suitability and background checks as part of approval/appointment.
 
-Candidate
-- `candidate_profiles` **[MVP-lite → P2]** — `user_id`, `headline`, `summary`, `location`, `visibility`. MVP fields minimal.
-- `candidate_competencies`, `candidate_education`, `candidate_certifications` **[P2]**.
-- `cv_files` **[P2]** — Storage object refs + metadata.
-- `saved_jobs`, `job_alerts` **[P2]**.
-
-Jobs
-- `jobs` **[P2]** — `org_id`, `title_bi`, `description_bi`, `profession_id`, `location`, `employment_type`, `workplace_type`, `experience_level`, `sector`, `status` (`draft|pending|published|expired|rejected`), `apply_mode` (`external_url|internal`), `apply_target`, `expires_at`, SEO fields.
-- `job_categories` **[P2]** — join to professions/competencies.
-- `job_applications` **[P2 / later]** — only if internal apply used.
-
-Professional assessment (kept structurally separate)
-- `professional_assessment_invites` **[Later]** — org-issued invite to candidate/employee.
-- `professional_assessment_runs` **[Later]** — separate table from `assessment_runs` to enforce data separation.
-- `professional_assessment_reports` **[Later]** — org-visible artefacts, consent-gated.
-
-Governance
-- `audit_logs` **[MVP-lite]** — `actor_id`, `actor_role`, `action`, `subject_type`, `subject_id`, `org_id`, `ip_hash`, `ua_hash`, `at`, `metadata_json`. Append-only.
-- `consent_records` **[MVP]** — `user_id`, `purpose`, `granted_at`, `revoked_at`, `policy_version`.
-- `data_export_requests`, `deletion_requests` **[MVP]** — GDPR SAR/erasure queue.
-- `ai_actions` **[Later]** — every AI call: prompt hash, model, inputs ref, outputs, sources, reviewer, status.
-- `human_approvals` **[Later]** — links `ai_actions` → approver → decision.
-
-Every `public.*` table ships with explicit `GRANT`s per the platform rule.
+**Explicitly deferred (unchanged):** OrganizationRoleProfile, CourseOffering marketplace, ESCO import pipeline, AI coach, jobs, employer dashboards, admin CMS, `ProtectiveGuardAssignment`, document uploads, verification and revocation workflows.
 
 ---
 
-## 5. User & role model
+## 3. Updated acceptance criteria
 
-Individuals
-- **Visitor** — unauthenticated. Read public content only.
-- **Candidate** — authenticated user with a `profiles` row. Default role for signups.
-- **Security professional** — same auth as candidate; a flag/badge on candidate profile, no separate account model.
-- **Consultant (future)** — candidate + `consultant` marker; no separate table in MVP.
-
-Organizations (membership-based; a user may belong to multiple orgs)
-- `owner` — full org control incl. billing, deletes.
-- `admin` — manage members, jobs, settings; cannot delete org.
-- `recruiter` — create/edit jobs, view applicants.
-- `hiring_manager` — view assigned jobs and applicants.
-- `assessment_reviewer` — view professional assessment reports the org owns.
-- `workforce_manager` — invite existing personnel to professional assessments.
-- `viewer` — read-only org dashboards.
-
-Platform (in `user_roles`)
-- `superadmin`, `admin`, `content_editor`, `assessment_editor`, `support`.
-
-Isolation
-- Every org-scoped row carries `org_id`; RLS uses `is_member_of(org_id)` / `has_org_role(org_id, role)` SECURITY DEFINER helpers.
-- Candidate results are user-owned and never joined to an org unless the user explicitly shares (via a professional invite acceptance).
-- Personal career-guidance data and professional-assessment data live in different tables with different policies; no view unifies them.
-
-Invitations: org admin creates `organization_invitations` (email + role + token) → email link → invitee signs in → server fn validates token and creates `organization_members`.
+1. `src/lib/knowledge-graph/read.ts` is the only knowledge import used by Career Center, Assessment result, and Career Journey.
+2. Ten pilot professions render via the read contract with SV+EN labels, aliases, family, definition, ESCO URI (nullable, never invented), ISCO where applicable, competencies, skills, knowledge, formal requirements, education, certifications, experience, career transitions, assessment signals, sources, review status, `lastVerified`.
+3. FormalRequirement seed exactly matches §1: no `fr.se.vaktare.employment`, no `fr.se.skyddsvakt.scope`, no separate candidate-visible `fr.se.criminal-record-check`. `vaktarutbildning-appointment` does not exist. Väktare has training + personnel-approval + company-authorization only. Ordningsvakt has training + appointment + renewal facet. Skyddsvakt has training + approval where the approving authority is **Länsstyrelsen** (ordinary) and **Försvarsmakten** only for Armed-Forces personnel, cited to Skyddsförordning (2010:523) §6.
+4. Every relationship in the approved §5 catalogue exists as an explicit record with metadata; no critical metadata lives in parent arrays.
+5. Sprint 08 tables are untouched; new CIP tables are additive; all have GRANTs, RLS, and `auth.uid()`-scoped policies. `service_role` grants present for admin paths.
+6. `assessment_runs` and `assessment_responses` cleanly separate user history from `assessments` / `assessment_versions`.
+7. The beta flow is completable end-to-end by an authenticated user: assessment → saved result → target profession → requirements → legal vs. developmental → competencies → education & certifications → career pathway → next-action milestone.
+8. Beta UI contains **no** document upload, identity/medical/criminal-record document capture, government decision upload, employer verification, manual verification, or revocation workflow.
+9. Formal-gap UI shows only the four statuses `required` / `self-reported as met` / `not provided` / `not applicable`.
+10. Career Guidance Assessment output is presented only as guidance signals / strengths / development areas — never as verified competence.
+11. No readiness percentage or aggregate score appears anywhere.
+12. No candidate-facing criminal-record request or upload exists; where relevant, the UI notes that the authority performs suitability and background checks as part of approval/appointment.
+13. Every reviewed regulated claim carries a reliability-tier-1 source; `researched` tiles show a caveat banner.
+14. `graphVersion` is stamped on published records and on every `gap_snapshots` and `recommendation_instances` row.
+15. `bun run kg:check` passes; TypeScript passes; existing matching-engine personas and validation suites continue to pass unchanged.
+16. Swedish and English copy complete; mobile layout works.
+17. No AI, jobs, employer, admin CMS, `ProtectiveGuardAssignment`, or verification code is introduced.
 
 ---
 
-## 6. RLS & authorization model
+## 4. Confirmation
 
-Helpers (SECURITY DEFINER, `search_path = public`):
-- `has_role(uid, role)` — platform role.
-- `is_member_of(uid, org_id)` / `has_org_role(uid, org_id, role)` — org membership.
-- `owns_row(uid, user_id_col)` — trivial equality, expressed inline usually.
-
-Example policies (illustrative only):
-
-```sql
--- Candidate profile: owner read/write; support read (audited)
-create policy candidate_self_rw on public.candidate_profiles
-  for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
-
-create policy candidate_support_read on public.candidate_profiles
-  for select to authenticated
-  using (public.has_role(auth.uid(), 'support'));
-
--- Saved career results: strictly owner
-create policy runs_self on public.assessment_runs
-  for all to authenticated
-  using (user_id = auth.uid()) with check (user_id = auth.uid());
-
--- Jobs: public read only when published; org members manage
-create policy jobs_public_read on public.jobs
-  for select to anon, authenticated
-  using (status = 'published' and (expires_at is null or expires_at > now()));
-
-create policy jobs_org_manage on public.jobs
-  for all to authenticated
-  using (public.is_member_of(auth.uid(), org_id))
-  with check (public.is_member_of(auth.uid(), org_id));
-
--- Professional assessment reports: org access only, and only for the specific org that commissioned it
-create policy pa_reports_org_read on public.professional_assessment_reports
-  for select to authenticated
-  using (public.has_org_role(auth.uid(), org_id, 'assessment_reviewer')
-      or public.has_org_role(auth.uid(), org_id, 'admin')
-      or public.has_org_role(auth.uid(), org_id, 'owner'));
-
--- Audit logs: no direct client access; superadmin via server fn only
-alter table public.audit_logs enable row level security;
--- (no policies for authenticated → effectively deny; server uses service role)
-```
-
-Rules
-- One org **never** sees another org's data — every org-scoped policy uses `org_id` in the predicate.
-- Candidate can never read another candidate's row — user-scoped tables use `user_id = auth.uid()`.
-- Support access is read-only and always logged to `audit_logs` via a server fn wrapper.
-- Superadmin actions bypass RLS only through `supabaseAdmin` in vetted server fns, each of which writes an audit row.
-
----
-
-## 7. Assessment data-separation model
-
-| Aspect | Career-guidance | Professional |
-|---|---|---|
-| Owner | Individual (`user_id`) | Organization (`org_id`) + subject user |
-| Purpose | Self-exploration | Recruitment / competence development |
-| Consent | Terms + implicit for self-use | Explicit consent per invite, versioned |
-| Visibility | Only the user | Reviewers within the commissioning org |
-| Sharing | User may export/share manually | Never cross-org; report generated per commission |
-| Withdrawal | Delete run at any time | Subject may withdraw before finalization; report frozen after |
-| Human review | Not required | Required before report is released |
-| Retention | User-controlled | Org retention window (default 12 months) |
-| Storage | `assessment_*` tables | `professional_assessment_*` tables (separate) |
-| Audit | Minimal | Full audit trail |
-
-No SQL view or server fn joins the two domains. Cross-domain analytics, if ever needed, go through an aggregated, de-identified pipeline (Later).
-
----
-
-## 8. Candidate MVP
-
-**Must have**
-- Sign up / sign in (email + Google), email verification, password reset.
-- Persist career-guidance result (`assessment_runs` + `assessment_answers` + `assessment_results`).
-- View own past results with model/disclaimer version.
-- Retake assessment.
-- Delete account + export data (GDPR).
-
-**Should have**
-- Minimal profile (display name, locale, country).
-- Saved jobs (once jobs ship).
-- Career action plan (already deterministic; persist selected plan).
-
-**Later**
-- CV upload, competencies/education/certifications, job alerts, public profile visibility, consultant flag.
-
----
-
-## 9. Employer MVP
-
-**Must have**
-- Organization creation (via admin approval) + owner role.
-- Invite team members with role.
-- Create job draft → submit for moderation → published/rejected.
-- View own jobs and status.
-- Choose application destination (external URL vs internal — see §10 recommendation).
-
-**Should have**
-- Organization profile page (logo, description, website).
-- Basic org dashboard (job counts).
-
-**Later**
-- Invite candidate to professional assessment, invoices, analytics, workforce management.
-
----
-
-## 10. Jobs MVP
-
-Scope: public list, detail, search, employer draft/publish, admin moderation, expiration, bilingual content, profession/competency links, location, employment type, workplace type, experience level, sector, org profile, SEO metadata.
-
-**Application flow recommendation: external-link only in MVP.** Reasons: eliminates PII handling for applications, no CV storage requirement, no applicant-tracking obligations, faster launch, matches how WordPress currently operates. Internal application is a Phase 2 add-on once volume justifies the compliance surface (CV storage, malware scanning, notifications, ATS export).
-
----
-
-## 11. Admin MVP
-
-Custom-built (minimal UI)
-- Org approval queue.
-- Job moderation queue (approve/reject with reason).
-- User lookup + suspend.
-- GDPR request queue (export/deletion).
-
-Handled via Lovable Cloud dashboard initially (defer custom UI)
-- Direct table edits for professions/competencies/etc.
-- Audit-log inspection.
-- Backup/restore.
-
-Publish content status (`researched → reviewed → published`) stays code-driven until the DB mirror lands.
-
----
-
-## 12. GDPR & privacy
-
-**Before MVP launch (P0)**
-- EU region, DPA with Lovable/Supabase on file.
-- Privacy notice + cookie/consent notice (public site).
-- Lawful basis map: contract (accounts, jobs), consent (marketing, professional assessment), legitimate interest (security).
-- Data minimization on signup.
-- Export & delete flows (`data_export_requests`, `deletion_requests` + server fns).
-- Consent records versioned.
-- Sub-processor list published.
-
-**Before professional assessments**
-- Controller/processor clarification per commission.
-- Purpose-limited access, explicit subject consent, retention policy, right to withdraw before finalization.
-- DPIA (assessment data is behavioural profiling — specialist review required).
-
-**Before AI**
-- Model + prompt disclosure to users.
-- No training on user data by default.
-- Human-review workflow for consequential outputs.
-- DPIA update.
-
-Specialist legal review required for: DPIA, cross-border transfers, professional-assessment consent wording, AI transparency notices.
-
----
-
-## 13. Security architecture
-
-| Item | Priority |
-|---|---|
-| EU region, env separation (dev/staging/prod) | P0 |
-| Secrets in Lovable secrets store; never in repo | P0 |
-| RLS on every user/org table; explicit GRANTs | P0 |
-| Password policy + HIBP leak check | P0 |
-| Security headers (CSP, HSTS, X-Frame-Options, Referrer-Policy) | P0 |
-| CORS locked to app origins | P0 |
-| Rate limiting on auth + public server fns | P0 |
-| Audit log for admin/support actions | P0 |
-| Automated backups + PITR | P0 |
-| Dependency updates cadence | P0 |
-| MFA for admin roles | P1 |
-| File-upload malware scan + type/size limits | P1 (with CV upload) |
-| CAPTCHA on signup + job posting | P1 |
-| Access reviews (quarterly) | P1 |
-| Support impersonation with audit + time-boxed token | P1 |
-| Production monitoring + alerting | P1 |
-| Incident runbook + tabletop | P1 |
-| SSO for staff, SIEM integration, pentest | P2 |
-
----
-
-## 14. AI-native foundation (no AI built yet)
-
-Ship structurally now, populate later:
-- Enum & config for `ai_actions.status`: `draft | ai_generated | human_reviewed | approved | rejected`.
-- Every AI feature must write to `ai_actions` with: model id, prompt version, input refs, output, sources, org_id (nullable), user_id (nullable), reviewer, decision.
-- Prompts versioned in code (`prompts/*.md`) with a version constant; `ai_actions.prompt_version` records it.
-- Model-agnostic wrapper via Lovable AI Gateway; no direct provider SDKs in components.
-- Grounding: retrieval sources referenced by stable IDs (profession id, competency id, source URL) and stored on the action.
-- Consent gate: no personal data enters a prompt without a matching `consent_records` row.
-- Deletion cascade: user erasure removes/anonymizes `ai_actions` inputs.
-- Restricted tools: AI cannot write to jobs, profiles, or assessment results directly — only propose drafts that require human approval.
-
-Tables now: none. Add `ai_actions` + `human_approvals` only when the first AI feature ships.
-
----
-
-## 15. Deployment & environments
-
-- **Dev:** Lovable preview per branch.
-- **Staging:** dedicated Lovable Cloud project (`*-staging`), seeded with synthetic data.
-- **Production:** separate Lovable Cloud project, EU region, backups + PITR on.
-- **GitHub:** trunk-based; feature branches → PR → preview → merge → staging → production publish.
-- **Migrations:** SQL migrations checked into repo; applied via Lovable Cloud migration flow; never hand-edit prod schema.
-- **Rollback:** DB PITR; frontend rollback via previous published build.
-- **Approvals:** production publish is an explicit action; requires a green staging run.
-
----
-
-## 16. WordPress replacement plan
-
-1. Freeze WordPress content changes window.
-2. Full WordPress backup (DB + uploads).
-3. URL inventory + traffic export from analytics.
-4. Content export (pages, posts, jobs, legal pages).
-5. Map every WP URL → new route; produce redirect map (301) stored as a route or edge rule.
-6. Migrate legal pages first (privacy, terms, cookie).
-7. Migrate jobs (script export → import into `jobs`).
-8. Rebuild sitemap + robots; submit to Search Console.
-9. Parallel-run new platform on subdomain (e.g. `app.cqrityjob.com`) for UAT.
-10. Production acceptance test: auth, assessment persistence, job publishing, GDPR export/delete, redirects, SEO parity.
-11. DNS cutover: switch `www.cqrityjob.com` A/ALIAS to Lovable; keep WP reachable at `legacy.cqrityjob.com` for N days.
-12. Monitor 404s and search rankings for 30 days.
-13. Shutdown criteria: <0.1% 404 rate on top URLs, no critical GDPR/support issues, rankings stable → decommission WP.
-
----
-
-## 17. Phased roadmap
-
-1. **Sprint 08 — Backend foundation**
-   - Enable Lovable Cloud (EU), baseline schema (profiles, user_roles, consent_records, audit_logs, data_export_requests, deletion_requests, assessment_runs/answers/results).
-   - Objective: persistent identity + saved career results.
-   - Acceptance: signed-in user can complete assessment and see prior runs; GDPR export/delete stubs work; RLS enforced.
-
-2. **Sprint 09 — Auth polish & candidate MVP**
-   - Email/password + Google, verification, reset, `_authenticated` gate, minimal profile, delete account UI, export data UI.
-
-3. **Sprint 10 — Organizations & employer accounts**
-   - `organizations`, `organization_members`, invitations, org profile.
-
-4. **Sprint 11 — Jobs MVP (external-apply)**
-   - `jobs`, moderation queue, public list/detail with SEO, employer draft/publish.
-
-5. **Sprint 12 — Admin moderation UI**
-   - Org approval, job moderation, GDPR queue, user lookup, audit view.
-
-6. **Sprint 13 — WordPress migration**
-   - Content + jobs import, redirect map, DNS cutover to `www.cqrityjob.com`.
-
-7. **Sprint 14 — Career action plan persistence + saved jobs**
-   - Small candidate value-adds.
-
-8. **Sprint 15 — Professional assessment pilot**
-   - Separate schema, invite flow, consent, human-review report.
-
-9. **Sprint 16 — AI foundation**
-   - `ai_actions`, prompt versioning, human approval, first AI feature (career explanation).
-
-10. **Sprint 17+ — Workforce intelligence, AI Security Strategist, analytics, MFA, internal applications.**
-
-Dependencies flow top-down. Risks: legal review for professional assessment and AI (schedule specialist review early). Out-of-scope items are held to their sprint.
-
----
-
-## 18. P0 / P1 / P2 decisions
-
-**P0 (before public launch on cqrityjob.com):** Lovable Cloud EU, auth, RLS, GDPR export/delete, consent, audit log, security headers, backups, rate limiting, WordPress redirects.
-
-**P1 (weeks after launch):** Admin MFA, malware scan (with CV upload), CAPTCHA, monitoring/alerting, internal applications (if demanded), support impersonation with audit.
-
-**P2 (later):** SSO for staff, SIEM, pentest, BankID/Freja, professional assessment at scale, AI workforce intelligence, advanced org analytics, invoicing.
-
----
-
-## Next Build sprint (proposed)
-
-**Sprint 08 — Backend foundation & saved career results**
-- Enable Lovable Cloud (EU region).
-- Migrations: `profiles`, `user_roles` + `has_role`, `consent_records`, `audit_logs`, `assessments`, `assessment_versions`, `assessment_runs`, `assessment_answers`, `assessment_results`, `data_export_requests`, `deletion_requests` — with GRANTs and RLS per the platform rule.
-- Wire email/password + Google auth; `_authenticated` gate (integration-managed).
-- Persist a completed career-guidance run for signed-in users; anonymous flow unchanged.
-- "My results" page listing prior runs with model/disclaimer version.
-- GDPR request stubs (server fns writing to the queues + admin viewable in Lovable Cloud dashboard).
-
-No jobs, no employer, no admin UI, no AI in Sprint 08.
-
-Awaiting approval to switch to build mode and start Sprint 08.
+No code, migration, or backend configuration has been changed. This response is planning only. Sprint 09B is ready to move to Build on your approval.

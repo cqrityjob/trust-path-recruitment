@@ -20,13 +20,16 @@ import { Route as CareerCenterRouteImport } from './routes/career-center'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
+import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -85,6 +88,10 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -111,6 +118,11 @@ const CareerCenterProfessionRoute = CareerCenterProfessionRouteImport.update({
   path: '/$profession',
   getParentRoute: () => CareerCenterRoute,
 } as any)
+const AuthenticatedJourneyRoute = AuthenticatedJourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -122,6 +134,12 @@ const Char91DotmcpChar93ListToolsRoute =
     id: '/.mcp/list-tools',
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedJourneyTargetIdRoute =
+  AuthenticatedJourneyTargetIdRouteImport.update({
+    id: '/$targetId',
+    path: '/$targetId',
+    getParentRoute: () => AuthenticatedJourneyRoute,
   } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
@@ -145,11 +163,13 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -165,15 +185,18 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
   '/assessment': typeof AssessmentRoute
   '/auth': typeof AuthRoute
@@ -187,11 +210,13 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,11 +235,13 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/journey'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
+    | '/journey/$targetId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,14 +257,17 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/journey'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center'
     | '/.mcp/invoke-tool/$tool'
+    | '/journey/$targetId'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/about'
     | '/assessment'
     | '/auth'
@@ -251,15 +281,18 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/_authenticated/journey'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center/'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/journey/$targetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
   AssessmentRoute: typeof AssessmentRoute
   AuthRoute: typeof AuthRoute
@@ -356,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -391,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CareerCenterProfessionRouteImport
       parentRoute: typeof CareerCenterRoute
     }
+    '/_authenticated/journey': {
+      id: '/_authenticated/journey'
+      path: '/journey'
+      fullPath: '/journey'
+      preLoaderRoute: typeof AuthenticatedJourneyRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/.well-known/oauth-protected-resource': {
       id: '/.well-known/oauth-protected-resource'
       path: '/.well-known/oauth-protected-resource'
@@ -405,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/journey/$targetId': {
+      id: '/_authenticated/journey/$targetId'
+      path: '/$targetId'
+      fullPath: '/journey/$targetId'
+      preLoaderRoute: typeof AuthenticatedJourneyTargetIdRouteImport
+      parentRoute: typeof AuthenticatedJourneyRoute
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -414,6 +468,29 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedJourneyRouteChildren {
+  AuthenticatedJourneyTargetIdRoute: typeof AuthenticatedJourneyTargetIdRoute
+}
+
+const AuthenticatedJourneyRouteChildren: AuthenticatedJourneyRouteChildren = {
+  AuthenticatedJourneyTargetIdRoute: AuthenticatedJourneyTargetIdRoute,
+}
+
+const AuthenticatedJourneyRouteWithChildren =
+  AuthenticatedJourneyRoute._addFileChildren(AuthenticatedJourneyRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 interface CareerCenterRouteChildren {
   CareerCenterProfessionRoute: typeof CareerCenterProfessionRoute
@@ -433,6 +510,7 @@ const CareerCenterRouteWithChildren = CareerCenterRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
   AssessmentRoute: AssessmentRoute,
   AuthRoute: AuthRoute,

@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessment_responses: {
+        Row: {
+          answer: Json
+          created_at: string
+          id: string
+          question_id: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          answer: Json
+          created_at?: string
+          id?: string
+          question_id: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          answer?: Json
+          created_at?: string
+          id?: string
+          question_id?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_responses_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_runs: {
+        Row: {
+          assessment_id: string
+          assessment_version_id: string
+          completed_at: string | null
+          created_at: string
+          graph_version: string
+          id: string
+          locale: string
+          result_summary: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assessment_id: string
+          assessment_version_id: string
+          completed_at?: string | null
+          created_at?: string
+          graph_version: string
+          id?: string
+          locale?: string
+          result_summary?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assessment_id?: string
+          assessment_version_id?: string
+          completed_at?: string | null
+          created_at?: string
+          graph_version?: string
+          id?: string
+          locale?: string
+          result_summary?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_runs_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_runs_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_versions: {
         Row: {
           assessment_id: string
@@ -118,6 +213,100 @@ export type Database = {
         }
         Relationships: []
       }
+      career_milestones: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          milestone_kind: string
+          plan_id: string
+          position: number
+          status: string
+          target_ref: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_kind?: string
+          plan_id: string
+          position?: number
+          status?: string
+          target_ref?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_kind?: string
+          plan_id?: string
+          position?: number
+          status?: string
+          target_ref?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_milestones_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "career_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_plans: {
+        Row: {
+          created_at: string
+          graph_version: string | null
+          id: string
+          notes: string | null
+          target_profession_id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          graph_version?: string | null
+          id?: string
+          notes?: string | null
+          target_profession_id: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          graph_version?: string | null
+          id?: string
+          notes?: string | null
+          target_profession_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_plans_target_profession_id_fkey"
+            columns: ["target_profession_id"]
+            isOneToOne: false
+            referencedRelation: "target_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_records: {
         Row: {
           granted_at: string
@@ -148,6 +337,116 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_items: {
+        Row: {
+          created_at: string
+          evidence_type: string
+          graph_version: string | null
+          id: string
+          payload: Json
+          source_run_id: string | null
+          status: string
+          target_id: string
+          target_kind: string
+          updated_at: string
+          user_id: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          evidence_type: string
+          graph_version?: string | null
+          id?: string
+          payload?: Json
+          source_run_id?: string | null
+          status?: string
+          target_id: string
+          target_kind: string
+          updated_at?: string
+          user_id: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          evidence_type?: string
+          graph_version?: string | null
+          id?: string
+          payload?: Json
+          source_run_id?: string | null
+          status?: string
+          target_id?: string
+          target_kind?: string
+          updated_at?: string
+          user_id?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_items_source_run_id_fkey"
+            columns: ["source_run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gap_snapshots: {
+        Row: {
+          competence_gaps: Json
+          created_at: string
+          experience_gaps: Json
+          formal_requirement_gaps: Json
+          graph_version: string
+          id: string
+          profession_id: string
+          source_run_id: string | null
+          target_profession_id: string
+          user_id: string
+        }
+        Insert: {
+          competence_gaps?: Json
+          created_at?: string
+          experience_gaps?: Json
+          formal_requirement_gaps?: Json
+          graph_version: string
+          id?: string
+          profession_id: string
+          source_run_id?: string | null
+          target_profession_id: string
+          user_id: string
+        }
+        Update: {
+          competence_gaps?: Json
+          created_at?: string
+          experience_gaps?: Json
+          formal_requirement_gaps?: Json
+          graph_version?: string
+          id?: string
+          profession_id?: string
+          source_run_id?: string | null
+          target_profession_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gap_snapshots_source_run_id_fkey"
+            columns: ["source_run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gap_snapshots_target_profession_id_fkey"
+            columns: ["target_profession_id"]
+            isOneToOne: false
+            referencedRelation: "target_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           country: string | null
@@ -174,6 +473,110 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      recommendation_instances: {
+        Row: {
+          created_at: string
+          graph_version: string
+          id: string
+          rationale: Json
+          recommendation_kind: string
+          source_run_id: string | null
+          status: string
+          target_profession_id: string | null
+          target_ref: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          graph_version: string
+          id?: string
+          rationale?: Json
+          recommendation_kind: string
+          source_run_id?: string | null
+          status?: string
+          target_profession_id?: string | null
+          target_ref: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          graph_version?: string
+          id?: string
+          rationale?: Json
+          recommendation_kind?: string
+          source_run_id?: string | null
+          status?: string
+          target_profession_id?: string | null
+          target_ref?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_instances_source_run_id_fkey"
+            columns: ["source_run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_instances_target_profession_id_fkey"
+            columns: ["target_profession_id"]
+            isOneToOne: false
+            referencedRelation: "target_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      target_professions: {
+        Row: {
+          chosen_at: string
+          created_at: string
+          graph_version: string
+          id: string
+          is_primary: boolean
+          notes: string | null
+          profession_id: string
+          source_run_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chosen_at?: string
+          created_at?: string
+          graph_version: string
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          profession_id: string
+          source_run_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chosen_at?: string
+          created_at?: string
+          graph_version?: string
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          profession_id?: string
+          source_run_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "target_professions_source_run_id_fkey"
+            columns: ["source_run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
