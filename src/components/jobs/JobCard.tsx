@@ -3,6 +3,7 @@ import { MapPin, Clock, Building2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
+import { employmentTypeLabel, workplaceTypeLabel } from "@/lib/job-intelligence/enum-labels";
 
 function pickTitle(job: PublicJobCard, lang: "sv" | "en"): string {
   const primary = lang === "sv" ? job.title_sv : job.title_en;
@@ -67,10 +68,12 @@ export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }
         {job.employment_type && (
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>{job.employment_type}</span>
+            <span>{employmentTypeLabel(job.employment_type, lang)}</span>
           </span>
         )}
-        {job.workplace_type && <span className="capitalize">{job.workplace_type}</span>}
+        {job.workplace_type && (
+          <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>
+        )}
       </div>
 
       {area && (
