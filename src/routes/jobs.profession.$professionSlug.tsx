@@ -10,6 +10,24 @@ import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
 export const Route = createFileRoute("/jobs/profession/$professionSlug")({
   ssr: false,
+  head: ({ params }) => {
+    const profession = getProfession(params.professionSlug);
+    const url = `https://trust-path-recruitment.lovable.app/jobs/profession/${params.professionSlug}`;
+    const name = profession ? profession.titleEn : params.professionSlug;
+    const title = `${name} jobs — CQrityjob`;
+    const desc = `Active openings for ${name} in the security industry.`;
+    return {
+      meta: [
+        { title },
+        { name: "description", content: desc },
+        { property: "og:title", content: title },
+        { property: "og:description", content: desc },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: JobsByProfession,
 });
 
