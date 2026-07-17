@@ -112,7 +112,7 @@ export interface EnrichmentSource {
   label: string;
   url?: string;
   kind?: string;
-  retrievedAt?: string | null;
+  retrievedAt?: string;
 }
 
 export interface EnrichmentBundle {
@@ -125,17 +125,17 @@ export interface EnrichmentBundle {
     isLegal: boolean;
     isEmployer: boolean;
     kind?: string;
-    jurisdiction?: string | null;
+    jurisdiction?: string;
   }>;
   relatedProfessions: Array<{ slug: string; title: Bi; familyKey?: string }>;
   transitions: Array<{
     direction: "from" | "to";
     otherSlug: string;
-    effort?: string | null;
-    notes?: Bi | null;
+    effort?: string;
+    notes?: Bi;
   }>;
-  educationPathways: Array<{ slug: string; title: Bi; level?: string | null }>;
-  certifications: Array<{ slug: string; title: Bi; issuer?: string | null }>;
+  educationPathways: Array<{ slug: string; title: Bi; level?: string }>;
+  certifications: Array<{ slug: string; title: Bi; issuer?: string }>;
   sources: EnrichmentSource[];
   sourceCoverage: number; // 0..1 heuristic
 }
@@ -157,7 +157,7 @@ export interface StructuredExplanation {
     | "family_rationale"
     | "evidence_note";
   text: Bi;
-  data?: Record<string, unknown>;
+  data?: Record<string, string | number | boolean>;
 }
 
 export interface Match {
