@@ -22,6 +22,7 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
@@ -102,6 +103,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => JobsRoute,
 } as any)
 const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
   id: '/',
@@ -196,7 +202,7 @@ export interface FileRoutesByFullPath {
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
-  '/jobs': typeof JobsRoute
+  '/jobs': typeof JobsRouteWithChildren
   '/mcp': typeof McpRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
+  '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
@@ -224,7 +231,6 @@ export interface FileRoutesByTo {
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
-  '/jobs': typeof JobsRoute
   '/mcp': typeof McpRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -235,6 +241,7 @@ export interface FileRoutesByTo {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center': typeof CareerCenterIndexRoute
+  '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -253,7 +260,7 @@ export interface FileRoutesById {
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
   '/employers': typeof EmployersRoute
-  '/jobs': typeof JobsRoute
+  '/jobs': typeof JobsRouteWithChildren
   '/mcp': typeof McpRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -265,6 +272,7 @@ export interface FileRoutesById {
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
+  '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
@@ -296,6 +304,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center/'
+    | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/employers'
     | '/admin/jobs'
@@ -312,7 +321,6 @@ export interface FileRouteTypes {
     | '/careers'
     | '/contact'
     | '/employers'
-    | '/jobs'
     | '/mcp'
     | '/security-career-assessment'
     | '/sitemap.xml'
@@ -323,6 +331,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center'
+    | '/jobs'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/employers'
     | '/journey/$targetId'
@@ -352,6 +361,7 @@ export interface FileRouteTypes {
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
     | '/career-center/'
+    | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/employers'
     | '/_authenticated/admin/jobs'
@@ -371,7 +381,7 @@ export interface RootRouteChildren {
   CareersRoute: typeof CareersRoute
   ContactRoute: typeof ContactRoute
   EmployersRoute: typeof EmployersRoute
-  JobsRoute: typeof JobsRoute
+  JobsRoute: typeof JobsRouteWithChildren
   McpRoute: typeof McpRoute
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -473,6 +483,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
+      parentRoute: typeof JobsRoute
     }
     '/career-center/': {
       id: '/career-center/'
@@ -654,6 +671,16 @@ const CareerCenterRouteWithChildren = CareerCenterRoute._addFileChildren(
   CareerCenterRouteChildren,
 )
 
+interface JobsRouteChildren {
+  JobsIndexRoute: typeof JobsIndexRoute
+}
+
+const JobsRouteChildren: JobsRouteChildren = {
+  JobsIndexRoute: JobsIndexRoute,
+}
+
+const JobsRouteWithChildren = JobsRoute._addFileChildren(JobsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
@@ -664,7 +691,7 @@ const rootRouteChildren: RootRouteChildren = {
   CareersRoute: CareersRoute,
   ContactRoute: ContactRoute,
   EmployersRoute: EmployersRoute,
-  JobsRoute: JobsRoute,
+  JobsRoute: JobsRouteWithChildren,
   McpRoute: McpRoute,
   SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
