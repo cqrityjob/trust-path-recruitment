@@ -1,242 +1,260 @@
-# Phase D Plan (Revised) — Career Intelligence Engine v1
+# Phase A — Final Scope (Revised for Approval)
 
-Revision adds: Career Profile, Current Fit vs Potential, Career Family framing, Evidence Score, Career Journey-ready output. No DB redesign, no assessment change, deterministic scoring preserved.
+Corrections from the approved review are applied verbatim below. Scope is unchanged: foundation, no user-visible UI, no feature-flag flip, CIE/CIG/assessment untouched.
 
-## Objective
+## A.1 Schema — public vs. admin-only split
 
-Connect the unchanged assessment to the Phase C-seeded CIG and produce a layered, explainable, source-backed career result: **Career Profile → Career Family → Professions → supporting content**. Deterministic. No generative AI in ranking or scoring.
+To avoid any risk of leaking internal metadata through anon reads, employer and job records are split into a public row and an admin-only sibling row. Only the public rows carry `GRANT SELECT TO anon`; sibling rows are readable only by admins/service_role.
 
-## 1. Current-state mapping (unchanged from prior plan)
+### A.1.1 `public.job_import_sources` (unchanged from prior revision)
 
-- Assessment content, dimensions, mappings, user-vector math untouched.
-- Legacy `profession-profiles.ts` (TS hypotheses) is replaced by CIG-derived signals (`cig_assessment_dimensions`, `cig_assessment_signals`, `cig_profession_assessment_signals`) for live matching.
-- Live matching restricted to `content_status = 'published'`.
-- Result page keeps its layout; data source swaps to CIG.
+Reference table, admin-managed. `SELECT` to authenticated only; no anon grant. Kinds: `manual`, `employer`, `feed` (feed unused in v1).
 
-## 2. Career Intelligence Engine v1 — layered deterministic flow
+### A.1.2 Employers — split model
 
-```text
-answers
-  → computeUserVector(answers)                        [existing]
-  → dimensionScores {dim, normalized, observed, evidence}
+**`public.employers` (public)**
 
-  → deriveCareerProfile(dimensionScores, background)  [NEW, layer 1]
-      behavioural archetype(s), motivation signals,
-      development capacity, working-style tags
+| column | notes |
+|---|---|
+| `id uuid pk` | |
+| `slug text not null unique` | ASCII-folded kebab-case |
+| `name text not null` | |
+| `logo_url text` | |
+| `website text` | |
+| `country text` | ISO 3166-1 alpha-2 |
+| `description_sv text`, `description_en text` | employer-approved copy only |
+| `created_at`, `updated_at timestamptz` | |
 
-  → computeCurrentFit(profile, backgroundEvidence)    [NEW, layer 2a]
-  → computePotential(profile)                          [NEW, layer 2b]
+No `verified`, no `verification_notes`, no `created_by`, no `updated_by`, no admin flags on the public table.
 
-  → rankFamilies(currentFit, potential)                [NEW, layer 3]
-      aggregate profession scores per cig_profession_families
-      → top family + runner-up families
+**`public.employer_admin_meta` (admin-only)**
 
-  → rankProfessions(currentFit, potential, families)   [layer 4]
-      published cig_professions only
-      per-profession: gate, similarity, distinguishing,
-      mismatch penalty, evidence scale, confidence cap
-      family-diversity guard on top-3
+| column | notes |
+|---|---|
+| `employer_id uuid pk references employers(id) on delete cascade` | 1:1 |
+| `verified boolean not null default false` | never rendered in v1 |
+| `verification_notes text` | |
+| `created_by uuid references auth.users on delete set null` | |
+| `updated_by uuid references auth.users on delete set null` | |
+| `created_at`, `updated_at timestamptz` | |
 
-  → enrich(perMatch)                                    [layer 5]
-      formal requirements, disclaimers, related,
-      transitions, education, certifications, sources
+`SELECT/INSERT/UPDATE/DELETE` on `employer_admin_meta` restricted to `has_role(auth.uid(),'admin')` and `service_role`. No anon or authenticated grants.
 
-  → composeStructuredExplanations                       [layer 6]
-  → attachEvidenceScore + Confidence                    [layer 7]
-  → EngineResultV1 (Journey-ready envelope)
-```
+### A.1.3 Jobs — split model
 
-Layers 1–2 are new; layers 4–6 are the previously approved flow. Scoring math is unchanged: `currentFit` uses today's `computeUserVector` similarity; `potential` uses the same vector with importance re-weighted toward behavioural / development-capacity dimensions and no experience-evidence penalty. Both remain pure functions.
+**`public.jobs` (public-facing row)** — same field set as previously proposed, minus admin-only metadata:
 
-## 3. Career Profile (new, layer 1)
+- Identity: `id`, `slug`, `short_id`, `source_id → job_import_sources`, `source_job_id`, `source_url`, `canonical_url`.
+- `employer_id → employers(id)`.
+- Classification: `profession_slug text`, `family_id text`, `related_profession_slugs text[]`, `sector`, `employer_type`.
+- Presentation: `title_sv`, `title_en`, `description_sv`, `description_en`, `responsibilities jsonb`, `requirements jsonb`, `benefits jsonb`.
+- Work context: `location_text`, `country`, `region`, `city`, `workplace_type`, `employment_type`, `experience_level`, `language_requirements text[]`, `travel_required`, `shift_work`, `night_work`.
+- Formal/regulated: `regulated`, `formal_requirement_ids text[]`, `security_vetting_mentioned`, `driving_licence_required`.
+- Application: `application_method text check (application_method in ('external','email','internal','unavailable'))`, `application_url`, `application_email`.
+- Lifecycle: `status text check (status in ('draft','pending_review','published','expired','rejected','archived'))`, `published_at`, `deadline_at`, `expires_at`.
+- Dedupe: `content_hash text`.
+- Timestamps: `created_at`, `updated_at`.
 
-Derived deterministically from the dimension vector plus optional background inputs already collected. Structure:
+Removed from the public row: `moderation_notes`, `reviewed_by`, `reviewed_at`, `created_by`, `updated_by`, `imported_at`. Those move to `job_admin_meta`.
 
-```
-CareerProfile {
-  archetypes: [{ key, label_sv/en, strength 0..100 }]      // e.g. operational_guardian, strategic_leader, analytical_investigator, technical_specialist, service_communicator, risk_crisis_responder
-  motivationSignals: [{ key, label, strength }]            // service, autonomy, impact, mastery, structure
-  workingStyle: { independence, teamwork, structurePreference, riskTolerance }   // 0..100
-  developmentCapacity: 0..100                              // from learning_development + coverage
-  evidenceCoverage: 0..1
-  profileVersion: "cp-v1"
-}
-```
+**`public.job_admin_meta` (admin-only)**
 
-Archetype mapping is a fixed table (dimension weights → archetype strengths) checked in code, not in DB. Reusable foundation for later AI services (chat coach, roadmap generation) — but not consumed by AI in Phase D. Rendered in the result page as an opening summary block before family/profession sections.
+| column | notes |
+|---|---|
+| `job_id uuid pk references jobs(id) on delete cascade` | 1:1 |
+| `moderation_notes text` | |
+| `reviewed_by uuid references auth.users on delete set null` | |
+| `reviewed_at timestamptz` | |
+| `created_by uuid references auth.users on delete set null` | |
+| `updated_by uuid references auth.users on delete set null` | |
+| `imported_at timestamptz` | |
+| `duplicate_of uuid references jobs(id) on delete set null` | |
+| `created_at`, `updated_at timestamptz` | |
 
-## 4. Current Fit vs Potential (new, layer 2)
+Admin-only RLS; no anon/authenticated grants.
 
-Both are computed per profession and per family and returned side-by-side:
+### A.1.4 `public.saved_jobs`
 
-- **Current Fit (0–100):** existing similarity math against CIG target vector, evidence-scaled. Reflects today's answered signals and (when present) background/experience inputs.
-- **Potential (0–100):** same similarity math against the same target vector, with:
-  - importance re-weighted toward behavioural + `learning_development` + motivation-aligned dimensions,
-  - evidence-scale penalty removed for unobserved important dims (missing experience does not depress potential),
-  - gate result reported but does not cap potential (it still caps current fit).
+- `user_id uuid not null references auth.users on delete cascade`
+- `job_id uuid not null references jobs(id) on delete cascade`
+- `saved_at timestamptz not null default now()`
+- PK `(user_id, job_id)`; index `(user_id, saved_at desc)`.
 
-Guarantees: identical answers → identical (currentFit, potential) pair. Neither implies eligibility. Copy explicitly separates them.
+RLS gated by `auth.uid() = user_id` for all four ops. No anon grant.
 
-## 5. Career Family framing (new, layer 3)
+### A.1.5 `public.job_audit_events` — audit-safe
 
-Before profession list, the result surfaces the **strongest Career Family** with its Current Fit and Potential aggregated from member professions (published-only). Runner-up families appear as compact chips. Then top-3 professions render inside/under the top family, with a "professions in other families" secondary group.
+Must survive job deletion. FK to `jobs` is deliberately weak.
 
-Family aggregate = importance-weighted mean of member-profession scores; ties broken by member count then family slug (deterministic). Family-diversity guard from prior plan still applies to the profession top-3 so a single family cannot fully monopolise if a strong other-family match is within tolerance.
+| column | notes |
+|---|---|
+| `id uuid pk` | |
+| `job_id uuid` | **no FK reference** (kept as a plain uuid so hard-deleting a job cannot cascade or block audit). |
+| `job_slug_snapshot text` | denormalised at write time for later lookup readability. |
+| `actor_id uuid references auth.users on delete set null` | |
+| `action text not null` | `created`, `updated`, `submitted`, `published`, `rejected`, `expired`, `archived`, `duplicate_marked`, `deleted` |
+| `before jsonb`, `after jsonb` | |
+| `created_at timestamptz not null default now()` | |
 
-## 6. Match output (per top match)
+Policy for `jobs`: hard deletes are discouraged. The admin flow uses `status='archived'`; a `deleted` audit action is only produced when a genuine hard-delete happens (e.g., legal takedown) and the row's key facts are captured in `after` before the delete.
 
-```
-{
-  professionId, slug, titleSv/En, family: { slug, title },
-  currentFit: 0..100,
-  potential:  0..100,
-  confidence: limited|moderate|stronger,
-  evidenceScore: 0..100,                     // NEW, layer 7
-  gatePassed, gateNote?,
-  strongestDimensions, developmentAreas,
-  formalRequirements, disclaimer?,
-  relatedProfessions, transitions,
-  educationPathways, certifications, sources,
-  reason: StructuredExplanation[]
-}
-```
+Index: `(job_id, created_at desc)`.
 
-## 7. Evidence Score (new, layer 7)
+RLS: SELECT admin-only; no INSERT/UPDATE/DELETE from anon or authenticated (writes happen from admin server functions with `service_role` or from a trigger). No anon grant.
 
-Reported alongside Confidence, not replacing it.
+### A.1.6 CIG taxonomy protection at the database
 
-```
-evidenceScore = round(100 * weightedMean(
-  answeredCoverage,             // fraction of relevant questions answered
-  importantDimObservedRatio,    // observed important dims / total important
-  sourceCoverageForMatch,       // published sources on the profession
-  distinguishingObservedRatio   // distinguishing dims observed
-))
-```
+`family_id` and `profession_slug` on `public.jobs` are validated by a database trigger, not by foreign key. Reasons documented in `docs/job-intelligence/schema.md`:
 
-Pure function of already-computed inputs; deterministic; does not affect ranking. Confidence remains the categorical band; Evidence Score is the transparency metric.
+- **Family**: the canonical set lives in code (`src/lib/career-center/profession-families.ts`) — 13 fixed IDs — not in a DB reference table. The trigger validates `family_id` against a hard-coded whitelist inside a SQL function `public.assert_cig_family_id(text)` whose body enumerates the 13 IDs. Changing this list requires a migration; that is intentional and matches the frozen taxonomy rule.
+- **Profession slug**: the CIG source of truth for professions lives in `cig_professions` (Supabase) and, for the code path, in `src/lib/career-center/professions/*`. A FK to `cig_professions.slug` is used **when technically possible** — i.e. if `cig_professions.slug` is unique. A companion trigger `public.assert_cig_profession_slug(text)` also enforces existence on write (defence-in-depth), and permits `null` for jobs not yet classified.
+- Validation trigger `public.jobs_cig_taxonomy_check` runs `BEFORE INSERT OR UPDATE OF family_id, profession_slug ON public.jobs` and raises if either value is set to a non-canonical entry.
+- If, at migration time, we discover `cig_professions.slug` is not unique, the FK is dropped from the migration and the trigger alone enforces the check. That decision is captured in the Phase A report; no schema drift is silently tolerated.
 
-## 8. Scoring safeguards (unchanged, still binding)
+### A.1.7 Active-job predicate (single source of truth)
 
-Single-profession dominance guard; interest vs eligibility separation; current vs future separation (now explicit via Current Fit / Potential); missing experience ≠ unsuitability; legal/employer requirements not rendered as traits; drafts excluded; determinism preserved.
-
-## 9. Explanation model (structured, no generative AI)
-
-Same as prior plan; add explanation kinds:
-- `profile_archetype` — describes derived archetype.
-- `current_vs_potential` — "You currently fit X; your behavioural profile suggests strong potential for Y."
-- `family_rationale` — why this family ranked highest.
-- `evidence_note` — "Evidence Score {n}/100 based on covered questions and available sources."
-
-All bilingual, template-driven.
-
-## 10. Regulated professions
-
-Unchanged: CIG disclaimers verbatim, never "eligible/admitted/approved/cleared", formal-requirements block always precedes next-step suggestions. Applies to both Current Fit and Potential rendering.
-
-## 11. Result-page integration (minimum UI change)
-
-Reuse `src/components/assessment/result/index.tsx`. Additions only:
-- **New top block:** `CareerProfileSummary` (archetype + motivation + working-style).
-- **New family block:** `CareerFamilyHeadline` (top family, Current Fit, Potential, runner-ups).
-- **Existing card `CareerMatchCard` extended:** two score chips (Current Fit / Potential) + Evidence Score chip alongside Confidence.
-- **New sub-sections in the card:** formal requirements, transitions.
-- No restyle, no new page.
-
-## 12. Career Journey readiness (structural only, not built)
-
-`EngineResultV1` returns a stable envelope so a later Career Journey feature can consume it without redesign:
+An immutable-style SQL function determines when a job is publicly visible. The same predicate is reused for `employers` visibility so an employer cannot be visible to anon while none of their jobs are.
 
 ```
-EngineResultV1 {
-  engineVersion, computedAt, inputsHash,
-  careerProfile,              // reusable foundation
-  familyRanking: [...],
-  matches: [...],             // top-N with currentFit + potential + evidenceScore
-  journeyHooks: {             // structural placeholders, empty in Phase D
-    developmentRoadmap: null,
-    educationTrack:     null,
-    certificationTrack: null,
-    jobsQuery:          null,
-    nextReviewAt:       null,
-  }
-}
+public.job_is_active(status text, published_at timestamptz, deadline_at timestamptz, expires_at timestamptz) RETURNS boolean
+  -> status = 'published'
+     AND published_at IS NOT NULL AND published_at <= now()
+     AND (deadline_at IS NULL OR deadline_at > now())
+     AND (expires_at  IS NULL OR expires_at  > now())
 ```
 
-`journeyHooks` is a documented extension point — no logic behind it in Phase D. `inputsHash` is a deterministic hash of the answer set (already deterministic engine) so a future Journey can detect when to recompute. No DB tables required; if persistence is later needed, it can attach to existing user tables without CIG changes.
+Marked `STABLE` (not `IMMUTABLE`) because `now()` is time-varying.
 
-## 13. Testing
+### A.1.8 Published-job application-path validation
 
-Prior persona suite plus:
-- Career Profile snapshot per persona (archetype stability).
-- Current Fit vs Potential divergence test: student-no-experience must have Potential > Current Fit for at least one appropriate family.
-- Experienced officer: Current Fit ≥ Potential in own family.
-- Family ranking test: leadership persona → corporate/management family top.
-- Evidence Score monotonicity: adding more answered questions never lowers Evidence Score for the same profile.
-- Determinism snapshot on full `EngineResultV1` envelope (including `inputsHash`).
-- Regression against existing `test-personas.ts` expected-top-family assertions.
+Enforced by a `BEFORE INSERT OR UPDATE` trigger on `public.jobs` (per Cloud rules that time/data-dependent rules use triggers, not CHECK):
 
-## 14. Data-quality handling
+- If the new `status = 'published'`:
+  - `application_method` must be one of `external`, `email`, `internal`.
+  - `application_method = 'unavailable'` is rejected.
+  - `application_method = 'external'` requires non-empty `application_url`.
+  - `application_method = 'email'` requires non-empty `application_email` matching a basic email pattern.
+  - `application_method = 'internal'` requires an internal handler flag — not present in v1 — so `internal` is rejected on publish in v1 and unlocked in a later phase.
+  - `published_at` must be non-null and `<= now()`.
+  - `deadline_at`, if set, must be `>= published_at`.
+- For non-published statuses, none of the above apply — drafts can be incomplete.
 
-Unchanged from prior plan. Additionally: if a family has zero published members, it is excluded from family ranking (never surfaced empty). Career Profile is always computable — it depends only on the dimension vector, not on CIG completeness.
+## A.2 RLS policies (revised)
 
-## 15. Scope protection
+Enable RLS on all five new tables. GRANTs and policies together in the same migration.
 
-Still out of Phase D: adaptive questions, AI chat coach, employer intelligence, job matching, new auth, payments, major UI redesign, new DB architecture, publication workflow, content curation UI. `journeyHooks` is a shape, not a feature.
+- **`job_import_sources`**: `GRANT SELECT TO authenticated`. Admin all via `has_role(auth.uid(),'admin')`. No anon.
+- **`employers`** (public row):
+  - Anon+authenticated SELECT: `EXISTS (SELECT 1 FROM public.jobs j WHERE j.employer_id = employers.id AND public.job_is_active(j.status, j.published_at, j.deadline_at, j.expires_at))`.
+  - Admin all.
+  - No `TO anon` write grants.
+- **`employer_admin_meta`**: admin-only SELECT/INSERT/UPDATE/DELETE via `has_role`. `GRANT ALL TO service_role`. No anon, no authenticated.
+- **`jobs`**: three SELECT policies:
+  1. Anon+authenticated: `public.job_is_active(status, published_at, deadline_at, expires_at) = true`.
+  2. Admin: all rows via `has_role(auth.uid(),'admin')`.
+  3. (No general author-read policy in v1 — writes are admin-only, so drafts are always admin-owned. This removes the need to expose `created_by` on the public row.)
+  Writes: admin-only via `has_role`. `GRANT SELECT TO anon, authenticated`; `GRANT INSERT/UPDATE/DELETE TO authenticated` (gated to admins by policy); `GRANT ALL TO service_role`.
+- **`job_admin_meta`**: admin-only, same shape as `employer_admin_meta`. No anon/authenticated grants.
+- **`saved_jobs`**: `auth.uid() = user_id` for SELECT/INSERT/DELETE. `GRANT SELECT, INSERT, DELETE TO authenticated`. `GRANT ALL TO service_role`. No anon.
+- **`job_audit_events`**: SELECT admin-only. No write policies (writes via `service_role` from server functions and from an internal AFTER-trigger on `public.jobs` running as `security definer`). `GRANT SELECT TO authenticated` (admin-gated by policy). `GRANT ALL TO service_role`. No anon.
 
-## 16. Deliverables
+Result: no admin-only column reaches an anon read path, either directly or through a join.
 
-**New files:**
-- `src/lib/career-intelligence-engine/index.ts` — public API, `ENGINE_VERSION = "cie-v1"`.
-- `.../types.ts` — `EngineResultV1`, `CareerProfile`, `FamilyRanking`, `StructuredExplanation`.
-- `.../career-profile.ts` — archetype/motivation/working-style derivation.
-- `.../scoring.ts` — Current Fit + Potential (reuses `computeUserVector`).
-- `.../family-ranking.ts`.
-- `.../target-vector.ts` — CIG signals → target vector.
-- `.../evidence-score.ts`.
-- `.../enrich.ts` — related, transitions, education, certs, sources.
-- `.../explanations.ts` — bilingual template registry.
-- `.../compute.functions.ts` — server fn `computeCareerIntelligenceMatches({ answers, topN? })`.
-- `docs/career-intelligence/engine-v1.md`.
+## A.3 Migration & rollback
 
-**Affected files:**
-- `src/components/assessment/result/index.tsx` — data-source swap + Career Profile block + Family headline + Current Fit/Potential/Evidence chips.
-- `src/components/assessment/CareerMatchCard.tsx` — new chips + structured `reason`.
-- `src/routes/assessment.tsx` — call new server fn.
-- `src/lib/mcp/tools/compute-career-matches.ts` — return v1 envelope (backwards-compatible superset).
+- **Schema migration** (`<ts>_phase_a_job_intelligence_foundation.sql`): reference table → `employers` → `employer_admin_meta` → `jobs` → `job_admin_meta` → `saved_jobs` → `job_audit_events` → `job_is_active` function → CIG taxonomy validators → published-path trigger → `updated_at` triggers → GRANTs → RLS enable → policies. **No seed rows.** No fictional employers or demo jobs in this migration.
+- **Seed migration/script** (dev/test only): a separate file `supabase/seeds/phase_a_dev_seed.sql` is authored but is NOT part of the production migration pipeline. It is applied manually in development via `psql` against a dev database when a developer wants demo data. The Phase A report documents the exact command and warns against running it in production. Every seeded row carries `[TEST DATA]` in `title_sv`/`title_en`/`description_*`; employer names carry a `(demo)` suffix. This satisfies "seed process must not run automatically in production".
+- **Rollback**: revert migration drops in reverse order — `job_audit_events → saved_jobs → job_admin_meta → jobs → employer_admin_meta → employers → job_import_sources`, then the trigger functions and `job_is_active`. Documented in `docs/job-intelligence/rollback.md` with the exact SQL and the note that no existing table/policy is modified, so rollback is safe at any point in Phase A.
 
-**DB reads:** as prior plan (all `cig_*` tables, published-only, anon RLS in place).
-**Required DB changes:** none. Additive migrations only if a Phase C signal audit turns up gaps (data-only, not schema).
+## A.4 Feature flag
 
-**Implementation stages:**
-1. Types + `CareerProfile` derivation + unit tests.
-2. Target-vector build from CIG signals.
-3. Current Fit + Potential scoring; determinism snapshots.
-4. Family ranking + diversity guard.
-5. Evidence Score.
-6. Server fn + published-only guard.
-7. Enrichment.
-8. Structured explanations (bilingual).
-9. Result-page integration (Profile block, Family headline, new chips, formal-req + transitions sub-sections).
-10. Regulated-profession disclaimer wiring.
-11. Regression + graph-integrity update.
+`VITE_JOBS_ENABLED` is a **release-control flag only**, not a security boundary. It gates rendering of Phase C+ public UI, nothing else. Database RLS and server-side authorisation remain effective independent of the flag: with the flag off, RLS still hides drafts and admin metadata; with the flag on, RLS is still the last line of defence. This is stated explicitly in `docs/job-intelligence/README.md` and `docs/job-intelligence/schema.md`.
 
-**Acceptance criteria:**
-- Assessment unchanged and functional.
-- `EngineResultV1` deterministic; identical answers → identical envelope including `inputsHash`.
-- Career Profile rendered before family and professions.
-- Top family shown before profession list.
-- Each match shows Current Fit, Potential, Confidence, Evidence Score.
-- Regulated matches render CIG disclaimer verbatim; no eligibility language anywhere.
-- Draft professions excluded.
-- All persona tests + regression pass.
-- `journeyHooks` present but null.
-- Type-check + security linter clean.
+Helper: `src/lib/job-intelligence/feature-flag.ts` exposes `jobsEnabled()` reading `import.meta.env.VITE_JOBS_ENABLED === 'true'`. Not consumed by Phase A.
 
-**Rollback:** additive; `CIE_V1_ENABLED` feature flag toggles the result page between legacy and v1 engine. `GRAPH_ACTIVATION_STATE` remains authoritative for CIG activation. Rollback steps appended to `docs/career-intelligence/rollback.md`.
+## A.5 Seed-data approach
 
-**Estimated complexity:** Medium (was Medium). Added layers are pure functions over existing data. Estimated credits: ~50–65.
+- Production: **no seed rows in the schema migration**.
+- Development: `supabase/seeds/phase_a_dev_seed.sql` — 5 fictional employers (all suffixed `(demo)`), 8 fictional jobs (all prefixed `[TEST DATA]`), mapped to real published CIG family IDs and, where possible, to real published `cig_professions.slug`. Applied by an engineer with a documented command, never automatically. The seed file itself carries a header comment: `-- DEVELOPMENT SEED ONLY. DO NOT APPLY IN PRODUCTION.`.
+- CI: any test that needs data creates rows programmatically inside the test, not through the seed file.
+
+## A.6 Security & GDPR impact (updated)
+
+- Anon reads see: `job_import_sources` — never; `employers` — only when linked to an active job (predicate applied in the policy); `jobs` — only when `job_is_active()` is true; all admin-only sibling tables — never; `saved_jobs`, `job_audit_events` — never.
+- User deletion:
+  - `saved_jobs.user_id`: `ON DELETE CASCADE`.
+  - `employer_admin_meta.created_by/updated_by`, `job_admin_meta.created_by/updated_by/reviewed_by`, `job_audit_events.actor_id`: `ON DELETE SET NULL`. Audit history is preserved with a null actor.
+- Audit preservation: `job_audit_events.job_id` is not a FK, and hard deletes on `jobs` are actively discouraged in favour of `status='archived'`. If a hard delete is ever performed, its `deleted` event is written to `job_audit_events` first, capturing `before`/`after`.
+- Verified/moderation metadata: never exposed via the public read path because it lives in separate admin-only tables. Column-level hiding is not relied on.
+- Feature flag: does not gate RLS. Documented as such.
+- Linter: run `supabase--linter` after the migration is approved; fix any new finding before sign-off.
+
+## A.7 Acceptance criteria (revised)
+
+1. Migration applies cleanly on dev; linter reports no new critical findings.
+2. All new tables/functions/triggers exist per spec; RLS enabled; GRANTs applied.
+3. Anon SELECT on `jobs` returns only rows where `job_is_active()` is true; expiring by either `deadline_at` or `expires_at` hides the row.
+4. Anon SELECT on `employers` returns only employers with at least one active job.
+5. Anon SELECT on `employer_admin_meta`, `job_admin_meta`, `job_audit_events`, `saved_jobs`, `job_import_sources` all return 0 rows / permission-denied.
+6. Non-admin authenticated user cannot read `job_admin_meta`, `employer_admin_meta`, `job_audit_events`, or other users' `saved_jobs`.
+7. Admin can read all rows across every table.
+8. Attempting to publish a job with `application_method='unavailable'` is rejected by the trigger.
+9. Attempting to publish `external` without `application_url`, or `email` without `application_email`, is rejected.
+10. Attempting to set `family_id` or `profession_slug` to a non-canonical value is rejected.
+11. Deleting a user cascades their `saved_jobs`; nulls `created_by/updated_by/reviewed_by/actor_id` in admin/audit tables; leaves audit rows intact.
+12. Hard-deleting a `jobs` row (via admin/service_role) does not delete its `job_audit_events` history; `job_admin_meta` is cascaded away with the job (1:1), consistent with the archive-preferred policy.
+13. Production schema migration contains **zero** seed rows for employers/jobs; only `job_import_sources` reference rows.
+14. Dev seed file exists, is not in the migration pipeline, is prefixed with a "do not run in production" header, and all its rows are clearly marked.
+15. `VITE_JOBS_ENABLED=false` in dev; `/jobs` unchanged; documentation states the flag is release-control only.
+16. `bun cie:check` remains green. CIE, assessment, CIG code paths untouched.
+17. Type-check clean; Playwright smoke on `/`, `/security-career-assessment`, `/career-center`, `/jobs` unchanged.
+18. `docs/job-intelligence/rollback.md`, `schema.md`, `README.md` present and current.
+19. No existing table, policy, function, or GRANT modified.
+
+## A.8 Test plan (revised)
+
+Executed against the dev database after migration approval.
+
+- **Schema shape**: assert every column, type, default, index, trigger, and function exists as specified via `information_schema` and `pg_proc` queries.
+- **Active-job predicate** — table-driven tests with published_at/deadline_at/expires_at permutations: past-published + future-deadline + null-expires = visible; past-expires = hidden; future-published = hidden; deadline in the past = hidden.
+- **Application-path validation**: 6 negative cases (unavailable-on-publish, external-without-url, email-without-@, internal-on-publish, published_at null, deadline before published_at) each rejected with a clear error; 3 positive cases accepted.
+- **CIG taxonomy**: assert non-canonical `family_id` rejected; non-existent `profession_slug` rejected; null `profession_slug` accepted with a valid `family_id`.
+- **RLS matrix**: exhaustive anon/authenticated-non-admin/admin × (jobs/employers/admin_meta tables/audit/saved_jobs) SELECT tests; write attempts denied where policy forbids.
+- **Cross-user saved_jobs**: user A writes; user B SELECT returns 0; user B DELETE denied.
+- **User deletion** (in a disposable dev user): delete `auth.users` row → `saved_jobs` rows gone; `created_by`/`updated_by`/`reviewed_by`/`actor_id` set to null in the admin/audit tables; audit rows still present.
+- **Job hard-delete** (admin path): audit rows for that `job_id` remain readable to admin; `job_admin_meta` for that job removed.
+- **Rollback drill**: apply revert → confirm all Phase A objects removed → re-apply forward → identical state.
+- **Regression**: `bun cie:check`, `bun kg-check` (or equivalent), full Playwright smoke.
+- **Linter**: `supabase--linter` reports no new critical/warning findings attributable to Phase A.
+- **Production-safety check**: `rg "INSERT INTO public.(employers|jobs) " supabase/migrations/` on the Phase A migration returns zero matches.
+
+## A.9 Files expected to change (revised)
+
+New files:
+
+- `supabase/migrations/<ts>_phase_a_job_intelligence_foundation.sql` — schema, functions, triggers, RLS, GRANTs, and **only** `job_import_sources` reference-row inserts. No employers, no jobs.
+- `supabase/seeds/phase_a_dev_seed.sql` — dev/test only, header warning, 5 fictional employers + 8 fictional jobs, all clearly marked. Not part of the migration pipeline.
+- `src/lib/job-intelligence/feature-flag.ts` — release-control helper (unused in Phase A).
+- `src/lib/job-intelligence/types.ts` — TS shapes only, no logic; splits `Job` (public) from `JobAdminMeta`, and `Employer` from `EmployerAdminMeta`.
+- `docs/job-intelligence/README.md` — index; states the flag is release-control only.
+- `docs/job-intelligence/schema.md` — schema, RLS matrix, active-job predicate, CIG taxonomy protection, admin/public split rationale, slug format.
+- `docs/job-intelligence/rollback.md` — rollback SQL and drill notes.
+- `docs/job-intelligence/phase-a-report.md` — filled in at Phase A completion.
+
+Auto-regenerated:
+
+- `src/integrations/supabase/types.ts` — regenerated after the migration is approved and applied; not hand-edited.
+
+Modified:
+
+- `.env.example` — add `VITE_JOBS_ENABLED=false` with a comment noting it is release-control only.
+
+Not modified in Phase A: `src/routes/jobs.tsx`, all Career Center and assessment routes, `src/lib/career-intelligence-engine/*`, `src/lib/career-center/*`, `src/lib/knowledge-graph/*`, `src/routes/__root.tsx`, `src/routes/sitemap[.]xml.ts`, `src/i18n/dictionaries.ts`.
+
+## A.10 Non-goals (unchanged)
+
+No admin UI, no public Jobs UI change, no JSON-LD/sitemap, no analytics, no relevance engine, no employer self-serve writes, no badges rendered, no feature-flag flip, no CIE/assessment/CIG modification.
 
 ## Stop point
 
-Stop after this revised plan. Do not implement until approval.
+Stop after this revised Phase A. On approval, implementation proceeds exactly as scoped above; Phase B does not begin until the Phase A report is signed off.
