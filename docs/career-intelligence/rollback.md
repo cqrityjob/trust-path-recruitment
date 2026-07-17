@@ -171,3 +171,35 @@ To roll back to the legacy result UI:
    available for other consumers (MCP tool, tests).
 
 No migrations to reverse. No data loss risk.
+
+## Rollback: Epic 1 — CIG Lifecycle & Quality Levels
+
+Epic 1 is additive governance infrastructure. No existing table, column,
+policy, function, or row was modified, so rollback is safe at any time.
+
+```sql
+DROP TRIGGER  IF EXISTS cig_professions_validate_before_write_tg ON public.cig_professions;
+DROP FUNCTION IF EXISTS public.cig_professions_validate_before_write();
+DROP FUNCTION IF EXISTS public.cig_lifecycle_enforced();
+DROP TABLE    IF EXISTS public.cig_governance_settings;
+DROP TABLE    IF EXISTS public.cig_profession_reviews;
+DROP TRIGGER  IF EXISTS graph_versions_immutable_tg ON public.graph_versions;
+DROP FUNCTION IF EXISTS public.graph_versions_immutable();
+DROP TABLE    IF EXISTS public.graph_versions;
+```
+
+The three enum labels (`researched`, `awaiting_human_review`, `reviewed`)
+cannot be dropped in a single statement; they are unused when the trigger
+is gone and are safe to leave in place. To remove them, recreate
+`cig_content_status` with the original three labels and cast the column
+back — not recommended.
+
+### Code
+
+- Delete `src/lib/knowledge-graph/governance.ts`.
+- Delete `scripts/cig-governance-check.ts`.
+- Remove `VITE_CIG_LIFECYCLE_ENFORCED` from `.env` and `.env.example`.
+- Delete `docs/career-intelligence/epic-1-report.md`.
+
+No user-facing UI reads from any Epic 1 object, so rollback requires no
+UI changes and no user-data migration.
