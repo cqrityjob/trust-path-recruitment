@@ -34,6 +34,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedAdminJobsIndexRouteImport } from './routes/_authenticated.admin.jobs.index'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -165,6 +166,12 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdminJobsIndexRoute =
+  AuthenticatedAdminJobsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminJobsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -188,9 +195,10 @@ export interface FileRoutesByFullPath {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -212,9 +220,9 @@ export interface FileRoutesByTo {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/admin/jobs': typeof AuthenticatedAdminJobsRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -240,9 +248,10 @@ export interface FileRoutesById {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
+  '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/journey/$targetId'
     | '/admin/'
+    | '/admin/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -292,9 +302,9 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/career-center'
     | '/.mcp/invoke-tool/$tool'
-    | '/admin/jobs'
     | '/journey/$targetId'
     | '/admin'
+    | '/admin/jobs'
   id:
     | '__root__'
     | '/'
@@ -322,6 +332,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/jobs'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/admin/'
+    | '/_authenticated/admin/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -521,16 +532,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/jobs/': {
+      id: '/_authenticated/admin/jobs/'
+      path: '/'
+      fullPath: '/admin/jobs/'
+      preLoaderRoute: typeof AuthenticatedAdminJobsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminJobsRoute
+    }
   }
 }
 
+interface AuthenticatedAdminJobsRouteChildren {
+  AuthenticatedAdminJobsIndexRoute: typeof AuthenticatedAdminJobsIndexRoute
+}
+
+const AuthenticatedAdminJobsRouteChildren: AuthenticatedAdminJobsRouteChildren =
+  {
+    AuthenticatedAdminJobsIndexRoute: AuthenticatedAdminJobsIndexRoute,
+  }
+
+const AuthenticatedAdminJobsRouteWithChildren =
+  AuthenticatedAdminJobsRoute._addFileChildren(
+    AuthenticatedAdminJobsRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
+  AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
+  AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRouteWithChildren,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
