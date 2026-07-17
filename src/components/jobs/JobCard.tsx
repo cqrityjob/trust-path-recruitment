@@ -1,10 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { MapPin, Clock, Building2 } from "lucide-react";
 import { useT } from "@/i18n/context";
-import { useContext } from "react";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { getFamily } from "@/lib/career-center/profession-families";
-import { I18nContext } from "@/i18n/context-object";
 
 function pickTitle(job: PublicJobCard, lang: "sv" | "en"): string {
   const primary = lang === "sv" ? job.title_sv : job.title_en;
@@ -81,7 +79,3 @@ export function JobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }
     </Link>
   );
 }
-
-// Small unused import guard — keep imports referenced so tsgo doesn't warn.
-void useContext;
-void I18nContext;
