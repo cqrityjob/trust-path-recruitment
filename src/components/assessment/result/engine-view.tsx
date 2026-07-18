@@ -1458,7 +1458,7 @@ function ActionPlanBlock({
             id="cq-bg"
             value={background}
             onChange={(e) => onBackgroundChange(e.target.value as BackgroundKey)}
-            className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="no-print mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {backgroundOptions.map((o) => (
               <option key={o.key} value={o.key}>
@@ -1466,6 +1466,14 @@ function ActionPlanBlock({
               </option>
             ))}
           </select>
+          {/* Print-only static value: the interactive dropdown collapses to its
+           *  current selection so the printed PDF is legible without controls. */}
+          <p className="print-only mt-1 text-sm text-foreground">
+            {pick(
+              backgroundOptions.find((o) => o.key === background)?.label ?? { sv: "", en: "" },
+              lang,
+            )}
+          </p>
         </div>
       }
     >
