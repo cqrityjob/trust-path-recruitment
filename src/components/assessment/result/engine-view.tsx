@@ -343,6 +343,15 @@ function Hero({
   const primaryHref = primary.legacySlug ? `/career-center/${primary.legacySlug}` : "/career-center";
   const [regOpen, setRegOpen] = useState(false);
   const [evOpen, setEvOpen] = useState(false);
+  // Phase 2 final pass, section 3: strongest profession's family may differ
+  // from the strongest aggregated family. Both outputs are mathematically
+  // independent; explain the distinction only when they actually differ.
+  const topFamilyKey = result.familyRanking[0]?.familyKey;
+  const professionFamilyKey = primary.family.key;
+  const familiesDiffer =
+    !!topFamilyKey && topFamilyKey !== professionFamilyKey;
+  const professionFamilyName = familyLabel(professionFamilyKey, lang);
+  const topFamilyName = topFamilyKey ? familyLabel(topFamilyKey, lang) : "";
   const scrollTo = (id: string) => {
     if (typeof document !== "undefined") {
       const el = document.getElementById(id);
