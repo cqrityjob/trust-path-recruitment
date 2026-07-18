@@ -49,6 +49,56 @@ export type Database = {
           },
         ]
       }
+      assessment_run_reports: {
+        Row: {
+          completion_id: string
+          created_at: string
+          engine_version: string
+          graph_version: string
+          inputs_hash: string
+          locale: string
+          profile_version: string | null
+          report: Json
+          report_version: string
+          run_id: string
+          user_id: string
+        }
+        Insert: {
+          completion_id: string
+          created_at?: string
+          engine_version: string
+          graph_version: string
+          inputs_hash: string
+          locale: string
+          profile_version?: string | null
+          report: Json
+          report_version?: string
+          run_id: string
+          user_id: string
+        }
+        Update: {
+          completion_id?: string
+          created_at?: string
+          engine_version?: string
+          graph_version?: string
+          inputs_hash?: string
+          locale?: string
+          profile_version?: string | null
+          report?: Json
+          report_version?: string
+          run_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_run_reports_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_runs: {
         Row: {
           assessment_id: string
@@ -2804,6 +2854,27 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      save_career_report: {
+        Args: {
+          p_assessment_id: string
+          p_assessment_version_id: string
+          p_completion_id: string
+          p_engine_version: string
+          p_graph_version: string
+          p_inputs_hash: string
+          p_locale: string
+          p_profile_snapshot: Json
+          p_profile_version: string
+          p_report: Json
+          p_report_version: string
+          p_result_summary: Json
+          p_user_id: string
+        }
+        Returns: {
+          created_new: boolean
+          run_id: string
+        }[]
       }
     }
     Enums: {
