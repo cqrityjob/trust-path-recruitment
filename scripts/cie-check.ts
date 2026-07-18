@@ -72,6 +72,27 @@ function run() {
     // At least one match.
     assert(a.matches.length > 0, `${persona.id}: no matches produced`);
 
+    // Canonical-identity uniqueness — no profession appears twice in the
+    // same report (Phase 2 final pass, section A).
+    const canonicalIds = a.matches.map(
+      (m) => m.cigSlug || m.legacySlug || m.professionKey,
+    );
+    const uniqueCanonical = new Set(canonicalIds);
+    assert(
+      uniqueCanonical.size === canonicalIds.length,
+      `${persona.id}: duplicate canonical profession in matches — ${canonicalIds.join(", ")}`,
+    );
+    const uniqueKeys = new Set(a.matches.map((m) => m.professionKey));
+    assert(
+      uniqueKeys.size === a.matches.length,
+      `${persona.id}: duplicate professionKey in matches`,
+    );
+    const uniqueTitlesSv = new Set(a.matches.map((m) => m.titleSv).filter(Boolean));
+    assert(
+      uniqueTitlesSv.size === a.matches.filter((m) => m.titleSv).length,
+      `${persona.id}: duplicate titleSv in matches — ${a.matches.map((m) => m.titleSv).join(" | ")}`,
+    );
+
     // Expected-family regression (relaxed to top-3 families).
     const topFamilies = a.familyRanking.slice(0, 3).map((f) => f.familyKey);
     const matchesExpectation = persona.expectedTopFamilies.some((f) =>
