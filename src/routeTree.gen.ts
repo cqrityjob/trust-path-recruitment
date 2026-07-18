@@ -33,6 +33,7 @@ import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedMyCareerIndexRouteImport } from './routes/_authenticated.my-career.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
@@ -167,6 +168,12 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedMyCareerIndexRoute =
+  AuthenticatedMyCareerIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedMyCareerRoute,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -256,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/my-career/': typeof AuthenticatedMyCareerIndexRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -274,7 +282,6 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
-  '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/my-career': typeof AuthenticatedMyCareerIndexRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/my-career/': typeof AuthenticatedMyCareerIndexRoute
   '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/admin/'
+    | '/my-career/'
     | '/admin/jobs/$id'
     | '/my-career/reports/$runId'
     | '/admin/jobs/'
@@ -379,7 +389,6 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/journey'
-    | '/my-career'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
@@ -392,6 +401,7 @@ export interface FileRouteTypes {
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/admin'
+    | '/my-career'
     | '/admin/jobs/$id'
     | '/my-career/reports/$runId'
     | '/admin/jobs'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/_authenticated/admin/'
+    | '/_authenticated/my-career/'
     | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/my-career/reports/$runId'
     | '/_authenticated/admin/jobs/'
@@ -623,6 +634,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/my-career/': {
+      id: '/_authenticated/my-career/'
+      path: '/'
+      fullPath: '/my-career/'
+      preLoaderRoute: typeof AuthenticatedMyCareerIndexRouteImport
+      parentRoute: typeof AuthenticatedMyCareerRoute
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -739,10 +757,12 @@ const AuthenticatedJourneyRouteWithChildren =
   AuthenticatedJourneyRoute._addFileChildren(AuthenticatedJourneyRouteChildren)
 
 interface AuthenticatedMyCareerRouteChildren {
+  AuthenticatedMyCareerIndexRoute: typeof AuthenticatedMyCareerIndexRoute
   AuthenticatedMyCareerReportsRunIdRoute: typeof AuthenticatedMyCareerReportsRunIdRoute
 }
 
 const AuthenticatedMyCareerRouteChildren: AuthenticatedMyCareerRouteChildren = {
+  AuthenticatedMyCareerIndexRoute: AuthenticatedMyCareerIndexRoute,
   AuthenticatedMyCareerReportsRunIdRoute:
     AuthenticatedMyCareerReportsRunIdRoute,
 }
