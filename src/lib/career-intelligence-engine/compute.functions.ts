@@ -221,9 +221,12 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
         .map((r) => ({
           slug: r.pathway.slug,
           title: bi(r.pathway.title_sv, r.pathway.title_en),
-          level:
-            r.pathway.typical_duration_months != null
-              ? `${r.pathway.typical_duration_months} months`
+          // Locale-neutral: the UI formats months per language ("24 månader" / "24 months").
+          // `level` remains undefined on newly computed reports; older saved snapshots may still
+          // carry an English-only "X months" string, which the UI treats as legacy fallback.
+          durationMonths:
+            typeof r.pathway.typical_duration_months === "number"
+              ? r.pathway.typical_duration_months
               : undefined,
         })),
       certifications: certRows
