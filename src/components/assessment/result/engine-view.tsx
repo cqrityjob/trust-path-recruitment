@@ -1371,6 +1371,11 @@ function RelatedAndTransitionsBlock({ match, lang }: { match: Match; lang: Lang 
           <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             {lang === "sv" ? "Karriärövergångar" : "Career transitions"}
           </h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {lang === "sv"
+              ? "Generella yrkesövergångar — inte personliga rekommendationer och förutsätter ingen viss bakgrund."
+              : "General profession transitions — not personal recommendations and do not assume any particular background."}
+          </p>
           {hasTransitions ? (
             <ul className="mt-3 space-y-2">
               {e.transitions.slice(0, 4).map((t, i) => (
