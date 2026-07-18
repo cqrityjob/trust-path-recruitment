@@ -61,5 +61,47 @@ export function CareerProfileForJobsSaver({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn]);
 
-  return null;
+  // Phase 2 final pass, section 8 — accessible, unobtrusive inline save
+  // status. Anonymous users see nothing (signedIn === false). Internal
+  // error text is never surfaced; the same completionId prevents duplicate
+  // rows server-side, so a manual retry is safe.
+  if (signedIn !== true) return null;
+
+  const isSaving = mut.isPending;
+  const isSaved = mut.isSuccess && (mut.data as any)?.saved;
+  const isFailed = mut.isError || (mut.isSuccess && !(mut.data as any)?.saved);
+
+  const savingLbl = lang === "sv" ? "Sparar din rapport…" : "Saving your report…";
+  const savedLbl =
+    lang === "sv"
+      ? "Rapporten har sparats i Min karriär."
+      : "Your report has been saved to My career.";
+  const failedLbl =
+    lang === "sv"
+      ? "Resultatet visas, men rapporten kunde inte sparas."
+      : "Your result is shown, but the report could not be saved.";
+  const retryLbl = lang === "sv" ? "Försök igen" : "Try again";
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="print:hidden mt-2 flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground"
+    >
+      {isSaving && <span>{savingLbl}</span>}
+      {isSaved && <span className="text-foreground">{savedLbl}</span>}
+      {isFailed && !isSaving && (
+        <>
+          <span>{failedLbl}</span>
+          <button
+            type="button"
+            onClick={() => mut.mutate()}
+            className="rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {retryLbl}
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
