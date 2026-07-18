@@ -1255,7 +1255,22 @@ function EducationCertsBlock({ match, lang }: { match: Match; lang: Lang }) {
                   <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
                   <div className="min-w-0">
                     <p className="font-medium">{pick(p.title, lang)}</p>
-                    {p.level && <p className="mt-0.5 text-xs text-muted-foreground">{p.level}</p>}
+                    {(() => {
+                      // Prefer the structured, locale-neutral value; fall back to the legacy
+                      // English-only "X months" string only when it's the sole source (older
+                      // saved snapshots pre-Phase 2 finalisation).
+                      if (typeof p.durationMonths === "number") {
+                        const label =
+                          lang === "sv"
+                            ? `${p.durationMonths} månader`
+                            : `${p.durationMonths} months`;
+                        return <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>;
+                      }
+                      if (p.level) {
+                        return <p className="mt-0.5 text-xs text-muted-foreground">{p.level}</p>;
+                      }
+                      return null;
+                    })()}
                   </div>
                 </li>
               ))}
