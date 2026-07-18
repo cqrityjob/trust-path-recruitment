@@ -489,6 +489,25 @@ function Hero({
           : "The result is guidance for career choices. It does not determine eligibility, competence or employment. Formal requirements must always be verified separately."}
       </p>
 
+      {/* Phase 2 final pass, section 3 — profession family vs top aggregated family. */}
+      {familiesDiffer && (
+        <p className="mt-3 rounded-md border border-border/60 bg-muted/40 p-3 text-[12px] leading-relaxed text-foreground">
+          {lang === "sv"
+            ? `Ditt starkaste enskilda yrke finns inom ${professionFamilyName}, medan dina samlade svar ger högst övergripande matchning mot familjen ${topFamilyName}.`
+            : `Your strongest individual profession is within ${professionFamilyName}, while your combined answers show the strongest overall alignment with the ${topFamilyName} family.`}
+        </p>
+      )}
+
+      {/* Phase 2 final pass, section 4 — match strength vs evidence level.
+          Rendered as visible print text (not tooltip-only) so a printed
+          report explains the two concepts. Terminology matches the labels
+          used throughout the report; scores/thresholds are unchanged. */}
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+        {lang === "sv"
+          ? "Matchningsstyrkan visar hur väl dina tillgängliga svar överensstämmer med yrkesprofilen. Underlagsnivån visar hur mycket svarsinformation som stödjer resultatet."
+          : "Match strength shows how closely your available answers align with the profession profile. Evidence level shows how much answer data supports the result."}
+      </p>
+
       {/* Phase D.2.1: Discover → Understand → Grow action hierarchy. */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <a
