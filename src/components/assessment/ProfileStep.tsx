@@ -32,7 +32,12 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
 
   useEffect(() => {
     let mounted = true;
+    console.log("[SecurityCareerProfile][ProfileStep] mounted, checking session…");
     supabase.auth.getSession().then(({ data }) => {
+      console.log("[SecurityCareerProfile][ProfileStep] getSession() resolved", {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id,
+      });
       if (mounted) setSignedIn(!!data.session);
     });
     // Mirrors the _authenticated layout guard's pattern (src/routes/_authenticated.tsx):
@@ -40,7 +45,12 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
     // settling/refreshing. Subscribing here means a late or corrected auth state
     // (e.g. after a token refresh) still flips `signedIn`, which re-triggers the
     // prefill effect below instead of getting stuck on a stale "signed out" read.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[SecurityCareerProfile][ProfileStep] onAuthStateChange", {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id,
+      });
       if (mounted) setSignedIn(!!session);
     });
     return () => {
@@ -50,16 +60,32 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
   }, []);
 
   useEffect(() => {
+    console.log("[SecurityCareerProfile][ProfileStep] signedIn effect fired", { signedIn });
     if (signedIn !== true) return;
+    console.log("[SecurityCareerProfile][ProfileStep] calling getMySecurityCareerProfile()…");
     getProfile()
       .then((existing) => {
-        if (!existing) return;
-        setDraft({
+        console.log(
+          "[SecurityCareerProfile][ProfileStep] getMySecurityCareerProfile() returned",
+          existing,
+        );
+        if (!existing) {
+          console.log(
+            "[SecurityCareerProfile][ProfileStep] no saved profile row — leaving draft empty",
+          );
+          return;
+        }
+        const mapped: SecurityCareerProfileDraft = {
           currentStatus: existing.currentStatus,
           currentProfessionSlug: existing.currentProfessionSlug,
           currentProfessionOther: existing.currentProfessionOther,
           yearsOfExperience: existing.yearsOfExperience,
-        });
+        };
+        console.log(
+          "[SecurityCareerProfile][ProfileStep] mapped into draft, calling setDraft()",
+          mapped,
+        );
+        setDraft(mapped);
       })
       .catch((err) => {
         // Best-effort prefill only — an empty draft is a safe fallback.
@@ -67,6 +93,10 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signedIn]);
+
+  useEffect(() => {
+    console.log("[SecurityCareerProfile][ProfileStep] draft changed", draft);
+  }, [draft]);
 
   const advance = async () => {
     if (signedIn) {

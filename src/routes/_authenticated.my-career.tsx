@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Award,
   Flame,
-  Eye,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -746,13 +745,13 @@ function AssessmentSummary({
       </dl>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Link
-          to="/security-career-assessment"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-          {L(c("Visa fullständiga resultat", "View full results"), lang)}
-        </Link>
+        {/* "View full results" removed: there is no route that replays a saved
+            assessment run's full result (assessment_runs.result_summary only
+            stores the slim CareerProfileForJobsV1 DTO, not an EngineResultV1
+            envelope). It previously linked to /security-career-assessment,
+            which silently started a brand new assessment instead of showing
+            anything saved — misleading. Re-add only once a real saved-result
+            route exists. */}
         <Link
           to="/security-career-assessment"
           className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
