@@ -27,6 +27,7 @@ import {
   type CareerProfileForJobsV1,
 } from "@/lib/career-intelligence-engine/profile-for-jobs";
 import { ENGINE_VERSION } from "@/lib/career-intelligence-engine/types";
+import { readSecurityCareerProfileSnapshot } from "@/lib/security-career-profile/snapshot";
 
 const ASSESSMENT_ID = "career-guidance";
 
@@ -98,6 +99,7 @@ export const saveMyCareerProfileForJobs = createServerFn({ method: "POST" })
     if (!version) return { saved: false as const, reason: "no_version" as const };
 
     const now = new Date().toISOString();
+    const profileSnapshot = await readSecurityCareerProfileSnapshot(supabase, userId);
     // We keep one profile "current" per user by inserting a fresh run.
     // getMyCareerProfileForJobs orders by completed_at desc so the latest
     // insert wins. Older rows remain for auditability.
@@ -112,6 +114,7 @@ export const saveMyCareerProfileForJobs = createServerFn({ method: "POST" })
         status: "completed",
         completed_at: now,
         result_summary: { careerProfileForJobs: data.profile },
+        profile_snapshot: profileSnapshot,
       })
       .select("id")
       .single();
