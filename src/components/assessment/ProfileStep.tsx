@@ -31,7 +31,22 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
   const upsertProfile = useServerFn(upsertMySecurityCareerProfile);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setSignedIn(!!data.session);
+    });
+    // Mirrors the _authenticated layout guard's pattern (src/routes/_authenticated.tsx):
+    // a one-shot getSession() check alone can resolve before a session finishes
+    // settling/refreshing. Subscribing here means a late or corrected auth state
+    // (e.g. after a token refresh) still flips `signedIn`, which re-triggers the
+    // prefill effect below instead of getting stuck on a stale "signed out" read.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setSignedIn(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
