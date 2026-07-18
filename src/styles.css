@@ -170,6 +170,16 @@
   @page {
     size: A4 portrait;
     margin: 15mm;
+    /* Running footer on every printed page. Browsers with paged-media support
+     * (Chromium, Safari) render this; browsers without support ignore the rule
+     * — the visible in-flow disclaimer at the end of the report is the source
+     * of truth. */
+    @bottom-center {
+      content: "CQrityjob — Where trust comes first · " counter(page) " / " counter(pages);
+      font-family: system-ui, sans-serif;
+      font-size: 9pt;
+      color: #6b7280;
+    }
   }
 
   /* Site chrome and any screen-only interactive controls (retake button,
@@ -190,8 +200,21 @@
     page-break-after: avoid;
   }
 
-  [data-report-card] {
+  /* NOTE: an unconditional `break-inside: avoid` on every SectionCard caused
+   * tall sections (comparison, formal requirements, action plan) to force
+   * near-empty pages, leaving 60–80% of the previous page blank and adding a
+   * final page that only contained the disclaimer. Allow the browser to split
+   * long cards; keep the guarantee only for small self-contained blocks.
+   */
+  li, tr, figure, .avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* Hide obviously-interactive controls that don't make sense on paper. */
+  button:not(.print-keep),
+  [role="button"]:not(.print-keep),
+  select {
+    display: none !important;
   }
 }
