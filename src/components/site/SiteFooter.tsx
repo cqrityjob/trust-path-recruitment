@@ -24,7 +24,7 @@ export function SiteFooter() {
   ] as const;
 
   return (
-    <footer className="border-t border-border bg-background">
+    <footer className="no-print border-t border-border bg-background">
       <Container className="py-16">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-5">
           <div className="md:col-span-2">

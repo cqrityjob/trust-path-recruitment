@@ -40,6 +40,7 @@ import type {
   Match,
   StructuredExplanation,
 } from "@/lib/career-intelligence-engine/types";
+import type { CompareEnrichmentMap } from "@/lib/career-intelligence-engine/report-types";
 import { cn } from "@/lib/utils";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import {
@@ -133,6 +134,7 @@ function SectionCard({
   return (
     <section
       id={id}
+      data-report-card
       className="rounded-lg border border-border bg-background p-6 md:p-8"
     >
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
@@ -825,13 +827,31 @@ function CareerFamilyBlock({
 
 // -------------------- Comparison --------------------
 
-function CompareCard({ match, rank, lang }: { match: Match; rank: number; lang: Lang }) {
+function CompareCard({
+  match,
+  rank,
+  lang,
+  compareEnrichment,
+}: {
+  match: Match;
+  rank: number;
+  lang: Lang;
+  // When supplied (saved-report replay), used instead of live getProfession()
+  // lookups so a saved report never picks up profession content that
+  // changed after it was saved. Absent on the live results page — behavior
+  // there is unchanged.
+  compareEnrichment?: CompareEnrichmentMap;
+}) {
   const band = matchStrengthBand(match.currentFit, match.confidence);
-  const cc = getProfession(match.legacySlug);
-  const level = cc ? levelLabel(cc.level) : undefined;
-  const envs = cc?.workEnvironments?.slice(0, 2) ?? [];
-  const nextRole = cc?.nextRoles?.[0];
-  const nextRoleTitle = nextRole ? getProfession(nextRole) : undefined;
+  const saved = compareEnrichment?.[match.legacySlug];
+  const cc = compareEnrichment ? undefined : getProfession(match.legacySlug);
+  const level = levelLabel(saved ? saved.level : cc?.level);
+  const envs = saved ? (saved.workEnvironments?.slice(0, 2) ?? []) : (cc?.workEnvironments?.slice(0, 2) ?? []);
+  const nextRoleTitle = saved
+    ? saved.nextRoleTitle
+    : cc?.nextRoles?.[0]
+      ? getProfession(cc.nextRoles[0])
+      : undefined;
   const hasFormal = match.enrichment.formalRequirements.length > 0;
 
   return (
@@ -941,7 +961,15 @@ function CompareCard({ match, rank, lang }: { match: Match; rank: number; lang: 
   );
 }
 
-function ComparisonBlock({ matches, lang }: { matches: Match[]; lang: Lang }) {
+function ComparisonBlock({
+  matches,
+  lang,
+  compareEnrichment,
+}: {
+  matches: Match[];
+  lang: Lang;
+  compareEnrichment?: CompareEnrichmentMap;
+}) {
   const top = matches.slice(0, 3);
   if (top.length === 0) return null;
   return (
@@ -958,7 +986,13 @@ function ComparisonBlock({ matches, lang }: { matches: Match[]; lang: Lang }) {
       </p>
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         {top.map((m, i) => (
-          <CompareCard key={m.professionKey} match={m} rank={i + 1} lang={lang} />
+          <CompareCard
+            key={m.professionKey}
+            match={m}
+            rank={i + 1}
+            lang={lang}
+            compareEnrichment={compareEnrichment}
+          />
         ))}
       </div>
     </SectionCard>
@@ -1573,10 +1607,20 @@ export function EngineResultView({
   result,
   lang,
   onRetake,
+  mode = "live",
+  compareEnrichment,
 }: {
   result: EngineResultV1;
   lang: Lang;
   onRetake: () => void;
+  // "live" (default) is the assessment results page — unchanged behavior.
+  // "saved" is a replay of a stored report (Phase 2): suppresses the
+  // sign-in-to-save prompt, which is meaningless once already saved.
+  mode?: "live" | "saved";
+  // Historical-accuracy data for CompareCard, captured at save time.
+  // Absent on the live page, where CompareCard falls back to its existing
+  // live getProfession() lookups exactly as before.
+  compareEnrichment?: CompareEnrichmentMap;
 }) {
   const [background, setBackground] = useState<BackgroundKey>("exploring");
   const primary = result.matches[0];
@@ -1588,7 +1632,7 @@ export function EngineResultView({
       <WhyThisResult match={primary} lang={lang} />
       <CareerProfileBlock profile={result.careerProfile} lang={lang} />
       <CareerFamilyBlock ranking={result.familyRanking} matches={result.matches} lang={lang} />
-      <ComparisonBlock matches={result.matches} lang={lang} />
+      <ComparisonBlock matches={result.matches} lang={lang} compareEnrichment={compareEnrichment} />
       <StrengthsBlock match={primary} lang={lang} />
       <GuidingProfileBlock result={result} lang={lang} />
       <FormalRequirementsBlock match={primary} lang={lang} />
@@ -1596,7 +1640,7 @@ export function EngineResultView({
       <RelatedAndTransitionsBlock match={primary} lang={lang} />
       <ActionPlanBlock match={primary} background={background} onBackgroundChange={setBackground} lang={lang} />
       <NextStepsBlock match={primary} lang={lang} />
-      <SavePromptBlock lang={lang} />
+      {mode === "live" && <SavePromptBlock lang={lang} />}
       <SharePreviewBlock match={primary} lang={lang} />
 
       {result.disclaimers.length > 0 && (

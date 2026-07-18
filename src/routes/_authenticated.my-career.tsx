@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Award,
   Flame,
+  Eye,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -318,9 +319,45 @@ function MyCareerPage() {
                   profile={profile}
                   topProfession={topProfTitle}
                   topArea={topAreaLabel}
+                  runId={latestRun.id}
                 />
               )}
             </DashboardCard>
+
+            {/* Previous reports — reuses runsQ.data, already fetched above;
+                no new query. Excludes the latest run, already linked from
+                the Assessment summary card. */}
+            {runsQ.data && runsQ.data.length > 1 && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(c("Tidigare rapporter", "Previous reports"), lang)}
+              >
+                <ul className="divide-y divide-border">
+                  {runsQ.data.slice(1).map((run: any) => {
+                    const runDate = new Date(
+                      run.completed_at ?? run.started_at,
+                    ).toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    });
+                    return (
+                      <li key={run.id} className="flex items-center justify-between gap-3 py-3">
+                        <span className="text-sm text-foreground">{runDate}</span>
+                        <Link
+                          to="/my-career/reports/$runId"
+                          params={{ runId: run.id }}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+                        >
+                          {L(c("Visa rapport", "View report"), lang)}
+                          <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </DashboardCard>
+            )}
 
             {/* Security Career Profile — editable, contextual only (Phase 1) */}
             <DashboardCard
@@ -667,12 +704,14 @@ function AssessmentSummary({
   profile,
   topProfession,
   topArea,
+  runId,
 }: {
   lang: "sv" | "en";
   completedAt: string;
   profile: CareerProfileForJobsV1 | undefined;
   topProfession: string | undefined;
   topArea: string | undefined;
+  runId: string;
 }) {
   const date = new Date(completedAt).toLocaleDateString(
     lang === "sv" ? "sv-SE" : "en-GB",
@@ -745,13 +784,19 @@ function AssessmentSummary({
       </dl>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {/* "View full results" removed: there is no route that replays a saved
-            assessment run's full result (assessment_runs.result_summary only
-            stores the slim CareerProfileForJobsV1 DTO, not an EngineResultV1
-            envelope). It previously linked to /security-career-assessment,
-            which silently started a brand new assessment instead of showing
-            anything saved — misleading. Re-add only once a real saved-result
-            route exists. */}
+        {/* Phase 2: now points at a real saved-report route
+            (/my-career/reports/$runId) instead of the assessment start
+            page. If this run predates Phase 2 (no saved snapshot), the
+            route itself renders a clear "not available for this result"
+            state — it never silently starts a new assessment. */}
+        <Link
+          to="/my-career/reports/$runId"
+          params={{ runId }}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+          {L(c("Visa fullständig rapport", "View full report"), lang)}
+        </Link>
         <Link
           to="/security-career-assessment"
           className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
