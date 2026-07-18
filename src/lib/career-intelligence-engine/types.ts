@@ -134,7 +134,15 @@ export interface EnrichmentBundle {
     effort?: string;
     notes?: Bi;
   }>;
-  educationPathways: Array<{ slug: string; title: Bi; level?: string }>;
+  educationPathways: Array<{
+    slug: string;
+    title: Bi;
+    /** Optional human-authored level label (kept for legacy stored snapshots). */
+    level?: string;
+    /** Structured, locale-neutral duration in months when the CIG record has one.
+     *  Prefer this over `level` for rendering — UIs format it per language. */
+    durationMonths?: number;
+  }>;
   certifications: Array<{ slug: string; title: Bi; issuer?: string }>;
   sources: EnrichmentSource[];
   sourceCoverage: number; // 0..1 heuristic
