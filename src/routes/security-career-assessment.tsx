@@ -14,6 +14,7 @@ import {
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { AssessmentProgress } from "@/components/assessment/AssessmentProgress";
 import { AssessmentQuestion, type Answer } from "@/components/assessment/AssessmentQuestion";
+import { ProfileStep } from "@/components/assessment/ProfileStep";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { questions } from "@/lib/assessment-content";
@@ -22,7 +23,7 @@ import { EngineResultView } from "@/components/assessment/result/engine-view";
 import type { AnswerMap } from "@/lib/career-assessment/types";
 import { CareerProfileForJobsSaver } from "@/components/assessment/CareerProfileForJobsSaver";
 
-type Phase = "landing" | "intro" | "questions" | "results";
+type Phase = "landing" | "intro" | "profile" | "questions" | "results";
 
 export const Route = createFileRoute("/security-career-assessment")({
   head: () => ({
@@ -60,7 +61,8 @@ function AssessmentApp() {
   };
 
   if (phase === "landing") return <Landing onStart={() => setPhase("intro")} />;
-  if (phase === "intro") return <Intro onContinue={() => setPhase("questions")} />;
+  if (phase === "intro") return <Intro onContinue={() => setPhase("profile")} />;
+  if (phase === "profile") return <ProfileStep onContinue={() => setPhase("questions")} />;
   if (phase === "questions")
     return (
       <Questions

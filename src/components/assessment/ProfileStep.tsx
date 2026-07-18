@@ -1,0 +1,104 @@
+// Optional pre-assessment "Security Career Profile" step. Phase 1 only:
+// this component collects and (for signed-in users) persists profile data,
+// but nothing here is ever passed into the scoring flow — AssessmentApp
+// does not lift this state up into Questions/Results at all.
+
+import { useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
+import { SecurityCareerProfileForm } from "@/components/assessment/SecurityCareerProfileForm";
+import { PrimaryButton } from "@/components/site/PrimaryButton";
+import { useT } from "@/i18n/context";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  getMySecurityCareerProfile,
+  upsertMySecurityCareerProfile,
+} from "@/lib/security-career-profile/profile.functions";
+import {
+  EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
+  type SecurityCareerProfileDraft,
+} from "@/lib/security-career-profile/types";
+
+export function ProfileStep({ onContinue }: { onContinue: () => void }) {
+  const { t } = useT();
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [draft, setDraft] = useState<SecurityCareerProfileDraft>(
+    EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
+  );
+  const [saving, setSaving] = useState(false);
+  const getProfile = useServerFn(getMySecurityCareerProfile);
+  const upsertProfile = useServerFn(upsertMySecurityCareerProfile);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+  }, []);
+
+  useEffect(() => {
+    if (signedIn !== true) return;
+    getProfile()
+      .then((existing) => {
+        if (!existing) return;
+        setDraft({
+          currentStatus: existing.currentStatus,
+          currentProfessionSlug: existing.currentProfessionSlug,
+          currentProfessionOther: existing.currentProfessionOther,
+          yearsOfExperience: existing.yearsOfExperience,
+        });
+      })
+      .catch((err) => {
+        // Best-effort prefill only — an empty draft is a safe fallback.
+        console.error("[SecurityCareerProfile] failed to load existing profile", err);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn]);
+
+  const advance = async () => {
+    if (signedIn) {
+      setSaving(true);
+      try {
+        await upsertProfile({ data: draft });
+      } catch (err) {
+        // Non-blocking — the assessment must remain usable even if the
+        // save fails (e.g. transient network issue).
+        console.error("[SecurityCareerProfile] failed to save profile", err);
+      } finally {
+        setSaving(false);
+      }
+    }
+    onContinue();
+  };
+
+  return (
+    <AssessmentLayout narrow>
+      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {t("sca.scp.badge")}
+      </span>
+      <h1
+        className="mt-6 text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        {t("sca.scp.title")}
+      </h1>
+      <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("sca.scp.body")}</p>
+
+      <div className="mt-10">
+        <SecurityCareerProfileForm value={draft} onChange={setDraft} />
+      </div>
+
+      <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
+        <button
+          type="button"
+          onClick={onContinue}
+          className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          {t("sca.scp.skip")}
+        </button>
+        <PrimaryButton onClick={advance} disabled={saving}>
+          {t("sca.scp.continue")}
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </PrimaryButton>
+      </div>
+    </AssessmentLayout>
+  );
+}

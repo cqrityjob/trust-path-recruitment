@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { GRAPH_VERSION } from "@/lib/knowledge-graph/graph-meta";
 import { computeGapAnalysis } from "@/lib/knowledge-graph/gap-engine";
+import { readSecurityCareerProfileSnapshot } from "@/lib/security-career-profile/snapshot";
 
 const ASSESSMENT_ID = "career-guidance";
 
@@ -31,6 +32,7 @@ export const saveAssessmentRun = createServerFn({ method: "POST" })
     }
 
     const now = new Date().toISOString();
+    const profileSnapshot = await readSecurityCareerProfileSnapshot(supabase, userId);
     const { data: run, error } = await supabase
       .from("assessment_runs")
       .insert({
@@ -42,6 +44,7 @@ export const saveAssessmentRun = createServerFn({ method: "POST" })
         status: "completed",
         completed_at: now,
         result_summary: data.resultSummary,
+        profile_snapshot: profileSnapshot,
       })
       .select("id")
       .single();

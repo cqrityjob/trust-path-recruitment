@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
+import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -320,6 +321,14 @@ function MyCareerPage() {
                   topArea={topAreaLabel}
                 />
               )}
+            </DashboardCard>
+
+            {/* Security Career Profile — editable, contextual only (Phase 1) */}
+            <DashboardCard
+              icon={<UserIcon className="h-5 w-5" />}
+              title={L(c("Din säkerhetskarriärprofil", "Your Security Career Profile"), lang)}
+            >
+              <SecurityCareerProfileCard />
             </DashboardCard>
 
             {/* Career profile */}
