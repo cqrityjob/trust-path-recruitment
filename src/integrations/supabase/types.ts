@@ -58,6 +58,7 @@ export type Database = {
           graph_version: string
           id: string
           locale: string
+          profile_snapshot: Json | null
           result_summary: Json
           started_at: string
           status: string
@@ -72,6 +73,7 @@ export type Database = {
           graph_version: string
           id?: string
           locale?: string
+          profile_snapshot?: Json | null
           result_summary?: Json
           started_at?: string
           status?: string
@@ -86,6 +88,7 @@ export type Database = {
           graph_version?: string
           id?: string
           locale?: string
+          profile_snapshot?: Json | null
           result_summary?: Json
           started_at?: string
           status?: string
@@ -2664,6 +2667,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_career_profiles: {
+        Row: {
+          created_at: string
+          current_profession_other: string | null
+          current_profession_slug: string | null
+          current_status: string | null
+          profile_version: string
+          updated_at: string
+          user_id: string
+          years_of_experience: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_profession_other?: string | null
+          current_profession_slug?: string | null
+          current_status?: string | null
+          profile_version?: string
+          updated_at?: string
+          user_id: string
+          years_of_experience?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_profession_other?: string | null
+          current_profession_slug?: string | null
+          current_status?: string | null
+          profile_version?: string
+          updated_at?: string
+          user_id?: string
+          years_of_experience?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_career_profiles_current_profession_slug_fkey"
+            columns: ["current_profession_slug"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["slug"]
           },
         ]
       }
