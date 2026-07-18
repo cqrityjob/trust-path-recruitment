@@ -25,6 +25,7 @@ import {
   type SavedCareerReportV1,
 } from "./report-types";
 import { ASSESSMENT_ID, buildCompareEnrichment } from "./report.server";
+import { validateSavedReportV1 } from "./report-validator";
 
 // -------- Save (atomic, server-only) --------
 
@@ -86,6 +87,19 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
       compareEnrichment,
       profileSnapshot,
     };
+
+    // Consistency validation. Structural defects (version drift, out-of-bounds
+    // scores, potential-below-current-fit, duplicate matches, English-only
+    // duration strings) block the write — we would rather refuse than persist
+    // a factually-inconsistent snapshot. This runs against server-computed
+    // data only; no client input reaches the validator.
+    const validation = validateSavedReportV1(report);
+    if (!validation.ok) {
+      console.error("[saveMyCareerReport] validation failed", { issues: validation.issues });
+      throw new Error(
+        `Report failed consistency validation: ${validation.issues.map((i) => i.code).join(", ")}`,
+      );
+    }
 
     // Server-only service-role client — same dynamic-import pattern already
     // used in src/lib/job-intelligence/admin.functions.ts. A top-level

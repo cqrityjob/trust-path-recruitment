@@ -21,6 +21,7 @@
 import { testPersonas } from "@/lib/career-assessment/test-personas";
 import { computeEngineResultV1, hashInputs } from "@/lib/career-intelligence-engine";
 import type { EngineResultV1 } from "@/lib/career-intelligence-engine";
+import { buildTargetVectorsFromLegacy } from "@/lib/career-intelligence-engine/target-vector";
 
 const NOW = "2026-07-17T00:00:00.000Z";
 const fixedClock = () => NOW;
@@ -152,7 +153,6 @@ function run() {
   // two hand-built target vectors sharing titleSv/titleEn but with different
   // legacySlug/cigSlug/familyKey, and confirm the engine keeps both.
   {
-    const { buildTargetVectorsFromLegacy } = require("@/lib/career-intelligence-engine/target-vector") as typeof import("@/lib/career-intelligence-engine/target-vector");
     const baseTargets = buildTargetVectorsFromLegacy();
     // Pick two targets from different families so the injected enrichment
     // collision cannot accidentally collapse them.

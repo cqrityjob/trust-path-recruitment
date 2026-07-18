@@ -1255,7 +1255,22 @@ function EducationCertsBlock({ match, lang }: { match: Match; lang: Lang }) {
                   <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
                   <div className="min-w-0">
                     <p className="font-medium">{pick(p.title, lang)}</p>
-                    {p.level && <p className="mt-0.5 text-xs text-muted-foreground">{p.level}</p>}
+                    {(() => {
+                      // Prefer the structured, locale-neutral value; fall back to the legacy
+                      // English-only "X months" string only when it's the sole source (older
+                      // saved snapshots pre-Phase 2 finalisation).
+                      if (typeof p.durationMonths === "number") {
+                        const label =
+                          lang === "sv"
+                            ? `${p.durationMonths} månader`
+                            : `${p.durationMonths} months`;
+                        return <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>;
+                      }
+                      if (p.level) {
+                        return <p className="mt-0.5 text-xs text-muted-foreground">{p.level}</p>;
+                      }
+                      return null;
+                    })()}
                   </div>
                 </li>
               ))}
@@ -1356,6 +1371,11 @@ function RelatedAndTransitionsBlock({ match, lang }: { match: Match; lang: Lang 
           <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             {lang === "sv" ? "Karriärövergångar" : "Career transitions"}
           </h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {lang === "sv"
+              ? "Generella yrkesövergångar — inte personliga rekommendationer och förutsätter ingen viss bakgrund."
+              : "General profession transitions — not personal recommendations and do not assume any particular background."}
+          </p>
           {hasTransitions ? (
             <ul className="mt-3 space-y-2">
               {e.transitions.slice(0, 4).map((t, i) => (
@@ -1438,7 +1458,7 @@ function ActionPlanBlock({
             id="cq-bg"
             value={background}
             onChange={(e) => onBackgroundChange(e.target.value as BackgroundKey)}
-            className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="no-print mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {backgroundOptions.map((o) => (
               <option key={o.key} value={o.key}>
@@ -1446,6 +1466,14 @@ function ActionPlanBlock({
               </option>
             ))}
           </select>
+          {/* Print-only static value: the interactive dropdown collapses to its
+           *  current selection so the printed PDF is legible without controls. */}
+          <p className="print-only mt-1 text-sm text-foreground">
+            {pick(
+              backgroundOptions.find((o) => o.key === background)?.label ?? { sv: "", en: "" },
+              lang,
+            )}
+          </p>
         </div>
       }
     >

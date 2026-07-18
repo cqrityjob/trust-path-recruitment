@@ -101,7 +101,14 @@ function SavedReportPage() {
       </div>
 
       <div className="no-print mb-6 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">{savedDate}</p>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{savedDate}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {lang === "sv"
+              ? "Använd webbläsarens dialogruta för att välja \"Spara som PDF\" som mål."
+              : "Use your browser's print dialog and choose \"Save as PDF\" as the destination."}
+          </p>
+        </div>
         <PrimaryButton variant="ghost" onClick={() => window.print()}>
           {t("sca.report.download")}
         </PrimaryButton>
