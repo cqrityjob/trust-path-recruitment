@@ -102,7 +102,21 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
       a.target.professionKey.localeCompare(b.target.professionKey),
   );
 
-  const diversified = enforceFamilyDiversity(scored, topN);
+  // Canonical-identity dedup. Two legacy profession keys can map to the
+  // same underlying CIG profession (see slug-map.ts), which would surface
+  // the same profession twice in a single report. Canonical identity =
+  // cigSlug || legacySlug || professionKey. Highest-scoring instance wins;
+  // sort order is preserved. See Phase 2 final-pass report section A.
+  const seenCanonical = new Set<string>();
+  const deduped: typeof scored = [];
+  for (const s of scored) {
+    const canonical = s.target.cigSlug || s.target.legacySlug || s.target.professionKey;
+    if (seenCanonical.has(canonical)) continue;
+    seenCanonical.add(canonical);
+    deduped.push(s);
+  }
+
+  const diversified = enforceFamilyDiversity(deduped, topN);
   const topScored = diversified.slice(0, topN);
   const familyRanking: FamilyRankingEntry[] = rankFamilies(diversified);
 
