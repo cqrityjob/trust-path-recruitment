@@ -152,7 +152,9 @@ function run() {
   // two hand-built target vectors sharing titleSv/titleEn but with different
   // legacySlug/cigSlug/familyKey, and confirm the engine keeps both.
   {
-    const { buildTargetVectorsFromLegacy } = require("@/lib/career-intelligence-engine/target-vector") as typeof import("@/lib/career-intelligence-engine/target-vector");
+    const { buildTargetVectorsFromLegacy } = await import(
+      "@/lib/career-intelligence-engine/target-vector"
+    );
     const baseTargets = buildTargetVectorsFromLegacy();
     // Pick two targets from different families so the injected enrichment
     // collision cannot accidentally collapse them.
