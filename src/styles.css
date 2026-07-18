@@ -151,3 +151,47 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* ---------------------------------------------------------------------
+ * Print / browser "Save as PDF" support (Saved Career Report, Phase 2).
+ *
+ * Client-only — window.print() triggers the browser's own print dialog.
+ * No PDF is generated, rendered, or stored by the application; nothing
+ * beyond what's already on screen for the authenticated owner is exposed.
+ * ------------------------------------------------------------------- */
+
+/* Hidden on screen, shown only in print (the saved-report page's title /
+ * date / version header). */
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
+  /* Site chrome and any screen-only interactive controls (retake button,
+   * profile-edit affordances, nav, footer, language switcher, etc.). */
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  /* Avoid a heading being stranded at the bottom of a page, separated
+   * from the content that follows it, and avoid splitting a report card
+   * awkwardly across a page break where reasonably possible. */
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  [data-report-card] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
