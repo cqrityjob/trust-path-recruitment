@@ -211,10 +211,6 @@
     page-break-inside: avoid;
   }
 
-  /* Hide obviously-interactive controls that don't make sense on paper. */
-  button:not(.print-keep),
-  [role="button"]:not(.print-keep),
-  select {
-    display: none !important;
-  }
+  /* Native form controls collapse to their static print-only siblings. */
+  select { display: none !important; }
 }
