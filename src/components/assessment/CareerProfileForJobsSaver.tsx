@@ -15,7 +15,7 @@
 // (StrictMode, a re-render) never creates a duplicate report.
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnswerMap } from "@/lib/career-assessment/types";
@@ -33,9 +33,21 @@ export function CareerProfileForJobsSaver({
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const saved = useRef(false);
   const save = useServerFn(saveMyCareerReport);
+  const queryClient = useQueryClient();
 
   const mut = useMutation({
     mutationFn: () => save({ data: { completionId, answers, locale: lang } }),
+    retry: 2,
+    onSuccess: (result) => {
+      if (!result.saved) return;
+      void queryClient.invalidateQueries({ queryKey: ["my-career", "runs"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["my-career", "report", result.runId],
+      });
+    },
+    onError: () => {
+      saved.current = false;
+    },
   });
 
   useEffect(() => {
