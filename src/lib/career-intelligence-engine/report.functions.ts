@@ -19,34 +19,12 @@ import { computeEngineResultV1 } from "./index";
 import { buildTargetVectorsFromLegacy } from "./target-vector";
 import { loadEnrichmentForSlugs } from "./compute.functions";
 import { buildCareerProfileForJobs } from "./profile-for-jobs";
-import { getProfession } from "@/lib/career-center";
 import { readSecurityCareerProfileSnapshot } from "@/lib/security-career-profile/snapshot";
 import {
   REPORT_VERSION,
-  type CompareEnrichmentMap,
   type SavedCareerReportV1,
 } from "./report-types";
-import type { Match } from "./types";
-
-const ASSESSMENT_ID = "career-guidance";
-
-function buildCompareEnrichment(matches: Match[]): CompareEnrichmentMap {
-  const result: CompareEnrichmentMap = {};
-  for (const m of matches.slice(0, 3)) {
-    const cc = getProfession(m.legacySlug);
-    if (!cc) continue;
-    const nextRoleSlug = cc.nextRoles?.[0];
-    const nextRoleProf = nextRoleSlug ? getProfession(nextRoleSlug) : undefined;
-    result[m.legacySlug] = {
-      level: cc.level,
-      workEnvironments: cc.workEnvironments?.slice(0, 2),
-      nextRoleTitle: nextRoleProf
-        ? { titleSv: nextRoleProf.titleSv, titleEn: nextRoleProf.titleEn }
-        : undefined,
-    };
-  }
-  return result;
-}
+import { ASSESSMENT_ID, buildCompareEnrichment } from "./report.server";
 
 // -------- Save (atomic, server-only) --------
 
