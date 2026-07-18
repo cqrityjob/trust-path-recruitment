@@ -2,6 +2,29 @@
 
 ## Root cause of the pre-existing failures
 
+### Final end-to-end root cause (2026-07-18)
+
+The signed-in browser flow was reproduced through all 16 questions. The
+`saveMyCareerReport` server function was called successfully, authentication
+was attached correctly, and the server reached `save_career_report`. The RPC
+then rolled the transaction back with:
+
+`column reference "run_id" is ambiguous`
+
+The ambiguity was inside the PL/pgSQL function: its `RETURNS TABLE(run_id
+uuid, ...)` output variable shared a name with `assessment_run_reports.run_id`,
+and the unqualified `RETURNING run_id` could resolve to either. The function
+now uses `RETURNING assessment_run_reports.run_id`; the assessment-run insert
+and cleanup delete are qualified as well. No table, RLS, grant, or trust-boundary
+change was required.
+
+The client saver now also invalidates the My Career run/report query keys after
+a successful save. This prevents the dashboard's 30-second stale cache from
+hiding a newly completed report when the user had already visited My Career.
+Transient save failures receive two retries; a final failure releases the
+component's in-memory guard so a remount can try again. Database idempotency
+remains authoritative.
+
 1. **"Missing SUPABASE_SERVICE_ROLE_KEY"** — surfaced only when running the app
    locally with a `.env` that lacks the service-role key. The Lovable-hosted
    preview and production environments *do* have `SUPABASE_SERVICE_ROLE_KEY`
@@ -39,8 +62,10 @@
 
 ## Database / permission changes
 
-None on top of the already-applied migration
-`20260718170443_assessment_run_reports.sql`:
+One function-only corrective migration was applied on top of
+`20260718170443_assessment_run_reports.sql`. It qualifies the ambiguous
+`run_id` references in `public.save_career_report`; it does not change schema,
+permissions, or policies:
 
 - `public.assessment_run_reports` — RLS on; `authenticated` gets `SELECT` only
   (owner-scoped policy `auth.uid() = user_id`); no INSERT/UPDATE/DELETE grant
@@ -82,16 +107,16 @@ SELECT policy above. No policy widening is required — writes flow through the
 - `bun scripts/cie-check.ts` — all 11 personas PASS; scoring/ordering
   unchanged (scoring engine is untouched by this phase).
 - DB state verified: `assessment_versions` has a `career-guidance` row (RPC
-  no-version short-circuit will not fire); `assessment_run_reports` starts
-  empty as expected.
+  no-version short-circuit will not fire).
+- Signed-in browser E2E completed all 16 questions and captured the
+  `saveMyCareerReport` request reaching the backend.
+- Before the function fix, the response contained the exact ambiguous-column
+  error and the atomic rollback left 0 reports / no orphan run.
+- After the fix, the same signed-in flow created one new `assessment_runs` row
+  and its matching `assessment_run_reports` row at the same transaction time.
 
 ## Remaining risks
 
-- Full E2E signed-in "complete-two-assessments + print" flow was not driven
-  through Playwright in this environment; it should be exercised manually in
-  the Lovable preview before merge. The static analysis (typecheck, CIE
-  regression, code review of the splitter fix) covers the failure modes that
-  were actually reported.
 - Local development still requires `SUPABASE_SERVICE_ROLE_KEY` in the
   developer's own `.env` to save reports. This is unchanged and expected.
 
