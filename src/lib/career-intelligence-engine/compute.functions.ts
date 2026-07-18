@@ -31,7 +31,7 @@ function optStr(v: string | null | undefined): string | undefined {
   return v == null ? undefined : v;
 }
 
-async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<EnrichmentMap> {
+export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<EnrichmentMap> {
   const supabase = serverPublicClient();
   const result: EnrichmentMap = {};
 

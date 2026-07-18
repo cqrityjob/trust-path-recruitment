@@ -53,11 +53,19 @@ function AssessmentApp() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  // Idempotency key for one genuine assessment-completion attempt. Generated
+  // once per mount, reused across every phase transition and any component
+  // remount within the same attempt (React StrictMode double-invoke, a
+  // saver component re-rendering) because it lives on this stable ancestor.
+  // Only reset() below mints a new one — a genuine retake, even with
+  // identical answers, must be treated as a new completion.
+  const [completionId, setCompletionId] = useState<string>(() => crypto.randomUUID());
 
   const reset = () => {
     setAnswers({});
     setIndex(0);
     setPhase("landing");
+    setCompletionId(crypto.randomUUID());
   };
 
   if (phase === "landing") return <Landing onStart={() => setPhase("intro")} />;
@@ -74,7 +82,7 @@ function AssessmentApp() {
         onBack={() => setPhase("intro")}
       />
     );
-  return <Results answers={answers} onRetake={reset} />;
+  return <Results answers={answers} onRetake={reset} completionId={completionId} />;
 }
 
 /* -------------------------------- Landing -------------------------------- */
@@ -295,9 +303,11 @@ function Questions({
 function Results({
   answers,
   onRetake,
+  completionId,
 }: {
   answers: Record<string, Answer>;
   onRetake: () => void;
+  completionId: string;
 }) {
   const { lang } = useT();
   const compute = useServerFn(computeCareerIntelligenceMatches);
@@ -369,7 +379,7 @@ function Results({
 
   return (
     <AssessmentLayout>
-      <CareerProfileForJobsSaver answers={answerMap} lang={lang} />
+      <CareerProfileForJobsSaver answers={answerMap} lang={lang} completionId={completionId} />
       <EngineResultView result={result} lang={lang} onRetake={onRetake} />
     </AssessmentLayout>
   );
