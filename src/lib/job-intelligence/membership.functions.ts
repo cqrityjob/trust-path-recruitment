@@ -123,6 +123,91 @@ export const listMyEmployerMemberships = createServerFn({ method: "GET" })
     return (data ?? []) as MyEmployerMembership[];
   });
 
+// -------- listMyEmployerWorkspaces (Phase G2 — read-only, self-scoped) --------
+//
+// The one new function G2 needs: active memberships joined to their
+// employer's public-safe display fields, in a single query, for the
+// context picker and the per-org shell. No new table, no new RLS, no new
+// grant — reuses the existing employer_memberships.employer_id ->
+// employers.id foreign key via a PostgREST embedded-relationship select,
+// so both employer_memberships_self_select AND employers_member_select
+// (both already shipped in Phase G1, unchanged here) independently
+// authorise their half of the join. Writes: none. Service role: none —
+// uses ctx.supabase (the caller's own RLS-scoped client) exactly like
+// listMyEmployerMemberships above.
+//
+// Deliberately filters ONLY on employer_memberships.status = 'active' —
+// not on employers.status. Those are different concepts: membership
+// status is "is this person currently allowed in", employer status is
+// the Phase G1 public-visibility lifecycle (draft/active/suspended/
+// archived), and employers_member_select was deliberately designed in
+// Phase G1 to let an active member keep reading their own employer
+// regardless of its public-visibility status. Silently adding an
+// employers.status filter here would second-guess that already-approved
+// RLS design from application code — out of scope for G2 to change.
+
+export type MyEmployerWorkspace = {
+  employerId: string;
+  employerSlug: string;
+  employerName: string;
+  employerLogoUrl: string | null;
+  role: EmployerRole;
+};
+
+type EmployerWorkspaceEmbed = {
+  id: string;
+  slug: string;
+  name: string;
+  logo_url: string | null;
+};
+
+type EmployerWorkspaceRow = {
+  role: EmployerRole;
+  employers: EmployerWorkspaceEmbed | EmployerWorkspaceEmbed[] | null;
+};
+
+export const listMyEmployerWorkspaces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MyEmployerWorkspace[]> => {
+    const ctx = context as Ctx;
+    // Same identity rationale as listMyEmployerMemberships: ctx.userId is
+    // verified-claims-only, never client-supplied; the explicit .eq is
+    // defense-in-depth alongside RLS, not the boundary itself.
+    const { data, error } = await ctx.supabase
+      .from("employer_memberships")
+      .select("role, employers(id, slug, name, logo_url)")
+      .eq("user_id", ctx.userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    // Fail safely: surface a stable, generic message rather than
+    // whatever PostgREST returns, and never partially return rows —
+    // matches "fail safely without leaking database internals". Every
+    // sibling function in this file instead re-throws error.message
+    // directly (an established, accepted convention here); this one is
+    // intentionally stricter because it has zero input parameters (no
+    // legitimate reason for a caller-facing error to need query detail
+    // to self-diagnose, unlike e.g. a validation error on user input).
+    if (error) throw new Error("Could not load your employer workspaces.");
+
+    const rows = (data ?? []) as EmployerWorkspaceRow[];
+    const workspaces: MyEmployerWorkspace[] = [];
+    for (const row of rows) {
+      // Defensive against either embed shape PostgREST may return for a
+      // many-to-one relationship — not assumed without a live check.
+      const employer = Array.isArray(row.employers) ? row.employers[0] : row.employers;
+      if (!employer) continue; // employer_id is NOT NULL + FK-enforced; unreachable in practice, handled anyway
+      workspaces.push({
+        employerId: employer.id,
+        employerSlug: employer.slug,
+        employerName: employer.name,
+        employerLogoUrl: employer.logo_url,
+        role: row.role,
+      });
+    }
+    return workspaces;
+  });
+
 // -------- adminListEmployerMemberships --------
 
 const listMembershipsSchema = z.object({

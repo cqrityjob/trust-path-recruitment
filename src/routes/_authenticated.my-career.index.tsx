@@ -27,6 +27,8 @@ import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCaree
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
+import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { getProfession } from "@/lib/career-center/professions";
@@ -107,7 +109,7 @@ function confidenceBand(level: ConfidenceLevel, lang: "sv" | "en") {
 // -----------------------------------------------------------------
 
 function MyCareerPage() {
-  const { lang } = useT();
+  const { lang, t } = useT();
   const [displayName, setDisplayName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
 
@@ -135,6 +137,18 @@ function MyCareerPage() {
     queryFn: () => fetchRuns(),
     staleTime: 30_000,
   });
+
+  // Phase G2 — entry point is gated on BOTH the feature flag and having
+  // at least one active membership. `enabled: employerPortalEnabled()`
+  // means no request is made at all while the flag is false — "no
+  // entry point at all" applies to data-fetching, not just rendering.
+  const fetchEmployerWorkspaces = useServerFn(listMyEmployerWorkspaces);
+  const employerWorkspacesQ = useQuery({
+    queryKey: ["employer", "my-workspaces"],
+    queryFn: () => fetchEmployerWorkspaces(),
+    enabled: employerPortalEnabled(),
+  });
+  const hasEmployerWorkspace = (employerWorkspacesQ.data?.length ?? 0) > 0;
 
   const profileState = useCareerProfileForJobs();
   const profile =
@@ -589,6 +603,15 @@ function MyCareerPage() {
                     lang,
                   )}
                 </p>
+                {employerPortalEnabled() && hasEmployerWorkspace && (
+                  <Link
+                    to="/employer"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("employer.workspace.label")}
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={onSignOut}

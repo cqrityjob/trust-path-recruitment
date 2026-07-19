@@ -467,6 +467,27 @@ export const dictionaries = {
     "sca.report.printEyebrow": "Karriärrapport",
     "sca.report.printHeading": "Din karriärintelligensrapport",
     "sca.report.download": "Ladda ner rapport",
+    "employer.workspace.label": "Arbetsgivaryta",
+    "employer.loading": "Laddar…",
+    "employer.comingSoon.heading": "Under utveckling",
+    "employer.comingSoon.body":
+      "Arbetsgivarytan är under utveckling och inte tillgänglig ännu.",
+    "employer.empty.heading": "Ingen arbetsgivaråtkomst än",
+    "employer.empty.body":
+      "Åtkomst till en arbetsgivarorganisation tilldelas av CQrityjobs team. Hör av dig till din arbetsgivare om du väntar dig åtkomst.",
+    "employer.picker.heading": "Välj organisation",
+    "employer.picker.body":
+      "Du är medlem i flera organisationer. Välj vilken du vill öppna.",
+    "employer.accessDenied.heading": "Åtkomst ej tillgänglig",
+    "employer.accessDenied.body":
+      "Du har inte åtkomst till den här arbetsgivarorganisationen, eller så finns den inte.",
+    "employer.switchOrg": "Byt organisation",
+    "employer.role.owner": "Ägare",
+    "employer.role.admin": "Administratör",
+    "employer.role.member": "Medlem",
+    "employer.shell.roleLabel": "Din roll",
+    "employer.shell.comingSoonNotice":
+      "Jobbpublicering och inbjudningar till bedömningar kommer i en senare fas.",
     "sca.progress.label": "Framsteg",
     "sca.progress.question": "Fråga",
     "sca.progress.of": "av",
@@ -1199,6 +1220,27 @@ export const dictionaries = {
     "sca.report.printEyebrow": "Career Report",
     "sca.report.printHeading": "Your Career Intelligence Report",
     "sca.report.download": "Download report",
+    "employer.workspace.label": "Employer workspace",
+    "employer.loading": "Loading…",
+    "employer.comingSoon.heading": "Under development",
+    "employer.comingSoon.body":
+      "The employer workspace is under development and not yet available.",
+    "employer.empty.heading": "No employer access yet",
+    "employer.empty.body":
+      "Employer organisation access is assigned by the CQrityjob team. Contact your employer if you're expecting access.",
+    "employer.picker.heading": "Choose organisation",
+    "employer.picker.body":
+      "You belong to more than one organisation. Choose which one to open.",
+    "employer.accessDenied.heading": "Access not available",
+    "employer.accessDenied.body":
+      "You don't have access to this employer organisation, or it doesn't exist.",
+    "employer.switchOrg": "Switch organisation",
+    "employer.role.owner": "Owner",
+    "employer.role.admin": "Admin",
+    "employer.role.member": "Member",
+    "employer.shell.roleLabel": "Your role",
+    "employer.shell.comingSoonNotice":
+      "Job publishing and assessment invitations are coming in a later phase.",
     "sca.progress.label": "Progress",
     "sca.progress.question": "Question",
     "sca.progress.of": "of",
