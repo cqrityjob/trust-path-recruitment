@@ -475,6 +475,21 @@ export const dictionaries = {
     "employer.empty.heading": "Ingen arbetsgivaråtkomst än",
     "employer.empty.body":
       "Åtkomst till en arbetsgivarorganisation tilldelas av CQrityjobs team. Hör av dig till din arbetsgivare om du väntar dig åtkomst.",
+    "employer.empty.selfServe.cta": "Skapa en arbetsgivarorganisation",
+    "employer.onboarding.heading": "Skapa arbetsgivarorganisation",
+    "employer.onboarding.body":
+      "Registrera din organisation för att komma igång. Organisationen får status \"utkast\" tills CQrityjobs team har godkänt den. Du kan skapa och redigera jobbutkast direkt, men publicering kräver godkännande.",
+    "employer.onboarding.name": "Organisationens namn",
+    "employer.onboarding.name.placeholder": "T.ex. Acme Security AB",
+    "employer.onboarding.website": "Webbplats (valfritt)",
+    "employer.onboarding.website.placeholder": "https://…",
+    "employer.onboarding.country": "Land (ISO alpha-2, valfritt)",
+    "employer.onboarding.country.placeholder": "SE",
+    "employer.onboarding.description": "Kort beskrivning (valfritt)",
+    "employer.onboarding.submit": "Skapa organisation",
+    "employer.onboarding.cancel": "Avbryt",
+    "employer.onboarding.pendingNotice":
+      "Din organisation väntar på godkännande. Du kan skapa jobbutkast, men inte skicka in dem för granskning förrän organisationen är godkänd.",
     "employer.picker.heading": "Välj organisation",
     "employer.picker.body":
       "Du är medlem i flera organisationer. Välj vilken du vill öppna.",
