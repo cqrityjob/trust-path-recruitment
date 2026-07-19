@@ -1265,6 +1265,30 @@ export const dictionaries = {
     "employer.shell.roleLabel": "Your role",
     "employer.shell.comingSoonNotice":
       "Job publishing and assessment invitations are coming in a later phase.",
+    "employer.dashboard.card.activeJobs": "Active jobs",
+    "employer.dashboard.card.draftJobs": "Drafts",
+    "employer.dashboard.card.applications": "Applications",
+    "employer.dashboard.card.assessmentInvitations": "Assessment invitations",
+    "employer.dashboard.statsError":
+      "We couldn't load the overview right now. Refresh the page to try again.",
+    "employer.dashboard.actions.heading": "Quick actions",
+    "employer.dashboard.action.createJob": "Create new job",
+    "employer.dashboard.action.manageJobs": "Manage jobs",
+    "employer.dashboard.action.inviteAssessment": "Invite candidate to assessment",
+    "employer.dashboard.action.orgSettings": "Organisation settings",
+    "employer.dashboard.action.open": "Open",
+    "employer.dashboard.action.hideInfo": "Hide",
+    "employer.dashboard.comingNext":
+      "This action activates in the next phase. Nothing changes yet.",
+    "employer.dashboard.empty.heading": "Get started with your employer workspace",
+    "employer.dashboard.empty.body":
+      "You don't have any jobs or applications yet. Here's what the workflow will look like once the next phase is enabled:",
+    "employer.dashboard.empty.step1":
+      "Create a job and submit it for review.",
+    "employer.dashboard.empty.step2":
+      "Invite candidates to complete the CQrityjob assessment.",
+    "employer.dashboard.empty.step3":
+      "Track applications and matches directly in your workspace.",
     "sca.progress.label": "Progress",
     "sca.progress.question": "Question",
     "sca.progress.of": "of",
