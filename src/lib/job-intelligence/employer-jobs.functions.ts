@@ -25,7 +25,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type Ctx = { supabase: any; userId: string };
 
 async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<{ employerSlug: string }> {
-  // Membership + employer active-status check via caller's RLS-scoped client.
+  // Membership + employer editable-status check via caller's RLS-scoped
+  // client. Employers in `pending` (self-service onboarding) and `active`
+  // may edit their own drafts; the database is the source of truth via
+  // employer_members_can_edit() + jobs_employer_* RLS + jobs_validate_
+  // before_write() (which still forbids pending employers from submitting
+  // for review). Public visibility remains gated on `active` only via
+  // employer_is_active_status.
   const { data: membership, error: memErr } = await ctx.supabase
     .from("employer_memberships")
     .select("id, employers!inner(slug, status)")
@@ -38,7 +44,9 @@ async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<{ e
   const emp = Array.isArray((membership as any).employers)
     ? (membership as any).employers[0]
     : (membership as any).employers;
-  if (!emp || emp.status !== "active") throw new Error("Access not available");
+  if (!emp || (emp.status !== "active" && emp.status !== "pending")) {
+    throw new Error("Access not available");
+  }
   return { employerSlug: emp.slug as string };
 }
 
