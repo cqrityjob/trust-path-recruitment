@@ -3050,7 +3050,24 @@ export type Database = {
     Functions: {
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
       cig_lifecycle_enforced: { Args: never; Returns: boolean }
+      create_employer_self_service: {
+        Args: {
+          p_country?: string
+          p_description_en?: string
+          p_description_sv?: string
+          p_name: string
+          p_website?: string
+        }
+        Returns: {
+          employer_id: string
+          employer_slug: string
+        }[]
+      }
       employer_is_active_status: {
+        Args: { _employer_id: string }
+        Returns: boolean
+      }
+      employer_members_can_edit: {
         Args: { _employer_id: string }
         Returns: boolean
       }
@@ -3111,6 +3128,7 @@ export type Database = {
         }[]
       }
       sweep_expired_jobs: { Args: never; Returns: number }
+      unaccent: { Args: { "": string }; Returns: string }
       update_employer_membership: {
         Args: {
           _membership_id: string
