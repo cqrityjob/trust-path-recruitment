@@ -50,6 +50,7 @@ import { Route as AuthenticatedMyCareerReportsRunIdRouteImport } from './routes/
 import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenticated.admin.jobs.$id'
 import { Route as AuthenticatedEmployerEmployerSlugJobsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsNewRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.new'
+import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -272,6 +273,12 @@ const AuthenticatedEmployerEmployerSlugJobsNewRoute =
     path: '/jobs/new',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute =
+  AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport.update({
+    id: '/jobs/$jobId/edit',
+    path: '/jobs/$jobId/edit',
+    getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
+  '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -349,6 +357,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/jobs': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
+  '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -393,6 +402,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/_authenticated/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/_authenticated/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
+  '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -437,6 +447,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/'
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/jobs/'
+    | '/employer/$employerSlug/jobs/$jobId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug'
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/jobs'
+    | '/employer/$employerSlug/jobs/$jobId/edit'
   id:
     | '__root__'
     | '/'
@@ -515,6 +527,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/'
     | '/_authenticated/employer/$employerSlug/jobs/new'
     | '/_authenticated/employer/$employerSlug/jobs/'
+    | '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -826,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsNewRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': {
+      id: '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
+      path: '/jobs/$jobId/edit'
+      fullPath: '/employer/$employerSlug/jobs/$jobId/edit'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
   }
 }
 
@@ -864,6 +884,7 @@ interface AuthenticatedEmployerEmployerSlugRouteChildren {
   AuthenticatedEmployerEmployerSlugIndexRoute: typeof AuthenticatedEmployerEmployerSlugIndexRoute
   AuthenticatedEmployerEmployerSlugJobsNewRoute: typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   AuthenticatedEmployerEmployerSlugJobsIndexRoute: typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
+  AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
 }
 
 const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmployerSlugRouteChildren =
@@ -874,6 +895,8 @@ const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmplo
       AuthenticatedEmployerEmployerSlugJobsNewRoute,
     AuthenticatedEmployerEmployerSlugJobsIndexRoute:
       AuthenticatedEmployerEmployerSlugJobsIndexRoute,
+    AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute:
+      AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute,
   }
 
 const AuthenticatedEmployerEmployerSlugRouteWithChildren =
