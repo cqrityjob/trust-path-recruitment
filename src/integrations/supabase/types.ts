@@ -2148,6 +2148,59 @@ export type Database = {
           },
         ]
       }
+      employer_memberships: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          created_by: string | null
+          employer_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          removed_at: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          removed_at?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          removed_at?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_memberships_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           country: string | null
@@ -2158,6 +2211,7 @@ export type Database = {
           logo_url: string | null
           name: string
           slug: string
+          status: string
           updated_at: string
           website: string | null
         }
@@ -2170,6 +2224,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           slug: string
+          status?: string
           updated_at?: string
           website?: string | null
         }
@@ -2182,6 +2237,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           slug?: string
+          status?: string
           updated_at?: string
           website?: string | null
         }
@@ -2839,6 +2895,14 @@ export type Database = {
     Functions: {
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
       cig_lifecycle_enforced: { Args: never; Returns: boolean }
+      employer_is_active_status: {
+        Args: { _employer_id: string }
+        Returns: boolean
+      }
+      has_employer_role: {
+        Args: { _employer_id: string; _roles?: string[]; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2846,6 +2910,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       job_is_active: {
         Args: {
           p_deadline_at: string
@@ -2874,6 +2939,26 @@ export type Database = {
         Returns: {
           created_new: boolean
           run_id: string
+        }[]
+      }
+      update_employer_membership: {
+        Args: {
+          _membership_id: string
+          _new_role?: string
+          _new_status?: string
+        }
+        Returns: {
+          accepted_at: string
+          changed: boolean
+          created_at: string
+          employer_id: string
+          id: string
+          invited_at: string
+          removed_at: string
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
         }[]
       }
     }
