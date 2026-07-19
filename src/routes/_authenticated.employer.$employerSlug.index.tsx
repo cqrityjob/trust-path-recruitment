@@ -28,7 +28,7 @@ import {
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
-export const Route = createFileRoute("/_authenticated/employer/$employerSlug")({
+export const Route = createFileRoute("/_authenticated/employer/$employerSlug/")({
   ssr: false,
   component: EmployerWorkspacePage,
 });
