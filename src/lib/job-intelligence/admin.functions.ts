@@ -6,9 +6,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // Job Intelligence — Admin Moderation server functions (Phase B).
 //
 // All functions are authenticated via requireSupabaseAuth and additionally
-// gated on `has_role(auth.uid(),'admin')`. RLS on the underlying tables
-// enforces the same rule; the explicit check gives clearer error messages and
-// makes intent obvious in code review.
+// gated on `is_platform_admin(auth.uid())` (platform admin OR superadmin —
+// corrected in Phase G1; previously checked has_role(admin) only, which
+// locked superadmin-only users out of this entire module). RLS on the
+// underlying tables enforces the same rule; the explicit check gives
+// clearer error messages and makes intent obvious in code review.
 //
 // Audit events are written with service_role (via supabaseAdmin, loaded
 // inside the handler) because RLS forbids writes from anon/authenticated.
@@ -17,12 +19,29 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type Ctx = { supabase: any; userId: string };
 
 async function assertAdmin(ctx: Ctx): Promise<void> {
-  const { data, error } = await ctx.supabase.rpc("has_role", {
+  const { data, error } = await ctx.supabase.rpc("is_platform_admin", {
     _user_id: ctx.userId,
-    _role: "admin",
   });
   if (error) throw new Error(`Role check failed: ${error.message}`);
   if (!data) throw new Error("Forbidden: admin role required");
+}
+
+async function writeOrgAudit(params: {
+  action: "employer_created" | "employer_updated" | "employer_status_changed";
+  employerId: string;
+  actorId: string;
+  metadata: Record<string, unknown>;
+}): Promise<void> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("audit_logs").insert({
+    actor_id: params.actorId,
+    actor_role: "platform_admin",
+    action: params.action,
+    subject_type: "employer",
+    subject_id: params.employerId,
+    org_id: params.employerId,
+    metadata: params.metadata as any,
+  });
 }
 
 async function writeAudit(params: {
@@ -430,6 +449,10 @@ const employerPayloadSchema = z.object({
   country: z.string().max(2).optional().nullable(),
   description_sv: z.string().max(4000).optional().nullable(),
   description_en: z.string().max(4000).optional().nullable(),
+  // Phase G1: optional so existing callers (pre-G1 admin UI) keep working
+  // unchanged. Omitted on create -> the column's own DB default ('active')
+  // applies. Omitted on update -> status is left untouched.
+  status: z.enum(["draft", "active", "suspended", "archived"]).optional(),
 });
 
 export const adminUpsertEmployer = createServerFn({ method: "POST" })
@@ -443,19 +466,75 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
     const slug = data.slug?.trim() || slugify(data.name);
 
     if (data.id) {
+      const { data: before, error: beforeErr } = await ctx.supabase
+        .from("employers")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (beforeErr) throw new Error(beforeErr.message);
+      if (!before) throw new Error("Employer not found");
+
+      // No-op guard (Phase G1 code-review fix): if every mutable field
+      // is already exactly what's requested, skip the UPDATE entirely
+      // and write no audit event — an unconditional "employer_updated"
+      // on a no-op save (e.g. re-submitting an unchanged edit form)
+      // would otherwise be a misleading audit row (before === after).
+      const nextStatus = data.status ?? before.status;
+      const isNoOp =
+        before.name === data.name &&
+        before.slug === slug &&
+        (before.website ?? null) === (data.website ?? null) &&
+        (before.country ?? null) === (data.country ?? null) &&
+        (before.description_sv ?? null) === (data.description_sv ?? null) &&
+        (before.description_en ?? null) === (data.description_en ?? null) &&
+        before.status === nextStatus;
+
+      if (isNoOp) {
+        return { id: data.id };
+      }
+
+      const updatePatch: Record<string, unknown> = {
+        name: data.name,
+        slug,
+        website: data.website ?? null,
+        country: data.country ?? null,
+        description_sv: data.description_sv ?? null,
+        description_en: data.description_en ?? null,
+        updated_at: nowIso,
+      };
+      if (data.status) updatePatch.status = data.status;
+
       const { error } = await ctx.supabase
         .from("employers")
-        .update({
-          name: data.name,
-          slug,
-          website: data.website ?? null,
-          country: data.country ?? null,
-          description_sv: data.description_sv ?? null,
-          description_en: data.description_en ?? null,
-          updated_at: nowIso,
-        })
+        .update(updatePatch)
         .eq("id", data.id);
       if (error) throw new Error(error.message);
+
+      const { data: after } = await ctx.supabase
+        .from("employers")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      await writeOrgAudit({
+        action: "employer_updated",
+        employerId: data.id,
+        actorId: ctx.userId,
+        metadata: {
+          before: { name: before.name, slug: before.slug, status: before.status },
+          after: { name: after?.name, slug: after?.slug, status: after?.status },
+        },
+      });
+
+      if (data.status && data.status !== before.status) {
+        await writeOrgAudit({
+          action: "employer_status_changed",
+          employerId: data.id,
+          actorId: ctx.userId,
+          metadata: { before_status: before.status, after_status: data.status },
+        });
+      }
+
       return { id: data.id };
     }
 
@@ -468,6 +547,10 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
         country: data.country ?? null,
         description_sv: data.description_sv ?? null,
         description_en: data.description_en ?? null,
+        // status omitted here deliberately: the column DEFAULT ('active')
+        // applies unless the caller explicitly requested a different
+        // starting status (e.g. 'draft').
+        ...(data.status ? { status: data.status } : {}),
       })
       .select("id")
       .single();
@@ -483,6 +566,13 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
       { onConflict: "employer_id" },
     );
 
+    await writeOrgAudit({
+      action: "employer_created",
+      employerId: inserted.id as string,
+      actorId: ctx.userId,
+      metadata: { name: data.name, slug, status: data.status ?? "active" },
+    });
+
     return { id: inserted.id as string };
   });
 
@@ -492,9 +582,8 @@ export const adminWhoAmI = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = context as Ctx;
-    const { data, error } = await ctx.supabase.rpc("has_role", {
+    const { data, error } = await ctx.supabase.rpc("is_platform_admin", {
       _user_id: ctx.userId,
-      _role: "admin",
     });
     if (error) throw new Error(error.message);
     return { userId: ctx.userId, isAdmin: Boolean(data) };
