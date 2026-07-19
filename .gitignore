@@ -31,7 +31,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local environment files — keep .env.example tracked, ignore everything else
-.env
-.env.*
-!.env.example
+# Local environment files.
+# The project-generated .env holds only PUBLIC Lovable Cloud config
+# (URL, publishable key, project id, release-control flags) and is
+# tracked in Git so fresh runtimes boot without manual restoration.
+# Local override variants remain ignored.
+.env.local
+.env.*.local
