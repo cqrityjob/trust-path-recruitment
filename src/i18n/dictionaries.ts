@@ -1320,6 +1320,21 @@ export const dictionaries = {
     "employer.empty.heading": "No employer access yet",
     "employer.empty.body":
       "Employer organisation access is assigned by the CQrityjob team. Contact your employer if you're expecting access.",
+    "employer.empty.selfServe.cta": "Create an employer organisation",
+    "employer.onboarding.heading": "Create an employer organisation",
+    "employer.onboarding.body":
+      "Register your organisation to get started. It will be created with status \"draft\" until the CQrityjob team approves it. You can create and edit job drafts right away, but publishing requires approval.",
+    "employer.onboarding.name": "Organisation name",
+    "employer.onboarding.name.placeholder": "e.g. Acme Security AB",
+    "employer.onboarding.website": "Website (optional)",
+    "employer.onboarding.website.placeholder": "https://…",
+    "employer.onboarding.country": "Country (ISO alpha-2, optional)",
+    "employer.onboarding.country.placeholder": "SE",
+    "employer.onboarding.description": "Short description (optional)",
+    "employer.onboarding.submit": "Create organisation",
+    "employer.onboarding.cancel": "Cancel",
+    "employer.onboarding.pendingNotice":
+      "Your organisation is pending approval. You can create job drafts, but you cannot submit them for review until the organisation is approved.",
     "employer.picker.heading": "Choose organisation",
     "employer.picker.body":
       "You belong to more than one organisation. Choose which one to open.",
