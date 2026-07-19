@@ -25,9 +25,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
+import { Route as EmployerRegisterRouteImport } from './routes/employer.register'
+import { Route as EmployerLoginRouteImport } from './routes/employer.login'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
+import { Route as CandidateRegisterRouteImport } from './routes/candidate.register'
+import { Route as CandidateLoginRouteImport } from './routes/candidate.login'
 import { Route as AuthenticatedMyCareerRouteImport } from './routes/_authenticated.my-career'
 import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
 import { Route as AuthenticatedEmployerRouteImport } from './routes/_authenticated.employer'
@@ -40,6 +44,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
+import { Route as AuthenticatedEmployerOnboardingRouteImport } from './routes/_authenticated.employer.onboarding'
 import { Route as AuthenticatedEmployerEmployerSlugRouteImport } from './routes/_authenticated.employer.$employerSlug'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authenticated.admin.employers'
@@ -132,6 +137,16 @@ const JobsSlugRoute = JobsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => JobsRoute,
 } as any)
+const EmployerRegisterRoute = EmployerRegisterRouteImport.update({
+  id: '/employer/register',
+  path: '/employer/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmployerLoginRoute = EmployerLoginRouteImport.update({
+  id: '/employer/login',
+  path: '/employer/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevCareerAssessmentCalibrationRoute =
   DevCareerAssessmentCalibrationRouteImport.update({
     id: '/dev/career-assessment-calibration',
@@ -147,6 +162,16 @@ const CareerCenterProfessionRoute = CareerCenterProfessionRouteImport.update({
   id: '/$profession',
   path: '/$profession',
   getParentRoute: () => CareerCenterRoute,
+} as any)
+const CandidateRegisterRoute = CandidateRegisterRouteImport.update({
+  id: '/candidate/register',
+  path: '/candidate/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CandidateLoginRoute = CandidateLoginRouteImport.update({
+  id: '/candidate/login',
+  path: '/candidate/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedMyCareerRoute = AuthenticatedMyCareerRouteImport.update({
   id: '/my-career',
@@ -213,6 +238,12 @@ const AuthenticatedJourneyTargetIdRoute =
     id: '/$targetId',
     path: '/$targetId',
     getParentRoute: () => AuthenticatedJourneyRoute,
+  } as any)
+const AuthenticatedEmployerOnboardingRoute =
+  AuthenticatedEmployerOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedEmployerRoute,
   } as any)
 const AuthenticatedEmployerEmployerSlugRoute =
   AuthenticatedEmployerEmployerSlugRouteImport.update({
@@ -299,9 +330,13 @@ export interface FileRoutesByFullPath {
   '/employer': typeof AuthenticatedEmployerRouteWithChildren
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/candidate/login': typeof CandidateLoginRoute
+  '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/employer/login': typeof EmployerLoginRoute
+  '/employer/register': typeof EmployerRegisterRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -309,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
@@ -337,14 +373,19 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
+  '/candidate/login': typeof CandidateLoginRoute
+  '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/employer/login': typeof EmployerLoginRoute
+  '/employer/register': typeof EmployerRegisterRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
+  '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
@@ -380,9 +421,13 @@ export interface FileRoutesById {
   '/_authenticated/employer': typeof AuthenticatedEmployerRouteWithChildren
   '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/_authenticated/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/candidate/login': typeof CandidateLoginRoute
+  '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/employer/login': typeof EmployerLoginRoute
+  '/employer/register': typeof EmployerRegisterRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -390,6 +435,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
@@ -425,9 +471,13 @@ export interface FileRouteTypes {
     | '/employer'
     | '/journey'
     | '/my-career'
+    | '/candidate/login'
+    | '/candidate/register'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/employer/login'
+    | '/employer/register'
     | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
@@ -435,6 +485,7 @@ export interface FileRouteTypes {
     | '/admin/employers'
     | '/admin/jobs'
     | '/employer/$employerSlug'
+    | '/employer/onboarding'
     | '/journey/$targetId'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
@@ -463,14 +514,19 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/journey'
+    | '/candidate/login'
+    | '/candidate/register'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/employer/login'
+    | '/employer/register'
     | '/jobs/$slug'
     | '/career-center'
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/employers'
+    | '/employer/onboarding'
     | '/journey/$targetId'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
@@ -505,9 +561,13 @@ export interface FileRouteTypes {
     | '/_authenticated/employer'
     | '/_authenticated/journey'
     | '/_authenticated/my-career'
+    | '/candidate/login'
+    | '/candidate/register'
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/employer/login'
+    | '/employer/register'
     | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
@@ -515,6 +575,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/employers'
     | '/_authenticated/admin/jobs'
     | '/_authenticated/employer/$employerSlug'
+    | '/_authenticated/employer/onboarding'
     | '/_authenticated/journey/$targetId'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
@@ -546,7 +607,11 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  CandidateLoginRoute: typeof CandidateLoginRoute
+  CandidateRegisterRoute: typeof CandidateRegisterRoute
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
+  EmployerLoginRoute: typeof EmployerLoginRoute
+  EmployerRegisterRoute: typeof EmployerRegisterRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -664,6 +729,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsSlugRouteImport
       parentRoute: typeof JobsRoute
     }
+    '/employer/register': {
+      id: '/employer/register'
+      path: '/employer/register'
+      fullPath: '/employer/register'
+      preLoaderRoute: typeof EmployerRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/employer/login': {
+      id: '/employer/login'
+      path: '/employer/login'
+      fullPath: '/employer/login'
+      preLoaderRoute: typeof EmployerLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/career-assessment-calibration': {
       id: '/dev/career-assessment-calibration'
       path: '/dev/career-assessment-calibration'
@@ -684,6 +763,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/career-center/$profession'
       preLoaderRoute: typeof CareerCenterProfessionRouteImport
       parentRoute: typeof CareerCenterRoute
+    }
+    '/candidate/register': {
+      id: '/candidate/register'
+      path: '/candidate/register'
+      fullPath: '/candidate/register'
+      preLoaderRoute: typeof CandidateRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/candidate/login': {
+      id: '/candidate/login'
+      path: '/candidate/login'
+      fullPath: '/candidate/login'
+      preLoaderRoute: typeof CandidateLoginRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/my-career': {
       id: '/_authenticated/my-career'
@@ -768,6 +861,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/journey/$targetId'
       preLoaderRoute: typeof AuthenticatedJourneyTargetIdRouteImport
       parentRoute: typeof AuthenticatedJourneyRoute
+    }
+    '/_authenticated/employer/onboarding': {
+      id: '/_authenticated/employer/onboarding'
+      path: '/onboarding'
+      fullPath: '/employer/onboarding'
+      preLoaderRoute: typeof AuthenticatedEmployerOnboardingRouteImport
+      parentRoute: typeof AuthenticatedEmployerRoute
     }
     '/_authenticated/employer/$employerSlug': {
       id: '/_authenticated/employer/$employerSlug'
@@ -906,12 +1006,14 @@ const AuthenticatedEmployerEmployerSlugRouteWithChildren =
 
 interface AuthenticatedEmployerRouteChildren {
   AuthenticatedEmployerEmployerSlugRoute: typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  AuthenticatedEmployerOnboardingRoute: typeof AuthenticatedEmployerOnboardingRoute
   AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
 }
 
 const AuthenticatedEmployerRouteChildren: AuthenticatedEmployerRouteChildren = {
   AuthenticatedEmployerEmployerSlugRoute:
     AuthenticatedEmployerEmployerSlugRouteWithChildren,
+  AuthenticatedEmployerOnboardingRoute: AuthenticatedEmployerOnboardingRoute,
   AuthenticatedEmployerIndexRoute: AuthenticatedEmployerIndexRoute,
 }
 
@@ -1014,7 +1116,11 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  CandidateLoginRoute: CandidateLoginRoute,
+  CandidateRegisterRoute: CandidateRegisterRoute,
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
+  EmployerLoginRoute: EmployerLoginRoute,
+  EmployerRegisterRoute: EmployerRegisterRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport

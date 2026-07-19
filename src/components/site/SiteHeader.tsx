@@ -18,7 +18,12 @@ export function SiteHeader() {
       if (alive) setSignedIn(Boolean(data.session));
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+      if (
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "USER_UPDATED" ||
+        event === "INITIAL_SESSION"
+      ) {
         setSignedIn(Boolean(session));
       }
     });
@@ -66,20 +71,36 @@ export function SiteHeader() {
         <div className="hidden items-center gap-3 md:flex">
           <LanguageSwitcher />
           {signedIn ? (
-            <Link
-              to="/my-career"
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              activeProps={{ className: "bg-muted" }}
-            >
-              {t("nav.my_career")}
-            </Link>
+            <>
+              <Link
+                to="/my-career"
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                activeProps={{ className: "bg-muted" }}
+              >
+                {t("nav.my_career")}
+              </Link>
+              <Link
+                to="/employer"
+                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {t("nav.employerPortal")}
+              </Link>
+            </>
           ) : (
-            <Link
-              to="/auth"
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              {t("nav.signin")}
-            </Link>
+            <>
+              <Link
+                to="/candidate/login"
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {t("nav.signin")}
+              </Link>
+              <Link
+                to="/employer/login"
+                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {t("nav.employerSignin")}
+              </Link>
+            </>
           )}
         </div>
 
@@ -107,25 +128,34 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <div className="mt-3 flex items-center justify-between">
-            <LanguageSwitcher />
-            {signedIn ? (
-              <Link
-                to="/my-career"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
-              >
-                {t("nav.my_career")}
-              </Link>
-            ) : (
-              <Link
-                to="/auth"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
-              >
-                {t("nav.signin")}
-              </Link>
-            )}
+          <div className="mt-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <LanguageSwitcher />
+              {signedIn ? (
+                <Link
+                  to="/my-career"
+                  onClick={() => setOpen(false)}
+                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                >
+                  {t("nav.my_career")}
+                </Link>
+              ) : (
+                <Link
+                  to="/candidate/login"
+                  onClick={() => setOpen(false)}
+                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+                >
+                  {t("nav.signin")}
+                </Link>
+              )}
+            </div>
+            <Link
+              to={signedIn ? "/employer" : "/employer/login"}
+              onClick={() => setOpen(false)}
+              className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              {signedIn ? t("nav.employerPortal") : t("nav.employerSignin")}
+            </Link>
           </div>
         </Container>
       </div>

@@ -3,9 +3,29 @@
 // (listMyEmployerWorkspaces — Phase G1 RLS-scoped, re-derived fresh on
 // every load, never trusted from any client-cached/stored value):
 //
-//   0 workspaces  -> neutral empty state, no self-registration CTA
+//   0 workspaces  -> Phase H3.1: auto-redirect to /employer/onboarding
+//                    (was a dead-end empty state pre-H3.1 — self-service
+//                    company creation now lives on that dedicated page,
+//                    not inline here — see the H3.1 reconciliation note
+//                    below for why the inline form that briefly existed
+//                    on this route was removed rather than kept)
 //   1 workspace   -> auto-redirect straight into it, no unnecessary picker
 //   2+ workspaces -> accessible picker (semantic <Link>s, keyboard-navigable)
+//
+// H3.1 reconciliation note: an inline "create your company" form
+// (EmployerZeroState/EmployerOnboardingForm, calling
+// createSelfServiceEmployer/create_employer_self_service) was briefly
+// implemented directly on this route in parallel, independently of the
+// approved candidate-employer-portal-spec-v1.md work. It is intentionally
+// NOT kept here — the canonical zero-workspace experience is the fuller
+// /employer/onboarding page (create-company form with duplicate detection,
+// registration number, job title, plus the contact-CQrityjob guidance for
+// an already-existing company), per the approved spec. The underlying
+// create_employer_self_service()/employer_members_can_edit() database
+// functions from that parallel work are left untouched (not dropped) in
+// case other already-shipped code depends on them (see the H3.1
+// implementation report for the full reconciliation record) — only this
+// route's inline form was removed, in favour of the redirect below.
 //
 // Optional UX convenience: a last-visited employer slug in localStorage
 // (set by the $employerSlug route on successful access) lets a
@@ -21,14 +41,13 @@
 // what the caller actually has.
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
-import { createSelfServiceEmployer } from "@/lib/job-intelligence/employer-onboarding.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
@@ -76,7 +95,12 @@ function EmployerWorkspacePicker() {
   const workspaces = query.data ?? [];
 
   useEffect(() => {
-    if (!query.isSuccess || workspaces.length === 0) return;
+    if (!query.isSuccess) return;
+
+    if (workspaces.length === 0) {
+      navigate({ to: "/employer/onboarding", replace: true });
+      return;
+    }
 
     if (workspaces.length === 1) {
       navigate({
@@ -127,14 +151,12 @@ function EmployerWorkspacePicker() {
     );
   }
 
-  if (workspaces.length === 0) {
-    return <EmployerZeroState />;
-  }
-
-  // workspaces.length === 1 redirects via the effect above; a brief
-  // loading state covers that instant. workspaces.length >= 2 (or a
-  // stale/no stored slug on a multi-membership account) renders here.
-  if (workspaces.length === 1) {
+  // workspaces.length === 0 and workspaces.length === 1 both redirect via
+  // the effect above (0 -> /employer/onboarding, 1 -> auto-select); a
+  // brief loading state covers that instant for either case.
+  // workspaces.length >= 2 (or a stale/no stored slug on a multi-membership
+  // account) renders the picker below.
+  if (workspaces.length <= 1) {
     return (
       <SiteLayout>
         <Section containerClassName="max-w-2xl">
@@ -183,179 +205,6 @@ function EmployerWorkspacePicker() {
             {t("sca.report.backToMyCareer")}
           </Link>
         </div>
-      </Section>
-    </SiteLayout>
-  );
-}
-
-function EmployerZeroState() {
-  const { t } = useT();
-  const [mode, setMode] = useState<"idle" | "form">("idle");
-
-  if (mode === "form") {
-    return <EmployerOnboardingForm onCancel={() => setMode("idle")} />;
-  }
-
-  return (
-    <SiteLayout>
-      <Section containerClassName="max-w-2xl">
-        <h1 className="text-2xl font-semibold text-foreground">
-          {t("employer.empty.heading")}
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">{t("employer.empty.body")}</p>
-        <div className="mt-6 flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setMode("form")}
-            className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {t("employer.empty.selfServe.cta")}
-          </button>
-          <Link to="/my-career" className="text-sm font-medium text-accent hover:underline">
-            {t("sca.report.backToMyCareer")}
-          </Link>
-        </div>
-      </Section>
-    </SiteLayout>
-  );
-}
-
-function EmployerOnboardingForm({ onCancel }: { onCancel: () => void }) {
-  const { t } = useT();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const create = useServerFn(createSelfServiceEmployer);
-
-  const [name, setName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [country, setCountry] = useState("");
-  const [descriptionSv, setDescriptionSv] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const result = await create({
-        data: {
-          name,
-          website: website || null,
-          country: country || null,
-          descriptionSv: descriptionSv || null,
-          descriptionEn: null,
-        },
-      });
-      await queryClient.invalidateQueries({ queryKey: ["employer", "my-workspaces"] });
-      navigate({
-        to: "/employer/$employerSlug",
-        params: { employerSlug: result.employerSlug },
-        replace: true,
-      });
-    } catch (err) {
-      setError((err as Error)?.message ?? "Could not create organisation.");
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <SiteLayout>
-      <Section containerClassName="max-w-2xl">
-        <h1 className="text-2xl font-semibold text-foreground">
-          {t("employer.onboarding.heading")}
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">{t("employer.onboarding.body")}</p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
-          <div>
-            <label htmlFor="employer-name" className="block text-sm font-medium text-foreground">
-              {t("employer.onboarding.name")}
-            </label>
-            <input
-              id="employer-name"
-              type="text"
-              required
-              minLength={2}
-              maxLength={200}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("employer.onboarding.name.placeholder")}
-              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="employer-website" className="block text-sm font-medium text-foreground">
-              {t("employer.onboarding.website")}
-            </label>
-            <input
-              id="employer-website"
-              type="url"
-              maxLength={500}
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder={t("employer.onboarding.website.placeholder")}
-              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="employer-country" className="block text-sm font-medium text-foreground">
-              {t("employer.onboarding.country")}
-            </label>
-            <input
-              id="employer-country"
-              type="text"
-              maxLength={2}
-              value={country}
-              onChange={(e) => setCountry(e.target.value.toUpperCase())}
-              placeholder={t("employer.onboarding.country.placeholder")}
-              className="mt-1 block w-32 rounded-md border border-border bg-background px-3 py-2 text-sm uppercase text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="employer-description"
-              className="block text-sm font-medium text-foreground"
-            >
-              {t("employer.onboarding.description")}
-            </label>
-            <textarea
-              id="employer-description"
-              maxLength={2000}
-              value={descriptionSv}
-              onChange={(e) => setDescriptionSv(e.target.value)}
-              rows={4}
-              className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={submitting || name.trim().length < 2}
-              className="inline-flex items-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
-            >
-              {submitting ? t("employer.loading") : t("employer.onboarding.submit")}
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={submitting}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-            >
-              {t("employer.onboarding.cancel")}
-            </button>
-          </div>
-        </form>
       </Section>
     </SiteLayout>
   );
