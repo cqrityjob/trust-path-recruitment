@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import {
   MapPin,
   Building2,
@@ -23,6 +23,11 @@ import {
   type PublicJobDetail,
   type PublicEmployer,
 } from "@/lib/job-intelligence/public-queries";
+import {
+  getPublicJobBySlugSSR,
+  type PublicJobSsrDetail,
+} from "@/lib/job-intelligence/public-queries.functions";
+import { buildJobPostingJsonLd, buildJobHeadMeta } from "@/lib/job-intelligence/seo";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { getProfession } from "@/lib/career-center/professions";
 import {
@@ -37,23 +42,19 @@ import { JobRelevancePanel } from "@/components/jobs/JobRelevancePanel";
 import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 
+function jobDetailQueryOptions(slug: string) {
+  return queryOptions({
+    queryKey: ["public-job-ssr", slug],
+    queryFn: () => getPublicJobBySlugSSR({ data: { slug } }),
+  });
+}
+
 export const Route = createFileRoute("/jobs/$slug")({
-  ssr: false,
-  head: ({ params }) => {
-    const url = `https://trust-path-recruitment.lovable.app/jobs/${params.slug}`;
-    return {
-      meta: [
-        { title: "Security job — CQrityjob" },
-        {
-          name: "description",
-          content:
-            "Role details, requirements and how to apply — from a vetted employer in the security industry.",
-        },
-        { property: "og:type", content: "article" },
-        { property: "og:url", content: url },
-      ],
-      links: [{ rel: "canonical", href: url }],
-    };
+  loader: ({ params, context }) =>
+    context.queryClient.ensureQueryData(jobDetailQueryOptions(params.slug)),
+  head: ({ params, loaderData }) => {
+    const job = loaderData as PublicJobSsrDetail | null | undefined;
+    return buildJobHeadMeta(params.slug, job ?? null);
   },
   component: JobDetailPage,
   errorComponent: ({ error }) => <ErrorState message={error.message} />,
@@ -135,6 +136,11 @@ function JobDetailPage() {
   const { slug } = Route.useParams();
   const { t, lang } = useT();
 
+  const ssr = useSuspenseQuery(jobDetailQueryOptions(slug));
+  if (!ssr.data) throw notFound();
+
+  // The existing UI depends on `PublicJobDetail` (browser-client shape).
+  // The SSR fetch is a superset of it; cast is safe.
   const q = useQuery({
     queryKey: ["public-job", slug],
     queryFn: async () => {
@@ -142,6 +148,7 @@ function JobDetailPage() {
       if (!job) throw notFound();
       return job;
     },
+    initialData: ssr.data as unknown as PublicJobDetail,
   });
 
   const profileState = useCareerProfileForJobs();
