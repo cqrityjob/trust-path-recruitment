@@ -97,7 +97,7 @@ export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
     const app = await loadApplication(ctx, data.applicationId);
     await assertActiveEmployerMember(ctx, app.employer_id);
 
-    const patch: Record<string, unknown> = {};
+    const patch: { status?: "viewed"; employer_note?: string | null } = {};
     if (data.markViewed && app.status === "submitted") patch.status = "viewed";
     if (data.employerNote !== undefined) patch.employer_note = data.employerNote;
 
