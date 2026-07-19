@@ -40,6 +40,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
+import { Route as AuthenticatedEmployerEmployerSlugRouteImport } from './routes/_authenticated.employer.$employerSlug'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authenticated.admin.employers'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -210,6 +211,12 @@ const AuthenticatedJourneyTargetIdRoute =
     path: '/$targetId',
     getParentRoute: () => AuthenticatedJourneyRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugRoute =
+  AuthenticatedEmployerEmployerSlugRouteImport.update({
+    id: '/$employerSlug',
+    path: '/$employerSlug',
+    getParentRoute: () => AuthenticatedEmployerRoute,
+  } as any)
 const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -229,9 +236,9 @@ const Char91DotmcpChar93InvokeToolToolRoute =
   } as any)
 const AuthenticatedEmployerEmployerSlugIndexRoute =
   AuthenticatedEmployerEmployerSlugIndexRouteImport.update({
-    id: '/$employerSlug/',
-    path: '/$employerSlug/',
-    getParentRoute: () => AuthenticatedEmployerRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
 const AuthenticatedAdminJobsIndexRoute =
   AuthenticatedAdminJobsIndexRouteImport.update({
@@ -280,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
+  '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
@@ -354,6 +362,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
+  '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
@@ -395,6 +404,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/employers'
     | '/admin/jobs'
+    | '/employer/$employerSlug'
     | '/journey/$targetId'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
@@ -468,6 +478,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/employers'
     | '/_authenticated/admin/jobs'
+    | '/_authenticated/employer/$employerSlug'
     | '/_authenticated/journey/$targetId'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
@@ -719,6 +730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedJourneyTargetIdRouteImport
       parentRoute: typeof AuthenticatedJourneyRoute
     }
+    '/_authenticated/employer/$employerSlug': {
+      id: '/_authenticated/employer/$employerSlug'
+      path: '/$employerSlug'
+      fullPath: '/employer/$employerSlug'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugRouteImport
+      parentRoute: typeof AuthenticatedEmployerRoute
+    }
     '/_authenticated/admin/jobs': {
       id: '/_authenticated/admin/jobs'
       path: '/jobs'
@@ -742,10 +760,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/employer/$employerSlug/': {
       id: '/_authenticated/employer/$employerSlug/'
-      path: '/$employerSlug'
+      path: '/'
       fullPath: '/employer/$employerSlug/'
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugIndexRouteImport
-      parentRoute: typeof AuthenticatedEmployerRoute
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
     '/_authenticated/admin/jobs/': {
       id: '/_authenticated/admin/jobs/'
@@ -802,15 +820,30 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
-interface AuthenticatedEmployerRouteChildren {
-  AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
+interface AuthenticatedEmployerEmployerSlugRouteChildren {
   AuthenticatedEmployerEmployerSlugIndexRoute: typeof AuthenticatedEmployerEmployerSlugIndexRoute
 }
 
+const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmployerSlugRouteChildren =
+  {
+    AuthenticatedEmployerEmployerSlugIndexRoute:
+      AuthenticatedEmployerEmployerSlugIndexRoute,
+  }
+
+const AuthenticatedEmployerEmployerSlugRouteWithChildren =
+  AuthenticatedEmployerEmployerSlugRoute._addFileChildren(
+    AuthenticatedEmployerEmployerSlugRouteChildren,
+  )
+
+interface AuthenticatedEmployerRouteChildren {
+  AuthenticatedEmployerEmployerSlugRoute: typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
+}
+
 const AuthenticatedEmployerRouteChildren: AuthenticatedEmployerRouteChildren = {
+  AuthenticatedEmployerEmployerSlugRoute:
+    AuthenticatedEmployerEmployerSlugRouteWithChildren,
   AuthenticatedEmployerIndexRoute: AuthenticatedEmployerIndexRoute,
-  AuthenticatedEmployerEmployerSlugIndexRoute:
-    AuthenticatedEmployerEmployerSlugIndexRoute,
 }
 
 const AuthenticatedEmployerRouteWithChildren =
