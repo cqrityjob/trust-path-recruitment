@@ -94,3 +94,11 @@ shell never surfaces different messages for "no such employer" vs
 - **Modified** `src/routes/_authenticated.employer.$employerSlug.tsx`
 - **Modified** `src/i18n/dictionaries.ts` (17 new keys × 2 locales)
 - **Added** `docs/job-intelligence/phase-g3-report.md`
+
+## Owner approval
+
+- **Status:** Approved as delivered.
+- **Delivery commit:** `feb7dacabdce311e61d865bdd83e0e84e767a298` on `main`.
+- **Pull request:** No PR was created; Lovable had already fast-forwarded the implementation to `origin/main`.
+- **Feature flag:** `VITE_EMPLOYER_PORTAL_ENABLED` remains `"false"` in tracked `.env`.
+- **Published site:** Unchanged; employer portal remains inactive in production.
