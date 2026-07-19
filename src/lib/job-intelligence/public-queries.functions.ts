@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [k: string]: JsonValue };
+
 // -----------------------------------------------------------------------------
 // Jobs MVP v1 — H2: SSR-safe public job queries.
 //
@@ -33,9 +41,9 @@ export type PublicJobSsrDetail = {
   title_en: string | null;
   description_sv: string | null;
   description_en: string | null;
-  responsibilities: unknown[] | Record<string, unknown> | null;
-  requirements: unknown[] | Record<string, unknown> | null;
-  benefits: unknown[] | Record<string, unknown> | null;
+  responsibilities: JsonValue;
+  requirements: JsonValue;
+  benefits: JsonValue;
   location_text: string | null;
   country: string | null;
   city: string | null;
