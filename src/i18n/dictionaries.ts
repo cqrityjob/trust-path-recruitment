@@ -475,6 +475,21 @@ export const dictionaries = {
     "employer.empty.heading": "Ingen arbetsgivaråtkomst än",
     "employer.empty.body":
       "Åtkomst till en arbetsgivarorganisation tilldelas av CQrityjobs team. Hör av dig till din arbetsgivare om du väntar dig åtkomst.",
+    "employer.empty.selfServe.cta": "Skapa en arbetsgivarorganisation",
+    "employer.onboarding.heading": "Skapa arbetsgivarorganisation",
+    "employer.onboarding.body":
+      "Registrera din organisation för att komma igång. Organisationen får status \"utkast\" tills CQrityjobs team har godkänt den. Du kan skapa och redigera jobbutkast direkt, men publicering kräver godkännande.",
+    "employer.onboarding.name": "Organisationens namn",
+    "employer.onboarding.name.placeholder": "T.ex. Acme Security AB",
+    "employer.onboarding.website": "Webbplats (valfritt)",
+    "employer.onboarding.website.placeholder": "https://…",
+    "employer.onboarding.country": "Land (ISO alpha-2, valfritt)",
+    "employer.onboarding.country.placeholder": "SE",
+    "employer.onboarding.description": "Kort beskrivning (valfritt)",
+    "employer.onboarding.submit": "Skapa organisation",
+    "employer.onboarding.cancel": "Avbryt",
+    "employer.onboarding.pendingNotice":
+      "Din organisation väntar på godkännande. Du kan skapa jobbutkast, men inte skicka in dem för granskning förrän organisationen är godkänd.",
     "employer.picker.heading": "Välj organisation",
     "employer.picker.body":
       "Du är medlem i flera organisationer. Välj vilken du vill öppna.",
@@ -1305,6 +1320,21 @@ export const dictionaries = {
     "employer.empty.heading": "No employer access yet",
     "employer.empty.body":
       "Employer organisation access is assigned by the CQrityjob team. Contact your employer if you're expecting access.",
+    "employer.empty.selfServe.cta": "Create an employer organisation",
+    "employer.onboarding.heading": "Create an employer organisation",
+    "employer.onboarding.body":
+      "Register your organisation to get started. It will be created with status \"draft\" until the CQrityjob team approves it. You can create and edit job drafts right away, but publishing requires approval.",
+    "employer.onboarding.name": "Organisation name",
+    "employer.onboarding.name.placeholder": "e.g. Acme Security AB",
+    "employer.onboarding.website": "Website (optional)",
+    "employer.onboarding.website.placeholder": "https://…",
+    "employer.onboarding.country": "Country (ISO alpha-2, optional)",
+    "employer.onboarding.country.placeholder": "SE",
+    "employer.onboarding.description": "Short description (optional)",
+    "employer.onboarding.submit": "Create organisation",
+    "employer.onboarding.cancel": "Cancel",
+    "employer.onboarding.pendingNotice":
+      "Your organisation is pending approval. You can create job drafts, but you cannot submit them for review until the organisation is approved.",
     "employer.picker.heading": "Choose organisation",
     "employer.picker.body":
       "You belong to more than one organisation. Choose which one to open.",
