@@ -2110,6 +2110,53 @@ export type Database = {
         }
         Relationships: []
       }
+      employer_access_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          employer_id: string
+          granted_role: string | null
+          id: string
+          message: string | null
+          requester_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employer_id: string
+          granted_role?: string | null
+          id?: string
+          message?: string | null
+          requester_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employer_id?: string
+          granted_role?: string | null
+          id?: string
+          message?: string | null
+          requester_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_access_requests_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employer_admin_meta: {
         Row: {
           created_at: string
@@ -2157,6 +2204,7 @@ export type Database = {
           id: string
           invited_at: string | null
           invited_by: string | null
+          job_title: string | null
           removed_at: string | null
           role: string
           status: string
@@ -2171,6 +2219,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           invited_by?: string | null
+          job_title?: string | null
           removed_at?: string | null
           role: string
           status?: string
@@ -2185,6 +2234,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           invited_by?: string | null
+          job_title?: string | null
           removed_at?: string | null
           role?: string
           status?: string
@@ -2210,6 +2260,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          registration_number: string | null
           slug: string
           status: string
           updated_at: string
@@ -2223,6 +2274,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          registration_number?: string | null
           slug: string
           status?: string
           updated_at?: string
@@ -2236,6 +2288,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          registration_number?: string | null
           slug?: string
           status?: string
           updated_at?: string
@@ -3048,6 +3101,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_access_request: {
+        Args: { _decision: string; _granted_role?: string; _request_id: string }
+        Returns: {
+          employer_id: string
+          membership_id: string
+          request_id: string
+          status: string
+        }[]
+      }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
       cig_lifecycle_enforced: { Args: never; Returns: boolean }
       create_employer_self_service: {
@@ -3061,6 +3123,21 @@ export type Database = {
         Returns: {
           employer_id: string
           employer_slug: string
+        }[]
+      }
+      create_my_employer_company: {
+        Args: {
+          _country: string
+          _job_title?: string
+          _name: string
+          _registration_number?: string
+          _slug_base: string
+          _website?: string
+        }
+        Returns: {
+          employer_id: string
+          employer_slug: string
+          membership_id: string
         }[]
       }
       employer_is_active_status: {
