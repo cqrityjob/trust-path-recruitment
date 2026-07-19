@@ -117,6 +117,7 @@ function EmployerWorkspaceShell() {
   return (
     <EmployerDashboard
       employerId={workspace.employerId}
+      employerSlug={workspace.employerSlug}
       employerName={workspace.employerName}
       role={workspace.role}
       showSwitcher={workspaces.length > 1}
@@ -126,11 +127,13 @@ function EmployerWorkspaceShell() {
 
 function EmployerDashboard({
   employerId,
+  employerSlug,
   employerName,
   role,
   showSwitcher,
 }: {
   employerId: string;
+  employerSlug: string;
   employerName: string;
   role: "owner" | "admin" | "member";
   showSwitcher: boolean;
@@ -169,11 +172,32 @@ function EmployerDashboard({
     },
   ];
 
-  const actions: Array<{ key: string; label: string }> = [
-    { key: "createJob", label: t("employer.dashboard.action.createJob") },
-    { key: "manageJobs", label: t("employer.dashboard.action.manageJobs") },
-    { key: "inviteAssessment", label: t("employer.dashboard.action.inviteAssessment") },
-    { key: "orgSettings", label: t("employer.dashboard.action.orgSettings") },
+  type Action =
+    | { key: string; label: string; kind: "link"; to: "/employer/$employerSlug/jobs" | "/employer/$employerSlug/jobs/new" }
+    | { key: string; label: string; kind: "coming-next" };
+  const actions: Array<Action> = [
+    {
+      key: "createJob",
+      label: t("employer.dashboard.action.createJob"),
+      kind: "link",
+      to: "/employer/$employerSlug/jobs/new",
+    },
+    {
+      key: "manageJobs",
+      label: t("employer.dashboard.action.manageJobs"),
+      kind: "link",
+      to: "/employer/$employerSlug/jobs",
+    },
+    {
+      key: "inviteAssessment",
+      label: t("employer.dashboard.action.inviteAssessment"),
+      kind: "coming-next",
+    },
+    {
+      key: "orgSettings",
+      label: t("employer.dashboard.action.orgSettings"),
+      kind: "coming-next",
+    },
   ];
 
   return (
@@ -242,18 +266,28 @@ function EmployerDashboard({
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium text-foreground">{a.label}</span>
-                    <button
-                      type="button"
-                      onClick={() => setPendingAction(active ? null : a.key)}
-                      aria-expanded={active}
-                      className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    >
-                      {active
-                        ? t("employer.dashboard.action.hideInfo")
-                        : t("employer.dashboard.action.open")}
-                    </button>
+                    {a.kind === "link" ? (
+                      <Link
+                        to={a.to}
+                        params={{ employerSlug }}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        {t("employer.dashboard.action.open")}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setPendingAction(active ? null : a.key)}
+                        aria-expanded={active}
+                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        {active
+                          ? t("employer.dashboard.action.hideInfo")
+                          : t("employer.dashboard.action.open")}
+                      </button>
+                    )}
                   </div>
-                  {active && (
+                  {a.kind === "coming-next" && active && (
                     <p className="mt-3 text-xs text-muted-foreground">
                       {t("employer.dashboard.comingNext")}
                     </p>
