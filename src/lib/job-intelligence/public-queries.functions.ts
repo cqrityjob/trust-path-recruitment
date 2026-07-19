@@ -33,9 +33,9 @@ export type PublicJobSsrDetail = {
   title_en: string | null;
   description_sv: string | null;
   description_en: string | null;
-  responsibilities: unknown;
-  requirements: unknown;
-  benefits: unknown;
+  responsibilities: unknown[] | Record<string, unknown> | null;
+  requirements: unknown[] | Record<string, unknown> | null;
+  benefits: unknown[] | Record<string, unknown> | null;
   location_text: string | null;
   country: string | null;
   city: string | null;
