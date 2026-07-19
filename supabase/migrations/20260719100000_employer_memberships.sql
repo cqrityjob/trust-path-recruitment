@@ -319,3 +319,205 @@ ALTER POLICY "job_admin_meta_admin_all" ON public.job_admin_meta
 -- 8/8
 ALTER POLICY "job_audit_events_admin_select" ON public.job_audit_events
   USING (public.is_platform_admin(auth.uid()));
+
+
+-- -----------------------------------------------------------------------------
+-- 9. public.update_employer_membership(uuid, text, text) — atomic
+--    role/status mutation with race-free final-active-owner protection
+-- -----------------------------------------------------------------------------
+-- Added after the Phase G1 code review identified a real check-then-act
+-- race: the original design ran a plain SELECT count(...) in application
+-- code, then a separate UPDATE, with no lock and no shared transaction.
+-- Two concurrent platform-admin requests, each demoting a DIFFERENT
+-- active owner of the SAME employer, could both pass their own count
+-- check before either committed, jointly leaving the employer with zero
+-- active owners — exactly the state this feature exists to prevent.
+--
+-- Fix: the count-check and the mutation now happen inside ONE function,
+-- in ONE transaction, after taking row locks that force any second
+-- concurrent call touching the same employer to wait rather than race.
+--
+-- SECURITY INVOKER (not DEFINER): deliberately. The calling platform
+-- admin already has direct RLS-granted access to employer_memberships
+-- via the employer_memberships_admin_all policy (section 5 above) — a
+-- SECURITY INVOKER function runs with the caller's own privileges and
+-- auth.uid(), so RLS keeps applying inside it exactly as if the caller
+-- ran the statements directly. This means RLS remains the authoritative
+-- boundary even if the explicit is_platform_admin() check below were
+-- ever accidentally removed in a future edit — a non-admin's SELECT ...
+-- FOR UPDATE / UPDATE would still be denied by RLS itself, not merely
+-- by this function's own logic. SECURITY DEFINER was considered and
+-- rejected: nothing here needs to read or write anything the calling
+-- admin doesn't already have direct RLS access to, so bypassing RLS
+-- would only widen the trust boundary for no benefit.
+--
+-- Locking strategy (the actual race fix): one SELECT ... FOR UPDATE
+-- locks the target membership row AND every row that is currently an
+-- active owner for the same employer, together, in a single statement,
+-- ordered by id. Two concurrent calls against the same employer always
+-- request that same lock set in that same order, so the second call
+-- simply blocks (ordinary lock contention) until the first call's
+-- transaction commits or rolls back — it can never observe a stale,
+-- pre-change count, and the two calls can never deadlock each other
+-- (both always acquire locks in the same relative order). Once
+-- unblocked, the second call re-reads the now-committed state and
+-- evaluates the final-owner rule against genuinely current data.
+--
+-- No-op handling: if the requested role/status equals the row's current
+-- role/status, the function returns immediately with changed = false
+-- and performs no UPDATE at all — the caller (membership.functions.ts)
+-- uses this flag to skip writing a misleading audit event for a change
+-- that didn't happen.
+--
+-- removed_at semantics: set to now() exactly when the resulting status
+-- is 'removed', and explicitly cleared to NULL for every other
+-- resulting status (active, invited, suspended) — a membership can never
+-- carry a stale removed_at from an earlier removal after being
+-- reactivated or otherwise changed.
+
+CREATE OR REPLACE FUNCTION public.update_employer_membership(
+  _membership_id uuid,
+  _new_role text DEFAULT NULL,
+  _new_status text DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  employer_id uuid,
+  user_id uuid,
+  role text,
+  status text,
+  invited_at timestamptz,
+  accepted_at timestamptz,
+  removed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  changed boolean
+)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+AS $$
+DECLARE
+  _caller uuid := auth.uid();
+  _employer_id uuid;
+  _existing public.employer_memberships;
+  _final_role text;
+  _final_status text;
+  _other_active_owners int;
+  _now timestamptz := now();
+BEGIN
+  -- Authorization: auth.uid() only. No actor identity is ever accepted
+  -- as a parameter, so a caller cannot assert someone else's identity.
+  IF _caller IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  IF NOT public.is_platform_admin(_caller) THEN
+    RAISE EXCEPTION 'Forbidden: platform admin role required';
+  END IF;
+
+  -- Input validation: explicit, even though the TypeScript caller also
+  -- validates with zod against the same value sets — this function must
+  -- be safe to call directly (e.g. via a raw RPC request), not just via
+  -- the approved server function.
+  IF _new_role IS NULL AND _new_status IS NULL THEN
+    RAISE EXCEPTION 'No change requested: specify a new role, a new status, or both';
+  END IF;
+  IF _new_role IS NOT NULL AND _new_role NOT IN ('owner', 'admin', 'member') THEN
+    RAISE EXCEPTION 'Invalid role';
+  END IF;
+  IF _new_status IS NOT NULL AND _new_status NOT IN ('invited', 'active', 'suspended', 'removed') THEN
+    RAISE EXCEPTION 'Invalid status';
+  END IF;
+
+  SELECT em.employer_id INTO _employer_id
+  FROM public.employer_memberships em
+  WHERE em.id = _membership_id;
+
+  IF _employer_id IS NULL THEN
+    RAISE EXCEPTION 'Membership not found';
+  END IF;
+
+  -- The actual race fix: lock the target row and every active-owner row
+  -- for this employer together, in id order. See the comment block
+  -- above for why this specific shape avoids both the race and any
+  -- deadlock between two concurrent calls.
+  PERFORM 1
+  FROM public.employer_memberships em
+  WHERE em.employer_id = _employer_id
+    AND (em.id = _membership_id OR (em.role = 'owner' AND em.status = 'active'))
+  ORDER BY em.id
+  FOR UPDATE;
+
+  SELECT * INTO _existing FROM public.employer_memberships WHERE id = _membership_id;
+
+  _final_role := COALESCE(_new_role, _existing.role);
+  _final_status := COALESCE(_new_status, _existing.status);
+
+  -- No-op: nothing to change. Return the current row unchanged with
+  -- changed = false and stop — no UPDATE, no updated_at bump.
+  IF _final_role = _existing.role AND _final_status = _existing.status THEN
+    RETURN QUERY
+      SELECT em.id, em.employer_id, em.user_id, em.role, em.status,
+             em.invited_at, em.accepted_at, em.removed_at, em.created_at, em.updated_at,
+             false
+      FROM public.employer_memberships em
+      WHERE em.id = _membership_id;
+    RETURN;
+  END IF;
+
+  -- Final-active-owner protection: only relevant when the row being
+  -- changed is CURRENTLY an active owner and the requested change would
+  -- move it out of that state. The count below is computed after the
+  -- lock above, inside this same transaction, against rows this
+  -- transaction already holds locks on — no other transaction can have
+  -- changed them since.
+  IF _existing.role = 'owner' AND _existing.status = 'active'
+     AND (_final_role <> 'owner' OR _final_status <> 'active') THEN
+    SELECT count(*) INTO _other_active_owners
+    FROM public.employer_memberships em
+    WHERE em.employer_id = _employer_id
+      AND em.role = 'owner'
+      AND em.status = 'active'
+      AND em.id <> _membership_id;
+
+    IF _other_active_owners = 0 THEN
+      RAISE EXCEPTION 'Cannot change this membership: it is the only active owner for this employer. Assign another active owner first.';
+    END IF;
+  END IF;
+
+  UPDATE public.employer_memberships em
+  SET role = _final_role,
+      status = _final_status,
+      accepted_at = CASE
+        WHEN _final_status = 'active' AND em.status <> 'active' THEN _now
+        ELSE em.accepted_at
+      END,
+      -- removed_at semantics (Phase G1 code-review fix): set only when
+      -- the resulting status is 'removed', cleared to NULL for every
+      -- other resulting status — never left stale.
+      removed_at = CASE WHEN _final_status = 'removed' THEN _now ELSE NULL END,
+      updated_at = _now
+  WHERE em.id = _membership_id;
+
+  RETURN QUERY
+    SELECT em.id, em.employer_id, em.user_id, em.role, em.status,
+           em.invited_at, em.accepted_at, em.removed_at, em.created_at, em.updated_at,
+           true
+    FROM public.employer_memberships em
+    WHERE em.id = _membership_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.update_employer_membership(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.update_employer_membership(uuid, text, text) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.update_employer_membership(uuid, text, text) IS
+  'Atomic role/status mutation for employer_memberships, added by the '
+  'Phase G1 code-review fix. Authorization: auth.uid() + is_platform_admin() '
+  'only, re-checked here even though RLS also enforces it. Concurrency: '
+  'locks the target row and all active-owner rows for the employer '
+  'together (id order) before evaluating the final-owner rule, so '
+  'concurrent calls on the same employer serialize instead of racing. '
+  'No-op calls (role/status unchanged) return changed = false and write '
+  'nothing. removed_at is always NULL unless the resulting status is '
+  '''removed''.';

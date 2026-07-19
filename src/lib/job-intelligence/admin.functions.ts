@@ -474,6 +474,25 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
       if (beforeErr) throw new Error(beforeErr.message);
       if (!before) throw new Error("Employer not found");
 
+      // No-op guard (Phase G1 code-review fix): if every mutable field
+      // is already exactly what's requested, skip the UPDATE entirely
+      // and write no audit event — an unconditional "employer_updated"
+      // on a no-op save (e.g. re-submitting an unchanged edit form)
+      // would otherwise be a misleading audit row (before === after).
+      const nextStatus = data.status ?? before.status;
+      const isNoOp =
+        before.name === data.name &&
+        before.slug === slug &&
+        (before.website ?? null) === (data.website ?? null) &&
+        (before.country ?? null) === (data.country ?? null) &&
+        (before.description_sv ?? null) === (data.description_sv ?? null) &&
+        (before.description_en ?? null) === (data.description_en ?? null) &&
+        before.status === nextStatus;
+
+      if (isNoOp) {
+        return { id: data.id };
+      }
+
       const updatePatch: Record<string, unknown> = {
         name: data.name,
         slug,

@@ -1,7 +1,11 @@
 # Phase G1 — Employer Identity Foundation
 
 **Status:** Implemented, unapplied. Migration reviewed but not run against
-any database. Feature flags unchanged (all remain `false`).
+any database. Feature flags unchanged (all remain `false`). This
+revision incorporates three required corrections from the final Phase G1
+security review (verdict: APPROVE WITH REQUIRED CHANGES) — see "Final
+active owner protection" (race-condition fix), "No-op update handling",
+and "removed_at semantics" below.
 
 ## Purpose
 
@@ -277,10 +281,10 @@ are untouched — out of scope, already correct or unrelated.
 
 | File | Change |
 |---|---|
-| `supabase/migrations/20260719100000_employer_memberships.sql` | **New.** Full migration — see above. **Not applied.** |
-| `src/lib/job-intelligence/membership.functions.ts` | **New.** `listMyEmployerMemberships`, `adminListEmployerMemberships`, `adminCreateEmployerMembership`, `adminUpdateEmployerMembershipRole`, `adminUpdateEmployerMembershipStatus`. |
-| `src/lib/job-intelligence/admin.functions.ts` | **Modified.** `assertAdmin()`/`adminWhoAmI()` switched to `is_platform_admin`; new local `writeOrgAudit()` helper; `adminUpsertEmployer` gained an optional `status` field on its existing payload and now writes `employer_created`/`employer_updated`/`employer_status_changed` audit events. See "Items requiring Mostafa's approval" — this is a larger touch to this file than a minimal 3-line diff, because auditing `employer_updated`/`employer_status_changed` (explicitly required) has no dedicated server function in the approved scope, so the existing upsert function was the only reasonable place to add it without inventing an unrequested sixth function. |
-| `docs/job-intelligence/phase-g1-report.md` | **New.** This report. |
+| `supabase/migrations/20260719100000_employer_memberships.sql` | **New, then updated in place (code-review fix revision) — never a second migration file, since the original was never applied anywhere.** Added section 9: `public.update_employer_membership(uuid, text, text)`, the atomic, race-free RPC, plus its grants/revokes. Sections 1–8 unchanged. **Still not applied.** |
+| `src/lib/job-intelligence/membership.functions.ts` | **New, then updated (code-review fix revision).** `listMyEmployerMemberships`, `adminListEmployerMemberships`, `adminCreateEmployerMembership` unchanged from the original implementation. `adminUpdateEmployerMembershipRole`/`adminUpdateEmployerMembershipStatus` rewritten to call `update_employer_membership` instead of a separate `SELECT` + `UPDATE`; the old `assertNotRemovingLastActiveOwner` TS helper removed (superseded by the DB function). |
+| `src/lib/job-intelligence/admin.functions.ts` | **Modified, then updated (code-review fix revision).** `assertAdmin()`/`adminWhoAmI()` switched to `is_platform_admin`; new local `writeOrgAudit()` helper; `adminUpsertEmployer` gained an optional `status` field and now writes `employer_created`/`employer_updated`/`employer_status_changed` audit events, plus (this revision) a no-op comparison across all seven mutable fields that skips both the `UPDATE` and the audit write when nothing actually changed. See "Items requiring Mostafa's approval" — this remains a larger touch to this file than a minimal 3-line diff, for the same reason recorded in the original report: auditing `employer_updated`/`employer_status_changed` has no dedicated server function in the approved scope. |
+| `docs/job-intelligence/phase-g1-report.md` | **New, then updated (code-review fix revision) — this report.** |
 
 **Not touched, confirmed by `git diff --stat`:** every route file,
 `SiteHeader.tsx`, `feature-flag.ts`, every i18n dictionary, every CIE/CIG
@@ -324,34 +328,148 @@ reused, not a new dependency.
 
 ## Final active owner protection
 
-**Implementation: server-side check, not a database trigger** — per the
-brief's own minimum-acceptable-implementation guidance, and because
-Phase G1 has no self-service removal path that could trigger this
-condition outside the two admin functions that already guard it.
+### Original design and the race condition found by code review
 
-```ts
-async function assertNotRemovingLastActiveOwner(ctx, employerId, excludeMembershipId) {
-  const { count } = await ctx.supabase
-    .from("employer_memberships")
-    .select("id", { count: "exact", head: true })
-    .eq("employer_id", employerId)
-    .eq("role", "owner")
-    .eq("status", "active")
-    .neq("id", excludeMembershipId);
-  if (!count || count === 0) throw new Error("Cannot change this membership: it is the only active owner...");
-}
+The first implementation was a server-side check-then-act: a plain
+`SELECT count(...)` in `membership.functions.ts`, followed by a
+*separate* `UPDATE` call, with no lock and no shared transaction between
+the two. The final Phase G1 security review identified a concrete,
+reproducible race: if two platform admins concurrently changed two
+*different* active owners of the *same* employer (e.g. admin 1 demotes
+owner A while admin 2, in the same instant, suspends owner B), each
+request's count query could see "1 other active owner exists" — each
+excluding only itself — and both could pass the check and both proceed
+to update, before either committed. Result: the employer ends up with
+**zero** active owners, exactly the state this feature exists to
+prevent. This was a real gap against an explicit requirement, not a
+theoretical one, and applied even within Phase G1's admin-only,
+no-self-service scope — it needed two concurrent *admin* actions, not
+any self-service surface, to trigger.
+
+### Fix: one atomic database function, not two application-layer steps
+
+`public.update_employer_membership(_membership_id uuid, _new_role text,
+_new_status text)` — new in this migration, section 9 — moves the
+entire check-then-act sequence into a single Postgres function, so the
+count-check and the mutation happen in one transaction, after taking
+row locks that force a second concurrent call to wait rather than race.
+
+**Authorization model:** `auth.uid()` only — no actor identity is ever
+accepted as a function parameter, so a caller cannot assert someone
+else's identity. The function explicitly checks
+`public.is_platform_admin(auth.uid())` and raises a clear
+`Forbidden: platform admin role required` error otherwise, *in addition
+to* RLS itself. The function is `SECURITY INVOKER` (the default), not
+`SECURITY DEFINER` — deliberately: the calling platform admin already
+has direct RLS-granted access to `employer_memberships` via the
+`employer_memberships_admin_all` policy, so a `SECURITY INVOKER`
+function runs with the caller's own privileges and RLS keeps applying
+inside it exactly as if the caller issued the statements directly. This
+means RLS remains the authoritative boundary even if the function's own
+explicit admin check were ever accidentally removed in a future edit —
+a non-admin's `SELECT ... FOR UPDATE` / `UPDATE` inside the function
+would still be denied by RLS, not merely by application logic.
+`SECURITY DEFINER` was considered and rejected: nothing in this function
+needs to touch data the calling admin doesn't already have direct RLS
+access to, so bypassing RLS would only widen the trust boundary for no
+benefit.
+
+**Locking strategy — this is the actual race fix:**
+```sql
+PERFORM 1
+FROM public.employer_memberships em
+WHERE em.employer_id = _employer_id
+  AND (em.id = _membership_id OR (em.role = 'owner' AND em.status = 'active'))
+ORDER BY em.id
+FOR UPDATE;
 ```
+One statement locks the target row **and** every row that is currently
+an active owner for the same employer, together, ordered by `id`. Two
+concurrent calls touching the same employer always request that same
+lock set in that same order, so the second call simply blocks on
+ordinary lock contention until the first call's transaction commits or
+rolls back — it can never observe a stale, pre-change count. Locking the
+full candidate set in one, consistently-ordered statement (rather than
+two separate lock statements, e.g. "lock my row" then "lock the other
+owners") is also what avoids a deadlock between the two concurrent
+calls — both always acquire locks in the same relative order, so one
+simply waits for the other rather than each holding a lock the other
+needs.
 
-Called from both `adminUpdateEmployerMembershipRole` (before changing an
-active owner's role away from `owner`) and
-`adminUpdateEmployerMembershipStatus` (before moving an active owner out
-of `status = 'active'`). Not called from `adminCreateEmployerMembership`,
-since creation only ever adds capacity and cannot violate the invariant.
-Not enforced by a DB trigger for every possible write path — a platform
-admin issuing a raw SQL statement outside these two functions could still
-violate the invariant, exactly the same trust level already extended to
-platform admins for every other table in this schema. **Test coverage:**
-scenario 16 in the test matrix below.
+The count-check and the `UPDATE` happen after this lock, inside the same
+function invocation (one implicit transaction) — no other transaction
+can have changed any locked row in between, so the final-owner
+evaluation is against genuinely current data, not a stale read.
+
+**Scope:** covers `adminUpdateEmployerMembershipRole` and
+`adminUpdateEmployerMembershipStatus`, both of which now call this one
+RPC (with only `_new_role` or only `_new_status` set, respectively) in
+place of their old separate `SELECT` + `UPDATE`. Not called from
+`adminCreateEmployerMembership`, since creation only ever adds capacity
+and structurally cannot violate the invariant. Still not enforced for
+every conceivable write path — a platform admin issuing a raw SQL
+statement outside this RPC could still violate the invariant — but this
+is the same trust level already extended to platform admins for direct
+database access everywhere else in this schema, and is a materially
+smaller residual risk than the original app-level-only race, since every
+*normal* write path (this RPC, called by both of the only two functions
+that ever change role/status) is now race-free.
+
+**No-op detection moved into the same function:** if the resolved
+`role`/`status` equal the row's current values, the function returns
+immediately with `changed = false` and performs no `UPDATE` — no
+`updated_at` bump, no state change of any kind. See "No-op update
+handling" below for how the TypeScript callers use this.
+
+**`removed_at` semantics, enforced inside the same `UPDATE`:**
+`removed_at = CASE WHEN _final_status = 'removed' THEN now() ELSE NULL
+END` — set exactly when the resulting status is `'removed'`, and
+explicitly cleared to `NULL` for every other resulting status (`active`,
+`invited`, `suspended`). A membership can no longer carry a stale
+`removed_at` timestamp after being reactivated or otherwise changed
+following a prior removal. See "removed_at semantics" below.
+
+**Test coverage:** scenarios 1–5 and 9–10 in "Additional tests from the
+code-review fix" below.
+
+## No-op update handling
+
+Three write paths now compare the requested value against the current
+value before doing anything, and skip both the write and the audit
+event when they're identical — an unconditional update on a no-op save
+would otherwise be a misleading audit row (`before === after`).
+
+- **`update_employer_membership`** (database function, used by both
+  `adminUpdateEmployerMembershipRole` and
+  `adminUpdateEmployerMembershipStatus`): compares the resolved
+  role/status against the row's current values immediately after
+  locking it; returns `changed = false` with no `UPDATE` if identical.
+  The two TypeScript callers only call `writeMembershipAudit(...)` when
+  `row.changed` is `true`.
+- **`adminUpsertEmployer`'s update branch** (`admin.functions.ts`):
+  compares `name`, `slug`, `website`, `country`, `description_sv`,
+  `description_en`, and the resolved `status` against the existing row
+  before doing anything; if every field matches, the function returns
+  `{ id: data.id }` immediately with no `UPDATE` and no `employer_updated`
+  (or `employer_status_changed`) audit write.
+
+In all three cases, the "no change" response returns the existing
+record's identity safely (the caller gets a normal success response,
+just with `changed: false` or no side effect) — it is not treated as an
+error.
+
+## removed_at semantics
+
+| Transition | `removed_at` |
+|---|---|
+| any status → `removed` | set to `now()` |
+| any status → `active` / `invited` / `suspended` | explicitly set to `NULL` (not just left as-is) |
+| no-op (status unchanged) | untouched — no `UPDATE` runs at all |
+
+Enforced unconditionally inside `update_employer_membership`'s single
+`UPDATE` statement (see SQL above) — there is exactly one code path that
+can change `status`, so there is exactly one place this rule needs to be
+correct.
 
 ## Audit logging
 
@@ -368,6 +486,14 @@ subject_id, org_id, metadata jsonb, at` — schema unchanged, already
 | `membership_created` | `membership.functions.ts` → `adminCreateEmployerMembership` |
 | `membership_role_changed` | `membership.functions.ts` → `adminUpdateEmployerMembershipRole` |
 | `membership_status_changed` | `membership.functions.ts` → `adminUpdateEmployerMembershipStatus` |
+
+**Written only on a real state change** (code-review fix — see "No-op
+update handling" above): `employer_updated`/`employer_status_changed`
+are skipped entirely when `adminUpsertEmployer`'s no-op comparison finds
+no field differs; `membership_role_changed`/`membership_status_changed`
+are skipped when `update_employer_membership` returns `changed: false`.
+`membership_created` has no no-op case — creation is always a real
+state change by definition.
 
 `metadata` contains only non-sensitive operational data: names, slugs,
 role/status before/after values, and bare `uuid` actor/target references
@@ -395,14 +521,16 @@ generated `Database` type.
 
 ## Tests run and results
 
-**Run in this environment (results below are real, not assumed):**
+**Run in this environment, twice — once for the original implementation
+and again after the three code-review fixes (results below are the
+second, current run; both were real, not assumed):**
 
 | Check | Result |
 |---|---|
 | `bunx tsc --noEmit` | Clean, 0 errors |
 | `bun run cie:check` | `CIE v1 harness: PASS`, 11/11 personas, byte-identical to the pre-Phase-G1 baseline |
 | `bun run kg:check` | `kg:check OK` |
-| `grep` isolation (`employer_memberships`/`has_employer_role`/`is_platform_admin` must not appear under `src/lib/career-intelligence-engine/`) | Empty — clean |
+| `grep` isolation (`employer_memberships`/`has_employer_role`/`is_platform_admin`/`update_employer_membership` must not appear under `src/lib/career-intelligence-engine/`) | Empty — clean |
 | `bun run lint` | Non-blocking per CI configuration and this task's instructions. Findings on touched files are `@typescript-eslint/no-explicit-any`, matching this codebase's own pre-existing `Ctx = { supabase: any }` / `as any`-cast convention already used throughout every `*.functions.ts` file (including the pre-existing `writeAudit()` this phase's `writeOrgAudit()`/`writeMembershipAudit()` mirror), plus one pre-existing, untouched-by-this-phase prettier formatting item. No new lint *category* introduced; no formatting debt fixed, per instruction. |
 
 **Cannot be run from this environment (no connected database — the same
@@ -456,7 +584,7 @@ SELECT public.has_employer_role('<suspended user>', '<their employer>');      --
 | 13 | Forged caller `user_id` | Every function derives identity from `ctx.userId` (verified `requireSupabaseAuth` claims) exclusively; no function parameter accepts a caller-identity override |
 | 14 | Employer admin attempts platform-role escalation | Structurally impossible — `employer_memberships` and `user_roles` are different tables with no write path between them; no function in this phase writes `user_roles` |
 | 15 | Employer owner attempts superadmin escalation | Same structural impossibility as #14 |
-| 16 | Attempt to remove/downgrade the final active owner | `assertNotRemovingLastActiveOwner` throws before the update is applied, in both `adminUpdateEmployerMembershipRole` and `adminUpdateEmployerMembershipStatus` |
+| 16 | Attempt to remove/downgrade the final active owner | `update_employer_membership` raises before any update is applied, called by both `adminUpdateEmployerMembershipRole` and `adminUpdateEmployerMembershipStatus` — see "Additional tests from the code-review fix" below for the race-specific variant of this scenario |
 | 17 | Existing assessment flow | Zero files under `career-intelligence-engine`/`career-assessment` touched; `bun cie:check` 11/11 confirms no behavioural change |
 | 18 | Existing saved-report flow | Zero files under the Phase 2 saved-report surface touched; unaffected by construction |
 | 19 | Public jobs for active employer | `jobs_public_active_select`/`employers_public_active_select`'s added condition (`employers.status='active'`) is satisfied by every existing row (default `'active'`) — behaviour unchanged |
@@ -466,6 +594,27 @@ Scenarios 1–16 and 19–20 require the connected environment to execute
 against real rows; 17–18 are confirmed today by the automated checks
 above plus the fact that no file in either surface appears in this
 branch's diff.
+
+### Additional tests from the code-review fix
+
+The 12 tests explicitly requested by the final security review, each
+marked with what's actually been done versus what still requires the
+connected environment.
+
+| # | Test | Status |
+|---|---|---|
+| 1 | Final owner role downgrade blocked | **Prepared, not executed.** `update_employer_membership(target, _new_role := 'member')` where target is the sole active owner → expect `RAISE EXCEPTION 'Cannot change this membership...'`. Requires a live database. |
+| 2 | Final owner suspension blocked | **Prepared, not executed.** Same function, `_new_status := 'suspended'` → same expected exception. Requires a live database. |
+| 3 | Final owner removal blocked | **Prepared, not executed.** Same function, `_new_status := 'removed'` → same expected exception. Requires a live database. |
+| 4 | Two owners, one downgrade succeeds | **Prepared, not executed.** With two active owners, downgrading one succeeds (`changed: true`, no exception) and the other owner's row is unaffected. Requires a live database. |
+| 5 | Concurrent downgrade/removal of two owners cannot leave zero active owners | **Prepared, not executed — the concurrency test procedure above.** This is the direct validation of the H1 fix and can only be observed against a real Postgres instance with two genuinely concurrent sessions; cannot be simulated meaningfully outside a connected environment. |
+| 6 | No-op role update writes no audit event | **Logic verified by code inspection + typecheck; not executed against a live database.** `adminUpdateEmployerMembershipRole` only calls `writeMembershipAudit` when `row.changed` is `true`, and `update_employer_membership` returns `changed: false` without updating when the resolved role equals the existing role. |
+| 7 | No-op status update writes no audit event | Same mechanism and same verification status as #6, for `adminUpdateEmployerMembershipStatus`. |
+| 8 | No-op employer update writes no misleading audit event | **Logic verified by code inspection + typecheck; not executed against a live database.** `adminUpsertEmployer`'s `isNoOp` comparison (all seven mutable fields) short-circuits before any `UPDATE` or `writeOrgAudit` call. |
+| 9 | `removed → active` clears `removed_at` | **Prepared, not executed.** `update_employer_membership`'s `UPDATE` sets `removed_at = CASE WHEN _final_status = 'removed' THEN now() ELSE NULL END` unconditionally on every real (non-no-op) status change — a transition to `active` always results in `removed_at IS NULL`. Requires a live database to observe the actual column value. |
+| 10 | `active → removed` sets `removed_at` | **Prepared, not executed.** Same `CASE` expression, `removed_at = now()` when `_final_status = 'removed'`. Requires a live database. |
+| 11 | Non-platform user cannot call the RPC successfully | **Prepared, not executed.** Two independent layers both deny it: (a) the function's own `IF NOT is_platform_admin(auth.uid()) THEN RAISE EXCEPTION` runs before any table access; (b) even if that check were removed, RLS's `employer_memberships_admin_all` (the only policy permitting `UPDATE`) would still deny the underlying `SELECT ... FOR UPDATE`/`UPDATE` for a non-admin caller, because the function is `SECURITY INVOKER` and therefore fully subject to RLS. Requires a live database to observe both layers directly; verified by code/migration inspection here. |
+| 12 | Forged actor identity is impossible | **Verified by code inspection, confirmed structurally, no live database needed.** `update_employer_membership` takes no actor/user-id parameter of any kind — its only identity input is `auth.uid()`, resolved server-side from the session's own verified JWT. There is no argument a caller could pass to assert a different identity. Same property holds for every other function in both files: `ctx.userId` (TypeScript) and `auth.uid()`/`context.userId` (SQL/middleware) are always derived from `requireSupabaseAuth`'s verified claims, never from request-body input. |
 
 ## Rollback procedure
 
@@ -500,7 +649,10 @@ ALTER POLICY "employers_public_active_select" ON public.employers
       AND public.job_is_active(j.status, j.published_at, j.deadline_at, j.expires_at)
   ));
 
--- Remove every new object
+-- Remove every new object (function first: it references the table,
+-- and dropping it before the table keeps drop order self-explanatory
+-- even though Postgres does not strictly require this order for DROP)
+DROP FUNCTION IF EXISTS public.update_employer_membership(uuid, text, text);
 DROP POLICY IF EXISTS "employers_member_select" ON public.employers;
 DROP POLICY IF EXISTS "employer_memberships_admin_all" ON public.employer_memberships;
 DROP POLICY IF EXISTS "employer_memberships_self_select" ON public.employer_memberships;
@@ -510,33 +662,65 @@ DROP TABLE IF EXISTS public.employer_memberships;
 ALTER TABLE public.employers DROP COLUMN IF EXISTS status;
 ```
 
-Application code rollback: revert `admin.functions.ts`'s three changes
+Application code rollback: revert `admin.functions.ts`'s changes
 (`assertAdmin`/`adminWhoAmI` RPC target back to `has_role`/`{_role:
-"admin"}`; remove `writeOrgAudit` and its three call sites; remove the
-`status` field from `employerPayloadSchema` and the update-branch
-`before`/`after` read); delete `membership.functions.ts`. No other file
-requires any change to fully roll back.
+"admin"}`; remove `writeOrgAudit` and its call sites; remove the
+`status` field and no-op comparison from `adminUpsertEmployer`); delete
+`membership.functions.ts`. No other file requires any change to fully
+roll back.
 
 **Rollback drill (to run in the connected environment before production
 application):** apply forward → run the `pg_policies` query above,
 capture output → apply rollback → re-run the same query, confirm it
-matches the pre-migration original text exactly → re-apply forward →
-confirm the resulting state matches the first post-apply capture exactly.
+matches the pre-migration original text exactly; also confirm
+`update_employer_membership` no longer exists
+(`SELECT 1 FROM pg_proc WHERE proname = 'update_employer_membership'`
+returns zero rows) → re-apply forward → confirm the resulting state
+matches the first post-apply capture exactly.
+
+**Concurrency test procedure (to run in the connected environment,
+after the forward migration is applied — this is the test that directly
+validates the race-condition fix):**
+1. Seed one employer with exactly two `employer_memberships` rows,
+   both `role = 'owner'`, both `status = 'active'` (owners A and B).
+2. From two separate connections/sessions, both authenticated as a
+   platform admin, simultaneously call
+   `update_employer_membership(A.id, _new_status := 'suspended')` and
+   `update_employer_membership(B.id, _new_status := 'suspended')` —
+   e.g. via `pg_sleep` injected into one session between the lock and
+   the count-check to force the interleaving deterministically, or via
+   two concurrent application requests fired at the same instant.
+3. Expected result: exactly one call succeeds; the other either blocks
+   until the first commits and then correctly fails the final-owner
+   check (because the first call's change is now visible), or the two
+   calls' lock-ordering causes the second to simply wait its turn — in
+   no observed outcome do both succeed and leave the employer with zero
+   active owners.
+4. Confirm via `SELECT count(*) FROM employer_memberships WHERE
+   employer_id = ... AND role = 'owner' AND status = 'active'` that the
+   count is never `0` after both calls have completed (one succeeded,
+   one failed, or one is still correctly blocked/retried).
 
 ## Known limitations
 
 - **Types not regenerated** — see "Generated types" above. Required
   before or immediately after this migration is applied anywhere.
-- **No live RLS verification performed** — this environment has no
-  connected database. Every RLS/access scenario is fully specified
-  (validation SQL + 20-scenario matrix) but unexecuted pending Lovable
-  Cloud's connected environment.
-- **Final-owner protection is a server-side check, not a DB constraint**
-  — a platform admin bypassing `membership.functions.ts` via a raw SQL
-  statement could still violate the invariant. Acceptable in G1 because
-  no self-service path exists to trigger this condition outside the two
-  guarded functions; must become a DB-level enforcement (trigger or
-  constraint) before any self-service membership management ships.
+- **No live RLS or concurrency verification performed** — this
+  environment has no connected database. Every RLS/access scenario and
+  the concurrency test procedure are fully specified (validation SQL +
+  20-scenario matrix + the dedicated concurrency test above) but
+  unexecuted pending Lovable Cloud's connected environment.
+- **Final-owner protection is now DB-enforced and race-free**
+  (superseded limitation, resolved in this revision) — the check and
+  the mutation both happen inside `update_employer_membership`, under
+  row locks, in one transaction, closing the check-then-act race the
+  original design had. It is still possible, in principle, for a
+  platform admin to violate the invariant via a raw SQL statement that
+  bypasses this function entirely (e.g. a direct `UPDATE
+  employer_memberships`) — the same trust level already extended to
+  platform admins for direct database access everywhere else in this
+  schema, and a materially smaller residual risk than the original gap,
+  since every *normal* write path is now race-free.
 - **`employer_memberships_self_select`'s no-status-filter design** is an
   interpretive resolution of ambiguous source wording — flagged for
   explicit confirmation, not assumed correct.

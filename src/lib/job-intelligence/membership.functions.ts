@@ -30,6 +30,27 @@ type EmployerRole = (typeof EMPLOYER_ROLES)[number];
 const EMPLOYER_MEMBERSHIP_STATUSES = ["invited", "active", "suspended", "removed"] as const;
 type EmployerMembershipStatus = (typeof EMPLOYER_MEMBERSHIP_STATUSES)[number];
 
+// Mirrors the RETURNS TABLE shape of public.update_employer_membership()
+// (supabase/migrations/20260719100000_employer_memberships.sql, section
+// 9) — the atomic, race-free RPC that adminUpdateEmployerMembershipRole
+// and adminUpdateEmployerMembershipStatus both call instead of doing
+// their own SELECT + UPDATE. `changed` is what those two functions use
+// to decide whether a state change actually happened, and therefore
+// whether an audit event should be written.
+type UpdateEmployerMembershipResult = {
+  id: string;
+  employer_id: string;
+  user_id: string;
+  role: EmployerRole;
+  status: EmployerMembershipStatus;
+  invited_at: string | null;
+  accepted_at: string | null;
+  removed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  changed: boolean;
+};
+
 async function assertPlatformAdmin(ctx: Ctx): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("is_platform_admin", {
     _user_id: ctx.userId,
@@ -57,31 +78,20 @@ async function writeMembershipAudit(params: {
   });
 }
 
-// Final active-owner protection (Phase G1 §8): a server-side check before
-// any role/status change, not a DB trigger — Phase G1 has no self-service
-// removal path, so a full invariant-enforcing trigger would be unused
-// complexity today. Revisit as a DB-level constraint once self-service
-// membership management ships (see docs/job-intelligence/phase-g1-report.md
-// "Known limitations").
-async function assertNotRemovingLastActiveOwner(
-  ctx: Ctx,
-  employerId: string,
-  excludeMembershipId: string,
-): Promise<void> {
-  const { count, error } = await ctx.supabase
-    .from("employer_memberships")
-    .select("id", { count: "exact", head: true })
-    .eq("employer_id", employerId)
-    .eq("role", "owner")
-    .eq("status", "active")
-    .neq("id", excludeMembershipId);
-  if (error) throw new Error(error.message);
-  if (!count || count === 0) {
-    throw new Error(
-      "Cannot change this membership: it is the only active owner for this employer. Assign another active owner first.",
-    );
-  }
-}
+// Final active-owner protection (Phase G1 code-review fix): the
+// check-then-act TS pre-check that used to live here was replaced after
+// the security review identified a real race — two concurrent
+// platform-admin requests, each demoting a different active owner of
+// the same employer, could both pass a plain SELECT-count check before
+// either committed, jointly leaving the employer with zero active
+// owners. The authoritative check now lives inside a single atomic
+// database function, `public.update_employer_membership`, which locks
+// the relevant rows and performs the count-check and the mutation in
+// one transaction — see
+// supabase/migrations/20260719100000_employer_memberships.sql section 9
+// and docs/job-intelligence/phase-g1-report.md for the full design.
+// `adminUpdateEmployerMembershipRole`/`Status` below call that RPC
+// instead of doing their own SELECT + UPDATE.
 
 // -------- listMyEmployerMemberships (owner-scoped, any authenticated user) --------
 
@@ -209,35 +219,44 @@ export const adminUpdateEmployerMembershipRole = createServerFn({ method: "POST"
     const ctx = context as Ctx;
     await assertPlatformAdmin(ctx);
 
+    // User-friendly early check only — NOT the security boundary and NOT
+    // where the final-owner rule is enforced. Its only purposes are (a)
+    // a clear "not found" message before the RPC round-trip and (b) a
+    // "before" value for the audit event. The atomic RPC below re-reads
+    // the row fresh under a row lock and is the sole authority on
+    // whether the change is a no-op or would violate the final-owner
+    // invariant.
     const { data: existing, error: exErr } = await ctx.supabase
       .from("employer_memberships")
-      .select("id, employer_id, role, status")
+      .select("id, role, status")
       .eq("id", data.membershipId)
       .maybeSingle();
     if (exErr) throw new Error(exErr.message);
     if (!existing) throw new Error("Membership not found");
 
-    // Final active-owner protection: only relevant when this row is
-    // currently an active owner and the change would make it not one.
-    if (existing.role === "owner" && existing.status === "active" && data.role !== "owner") {
-      await assertNotRemovingLastActiveOwner(ctx, existing.employer_id, existing.id);
+    const { data: result, error } = await ctx.supabase.rpc("update_employer_membership", {
+      _membership_id: data.membershipId,
+      _new_role: data.role,
+      _new_status: null,
+    });
+    if (error) throw new Error(error.message);
+    const row = (result as UpdateEmployerMembershipResult[] | null)?.[0];
+    if (!row) throw new Error("Membership not found");
+
+    // Audit only a real state change (Phase G1 code-review fix) — the
+    // RPC's own no-op detection (role/status both unchanged) is
+    // authoritative; `row.changed` reflects it directly.
+    if (row.changed) {
+      await writeMembershipAudit({
+        action: "membership_role_changed",
+        employerId: row.employer_id,
+        membershipId: row.id,
+        actorId: ctx.userId,
+        metadata: { before_role: existing.role, after_role: row.role },
+      });
     }
 
-    const { error } = await ctx.supabase
-      .from("employer_memberships")
-      .update({ role: data.role, updated_at: new Date().toISOString() })
-      .eq("id", data.membershipId);
-    if (error) throw new Error(error.message);
-
-    await writeMembershipAudit({
-      action: "membership_role_changed",
-      employerId: existing.employer_id,
-      membershipId: data.membershipId,
-      actorId: ctx.userId,
-      metadata: { before_role: existing.role, after_role: data.role },
-    });
-
-    return { id: data.membershipId, role: data.role };
+    return { id: row.id, role: row.role as EmployerRole, changed: row.changed };
   });
 
 // -------- adminUpdateEmployerMembershipStatus --------
@@ -254,39 +273,36 @@ export const adminUpdateEmployerMembershipStatus = createServerFn({ method: "POS
     const ctx = context as Ctx;
     await assertPlatformAdmin(ctx);
 
+    // Same rationale as adminUpdateEmployerMembershipRole above: a
+    // friendly early "not found" + audit "before" value only, not the
+    // security boundary and not where the final-owner rule or
+    // removed_at semantics are enforced — the atomic RPC owns both.
     const { data: existing, error: exErr } = await ctx.supabase
       .from("employer_memberships")
-      .select("id, employer_id, role, status")
+      .select("id, role, status")
       .eq("id", data.membershipId)
       .maybeSingle();
     if (exErr) throw new Error(exErr.message);
     if (!existing) throw new Error("Membership not found");
 
-    // Final active-owner protection: only relevant when this row is
-    // currently an active owner and the change would move it out of
-    // status = 'active' (suspend or remove).
-    if (existing.role === "owner" && existing.status === "active" && data.status !== "active") {
-      await assertNotRemovingLastActiveOwner(ctx, existing.employer_id, existing.id);
+    const { data: result, error } = await ctx.supabase.rpc("update_employer_membership", {
+      _membership_id: data.membershipId,
+      _new_role: null,
+      _new_status: data.status,
+    });
+    if (error) throw new Error(error.message);
+    const row = (result as UpdateEmployerMembershipResult[] | null)?.[0];
+    if (!row) throw new Error("Membership not found");
+
+    if (row.changed) {
+      await writeMembershipAudit({
+        action: "membership_status_changed",
+        employerId: row.employer_id,
+        membershipId: row.id,
+        actorId: ctx.userId,
+        metadata: { before_status: existing.status, after_status: row.status },
+      });
     }
 
-    const nowIso = new Date().toISOString();
-    const patch: Record<string, unknown> = { status: data.status, updated_at: nowIso };
-    if (data.status === "active" && existing.status !== "active") patch.accepted_at = nowIso;
-    if (data.status === "removed") patch.removed_at = nowIso;
-
-    const { error } = await ctx.supabase
-      .from("employer_memberships")
-      .update(patch)
-      .eq("id", data.membershipId);
-    if (error) throw new Error(error.message);
-
-    await writeMembershipAudit({
-      action: "membership_status_changed",
-      employerId: existing.employer_id,
-      membershipId: data.membershipId,
-      actorId: ctx.userId,
-      metadata: { before_status: existing.status, after_status: data.status },
-    });
-
-    return { id: data.membershipId, status: data.status };
+    return { id: row.id, status: row.status as EmployerMembershipStatus, changed: row.changed };
   });
