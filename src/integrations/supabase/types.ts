@@ -2437,6 +2437,113 @@ export type Database = {
           },
         ]
       }
+      job_analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          job_id: string | null
+          properties: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          job_id?: string | null
+          properties?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          job_id?: string | null
+          properties?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_analytics_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_applications: {
+        Row: {
+          applicant_user_id: string
+          consent_given_at: string
+          cover_note: string | null
+          created_at: string
+          cv_mime_type: string | null
+          cv_original_filename: string | null
+          cv_size_bytes: number | null
+          cv_storage_path: string | null
+          employer_id: string
+          employer_note: string | null
+          id: string
+          job_id: string
+          phone: string | null
+          status: string
+          updated_at: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          applicant_user_id: string
+          consent_given_at: string
+          cover_note?: string | null
+          created_at?: string
+          cv_mime_type?: string | null
+          cv_original_filename?: string | null
+          cv_size_bytes?: number | null
+          cv_storage_path?: string | null
+          employer_id: string
+          employer_note?: string | null
+          id?: string
+          job_id: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          applicant_user_id?: string
+          consent_given_at?: string
+          cover_note?: string | null
+          created_at?: string
+          cv_mime_type?: string | null
+          cv_original_filename?: string | null
+          cv_size_bytes?: number | null
+          cv_storage_path?: string | null
+          employer_id?: string
+          employer_note?: string | null
+          id?: string
+          job_id?: string
+          phone?: string | null
+          status?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_audit_events: {
         Row: {
           action: string
@@ -2508,6 +2615,7 @@ export type Database = {
           benefits: Json | null
           canonical_url: string | null
           city: string | null
+          confidence_level: string | null
           content_hash: string | null
           country: string | null
           created_at: string
@@ -2515,6 +2623,7 @@ export type Database = {
           description_en: string | null
           description_sv: string | null
           driving_licence_required: boolean
+          education_requirements: string | null
           employer_id: string
           employer_type: string | null
           employment_type: string | null
@@ -2523,29 +2632,43 @@ export type Database = {
           family_id: string | null
           formal_requirement_ids: string[]
           id: string
+          inference_method: string | null
           language_requirements: string[]
+          leadership_responsibility: boolean | null
           location_text: string | null
+          mapping_reviewed_at: string | null
+          mapping_reviewed_by: string | null
+          model_version: string | null
           night_work: boolean | null
+          preferred_skill_ids: string[]
           profession_slug: string | null
           published_at: string | null
           region: string | null
           regulated: boolean
           related_profession_slugs: string[]
+          required_skill_ids: string[]
           requirements: Json | null
           responsibilities: Json | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
           sector: string | null
           security_vetting_mentioned: boolean
+          seniority: string | null
           shift_work: boolean | null
           short_id: string
           slug: string
           source_id: string | null
           source_job_id: string | null
+          source_type: string | null
           source_url: string | null
           status: string
           title_en: string | null
           title_sv: string | null
           travel_required: boolean | null
           updated_at: string
+          work_environment: string | null
           workplace_type: string | null
         }
         Insert: {
@@ -2555,6 +2678,7 @@ export type Database = {
           benefits?: Json | null
           canonical_url?: string | null
           city?: string | null
+          confidence_level?: string | null
           content_hash?: string | null
           country?: string | null
           created_at?: string
@@ -2562,6 +2686,7 @@ export type Database = {
           description_en?: string | null
           description_sv?: string | null
           driving_licence_required?: boolean
+          education_requirements?: string | null
           employer_id: string
           employer_type?: string | null
           employment_type?: string | null
@@ -2570,29 +2695,43 @@ export type Database = {
           family_id?: string | null
           formal_requirement_ids?: string[]
           id?: string
+          inference_method?: string | null
           language_requirements?: string[]
+          leadership_responsibility?: boolean | null
           location_text?: string | null
+          mapping_reviewed_at?: string | null
+          mapping_reviewed_by?: string | null
+          model_version?: string | null
           night_work?: boolean | null
+          preferred_skill_ids?: string[]
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
           regulated?: boolean
           related_profession_slugs?: string[]
+          required_skill_ids?: string[]
           requirements?: Json | null
           responsibilities?: Json | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           sector?: string | null
           security_vetting_mentioned?: boolean
+          seniority?: string | null
           shift_work?: boolean | null
           short_id: string
           slug: string
           source_id?: string | null
           source_job_id?: string | null
+          source_type?: string | null
           source_url?: string | null
           status?: string
           title_en?: string | null
           title_sv?: string | null
           travel_required?: boolean | null
           updated_at?: string
+          work_environment?: string | null
           workplace_type?: string | null
         }
         Update: {
@@ -2602,6 +2741,7 @@ export type Database = {
           benefits?: Json | null
           canonical_url?: string | null
           city?: string | null
+          confidence_level?: string | null
           content_hash?: string | null
           country?: string | null
           created_at?: string
@@ -2609,6 +2749,7 @@ export type Database = {
           description_en?: string | null
           description_sv?: string | null
           driving_licence_required?: boolean
+          education_requirements?: string | null
           employer_id?: string
           employer_type?: string | null
           employment_type?: string | null
@@ -2617,29 +2758,43 @@ export type Database = {
           family_id?: string | null
           formal_requirement_ids?: string[]
           id?: string
+          inference_method?: string | null
           language_requirements?: string[]
+          leadership_responsibility?: boolean | null
           location_text?: string | null
+          mapping_reviewed_at?: string | null
+          mapping_reviewed_by?: string | null
+          model_version?: string | null
           night_work?: boolean | null
+          preferred_skill_ids?: string[]
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
           regulated?: boolean
           related_profession_slugs?: string[]
+          required_skill_ids?: string[]
           requirements?: Json | null
           responsibilities?: Json | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           sector?: string | null
           security_vetting_mentioned?: boolean
+          seniority?: string | null
           shift_work?: boolean | null
           short_id?: string
           slug?: string
           source_id?: string | null
           source_job_id?: string | null
+          source_type?: string | null
           source_url?: string | null
           status?: string
           title_en?: string | null
           title_sv?: string | null
           travel_required?: boolean | null
           updated_at?: string
+          work_environment?: string | null
           workplace_type?: string | null
         }
         Relationships: [
@@ -2941,6 +3096,21 @@ export type Database = {
           run_id: string
         }[]
       }
+      sweep_analytics_retention: {
+        Args: never
+        Returns: {
+          deidentified: number
+          purged: number
+        }[]
+      }
+      sweep_application_retention: {
+        Args: never
+        Returns: {
+          application_id: string
+          cv_storage_path: string
+        }[]
+      }
+      sweep_expired_jobs: { Args: never; Returns: number }
       update_employer_membership: {
         Args: {
           _membership_id: string
