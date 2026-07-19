@@ -248,14 +248,57 @@ CREATE POLICY "employers_member_select" ON public.employers
 -- Active employers keep exactly their current public behaviour; only
 -- suspended/archived employers (and, transitively, their jobs) lose
 -- public visibility.
+--
+-- RLS-recursion fix (found by local Postgres 16 validation, not by static
+-- review): a first draft of this section added a plain
+-- `EXISTS (SELECT 1 FROM public.employers e WHERE ...)` directly inside
+-- jobs_public_active_select's USING clause. Combined with
+-- employers_public_active_select's own pre-existing subquery into `jobs`
+-- (unchanged, above), this created a genuine mutual dependency: evaluating
+-- either policy required evaluating the other table's RLS, which required
+-- evaluating the first table's RLS again — Postgres correctly rejected
+-- this with "infinite recursion detected in policy for relation ...",
+-- reproducibly, on every anon/authenticated read of `jobs` or `employers`
+-- once this migration was applied. Fixed the same way this codebase
+-- already avoids exactly this class of problem for has_role()/
+-- is_platform_admin()/has_employer_role() (see their own comments:
+-- "SECURITY DEFINER, avoids RLS recursion"): the employer-status lookup
+-- from inside jobs_public_active_select now goes through
+-- public.employer_is_active_status(uuid), a SECURITY DEFINER function
+-- whose internal SELECT runs as the function's owner and therefore does
+-- not re-trigger employers' own RLS policies — breaking the cycle at
+-- this one edge. employers_public_active_select's existing subquery into
+-- `jobs` is unchanged; once jobs' own policy no longer loops back into
+-- employers, there is nothing left to recurse.
+
+CREATE OR REPLACE FUNCTION public.employer_is_active_status(_employer_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT status = 'active' FROM public.employers WHERE id = _employer_id;
+$$;
+
+-- Callable by anon too: jobs_public_active_select applies to
+-- `TO anon, authenticated`, and this function only ever returns a plain
+-- boolean derived from a non-sensitive column (employers.status) that is
+-- already effectively public knowledge for any employer with a visible
+-- job — no new information is exposed by granting anon EXECUTE here.
+REVOKE ALL ON FUNCTION public.employer_is_active_status(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.employer_is_active_status(uuid) TO anon, authenticated, service_role;
+
+COMMENT ON FUNCTION public.employer_is_active_status(uuid) IS
+  'RLS-recursion-avoidance helper (see section 7 comment above). SECURITY '
+  'DEFINER so this lookup does not re-trigger employers'' own RLS policies '
+  'when called from jobs_public_active_select. Returns only a boolean, '
+  'never row data — safe for anon.';
 
 ALTER POLICY "jobs_public_active_select" ON public.jobs
   USING (
     public.job_is_active(status, published_at, deadline_at, expires_at)
-    AND EXISTS (
-      SELECT 1 FROM public.employers e
-      WHERE e.id = jobs.employer_id AND e.status = 'active'
-    )
+    AND public.employer_is_active_status(jobs.employer_id)
   );
 
 ALTER POLICY "employers_public_active_select" ON public.employers
@@ -448,7 +491,12 @@ BEGIN
   ORDER BY em.id
   FOR UPDATE;
 
-  SELECT * INTO _existing FROM public.employer_memberships WHERE id = _membership_id;
+  -- Bug found by local Postgres 16 execution (not by static review): the
+  -- RETURNS TABLE clause implicitly declares an `id` PL/pgSQL variable in
+  -- scope for the whole function body, so an unqualified `WHERE id = ...`
+  -- here was ambiguous between that variable and employer_memberships.id
+  -- -- Postgres correctly rejected it at call time. Fixed by aliasing.
+  SELECT * INTO _existing FROM public.employer_memberships em WHERE em.id = _membership_id;
 
   _final_role := COALESCE(_new_role, _existing.role);
   _final_status := COALESCE(_new_status, _existing.status);

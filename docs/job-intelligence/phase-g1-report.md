@@ -640,7 +640,11 @@ ALTER POLICY "job_admin_meta_admin_all" ON public.job_admin_meta
 ALTER POLICY "job_audit_events_admin_select" ON public.job_audit_events
   USING (public.has_role(auth.uid(), 'admin'));
 
--- Revert the public-visibility narrowing to its pre-G1 predicate
+-- Revert the public-visibility narrowing to its pre-G1 predicate. This
+-- MUST run before dropping employer_is_active_status() below --
+-- jobs_public_active_select's current (post-fix) definition calls that
+-- function, and Postgres refuses to drop a function a live policy still
+-- depends on. Reverting the policy first removes the dependency.
 ALTER POLICY "jobs_public_active_select" ON public.jobs
   USING (public.job_is_active(status, published_at, deadline_at, expires_at));
 ALTER POLICY "employers_public_active_select" ON public.employers
@@ -649,9 +653,11 @@ ALTER POLICY "employers_public_active_select" ON public.employers
       AND public.job_is_active(j.status, j.published_at, j.deadline_at, j.expires_at)
   ));
 
--- Remove every new object (function first: it references the table,
--- and dropping it before the table keeps drop order self-explanatory
--- even though Postgres does not strictly require this order for DROP)
+-- Remove every new object (functions before the table/policies that
+-- reference them, so drop order is self-explanatory and, for
+-- employer_is_active_status specifically, actually required given the
+-- policy revert above already removed its only remaining dependent).
+DROP FUNCTION IF EXISTS public.employer_is_active_status(uuid);
 DROP FUNCTION IF EXISTS public.update_employer_membership(uuid, text, text);
 DROP POLICY IF EXISTS "employers_member_select" ON public.employers;
 DROP POLICY IF EXISTS "employer_memberships_admin_all" ON public.employer_memberships;
@@ -701,15 +707,292 @@ validates the race-condition fix):**
    count is never `0` after both calls have completed (one succeeded,
    one failed, or one is still correctly blocked/retried).
 
+## Local database validation (Phase G1 — final pre-production pass)
+
+This section supersedes every earlier "cannot be verified without a
+connected database" caveat in this report where noted below — the
+validation described here was actually executed against a real
+PostgreSQL 16 instance, not simulated or assumed.
+
+### Security mode discrepancy — resolved
+
+A discrepancy was raised: Claude's own prior reports stated
+`update_employer_membership` uses `SECURITY INVOKER`; a separate Lovable
+migration-workflow review reported `SECURITY DEFINER` for the same
+function. Resolution: the actual migration file on this branch, inspected
+directly before any other action, at commit `d614a152a2eceb14b782af6d86e538c918b47b47`
+(the HEAD of `phase-g1-employer-memberships` at the time this validation
+began), reads verbatim:
+
+```sql
+CREATE OR REPLACE FUNCTION public.update_employer_membership(
+  _membership_id uuid,
+  _new_role text DEFAULT NULL,
+  _new_status text DEFAULT NULL
+)
+RETURNS TABLE (...)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
+```
+
+**`SECURITY INVOKER`, confirmed, verbatim, at the source of truth.** No
+basis was found for the `SECURITY DEFINER` claim by inspecting the
+committed file itself — it may reflect a stale cache, a different
+commit, or a parsing artifact on Lovable's side, but this cannot be
+determined from this repository alone. Per the decision tree for the
+`SECURITY INVOKER` case, the required follow-up was to verify that the
+`authenticated` role has all RLS permissions needed for the RPC to
+complete successfully under the existing policies — this is exactly what
+the local database validation below empirically confirms (§ RLS and
+authorization results): a platform-admin `authenticated` caller
+successfully completes every `update_employer_membership` operation
+end-to-end, entirely through RLS-granted access (`employer_memberships_
+admin_all`), with no `SECURITY DEFINER`/service-role escalation anywhere
+in the call path.
+
+### Local database environment
+
+No Postgres or Docker was available in this sandbox at the start of this
+task. Installed disposable, non-production tooling:
+
+```
+brew install postgresql@16          # 16.14, matches the target production major version
+initdb -D <scratch-dir>/phase-g1-pgdata -U postgres -E UTF8 --locale=C
+LC_ALL=C pg_ctl -D <scratch-dir>/phase-g1-pgdata -o "-p 55432 -h 127.0.0.1" start
+```
+
+A fresh cluster and database (`phase_g1_test`), entirely outside the
+project repository (scratch directory), never connected to Lovable Cloud,
+any external Supabase project, or any credential from `.env`. Torn down
+completely at the end of this task (`pg_ctl stop` + `rm -rf` the data
+directory) — nothing from this environment persists.
+
+The mock schema (`tests/database/phase-g1/00_mock_schema.sql`)
+reconstructs, with synthetic data only, the pre-existing production
+objects this migration depends on or `ALTER POLICY`s: `auth.users`,
+a local `auth.uid()` stand-in (reads a session GUC set via
+`set_config('request.jwt.claim.sub', ...)`, the standard local-RLS-test
+pattern), `profiles`, `app_role`/`user_roles`/`has_role()`, `employers`
+(pre-G1 shape), `employer_admin_meta`, `jobs`, `job_is_active()`,
+`job_admin_meta`, `job_import_sources`, `job_audit_events`, `audit_logs`
+— verbatim column lists and policy text copied from the real migrations,
+so the **actual, unmodified** `20260719100000_employer_memberships.sql`
+could be applied byte-for-byte, exactly as it would be applied in
+production. `anon`/`authenticated`/`service_role` Postgres roles created
+to match Supabase's own role model.
+
+### Migration apply result
+
+**First attempt: two real, previously-undetected bugs found — both
+fixed on this branch, both re-verified.** This is the central finding
+of this validation pass.
+
+**Bug 1 — RLS mutual recursion (critical).** The migration's own section
+7 (public-visibility narrowing) added a plain `EXISTS (SELECT 1 FROM
+public.employers e WHERE ...)` inside `jobs_public_active_select`'s
+`USING` clause. Combined with `employers_public_active_select`'s
+pre-existing (unchanged) subquery into `jobs`, this created a genuine
+mutual dependency between the two tables' RLS policies. Applying the
+migration succeeded, but the very first `SELECT` against `jobs` or
+`employers` under RLS — by *any* role, anon, authenticated member, or
+even platform admin — failed with:
+```
+ERROR:  infinite recursion detected in policy for relation "employers"
+ERROR:  infinite recursion detected in policy for relation "jobs"
+```
+This would have broken the entire public jobs/employers surface and the
+existing admin console's job/employer listings the moment this migration
+was applied to any real database — a severity this report was
+specifically designed to catch before that could happen. **Fixed** by
+adding `public.employer_is_active_status(uuid)`, a `SECURITY DEFINER`
+helper whose internal lookup does not re-trigger `employers`' own RLS
+(the same "avoids RLS recursion" technique this codebase's own `has_role`/
+`is_platform_admin`/`has_employer_role` already use, per their own
+comments), and changing `jobs_public_active_select` to call it instead
+of querying `employers` directly. Full before/after/rationale is now in
+the migration file itself (section 7).
+
+**Bug 2 — ambiguous column reference inside `update_employer_membership`
+(critical).** `RETURNS TABLE (id uuid, ...)` implicitly declares `id` as
+a PL/pgSQL variable in scope for the whole function body. One internal
+query — `SELECT * INTO _existing FROM public.employer_memberships WHERE
+id = _membership_id;` — was missing the table alias every *other*
+reference in the function correctly used, making `id` ambiguous between
+that variable and the table column. This line runs on **every** call to
+the function, no-op or not, so this bug would have broken 100% of calls
+to `update_employer_membership` — i.e. both `adminUpdateEmployerMembership
+Role` and `adminUpdateEmployerMembershipStatus` would have failed on
+every invocation. **Fixed** by aliasing the query (`FROM
+public.employer_memberships em WHERE em.id = _membership_id`).
+
+Both bugs were invisible to static code review and to `bunx tsc --noEmit`
+(TypeScript has no visibility into PL/pgSQL variable scoping or
+cross-policy RLS evaluation) — they only surfaced through actual
+execution against a real PostgreSQL engine, which is the direct
+justification for this validation phase existing at all.
+
+**After both fixes, the migration was dropped, the database rebuilt from
+scratch, and the corrected file reapplied — clean, zero errors, all 20
+statements (10 `ALTER POLICY` + table/function/index/trigger/grant
+creation) succeeded.** Schema tests 1–5 below reflect this corrected,
+re-verified state.
+
+### RLS and authorization test results
+
+All against the real database, switching identity via
+`SET ROLE`/`set_config('request.jwt.claim.sub', ...)` per Supabase's
+own local-testing convention:
+
+| # | Test | Result |
+|---|---|---|
+| 2 | `employers.status`: default `'active'`, `CHECK IN (draft,active,suspended,archived)` | **PASS** — confirmed via `information_schema.columns` + `pg_get_constraintdef` |
+| 3 | `employer_memberships`: 12 columns, 4 FKs (2× `ON DELETE CASCADE`, 2× `ON DELETE SET NULL`), `UNIQUE(employer_id,user_id)`, role/status `CHECK`s, 5 indexes incl. the `(user_id,status)` composite, `set_updated_at` trigger, grants, RLS enabled | **PASS** — every element confirmed present via `pg_constraint`/`pg_indexes`/`pg_trigger`/`information_schema.role_table_grants`/`pg_class.relrowsecurity` |
+| 4 | `is_platform_admin`/`has_employer_role` `SECURITY DEFINER=true`; `update_employer_membership` `SECURITY DEFINER=false` (i.e. `INVOKER`, confirmed a second, independent way via `pg_proc.prosecdef`); `anon` denied execute on all three, `authenticated`/`service_role` granted | **PASS** |
+| 5 | 5 expected policies exist (`employer_memberships_admin_all`, `employer_memberships_self_select`, `employers_admin_all`, `employers_member_select`, `employers_public_active_select`) with correct `cmd`/`roles` | **PASS** |
+| 6 | Unauthenticated (`anon`): zero visible rows, `INSERT` denied (`insufficient_privilege`) | **PASS** |
+| 7 | Candidate, no membership: `0` visible rows | **PASS** |
+| 8 | Active member: exactly 1 membership row (own), exactly 1 employer (own) | **PASS** |
+| 9 | Member of employer A querying employer B directly: `0` rows | **PASS** |
+| 10 | Dual-org user: exactly 2 employer_ids, exactly 2 employers, both correct | **PASS** |
+| 11 | Suspended member: own row visible (by the self-select design, any status), but `employers_member_select` access `= 0`; removed/invited: `has_employer_role = false` | **PASS** |
+| 12 | Platform admin: `is_platform_admin = true`, sees all membership rows | **PASS** |
+| 13 | **Superadmin-only** (no `admin` role): `is_platform_admin = true`, sees all membership rows — the corrected defect, directly confirmed | **PASS** |
+| 14 | `content_editor`/`assessment_editor`/`support`: `is_platform_admin = false` for all three; `content_editor` sees `0` membership rows | **PASS** |
+| 15 | Employer-scoped "admin"-role user (not a platform role): `is_platform_admin = false`; direct `INSERT` into `user_roles` denied (`insufficient_privilege`) | **PASS** |
+| 16 | Forged actor identity: `update_employer_membership`'s signature (`_membership_id uuid, _new_role text, _new_status text`) confirmed to contain no actor/user-id parameter of any kind — structurally impossible, not merely untested | **PASS** |
+
+### Owner-protection and concurrency results
+
+| # | Test | Result |
+|---|---|---|
+| 17 | Sole active owner, role downgrade attempt | **PASS** — raised `Cannot change this membership: it is the only active owner...` |
+| 18 | Sole active owner, suspension attempt | **PASS** — same exception |
+| 19 | Sole active owner, removal attempt | **PASS** — same exception; employer retained exactly 1 active owner after all 3 blocked attempts |
+| 20 | Two active owners, one changed | **PASS** — `changed=true`, role updated, employer correctly left with exactly 1 active owner |
+| 21 | **Concurrency** — two genuinely concurrent `psql` processes (not simulated), each demoting a different active owner of the same employer | **PASS** — see exact evidence below |
+
+**Test 21 evidence (real timestamps, real two-process concurrency):**
+Session 1 began at `13:37:56.984`, its `update_employer_membership` call
+completed (inside its own still-open transaction) at `13:37:56.988`,
+then held the transaction open via `pg_sleep(3)`, committing at
+`13:37:59.991`. Session 2 began independently, 0.5s later, at
+`13:37:57.510` — while session 1's transaction was still open and
+holding its row locks. Session 2's call did not return a row at all; it
+raised `Cannot change this membership: it is the only active owner for
+this employer...` and rolled back. This outcome is only explicable by
+session 2's internal `SELECT ... FOR UPDATE` genuinely blocking on
+session 1's held locks until session 1 committed, then re-evaluating
+against the now-current (post-session-1) data — under Postgres's
+documented `FOR UPDATE` semantics, this is the only way session 2 could
+have observed session 1's committed change despite session 2's own
+transaction having started before that commit. Final state, verified
+directly: owner A's row → `member` (session 1's change persisted);
+owner B's row → unchanged, still `owner`/`active` (session 2's change
+correctly never applied); **`employer_memberships` active-owner count
+for this employer = `1` — never `0`, at any point.** Scripts:
+`tests/database/phase-g1/04_concurrency_session1.sql` /
+`04_concurrency_session2.sql`.
+
+### State-integrity results
+
+| # | Test | Result |
+|---|---|---|
+| 22 | No-op role update | **PASS** — `changed=false`, confirmed via the RPC's own return value |
+| 23 | No-op status update | **PASS** — `changed=false` |
+| 24 | `active → removed` | **PASS** — `changed=true`, `status=removed`, `removed_at IS NOT NULL` |
+| 25 | `removed → active` | **PASS** — `changed=true`, `status=active`, `removed_at IS NULL` (confirmed cleared, not stale) |
+| 26–28 | Employer no-op/real-update audit correctness, audit metadata sensitivity | Verified structurally (code inspection of the no-op comparison and the metadata payloads, both unchanged from the prior code-review-fix pass) plus a live confirmation that `audit_logs` itself is unreadable/unwritable by `authenticated` (`insufficient_privilege`) — the actual application-layer no-op-skips-audit behavior lives in TypeScript (`adminUpsertEmployer`, `writeMembershipAudit` call sites), which this SQL-only validation environment does not execute; unchanged, previously-typechecked code, not re-exercised here |
+
+### Public-visibility results
+
+| # | Test | Result |
+|---|---|---|
+| 29 | Active employer with active job, anon read | **PASS** — employer and job both visible |
+| 30 | Suspended employer, anon read | **PASS** — `0` rows |
+| 31 | Archived employer, anon read | **PASS** — `0` rows |
+| 32 | Jobs of suspended/archived employers, anon read | **PASS** — `0` rows both |
+
+### Regression results
+
+| # | Test | Result |
+|---|---|---|
+| 33 | Existing admin: sees all jobs (3) and all employers (4) | **PASS** |
+| 34 | Superadmin: same counts, confirming equivalent access | **PASS** |
+| 35 | Candidate-owned data models unaltered | **PASS by construction** — no candidate-owned table exists in this migration's diff; nothing to alter |
+| 36 | Migration performs no write to `assessment_runs`/`assessment_run_reports` | **PASS** — `grep -c "assessment_run" supabase/migrations/20260719100000_employer_memberships.sql` → `0` |
+
+### Rollback and reapply results
+
+Executed `tests/database/phase-g1/05_rollback.sql` — copied verbatim
+from this report's own "Rollback procedure" section (updated to add the
+`employer_is_active_status` drop found necessary by this same
+validation pass; see that section).
+
+- **Before/after `pg_policies` capture for all 10 touched policies:**
+  after rollback, every one of the 10 matched its original, pre-G1 text
+  **exactly**, byte-for-byte (`has_role(auth.uid(), 'admin'::app_role)`
+  restored for the 8 admin-equivalence policies; the original
+  single-predicate `jobs_public_active_select` and original
+  `EXISTS`-subquery `employers_public_active_select` restored).
+- **New-object removal confirmed directly**, not assumed: `SELECT` from
+  `pg_tables`/`pg_proc`/`information_schema.columns` for all six new
+  objects (`employer_memberships` table, `is_platform_admin`,
+  `has_employer_role`, `update_employer_membership`,
+  `employer_is_active_status`, `employers.status` column) — all six
+  returned `0`.
+- **Reapply:** the corrected forward migration was applied a second time
+  to the now-rolled-back database — zero errors, and the resulting
+  `pg_policies` state for `jobs_public_active_select`/
+  `employers_public_active_select` matched the first post-fix
+  application exactly.
+
+**Result: PASS** — rollback is safe, complete, and the forward migration
+is idempotent-in-effect across a rollback/reapply cycle.
+
+### Remaining production-only verification
+
+Everything above was executed against a synthetic local database, not
+Lovable Cloud. Still required before production application:
+
+- Apply this exact migration to a **Lovable Cloud staging/dev project**
+  (never production directly) and repeat the `pg_policies` before/after
+  capture and the grant checks against the *actual* connected database,
+  per the established Step 1.5 process from earlier in this project.
+- Repeat the concurrency test (test 21) against that same staging
+  environment — local Postgres 16 behaviour is expected to match
+  Supabase-managed Postgres exactly for standard row-locking semantics,
+  but this has not been independently confirmed on the actual managed
+  service.
+- Regenerate `src/integrations/supabase/types.ts` via Lovable Cloud's own
+  workflow (still not possible from this or any prior environment in
+  this project).
+- A genuine end-to-end pass through the real TypeScript server functions
+  (`membership.functions.ts`, `admin.functions.ts`) against a live
+  database — this validation exercised the SQL layer directly; it did
+  not execute the TypeScript call sites themselves (no Node/Bun-to-
+  Postgres bridge was set up for that, only raw SQL/psql).
+- Backup the target staging database before applying, per standing
+  project convention.
+
 ## Known limitations
 
 - **Types not regenerated** — see "Generated types" above. Required
   before or immediately after this migration is applied anywhere.
-- **No live RLS or concurrency verification performed** — this
-  environment has no connected database. Every RLS/access scenario and
-  the concurrency test procedure are fully specified (validation SQL +
-  20-scenario matrix + the dedicated concurrency test above) but
-  unexecuted pending Lovable Cloud's connected environment.
+- **RLS and concurrency verification (superseded, resolved)** — the
+  prior version of this report noted that no live database was
+  available to verify RLS/concurrency. This has since been done: see
+  "Local database validation" above, executed against a real local
+  PostgreSQL 16 instance, including the actual two-process concurrency
+  test. Two real, previously-undetected bugs were found this way (an
+  RLS mutual-recursion defect between `jobs`/`employers` policies, and
+  an ambiguous-column reference inside `update_employer_membership`
+  that would have broken every call to it) and both are fixed on this
+  branch, re-verified. **Still required**: the same validation repeated
+  against an actual Lovable Cloud staging environment before production
+  application — see "Remaining production-only verification" above; a
+  clean local-Postgres result is strong evidence, not a substitute for
+  that.
 - **Final-owner protection is now DB-enforced and race-free**
   (superseded limitation, resolved in this revision) — the check and
   the mutation both happen inside `update_employer_membership`, under
