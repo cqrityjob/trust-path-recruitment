@@ -213,4 +213,42 @@
 
   /* Native form controls collapse to their static print-only siblings. */
   select { display: none !important; }
+
+  /* Prevent a trailing blank page.
+   *
+   * Culprits observed in print preview:
+   * 1. SiteLayout wraps everything in `min-h-screen flex-col`, which forces
+   *    the outer column to at least 100vh (~29.7cm at A4). On the last page,
+   *    `flex-1` on <main> stretches to fill that height, pushing an empty
+   *    band past the end of the report — enough to spill into an extra page.
+   * 2. AssessmentLayout adds `py-14 md:py-20` (up to 5rem bottom padding)
+   *    after the final disclaimer, which can also nudge content over the
+   *    page boundary.
+   *
+   * Neutralise both for print only. Screen behaviour is unchanged. */
+  html, body {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+  main.flex-1,
+  .flex-1 {
+    flex: 0 0 auto !important;
+  }
+  /* Trim large vertical padding on the outermost assessment wrapper so the
+   * last section doesn't push a stray band onto a new page. */
+  main > div.py-14,
+  main > div.md\:py-20 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  /* Belt-and-braces: never force a break after the last flow element. */
+  main > *:last-child,
+  main > * > *:last-child {
+    break-after: avoid-page !important;
+    page-break-after: avoid !important;
+    margin-bottom: 0 !important;
+  }
 }
