@@ -305,10 +305,16 @@ export const adminSaveJobDraft = createServerFn({ method: "POST" })
 
 // ---------------------------- JOBS: TRANSITION ------------------------------
 
-// H3.4B: rejecting a job requires a non-empty internal note -- the note is
-// the only record of why a job was rejected, so a blank rejection is a
-// dead end for both the employer and any future reviewer. Every other
-// action keeps the note optional, unchanged.
+// H3.4B / H3.4 integrity fix: rejecting a job requires a non-empty
+// internal note -- the note is the only record of why a job was
+// rejected, so a blank rejection is a dead end for both the employer and
+// any future reviewer. This zod refine gives an immediate, friendly
+// error without a round-trip to Postgres; the actual, authoritative
+// enforcement is the reject_job() SECURITY DEFINER RPC the handler below
+// calls for the "reject" action (a raw client update to jobs.status
+// bypasses this schema entirely, since jobs_admin_write RLS is FOR ALL --
+// the RPC, not this refine, is what closes that). Every other action
+// keeps the note optional, unchanged.
 const transitionSchema = z
   .object({
     id: z.string().uuid(),
@@ -336,6 +342,44 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
     if (!before) throw new Error("Job not found");
 
     const nowIso = new Date().toISOString();
+
+    // H3.4 integrity fix: rejection is the one transition with a
+    // required-note invariant, so it goes through reject_job() -- the
+    // sole, atomically-validated, database-level path a job can ever be
+    // set to status='rejected' through (this closes a direct-RLS-update
+    // bypass of the previous TS-only zod check; jobs_admin_write RLS is
+    // FOR ALL, so a raw client update could otherwise reject a job with
+    // no note at all -- see the migration's own comment for the full
+    // reasoning). Every other action below is unchanged.
+    if (data.action === "reject") {
+      const { error: rejectErr } = await ctx.supabase.rpc("reject_job", {
+        _job_id: data.id,
+        _note: data.moderation_notes,
+      });
+      if (rejectErr) {
+        console.error("[admin] reject_job RPC failed", rejectErr);
+        if (rejectErr.code === "23514") throw new Error("REJECTION_NOTE_REQUIRED");
+        throw new Error("Could not reject this job.");
+      }
+
+      const { data: after } = await ctx.supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      await writeAudit({
+        jobId: data.id,
+        slugSnapshot: (after?.slug as string) ?? null,
+        actorId: ctx.userId,
+        action: "rejected",
+        before,
+        after,
+      });
+
+      return { id: data.id, status: "rejected" };
+    }
+
     const patch: Record<string, unknown> = { updated_at: nowIso };
     let auditAction: string;
 
@@ -348,10 +392,6 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
         patch.status = "published";
         if (!before.published_at) patch.published_at = nowIso;
         auditAction = "published";
-        break;
-      case "reject":
-        patch.status = "rejected";
-        auditAction = "rejected";
         break;
       case "archive":
         patch.status = "archived";
@@ -366,9 +406,9 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
     const { error: upErr } = await ctx.supabase.from("jobs").update(patch).eq("id", data.id);
     if (upErr) throw new Error(upErr.message); // DB trigger enforces publish rules
 
-    // Record reviewer on publish/reject
+    // Record reviewer on publish
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.action === "publish" || data.action === "reject") {
+    if (data.action === "publish") {
       await supabaseAdmin.from("job_admin_meta").upsert(
         {
           job_id: data.id,

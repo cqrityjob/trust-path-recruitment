@@ -1,9 +1,14 @@
 # H3.4 — Closed Beta Readiness
 
 Status: H3.4A and H3.4B both implemented and tested locally (disposable
-Postgres 16, real migration history). Not yet verified against Lovable
-Cloud — see §12 for the handoff. No live Supabase Cloud data was touched
-by this phase; every fixture used lived only in disposable local test
+Postgres 16, real migration history). A follow-up integrity pass (§16)
+closed a database-level bypass of the job-rejection note requirement
+found during Lovable Cloud verification — the rejection-note requirement
+is now enforced at the canonical server boundary (a dedicated
+`reject_job()` RPC plus a database trigger guard) and is no longer a
+known limitation. Not yet re-verified against Lovable Cloud after this
+fix — see §15 for the handoff. No live Supabase Cloud data was touched by
+this phase; every fixture used lived only in disposable local test
 clusters and was torn down afterward.
 
 ## 1. Ground-truth audit (confirmed before writing any code)
@@ -177,13 +182,12 @@ clusters and was torn down afterward.
 1. **Admin job rejection requires a non-empty internal note.**
    `adminTransitionJob`'s `transitionSchema` gained a `.refine()`
    requiring `moderation_notes` to be non-blank when `action === 'reject'`
-   (server-side backstop). The primary UX is client-side: the admin job
-   editor's "Reject" button now runs `onReject()`, which blocks the
-   request and shows an inline error if the note field is empty. This is
-   application-layer only (not a database trigger) — judged proportional
-   given the brief frames this as a process requirement, not a listed
-   H3.4A-style security requirement; documented as a conscious scope
-   decision, not an oversight.
+   (immediate client-facing feedback), and the admin job editor's
+   "Reject" button runs `onReject()`, which blocks the request and shows
+   an inline error if the note field is empty. **Originally judged
+   sufficient as an application-layer-only check; a follow-up integrity
+   pass found this insufficient and closed it at the canonical database
+   boundary too — see §16, this is no longer a known limitation.**
 2. **Admin job moderation UI now fully uses sv/en i18n.**
    `_authenticated.admin.jobs.index.tsx` and
    `_authenticated.admin.jobs.$id.tsx` were fully converted from
@@ -249,18 +253,29 @@ unchanged.
    `job_application_status_events` + RLS, adds `set_application_status()`.
 2. `supabase/migrations/20260720160000_h3_4b_beta_feedback.sql` —
    additive. Adds `beta_feedback` + RLS.
+3. `supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql`
+   — additive (follow-up integrity pass, see §16). Extends
+   `jobs_validate_before_write()` (`CREATE OR REPLACE`) with one new,
+   unconditional check, adds `reject_job()`.
 
-Neither migration edits any already-applied migration file. Both were
-tested by applying the **complete real migration history** (bootstrap →
-every file in `supabase/migrations/` in chronological order, skipping the
-5 confirmed-duplicate files, through both files above) against a fresh
-disposable Postgres 16 cluster.
+None of the three migrations edit any already-applied migration file.
+All were tested by applying the **complete real migration history**
+(bootstrap → every file in `supabase/migrations/` in chronological
+order, skipping the confirmed-duplicate files — 5 from before this
+phase, plus 2 more discovered mid-phase: Lovable's own consolidated
+snapshots of the H3.3 and H3.4A/B migration sets, applied and pushed to
+`origin/main` while this work was in progress — through all three files
+above) against a fresh disposable Postgres 16 cluster.
 
 ## 5. Routes and files changed
 
 **New files:**
 - `supabase/migrations/20260720150000_h3_4a_candidate_application_core.sql`
 - `supabase/migrations/20260720160000_h3_4b_beta_feedback.sql`
+- `supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql`
+  (follow-up integrity pass, see §16)
+- `tests/database/phase-h3-4-job-reject/{00_bootstrap,01_fixtures,02_run_tests}.sql`
+  (follow-up integrity pass)
 - `src/components/jobs/ApplyInternalDialog.tsx`
 - `src/routes/_authenticated.my-career.applications.tsx`
 - `src/lib/job-intelligence/beta-feedback.functions.ts`
@@ -285,9 +300,14 @@ disposable Postgres 16 cluster.
 - `src/routes/_authenticated.my-career.index.tsx` — added a "My
   applications" quick link
 - `src/lib/job-intelligence/admin.functions.ts` — rejection-note `.refine()`
+  (H3.4B); further modified in the follow-up integrity pass (§16) so the
+  "reject" action calls the new `reject_job()` RPC instead of a raw
+  `jobs` update
 - `src/routes/_authenticated.admin.jobs.index.tsx` — full i18n conversion
 - `src/routes/_authenticated.admin.jobs.$id.tsx` — full i18n conversion +
-  client-side reject-note guard + `internal` application-method option
+  client-side reject-note guard + `internal` application-method option;
+  further modified in the follow-up integrity pass (§16) to translate the
+  server's `REJECTION_NOTE_REQUIRED` error code
 - `src/components/admin/AdminShellChrome.tsx` — added "feedback" nav section
 - `src/components/auth/PortalAuthForm.tsx` — `redirectTo` now points at
   `/reset-password`
@@ -483,10 +503,11 @@ correction already documented in §9/the migration's own comments.
 
 ## 13. Known limitations
 
-- Admin job rejection's non-empty-note requirement is enforced at the
-  application layer (zod `.refine()` + client-side guard), not by a
-  database trigger — a deliberate, documented proportionality decision
-  (see §3.1), not an oversight.
+- ~~Admin job rejection's non-empty-note requirement is enforced at the
+  application layer only...~~ **Closed in a follow-up integrity pass, no
+  longer a limitation.** See §16: `reject_job()` is now the sole,
+  database-enforced path a job may ever be set to `status='rejected'`
+  through, for every caller, including a direct raw table update.
 - `employer_note` on `job_applications` remains readable by the candidate
   it describes if they query their own row's full column set directly
   (pre-existing behaviour from H1, unrelated to and unchanged by this
@@ -521,13 +542,13 @@ this phase (not requested, flagged for future consideration):
 
 ## 15. Lovable Cloud handoff
 
-1. **Sync** the final commit (`feat: add H3.4 closed beta candidate
-   application core and completion items`, tip of `main`) to the Lovable
-   Cloud project.
-2. **Apply both migrations, in order**:
+1. **Sync** the final commit (tip of `main`, see §16 for the exact hash
+   of the follow-up integrity fix) to the Lovable Cloud project.
+2. **Apply all three migrations, in order**:
    1. `supabase/migrations/20260720150000_h3_4a_candidate_application_core.sql`
    2. `supabase/migrations/20260720160000_h3_4b_beta_feedback.sql`
-   Both additive only; no existing migration edited.
+   3. `supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql`
+   All additive only; no existing migration edited.
 3. **Prerequisite**: at least one existing user must already satisfy
    `is_platform_admin()` (see `docs/beta/beta-operator-guide.md` §1) —
    unchanged, pre-existing Phase G1 model.
@@ -549,7 +570,13 @@ this phase (not requested, flagged for future consideration):
      `Withdrawn` and re-applying to that same job now succeeds.
    - As an admin, attempt to reject a pending job **without** a note →
      confirm it's blocked with an inline message; reject **with** a note
-     → confirm it succeeds.
+     → confirm it succeeds and the note appears in `job_admin_meta`.
+   - (Follow-up integrity pass, §16) If you have direct SQL access to a
+     non-production copy of the database, confirm a raw
+     `UPDATE jobs SET status = 'rejected' WHERE id = '<any job>'` now
+     fails with `jobs.status can only be set to rejected via
+     reject_job()` — this is the actual fix; the UI-level check above
+     alone does not prove it.
    - Confirm the admin job list/detail pages render entirely in Swedish
      when the language switcher is set to `SV`, and entirely in English
      when set to `EN` — no leftover hardcoded strings.
@@ -561,3 +588,158 @@ this phase (not requested, flagged for future consideration):
      user in and redirects to `/my-career`.
 5. **Report pass/fail** against the checklist above. No product or
    implementation decisions are left open for this phase.
+
+## 16. Follow-up integrity fix — job rejection note now enforced server-side
+
+### 16.1 The gap
+
+Lovable Cloud verification found that "admin cannot reject a job without
+a non-empty internal moderation note" was enforced only in the admin job
+editor's client-side `onReject()` guard, plus a zod `.refine()` inside
+`adminTransitionJob`'s `transitionSchema`. Re-auditing the canonical
+mutation path confirmed this was genuinely insufficient: `jobs_admin_write`
+RLS (Phase A, unchanged) is `FOR ALL TO authenticated USING
+(has_role(auth.uid(), 'admin'))` — a real platform-admin session could
+already perform a raw `UPDATE public.jobs SET status = 'rejected' ...`
+directly (via `supabase-js`, a future route, or any other caller),
+completely bypassing `adminTransitionJob()` and its zod check.
+`jobs_validate_before_write()` (the pre-existing trigger) made this worse,
+not better: it already fully exempts `is_platform_admin(auth.uid())`
+callers from every one of its own rules, so a direct admin update to
+`status='rejected'` was both RLS-permitted and trigger-permitted, with no
+note check anywhere in the database. This is the same class of gap
+already found and closed for employer moderation in H3.3.
+`adminSaveJobDraft()` (the only other admin job-write function) was
+re-audited and reconfirmed to accept no `status` field in its input
+schema at all — it needed no change.
+
+### 16.2 Exact enforcement added
+
+Two changes, deployed together, closing both the application-layer gap
+and the underlying database-level bypass:
+
+1. **New `reject_job(_job_id uuid, _note text)` RPC** (`SECURITY
+   DEFINER`) — the application's own path to reject a job.
+   `adminTransitionJob`'s `"reject"` branch now calls this RPC instead of
+   building a raw `jobs` update + separate `job_admin_meta` upsert;
+   every other action (`submit`/`publish`/`archive`/`unpublish`) is
+   completely untouched, still writing through the exact same path as
+   before. The RPC validates a non-empty, trimmed note
+   (`NULLIF(btrim(_note), '')`), row-locks the job (`FOR UPDATE`), then
+   atomically updates `jobs.status` and upserts
+   `job_admin_meta.moderation_notes` in one transaction — mirroring
+   `moderate_employer()` (H3.3) and `set_application_status()` (H3.4A)
+   exactly.
+2. **`jobs_validate_before_write()` gains one new, unconditional check**
+   (applies to every caller, including platform admins — unlike every
+   other rule in that trigger): `NEW.status = 'rejected'` is only ever
+   allowed when a transaction-local marker
+   (`app.job_rejection_in_progress`) is set, and the only place that
+   marker is ever set is inside `reject_job()` itself, immediately before
+   its own internal `UPDATE`. This is the exact transaction-local-marker
+   pattern already proven for `employers.status` in H3.3's own
+   database-integrity fix, applied here for the same reason: a client can
+   never set this marker itself (PostgREST executes only the single
+   statement/RPC call requested), so a raw direct `UPDATE jobs SET
+   status = 'rejected'` — from any caller, any role, any future route —
+   is now rejected by the database itself, not merely discouraged by a
+   nicer RPC existing alongside it.
+
+Every other rule already inside `jobs_validate_before_write()` (family/
+profession validation, published-job field requirements, the H3.1
+employer-approval gate, the non-admin transition whitelist, the
+published-job-frozen-field guard) is completely unchanged.
+
+**A real bug was caught and fixed during local testing**: the RPC's
+`RETURNS TABLE (job_id uuid, status text, updated_at timestamptz)` clause
+creates implicit PL/pgSQL variables with those exact names, which
+collided with `job_admin_meta`'s own `job_id` column specifically at the
+`ON CONFLICT (job_id)` clause of the upsert (`column reference "job_id"
+is ambiguous`, SQLSTATE 42702). Fixed with `#variable_conflict
+use_column` at the top of the function body — safe here because the
+function never reads the OUT-parameter variables by name anywhere in its
+body (only the underscore-prefixed local variables, and a final `RETURN
+QUERY SELECT` at the end). Caught by the local test suite before this was
+ever committed, not left for Lovable to find.
+
+### 16.3 Whether a migration was required
+
+**Yes** —
+`supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql`,
+additive only, does not edit any already-applied migration file
+(including the two prior H3.4 migrations). A migration was necessary
+specifically because §16.1 confirmed direct authenticated status
+mutation could otherwise bypass the server function entirely, which is
+exactly the documented condition under which a database-level change was
+required rather than optional.
+
+### 16.4 Tests and results
+
+New phase directory `tests/database/phase-h3-4-job-reject/` — 10/10
+assertions passed (T1–T10) against a fresh disposable Postgres 16
+cluster with the complete real migration history (through all three H3.4
+migrations, skipping all 7 confirmed-duplicate files — the original 5
+plus the 2 Lovable consolidated-snapshot files discovered mid-phase, see
+§4):
+
+| # | Requirement | Result |
+|---|---|---|
+| 1 | Reject with null note fails | T1 — `SQLSTATE 23514`, status unchanged (`pending_review`) |
+| 2 | Reject with empty note fails | T2 — same |
+| 3 | Reject with whitespace-only note fails | T3 — same |
+| 4 | Reject with a valid note succeeds | T4 — status → `rejected`, `job_admin_meta.moderation_notes` set, `reviewed_by` correctly attributed to the real caller |
+| 5 | Failed rejection does not change job status | T1–T3 (status re-checked after each) |
+| 6 | Failed rejection does not create/modify moderation metadata | T6 — zero `job_admin_meta` rows exist for the job before the first successful attempt |
+| 7 | Approval (publish) still works | T7 — a draft job still transitions straight through to `published` via the unchanged raw-update path |
+| 8 | Existing H3.3/H3.4 regressions pass | T8 — non-admin forbidden from `reject_job()`; the full H3.4A `job_applications` suite (23/23) re-run against the same migration history with no change in result |
+| — | **The actual point of this fix** | T9 — a genuine admin session's raw `UPDATE jobs SET status = 'rejected'` (bypassing `reject_job()` entirely) now fails with `jobs.status can only be set to rejected via reject_job()` — this is the concrete, empirical proof the database-level bypass is closed, not just documented as closed |
+| — | Function inventory | T10 — `reject_job` is the only function in the schema whose body sets `app.job_rejection_in_progress` |
+
+Static/build checks re-run after this fix: `bunx tsc --noEmit` — zero
+errors. `bun run build` — succeeds. `bunx eslint` on both changed files —
+zero new issues (only pre-existing-convention `any` usages, none in the
+newly-changed lines). `cie:check` — PASS, persona output byte-identical
+to before this fix. `kg:check` — OK.
+
+### 16.5 Files changed
+
+- `supabase/migrations/20260720170000_h3_4_job_rejection_note_guard.sql`
+  (new)
+- `tests/database/phase-h3-4-job-reject/{00_bootstrap,01_fixtures,02_run_tests}.sql`
+  (new)
+- `src/lib/job-intelligence/admin.functions.ts` — `adminTransitionJob`'s
+  `"reject"` branch now calls `reject_job()`; every other action
+  unchanged
+- `src/routes/_authenticated.admin.jobs.$id.tsx` — translates the
+  server's `REJECTION_NOTE_REQUIRED` error code to the existing localized
+  message instead of showing it raw; comment updated to reflect the RPC
+  as the actual boundary
+
+No file under `src/lib/career-intelligence-engine/`,
+`src/lib/knowledge-graph/`, `src/lib/job-intelligence/applications.functions.ts`,
+`src/components/jobs/`, `src/routes/_authenticated.my-career.applications.tsx`,
+`src/routes/_authenticated.feedback.tsx`, `src/routes/reset-password.tsx`,
+or any other candidate-application/assessment/feedback/authentication
+path was touched — confirmed via `git status` and by scope (this fix
+only ever imports/calls the new RPC from within `adminTransitionJob`'s
+existing `"reject"` branch).
+
+### 16.6 Final review
+
+Re-read the complete diff. Verified: `reject_job()`'s `SET search_path =
+public`, its `REVOKE ALL ... FROM PUBLIC, anon` / `GRANT EXECUTE ... TO
+authenticated`, its role-derivation from `auth.uid()` (never trusted from
+client input), its atomicity (status update + `job_admin_meta` upsert in
+one function body), and that it changes neither on a validation failure.
+Verified `jobs_validate_before_write()`'s one new check applies
+unconditionally (no admin exemption, unlike every other rule in that
+function) and that every pre-existing rule in it is byte-for-byte
+unchanged. Verified no raw database error reaches the UI
+(`REJECTION_NOTE_REQUIRED` is a stable application-level code, translated
+to the existing localized string; any other `reject_job()` failure falls
+back to a generic safe message). Confirmed internal notes remain
+admin-only (`job_admin_meta` grants/RLS untouched by this fix). Confirmed
+`writeAudit()` (the existing `job_audit_events` attribution path) is
+still called, unchanged, for the reject action. `git status` reviewed —
+exactly the 4 files in §16.5 changed. Full local test suite (§16.4)
+re-run and passing at the time of this review.

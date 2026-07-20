@@ -189,14 +189,22 @@ function AdminJobEditor() {
     },
     onError: (e: Error) => {
       setMessage(null);
-      setError(e.message);
+      setError(
+        e.message === "REJECTION_NOTE_REQUIRED"
+          ? t("admin.jobs.detail.error.rejectionNoteRequired")
+          : e.message,
+      );
     },
   });
 
-  // H3.4B: rejecting a job requires a non-empty internal note. Checked
-  // here (client-side, before the request is even sent) as the primary
-  // UX; the server independently re-validates the same rule (zod refine
-  // in adminTransitionJob's transitionSchema) as a backstop.
+  // H3.4B/H3.4 integrity fix: rejecting a job requires a non-empty
+  // internal note. Checked here (client-side, before the request is even
+  // sent) as the primary UX; the canonical enforcement is server-side --
+  // adminTransitionJob's "reject" action now routes through the
+  // reject_job() database RPC (supabase/migrations/20260720170000_h3_4_
+  // job_rejection_note_guard.sql), the only path a job can ever be set to
+  // status='rejected' through, so this client check is a convenience, not
+  // the actual boundary.
   function onReject() {
     setMessage(null);
     if (!form.moderation_notes.trim()) {
