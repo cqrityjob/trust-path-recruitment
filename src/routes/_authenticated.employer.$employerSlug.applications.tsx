@@ -22,8 +22,10 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   listApplicationsForEmployer,
   getApplicationCvSignedUrl,
@@ -75,12 +77,7 @@ function EmployerApplicationsPage() {
   if (workspacesQuery.isError || !workspace) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-        </Section>
+        <EmployerAccessDenied workspaces={workspacesQuery.data} />
       </SiteLayout>
     );
   }
@@ -194,7 +191,7 @@ function ApplicationsList({
                         <p className="text-xs text-muted-foreground">
                           {r.applicantDisplayName ?? t("employer.applications.anonymousCandidate")}
                           {" · "}
-                          {new Date(r.createdAt).toLocaleDateString()}
+                          {formatDate(r.createdAt, lang)}
                         </p>
                       </div>
                       <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">

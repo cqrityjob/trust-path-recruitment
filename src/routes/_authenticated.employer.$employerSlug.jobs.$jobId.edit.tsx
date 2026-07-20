@@ -11,6 +11,7 @@ import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerJob,
@@ -25,6 +26,7 @@ import {
   toServerPayload,
   type EmployerJobFormValues,
 } from "@/components/employer/EmployerJobForm";
+import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/edit")({
   ssr: false,
@@ -34,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/job
 
 function EmployerJobEditPage() {
   const { employerSlug, jobId } = Route.useParams();
-  const { t } = useT();
+  const { t, lang } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -61,7 +63,7 @@ function EmployerJobEditPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       return saveFn({
         data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(values) },
       });
@@ -71,12 +73,12 @@ function EmployerJobEditPage() {
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "job", jobId] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Save failed"),
+    onError: (e: any) => setFormError(e?.message ?? "SAVE_DRAFT_FAILED"),
   });
 
   const submitMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       await saveFn({
         data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(values) },
       });
@@ -88,12 +90,12 @@ function EmployerJobEditPage() {
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
       navigate({ to: "/employer/$employerSlug/jobs", params: { employerSlug } });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Submit failed"),
+    onError: (e: any) => setFormError(e?.message ?? "SUBMIT_FOR_REVIEW_FAILED"),
   });
 
   const closeMutation = useMutation({
     mutationFn: () => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       return closeFn({ data: { employerId: workspace.employerId, jobId } });
     },
     onSuccess: () => {
@@ -102,12 +104,12 @@ function EmployerJobEditPage() {
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "job", jobId] });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Close failed"),
+    onError: (e: any) => setFormError(e?.message ?? "CLOSE_JOB_FAILED"),
   });
 
   const dupMutation = useMutation({
     mutationFn: () => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       return dupFn({ data: { employerId: workspace.employerId, jobId } });
     },
     onSuccess: (result) => {
@@ -118,7 +120,7 @@ function EmployerJobEditPage() {
         params: { employerSlug, jobId: result.id },
       });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Duplicate failed"),
+    onError: (e: any) => setFormError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
   if (workspacesQuery.isLoading || (workspace && jobQuery.isLoading)) {
@@ -134,12 +136,7 @@ function EmployerJobEditPage() {
   if (!workspace || jobQuery.isError || !jobQuery.data) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-        </Section>
+        <EmployerAccessDenied workspaces={workspacesQuery.data} />
       </SiteLayout>
     );
   }
@@ -166,7 +163,7 @@ function EmployerJobEditPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               {t("employer.jobs.list.status")}:{" "}
               <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                {job.status}
+                {jobStatusLabel(job.status, lang) || job.status}
               </span>
             </p>
           </div>

@@ -35,6 +35,7 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerDashboardStats,
@@ -115,17 +116,7 @@ function EmployerWorkspaceShell() {
   if (query.isError || !workspace) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-          <div className="mt-6">
-            <Link to="/my-career" className="text-sm font-medium text-accent hover:underline">
-              {t("sca.report.backToMyCareer")}
-            </Link>
-          </div>
-        </Section>
+        <EmployerAccessDenied workspaces={workspaces} />
       </SiteLayout>
     );
   }

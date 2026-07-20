@@ -15,6 +15,7 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   listEmployerJobs,
@@ -22,7 +23,10 @@ import {
   duplicateEmployerJob,
   type EmployerJobRow,
 } from "@/lib/job-intelligence/employer-jobs.functions";
+import { translateJobServerError } from "@/components/employer/EmployerJobForm";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
+import { formatDate } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/")({
   ssr: false,
@@ -68,12 +72,7 @@ function EmployerJobsListPage() {
   if (workspacesQuery.isError || !workspace) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-        </Section>
+        <EmployerAccessDenied workspaces={workspacesQuery.data} />
       </SiteLayout>
     );
   }
@@ -105,7 +104,7 @@ function JobsList({
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
   const listFn = useServerFn(listEmployerJobs);
   const closeFn = useServerFn(closeEmployerJob);
@@ -124,7 +123,7 @@ function JobsList({
       qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
     },
-    onError: (e: any) => setActionError(e?.message ?? "Could not close job"),
+    onError: (e: any) => setActionError(e?.message ?? "CLOSE_JOB_FAILED"),
   });
 
   const dupMutation = useMutation({
@@ -133,7 +132,7 @@ function JobsList({
       qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
     },
-    onError: (e: any) => setActionError(e?.message ?? "Could not duplicate job"),
+    onError: (e: any) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
   const rows: EmployerJobRow[] = jobsQuery.data ?? [];
@@ -163,7 +162,7 @@ function JobsList({
 
         {actionError && (
           <div className="mt-6 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {actionError}
+            {translateJobServerError(actionError, t)}
           </div>
         )}
 
@@ -179,7 +178,7 @@ function JobsList({
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3">Title</th>
+                    <th className="px-4 py-3">{t("employer.jobs.list.title")}</th>
                     <th className="px-4 py-3">{t("employer.jobs.list.status")}</th>
                     <th className="px-4 py-3">{t("employer.jobs.list.expires")}</th>
                     <th className="px-4 py-3">{t("employer.jobs.list.updated")}</th>
@@ -202,14 +201,14 @@ function JobsList({
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                            {r.status}
+                            {jobStatusLabel(r.status, lang) || r.status}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {r.expires_at ? new Date(r.expires_at).toLocaleDateString() : "—"}
+                          {r.expires_at ? formatDate(r.expires_at, lang) : "—"}
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {new Date(r.updated_at).toLocaleDateString()}
+                          {formatDate(r.updated_at, lang)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex flex-wrap justify-end gap-2">

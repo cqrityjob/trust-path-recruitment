@@ -9,6 +9,7 @@ import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   saveEmployerJobDraft,
@@ -46,7 +47,7 @@ function EmployerJobNewPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       return saveFn({ data: { employerId: workspace.employerId, ...toServerPayload(values) } });
     },
     onSuccess: (result) => {
@@ -58,12 +59,12 @@ function EmployerJobNewPage() {
         params: { employerSlug, jobId: result.id },
       });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Save failed"),
+    onError: (e: any) => setFormError(e?.message ?? "SAVE_DRAFT_FAILED"),
   });
 
   const submitMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
-      if (!workspace) throw new Error("Access not available");
+      if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       const saved = await saveFn({
         data: { employerId: workspace.employerId, ...toServerPayload(values) },
       });
@@ -75,7 +76,7 @@ function EmployerJobNewPage() {
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
       navigate({ to: "/employer/$employerSlug/jobs", params: { employerSlug } });
     },
-    onError: (e: any) => setFormError(e?.message ?? "Submit failed"),
+    onError: (e: any) => setFormError(e?.message ?? "SUBMIT_FOR_REVIEW_FAILED"),
   });
 
   if (workspacesQuery.isLoading) {
@@ -91,12 +92,7 @@ function EmployerJobNewPage() {
   if (!workspace) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-        </Section>
+        <EmployerAccessDenied workspaces={workspacesQuery.data} />
       </SiteLayout>
     );
   }

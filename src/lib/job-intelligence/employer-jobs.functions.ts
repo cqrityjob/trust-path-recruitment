@@ -17,6 +17,19 @@
 //      grant, matching admin.functions.ts's writeAudit() pattern.
 //   4. published_at is NEVER set by employer code paths — the trigger
 //      rejects any employer write that touches it.
+//
+// Final localisation pass: every throw in this file now carries a
+// stable, UPPER_SNAKE_CASE error CODE as its message (e.g.
+// "JOB_NOT_FOUND"), not English prose. A server function's thrown
+// Error.message is the one thing that unavoidably reaches the client
+// (TanStack Start serialises it into the response), so putting English
+// text there means it renders in Swedish view too. The client
+// (EmployerJobForm.tsx's translateJobServerError()) maps each code to a
+// localised sv/en string; an unrecognised code always falls back to a
+// generic localised message, so no raw text can ever render regardless
+// of what a future change to this file emits. Nothing about the
+// underlying authorization, RLS, or job-lifecycle logic changed — only
+// the text of what gets thrown.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -42,45 +55,43 @@ async function assertActiveMembership(
     .eq("employer_id", employerId)
     .eq("status", "active")
     .maybeSingle();
-  if (memErr) throw new Error("Access not available");
-  if (!membership) throw new Error("Access not available");
+  if (memErr) throw new Error("ACCESS_NOT_AVAILABLE");
+  if (!membership) throw new Error("ACCESS_NOT_AVAILABLE");
   const emp = Array.isArray((membership as any).employers)
     ? (membership as any).employers[0]
     : (membership as any).employers;
   if (!emp || (emp.status !== "active" && emp.status !== "pending")) {
-    throw new Error("Access not available");
+    throw new Error("ACCESS_NOT_AVAILABLE");
   }
   return { employerSlug: emp.slug as string };
 }
 
-// Final review hardening: the five INSERT/UPDATE call sites below
-// previously did `throw new Error(uErr.message)` / `throw new
-// Error(iErr.message)`, forwarding raw Postgres/PostgREST error text
-// (including, for a genuine CHECK-constraint or trigger-guard violation,
-// internal table/constraint names) straight into the server function's
-// HTTP response and from there into EmployerJobForm's rendered error
-// banner. The full error is still logged server-side for debugging; the
-// client only ever sees one of two safe, controlled messages. `23514` is
-// the Postgres SQLSTATE for check_violation -- both real column CHECK
-// constraints (e.g. workplace_type) and every jobs_validate_before_write()
-// RAISE EXCEPTION ... USING ERRCODE = 'check_violation' guard (taxonomy
-// whitelist, moderation-owned fields, status-transition rules,
-// published-path rules) surface with this code, so it reliably identifies
-// "the data you submitted is invalid" without needing to parse or forward
-// the trigger's own wording. Nothing else about the write, the RLS
-// policies, or the trigger logic itself is changed.
+// The five INSERT/UPDATE call sites below previously did `throw new
+// Error(uErr.message)` / `throw new Error(iErr.message)`, forwarding raw
+// Postgres/PostgREST error text (including, for a genuine CHECK-constraint
+// or trigger-guard violation, internal table/constraint names) straight
+// into the server function's HTTP response. The full error is still
+// logged server-side for debugging; the client only ever sees a stable
+// error CODE, translated by EmployerJobForm.tsx's translateJobServerError()
+// into the active locale. `23514` is the Postgres SQLSTATE for
+// check_violation -- both real column CHECK constraints (e.g.
+// workplace_type) and every jobs_validate_before_write() RAISE EXCEPTION
+// ... USING ERRCODE = 'check_violation' guard (taxonomy whitelist,
+// moderation-owned fields, status-transition rules, published-path rules)
+// surface with this code, so it reliably identifies "the data you
+// submitted is invalid" without needing to parse or forward the trigger's
+// own wording. Nothing else about the write, the RLS policies, or the
+// trigger logic itself is changed.
 function sanitizeJobWriteError(
   error: { message?: string; code?: string } | null | undefined,
   context: string,
-  fallback: string,
+  fallbackCode: string,
 ): Error {
   console.error(`[employer-jobs] ${context} failed`, error);
   if (error?.code === "23514") {
-    return new Error(
-      "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
-    );
+    return new Error("INVALID_JOB_DATA");
   }
-  return new Error(fallback);
+  return new Error(fallbackCode);
 }
 
 async function writeAudit(params: {
@@ -97,8 +108,14 @@ async function writeAudit(params: {
   // the admin client throws a raw env-var error that would otherwise
   // propagate to the user as a leaked backend message even after the
   // primary write already succeeded. We swallow every failure here and
-  // log server-side. The RLS-scoped write above is the source of truth;
-  // missing an audit row never blocks the employer flow.
+  // log server-side (error object only -- never the service-role key
+  // itself, since a missing-credential error never contains the credential
+  // value). The RLS-scoped write above is the source of truth; missing an
+  // audit row never blocks the employer flow. Robust, guaranteed audit
+  // persistence (e.g. retry, a dead-letter queue, or an authenticated-role
+  // write path that doesn't depend on service-role availability at all) is
+  // deferred to a future phase (H3.3 platform-admin/moderation work) -- not
+  // attempted here.
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("job_audit_events").insert({
@@ -166,7 +183,7 @@ export const listEmployerJobs = createServerFn({ method: "POST" })
       .eq("employer_id", data.employerId)
       .order("updated_at", { ascending: false })
       .limit(200);
-    if (error) throw new Error("Could not load jobs.");
+    if (error) throw new Error("LOAD_JOBS_FAILED");
     return (rows ?? []) as EmployerJobRow[];
   });
 
@@ -190,8 +207,8 @@ export const getEmployerJob = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId)
       .maybeSingle();
-    if (error) throw new Error("Could not load job.");
-    if (!job) throw new Error("Job not found");
+    if (error) throw new Error("LOAD_JOB_FAILED");
+    if (!job) throw new Error("JOB_NOT_FOUND");
     return job;
   });
 
@@ -271,10 +288,10 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
         .eq("id", data.id)
         .eq("employer_id", data.employerId)
         .maybeSingle();
-      if (bErr) throw new Error("Could not load job.");
-      if (!before) throw new Error("Job not found");
+      if (bErr) throw new Error("LOAD_JOB_FAILED");
+      if (!before) throw new Error("JOB_NOT_FOUND");
       if (before.status !== "draft" && before.status !== "rejected") {
-        throw new Error("This job cannot be edited in its current state.");
+        throw new Error("JOB_NOT_EDITABLE");
       }
 
       const { error: uErr } = await ctx.supabase
@@ -283,11 +300,7 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
         .eq("id", data.id)
         .eq("employer_id", data.employerId);
       if (uErr)
-        throw sanitizeJobWriteError(
-          uErr,
-          "saveEmployerJobDraft update",
-          "Could not save this job draft.",
-        );
+        throw sanitizeJobWriteError(uErr, "saveEmployerJobDraft update", "SAVE_DRAFT_FAILED");
 
       await writeAudit({
         jobId: data.id,
@@ -309,8 +322,8 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       .select("slug")
       .eq("id", data.employerId)
       .maybeSingle();
-    if (empErr) throw new Error("Could not load employer.");
-    if (!emp) throw new Error("Employer not found");
+    if (empErr) throw new Error("LOAD_EMPLOYER_FAILED");
+    if (!emp) throw new Error("EMPLOYER_NOT_FOUND");
 
     const short = randomShortId();
     const titleBase = data.title_sv || data.title_en || "draft";
@@ -327,12 +340,7 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       })
       .select("id, slug")
       .single();
-    if (iErr)
-      throw sanitizeJobWriteError(
-        iErr,
-        "saveEmployerJobDraft insert",
-        "Could not save this job draft.",
-      );
+    if (iErr) throw sanitizeJobWriteError(iErr, "saveEmployerJobDraft insert", "SAVE_DRAFT_FAILED");
 
     await writeAudit({
       jobId: inserted.id as string,
@@ -365,10 +373,10 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId)
       .maybeSingle();
-    if (bErr) throw new Error("Could not load job.");
-    if (!before) throw new Error("Job not found");
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
     if (before.status !== "draft" && before.status !== "rejected") {
-      throw new Error("Only draft or rejected jobs can be submitted for review.");
+      throw new Error("JOB_NOT_SUBMITTABLE");
     }
 
     // MVP submission gate (Part J / M2): title, description, application
@@ -385,7 +393,7 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
       missing.push("application email");
     if (!before.expires_at) missing.push("expires at");
     if (missing.length > 0) {
-      throw new Error(`Missing required fields: ${missing.join(", ")}`);
+      throw new Error("MISSING_REQUIRED_FIELDS");
     }
 
     const { error: uErr } = await ctx.supabase
@@ -394,11 +402,7 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId);
     if (uErr)
-      throw sanitizeJobWriteError(
-        uErr,
-        "submitEmployerJob update",
-        "Could not submit this job for review.",
-      );
+      throw sanitizeJobWriteError(uErr, "submitEmployerJob update", "SUBMIT_FOR_REVIEW_FAILED");
 
     await writeAudit({
       jobId: data.jobId,
@@ -431,10 +435,10 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId)
       .maybeSingle();
-    if (bErr) throw new Error("Could not load job.");
-    if (!before) throw new Error("Job not found");
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
     if (before.status !== "published") {
-      throw new Error("Only a published job can be closed.");
+      throw new Error("JOB_NOT_CLOSEABLE");
     }
 
     // Trigger rejects any content change alongside published->archived.
@@ -444,8 +448,7 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
       .update({ status: "archived", updated_at: new Date().toISOString() })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId);
-    if (uErr)
-      throw sanitizeJobWriteError(uErr, "closeEmployerJob update", "Could not close this job.");
+    if (uErr) throw sanitizeJobWriteError(uErr, "closeEmployerJob update", "CLOSE_JOB_FAILED");
 
     await writeAudit({
       jobId: data.jobId,
@@ -478,16 +481,16 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId)
       .maybeSingle();
-    if (sErr) throw new Error("Could not load job.");
-    if (!src) throw new Error("Job not found");
+    if (sErr) throw new Error("LOAD_JOB_FAILED");
+    if (!src) throw new Error("JOB_NOT_FOUND");
 
     const { data: emp, error: empErr } = await ctx.supabase
       .from("employers")
       .select("slug")
       .eq("id", data.employerId)
       .maybeSingle();
-    if (empErr) throw new Error("Could not load employer.");
-    if (!emp) throw new Error("Employer not found");
+    if (empErr) throw new Error("LOAD_EMPLOYER_FAILED");
+    if (!emp) throw new Error("EMPLOYER_NOT_FOUND");
 
     const short = randomShortId();
     const titleBase = src.title_sv || src.title_en || "draft";
@@ -526,11 +529,7 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       .select("id, slug")
       .single();
     if (iErr)
-      throw sanitizeJobWriteError(
-        iErr,
-        "duplicateEmployerJob insert",
-        "Could not duplicate this job.",
-      );
+      throw sanitizeJobWriteError(iErr, "duplicateEmployerJob insert", "DUPLICATE_JOB_FAILED");
 
     await writeAudit({
       jobId: inserted.id as string,

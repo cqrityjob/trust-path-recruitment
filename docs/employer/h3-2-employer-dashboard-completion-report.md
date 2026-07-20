@@ -8,6 +8,8 @@
 > **Status update (H3.2.2, final independent review):** a follow-up code and security review found one additional, narrowly-scoped issue (four raw Supabase/Postgres error messages in `applications.functions.ts` that could reach a server function's HTTP response body, though none were ever rendered in the UI) and hardened it, plus added a small taxonomy-regression script. No defects in the four originally-reported areas; no schema change. See **[the H3.2.2 section below](#h322--final-independent-code-and-security-review)**.
 >
 > **Status update (H3.2.3, employer job error hardening):** the H3.2.2 review had flagged, but explicitly left unfixed as out-of-scope, that `employer-jobs.functions.ts` (save draft, edit, submit-for-review, close, duplicate) still forwarded raw Postgres error text to the client. That is now fixed — see **[the H3.2.3 section below](#h323--employer-job-server-error-sanitization)**. No schema change.
+>
+> **Status update (H3.2.4, job-form UX/validation/localisation):** the final Lovable Cloud retest confirmed the core employer flow works end-to-end, but product-owner screenshots showed remaining UX issues in the job form itself — an English server-error fallback rendering in Swedish view, no client-side required-field validation, US-style `mm/dd/yyyy`/12-hour dates in Swedish view, developer-facing field labels ("Land (ISO-2)", "Yrke (slug)"), and a free-text profession field an employer could type any internal slug into. All fixed — see **[the H3.2.4 section below](#h324--job-form-ux-validation-and-localisation)**. No schema, RLS, or permission change.
 
 ## 1. Current-state audit (before this phase)
 
@@ -510,3 +512,115 @@ Repo-wide: `bunx tsc --noEmit` clean; `bun run build` succeeds; `bunx eslint` on
 ## Commit and push
 
 Committed as `fix: sanitize employer job server errors`. See the final chat response for the exact commit hash and confirmation this is the final repository tip.
+
+---
+
+# H3.2.4 — Job Form UX, Validation and Localisation
+
+**Scope:** final product-owner-facing pass on the employer job form itself — localise every validation/error message, add client-side required-field validation with inline errors and focus-to-first-invalid, fix Swedish/English date-time presentation, replace developer-facing field labels, replace the free-text profession field with a real selector, and make the access-denied state consistent across all six employer routes. **No new functionality beyond what was asked. No H3.3 work. No permission, RLS, job-lifecycle, or migration change.**
+
+## 1. UX issues corrected
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | English validation message rendered in Swedish view (`sanitizeJobWriteError`'s hardcoded "Invalid job data...") | Every throw in `employer-jobs.functions.ts` now carries a stable UPPER_SNAKE_CASE **code**, never English prose; `EmployerJobForm.tsx`'s new `translateJobServerError()` maps each code to a localised sv/en string, with an always-localised generic fallback for any unrecognised code |
+| 2 | No client-side required-field validation; the server was the only thing that ever complained, and only after a round-trip | Added `validateDraft()` and `validateForSubmit()`, run before every server call; inline field errors, a required-for-review hint next to the relevant fields, a summary banner, and scroll-to/focus-first-invalid-field |
+| 3 | Swedish view showed `mm/dd/yyyy` and `12:00 PM`-style times | New `src/lib/job-intelligence/date-format.ts` (`formatDate`/`formatDateTime`, sv-SE/en-GB, 24-hour, no AM/PM in either language); applied to the job list's expires/updated columns and the applications list's date column |
+| 4 | Developer-facing field labels ("Plats (fritext)", "Land (ISO-2)", "Yrke (slug)") | Reworded to "Plats"/"Location", "Land"/"Country", "Yrkesroll"/"Profession or role" |
+| 5 | `profession_slug` was a free-text input an employer could type any internal slug into | Replaced with a `<select>` sourced from the existing `listPublishedProfessionsV2` read (see §5 below) |
+| 6 | Raw job `status` enum values (`draft`, `pending_review`, …) shown untranslated in the jobs list and edit page | Now rendered via the existing `jobStatusLabel()` (already used on the public jobs pages) |
+| 7 | Job list's "Title" column header was hardcoded English, never localised | New `employer.jobs.list.title` key |
+| 8 | Access-denied state was inconsistent across routes — only the dashboard had a "back to My Career" link, none had a way back to a workspace the user actually has | New shared `EmployerAccessDenied` component, used by all six routes; always offers "Min karriär"/"My Career", and additionally "Gå till din arbetsgivarorganisation"/"Go to your employer workspace" when the caller has at least one other real workspace |
+
+## 2. Validation rules: draft vs. review submission
+
+Confirmed against the live schema and `submitEmployerJob`'s own existing gate, not invented:
+
+- **Draft save** genuinely requires nothing beyond `application_method` (which always has a default value) — every other draft column is nullable. `validateDraft()` therefore only checks **format**, not presence: if the employer filled in `application_url`/`application_email`, it must look like a real URL/email (this also prevents a request that would otherwise fail the server's own `zod.url()`/`zod.email()` parse with an unhandled validation error).
+- **Submit for review** requires exactly what `submitEmployerJob`'s existing `missing[]` check already required, unchanged: title in Swedish **or** English, description in Swedish **or** English, a valid application target for the selected method (URL for external, email for email), and `expires_at`. `family_id` and `profession_slug` are required by **neither** stage — the classification section is labelled "optional" and a hint text states drafts save fine without it.
+- `validateForSubmit()` is `validateDraft()` plus the above — submitting for review always re-checks format too.
+
+No new requirement was invented on either side, and no existing requirement was removed.
+
+## 3. Swedish and English copy changes
+
+~35 new/changed dictionary key pairs (sv+en), all reviewed for genuine sv≠en distinctness by the new `employer-job-form:check` script (§7). Full list in the diff; the notable groups:
+
+- 15 new `employer.jobs.form.error.*` keys — one per stable server error code, plus a generic fallback matching the product owner's own example copy ("Jobbannonsen kunde inte sparas..."/"The job advertisement could not be saved...").
+- 4 new `employer.jobs.form.validation.*` keys (required, invalid URL, invalid email, summary banner).
+- `employer.jobs.form.hint.optional` / `.requiredForReview` and `employer.jobs.form.section.basicsHint` — the "required for draft vs. review" indicators.
+- `employer.jobs.form.field.locationText`/`.country`/`.professionSlug` reworded; `employer.jobs.form.profession.loading`/`.loadError` added.
+- `employer.jobs.list.title` (new column header key).
+- `employer.accessDenied.goToWorkspace` (new).
+
+## 4. Date/time changes
+
+`src/lib/job-intelligence/date-format.ts` — `formatDate` (date-only, reusing the exact locale choice already established in `src/routes/jobs.$slug.tsx`'s own formatter: sv-SE / en-GB, never en-US) and `formatDateTime` (date+time, `hour12: false` in both languages, so Swedish renders `yyyy-mm-dd hh:mm` and English renders `dd/mm/yyyy hh:mm` — never `mm/dd/yyyy` and never AM/PM). Applied to:
+- the employer jobs list's "Expires"/"Updated" columns (`_authenticated.employer.$employerSlug.jobs.index.tsx`) — previously raw `.toLocaleDateString()` with no locale argument, which silently used the browser's own default locale regardless of the app's active language;
+- the applications list's date column (`applications.tsx`), the same underlying bug, fixed for consistency.
+
+The `datetime-local` **input** fields (deadline/expiry entry) are native browser controls and were not touched — their picker presentation follows the browser/OS locale, which is standard, expected behaviour for that input type and outside what application code can or should override. Storage values (`deadline_at`/`expires_at`, ISO 8601 in the database) are completely unchanged — this is a display-only fix.
+
+## 5. Profession field solution
+
+Audited every option the brief offered against repository ground truth:
+
+- **A canonical, dependent, family-filtered selector** (option 2) was investigated and rejected: `cig_profession_families` (the CIG's own family taxonomy, `uuid` ids) and the 14 canonical Career Family slugs `jobs.family_id` actually validates against (`career-area-labels.ts` / `assert_cig_family_id()`) are two different, unrelated taxonomies with no mapping between them anywhere in this codebase. Building one now would itself be a new, unverified taxonomy — exactly what the brief prohibits.
+- **A flat canonical selector** (option 1) was found to already exist, safely, unused: `listPublishedProfessionsV2` in `src/lib/knowledge-graph/read-v2.functions.ts` — an already-built, already-RLS-safe, publishable-key read of the live `cig_professions` catalogue filtered to `content_status = 'published'` (its own header comment: "enforced both by RLS anon policy and by explicit filters"). It was written in an earlier phase and never wired into any UI. This is now reused, unmodified, by `EmployerJobForm.tsx`: a `<select>` populated with `{ value: slug, label: title_sv|title_en }`, sorted alphabetically in the active language, with its own loading/error states (a load failure never blocks the rest of the form or draft saving).
+- Option 3 (hide the field) was not needed since a safe catalogue already existed.
+
+`profession_slug`'s value is always a real, published CIG profession `slug` — never a translated label, never arbitrary free text.
+
+## 6. writeAudit confirmation
+
+Lovable's own commit (`1e964fa`, pulled in via fast-forward before this pass began) wraps `writeAudit()`'s service-role import and insert in `try`/`catch`, logging any failure via `console.error` and never re-throwing — confirmed present in `main` and reviewed:
+- No raw environment-variable error can reach the client: the only place `SUPABASE_SERVICE_ROLE_KEY`-missing errors originate (`createSupabaseAdminClient()`) is now always caught inside `writeAudit()`.
+- An audit failure never blocks the primary job write: `writeAudit()` is called **after** the RLS-scoped `jobs` insert/update has already succeeded and its result already returned to the caller in every one of the five call sites; nothing downstream depends on `writeAudit()` succeeding.
+- Server-side logging (`console.error("[employer-jobs] writeAudit failed (non-fatal)", e)`) never includes secrets — a missing-credential error contains only the name of the missing variable, never a value, and no other input to this function (job id, slug, actor id, before/after snapshots of the employer's own job row) is a credential.
+- Added an explicit doc-comment amendment (this pass) stating robust, guaranteed audit persistence is deferred to a future phase (H3.3 platform-admin/moderation work), per the brief's explicit documentation requirement.
+
+## 7. Tests
+
+New `scripts/employer-job-form-check.ts` (`bun run employer-job-form:check`), the same plain-script pattern as `cie:check`/`kg:check`/`employer-taxonomy:check` (no unit-test runner is configured in this repository). It:
+1. Cross-checks every error CODE `employer-jobs.functions.ts` actually throws (extracted by scanning the real source file, not merely re-declared) against a translation map, catching any future code that would silently fall back to the generic message.
+2. Confirms every mapped code's sv and en dictionary values are non-empty and distinct from each other.
+3. Confirms `formatDateTime()` never renders "AM"/"PM" in either language, confirms Swedish output is year-first, and confirms both formatters return `""` (never throw) for null/undefined/invalid input.
+
+Item-by-item against the requested list:
+
+| # | Item | How verified |
+|---|---|---|
+| 1 | Swedish validation messages | `employer-job-form:check` (dictionary coverage) + code review of `translateJobServerError` |
+| 2 | English validation messages | same |
+| 3 | Draft minimum validation | code review of `validateDraft()` against the live nullable-column schema (§2) |
+| 4 | Review-submission full validation | code review of `validateForSubmit()` against `submitEmployerJob`'s own unchanged `missing[]` gate (§2) |
+| 5 | First invalid field identified | code review of `focusFirstError()` / `FIELD_ORDER` |
+| 6 | Swedish date format | `employer-job-form:check` (year-first assertion) |
+| 7 | English date format | `employer-job-form:check` (formatter smoke test) |
+| 8 | 24-hour time in Swedish | `employer-job-form:check` (no AM/PM assertion, both languages) |
+| 9 | Canonical Career Family preserved on edit | unchanged from H3.2.1 — `fromJobRow()` still reads `family_id` back verbatim, never re-derived from a label; re-confirmed by code review, no behavioural change this pass |
+| 10 | Translated labels never stored as IDs | unchanged from H3.2.1 (`career-area-labels.ts`/`enum-labels.ts` selects) plus the new profession `<select>` (`value={p.slug}`, never the display title) |
+| 11 | Profession slug cannot be entered as arbitrary text | code review — the field is now exclusively a `<select>`; no `<input>` for `profession_slug` remains anywhere |
+| 12 | Existing draft rehydrates correctly | `fromJobRow()` unchanged in shape (still one pure function, still the only deserialisation path for both create and edit) |
+| 13 | Access-denied state remains secure | code review of `EmployerAccessDenied` — never reveals another organisation's identity or membership detail; the "go to your workspace" link only ever uses the caller's own already-authorised `listMyEmployerWorkspaces()` result |
+| 14 | writeAudit failure does not block draft save | §6 above |
+| 15 | No raw backend/environment error reaches the UI | `employer-job-form:check` (error-code coverage) + code review — every render path for a server-thrown error now goes through `translateJobServerError()`, which never interpolates the raw code into user-facing text |
+| 16 | Typecheck, build, CIE, KG, taxonomy check, lint | see below |
+
+Items 9–14 concern authorization/RLS/lifecycle behaviour that was not touched in this pass (no schema/RLS file was modified — confirmed via `git status`) and remains covered by the existing `tests/database/phase-h3-2-1/` and `tests/database/phase-h3-2-3/` suites, which already pass against the unchanged schema; re-running them would reproduce identical results, so they were not re-run for this purely application-layer pass.
+
+Repo-wide: `bunx tsc --noEmit` clean; `bun run build` succeeds; `bunx eslint` on every changed/added file clean except the pre-existing repo-wide `@typescript-eslint/no-explicit-any` convention (confirmed via diff — no new occurrence); `bun run scripts/cie-check.ts` PASS; `bun run scripts/kg-check.ts` OK; `bun run employer-taxonomy:check` OK (unaffected); `bun run employer-job-form:check` OK (new).
+
+## 8. Final diff review
+
+- No technical/developer-facing label remains in the employer-facing job form (`grep` confirms no more "(fritext)", "(ISO-2)", "(slug)" in any `employer.jobs.form.field.*` value).
+- No English validation text can appear in Swedish view: every message the job form can show is either a `t()`-wrapped dictionary lookup or produced by `translateJobServerError()`/the `validate*()` functions, all of which route through `t()`.
+- No internal slug is editable as free text: `profession_slug` is a `<select>`; `family_id` was already a `<select>` since H3.2.1.
+- No new dead button or route: the profession `<select>` degrades to a disabled, empty-but-functional dropdown with a visible load-error message if the catalogue read fails, never a broken/unresponsive control; no new route was added.
+- No permission, RLS, or job-lifecycle change: `git status` confirms zero `.sql`/migration files touched; `assertActiveMembership`, every `jobs_employer_*` policy, and `jobs_validate_before_write()` are untouched.
+- Pending-employer behaviour unchanged: still can create/edit/save drafts, still cannot reach `pending_review` (unchanged trigger gate) — nothing in this pass touches that logic, only the text shown when it fires.
+- **No migration is required or was created** — confirmed by the same `git status` check; this entire pass is application code, dictionary entries, and two new plain verification scripts.
+
+## Commit and push
+
+Committed as `fix: complete employer job form validation and localisation`. See the final chat response for the exact commit hash and confirmation this is the final repository tip.

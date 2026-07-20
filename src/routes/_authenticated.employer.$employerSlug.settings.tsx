@@ -20,6 +20,7 @@ import {
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import {
@@ -71,12 +72,7 @@ function EmployerSettingsPage() {
   if (workspacesQuery.isError || !workspace) {
     return (
       <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.accessDenied.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.accessDenied.body")}</p>
-        </Section>
+        <EmployerAccessDenied workspaces={workspacesQuery.data} />
       </SiteLayout>
     );
   }
