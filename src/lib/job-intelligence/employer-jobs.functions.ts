@@ -24,7 +24,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Ctx = { supabase: any; userId: string };
 
-async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<{ employerSlug: string }> {
+async function assertActiveMembership(
+  ctx: Ctx,
+  employerId: string,
+): Promise<{ employerSlug: string }> {
   // Membership + employer editable-status check via caller's RLS-scoped
   // client. Employers in `pending` (self-service onboarding) and `active`
   // may edit their own drafts; the database is the source of truth via
@@ -48,6 +51,36 @@ async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<{ e
     throw new Error("Access not available");
   }
   return { employerSlug: emp.slug as string };
+}
+
+// Final review hardening: the five INSERT/UPDATE call sites below
+// previously did `throw new Error(uErr.message)` / `throw new
+// Error(iErr.message)`, forwarding raw Postgres/PostgREST error text
+// (including, for a genuine CHECK-constraint or trigger-guard violation,
+// internal table/constraint names) straight into the server function's
+// HTTP response and from there into EmployerJobForm's rendered error
+// banner. The full error is still logged server-side for debugging; the
+// client only ever sees one of two safe, controlled messages. `23514` is
+// the Postgres SQLSTATE for check_violation -- both real column CHECK
+// constraints (e.g. workplace_type) and every jobs_validate_before_write()
+// RAISE EXCEPTION ... USING ERRCODE = 'check_violation' guard (taxonomy
+// whitelist, moderation-owned fields, status-transition rules,
+// published-path rules) surface with this code, so it reliably identifies
+// "the data you submitted is invalid" without needing to parse or forward
+// the trigger's own wording. Nothing else about the write, the RLS
+// policies, or the trigger logic itself is changed.
+function sanitizeJobWriteError(
+  error: { message?: string; code?: string } | null | undefined,
+  context: string,
+  fallback: string,
+): Error {
+  console.error(`[employer-jobs] ${context} failed`, error);
+  if (error?.code === "23514") {
+    return new Error(
+      "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
+    );
+  }
+  return new Error(fallback);
 }
 
 async function writeAudit(params: {
@@ -169,8 +202,20 @@ const draftPayloadSchema = z.object({
   employment_type: z.string().max(32).optional().nullable(),
   experience_level: z.string().max(32).optional().nullable(),
   application_method: z.enum(["external", "email", "internal", "unavailable"]),
-  application_url: z.string().url().max(500).optional().nullable().or(z.literal("").transform(() => null)),
-  application_email: z.string().email().max(200).optional().nullable().or(z.literal("").transform(() => null)),
+  application_url: z
+    .string()
+    .url()
+    .max(500)
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+  application_email: z
+    .string()
+    .email()
+    .max(200)
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
   deadline_at: z.string().datetime().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),
 });
@@ -225,7 +270,12 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
         .update(rowBase)
         .eq("id", data.id)
         .eq("employer_id", data.employerId);
-      if (uErr) throw new Error(uErr.message);
+      if (uErr)
+        throw sanitizeJobWriteError(
+          uErr,
+          "saveEmployerJobDraft update",
+          "Could not save this job draft.",
+        );
 
       await writeAudit({
         jobId: data.id,
@@ -265,7 +315,12 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       })
       .select("id, slug")
       .single();
-    if (iErr) throw new Error(iErr.message);
+    if (iErr)
+      throw sanitizeJobWriteError(
+        iErr,
+        "saveEmployerJobDraft insert",
+        "Could not save this job draft.",
+      );
 
     await writeAudit({
       jobId: inserted.id as string,
@@ -312,8 +367,10 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
     if (!(before.title_sv || before.title_en)) missing.push("title");
     if (!(before.description_sv || before.description_en)) missing.push("description");
     if (before.application_method === "unavailable") missing.push("application method");
-    if (before.application_method === "external" && !before.application_url) missing.push("application URL");
-    if (before.application_method === "email" && !before.application_email) missing.push("application email");
+    if (before.application_method === "external" && !before.application_url)
+      missing.push("application URL");
+    if (before.application_method === "email" && !before.application_email)
+      missing.push("application email");
     if (!before.expires_at) missing.push("expires at");
     if (missing.length > 0) {
       throw new Error(`Missing required fields: ${missing.join(", ")}`);
@@ -324,7 +381,12 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
       .update({ status: "pending_review", updated_at: new Date().toISOString() })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId);
-    if (uErr) throw new Error(uErr.message);
+    if (uErr)
+      throw sanitizeJobWriteError(
+        uErr,
+        "submitEmployerJob update",
+        "Could not submit this job for review.",
+      );
 
     await writeAudit({
       jobId: data.jobId,
@@ -370,7 +432,8 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
       .update({ status: "archived", updated_at: new Date().toISOString() })
       .eq("id", data.jobId)
       .eq("employer_id", data.employerId);
-    if (uErr) throw new Error(uErr.message);
+    if (uErr)
+      throw sanitizeJobWriteError(uErr, "closeEmployerJob update", "Could not close this job.");
 
     await writeAudit({
       jobId: data.jobId,
@@ -438,7 +501,8 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       workplace_type: src.workplace_type,
       employment_type: src.employment_type,
       experience_level: src.experience_level,
-      application_method: src.application_method === "unavailable" ? "external" : src.application_method,
+      application_method:
+        src.application_method === "unavailable" ? "external" : src.application_method,
       application_url: src.application_url,
       application_email: src.application_email,
       deadline_at: null,
@@ -449,7 +513,12 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       .insert(clone)
       .select("id, slug")
       .single();
-    if (iErr) throw new Error(iErr.message);
+    if (iErr)
+      throw sanitizeJobWriteError(
+        iErr,
+        "duplicateEmployerJob insert",
+        "Could not duplicate this job.",
+      );
 
     await writeAudit({
       jobId: inserted.id as string,

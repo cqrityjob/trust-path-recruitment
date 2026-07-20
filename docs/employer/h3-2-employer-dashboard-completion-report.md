@@ -6,6 +6,8 @@
 > **Status update (H3.2.1, defect-fix pass):** Lovable Cloud applied the H3.2 migration successfully and its own preview test account passed all 16 checks. **Product-owner testing on a newly created employer then found four real defects that Lovable's test account did not surface** — a service-role dependency that crashed the dashboard for ordinary reads, a taxonomy bug that let a translated display label be submitted as `family_id`, untranslated (and in one case outright wrong) job-form option values, and unsafe raw-error exposure. All four are fixed, tested, and documented in **[the H3.2.1 section below](#h321--product-owner-defect-fix-pass)**. Do not treat §5's "Security and RLS conclusion" or §6's "Local test results" below as the current state of `employer-dashboard.functions.ts` or `applications.functions.ts` without reading that section — those two files were corrected in H3.2.1.
 >
 > **Status update (H3.2.2, final independent review):** a follow-up code and security review found one additional, narrowly-scoped issue (four raw Supabase/Postgres error messages in `applications.functions.ts` that could reach a server function's HTTP response body, though none were ever rendered in the UI) and hardened it, plus added a small taxonomy-regression script. No defects in the four originally-reported areas; no schema change. See **[the H3.2.2 section below](#h322--final-independent-code-and-security-review)**.
+>
+> **Status update (H3.2.3, employer job error hardening):** the H3.2.2 review had flagged, but explicitly left unfixed as out-of-scope, that `employer-jobs.functions.ts` (save draft, edit, submit-for-review, close, duplicate) still forwarded raw Postgres error text to the client. That is now fixed — see **[the H3.2.3 section below](#h323--employer-job-server-error-sanitization)**. No schema change.
 
 ## 1. Current-state audit (before this phase)
 
@@ -425,3 +427,86 @@ The remaining requested application-level checks (dashboard-without-service-role
 ## Commit and push
 
 Committed as `fix: harden final employer dashboard review`. See the final chat response for the exact commit hash and confirmation this is the final repository tip.
+
+---
+
+# H3.2.3 — Employer Job Server Error Sanitization
+
+**Scope:** fix the one item the H3.2.2 review flagged but explicitly left unfixed as out-of-scope: `src/lib/job-intelligence/employer-jobs.functions.ts` (create/edit/save/submit/close/duplicate) still forwarded raw Postgres error text to the client on write failures. **No new functionality. No H3.3 work. No migration.**
+
+## Audit
+
+Every exported function in the file — `listEmployerJobs`, `getEmployerJob`, `saveEmployerJobDraft`, `submitEmployerJob`, `closeEmployerJob`, `duplicateEmployerJob` — was read in full. All of the file's *read* paths and *not-found/forbidden* paths already threw safe, generic, hand-authored messages (`"Access not available"`, `"Could not load job."`, `"Job not found"`, etc.) and needed no change. The leak was narrower and specific: **five** write call sites did `throw new Error(uErr.message)` / `throw new Error(iErr.message)`, forwarding whatever PostgREST returned verbatim:
+
+| Site | Function | Line (before) |
+|---|---|---|
+| UPDATE (edit) | `saveEmployerJobDraft` | `if (uErr) throw new Error(uErr.message);` |
+| INSERT (new draft) | `saveEmployerJobDraft` | `if (iErr) throw new Error(iErr.message);` |
+| UPDATE (draft → pending_review) | `submitEmployerJob` | `if (uErr) throw new Error(uErr.message);` |
+| UPDATE (published → archived) | `closeEmployerJob` | `if (uErr) throw new Error(uErr.message);` |
+| INSERT (duplicate) | `duplicateEmployerJob` | `if (iErr) throw new Error(iErr.message);` |
+
+For a real, live failure at any of these five points, the forwarded text could be either (a) one of `jobs_validate_before_write()`'s own deliberately-worded `RAISE EXCEPTION` messages (e.g. *"Invalid family_id %; must be a canonical Career Family"*, *"status is a moderation-owned field..."*) — reasonably informative but still an internal trigger's own wording, not app-authored copy — or (b) a genuinely raw PostgreSQL error, e.g. a column CHECK-constraint violation naming the constraint and table directly (`new row for relation "jobs" violates check constraint "jobs_workplace_type_check"`), which is exactly the class of internal detail this whole H3.2.x hardening effort exists to prevent from reaching the browser.
+
+## Fix
+
+Added one shared helper, `sanitizeJobWriteError(error, context, fallback)`, used at all five sites:
+
+```ts
+function sanitizeJobWriteError(
+  error: { message?: string; code?: string } | null | undefined,
+  context: string,
+  fallback: string,
+): Error {
+  console.error(`[employer-jobs] ${context} failed`, error);
+  if (error?.code === "23514") {
+    return new Error(
+      "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
+    );
+  }
+  return new Error(fallback);
+}
+```
+
+- The **full** error (message, code, details, hint — never tokens, credentials, signed URLs, CV contents, or candidate personal data, since these are write-error objects on the employer's own `jobs` row, not payload dumps) is always logged server-side via `console.error`, tagged with which operation failed.
+- `23514` is the Postgres SQLSTATE for `check_violation`. Empirically confirmed against a real Postgres 16 instance running the live schema (see Tests below) that **both** a genuine column CHECK constraint (`jobs_workplace_type_check`) **and** every `jobs_validate_before_write()` custom guard (`RAISE EXCEPTION ... USING ERRCODE = 'check_violation'` — taxonomy whitelist, moderation-owned fields, status-transition rules, the employer-approval gate, published-path rules) surface with this exact code. Checking `error.code === "23514"` therefore reliably means "the data you submitted is invalid," without parsing or forwarding the trigger's own wording, and maps to the single safe message above.
+- Any other error (e.g. a genuine unexpected failure) falls back to an operation-specific safe message: *"Could not save this job draft."* (save/insert), *"Could not submit this job for review."* (submit), *"Could not close this job."* (close), *"Could not duplicate this job."* (duplicate).
+
+The pre-existing `throw new Error(\`Missing required fields: ${missing.join(", ")}\`)` in `submitEmployerJob` was left unchanged — it is app-authored copy built only from a fixed, hardcoded list of field names, never from database or user-supplied text, so it was already safe.
+
+## Preserved unchanged
+
+Nothing else was touched. `assertActiveMembership`'s active/pending employer gate, every `jobs_employer_*` RLS policy, `jobs_validate_before_write()`, the canonical `family_id`/`workplace_type` whitelist logic, `writeAudit()`, and all six exported functions' actual read/write behaviour are byte-for-byte identical to before this fix — only the *text* of five thrown errors changed. No migration was written or required.
+
+## Other functions checked
+
+Per the review's own request to confirm no other ordinary employer server function exposes raw backend errors: `employer-dashboard.functions.ts` and `applications.functions.ts` were already fully sanitized in H3.2.1/H3.2.2. `employer-settings.functions.ts` was already clean (no raw-message interpolation). `membership.functions.ts` does contain several `throw new Error(error.message)` sites, but on inspection every one of them is either (a) inside `assertPlatformAdmin` or the four `admin*` functions (`adminListEmployerMemberships`, `adminCreateEmployerMembership`, `adminUpdateEmployerMembershipRole`, `adminUpdateEmployerMembershipStatus`) — platform-admin-only tooling, not part of the ordinary employer MVP surface this whole effort concerns, and squarely H3.3 territory this task explicitly says not to start — or (b) inside `listMyEmployerMemberships`, which is exported but not currently called from any route or component in the live app (confirmed by repository-wide search). `listMyEmployerWorkspaces` — the one function from this file actually used by every employer route today — was already safe. **Flagged, not fixed, consistent with not starting H3.3 or touching unreferenced code paths.**
+
+## Tests
+
+New `tests/database/phase-h3-2-3/` (bootstrap + fixtures + a 10-test runner), same disposable-Postgres-16-with-the-full-real-migration-history method as phase-h3-2-1, run twice (once during development, once as the final pre-commit verification) — **10/10 pass**:
+
+| # | Test | Result |
+|---|---|---|
+| T1 | Pending-employer owner INSERTs a new draft | succeeds |
+| T2 | Pending-employer owner UPDATEs (edits) their own draft | succeeds |
+| T3 | Pending-employer owner attempts submit-for-review | rejected, `SQLSTATE 23514`, exact employer-approval-gate message |
+| T4 | Active-employer owner UPDATEs (edits) a pre-existing draft | succeeds |
+| T5 | Active-employer owner submits that job for review with valid canonical `family_id`/`workplace_type` and all required fields | succeeds |
+| T6 | Active-employer owner attempts to INSERT with `family_id = 'Säkerhet'` (a translated label) | rejected, `SQLSTATE 23514` |
+| T7 | Active-employer owner attempts to INSERT with `workplace_type = 'on_site'` (old invalid value) | rejected, `SQLSTATE 23514` (the real CHECK constraint, not the trigger — confirms both classes of guard share the code `sanitizeJobWriteError` branches on) |
+| T8 | Cross-tenant: employer A's owner attempts to UPDATE employer B's job | 0 rows affected, RLS denies |
+| T9 | Candidate-only user (no membership) attempts to INSERT a job for an employer | denied (`42501`, RLS policy violation) |
+| T10 | `jobs` table policy/trigger inventory unchanged | confirmed identical to the pre-existing baseline |
+
+Item 1 of the requested test list ("raw Supabase/Postgres messages are not returned to the client") is verified by direct code review — `grep` for `throw new Error` across the file confirms zero remaining `.message`-interpolated throws — combined with T3/T6/T7 empirically proving the exact SQLSTATE the new sanitizer keys off actually occurs for every guard class in the live schema. Item 5 ("invalid input produces a controlled message") follows directly: every condition that produces `SQLSTATE 23514` in T3/T6/T7 is exactly the condition `sanitizeJobWriteError` maps to the single safe "Invalid job data..." message.
+
+Repo-wide: `bunx tsc --noEmit` clean; `bun run build` succeeds; `bunx eslint` on the changed file shows only the pre-existing repo-wide `@typescript-eslint/no-explicit-any` convention (confirmed via diff — none on any new line); `bun run scripts/cie-check.ts` PASS; `bun run scripts/kg-check.ts` OK; `bun run employer-taxonomy:check` OK.
+
+## Migration required
+
+**No.** No schema, RLS, or trigger change — T10 confirms the `jobs` table's policy/trigger inventory is unchanged.
+
+## Commit and push
+
+Committed as `fix: sanitize employer job server errors`. See the final chat response for the exact commit hash and confirmation this is the final repository tip.
