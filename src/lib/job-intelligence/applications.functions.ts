@@ -26,7 +26,10 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
     .select("id, job_id, employer_id, applicant_user_id, status, cv_storage_path")
     .eq("id", applicationId)
     .maybeSingle();
-  if (error) throw new Error(`Failed to load application: ${error.message}`);
+  if (error) {
+    console.error("[applications] loadApplication query failed", error);
+    throw new Error("Could not load this application.");
+  }
   if (!data) throw new Error("Application not found or access denied");
   return data as {
     id: string;
@@ -84,7 +87,10 @@ export const withdrawMyApplication = createServerFn({ method: "POST" })
       .update({ status: "withdrawn", withdrawn_at: new Date().toISOString() })
       .eq("id", app.id)
       .eq("applicant_user_id", ctx.userId);
-    if (error) throw new Error(`Failed to withdraw application: ${error.message}`);
+    if (error) {
+      console.error("[applications] withdrawMyApplication update failed", error);
+      throw new Error("Could not withdraw this application.");
+    }
     return { ok: true, alreadyWithdrawn: false };
   });
 
@@ -116,7 +122,10 @@ export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
       .update(patch)
       .eq("id", app.id)
       .eq("employer_id", app.employer_id);
-    if (error) throw new Error(`Failed to update application: ${error.message}`);
+    if (error) {
+      console.error("[applications] updateApplicationAsEmployer update failed", error);
+      throw new Error("Could not update this application.");
+    }
     return { ok: true, changed: true };
   });
 
@@ -240,7 +249,8 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
       .from("job-application-cvs")
       .createSignedUrl(app.cv_storage_path, 60 * 5); // 5 minutes
     if (error || !signed) {
-      throw new Error(`Failed to sign CV URL: ${error?.message ?? "unknown error"}`);
+      console.error("[applications] CV signed-URL creation failed", error);
+      throw new Error("Could not generate a download link for this CV.");
     }
     return { url: signed.signedUrl, expiresInSeconds: 300 };
   });

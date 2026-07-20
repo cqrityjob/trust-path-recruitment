@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "kg:check": "bun run scripts/kg-check.ts",
-    "cie:check": "bun run scripts/cie-check.ts"
+    "cie:check": "bun run scripts/cie-check.ts",
+    "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

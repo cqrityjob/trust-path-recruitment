@@ -4,6 +4,8 @@
 **Not in scope:** assessment invitations (no backend exists), colleague invitations/role management, any future employer-intelligence functionality (billing, candidate search, analytics, etc).
 
 > **Status update (H3.2.1, defect-fix pass):** Lovable Cloud applied the H3.2 migration successfully and its own preview test account passed all 16 checks. **Product-owner testing on a newly created employer then found four real defects that Lovable's test account did not surface** — a service-role dependency that crashed the dashboard for ordinary reads, a taxonomy bug that let a translated display label be submitted as `family_id`, untranslated (and in one case outright wrong) job-form option values, and unsafe raw-error exposure. All four are fixed, tested, and documented in **[the H3.2.1 section below](#h321--product-owner-defect-fix-pass)**. Do not treat §5's "Security and RLS conclusion" or §6's "Local test results" below as the current state of `employer-dashboard.functions.ts` or `applications.functions.ts` without reading that section — those two files were corrected in H3.2.1.
+>
+> **Status update (H3.2.2, final independent review):** a follow-up code and security review found one additional, narrowly-scoped issue (four raw Supabase/Postgres error messages in `applications.functions.ts` that could reach a server function's HTTP response body, though none were ever rendered in the UI) and hardened it, plus added a small taxonomy-regression script. No defects in the four originally-reported areas; no schema change. See **[the H3.2.2 section below](#h322--final-independent-code-and-security-review)**.
 
 ## 1. Current-state audit (before this phase)
 
@@ -328,3 +330,98 @@ Per instruction, **H3.3 — Platform Admin Employer Moderation is explicitly not
 ## Commit and push
 
 Committed with message `fix: resolve employer dashboard and job form defects` after confirming `origin/main` had not diverged; pushed as a fast-forward. See the final chat response for the exact commit hash.
+
+---
+
+# H3.2.2 — Final Independent Code and Security Review
+
+**Scope:** an independent final review of the H3.2.1 defect-fix implementation before Lovable Cloud retesting, covering the effective diff and final code state on top of Lovable's own rebased-in H3.2 verification commits. **No new functionality. No H3.3 work. No migration** (this review found no database defect).
+
+## Review scope and method
+
+Read the final state (not just the diffs) of `employer-dashboard.functions.ts`, `applications.functions.ts`, `EmployerJobForm.tsx`, `EmployerErrorState.tsx`, all six employer routes' error-boundary wiring, `career-area-labels.ts`/`enum-labels.ts` (confirmed untouched by any H3.2/H3.2.1 commit — pure imports), the sv/en dictionary diff, `tests/database/phase-h3-2-1/`, and both H3.2 reports, against the actual final repository tip.
+
+## Security-critical review
+
+### Candidate profile-name lookup (`listApplicationsForEmployer`)
+
+- Authenticated user verified first via `requireSupabaseAuth` (bearer JWT → verified `ctx.userId`).
+- Employer membership verified via `assertEmployerWorkspaceMember` (`has_employer_role` + `employer_members_can_edit`) **before** any query runs.
+- The application-to-employer relationship is enforced twice: the primary `job_applications` read is filtered by `.eq("employer_id", data.employerId)` **and** independently governed by `job_applications_employer_select` RLS (`has_employer_role(...) AND employer_is_active_status(...)`) — RLS is the actual, un-bypassable boundary; the app-level filter is defense-in-depth, not the boundary itself.
+- Only `id, display_name` are read from `profiles` — no other candidate field.
+- The `applicantIds` array passed into the `profiles` lookup is derived **exclusively** from rows already returned by the RLS-scoped `job_applications` query — the function accepts no candidate ID, application ID, or profile ID as a direct parameter, so there is no way to manipulate this lookup into returning an arbitrary user's profile. **No defect found.**
+
+### Mark application as viewed (`updateApplicationAsEmployer`)
+
+- `loadApplication` reads the target row through the caller's own RLS-scoped client — a caller with no legitimate relationship to the row (not the applicant, not a member of its employer) gets zero rows and a generic "not found" error, before `app.employer_id` is ever read. `app.employer_id` is therefore always DB-verified, never client-supplied.
+- `assertEmployerWorkspaceMember(ctx, app.employer_id)` — using that DB-derived employer ID — additionally confirms the caller specifically holds an **employer** role there (not merely applicant-level RLS visibility), correctly rejecting a candidate calling this employer-only mutation on their own application.
+- The write patch is a closed set: `status` is always the hardcoded literal `"viewed"` (never taken from client input directly — only whether to apply it is client-controlled), and `employer_note` is the only other writable field (length-capped, nullable). `employer_id`, `applicant_user_id`, `job_id`, and all candidate-supplied fields (`phone`, `cover_note`, `cv_storage_path`) can never be touched by this function.
+- The `.eq("id", app.id).eq("employer_id", app.employer_id)` filter on the write is fully server-derived, not client-trusted, so a cross-employer write is not reachable.
+- **Audit logging:** this function does not write to `job_audit_events` (unlike the jobs-table employer functions in `employer-jobs.functions.ts`, which do). This is a pre-existing H1 characteristic — unchanged by H3.2 or H3.2.1 — not a security defect (the write itself is minimal and correctly scoped); adding audit logging would be new functionality and is out of scope for this review. Flagged as an observation, not fixed.
+- **No defect found in the authorization boundary.**
+
+### CV signed URL (`getApplicationCvSignedUrl`)
+
+- Same `loadApplication` (RLS-gated) + `assertEmployerWorkspaceMember` pattern as above, skipped only when the caller **is** the applicant themselves (`app.applicant_user_id === ctx.userId`).
+- The function accepts exactly one input, `applicationId` (validated `z.string().uuid()`) — there is no separate candidate ID, filename, or path parameter to manipulate. `app.cv_storage_path` is read from the same single, RLS-verified row as everything else; it cannot be pointed at a different application's or employer's CV by any client-supplied value.
+- Signed URL expiry: 5 minutes (`60 * 5`) — short-lived, standard Supabase Storage signed-URL practice.
+- Return value is `{ url, expiresInSeconds }` only — no service-role key or other secret is ever returned.
+- Missing CV: generic `"No CV attached to this application"`. Unauthorized: the same generic `"Application not found or access denied"` / `"Forbidden: ..."` messages as everywhere else in this file — no distinction is made between "doesn't exist" and "not yours," so no information is leaked about other employers' applications.
+- **One genuine, narrowly-scoped finding:** the storage-signing failure path (`if (error || !signed) throw new Error(\`Failed to sign CV URL: ${error?.message}\`))`) interpolated the raw Supabase Storage API error message into the thrown `Error`. The rendered UI never displayed it (`onDownloadCv`'s `catch` in `applications.tsx` always shows the generic translated `employer.applications.error.cvDownload` regardless of the thrown message), but a thrown `Error`'s message is still carried in the server function's HTTP response body, so a sufficiently technical actor inspecting network traffic directly (bypassing the rendered UI) could see raw Postgres/Storage-internal error text. **Fixed:** now throws a generic `"Could not generate a download link for this CV."` and logs the real error server-side via `console.error` only. The same pattern (`loadApplication`, `withdrawMyApplication`, `updateApplicationAsEmployer`) was hardened identically for consistency, since all four are in the same reviewed file and the same class of issue.
+
+**No `supabaseAdmin` use identified as unnecessary.** Every remaining use is a write to a table/bucket with no `authenticated`-role RLS/grant path at all (`job_applications` has intentionally no `UPDATE` policy for `authenticated`; Storage signed-URL creation is inherently a privileged operation), each reached only after RLS-backed authorization has already been independently verified, and each scoped to server-derived identifiers only. None could be safely converted to RLS without a schema change, which this review's own constraints correctly rule out absent a genuine database defect (there is none).
+
+## Functional review — confirmed
+
+- Newly created pending employer loads the dashboard: confirmed by code (no `supabaseAdmin` import in `employer-dashboard.functions.ts` at all) and DB test T1/T2.
+- Dashboard statistics require no `SUPABASE_SERVICE_ROLE_KEY`: confirmed (grep for `supabaseAdmin` in that file returns only comments explaining its absence).
+- Pending employers can create/save/edit drafts, cannot publish directly: unchanged from before H3.2.1 (not touched by this pass); still correct.
+- Applications returns empty, not Forbidden, for a pending employer: DB test T2.
+- Cross-employer applications inaccessible: DB test T6.
+- `family_id` always canonical, never a translated label: `EmployerJobForm.tsx`'s `<select>` only ever emits one of the 14 `careerAreaLabels` ids; DB tests T9/T10; new `employer-taxonomy:check` script assertion #2.
+- Create/edit/reload/save/submit use the same mapping: guaranteed by construction — one shared `EmployerJobForm` component and one shared `fromJobRow`/`toServerPayload` pair, rendered by both `jobs.new.tsx` and `jobs.$jobId.edit.tsx`; no second code path exists to diverge.
+- `workplace_type` uses `onsite`: DB tests T11/T12; script assertion #3.
+- No unsupported enum value was added anywhere in this pass (verified by diff review — every changed `<select>` only reorders/labels pre-existing values, adds none).
+- sv/en labels render without changing backend values: values are always the canonical/enum token; only the displayed `<option>` text changes with `lang`.
+- Error boundaries expose no stack trace, env-var name, or raw Supabase error: `EmployerErrorState` confirmed by direct read; the one gap found (CV/applications raw-error interpolation) is fixed above.
+- No dead or duplicate active code path remains: confirmed — `assertActiveEmployerMember` (old name) has zero remaining references anywhere in `src/`; no leftover `"on_site"` value in code (only in an explanatory comment).
+
+## Test review
+
+Added `scripts/employer-taxonomy-check.ts` (`bun run employer-taxonomy:check`), following the same established plain-script pattern as `cie:check`/`kg:check` (no unit-test runner is configured in this repository at all — confirmed via `package.json`; introducing one would itself be new infrastructure, disproportionate to a final review pass). It asserts, as pure module-level checks:
+
+1. `career-area-labels.ts`'s 14 ids are exactly the live `assert_cig_family_id()` whitelist (byte-for-byte set comparison against a documented copy of the migration's own list).
+2. No family's sv/en display label ever equals its own id or any other canonical id.
+3. `enum-labels.ts`'s `WORKPLACE_TYPE_VALUES` is exactly `onsite`/`hybrid`/`remote` and never contains the old invalid `on_site`.
+4. No `employment_type`/`workplace_type`/`experience_level` sv/en label ever equals a stored value in its own set.
+
+This directly guards against the two originally-reported taxonomy/translation defects regressing, and runs in milliseconds with no new dependency.
+
+The remaining requested application-level checks (dashboard-without-service-role, pending-employer access, applications empty state, cross-tenant denial, controlled-error rendering, CV signed-URL boundaries) are authorization-boundary behaviors that genuinely require a real authenticated Postgres session to exercise meaningfully — exactly what `tests/database/phase-h3-2-1/` already does, and consistent with how every prior phase of this project (G1, H3.1, H3.2) validated identical concerns. Building a parallel HTTP/JWT-mocking integration-test harness to duplicate that coverage at the TypeScript layer would be new test infrastructure, not a focused fix, and was judged disproportionate here — flagged as a reasonable follow-up if this project later adopts a unit-test runner, not attempted in this review.
+
+**One item flagged but intentionally not fixed:** `employer-jobs.functions.ts` (save/submit/close/duplicate) and their `jobs.index.tsx`/`jobs.new.tsx`/`jobs.$jobId.edit.tsx` `onError` handlers propagate `uErr.message` (raw Postgres/PostgREST text, including the deliberately-crafted `jobs_validate_before_write` trigger messages but potentially also genuinely raw internal errors) directly into the rendered UI. This is pre-existing H3-era behavior, untouched by either H3.2 or H3.2.1, in files **outside** this review's stated scope (`employer-jobs.functions.ts` is not `applications.functions.ts` or `employer-dashboard.functions.ts`), and fixing it thoroughly would mean rewriting a well-established, independently-tested file well beyond "harden what H3.2.1 touched." Documented here for visibility; recommended as a small follow-up item, not fixed in this review.
+
+## Verification rerun
+
+- `bunx tsc --noEmit` — clean.
+- `bun run build` — succeeds.
+- `bunx eslint` on all files touched in this review — clean after one prettier pass (only the pre-existing repo-wide `@typescript-eslint/no-explicit-any` convention remains, unchanged from H3.2.1).
+- `bun run scripts/cie-check.ts` — PASS (11/11 personas, unaffected).
+- `bun run scripts/kg-check.ts` — OK (unaffected).
+- `bun run employer-taxonomy:check` (new) — OK.
+- `tests/database/phase-h3-2-1/` — re-run from a fresh disposable Postgres 16 instance, full real migration history re-applied (including Lovable's own rebased-in migration file, confirmed to be a harmless duplicate of the H3.2 migration already present — see below): **14/14 pass**, identical results to the H3.2.1 run.
+
+## Migration required
+
+**No.** This review found no database defect. The only schema-adjacent finding was confirming that Lovable's rebased-in `supabase/migrations/20260720072016_c58d0842-...sql` is a full, byte-for-byte duplicate of the already-committed `20260720064743_h3_2_employer_settings.sql` (same class of duplicate-migration artifact already documented four times earlier in this repository's history) — applying it after the original produces only `"already exists"` errors, confirmed directly against a real Postgres instance. Not a defect requiring action; not modified or removed, per this review's own instruction not to revisit already-resolved Supabase-project history.
+
+## Files changed in this review
+
+- `src/lib/job-intelligence/applications.functions.ts` — 4 raw-error-message hardenings (see Security-critical review above)
+- `scripts/employer-taxonomy-check.ts` — new
+- `package.json` — added the `employer-taxonomy:check` script entry
+- `docs/employer/h3-2-employer-dashboard-completion-report.md` — this section
+
+## Commit and push
+
+Committed as `fix: harden final employer dashboard review`. See the final chat response for the exact commit hash and confirmation this is the final repository tip.
