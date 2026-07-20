@@ -14,6 +14,7 @@ import {
   type EmployerRole,
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   listEmployerJobs,
@@ -26,6 +27,7 @@ import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/")({
   ssr: false,
   component: EmployerJobsListPage,
+  errorComponent: EmployerErrorState,
 });
 
 function EmployerJobsListPage() {

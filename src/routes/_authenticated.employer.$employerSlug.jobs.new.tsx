@@ -8,6 +8,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   saveEmployerJobDraft,
@@ -23,6 +24,7 @@ import {
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/new")({
   ssr: false,
   component: EmployerJobNewPage,
+  errorComponent: EmployerErrorState,
 });
 
 function EmployerJobNewPage() {

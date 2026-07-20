@@ -10,6 +10,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerJob,
@@ -28,6 +29,7 @@ import {
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/edit")({
   ssr: false,
   component: EmployerJobEditPage,
+  errorComponent: EmployerErrorState,
 });
 
 function EmployerJobEditPage() {

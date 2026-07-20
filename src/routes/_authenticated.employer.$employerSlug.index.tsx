@@ -34,6 +34,7 @@ import {
   type EmployerRole,
   type EmployerStatus,
 } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerDashboardStats,
@@ -45,6 +46,7 @@ import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slu
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/")({
   ssr: false,
   component: EmployerWorkspacePage,
+  errorComponent: EmployerErrorState,
 });
 
 function EmployerWorkspacePage() {

@@ -38,20 +38,33 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
   };
 }
 
-async function assertActiveEmployerMember(ctx: Ctx, employerId: string): Promise<void> {
+// Phase H3.2.1 correction: this previously gated on employer_is_active_status
+// (active-only), so a pending employer's owner got a hard "Forbidden" error
+// just from opening the applications page -- even though a pending employer
+// legitimately has zero applications (it cannot yet have a published job)
+// and per the H3.2 spec must be able to *view* (an empty) applications list
+// without error. Renamed and switched to employer_members_can_edit(), the
+// same active/draft/pending gate already used for job drafts -- membership
+// is still independently verified via has_employer_role() first. Actual row
+// visibility for job_applications remains governed by
+// job_applications_employer_select RLS (active employers only), so a
+// pending employer still correctly sees zero rows -- this only removes the
+// spurious hard error, it does not widen what data is reachable.
+async function assertEmployerWorkspaceMember(ctx: Ctx, employerId: string): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("has_employer_role", {
     _user_id: ctx.userId,
     _employer_id: employerId,
     _roles: null,
   });
-  if (error) throw new Error(`Membership check failed: ${error.message}`);
+  if (error) throw new Error("Membership check failed.");
   if (!data) throw new Error("Forbidden: employer membership required");
 
-  const { data: isActive, error: activeErr } = await ctx.supabase.rpc("employer_is_active_status", {
-    _employer_id: employerId,
-  });
-  if (activeErr) throw new Error(`Employer status check failed: ${activeErr.message}`);
-  if (!isActive) throw new Error("Forbidden: employer is not active");
+  const { data: canAccess, error: canAccessErr } = await ctx.supabase.rpc(
+    "employer_members_can_edit",
+    { _employer_id: employerId },
+  );
+  if (canAccessErr) throw new Error("Employer status check failed.");
+  if (!canAccess) throw new Error("Forbidden: employer workspace not accessible");
 }
 
 export const withdrawMyApplication = createServerFn({ method: "POST" })
@@ -89,7 +102,7 @@ export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     const app = await loadApplication(ctx, data.applicationId);
-    await assertActiveEmployerMember(ctx, app.employer_id);
+    await assertEmployerWorkspaceMember(ctx, app.employer_id);
 
     const patch: { status?: "viewed"; employer_note?: string | null } = {};
     if (data.markViewed && app.status === "submitted") patch.status = "viewed";
@@ -108,22 +121,26 @@ export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
   });
 
 // -----------------------------------------------------------------------------
-// Phase H3.2 addition — listApplicationsForEmployer.
+// Phase H3.2 addition, corrected in H3.2.1 — listApplicationsForEmployer.
 //
-// The candidate applicant's display name lives in `public.profiles`, which
-// is self-select-only (profiles_self_select: id = auth.uid()) -- an
-// employer's own RLS-scoped client cannot join to it. This function
-// therefore follows the same two-step pattern already established
-// elsewhere in this codebase (getEmployerDashboardStats,
-// updateApplicationAsEmployer's own use of supabaseAdmin after an
-// app-level check): verify the caller's active employer membership first
-// via assertActiveEmployerMember() (RLS-scoped RPC calls, not trusted from
-// any client-supplied role/status), THEN use supabaseAdmin only for the
-// actual privileged read, scoped explicitly by employer_id (and,
-// optionally, job_id) in the query itself -- never a blanket unscoped
-// select. No CV bytes are returned here; only cv_storage_path's presence
-// (boolean) is surfaced, so the UI can offer a signed-URL download via the
-// existing getApplicationCvSignedUrl, which re-checks authorization again
+// The job_applications + jobs read now goes through the caller's own
+// RLS-scoped ctx.supabase, not supabaseAdmin — job_applications_employer_select
+// RLS already grants exactly the right rows (active employer, membership
+// verified) and jobs_employer_select_own already permits the embedded jobs
+// join. This satisfies the H3.2.1 requirement that ordinary employer reads
+// never depend on a service-role key.
+//
+// The one narrow, still-justified exception is the applicant's display
+// name: it lives in `public.profiles`, which is self-select-only RLS
+// (profiles_self_select: id = auth.uid()) -- an employer's own RLS-scoped
+// client structurally cannot join to another user's profile row, by
+// design (candidate data minimisation). That lookup alone uses
+// supabaseAdmin, after assertEmployerWorkspaceMember() has already
+// verified membership, and is scoped to exactly the applicant IDs already
+// returned by the RLS-scoped query above -- never an open-ended read. No
+// CV bytes are returned here; only cv_storage_path's presence (boolean) is
+// surfaced, so the UI can offer a signed-URL download via the existing
+// getApplicationCvSignedUrl, which re-checks authorization again
 // independently.
 // -----------------------------------------------------------------------------
 
@@ -150,10 +167,13 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
   .inputValidator((input) => listApplicationsForEmployerSchema.parse(input))
   .handler(async ({ data, context }): Promise<EmployerApplicationRow[]> => {
     const ctx = context as unknown as Ctx;
-    await assertActiveEmployerMember(ctx, data.employerId);
+    await assertEmployerWorkspaceMember(ctx, data.employerId);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let query = supabaseAdmin
+    // RLS-scoped read -- job_applications_employer_select already limits
+    // this to the caller's own active employer's rows (a pending employer
+    // correctly gets zero rows here, not an error); jobs_employer_select_own
+    // permits the embedded jobs(title_sv, title_en) join the same way.
+    let query = ctx.supabase
       .from("job_applications")
       .select(
         "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, created_at, jobs(title_sv, title_en)",
@@ -166,11 +186,16 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
     const { data: rows, error } = await query;
     if (error) throw new Error("Could not load applications.");
 
-    const applicantIds = Array.from(
+    // Only the narrow, already-scoped applicant name lookup needs
+    // service-role (profiles is self-select-only RLS) -- membership was
+    // already verified above, and this only ever reads the exact
+    // applicant IDs the RLS-scoped query above already authorised.
+    const applicantIds: string[] = Array.from(
       new Set((rows ?? []).map((r: any) => r.applicant_user_id as string)),
     );
     const namesByUserId = new Map<string, string | null>();
     if (applicantIds.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: profileRows } = await supabaseAdmin
         .from("profiles")
         .select("id, display_name")
@@ -207,7 +232,7 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
 
     const isApplicant = app.applicant_user_id === ctx.userId;
     if (!isApplicant) {
-      await assertActiveEmployerMember(ctx, app.employer_id);
+      await assertEmployerWorkspaceMember(ctx, app.employer_id);
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -9,14 +9,26 @@
 //      employer_memberships_self_select policy (Phase G1) is the actual
 //      boundary; a suspended/invited/removed membership, a non-member,
 //      or a mismatched employer_id all return zero rows and we fail
-//      closed with an "Access not available" error before any privileged
-//      read.
-//   3. Only after (2) do we load supabaseAdmin (server-only import,
-//      lazy) to count jobs strictly filtered by the already-verified
-//      employer_id. This mirrors the audit-log pattern in
-//      membership.functions.ts (privileged write after membership
-//      check) — the caller never controls the filter, only the
-//      already-authorised employer_id.
+//      closed with an "Access not available" error before any read.
+//   3. All statistic reads happen through the SAME caller-scoped
+//      ctx.supabase client — never supabaseAdmin. `jobs_employer_select_own`
+//      RLS already permits an active/draft/pending member to see counts of
+//      their own employer's jobs of any status (employer_members_can_edit
+//      allows active/draft/pending); `job_applications_employer_select`
+//      RLS permits active employers only. This means a PENDING employer
+//      correctly gets a real (zero) applications count via RLS itself,
+//      never an error and never a service-role read.
+//
+// Phase H3.2.1 correction: this function previously used supabaseAdmin
+// (service-role) for the count reads, which required
+// SUPABASE_SERVICE_ROLE_KEY to be configured for ordinary authenticated
+// employer reads and crashed the dashboard for a newly created (pending)
+// employer whose Preview/runtime environment had not attached that
+// secret. Product-owner testing on a newly created employer reproduced
+// this; Lovable's own test account happened to have the key configured
+// and did not surface it. Removed entirely — see
+// docs/employer/h3-2-employer-dashboard-completion-report.md §"Defect 1"
+// for the full root-cause writeup.
 //
 // Phase H3.2 update: `job_applications` now exists (Jobs MVP v1 H1) with
 // `employer_id` denormalized directly on the row — `applications` is now a
@@ -64,23 +76,22 @@ export const getEmployerDashboardStats = createServerFn({ method: "POST" })
     if (memErr) throw new Error("Access not available");
     if (!membership) throw new Error("Access not available");
 
-    // Privileged read only after membership is verified. We never expose
-    // the admin client to the caller and never accept a caller-supplied
-    // filter beyond the already-authorised employer_id.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
+    // RLS-scoped reads only, through the caller's own bearer-authenticated
+    // client — no service-role client anywhere in this function. Never
+    // accepts a caller-supplied filter beyond the already-authorised
+    // employer_id.
     const [publishedRes, draftRes, applicationsRes] = await Promise.all([
-      supabaseAdmin
+      ctx.supabase
         .from("jobs")
         .select("id", { count: "exact", head: true })
         .eq("employer_id", data.employerId)
         .eq("status", "published"),
-      supabaseAdmin
+      ctx.supabase
         .from("jobs")
         .select("id", { count: "exact", head: true })
         .eq("employer_id", data.employerId)
         .eq("status", "draft"),
-      supabaseAdmin
+      ctx.supabase
         .from("job_applications")
         .select("id", { count: "exact", head: true })
         .eq("employer_id", data.employerId),
