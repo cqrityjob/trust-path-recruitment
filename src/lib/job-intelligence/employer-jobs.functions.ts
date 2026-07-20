@@ -91,15 +91,27 @@ async function writeAudit(params: {
   before?: unknown;
   after?: unknown;
 }): Promise<void> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin.from("job_audit_events").insert({
-    job_id: params.jobId,
-    job_slug_snapshot: params.slugSnapshot,
-    actor_id: params.actorId,
-    action: params.action,
-    before: (params.before ?? null) as any,
-    after: (params.after ?? null) as any,
-  });
+  // Audit is best-effort on the employer self-service path. In some
+  // Lovable Cloud preview/production environments the service-role key
+  // is not attached (by design — the platform hides it), so importing
+  // the admin client throws a raw env-var error that would otherwise
+  // propagate to the user as a leaked backend message even after the
+  // primary write already succeeded. We swallow every failure here and
+  // log server-side. The RLS-scoped write above is the source of truth;
+  // missing an audit row never blocks the employer flow.
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("job_audit_events").insert({
+      job_id: params.jobId,
+      job_slug_snapshot: params.slugSnapshot,
+      actor_id: params.actorId,
+      action: params.action,
+      before: (params.before ?? null) as any,
+      after: (params.after ?? null) as any,
+    });
+  } catch (e) {
+    console.error("[employer-jobs] writeAudit failed (non-fatal)", e);
+  }
 }
 
 function slugify(input: string): string {
