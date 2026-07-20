@@ -2251,6 +2251,47 @@ export type Database = {
           },
         ]
       }
+      employer_moderation_events: {
+        Row: {
+          action: string
+          admin_user_id: string | null
+          created_at: string
+          employer_id: string
+          id: string
+          new_status: string
+          note: string | null
+          previous_status: string
+        }
+        Insert: {
+          action: string
+          admin_user_id?: string | null
+          created_at?: string
+          employer_id: string
+          id?: string
+          new_status: string
+          note?: string | null
+          previous_status: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string | null
+          created_at?: string
+          employer_id?: string
+          id?: string
+          new_status?: string
+          note?: string | null
+          previous_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_moderation_events_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
           country: string | null
@@ -3168,6 +3209,18 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      moderate_employer: {
+        Args: { _action: string; _employer_id: string; _note?: string }
+        Returns: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          employer_id: string
+          new_status: string
+          note: string
+          previous_status: string
+        }[]
       }
       save_career_report: {
         Args: {
