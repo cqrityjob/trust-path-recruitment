@@ -3310,6 +3310,14 @@ export type Database = {
           previous_status: string
         }[]
       }
+      reject_job: {
+        Args: { _job_id: string; _note: string }
+        Returns: {
+          job_id: string
+          status: string
+          updated_at: string
+        }[]
+      }
       save_career_report: {
         Args: {
           p_assessment_id: string
