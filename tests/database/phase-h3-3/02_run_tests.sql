@@ -122,4 +122,22 @@ RESET ROLE;
 \echo '=== T19: final policy inventory -- employer_moderation_events has exactly one SELECT policy (admin-only), no INSERT/UPDATE/DELETE policy for authenticated at all ==='
 SELECT policyname, cmd FROM pg_policies WHERE schemaname='public' AND tablename='employer_moderation_events' ORDER BY policyname;
 
+\echo '=== T20 (integrity-review addendum): every function whose body issues an UPDATE against public.employers, from any source -- confirms moderate_employer() is the ONLY function that ever writes to the employers table at all (so, trivially, the only one able to write its status column). Matches literally on "UPDATE public.employers" (the exact form every UPDATE in this schema is written as); a looser two-substring match was tried first and produced one false positive (jobs_validate_before_write, which only SELECTs employers.status to check job-edit eligibility, never writes it) -- tightened to this exact-phrase form instead. ==='
+SELECT p.proname
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.prolang = (SELECT oid FROM pg_language WHERE lanname = 'plpgsql')
+  AND p.prosrc ILIKE '%UPDATE public.employers%'
+ORDER BY p.proname;
+
+\echo '=== T21 (integrity-review addendum, documented not closed): a genuine platform admin session can still write employers.status via a raw client-side UPDATE, bypassing moderate_employer() entirely and its note/transition/audit requirements -- because employers_admin_all RLS (FOR UPDATE ALL, is_platform_admin-gated, Phase G1) and employers_validate_before_write (Phase H3.2) both already exempt platform admins. This is PRE-EXISTING design, unchanged by H3.3 or this integrity pass, and requires the caller to already be a real platform admin choosing to bypass the application layer -- not a privilege-escalation bug. Documented here, not silently left as an assumption: the row is written directly, then immediately reverted to its prior value so this test does not corrupt any state a later run might rely on. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000001-0000-0000-0000-000000000001', false);
+SET ROLE authenticated;
+UPDATE public.employers SET status = 'suspended' WHERE id = 'e3000005-0000-0000-0000-000000000005';
+SELECT status FROM public.employers WHERE id = 'e3000005-0000-0000-0000-000000000005';
+UPDATE public.employers SET status = 'active' WHERE id = 'e3000005-0000-0000-0000-000000000005';
+SELECT status FROM public.employers WHERE id = 'e3000005-0000-0000-0000-000000000005';
+RESET ROLE;
+
 \echo '=== DONE ==='

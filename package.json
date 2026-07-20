@@ -13,7 +13,8 @@
     "kg:check": "bun run scripts/kg-check.ts",
     "cie:check": "bun run scripts/cie-check.ts",
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts",
-    "employer-job-form:check": "bun run scripts/employer-job-form-check.ts"
+    "employer-job-form:check": "bun run scripts/employer-job-form-check.ts",
+    "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

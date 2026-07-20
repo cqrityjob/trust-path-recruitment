@@ -187,9 +187,12 @@ function AdminEmployersPage() {
 }
 
 // Preserved from the pre-H3.3 admin tool -- manual employer creation is
-// unrelated to the moderation workflow above (it creates an employer
-// directly, defaulting to status='active' via the column default, same
-// as before this phase) and is kept as a collapsible secondary section
+// unrelated to the moderation workflow above. Creation-only: it can never
+// change an existing employer's status (adminUpsertEmployer rejects that
+// outright), and a newly created employer always starts 'pending' (H3.3
+// integrity fix) -- it must pass through the moderation workflow above to
+// become active, exactly like a self-service-created employer. Kept as a
+// collapsible secondary section
 // rather than deleted.
 function ManualCreateEmployerSection() {
   const listFn = useServerFn(adminListEmployers);

@@ -87,15 +87,7 @@ function randomShortId(): string {
 
 const listJobsSchema = z.object({
   status: z
-    .enum([
-      "all",
-      "draft",
-      "pending_review",
-      "published",
-      "expired",
-      "rejected",
-      "archived",
-    ])
+    .enum(["all", "draft", "pending_review", "published", "expired", "rejected", "archived"])
     .default("all"),
   search: z.string().trim().max(120).optional(),
 });
@@ -118,9 +110,7 @@ export const adminListJobs = createServerFn({ method: "POST" })
     if (data.status !== "all") q = q.eq("status", data.status);
     if (data.search) {
       const s = `%${data.search}%`;
-      q = q.or(
-        `title_sv.ilike.${s},title_en.ilike.${s},slug.ilike.${s},short_id.ilike.${s}`,
-      );
+      q = q.or(`title_sv.ilike.${s},title_en.ilike.${s},slug.ilike.${s},short_id.ilike.${s}`);
     }
 
     const { data: rows, error } = await q;
@@ -249,10 +239,7 @@ export const adminSaveJobDraft = createServerFn({ method: "POST" })
       before = existing;
       action = "updated";
 
-      const { error: upErr } = await ctx.supabase
-        .from("jobs")
-        .update(rowBase)
-        .eq("id", jobId);
+      const { error: upErr } = await ctx.supabase.from("jobs").update(rowBase).eq("id", jobId);
       if (upErr) throw new Error(upErr.message);
     } else {
       // fetch employer for slug base
@@ -287,18 +274,16 @@ export const adminSaveJobDraft = createServerFn({ method: "POST" })
     // so we can touch admin-only columns even if the caller's RLS scope on
     // the sibling table changes in a future migration.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("job_admin_meta")
-      .upsert(
-        {
-          job_id: jobId,
-          moderation_notes: data.moderation_notes ?? null,
-          created_by: before ? undefined : ctx.userId,
-          updated_by: ctx.userId,
-          updated_at: nowIso,
-        },
-        { onConflict: "job_id" },
-      );
+    await supabaseAdmin.from("job_admin_meta").upsert(
+      {
+        job_id: jobId,
+        moderation_notes: data.moderation_notes ?? null,
+        created_by: before ? undefined : ctx.userId,
+        updated_by: ctx.userId,
+        updated_at: nowIso,
+      },
+      { onConflict: "job_id" },
+    );
 
     const { data: after } = await ctx.supabase
       .from("jobs")
@@ -322,13 +307,7 @@ export const adminSaveJobDraft = createServerFn({ method: "POST" })
 
 const transitionSchema = z.object({
   id: z.string().uuid(),
-  action: z.enum([
-    "submit",
-    "publish",
-    "reject",
-    "archive",
-    "unpublish",
-  ]),
+  action: z.enum(["submit", "publish", "reject", "archive", "unpublish"]),
   moderation_notes: z.string().max(4000).optional().nullable(),
 });
 
@@ -375,10 +354,7 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
         break;
     }
 
-    const { error: upErr } = await ctx.supabase
-      .from("jobs")
-      .update(patch)
-      .eq("id", data.id);
+    const { error: upErr } = await ctx.supabase.from("jobs").update(patch).eq("id", data.id);
     if (upErr) throw new Error(upErr.message); // DB trigger enforces publish rules
 
     // Record reviewer on publish/reject
@@ -441,7 +417,25 @@ export const adminListEmployers = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-const employerPayloadSchema = z.object({
+// H3.3 integrity fix: status is accepted ONLY as a starting value for a
+// brand-new employer (no `id`), and only 'draft'/'pending' -- never a
+// moderation outcome ('active'/'suspended'/'archived'/'rejected'). This
+// tool can therefore never create an employer that is already active,
+// and (see assertNoExistingEmployerStatusChange below) can never change
+// an existing employer's status at all -- every status change, for every
+// employer, must go through moderate_employer(), the one canonical,
+// validated, audited transition path introduced in H3.3. Previously this
+// field accepted 'active'/'suspended'/'archived' and was honoured on
+// update with no transition validation and no audit row -- that gap is
+// what this fix closes.
+//
+// Exported (not just used internally) so scripts/admin-employer-status-
+// guard-check.ts can assert the allowed status enum directly rather than
+// re-deriving it -- this file's createServerFn-wrapped handlers cannot be
+// invoked outside the TanStack Start server runtime (confirmed: calling
+// one directly throws "No Start context found in AsyncLocalStorage"), so
+// the schema and the pure helpers below are the actual testable surface.
+export const employerPayloadSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(200),
   slug: z.string().trim().min(1).max(120).optional(),
@@ -449,11 +443,37 @@ const employerPayloadSchema = z.object({
   country: z.string().max(2).optional().nullable(),
   description_sv: z.string().max(4000).optional().nullable(),
   description_en: z.string().max(4000).optional().nullable(),
-  // Phase G1: optional so existing callers (pre-G1 admin UI) keep working
-  // unchanged. Omitted on create -> the column's own DB default ('active')
-  // applies. Omitted on update -> status is left untouched.
-  status: z.enum(["draft", "active", "suspended", "archived"]).optional(),
+  status: z.enum(["draft", "pending"]).optional(),
 });
+
+// H3.3 integrity fix. Pure guard, deliberately factored out of the
+// handler so it's directly unit-testable without the server runtime: an
+// existing employer's status can only ever change through
+// moderate_employer(). Throws rather than silently dropping the field,
+// so no caller is ever misled into thinking a status they sent took
+// effect.
+export function assertNoExistingEmployerStatusChange(
+  isUpdate: boolean,
+  requestedStatus: "draft" | "pending" | undefined,
+): void {
+  if (isUpdate && requestedStatus !== undefined) {
+    throw new Error(
+      "EMPLOYER_STATUS_UPDATE_NOT_ALLOWED: an existing employer's status can only be " +
+        "changed through the employer moderation workflow (moderate_employer), not this tool.",
+    );
+  }
+}
+
+// H3.3 integrity fix. Pure default-resolution, also factored out for
+// direct unit testing: a newly created employer always starts 'pending'
+// unless the caller explicitly asked for 'draft' -- never defaults to
+// 'active' (the bare column DEFAULT this tool previously relied on
+// implicitly).
+export function resolveNewEmployerStatus(
+  requestedStatus: "draft" | "pending" | undefined,
+): "draft" | "pending" {
+  return requestedStatus ?? "pending";
+}
 
 export const adminUpsertEmployer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -474,25 +494,26 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
       if (beforeErr) throw new Error(beforeErr.message);
       if (!before) throw new Error("Employer not found");
 
+      assertNoExistingEmployerStatusChange(true, data.status);
+
       // No-op guard (Phase G1 code-review fix): if every mutable field
       // is already exactly what's requested, skip the UPDATE entirely
       // and write no audit event — an unconditional "employer_updated"
       // on a no-op save (e.g. re-submitting an unchanged edit form)
       // would otherwise be a misleading audit row (before === after).
-      const nextStatus = data.status ?? before.status;
       const isNoOp =
         before.name === data.name &&
         before.slug === slug &&
         (before.website ?? null) === (data.website ?? null) &&
         (before.country ?? null) === (data.country ?? null) &&
         (before.description_sv ?? null) === (data.description_sv ?? null) &&
-        (before.description_en ?? null) === (data.description_en ?? null) &&
-        before.status === nextStatus;
+        (before.description_en ?? null) === (data.description_en ?? null);
 
       if (isNoOp) {
         return { id: data.id };
       }
 
+      // status is deliberately never included here -- see the guard above.
       const updatePatch: Record<string, unknown> = {
         name: data.name,
         slug,
@@ -502,12 +523,8 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
         description_en: data.description_en ?? null,
         updated_at: nowIso,
       };
-      if (data.status) updatePatch.status = data.status;
 
-      const { error } = await ctx.supabase
-        .from("employers")
-        .update(updatePatch)
-        .eq("id", data.id);
+      const { error } = await ctx.supabase.from("employers").update(updatePatch).eq("id", data.id);
       if (error) throw new Error(error.message);
 
       const { data: after } = await ctx.supabase
@@ -526,15 +543,6 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
         },
       });
 
-      if (data.status && data.status !== before.status) {
-        await writeOrgAudit({
-          action: "employer_status_changed",
-          employerId: data.id,
-          actorId: ctx.userId,
-          metadata: { before_status: before.status, after_status: data.status },
-        });
-      }
-
       return { id: data.id };
     }
 
@@ -547,10 +555,14 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
         country: data.country ?? null,
         description_sv: data.description_sv ?? null,
         description_en: data.description_en ?? null,
-        // status omitted here deliberately: the column DEFAULT ('active')
-        // applies unless the caller explicitly requested a different
-        // starting status (e.g. 'draft').
-        ...(data.status ? { status: data.status } : {}),
+        // H3.3 integrity fix: always explicit, always 'draft' or 'pending'
+        // (zod-enforced above), defaulting to 'pending' -- the same safe
+        // starting status create_my_employer_company() already uses for
+        // self-service creation (H3.1). This tool can no longer create an
+        // employer that starts out active/suspended/archived/rejected;
+        // every employer, however it was created, must pass through
+        // moderate_employer() to reach those states.
+        status: resolveNewEmployerStatus(data.status),
       })
       .select("id")
       .single();
@@ -570,7 +582,7 @@ export const adminUpsertEmployer = createServerFn({ method: "POST" })
       action: "employer_created",
       employerId: inserted.id as string,
       actorId: ctx.userId,
-      metadata: { name: data.name, slug, status: data.status ?? "active" },
+      metadata: { name: data.name, slug, status: resolveNewEmployerStatus(data.status) },
     });
 
     return { id: inserted.id as string };
