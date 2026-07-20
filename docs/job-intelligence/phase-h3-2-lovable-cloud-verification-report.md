@@ -1,5 +1,18 @@
 # Phase H3.2 — Lovable Cloud Verification Report
 
+> **Update (H3.2.1):** this report's "Confirmed defects: None" (§4) reflected
+> Lovable's own test account only. Product-owner testing on a **newly
+> created** employer afterward found four real defects this account did not
+> reproduce (a service-role dependency that crashed the dashboard for
+> ordinary reads, a taxonomy bug letting a translated label be submitted as
+> `family_id`, untranslated/incorrect job-form option values, and unsafe
+> raw-error exposure). All four are fixed and documented in the H3.2.1
+> section of `docs/employer/h3-2-employer-dashboard-completion-report.md`.
+> The verification steps and results below remain an accurate record of
+> what Lovable itself checked at the time — they are not being rewritten —
+> but should not be read as "no defects exist in H3.2," only "no defects
+> were found in this account's checks."
+
 **Repo commit synced:** `5b08c23` — feat: complete employer dashboard MVP (H3.2)
 **Migration applied:** `supabase/migrations/20260720064743_h3_2_employer_settings.sql`
 **Lovable code changes this turn:** none (verification-only).
