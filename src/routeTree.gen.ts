@@ -32,6 +32,7 @@ import { Route as CareerCenterStartRouteImport } from './routes/career-center.st
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
 import { Route as CandidateRegisterRouteImport } from './routes/candidate.register'
 import { Route as CandidateLoginRouteImport } from './routes/candidate.login'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AuthenticatedMyCareerRouteImport } from './routes/_authenticated.my-career'
 import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
 import { Route as AuthenticatedEmployerRouteImport } from './routes/_authenticated.employer'
@@ -55,6 +56,7 @@ import { Route as AuthenticatedMyCareerReportsRunIdRouteImport } from './routes/
 import { Route as AuthenticatedEmployerEmployerSlugSettingsRouteImport } from './routes/_authenticated.employer.$employerSlug.settings'
 import { Route as AuthenticatedEmployerEmployerSlugApplicationsRouteImport } from './routes/_authenticated.employer.$employerSlug.applications'
 import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenticated.admin.jobs.$id'
+import { Route as AuthenticatedAdminEmployersEmployerIdRouteImport } from './routes/_authenticated.admin.employers.$employerId'
 import { Route as AuthenticatedEmployerEmployerSlugJobsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsNewRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.new'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
@@ -173,6 +175,11 @@ const CandidateRegisterRoute = CandidateRegisterRouteImport.update({
 const CandidateLoginRoute = CandidateLoginRouteImport.update({
   id: '/candidate/login',
   path: '/candidate/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedMyCareerRoute = AuthenticatedMyCareerRouteImport.update({
@@ -306,6 +313,12 @@ const AuthenticatedAdminJobsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAdminJobsRoute,
   } as any)
+const AuthenticatedAdminEmployersEmployerIdRoute =
+  AuthenticatedAdminEmployersEmployerIdRouteImport.update({
+    id: '/$employerId',
+    path: '/$employerId',
+    getParentRoute: () => AuthenticatedAdminEmployersRoute,
+  } as any)
 const AuthenticatedEmployerEmployerSlugJobsIndexRoute =
   AuthenticatedEmployerEmployerSlugJobsIndexRouteImport.update({
     id: '/jobs/',
@@ -344,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/employer': typeof AuthenticatedEmployerRouteWithChildren
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
@@ -355,7 +369,7 @@ export interface FileRoutesByFullPath {
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/admin/employers': typeof AuthenticatedAdminEmployersRoute
+  '/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
@@ -365,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/employer/': typeof AuthenticatedEmployerIndexRoute
   '/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
@@ -389,6 +404,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
+  '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
@@ -400,7 +416,7 @@ export interface FileRoutesByTo {
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/admin/employers': typeof AuthenticatedAdminEmployersRoute
+  '/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
@@ -408,6 +424,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/employer': typeof AuthenticatedEmployerIndexRoute
   '/my-career': typeof AuthenticatedMyCareerIndexRoute
+  '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
@@ -439,6 +456,7 @@ export interface FileRoutesById {
   '/_authenticated/employer': typeof AuthenticatedEmployerRouteWithChildren
   '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/_authenticated/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
   '/career-center/$profession': typeof CareerCenterProfessionRoute
@@ -450,7 +468,7 @@ export interface FileRoutesById {
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRoute
+  '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
@@ -460,6 +478,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/employer/': typeof AuthenticatedEmployerIndexRoute
   '/_authenticated/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/_authenticated/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/_authenticated/employer/$employerSlug/settings': typeof AuthenticatedEmployerEmployerSlugSettingsRoute
@@ -491,6 +510,7 @@ export interface FileRouteTypes {
     | '/employer'
     | '/journey'
     | '/my-career'
+    | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
     | '/career-center/$profession'
@@ -512,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/employer/'
     | '/my-career/'
+    | '/admin/employers/$employerId'
     | '/admin/jobs/$id'
     | '/employer/$employerSlug/applications'
     | '/employer/$employerSlug/settings'
@@ -536,6 +557,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/journey'
+    | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
     | '/career-center/$profession'
@@ -555,6 +577,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/employer'
     | '/my-career'
+    | '/admin/employers/$employerId'
     | '/admin/jobs/$id'
     | '/employer/$employerSlug/applications'
     | '/employer/$employerSlug/settings'
@@ -585,6 +608,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer'
     | '/_authenticated/journey'
     | '/_authenticated/my-career'
+    | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
     | '/career-center/$profession'
@@ -606,6 +630,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/employer/'
     | '/_authenticated/my-career/'
+    | '/_authenticated/admin/employers/$employerId'
     | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/employer/$employerSlug/applications'
     | '/_authenticated/employer/$employerSlug/settings'
@@ -633,6 +658,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   CandidateLoginRoute: typeof CandidateLoginRoute
   CandidateRegisterRoute: typeof CandidateRegisterRoute
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
@@ -804,6 +830,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CandidateLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/my-career': {
       id: '/_authenticated/my-career'
       path: '/my-career'
@@ -965,6 +998,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminJobsIdRouteImport
       parentRoute: typeof AuthenticatedAdminJobsRoute
     }
+    '/_authenticated/admin/employers/$employerId': {
+      id: '/_authenticated/admin/employers/$employerId'
+      path: '/$employerId'
+      fullPath: '/admin/employers/$employerId'
+      preLoaderRoute: typeof AuthenticatedAdminEmployersEmployerIdRouteImport
+      parentRoute: typeof AuthenticatedAdminEmployersRoute
+    }
     '/_authenticated/employer/$employerSlug/jobs/': {
       id: '/_authenticated/employer/$employerSlug/jobs/'
       path: '/jobs'
@@ -989,6 +1029,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminEmployersRouteChildren {
+  AuthenticatedAdminEmployersEmployerIdRoute: typeof AuthenticatedAdminEmployersEmployerIdRoute
+}
+
+const AuthenticatedAdminEmployersRouteChildren: AuthenticatedAdminEmployersRouteChildren =
+  {
+    AuthenticatedAdminEmployersEmployerIdRoute:
+      AuthenticatedAdminEmployersEmployerIdRoute,
+  }
+
+const AuthenticatedAdminEmployersRouteWithChildren =
+  AuthenticatedAdminEmployersRoute._addFileChildren(
+    AuthenticatedAdminEmployersRouteChildren,
+  )
+
 interface AuthenticatedAdminJobsRouteChildren {
   AuthenticatedAdminJobsIdRoute: typeof AuthenticatedAdminJobsIdRoute
   AuthenticatedAdminJobsIndexRoute: typeof AuthenticatedAdminJobsIndexRoute
@@ -1006,13 +1061,14 @@ const AuthenticatedAdminJobsRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminEmployersRoute: typeof AuthenticatedAdminEmployersRoute
+  AuthenticatedAdminEmployersRoute: typeof AuthenticatedAdminEmployersRouteWithChildren
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminEmployersRoute: AuthenticatedAdminEmployersRoute,
+  AuthenticatedAdminEmployersRoute:
+    AuthenticatedAdminEmployersRouteWithChildren,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRouteWithChildren,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
@@ -1162,6 +1218,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminLoginRoute: AdminLoginRoute,
   CandidateLoginRoute: CandidateLoginRoute,
   CandidateRegisterRoute: CandidateRegisterRoute,
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,

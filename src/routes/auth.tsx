@@ -27,7 +27,9 @@ export const Route = createFileRoute("/auth")({
 });
 
 function destinationFor(params: URLSearchParams, alreadySignedIn: boolean): string {
-  const intent = params.get("intent") === "employer" ? "employer" : "candidate";
+  const intentParam = params.get("intent");
+  const intent =
+    intentParam === "employer" ? "employer" : intentParam === "admin" ? "admin" : "candidate";
   const mode = params.get("mode") === "register" ? "register" : "login";
   const redirect = params.get("redirect");
 
@@ -36,19 +38,26 @@ function destinationFor(params: URLSearchParams, alreadySignedIn: boolean): stri
     // intent (or no intent, matching every pre-H3.1 link's implicit
     // behaviour) preserves the exact prior default of landing on
     // /my-career; employer intent goes to the smart /employer router,
-    // which independently re-derives workspace state itself.
+    // which independently re-derives workspace state itself; admin
+    // intent (Phase H3.3) goes to /admin, whose own layout independently
+    // re-verifies is_platform_admin() regardless of how the user arrived.
     if (intent === "employer") return safeReturnPath(redirect, "/employer");
+    if (intent === "admin") return safeReturnPath(redirect, "/admin");
     return safeReturnPath(redirect, "/my-career");
   }
 
+  // Admin has no self-service registration -- "mode" is meaningless for
+  // this intent, always /admin/login.
   const base =
-    intent === "employer"
-      ? mode === "register"
-        ? "/employer/register"
-        : "/employer/login"
-      : mode === "register"
-        ? "/candidate/register"
-        : "/candidate/login";
+    intent === "admin"
+      ? "/admin/login"
+      : intent === "employer"
+        ? mode === "register"
+          ? "/employer/register"
+          : "/employer/login"
+        : mode === "register"
+          ? "/candidate/register"
+          : "/candidate/login";
   const validatedRedirect = safeReturnPath(redirect, "");
   return validatedRedirect ? `${base}?redirect=${encodeURIComponent(validatedRedirect)}` : base;
 }

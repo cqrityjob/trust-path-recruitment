@@ -20,7 +20,18 @@ function AuthenticatedLayout() {
       if (!mounted) return;
       const session = data.session;
       if (!session) {
-        navigate({ to: "/auth", search: { redirect: window.location.pathname } as any });
+        // Phase H3.3 — an unauthenticated attempt at an /admin/* route
+        // goes through /auth?intent=admin, landing on /admin/login
+        // specifically rather than the candidate-oriented default;
+        // every other authenticated route is completely unaffected.
+        const isAdminPath = window.location.pathname.startsWith("/admin");
+        navigate({
+          to: "/auth",
+          search: {
+            redirect: window.location.pathname,
+            ...(isAdminPath ? { intent: "admin" } : {}),
+          } as any,
+        });
       } else {
         setSignedIn(true);
       }
@@ -28,7 +39,10 @@ function AuthenticatedLayout() {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setSignedIn(!!session);
-      if (!session) navigate({ to: "/auth" });
+      if (!session) {
+        const isAdminPath = window.location.pathname.startsWith("/admin");
+        navigate({ to: "/auth", search: isAdminPath ? ({ intent: "admin" } as any) : undefined });
+      }
     });
     return () => {
       mounted = false;

@@ -1,84 +1,65 @@
-import { createFileRoute, Outlet, Link, useNavigate } from "@tanstack/react-router";
+// Phase H3.3 — protected admin layout. Nested under _authenticated (which
+// already redirects an unauthenticated visitor to /auth?intent=admin ->
+// /admin/login). This layout adds the second, real authorization check:
+// is_platform_admin(auth.uid()), verified server-side via adminWhoAmI()
+// (unchanged from Phase B/G1 -- one source of truth for "is this user an
+// admin," reused by /admin/login's own post-auth check too).
+//
+// A signed-in non-admin now sees an explicit, safe "access denied"
+// message (matching the exact required copy) instead of the previous
+// silent navigate-away -- consistent with every other H3.x access-denied
+// surface in this app, and never reveals anything about admin-only data.
+
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { Link } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { Section } from "@/components/site/Section";
+import { useT } from "@/i18n/context";
 import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
+import { AdminErrorState } from "@/components/admin/AdminErrorState";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
   head: () => ({
-    meta: [
-      { title: "Admin — CQrityjob" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Admin — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminLayout,
+  errorComponent: AdminErrorState,
 });
 
 function AdminLayout() {
+  const { t } = useT();
   const whoAmI = useServerFn(adminWhoAmI);
-  const navigate = useNavigate();
   const q = useQuery({ queryKey: ["admin", "whoami"], queryFn: () => whoAmI() });
-
-  useEffect(() => {
-    if (q.data && !q.data.isAdmin) {
-      navigate({ to: "/journey" });
-    }
-  }, [q.data, navigate]);
 
   if (q.isLoading) {
     return (
       <SiteLayout>
-        <Section>
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        </Section>
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <p className="text-sm text-muted-foreground">{t("admin.loading")}</p>
+        </div>
       </SiteLayout>
     );
   }
-  if (q.isError) {
+
+  if (q.isError || !q.data?.isAdmin) {
     return (
       <SiteLayout>
-        <Section>
-          <p className="text-sm text-destructive">
-            Failed to verify admin access. {(q.error as Error).message}
-          </p>
-        </Section>
+        <div className="mx-auto max-w-md px-4 py-16 text-center">
+          <h1 className="text-xl font-semibold text-foreground">
+            {t("admin.accessDenied.heading")}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("admin.accessDenied.body")}</p>
+          <div className="mt-6">
+            <Link to="/my-career" className="text-sm font-medium text-accent hover:underline">
+              {t("admin.accessDenied.backToMyCareer")}
+            </Link>
+          </div>
+        </div>
       </SiteLayout>
     );
   }
-  if (!q.data?.isAdmin) return null;
 
-  return (
-    <SiteLayout>
-      <Section>
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Job Intelligence · Admin</h1>
-            <p className="text-sm text-muted-foreground">
-              Moderation console. All actions are recorded in the audit log.
-            </p>
-          </div>
-          <nav className="flex gap-4 text-sm">
-            <Link
-              to="/admin/jobs"
-              className="text-primary hover:underline"
-              activeProps={{ className: "font-semibold underline" }}
-            >
-              Jobs
-            </Link>
-            <Link
-              to="/admin/employers"
-              className="text-primary hover:underline"
-              activeProps={{ className: "font-semibold underline" }}
-            >
-              Employers
-            </Link>
-          </nav>
-        </div>
-        <Outlet />
-      </Section>
-    </SiteLayout>
-  );
+  return <Outlet />;
 }

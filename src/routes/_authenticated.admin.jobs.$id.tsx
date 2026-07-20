@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 
 export const Route = createFileRoute("/_authenticated/admin/jobs/$id")({
   ssr: false,
@@ -182,184 +184,246 @@ function AdminJobEditor() {
   const currentStatus = (jobQ.data?.job as any)?.status ?? "draft";
 
   return (
-    <div className="max-w-3xl">
-      <div className="mb-4 flex items-center gap-3">
-        <Link to="/admin/jobs" className="text-sm text-primary hover:underline">
-          ← Back to jobs
-        </Link>
-        {!isNew && <Badge variant="outline">{currentStatus}</Badge>}
-      </div>
-
-      {!isNew && jobQ.isLoading && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      )}
-      {!isNew && jobQ.isError && (
-        <p className="text-sm text-destructive">{(jobQ.error as Error).message}</p>
-      )}
-
-      {(isNew || jobQ.data) && (
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            save.mutate();
-          }}
-        >
-          <div>
-            <Label>Employer *</Label>
-            <Select value={form.employer_id} onValueChange={(v) => set("employer_id", v)}>
-              <SelectTrigger><SelectValue placeholder="Choose employer" /></SelectTrigger>
-              <SelectContent>
-                {(employers.data ?? []).map((e: any) => (
-                  <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <SiteLayout>
+      <AdminShellChrome activeSection="jobs">
+        <div className="max-w-3xl">
+          <div className="mb-4 flex items-center gap-3">
+            <Link to="/admin/jobs" className="text-sm text-primary hover:underline">
+              ← Back to jobs
+            </Link>
+            {!isNew && <Badge variant="outline">{currentStatus}</Badge>}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Label>Title (SV)</Label>
-              <Input value={form.title_sv} onChange={(e) => set("title_sv", e.target.value)} />
-            </div>
-            <div>
-              <Label>Title (EN)</Label>
-              <Input value={form.title_en} onChange={(e) => set("title_en", e.target.value)} />
-            </div>
-          </div>
+          {!isNew && jobQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {!isNew && jobQ.isError && (
+            <p className="text-sm text-destructive">{(jobQ.error as Error).message}</p>
+          )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Label>Family</Label>
-              <Select value={form.family_id} onValueChange={(v) => set("family_id", v)}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {FAMILY_IDS.map((f) => (
-                    <SelectItem key={f} value={f}>{f}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Profession slug</Label>
-              <Input
-                value={form.profession_slug}
-                onChange={(e) => set("profession_slug", e.target.value)}
-                placeholder="e.g. security-officer"
-              />
-            </div>
-          </div>
+          {(isNew || jobQ.data) && (
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                save.mutate();
+              }}
+            >
+              <div>
+                <Label>Employer *</Label>
+                <Select value={form.employer_id} onValueChange={(v) => set("employer_id", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose employer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(employers.data ?? []).map((e: any) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Label>Location</Label>
-              <Input value={form.location_text} onChange={(e) => set("location_text", e.target.value)} />
-            </div>
-            <div>
-              <Label>Country (ISO 2)</Label>
-              <Input value={form.country} onChange={(e) => set("country", e.target.value.toUpperCase())} maxLength={2} />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Title (SV)</Label>
+                  <Input value={form.title_sv} onChange={(e) => set("title_sv", e.target.value)} />
+                </div>
+                <div>
+                  <Label>Title (EN)</Label>
+                  <Input value={form.title_en} onChange={(e) => set("title_en", e.target.value)} />
+                </div>
+              </div>
 
-          <div>
-            <Label>Description (SV)</Label>
-            <Textarea rows={5} value={form.description_sv} onChange={(e) => set("description_sv", e.target.value)} />
-          </div>
-          <div>
-            <Label>Description (EN)</Label>
-            <Textarea rows={5} value={form.description_en} onChange={(e) => set("description_en", e.target.value)} />
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Family</Label>
+                  <Select value={form.family_id} onValueChange={(v) => set("family_id", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FAMILY_IDS.map((f) => (
+                        <SelectItem key={f} value={f}>
+                          {f}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Profession slug</Label>
+                  <Input
+                    value={form.profession_slug}
+                    onChange={(e) => set("profession_slug", e.target.value)}
+                    placeholder="e.g. security-officer"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <Label>Application method</Label>
-              <Select
-                value={form.application_method}
-                onValueChange={(v) => set("application_method", v as any)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="external">external</SelectItem>
-                  <SelectItem value="email">email</SelectItem>
-                  <SelectItem value="unavailable">unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Application URL</Label>
-              <Input value={form.application_url} onChange={(e) => set("application_url", e.target.value)} placeholder="https://…" />
-            </div>
-            <div>
-              <Label>Application email</Label>
-              <Input value={form.application_email} onChange={(e) => set("application_email", e.target.value)} placeholder="apply@…" />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Location</Label>
+                  <Input
+                    value={form.location_text}
+                    onChange={(e) => set("location_text", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Country (ISO 2)</Label>
+                  <Input
+                    value={form.country}
+                    onChange={(e) => set("country", e.target.value.toUpperCase())}
+                    maxLength={2}
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <Label>Deadline</Label>
-              <Input type="datetime-local" value={form.deadline_at} onChange={(e) => set("deadline_at", e.target.value)} />
-            </div>
-            <div>
-              <Label>Expires</Label>
-              <Input type="datetime-local" value={form.expires_at} onChange={(e) => set("expires_at", e.target.value)} />
-            </div>
-          </div>
+              <div>
+                <Label>Description (SV)</Label>
+                <Textarea
+                  rows={5}
+                  value={form.description_sv}
+                  onChange={(e) => set("description_sv", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Description (EN)</Label>
+                <Textarea
+                  rows={5}
+                  value={form.description_en}
+                  onChange={(e) => set("description_en", e.target.value)}
+                />
+              </div>
 
-          <div>
-            <Label>Moderation notes (internal only)</Label>
-            <Textarea
-              rows={3}
-              value={form.moderation_notes}
-              onChange={(e) => set("moderation_notes", e.target.value)}
-              placeholder="Never shown to candidates or employers."
-            />
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <Label>Application method</Label>
+                  <Select
+                    value={form.application_method}
+                    onValueChange={(v) => set("application_method", v as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="external">external</SelectItem>
+                      <SelectItem value="email">email</SelectItem>
+                      <SelectItem value="unavailable">unavailable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Application URL</Label>
+                  <Input
+                    value={form.application_url}
+                    onChange={(e) => set("application_url", e.target.value)}
+                    placeholder="https://…"
+                  />
+                </div>
+                <div>
+                  <Label>Application email</Label>
+                  <Input
+                    value={form.application_email}
+                    onChange={(e) => set("application_email", e.target.value)}
+                    placeholder="apply@…"
+                  />
+                </div>
+              </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {message && <p className="text-sm text-green-700">{message}</p>}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Deadline</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.deadline_at}
+                    onChange={(e) => set("deadline_at", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Expires</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.expires_at}
+                    onChange={(e) => set("expires_at", e.target.value)}
+                  />
+                </div>
+              </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={save.isPending || !form.employer_id}>
-              {save.isPending ? "Saving…" : "Save draft"}
-            </Button>
-            {!isNew && (
-              <>
-                {currentStatus === "draft" && (
-                  <Button type="button" variant="secondary"
-                    onClick={() => transition.mutate("submit")} disabled={transition.isPending}>
-                    Submit for review
-                  </Button>
+              <div>
+                <Label>Moderation notes (internal only)</Label>
+                <Textarea
+                  rows={3}
+                  value={form.moderation_notes}
+                  onChange={(e) => set("moderation_notes", e.target.value)}
+                  placeholder="Never shown to candidates or employers."
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {message && <p className="text-sm text-green-700">{message}</p>}
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={save.isPending || !form.employer_id}>
+                  {save.isPending ? "Saving…" : "Save draft"}
+                </Button>
+                {!isNew && (
+                  <>
+                    {currentStatus === "draft" && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => transition.mutate("submit")}
+                        disabled={transition.isPending}
+                      >
+                        Submit for review
+                      </Button>
+                    )}
+                    {(currentStatus === "draft" || currentStatus === "pending_review") && (
+                      <Button
+                        type="button"
+                        onClick={() => transition.mutate("publish")}
+                        disabled={transition.isPending}
+                      >
+                        Publish
+                      </Button>
+                    )}
+                    {(currentStatus === "pending_review" || currentStatus === "draft") && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => transition.mutate("reject")}
+                        disabled={transition.isPending}
+                      >
+                        Reject
+                      </Button>
+                    )}
+                    {currentStatus === "published" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => transition.mutate("unpublish")}
+                        disabled={transition.isPending}
+                      >
+                        Unpublish (to draft)
+                      </Button>
+                    )}
+                    {currentStatus !== "archived" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => transition.mutate("archive")}
+                        disabled={transition.isPending}
+                      >
+                        Archive
+                      </Button>
+                    )}
+                  </>
                 )}
-                {(currentStatus === "draft" || currentStatus === "pending_review") && (
-                  <Button type="button"
-                    onClick={() => transition.mutate("publish")} disabled={transition.isPending}>
-                    Publish
-                  </Button>
-                )}
-                {(currentStatus === "pending_review" || currentStatus === "draft") && (
-                  <Button type="button" variant="destructive"
-                    onClick={() => transition.mutate("reject")} disabled={transition.isPending}>
-                    Reject
-                  </Button>
-                )}
-                {currentStatus === "published" && (
-                  <Button type="button" variant="outline"
-                    onClick={() => transition.mutate("unpublish")} disabled={transition.isPending}>
-                    Unpublish (to draft)
-                  </Button>
-                )}
-                {currentStatus !== "archived" && (
-                  <Button type="button" variant="outline"
-                    onClick={() => transition.mutate("archive")} disabled={transition.isPending}>
-                    Archive
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </form>
-      )}
-    </div>
+              </div>
+            </form>
+          )}
+        </div>
+      </AdminShellChrome>
+    </SiteLayout>
   );
 }
