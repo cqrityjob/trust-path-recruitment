@@ -266,6 +266,33 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_feedback: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          message: string
+          page_path: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          message: string
+          page_path?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          page_path?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       career_milestones: {
         Row: {
           created_at: string
@@ -2566,6 +2593,67 @@ export type Database = {
           },
         ]
       }
+      job_application_status_events: {
+        Row: {
+          actor_role: string
+          actor_user_id: string | null
+          application_id: string
+          created_at: string
+          employer_id: string
+          id: string
+          job_id: string
+          new_status: string
+          note: string | null
+          previous_status: string
+        }
+        Insert: {
+          actor_role: string
+          actor_user_id?: string | null
+          application_id: string
+          created_at?: string
+          employer_id: string
+          id?: string
+          job_id: string
+          new_status: string
+          note?: string | null
+          previous_status: string
+        }
+        Update: {
+          actor_role?: string
+          actor_user_id?: string | null
+          application_id?: string
+          created_at?: string
+          employer_id?: string
+          id?: string
+          job_id?: string
+          new_status?: string
+          note?: string | null
+          previous_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_application_status_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_status_events_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_status_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_applications: {
         Row: {
           applicant_user_id: string
@@ -3241,6 +3329,15 @@ export type Database = {
         Returns: {
           created_new: boolean
           run_id: string
+        }[]
+      }
+      set_application_status: {
+        Args: { _application_id: string; _new_status: string; _note?: string }
+        Returns: {
+          application_id: string
+          new_status: string
+          previous_status: string
+          updated_at: string
         }[]
       }
       sweep_analytics_retention: {
