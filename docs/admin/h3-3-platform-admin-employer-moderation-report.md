@@ -4,13 +4,21 @@ Status: implemented and tested locally (disposable Postgres 16, real migration
 history). Not yet verified against Lovable Cloud — that verification is the
 only remaining step, per the Lovable handoff at the end of this document.
 
-**Final integrity review (this pass)**: closed the `adminUpsertEmployer()`
+**Final integrity review**: closed the `adminUpsertEmployer()`
 arbitrary-status-write gap identified in §1's original audit — an existing
-employer's status can no longer be changed through that tool at all; see
-§16 for the full account (what was found, how it was closed, and the tests
-added). No new migration was required — this was an application-layer-only
-fix; the database schema and `moderate_employer()` RPC are unchanged from
-commit `e2c2dac52b14ea9d21643397557662d081fa76b5`.
+employer's status can no longer be changed through that tool at all. No new
+migration was required for that fix; see §16.
+
+**Database moderation integrity fix (this pass)**: closed the last
+remaining bypass — a genuine platform-admin session could still change
+`employers.status` via a raw client-side table update, entirely outside
+`moderate_employer()`, skipping the transition allow-list, note
+requirements, and audit trail. A new additive migration
+(`20260720140000_h3_3_employer_status_transition_guard.sql`) adds a
+database-level trigger guard that makes this structurally impossible for
+every Postgres role, including platform admins and `service_role` — not
+merely documented. See §17 for the full account. **There is no remaining
+direct authenticated status-write bypass anywhere in this schema.**
 
 ## 1. Current-state audit (ground truth confirmed before writing any code)
 
@@ -109,10 +117,19 @@ One additive migration:
 
 No existing table, column, policy, function, or trigger was altered.
 
-**Final integrity review**: no additional migration was needed. The
-`adminUpsertEmployer()` fix (§16) is entirely application-layer (TypeScript
-zod schema + handler logic) — the database schema, `moderate_employer()`,
-and `employer_moderation_events` from the migration above are unchanged.
+**`adminUpsertEmployer()` integrity review**: no additional migration was
+needed for that fix. It is entirely application-layer (TypeScript zod
+schema + handler logic) — the database schema, `moderate_employer()`, and
+`employer_moderation_events` from the migration above were unchanged by
+it.
+
+**Database moderation integrity fix**: a second additive migration,
+`supabase/migrations/20260720140000_h3_3_employer_status_transition_guard.sql`,
+was later added specifically to close the direct-authenticated-update
+bypass — see §17. It replaces (via `CREATE OR REPLACE FUNCTION`, not by
+editing this file) `employers_validate_before_write()` and
+`moderate_employer()`'s own bodies; the table, `employer_moderation_events`,
+and every RLS policy from this migration remain exactly as defined here.
 
 ## 4. Status-transition model
 
@@ -374,17 +391,15 @@ passing at the time of this review. No issue required a fix before commit.
   they were rejected/suspended, that should be a new, explicitly
   employer-visible field, kept separate from the internal note (as the
   brief anticipates), not a relaxation of the current note's RLS.
-- ~~`adminUpsertEmployer()`'s pre-existing gap...~~ **Closed in the final
-  integrity review, no longer a limitation.** See §16.
-- A genuine platform admin can still change `employers.status` via a raw,
-  direct database/client call that bypasses the application entirely
-  (`employers_admin_all` RLS + `employers_validate_before_write()` both
-  already exempt platform admins, by design, since Phase G1/H3.2). This is
-  **pre-existing infrastructure, unchanged by H3.3 or this integrity
-  pass**, requires the caller to already hold a real platform-admin
-  session, and is out of scope for an application-code-path fix — see
-  §16's "Audit completeness" for the full reasoning on why this was
-  documented rather than closed.
+- ~~`adminUpsertEmployer()`'s pre-existing gap...~~ **Closed in the H3.3
+  final integrity review, no longer a limitation.** See §16.
+- ~~A genuine platform admin can still change `employers.status` via a raw,
+  direct database/client call...~~ **Closed in the H3.3 database-integrity
+  fix, no longer a limitation.** A database-level trigger guard (a
+  transaction-local marker, set exclusively inside `moderate_employer()`)
+  now blocks this for every Postgres role, including platform admins and
+  `service_role` — not just documented, structurally impossible. See §17.
+  **There is no remaining direct authenticated status-write bypass.**
 - `admin.employers.status.*` i18n keys were kept **separate** from the
   pre-existing `employer.status.*.badge` keys rather than reused, after
   reviewing both: `employer.status.*.badge` is phrased from the employer's
@@ -399,14 +414,21 @@ passing at the time of this review. No issue required a fix before commit.
 
 ## 15. Lovable Cloud handoff
 
-1. **Sync** the final commit (`fix: enforce canonical employer moderation
-   paths`, tip of `main` — see §16 for the exact hash) to the Lovable
-   Cloud project.
-2. **Apply the named migration**:
-   `supabase/migrations/20260720114043_h3_3_platform_admin_employer_moderation.sql`
-   — additive only, no down-migration needed, no existing migration edited.
-   **No new migration was introduced by the final integrity review** — the
-   `adminUpsertEmployer()` fix is application-code-only.
+1. **Sync** the final commit (`fix: enforce database-only employer
+   moderation transitions`, tip of `main` — see §17 for the exact hash) to
+   the Lovable Cloud project.
+2. **Apply both named migrations, in order**:
+   1. `supabase/migrations/20260720114043_h3_3_platform_admin_employer_moderation.sql`
+      — additive only, no down-migration needed, no existing migration
+      edited.
+   2. `supabase/migrations/20260720140000_h3_3_employer_status_transition_guard.sql`
+      — additive only (uses `CREATE OR REPLACE FUNCTION`, so it does not
+      edit either prior migration file); rollback instructions are in the
+      migration's own header comment if ever needed.
+   **No new migration was introduced by the `adminUpsertEmployer()`
+   integrity review** — that fix is application-code-only. The second
+   migration above is new specifically for the database-level transition
+   guard (§17).
 3. **Prerequisite**: an existing user in the target Cloud environment must
    already satisfy `is_platform_admin()` (i.e. already have an `admin` or
    `superadmin` row in `user_roles` for their `auth.users` id) before any
@@ -688,3 +710,186 @@ new script entry), and this report were changed — no unrelated file, no
 candidate/assessment code, touched. Full local test suite (§16.5) re-run
 and passing at the time of this review. No further issue required a fix
 before commit.
+
+## 17. Database moderation integrity fix — direct authenticated status-write bypass closed
+
+### 17.1 The gap
+
+§16.1's audit correctly closed every *application-code* path capable of
+writing `employers.status`, but explicitly left one item open: a genuine
+platform-admin session could still perform a raw client-side
+`.from("employers").update({ status: ... })` (or an equivalent direct
+table UPDATE) and have it succeed, entirely outside `moderate_employer()`
+— skipping the transition allow-list, the required rejection/suspension
+note, and the atomic `employer_moderation_events` audit row. This was
+possible because `employers_admin_all` RLS (Phase G1, `FOR ALL`,
+`is_platform_admin()`-gated) and `employers_validate_before_write()`
+(Phase H3.2) both already exempted platform admins from every write-time
+check on this table. §16.1/§16 documented this as a known, accepted,
+pre-existing limitation rather than a new gap introduced by H3.3. This
+pass treats "documented" as insufficient for a moderation-status
+invariant and closes it at the database level instead.
+
+### 17.2 Database mechanism selected, and why
+
+**Option A — a database trigger guard with a transaction-local marker —
+was chosen** over Option B (revoking column-level `UPDATE` privilege on
+`status` from `authenticated`).
+
+Both were evaluated against the real schema (`employers_admin_all` grants
+`FOR ALL` at the RLS layer; the base table grant is a blanket
+`GRANT INSERT, UPDATE, DELETE ON public.employers TO authenticated`, with
+all fine-grained control delegated to RLS policies and the
+`employers_validate_before_write()` trigger — there was no pre-existing
+column-level privilege split to build on). Option B would have required
+revoking the blanket grant and re-granting `UPDATE` on every column except
+`status` (`name`, `slug`, `website`, `country`, `registration_number`,
+`description_sv`, `description_en`, `updated_at`). It was rejected as the
+*sole* mechanism for one concrete reason: a column-level `REVOKE` only
+binds the `authenticated` Postgres role. It would do nothing to stop a
+hypothetical direct write performed with the `service_role` key
+(`GRANT ALL ON public.employers TO service_role` is completely unaffected
+by revoking a column privilege from a different role) — and "a boundary
+enforced for one Postgres role but silently not covering `service_role`"
+is exactly the class of mistake this multi-phase engagement has
+repeatedly guarded against elsewhere (see
+`admin-employer-moderation.functions.ts`'s own "never use `supabaseAdmin`
+for a read RLS already grants" rule, §16.2's file header comment).
+
+Option A closes the gap uniformly for **every** Postgres role, including
+`service_role`, because a `BEFORE UPDATE` trigger fires regardless of
+which role performs the write — there is no role-based carve-out to
+accidentally miss. It also required touching fewer objects (two function
+bodies, via `CREATE OR REPLACE`, no grant surgery on the table itself),
+which better matches "smallest safe database-level control."
+
+**Mechanism, precisely**: `moderate_employer()` now calls
+`PERFORM set_config('app.employer_moderation_in_progress', 'on', true)`
+— the third argument makes this **transaction-local**, so it is
+automatically cleared at the end of the transaction (commit or rollback)
+and can never leak into a later, unrelated request. `employers_validate_
+before_write()` (the existing `BEFORE UPDATE` trigger function) now
+checks, whenever `NEW.status IS DISTINCT FROM OLD.status`, that
+`current_setting('app.employer_moderation_in_progress', true) = 'on'` —
+if not, it raises `ERRCODE = 'check_violation'` (SQLSTATE 23514) and the
+UPDATE fails, for any caller, any role, no exceptions. This marker cannot
+be set by a client: PostgREST (the layer every `supabase-js`
+`.from()`/`.rpc()` call goes through) executes only the single
+statement/RPC call requested — it exposes no way for a client to run an
+arbitrary `SET`/`set_config` call before or alongside their own UPDATE.
+The only code that can ever set this marker is the SQL inside
+`moderate_employer()` itself.
+
+The pre-existing slug-protection branch (non-admin members cannot change
+`slug`) was left untouched — platform admins remain able to adjust `slug`
+via `adminUpsertEmployer()`, unaffected by this fix, satisfying
+requirement 4/5 (does not block permitted admin edits to non-status
+fields, does not weaken other legitimate admin functionality).
+
+### 17.3 New migration
+
+`supabase/migrations/20260720140000_h3_3_employer_status_transition_guard.sql`
+— additive only. Does **not** edit either previously-committed migration
+(`20260720114043_h3_3_platform_admin_employer_moderation.sql` or
+`20260720064743_h3_2_employer_settings.sql`); both affected functions are
+updated via `CREATE OR REPLACE FUNCTION`, which preserves each function's
+OID, owner, and existing grants — so the pre-existing trigger
+(`employers_validate_before_write_trigger`) and the pre-existing
+`EXECUTE` grant on `moderate_employer()` both continue to apply to the
+replacement bodies automatically, with no `DROP`/`CREATE TRIGGER` and no
+grant surgery required. `REVOKE ALL ... FROM PUBLIC, anon` /
+`GRANT EXECUTE ... TO authenticated, service_role` on `moderate_employer()`
+are reissued anyway, explicitly, for auditability. Both functions keep
+their original `SET search_path = public`. The migration's own header
+comment includes full rollback instructions (revert both functions to
+their pre-this-migration bodies, cited by file and migration name — no
+table/column/index/policy was added or dropped, so no other rollback step
+applies).
+
+### 17.4 Grants, revokes, functions, and triggers changed
+
+| Object | Change |
+|---|---|
+| `public.employers_validate_before_write()` | `CREATE OR REPLACE`: added the unconditional transaction-local-marker status check (blocks every role, including admins); removed the now-redundant non-admin-only status branch (the new check is a strict superset); slug-protection branch unchanged |
+| `public.moderate_employer(uuid, text, text)` | `CREATE OR REPLACE`: identical logic to the original H3.3 definition, plus one new line (`PERFORM set_config(...)`) immediately before its internal `UPDATE` |
+| `moderate_employer`'s `REVOKE`/`GRANT` | Reissued unchanged (`REVOKE ALL ... FROM PUBLIC, anon`; `GRANT EXECUTE ... TO authenticated, service_role`) |
+| `employers_validate_before_write_trigger` | Untouched — resolves the replaced function body automatically via its preserved OID |
+| `employers_admin_all`, `employers_owner_admin_update`, base table `GRANT`s on `employers` | Untouched — the fix operates entirely inside the trigger function, not at the RLS or table-grant layer |
+
+### 17.5 Proof that direct platform-admin table updates are blocked
+
+Test T21 (rewritten from its previous form, which had intentionally
+proven and documented the opposite): a real platform-admin session
+(`d3000001`, satisfies `is_platform_admin()`) executes
+`UPDATE public.employers SET status = 'suspended' WHERE id = '...'`
+directly. **Result: `SQLSTATE 23514, "employers.status can only be
+changed via moderate_employer()"`, status unchanged.** Tests T22
+(employer owner, non-admin) and T23 (candidate, no employer membership at
+all) prove the same invariant holds for every other role: T22 is blocked
+by the same trigger (`23514`); T23 never reaches the trigger at all —
+RLS itself excludes the row (`UPDATE 0`, no error, no change). T25
+reconfirms slug protection is unaffected. **There is no remaining direct
+authenticated status-write bypass.**
+
+### 17.6 Proof that the canonical RPC still works
+
+Test T29: after the guard is in place, a platform admin calls
+`moderate_employer(<fresh pending employer>, 'approved', '<note>')`
+end-to-end — succeeds, status flips `pending → active`, and the audit row
+is created (T27 confirms the running total is exactly 4 successful
+transitions → exactly 4 audit rows at that point in the run; T28 confirms
+a subsequent *failed* call does not add a 5th). This proves the
+transaction-local marker correctly lets the RPC's own internal `UPDATE`
+through while blocking every other caller.
+
+### 17.7 Regression tests
+
+Full suite re-run against a fresh disposable Postgres 16 cluster, the
+complete real migration history (bootstrap → every migration in
+chronological order, skipping the same 5 confirmed-duplicate files as
+every prior phase, through both H3.3 migrations) → fixtures → all
+assertions in one pass. **29/29 passed** (T1–T29):
+
+| # | Requirement (this pass's 15-item list) | Covered by |
+|---|---|---|
+| 1 | Normal employer cannot change its own status | T22 |
+| 2 | Candidate cannot change employer status | T23 |
+| 3 | Platform admin direct table update cannot change status | T21 |
+| 4 | `moderate_employer()` approves pending → active | T6/T14/T15/T16, T29 |
+| 5 | `moderate_employer()` rejects pending → rejected, note required | T7, T11 |
+| 6 | Suspends active → suspended, note required | T8, T12 |
+| 7 | Reactivates suspended → active | T9 |
+| 8 | Invalid transitions remain blocked | T10, T28 |
+| 9 | Every successful transition creates exactly one audit row | T27 (4 successful calls → 4 rows) |
+| 10 | Failed transitions create neither status change nor audit row | T10/T11/T12/T13 (status unchanged) + T28 (count unchanged) |
+| 11 | New employer creation still defaults to pending | T26 (`create_my_employer_company()`, self-service) + admin-employer-status-guard:check (`adminUpsertEmployer()` creation path) |
+| 12 | Owner/admin can still update permitted organisation fields | T24 |
+| 13 | Employer status and slug remain protected | T21/T22/T23 (status) + T25 (slug) |
+| 14 | H3.1/H3.2 employer flows still pass | T24 (the exact H3.2 `updateEmployerOrganisation` flow) + `employer-taxonomy:check`/`employer-job-form:check` OK + no H3.1/H3.2 file touched |
+| 15 | Typecheck, build, lint, CIE, KG, all H3.3 DB tests pass | see below |
+
+Static/build checks: `bunx tsc --noEmit` — zero errors. `bun run build` —
+succeeds. `bunx eslint` — no new issues (this pass touched no `.ts`/`.tsx`
+file; only the new SQL migration and the SQL test file changed).
+`cie:check` — PASS, persona outputs unchanged. `kg:check` — OK.
+`admin-employer-status-guard:check` — OK (unchanged from the previous
+pass, re-run to confirm no regression). `employer-taxonomy:check` /
+`employer-job-form:check` — OK.
+
+### 17.8 Final review
+
+Re-searched the entire repository and the final database schema for every
+path capable of changing `employers.status`, repeating §16.1's method
+(grep for `.from("employers")`, `.update(`, employer status RPCs, admin
+upsert/create helpers) and adding a direct schema-level check: test T20
+(unchanged, still valid) confirms `moderate_employer()` remains the only
+function whose body contains `UPDATE public.employers`; tests T21–T23
+confirm that even reaching that statement through any *other* means (a
+raw update by any role) is now rejected before it can take effect,
+regardless of RLS visibility. **No file outside
+`supabase/migrations/20260720140000_h3_3_employer_status_transition_guard.sql`,
+`tests/database/phase-h3-3/02_run_tests.sql`, and this report was
+changed** — confirmed via `git status`; no candidate, assessment, or
+Career Intelligence code was touched, and `cie:check`'s output is
+unchanged in structure. **Conclusion: there is no remaining direct
+authenticated status-write bypass anywhere in this schema.**

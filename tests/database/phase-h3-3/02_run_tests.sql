@@ -131,13 +131,71 @@ WHERE n.nspname = 'public'
   AND p.prosrc ILIKE '%UPDATE public.employers%'
 ORDER BY p.proname;
 
-\echo '=== T21 (integrity-review addendum, documented not closed): a genuine platform admin session can still write employers.status via a raw client-side UPDATE, bypassing moderate_employer() entirely and its note/transition/audit requirements -- because employers_admin_all RLS (FOR UPDATE ALL, is_platform_admin-gated, Phase G1) and employers_validate_before_write (Phase H3.2) both already exempt platform admins. This is PRE-EXISTING design, unchanged by H3.3 or this integrity pass, and requires the caller to already be a real platform admin choosing to bypass the application layer -- not a privilege-escalation bug. Documented here, not silently left as an assumption: the row is written directly, then immediately reverted to its prior value so this test does not corrupt any state a later run might rely on. ==='
+\echo '=== T21 (database-integrity guard, migration 20260720140000): a genuine platform admin session can NO LONGER write employers.status via a raw client-side UPDATE -- the transaction-local-marker trigger guard now blocks this for every role, including platform admins. (Superseded assertion: an earlier pass of this same test intentionally proved this WAS possible and documented it as an accepted limitation; that limitation is now closed, and this test proves the closure.) Expect SQLSTATE 23514, no status change. ==='
 SELECT set_config('request.jwt.claim.sub', 'd3000001-0000-0000-0000-000000000001', false);
 SET ROLE authenticated;
 UPDATE public.employers SET status = 'suspended' WHERE id = 'e3000005-0000-0000-0000-000000000005';
-SELECT status FROM public.employers WHERE id = 'e3000005-0000-0000-0000-000000000005';
-UPDATE public.employers SET status = 'active' WHERE id = 'e3000005-0000-0000-0000-000000000005';
-SELECT status FROM public.employers WHERE id = 'e3000005-0000-0000-0000-000000000005';
 RESET ROLE;
+SELECT status FROM public.employers WHERE id = 'e3000005-0000-0000-0000-000000000005';
+
+\echo '=== T22 (database-integrity guard): a normal employer OWNER (non-admin, member of e3000003 which is active/editable) cannot change their own employer status via a raw UPDATE -- RLS (employers_owner_admin_update) permits reaching the row, but the trigger blocks the status change regardless. Expect SQLSTATE 23514, no status change. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000005-0000-0000-0000-000000000005', false);
+SET ROLE authenticated;
+UPDATE public.employers SET status = 'suspended' WHERE id = 'e3000003-0000-0000-0000-000000000003';
+RESET ROLE;
+SELECT status FROM public.employers WHERE id = 'e3000003-0000-0000-0000-000000000003';
+
+\echo '=== T23 (database-integrity guard): a candidate with no employer membership at all cannot change ANY employer status via a raw UPDATE -- blocked at the RLS layer itself (employers_owner_admin_update''s USING clause excludes them, employers_admin_all requires is_platform_admin), before the trigger is even relevant. Expect zero rows affected, no status change. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000002-0000-0000-0000-000000000002', false);
+SET ROLE authenticated;
+UPDATE public.employers SET status = 'active' WHERE id = 'e3000001-0000-0000-0000-000000000001';
+RESET ROLE;
+SELECT status FROM public.employers WHERE id = 'e3000001-0000-0000-0000-000000000001';
+
+\echo '=== T24 (regression guard): the owner/admin of an editable employer CAN still update permitted, non-status organisation fields (this is the exact H3.2 employer-settings flow -- updateEmployerOrganisation never sends status, so it must be completely unaffected by this migration). Expect success, name changes, status unchanged. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000005-0000-0000-0000-000000000005', false);
+SET ROLE authenticated;
+UPDATE public.employers SET name = 'Fictional Suspended Co 3 (renamed)', website = 'https://example.invalid/renamed' WHERE id = 'e3000003-0000-0000-0000-000000000003';
+RESET ROLE;
+SELECT name, website, status FROM public.employers WHERE id = 'e3000003-0000-0000-0000-000000000003';
+
+\echo '=== T25 (regression guard): slug remains protected from a non-admin employer member, unaffected by this migration (pre-existing H3.2 behaviour, reconfirmed after replacing employers_validate_before_write()). Expect SQLSTATE 23514, slug unchanged. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000005-0000-0000-0000-000000000005', false);
+SET ROLE authenticated;
+UPDATE public.employers SET slug = 'hijacked-slug' WHERE id = 'e3000003-0000-0000-0000-000000000003';
+RESET ROLE;
+SELECT slug FROM public.employers WHERE id = 'e3000003-0000-0000-0000-000000000003';
+
+\echo '=== T26 (regression guard): brand-new self-service employer creation via create_my_employer_company() (Phase H3.1, unchanged code) still defaults to pending -- proves the new trigger logic, which only ever fires on TG_OP = UPDATE, has zero effect on INSERT. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000002-0000-0000-0000-000000000002', false);
+SET ROLE authenticated;
+SELECT * FROM public.create_my_employer_company('Fresh Guard-Test Co', 'fresh-guard-test-co', 'SE', NULL, NULL, NULL);
+RESET ROLE;
+SELECT status FROM public.employers WHERE slug = 'fresh-guard-test-co';
+
+\echo '=== T27 (audit atomicity, whole-run check): exactly 4 employer_moderation_events rows exist at this point -- one for each of the 4 successful moderate_employer() calls so far in this run (T7 reject, T8 suspend, T9 reactivate, T6/14/15/16 approve). No failed call (T10, T11, T12, T13, and this test file''s own T21/T22/T23 raw-UPDATE attempts, all of which never reach moderate_employer at all) added a row. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000001-0000-0000-0000-000000000001', false);
+SET ROLE authenticated;
+SELECT count(*) AS total_moderation_events FROM public.employer_moderation_events;
+RESET ROLE;
+
+\echo '=== T28 (failed transitions create neither status change nor audit row): repeat an invalid transition (approve an already-rejected employer) through the real moderate_employer() RPC and confirm the audit-row count from T27 does not increase. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000001-0000-0000-0000-000000000001', false);
+SET ROLE authenticated;
+SELECT * FROM public.moderate_employer('e3000004-0000-0000-0000-000000000004', 'approved', NULL);
+SELECT count(*) AS total_moderation_events_after_failed_call FROM public.employer_moderation_events;
+RESET ROLE;
+SELECT status FROM public.employers WHERE id = 'e3000004-0000-0000-0000-000000000004';
+
+\echo '=== T29 (canonical RPC still works after the guard was added): platform admin can still approve a fresh pending employer end-to-end through moderate_employer() -- proves the transaction-local marker correctly lets the RPC''s own internal UPDATE through. ==='
+SELECT set_config('request.jwt.claim.sub', 'd3000001-0000-0000-0000-000000000001', false);
+SET ROLE authenticated;
+SELECT * FROM public.moderate_employer(
+  (SELECT id FROM public.employers WHERE slug = 'fresh-guard-test-co'),
+  'approved',
+  'Approved for guard-test verification.'
+);
+RESET ROLE;
+SELECT status FROM public.employers WHERE slug = 'fresh-guard-test-co';
 
 \echo '=== DONE ==='
