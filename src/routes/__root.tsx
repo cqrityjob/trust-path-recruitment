@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider } from "../i18n/context";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -125,6 +126,42 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Clear cross-identity React Query cache leakage.
+  //
+  // Defect reproduced 2026-07-20: /employer/$employerSlug fired
+  // getEmployerDashboardStats with an employerId belonging to a PRIOR
+  // signed-in user in the same tab (a stale observer of
+  // ["employer", <prev-employer-id>, "dashboard-stats"]). RLS correctly
+  // returned "Access not available" for the new session, but the
+  // rejection surfaced as a runtime error modal. Nothing about the
+  // server function, the membership logic, or the RLS policies is
+  // wrong — the fix is teardown of cross-identity cache on the client.
+  //
+  // The listener only reacts to real identity transitions
+  // (SIGNED_OUT, and a SIGNED_IN / INITIAL_SESSION whose user.id differs
+  // from the previously observed one) — TOKEN_REFRESHED / same-user
+  // INITIAL_SESSION do not thrash the cache.
+  useEffect(() => {
+    let lastUserId: string | null | undefined = undefined;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUserId = session?.user?.id ?? null;
+      if (event === "SIGNED_OUT") {
+        queryClient.cancelQueries();
+        queryClient.clear();
+        lastUserId = null;
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
+        if (lastUserId !== undefined && nextUserId !== lastUserId) {
+          queryClient.cancelQueries();
+          queryClient.clear();
+        }
+        lastUserId = nextUserId;
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
