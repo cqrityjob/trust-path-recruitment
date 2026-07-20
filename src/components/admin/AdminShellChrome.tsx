@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { adminCountPendingEmployers } from "@/lib/job-intelligence/admin-employer-moderation.functions";
 
-export type AdminNavSection = "overview" | "employers" | "jobs";
+export type AdminNavSection = "overview" | "employers" | "jobs" | "feedback";
 
 export interface AdminShellChromeProps {
   activeSection: AdminNavSection;
@@ -69,6 +69,7 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
     { key: "overview", labelKey: "admin.nav.overview", to: "/admin" },
     { key: "employers", labelKey: "admin.nav.employers", to: "/admin/employers" },
     { key: "jobs", labelKey: "admin.nav.jobs", to: "/admin/jobs" },
+    { key: "feedback", labelKey: "admin.nav.feedback", to: "/admin/feedback" },
   ];
 
   return (

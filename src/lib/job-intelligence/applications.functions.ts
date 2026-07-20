@@ -3,22 +3,55 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 // -----------------------------------------------------------------------------
-// Jobs MVP v1 — H1: Server functions for job applications.
+// Jobs MVP v1 H1 + H3.4A: server functions for job applications.
 //
-// All application state changes go through these functions. The
-// `job_applications` table has no UPDATE policy for the `authenticated` role,
-// so employers and candidates cannot bypass moderation by writing directly.
+// H3.4A adds the candidate-facing submission path (submitJobApplication,
+// listMyApplications) and switches every status change (employer- and
+// candidate-driven alike) onto the new set_application_status() SECURITY
+// DEFINER RPC (supabase/migrations/20260720150000_h3_4a_candidate_
+// application_core.sql) -- mirroring the H3.3 employer-moderation design:
+// role is derived server-side inside the RPC (never trusted from client
+// input), a fixed transition allow-list is enforced in the database, and
+// every change atomically writes exactly one job_application_status_events
+// audit row. There remains no UPDATE grant/policy for `authenticated` on
+// job_applications at all beyond the pre-existing admin-only one, so there
+// is no client-side raw-update bypass to guard against separately -- the
+// RPC is genuinely the only path.
 //
-// - withdraw_my_application: candidate withdraws their own submitted/viewed
-//   application. Sets status='withdrawn' and withdrawn_at=now().
-// - update_application_as_employer: active employer member marks a
-//   submitted application as viewed and optionally records an employer note.
-// - get_application_cv_signed_url: issues a short-lived signed URL for a
-//   stored CV, gated on either applicant ownership or active employer role
-//   on the parent job's employer.
+// - submitJobApplication: candidate applies to a published, on-platform
+//   ("internal") job. Uploads the CV (service-role only -- the storage
+//   bucket has zero client-facing policies, unchanged) THEN inserts the
+//   job_applications row through the caller's own RLS-scoped client (owner
+//   INSERT policy + the job-eligibility/duplicate checks enforced by the
+//   database itself). If the insert fails for any reason, the just-
+//   uploaded CV is deleted before the error is surfaced.
+// - listMyApplications: candidate's own application history.
+// - withdrawMyApplication: candidate withdraws their own eligible
+//   application, via set_application_status().
+// - updateApplicationStatusAsEmployer: active employer member advances an
+//   application's status and/or records a note, via
+//   set_application_status().
+// - listApplicationsForEmployer: unchanged read path (RLS-scoped), status
+//   union extended.
+// - listApplicationStatusEvents: the audit trail for one application,
+//   visible to the applicant and to the employer.
+// - getApplicationCvSignedUrl: unchanged (still service-role, still a
+//   short-lived 5-minute signed URL, still gated on applicant ownership or
+//   active employer membership).
 // -----------------------------------------------------------------------------
 
 type Ctx = { supabase: any; userId: string };
+
+export type ApplicationStatus =
+  | "submitted"
+  | "reviewing"
+  | "interview"
+  | "rejected"
+  | "hired"
+  | "withdrawn";
+
+const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB, matches the DB CHECK constraint
+const PDF_MAGIC = "%PDF-";
 
 async function loadApplication(ctx: Ctx, applicationId: string) {
   const { data, error } = await ctx.supabase
@@ -36,23 +69,15 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
     job_id: string;
     employer_id: string;
     applicant_user_id: string;
-    status: string;
+    status: ApplicationStatus;
     cv_storage_path: string | null;
   };
 }
 
-// Phase H3.2.1 correction: this previously gated on employer_is_active_status
-// (active-only), so a pending employer's owner got a hard "Forbidden" error
-// just from opening the applications page -- even though a pending employer
-// legitimately has zero applications (it cannot yet have a published job)
-// and per the H3.2 spec must be able to *view* (an empty) applications list
-// without error. Renamed and switched to employer_members_can_edit(), the
-// same active/draft/pending gate already used for job drafts -- membership
-// is still independently verified via has_employer_role() first. Actual row
-// visibility for job_applications remains governed by
-// job_applications_employer_select RLS (active employers only), so a
-// pending employer still correctly sees zero rows -- this only removes the
-// spurious hard error, it does not widen what data is reachable.
+// Phase H3.2.1 correction (unchanged): active-only would incorrectly hard-
+// error a pending employer's own applications page, which legitimately has
+// zero rows. Membership is independently verified via has_employer_role()
+// first; actual row visibility stays governed by RLS.
 async function assertEmployerWorkspaceMember(ctx: Ctx, employerId: string): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("has_employer_role", {
     _user_id: ctx.userId,
@@ -70,88 +95,260 @@ async function assertEmployerWorkspaceMember(ctx: Ctx, employerId: string): Prom
   if (!canAccess) throw new Error("Forbidden: employer workspace not accessible");
 }
 
+// -------------------- SUBMIT (candidate) --------------------
+
+const submitApplicationSchema = z.object({
+  jobId: z.string().uuid(),
+  phone: z.string().trim().max(40).optional().nullable(),
+  coverNote: z.string().trim().max(1000).optional().nullable(),
+  consent: z.literal(true),
+  cvFilename: z.string().trim().min(1).max(200),
+  cvBase64: z.string().min(1),
+});
+
+export const submitJobApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => submitApplicationSchema.parse(d))
+  .handler(async ({ data, context }): Promise<{ id: string; status: ApplicationStatus }> => {
+    const ctx = context as Ctx;
+
+    // Early, friendly checks via the caller's own RLS-scoped client -- the
+    // database (BEFORE INSERT trigger + partial unique index) is the real
+    // boundary and re-validates both independently.
+    const { data: job, error: jobErr } = await ctx.supabase
+      .from("jobs")
+      .select("id, status, application_method")
+      .eq("id", data.jobId)
+      .maybeSingle();
+    if (jobErr) {
+      console.error("[applications] submitJobApplication job lookup failed", jobErr);
+      throw new Error("JOB_LOOKUP_FAILED");
+    }
+    if (!job || job.status !== "published" || job.application_method !== "internal") {
+      throw new Error("JOB_NOT_APPLICABLE");
+    }
+
+    const { data: existing, error: existingErr } = await ctx.supabase
+      .from("job_applications")
+      .select("id")
+      .eq("job_id", data.jobId)
+      .eq("applicant_user_id", ctx.userId)
+      .neq("status", "withdrawn")
+      .maybeSingle();
+    if (existingErr) {
+      console.error("[applications] submitJobApplication duplicate check failed", existingErr);
+      throw new Error("DUPLICATE_CHECK_FAILED");
+    }
+    if (existing) throw new Error("DUPLICATE_APPLICATION");
+
+    // Decode + validate the CV. PDF only (brief: "secure PDF CV upload").
+    let cvBuffer: Buffer;
+    try {
+      cvBuffer = Buffer.from(data.cvBase64, "base64");
+    } catch {
+      throw new Error("CV_INVALID");
+    }
+    if (cvBuffer.length === 0 || cvBuffer.length > MAX_CV_BYTES) {
+      throw new Error("CV_TOO_LARGE");
+    }
+    if (cvBuffer.subarray(0, PDF_MAGIC.length).toString("ascii") !== PDF_MAGIC) {
+      throw new Error("CV_NOT_PDF");
+    }
+
+    const applicationId = crypto.randomUUID();
+    const safeFilename = data.cvFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "cv.pdf";
+    const storagePath = `${ctx.userId}/${applicationId}/${safeFilename}`;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from("job-application-cvs")
+      .upload(storagePath, cvBuffer, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+    if (uploadErr) {
+      console.error("[applications] CV upload failed", uploadErr);
+      throw new Error("CV_UPLOAD_FAILED");
+    }
+
+    const { data: inserted, error: insertErr } = await ctx.supabase
+      .from("job_applications")
+      .insert({
+        id: applicationId,
+        job_id: data.jobId,
+        applicant_user_id: ctx.userId,
+        phone: data.phone || null,
+        cover_note: data.coverNote || null,
+        cv_storage_path: storagePath,
+        cv_original_filename: data.cvFilename,
+        cv_mime_type: "application/pdf",
+        cv_size_bytes: cvBuffer.length,
+        consent_given_at: new Date().toISOString(),
+      })
+      .select("id, status")
+      .single();
+
+    if (insertErr) {
+      // Failed submission cleans up the uploaded CV -- never leave an
+      // orphaned file for an application that doesn't exist.
+      await supabaseAdmin.storage.from("job-application-cvs").remove([storagePath]);
+      console.error("[applications] submitJobApplication insert failed", insertErr);
+      if (insertErr.code === "23505") throw new Error("DUPLICATE_APPLICATION");
+      if (insertErr.code === "23514") throw new Error("JOB_NOT_APPLICABLE");
+      throw new Error("SUBMISSION_FAILED");
+    }
+
+    return { id: inserted.id as string, status: inserted.status as ApplicationStatus };
+  });
+
+// -------------------- CANDIDATE HISTORY --------------------
+
+export type MyApplicationRow = {
+  id: string;
+  jobId: string;
+  jobSlug: string | null;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  employerName: string | null;
+  status: ApplicationStatus;
+  hasCv: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const listMyApplications = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MyApplicationRow[]> => {
+    const ctx = context as Ctx;
+
+    // RLS-scoped -- job_applications_owner_select already limits this to
+    // exactly the caller's own rows.
+    const { data: rows, error } = await ctx.supabase
+      .from("job_applications")
+      .select(
+        "id, job_id, status, cv_storage_path, created_at, updated_at, jobs(slug, title_sv, title_en, employers(name))",
+      )
+      .eq("applicant_user_id", ctx.userId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) {
+      console.error("[applications] listMyApplications failed", error);
+      throw new Error("Could not load your applications.");
+    }
+
+    return (rows ?? []).map((r: any) => {
+      const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
+      const employer = job
+        ? Array.isArray(job.employers)
+          ? job.employers[0]
+          : job.employers
+        : null;
+      return {
+        id: r.id as string,
+        jobId: r.job_id as string,
+        jobSlug: (job?.slug as string | null) ?? null,
+        jobTitleSv: (job?.title_sv as string | null) ?? null,
+        jobTitleEn: (job?.title_en as string | null) ?? null,
+        employerName: (employer?.name as string | null) ?? null,
+        status: r.status as ApplicationStatus,
+        hasCv: Boolean(r.cv_storage_path),
+        createdAt: r.created_at as string,
+        updatedAt: r.updated_at as string,
+      };
+    });
+  });
+
+// -------------------- STATUS CHANGES (candidate + employer) --------------------
+
 export const withdrawMyApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const ctx = context as unknown as Ctx;
-    const app = await loadApplication(ctx, data.applicationId);
-    if (app.applicant_user_id !== ctx.userId) {
-      throw new Error("Forbidden: not the applicant");
-    }
-    if (app.status === "withdrawn") return { ok: true, alreadyWithdrawn: true };
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("job_applications")
-      .update({ status: "withdrawn", withdrawn_at: new Date().toISOString() })
-      .eq("id", app.id)
-      .eq("applicant_user_id", ctx.userId);
+    const ctx = context as Ctx;
+    const { data: result, error } = await ctx.supabase.rpc("set_application_status", {
+      _application_id: data.applicationId,
+      _new_status: "withdrawn",
+      _note: null,
+    });
     if (error) {
-      console.error("[applications] withdrawMyApplication update failed", error);
-      throw new Error("Could not withdraw this application.");
+      console.error("[applications] withdrawMyApplication RPC failed", error);
+      if (error.code === "23514") throw new Error("INVALID_APPLICATION_TRANSITION");
+      throw new Error("WITHDRAW_FAILED");
     }
-    return { ok: true, alreadyWithdrawn: false };
+    const row = Array.isArray(result) ? result[0] : result;
+    return { ok: true, status: row.new_status as ApplicationStatus };
   });
 
-export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
+const updateApplicationStatusSchema = z.object({
+  applicationId: z.string().uuid(),
+  newStatus: z.enum(["reviewing", "interview", "rejected", "hired"]),
+  note: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const updateApplicationStatusAsEmployer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z
-      .object({
-        applicationId: z.string().uuid(),
-        markViewed: z.boolean().optional(),
-        employerNote: z.string().max(1000).nullable().optional(),
-      })
-      .parse(input),
-  )
+  .inputValidator((d: unknown) => updateApplicationStatusSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const ctx = context as unknown as Ctx;
-    const app = await loadApplication(ctx, data.applicationId);
-    await assertEmployerWorkspaceMember(ctx, app.employer_id);
-
-    const patch: { status?: "viewed"; employer_note?: string | null } = {};
-    if (data.markViewed && app.status === "submitted") patch.status = "viewed";
-    if (data.employerNote !== undefined) patch.employer_note = data.employerNote;
-
-    if (Object.keys(patch).length === 0) return { ok: true, changed: false };
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("job_applications")
-      .update(patch)
-      .eq("id", app.id)
-      .eq("employer_id", app.employer_id);
+    const ctx = context as Ctx;
+    // set_application_status() independently re-verifies active employer
+    // membership itself -- this is the real authorization boundary, not a
+    // pre-check here.
+    const { data: result, error } = await ctx.supabase.rpc("set_application_status", {
+      _application_id: data.applicationId,
+      _new_status: data.newStatus,
+      _note: data.note ?? null,
+    });
     if (error) {
-      console.error("[applications] updateApplicationAsEmployer update failed", error);
-      throw new Error("Could not update this application.");
+      console.error("[applications] updateApplicationStatusAsEmployer RPC failed", error);
+      if (error.code === "23514") throw new Error("INVALID_APPLICATION_TRANSITION");
+      throw new Error("STATUS_UPDATE_FAILED");
     }
-    return { ok: true, changed: true };
+    const row = Array.isArray(result) ? result[0] : result;
+    return {
+      ok: true,
+      previousStatus: row.previous_status as ApplicationStatus,
+      status: row.new_status as ApplicationStatus,
+    };
   });
 
-// -----------------------------------------------------------------------------
-// Phase H3.2 addition, corrected in H3.2.1 — listApplicationsForEmployer.
-//
-// The job_applications + jobs read now goes through the caller's own
-// RLS-scoped ctx.supabase, not supabaseAdmin — job_applications_employer_select
-// RLS already grants exactly the right rows (active employer, membership
-// verified) and jobs_employer_select_own already permits the embedded jobs
-// join. This satisfies the H3.2.1 requirement that ordinary employer reads
-// never depend on a service-role key.
-//
-// The one narrow, still-justified exception is the applicant's display
-// name: it lives in `public.profiles`, which is self-select-only RLS
-// (profiles_self_select: id = auth.uid()) -- an employer's own RLS-scoped
-// client structurally cannot join to another user's profile row, by
-// design (candidate data minimisation). That lookup alone uses
-// supabaseAdmin, after assertEmployerWorkspaceMember() has already
-// verified membership, and is scoped to exactly the applicant IDs already
-// returned by the RLS-scoped query above -- never an open-ended read. No
-// CV bytes are returned here; only cv_storage_path's presence (boolean) is
-// surfaced, so the UI can offer a signed-URL download via the existing
-// getApplicationCvSignedUrl, which re-checks authorization again
-// independently.
-// -----------------------------------------------------------------------------
+// -------------------- STATUS HISTORY (audit trail) --------------------
+
+export type ApplicationStatusEvent = {
+  id: string;
+  actorRole: "candidate" | "employer";
+  previousStatus: ApplicationStatus;
+  newStatus: ApplicationStatus;
+  note: string | null;
+  createdAt: string;
+};
+
+export const listApplicationStatusEvents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<ApplicationStatusEvent[]> => {
+    const ctx = context as Ctx;
+    // RLS-scoped -- job_application_status_events_applicant_select /
+    // _employer_select already grant exactly the rows the caller may see.
+    const { data: rows, error } = await ctx.supabase
+      .from("job_application_status_events")
+      .select("id, actor_role, previous_status, new_status, note, created_at")
+      .eq("application_id", data.applicationId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("[applications] listApplicationStatusEvents failed", error);
+      throw new Error("Could not load the status history.");
+    }
+    return (rows ?? []).map((r: any) => ({
+      id: r.id as string,
+      actorRole: r.actor_role as "candidate" | "employer",
+      previousStatus: r.previous_status as ApplicationStatus,
+      newStatus: r.new_status as ApplicationStatus,
+      note: r.note as string | null,
+      createdAt: r.created_at as string,
+    }));
+  });
+
+// -------------------- EMPLOYER LIST --------------------
 
 const listApplicationsForEmployerSchema = z.object({
   employerId: z.string().uuid(),
@@ -166,7 +363,7 @@ export type EmployerApplicationRow = {
   applicantDisplayName: string | null;
   phone: string | null;
   coverNote: string | null;
-  status: "submitted" | "viewed" | "withdrawn";
+  status: ApplicationStatus;
   hasCv: boolean;
   createdAt: string;
 };
@@ -175,13 +372,11 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => listApplicationsForEmployerSchema.parse(input))
   .handler(async ({ data, context }): Promise<EmployerApplicationRow[]> => {
-    const ctx = context as unknown as Ctx;
+    const ctx = context as Ctx;
     await assertEmployerWorkspaceMember(ctx, data.employerId);
 
     // RLS-scoped read -- job_applications_employer_select already limits
-    // this to the caller's own active employer's rows (a pending employer
-    // correctly gets zero rows here, not an error); jobs_employer_select_own
-    // permits the embedded jobs(title_sv, title_en) join the same way.
+    // this to the caller's own active employer's rows.
     let query = ctx.supabase
       .from("job_applications")
       .select(
@@ -224,18 +419,20 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
         applicantDisplayName: namesByUserId.get(r.applicant_user_id as string) ?? null,
         phone: r.phone as string | null,
         coverNote: r.cover_note as string | null,
-        status: r.status as EmployerApplicationRow["status"],
+        status: r.status as ApplicationStatus,
         hasCv: Boolean(r.cv_storage_path),
         createdAt: r.created_at as string,
       };
     });
   });
 
+// -------------------- CV DOWNLOAD --------------------
+
 export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const ctx = context as unknown as Ctx;
+    const ctx = context as Ctx;
     const app = await loadApplication(ctx, data.applicationId);
     if (!app.cv_storage_path) throw new Error("No CV attached to this application");
 

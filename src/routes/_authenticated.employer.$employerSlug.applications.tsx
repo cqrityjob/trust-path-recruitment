@@ -1,12 +1,17 @@
 // Phase H3.2 — /employer/$employerSlug/applications: employer-scoped
-// applications view. New in this phase. Backend it reads from
-// (job_applications table + RLS, listApplicationsForEmployer,
-// updateApplicationAsEmployer, getApplicationCvSignedUrl) already existed
-// end-to-end before this phase (Jobs MVP v1 H1, delivered independently) —
-// only the employer-facing view was missing, per the H3.2 audit. Follows
-// the exact same access-resolution pattern as every other employer route:
-// slug is a lookup key only, re-verified independently via
+// applications view. Backend it reads from (job_applications table + RLS,
+// listApplicationsForEmployer, getApplicationCvSignedUrl) existed before
+// H3.2 (Jobs MVP v1 H1, delivered independently). Follows the exact same
+// access-resolution pattern as every other employer route: slug is a
+// lookup key only, re-verified independently via
 // listMyEmployerWorkspaces() on every load.
+//
+// H3.4A — extended with the full status-control model (reviewing /
+// interview / rejected / hired), backed by the database-validated,
+// atomically-audited set_application_status() RPC (via
+// updateApplicationStatusAsEmployer). Only the transitions the RPC's own
+// allow-list permits from the current status are ever offered as buttons —
+// an employer can never be shown (or send) 'withdrawn'.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,8 +34,9 @@ import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   listApplicationsForEmployer,
   getApplicationCvSignedUrl,
-  updateApplicationAsEmployer,
+  updateApplicationStatusAsEmployer,
   type EmployerApplicationRow,
+  type ApplicationStatus,
 } from "@/lib/job-intelligence/applications.functions";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/applications")({
@@ -94,10 +100,32 @@ function EmployerApplicationsPage() {
   );
 }
 
-const STATUS_LABEL_KEY: Record<EmployerApplicationRow["status"], TranslationKey> = {
+const STATUS_LABEL_KEY: Record<ApplicationStatus, TranslationKey> = {
   submitted: "employer.applications.status.submitted",
-  viewed: "employer.applications.status.viewed",
+  reviewing: "employer.applications.status.reviewing",
+  interview: "employer.applications.status.interview",
+  rejected: "employer.applications.status.rejected",
+  hired: "employer.applications.status.hired",
   withdrawn: "employer.applications.status.withdrawn",
+};
+
+type EmployerSettableStatus = "reviewing" | "interview" | "rejected" | "hired";
+
+// Mirrors set_application_status()'s own employer-side transition
+// allow-list exactly (supabase/migrations/20260720150000_h3_4a_candidate_
+// application_core.sql) -- only ever offer a button for a transition the
+// database will actually accept.
+const EMPLOYER_NEXT_STATUSES: Partial<Record<ApplicationStatus, EmployerSettableStatus[]>> = {
+  submitted: ["reviewing", "rejected"],
+  reviewing: ["interview", "rejected"],
+  interview: ["hired", "rejected"],
+};
+
+const ACTION_LABEL_KEY: Record<EmployerSettableStatus, TranslationKey> = {
+  reviewing: "employer.applications.action.markReviewing",
+  interview: "employer.applications.action.markInterview",
+  rejected: "employer.applications.action.markRejected",
+  hired: "employer.applications.action.markHired",
 };
 
 function ApplicationsList({
@@ -119,7 +147,7 @@ function ApplicationsList({
   const qc = useQueryClient();
   const listFn = useServerFn(listApplicationsForEmployer);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
-  const markViewedFn = useServerFn(updateApplicationAsEmployer);
+  const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const query = useQuery({
@@ -127,11 +155,14 @@ function ApplicationsList({
     queryFn: () => listFn({ data: { employerId } }),
   });
 
-  const markViewed = useMutation({
-    mutationFn: (applicationId: string) =>
-      markViewedFn({ data: { applicationId, markViewed: true } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] }),
-    onError: () => setActionError(t("employer.applications.error.markViewed")),
+  const setStatus = useMutation({
+    mutationFn: (vars: { applicationId: string; newStatus: EmployerSettableStatus }) =>
+      setStatusFn({ data: { applicationId: vars.applicationId, newStatus: vars.newStatus } }),
+    onSuccess: () => {
+      setActionError(null);
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+    },
+    onError: () => setActionError(t("employer.applications.error.statusUpdate")),
   });
 
   async function onDownloadCv(applicationId: string) {
@@ -200,16 +231,17 @@ function ApplicationsList({
                     </div>
                     {r.coverNote && <p className="mt-3 text-sm text-foreground">{r.coverNote}</p>}
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {r.status === "submitted" && (
+                      {(EMPLOYER_NEXT_STATUSES[r.status] ?? []).map((next) => (
                         <button
+                          key={next}
                           type="button"
-                          disabled={markViewed.isPending}
-                          onClick={() => markViewed.mutate(r.id)}
+                          disabled={setStatus.isPending}
+                          onClick={() => setStatus.mutate({ applicationId: r.id, newStatus: next })}
                           className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
                         >
-                          {t("employer.applications.action.markViewed")}
+                          {t(ACTION_LABEL_KEY[next])}
                         </button>
-                      )}
+                      ))}
                       {r.hasCv && (
                         <button
                           type="button"

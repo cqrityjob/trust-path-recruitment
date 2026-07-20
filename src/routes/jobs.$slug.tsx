@@ -37,6 +37,7 @@ import {
 } from "@/lib/job-intelligence/enum-labels";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
+import { ApplyInternalDialog } from "@/components/jobs/ApplyInternalDialog";
 import { JobCard } from "@/components/jobs/JobCard";
 import { JobRelevancePanel } from "@/components/jobs/JobRelevancePanel";
 import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
@@ -99,9 +100,7 @@ function normalizeRequirements(raw: unknown): ReqBuckets {
       mandatory: toStringList(o.mandatory ?? o.must ?? o.required),
       preferred: toStringList(o.preferred ?? o.nice_to_have ?? o.desired),
       formal: toStringList(o.formal ?? o.regulated),
-      employer: toStringList(
-        o.employer_specific ?? o.employer ?? o.company_specific,
-      ),
+      employer: toStringList(o.employer_specific ?? o.employer ?? o.company_specific),
       legacy: [],
     };
   }
@@ -154,12 +153,7 @@ function JobDetailPage() {
   const profileState = useCareerProfileForJobs();
 
   const related = useQuery({
-    queryKey: [
-      "public-job-related",
-      q.data?.id,
-      q.data?.profession_slug,
-      q.data?.family_id,
-    ],
+    queryKey: ["public-job-related", q.data?.id, q.data?.profession_slug, q.data?.family_id],
     enabled: !!q.data,
     queryFn: () =>
       listRelatedPublicJobs({
@@ -197,8 +191,7 @@ function JobDetailPage() {
   if (!q.data) return <NotFoundState />;
 
   const job = q.data;
-  const title =
-    pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
+  const title = pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
   const description = pickLocalized(job.description_sv, job.description_en, lang);
   const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
   const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
@@ -286,12 +279,8 @@ function JobDetailPage() {
                 {t("jobs.detail.badge.regulated")}
               </Chip>
             )}
-            {job.security_vetting_mentioned && (
-              <Chip>{t("jobs.detail.badge.vetting")}</Chip>
-            )}
-            {job.driving_licence_required && (
-              <Chip>{t("jobs.detail.badge.driving")}</Chip>
-            )}
+            {job.security_vetting_mentioned && <Chip>{t("jobs.detail.badge.vetting")}</Chip>}
+            {job.driving_licence_required && <Chip>{t("jobs.detail.badge.driving")}</Chip>}
           </div>
         </header>
 
@@ -299,9 +288,7 @@ function JobDetailPage() {
           <article className="min-w-0 space-y-8">
             {description && (
               <section>
-                <h2 className="text-xl font-semibold">
-                  {t("jobs.detail.summary")}
-                </h2>
+                <h2 className="text-xl font-semibold">{t("jobs.detail.summary")}</h2>
                 <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
                   {description}
                 </p>
@@ -310,9 +297,7 @@ function JobDetailPage() {
 
             {responsibilities.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold">
-                  {t("jobs.detail.responsibilities")}
-                </h2>
+                <h2 className="text-xl font-semibold">{t("jobs.detail.responsibilities")}</h2>
                 <BulletList items={responsibilities} />
               </section>
             )}
@@ -323,9 +308,7 @@ function JobDetailPage() {
               reqs.employer.length > 0 ||
               reqs.legacy.length > 0) && (
               <section>
-                <h2 className="text-xl font-semibold">
-                  {t("jobs.detail.requirements")}
-                </h2>
+                <h2 className="text-xl font-semibold">{t("jobs.detail.requirements")}</h2>
                 {reqs.legacy.length > 0 ? (
                   <BulletList items={reqs.legacy} />
                 ) : (
@@ -369,9 +352,7 @@ function JobDetailPage() {
 
             {benefits.length > 0 && (
               <section>
-                <h2 className="text-xl font-semibold">
-                  {t("jobs.detail.benefits")}
-                </h2>
+                <h2 className="text-xl font-semibold">{t("jobs.detail.benefits")}</h2>
                 <BulletList items={benefits} />
               </section>
             )}
@@ -386,20 +367,12 @@ function JobDetailPage() {
                 familyName={area ? area.name[lang] : null}
                 professionSlug={profession?.slug ?? null}
                 professionName={
-                  profession
-                    ? lang === "sv"
-                      ? profession.titleSv
-                      : profession.titleEn
-                    : null
+                  profession ? (lang === "sv" ? profession.titleSv : profession.titleEn) : null
                 }
               />
             )}
 
-            <RelatedJobs
-              loading={related.isLoading}
-              rows={related.data ?? []}
-              lang={lang}
-            />
+            <RelatedJobs loading={related.isLoading} rows={related.data ?? []} lang={lang} />
           </article>
 
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
@@ -407,8 +380,7 @@ function JobDetailPage() {
             {profileState.status === "ready" && (
               <JobRelevancePanel job={job} profile={profileState.data.profile} />
             )}
-            {(profileState.status === "anonymous" ||
-              profileState.status === "no_profile") && (
+            {(profileState.status === "anonymous" || profileState.status === "no_profile") && (
               <AssessmentInvite variant="sidebar" />
             )}
           </aside>
@@ -418,13 +390,7 @@ function JobDetailPage() {
   );
 }
 
-function Chip({
-  children,
-  icon,
-}: {
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-}) {
+function Chip({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5">
       {icon && <span aria-hidden="true">{icon}</span>}
@@ -433,26 +399,25 @@ function Chip({
   );
 }
 
-function ApplySidebar({
-  job,
-  expired,
-}: {
-  job: PublicJobDetail;
-  expired: boolean;
-}) {
+function ApplySidebar({ job, expired }: { job: PublicJobDetail; expired: boolean }) {
   const { t, lang } = useT();
 
   const applyBlock = () => {
     if (expired) {
       return (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
-          <p className="text-sm font-semibold text-destructive">
-            {t("jobs.detail.expired.title")}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("jobs.detail.expired.body")}
-          </p>
+          <p className="text-sm font-semibold text-destructive">{t("jobs.detail.expired.title")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("jobs.detail.expired.body")}</p>
         </div>
+      );
+    }
+    if (job.application_method === "internal") {
+      return (
+        <ApplyInternalDialog
+          jobId={job.id}
+          employerName={job.employer?.name ?? null}
+          label={t("jobs.detail.apply_internal")}
+        />
       );
     }
     if (job.application_method === "external" && job.application_url) {
@@ -474,11 +439,7 @@ function ApplySidebar({
         </Button>
       );
     }
-    return (
-      <p className="text-sm text-muted-foreground">
-        {t("jobs.detail.apply_unavailable")}
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">{t("jobs.detail.apply_unavailable")}</p>;
   };
 
   return (
@@ -542,9 +503,7 @@ function EmployerCard({
           <div className="min-w-0">
             <p className="truncate text-base font-semibold">{employer.name}</p>
             {employer.country && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {employer.country}
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{employer.country}</p>
             )}
           </div>
         </div>
@@ -648,9 +607,7 @@ function RelatedJobs({
     <section>
       <h2 className="text-xl font-semibold">{t("jobs.detail.related.title")}</h2>
       {loading ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          {t("jobs.results.loading")}
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("jobs.results.loading")}</p>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {rows.map((r) => (
@@ -662,7 +619,6 @@ function RelatedJobs({
   );
 }
 
-
 function NotFoundState() {
   const { t } = useT();
   return (
@@ -671,12 +627,8 @@ function NotFoundState() {
         <Link to="/jobs" className="text-sm text-primary hover:underline">
           {t("jobs.detail.back")}
         </Link>
-        <h1 className="mt-4 text-2xl font-semibold">
-          {t("jobs.detail.not_found.title")}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          {t("jobs.detail.not_found.body")}
-        </p>
+        <h1 className="mt-4 text-2xl font-semibold">{t("jobs.detail.not_found.title")}</h1>
+        <p className="mt-2 text-muted-foreground">{t("jobs.detail.not_found.body")}</p>
       </Section>
     </SiteLayout>
   );
@@ -690,9 +642,7 @@ function ErrorState({ message }: { message: string }) {
         <Link to="/jobs" className="text-sm text-primary hover:underline">
           {t("jobs.detail.back")}
         </Link>
-        <h1 className="mt-4 text-2xl font-semibold">
-          {t("jobs.results.error.title")}
-        </h1>
+        <h1 className="mt-4 text-2xl font-semibold">{t("jobs.results.error.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{message}</p>
       </Section>
     </SiteLayout>

@@ -58,6 +58,7 @@ function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetInfo, setResetInfo] = useState<string | null>(null);
   const [signedInNonAdminEmail, setSignedInNonAdminEmail] = useState<string | null>(null);
 
   // Verify admin status for whatever session already exists on mount --
@@ -137,6 +138,24 @@ function AdminLoginPage() {
     setError(null);
   }
 
+  async function onForgotPassword() {
+    setError(null);
+    setResetInfo(null);
+    if (!email.trim()) {
+      setError(t("auth.reset.need_email"));
+      return;
+    }
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password?intent=admin",
+      });
+      if (err) throw err;
+      setResetInfo(t("auth.reset.sent"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   return (
     <SiteLayout>
       <Section>
@@ -213,6 +232,15 @@ function AdminLoginPage() {
                   />
                 </label>
 
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-xs font-medium text-accent hover:underline"
+                >
+                  {t("auth.reset.link")}
+                </button>
+
+                {resetInfo && <p className="text-sm text-foreground">{resetInfo}</p>}
                 {error && (
                   <p role="alert" className="text-sm text-destructive">
                     {error}

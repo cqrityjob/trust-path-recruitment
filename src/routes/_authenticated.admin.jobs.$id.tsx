@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
+import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute("/_authenticated/admin/jobs/$id")({
   ssr: false,
@@ -44,6 +46,15 @@ const FAMILY_IDS = [
   "security_leadership_governance",
   "investigations_intelligence",
 ];
+
+const STATUS_LABEL_KEY: Record<string, TranslationKey> = {
+  draft: "admin.jobs.status.draft",
+  pending_review: "admin.jobs.status.pending_review",
+  published: "admin.jobs.status.published",
+  expired: "admin.jobs.status.expired",
+  rejected: "admin.jobs.status.rejected",
+  archived: "admin.jobs.status.archived",
+};
 
 type FormState = {
   employer_id: string;
@@ -82,6 +93,7 @@ const EMPTY: FormState = {
 };
 
 function AdminJobEditor() {
+  const { t } = useT();
   const { id } = Route.useParams();
   const isNew = id === "new";
   const getFn = useServerFn(adminGetJob);
@@ -155,7 +167,7 @@ function AdminJobEditor() {
     mutationFn: async () => saveFn({ data: buildPayload() as any }),
     onSuccess: (res) => {
       setError(null);
-      setMessage("Saved.");
+      setMessage(t("admin.jobs.detail.saved"));
       qc.invalidateQueries({ queryKey: ["admin", "jobs"] });
       qc.invalidateQueries({ queryKey: ["admin", "job"] });
       if (isNew) navigate({ to: "/admin/jobs/$id", params: { id: res.id } });
@@ -171,7 +183,7 @@ function AdminJobEditor() {
       transitionFn({ data: { id, action, moderation_notes: form.moderation_notes || null } }),
     onSuccess: () => {
       setError(null);
-      setMessage("Status updated.");
+      setMessage(t("admin.jobs.detail.statusUpdated"));
       qc.invalidateQueries({ queryKey: ["admin", "jobs"] });
       qc.invalidateQueries({ queryKey: ["admin", "job", id] });
     },
@@ -181,6 +193,20 @@ function AdminJobEditor() {
     },
   });
 
+  // H3.4B: rejecting a job requires a non-empty internal note. Checked
+  // here (client-side, before the request is even sent) as the primary
+  // UX; the server independently re-validates the same rule (zod refine
+  // in adminTransitionJob's transitionSchema) as a backstop.
+  function onReject() {
+    setMessage(null);
+    if (!form.moderation_notes.trim()) {
+      setError(t("admin.jobs.detail.error.rejectionNoteRequired"));
+      return;
+    }
+    setError(null);
+    transition.mutate("reject");
+  }
+
   const currentStatus = (jobQ.data?.job as any)?.status ?? "draft";
 
   return (
@@ -189,12 +215,18 @@ function AdminJobEditor() {
         <div className="max-w-3xl">
           <div className="mb-4 flex items-center gap-3">
             <Link to="/admin/jobs" className="text-sm text-primary hover:underline">
-              ← Back to jobs
+              {t("admin.jobs.detail.back")}
             </Link>
-            {!isNew && <Badge variant="outline">{currentStatus}</Badge>}
+            {!isNew && (
+              <Badge variant="outline">
+                {t(STATUS_LABEL_KEY[currentStatus] ?? "admin.jobs.status.draft")}
+              </Badge>
+            )}
           </div>
 
-          {!isNew && jobQ.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {!isNew && jobQ.isLoading && (
+            <p className="text-sm text-muted-foreground">{t("admin.jobs.detail.loading")}</p>
+          )}
           {!isNew && jobQ.isError && (
             <p className="text-sm text-destructive">{(jobQ.error as Error).message}</p>
           )}
@@ -208,10 +240,10 @@ function AdminJobEditor() {
               }}
             >
               <div>
-                <Label>Employer *</Label>
+                <Label>{t("admin.jobs.detail.field.employer")}</Label>
                 <Select value={form.employer_id} onValueChange={(v) => set("employer_id", v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose employer" />
+                    <SelectValue placeholder={t("admin.jobs.detail.placeholder.chooseEmployer")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(employers.data ?? []).map((e: any) => (
@@ -225,21 +257,21 @@ function AdminJobEditor() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Title (SV)</Label>
+                  <Label>{t("admin.jobs.detail.field.titleSv")}</Label>
                   <Input value={form.title_sv} onChange={(e) => set("title_sv", e.target.value)} />
                 </div>
                 <div>
-                  <Label>Title (EN)</Label>
+                  <Label>{t("admin.jobs.detail.field.titleEn")}</Label>
                   <Input value={form.title_en} onChange={(e) => set("title_en", e.target.value)} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Family</Label>
+                  <Label>{t("admin.jobs.detail.field.family")}</Label>
                   <Select value={form.family_id} onValueChange={(v) => set("family_id", v)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="—" />
+                      <SelectValue placeholder={t("admin.jobs.detail.placeholder.none")} />
                     </SelectTrigger>
                     <SelectContent>
                       {FAMILY_IDS.map((f) => (
@@ -251,25 +283,25 @@ function AdminJobEditor() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Profession slug</Label>
+                  <Label>{t("admin.jobs.detail.field.professionSlug")}</Label>
                   <Input
                     value={form.profession_slug}
                     onChange={(e) => set("profession_slug", e.target.value)}
-                    placeholder="e.g. security-officer"
+                    placeholder={t("admin.jobs.detail.placeholder.professionSlug")}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Location</Label>
+                  <Label>{t("admin.jobs.detail.field.location")}</Label>
                   <Input
                     value={form.location_text}
                     onChange={(e) => set("location_text", e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label>Country (ISO 2)</Label>
+                  <Label>{t("admin.jobs.detail.field.country")}</Label>
                   <Input
                     value={form.country}
                     onChange={(e) => set("country", e.target.value.toUpperCase())}
@@ -279,7 +311,7 @@ function AdminJobEditor() {
               </div>
 
               <div>
-                <Label>Description (SV)</Label>
+                <Label>{t("admin.jobs.detail.field.descriptionSv")}</Label>
                 <Textarea
                   rows={5}
                   value={form.description_sv}
@@ -287,7 +319,7 @@ function AdminJobEditor() {
                 />
               </div>
               <div>
-                <Label>Description (EN)</Label>
+                <Label>{t("admin.jobs.detail.field.descriptionEn")}</Label>
                 <Textarea
                   rows={5}
                   value={form.description_en}
@@ -297,7 +329,7 @@ function AdminJobEditor() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <Label>Application method</Label>
+                  <Label>{t("admin.jobs.detail.field.applicationMethod")}</Label>
                   <Select
                     value={form.application_method}
                     onValueChange={(v) => set("application_method", v as any)}
@@ -306,14 +338,23 @@ function AdminJobEditor() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="external">external</SelectItem>
-                      <SelectItem value="email">email</SelectItem>
-                      <SelectItem value="unavailable">unavailable</SelectItem>
+                      <SelectItem value="external">
+                        {t("employer.jobs.form.applicationMethod.external")}
+                      </SelectItem>
+                      <SelectItem value="email">
+                        {t("employer.jobs.form.applicationMethod.email")}
+                      </SelectItem>
+                      <SelectItem value="internal">
+                        {t("employer.jobs.form.applicationMethod.internal")}
+                      </SelectItem>
+                      <SelectItem value="unavailable">
+                        {t("employer.jobs.form.applicationMethod.unavailable")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Application URL</Label>
+                  <Label>{t("admin.jobs.detail.field.applicationUrl")}</Label>
                   <Input
                     value={form.application_url}
                     onChange={(e) => set("application_url", e.target.value)}
@@ -321,7 +362,7 @@ function AdminJobEditor() {
                   />
                 </div>
                 <div>
-                  <Label>Application email</Label>
+                  <Label>{t("admin.jobs.detail.field.applicationEmail")}</Label>
                   <Input
                     value={form.application_email}
                     onChange={(e) => set("application_email", e.target.value)}
@@ -332,7 +373,7 @@ function AdminJobEditor() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <Label>Deadline</Label>
+                  <Label>{t("admin.jobs.detail.field.deadline")}</Label>
                   <Input
                     type="datetime-local"
                     value={form.deadline_at}
@@ -340,7 +381,7 @@ function AdminJobEditor() {
                   />
                 </div>
                 <div>
-                  <Label>Expires</Label>
+                  <Label>{t("admin.jobs.detail.field.expires")}</Label>
                   <Input
                     type="datetime-local"
                     value={form.expires_at}
@@ -350,21 +391,27 @@ function AdminJobEditor() {
               </div>
 
               <div>
-                <Label>Moderation notes (internal only)</Label>
+                <Label>{t("admin.jobs.detail.field.moderationNotes")}</Label>
                 <Textarea
                   rows={3}
                   value={form.moderation_notes}
                   onChange={(e) => set("moderation_notes", e.target.value)}
-                  placeholder="Never shown to candidates or employers."
+                  placeholder={t("admin.jobs.detail.field.moderationNotesPlaceholder")}
                 />
               </div>
 
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
               {message && <p className="text-sm text-green-700">{message}</p>}
 
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" disabled={save.isPending || !form.employer_id}>
-                  {save.isPending ? "Saving…" : "Save draft"}
+                  {save.isPending
+                    ? t("admin.jobs.detail.action.saving")
+                    : t("admin.jobs.detail.action.saveDraft")}
                 </Button>
                 {!isNew && (
                   <>
@@ -375,7 +422,7 @@ function AdminJobEditor() {
                         onClick={() => transition.mutate("submit")}
                         disabled={transition.isPending}
                       >
-                        Submit for review
+                        {t("admin.jobs.detail.action.submitForReview")}
                       </Button>
                     )}
                     {(currentStatus === "draft" || currentStatus === "pending_review") && (
@@ -384,17 +431,17 @@ function AdminJobEditor() {
                         onClick={() => transition.mutate("publish")}
                         disabled={transition.isPending}
                       >
-                        Publish
+                        {t("admin.jobs.detail.action.publish")}
                       </Button>
                     )}
                     {(currentStatus === "pending_review" || currentStatus === "draft") && (
                       <Button
                         type="button"
                         variant="destructive"
-                        onClick={() => transition.mutate("reject")}
+                        onClick={onReject}
                         disabled={transition.isPending}
                       >
-                        Reject
+                        {t("admin.jobs.detail.action.reject")}
                       </Button>
                     )}
                     {currentStatus === "published" && (
@@ -404,7 +451,7 @@ function AdminJobEditor() {
                         onClick={() => transition.mutate("unpublish")}
                         disabled={transition.isPending}
                       >
-                        Unpublish (to draft)
+                        {t("admin.jobs.detail.action.unpublish")}
                       </Button>
                     )}
                     {currentStatus !== "archived" && (
@@ -414,7 +461,7 @@ function AdminJobEditor() {
                         onClick={() => transition.mutate("archive")}
                         disabled={transition.isPending}
                       >
-                        Archive
+                        {t("admin.jobs.detail.action.archive")}
                       </Button>
                     )}
                   </>

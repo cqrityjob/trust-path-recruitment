@@ -136,7 +136,7 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
     setBusy(true);
     try {
       const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + "/auth?intent=" + portal,
+        redirectTo: window.location.origin + "/reset-password?intent=" + portal,
       });
       if (err) throw err;
       setInfo(t("auth.reset.sent"));

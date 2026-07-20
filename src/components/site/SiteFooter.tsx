@@ -50,7 +50,10 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2 text-sm">
               {individuals.map((l) => (
                 <li key={l.to}>
-                  <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    to={l.to}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -64,7 +67,10 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2 text-sm">
               {orgs.map((l) => (
                 <li key={`${l.to}-org`}>
-                  <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    to={l.to}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -78,7 +84,10 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2 text-sm">
               {company.map((l) => (
                 <li key={`${l.to}-co`}>
-                  <Link to={l.to} className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    to={l.to}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -90,13 +99,23 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               <li>{t("footer.legal.privacy")}</li>
               <li>{t("footer.legal.terms")}</li>
+              <li>
+                <Link to="/feedback" className="transition-colors hover:text-foreground">
+                  {t("footer.betaFeedback")}
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-2 border-t border-border pt-6 text-xs text-muted-foreground md:flex-row md:items-center">
-          <p>© {year} {t("brand.name")}. {t("footer.rights")}</p>
-          <p className="tracking-tight text-foreground/70" style={{ fontFamily: "var(--font-display)" }}>
+          <p>
+            © {year} {t("brand.name")}. {t("footer.rights")}
+          </p>
+          <p
+            className="tracking-tight text-foreground/70"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             {t("brand.slogan")}
           </p>
         </div>

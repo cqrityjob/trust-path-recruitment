@@ -305,11 +305,20 @@ export const adminSaveJobDraft = createServerFn({ method: "POST" })
 
 // ---------------------------- JOBS: TRANSITION ------------------------------
 
-const transitionSchema = z.object({
-  id: z.string().uuid(),
-  action: z.enum(["submit", "publish", "reject", "archive", "unpublish"]),
-  moderation_notes: z.string().max(4000).optional().nullable(),
-});
+// H3.4B: rejecting a job requires a non-empty internal note -- the note is
+// the only record of why a job was rejected, so a blank rejection is a
+// dead end for both the employer and any future reviewer. Every other
+// action keeps the note optional, unchanged.
+const transitionSchema = z
+  .object({
+    id: z.string().uuid(),
+    action: z.enum(["submit", "publish", "reject", "archive", "unpublish"]),
+    moderation_notes: z.string().max(4000).optional().nullable(),
+  })
+  .refine((v) => v.action !== "reject" || (v.moderation_notes ?? "").trim().length > 0, {
+    message: "REJECTION_NOTE_REQUIRED",
+    path: ["moderation_notes"],
+  });
 
 export const adminTransitionJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

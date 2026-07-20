@@ -78,10 +78,7 @@ function L(v: Copy, lang: "sv" | "en") {
 
 function pickTopFamily(profile: CareerProfileForJobsV1) {
   return Object.entries(profile.familyScores)
-    .sort(
-      ([, a], [, b]) =>
-        (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
-    )
+    .sort(([, a], [, b]) => (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2)
     .map(([id]) => id)[0];
 }
 
@@ -89,16 +86,12 @@ function pickTopProfessions(profile: CareerProfileForJobsV1, n: number) {
   return Object.entries(profile.slugScores)
     .map(([slug, s]) => ({ slug, ...s, prof: getProfession(slug) }))
     .filter((r) => !!r.prof)
-    .sort(
-      (a, b) =>
-        (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
-    )
+    .sort((a, b) => (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2)
     .slice(0, n);
 }
 
 function confidenceBand(level: ConfidenceLevel, lang: "sv" | "en") {
-  if (level === "stronger")
-    return { label: lang === "sv" ? "Hög" : "High", tone: "high" as const };
+  if (level === "stronger") return { label: lang === "sv" ? "Hög" : "High", tone: "high" as const };
   if (level === "moderate")
     return { label: lang === "sv" ? "Medel" : "Medium", tone: "medium" as const };
   return { label: lang === "sv" ? "Låg" : "Low", tone: "low" as const };
@@ -151,8 +144,7 @@ function MyCareerPage() {
   const hasEmployerWorkspace = (employerWorkspacesQ.data?.length ?? 0) > 0;
 
   const profileState = useCareerProfileForJobs();
-  const profile =
-    profileState.status === "ready" ? profileState.data.profile : undefined;
+  const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
 
   const topFamilyId = profile ? pickTopFamily(profile) : undefined;
   const topProfessions = profile ? pickTopProfessions(profile, 3) : [];
@@ -172,9 +164,7 @@ function MyCareerPage() {
       const results = await Promise.all(
         topProfessions.map(async (p) => ({
           slug: p.slug,
-          hasJobs:
-            (await listPublicJobs({ professionSlug: p.slug, limit: 1 })).length >
-            0,
+          hasJobs: (await listPublicJobs({ professionSlug: p.slug, limit: 1 })).length > 0,
         })),
       );
       return Object.fromEntries(results.map((r) => [r.slug, r.hasJobs] as const));
@@ -187,17 +177,14 @@ function MyCareerPage() {
   const hasCompletedAssessment = !!latestRun && latestRun.status === "completed";
   const hasProfile = profileState.status === "ready" && !!profile;
   const noAssessment =
-    runsQ.status === "success" &&
-    (runsQ.data.length === 0 || profileState.status === "no_profile");
+    runsQ.status === "success" && (runsQ.data.length === 0 || profileState.status === "no_profile");
 
   async function onSignOut() {
     await supabase.auth.signOut();
   }
 
   const greeting = L(c("Välkommen tillbaka", "Welcome back"), lang);
-  const topAreaLabel = topFamilyId
-    ? getCareerAreaLabel(topFamilyId)?.name[lang]
-    : undefined;
+  const topAreaLabel = topFamilyId ? getCareerAreaLabel(topFamilyId)?.name[lang] : undefined;
   const topProfTitle = topProfession
     ? lang === "sv"
       ? topProfession.prof!.titleSv
@@ -291,9 +278,7 @@ function MyCareerPage() {
               title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
             >
               {runsQ.isLoading && (
-                <p className="text-sm text-muted-foreground">
-                  {L(c("Laddar…", "Loading…"), lang)}
-                </p>
+                <p className="text-sm text-muted-foreground">{L(c("Laddar…", "Loading…"), lang)}</p>
               )}
               {runsQ.isError && (
                 <p className="text-sm text-destructive">
@@ -348,13 +333,14 @@ function MyCareerPage() {
               >
                 <ul className="divide-y divide-border">
                   {runsQ.data.slice(1).map((run: any) => {
-                    const runDate = new Date(
-                      run.completed_at ?? run.started_at,
-                    ).toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    });
+                    const runDate = new Date(run.completed_at ?? run.started_at).toLocaleDateString(
+                      lang === "sv" ? "sv-SE" : "en-GB",
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      },
+                    );
                     return (
                       <li key={run.id} className="flex items-center justify-between gap-3 py-3">
                         <span className="text-sm text-foreground">{runDate}</span>
@@ -404,12 +390,9 @@ function MyCareerPage() {
               >
                 <ul className="grid gap-3 sm:grid-cols-1">
                   {topProfessions.map((r) => {
-                    const areaLabel =
-                      getCareerAreaLabel(r.familyKey)?.name[lang] ?? r.familyKey;
+                    const areaLabel = getCareerAreaLabel(r.familyKey)?.name[lang] ?? r.familyKey;
                     const summary =
-                      (lang === "sv"
-                        ? r.prof!.description.sv
-                        : r.prof!.description.en) || "";
+                      (lang === "sv" ? r.prof!.description.sv : r.prof!.description.en) || "";
                     const hasJobs = jobsForTopFamilyQ.data?.[r.slug];
                     return (
                       <li
@@ -466,9 +449,7 @@ function MyCareerPage() {
               }
             >
               {jobsQ.isLoading && (
-                <p className="text-sm text-muted-foreground">
-                  {L(c("Laddar…", "Loading…"), lang)}
-                </p>
+                <p className="text-sm text-muted-foreground">{L(c("Laddar…", "Loading…"), lang)}</p>
               )}
               {jobsQ.data && jobsQ.data.length === 0 && (
                 <EmptyState
@@ -488,10 +469,7 @@ function MyCareerPage() {
                   )}
                   ctaLabel={L(c("Bläddra alla jobb", "Browse all jobs"), lang)}
                   ctaTo="/jobs"
-                  secondaryLabel={L(
-                    c("Utforska yrken", "Explore professions"),
-                    lang,
-                  )}
+                  secondaryLabel={L(c("Utforska yrken", "Explore professions"), lang)}
                   secondaryTo="/career-center"
                 />
               )}
@@ -499,21 +477,12 @@ function MyCareerPage() {
                 <ul className="divide-y divide-border">
                   {jobsQ.data.map((j) => {
                     const title =
-                      (lang === "sv" ? j.title_sv : j.title_en) ||
-                      j.title_en ||
-                      j.title_sv ||
-                      "";
+                      (lang === "sv" ? j.title_sv : j.title_en) || j.title_en || j.title_sv || "";
                     const location =
-                      [j.location_text, j.city, j.country]
-                        .filter(Boolean)
-                        .join(", ") || "";
+                      [j.location_text, j.city, j.country].filter(Boolean).join(", ") || "";
                     return (
                       <li key={j.id} className="py-3 first:pt-0 last:pb-0">
-                        <Link
-                          to="/jobs/$slug"
-                          params={{ slug: j.slug }}
-                          className="group block"
-                        >
+                        <Link to="/jobs/$slug" params={{ slug: j.slug }} className="group block">
                           <p className="text-sm font-medium text-foreground group-hover:underline">
                             {title}
                           </p>
@@ -571,9 +540,12 @@ function MyCareerPage() {
                   />
                 </li>
                 <li>
+                  <QuickLink to="/jobs" label={L(c("Bläddra jobb", "Browse jobs"), lang)} />
+                </li>
+                <li>
                   <QuickLink
-                    to="/jobs"
-                    label={L(c("Bläddra jobb", "Browse jobs"), lang)}
+                    to="/my-career/applications"
+                    label={L(c("Mina ansökningar", "My applications"), lang)}
                   />
                 </li>
                 <li>
@@ -590,9 +562,7 @@ function MyCareerPage() {
               title={L(c("Konto", "Account"), lang)}
             >
               <div className="space-y-2 text-sm">
-                {displayName && (
-                  <p className="font-medium text-foreground">{displayName}</p>
-                )}
+                {displayName && <p className="font-medium text-foreground">{displayName}</p>}
                 {email && <p className="text-xs text-muted-foreground">{email}</p>}
                 <p className="text-xs text-muted-foreground">
                   {L(
@@ -697,10 +667,7 @@ function CareerJourney({
                     aria-label={L(c("Klart", "Done"), lang)}
                   />
                 ) : (
-                  <Circle
-                    className="h-4 w-4"
-                    aria-label={L(c("Kvar", "Upcoming"), lang)}
-                  />
+                  <Circle className="h-4 w-4" aria-label={L(c("Kvar", "Upcoming"), lang)} />
                 )}
               </span>
               <div>
@@ -736,10 +703,11 @@ function AssessmentSummary({
   topArea: string | undefined;
   runId: string;
 }) {
-  const date = new Date(completedAt).toLocaleDateString(
-    lang === "sv" ? "sv-SE" : "en-GB",
-    { year: "numeric", month: "long", day: "numeric" },
-  );
+  const date = new Date(completedAt).toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   const primaryMotivation =
     profile && profile.motivations[0]
       ? lang === "sv"
@@ -754,13 +722,9 @@ function AssessmentSummary({
   const topSlug =
     profile &&
     Object.entries(profile.slugScores)
-      .sort(
-        ([, a], [, b]) =>
-          (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2,
-      )
+      .sort(([, a], [, b]) => (b.currentFit + b.potential) / 2 - (a.currentFit + a.potential) / 2)
       .map(([slug]) => slug)[0];
-  const confidence =
-    topSlug && profile ? profile.slugScores[topSlug].confidence : undefined;
+  const confidence = topSlug && profile ? profile.slugScores[topSlug].confidence : undefined;
   const band = confidence ? confidenceBand(confidence, lang) : undefined;
 
   return (
@@ -799,9 +763,7 @@ function AssessmentSummary({
         />
         <Field
           label={L(c("Primär drivkraft", "Primary motivation"), lang)}
-          value={
-            primaryMotivation ?? L(c("Ej tillgänglig", "Not available"), lang)
-          }
+          value={primaryMotivation ?? L(c("Ej tillgänglig", "Not available"), lang)}
           icon={<Flame className="h-3.5 w-3.5" />}
         />
       </dl>
@@ -869,20 +831,11 @@ function ConfidenceBadge({
   const tip =
     tone === "high"
       ? L(
-          c(
-            "Baserat på tydliga signaler i dina svar.",
-            "Based on strong signals in your answers.",
-          ),
+          c("Baserat på tydliga signaler i dina svar.", "Based on strong signals in your answers."),
           lang,
         )
       : tone === "medium"
-        ? L(
-            c(
-              "Baserat på delvis tydliga signaler.",
-              "Based on partially clear signals.",
-            ),
-            lang,
-          )
+        ? L(c("Baserat på delvis tydliga signaler.", "Based on partially clear signals."), lang)
         : L(
             c(
               "Baserat på ett fåtal signaler; gör gärna om testet senare.",
@@ -894,8 +847,7 @@ function ConfidenceBadge({
     <span
       title={tip}
       className={
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium " +
-        styles[tone]
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium " + styles[tone]
       }
     >
       {label}
@@ -923,12 +875,8 @@ function CareerProfileBlock({
       ? profile.archetype.labelSv
       : profile.archetype.labelEn
     : undefined;
-  const motivations = profile.motivations.map((m) =>
-    lang === "sv" ? m.labelSv : m.labelEn,
-  );
-  const domain = topFamilyId
-    ? getCareerAreaLabel(topFamilyId)?.name[lang]
-    : undefined;
+  const motivations = profile.motivations.map((m) => (lang === "sv" ? m.labelSv : m.labelEn));
+  const domain = topFamilyId ? getCareerAreaLabel(topFamilyId)?.name[lang] : undefined;
 
   const slugScore = topSlug ? profile.slugScores[topSlug] : undefined;
   const strongDims = slugScore
@@ -973,10 +921,7 @@ function CareerProfileBlock({
         ) : (
           <p className="mt-1 text-sm text-muted-foreground">
             {L(
-              c(
-                "Inga tydliga drivkrafter i det här testet.",
-                "No clear motivations in this test.",
-              ),
+              c("Inga tydliga drivkrafter i det här testet.", "No clear motivations in this test."),
               lang,
             )}
           </p>
@@ -992,10 +937,7 @@ function CareerProfileBlock({
             <ul className="mt-2 space-y-1 text-sm">
               {strongDims.map((d, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <CheckCircle2
-                    className="h-3.5 w-3.5 text-primary"
-                    aria-hidden="true"
-                  />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   <span className="text-foreground">{d}</span>
                 </li>
               ))}
@@ -1014,10 +956,7 @@ function CareerProfileBlock({
             <ul className="mt-2 space-y-1 text-sm">
               {developDims.map((d, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <TrendingUp
-                    className="h-3.5 w-3.5 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <span className="text-foreground">{d}</span>
                 </li>
               ))}
@@ -1056,9 +995,7 @@ function ProfileTile({
         <span className="text-primary/70">{icon}</span>
         {label}
       </p>
-      <p className="mt-1 text-sm font-medium text-foreground">
-        {value ?? fallback}
-      </p>
+      <p className="mt-1 text-sm font-medium text-foreground">{value ?? fallback}</p>
     </div>
   );
 }
@@ -1186,9 +1123,7 @@ function StepBody({
   return (
     <div>
       <p className="text-sm leading-relaxed text-foreground">{why}</p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        {gain}
-      </p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{gain}</p>
       {cta}
     </div>
   );
@@ -1270,7 +1205,12 @@ function QuickLink({
   hash,
   label,
 }: {
-  to: "/my-career" | "/career-center" | "/jobs" | "/security-career-assessment";
+  to:
+    | "/my-career"
+    | "/my-career/applications"
+    | "/career-center"
+    | "/jobs"
+    | "/security-career-assessment";
   hash?: string;
   label: string;
 }) {
@@ -1281,10 +1221,7 @@ function QuickLink({
       className="flex items-center justify-between rounded-md px-2 py-1.5 text-foreground hover:bg-accent"
     >
       <span>{label}</span>
-      <ArrowRight
-        className="h-3.5 w-3.5 text-muted-foreground"
-        aria-hidden="true"
-      />
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
     </Link>
   );
 }

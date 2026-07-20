@@ -31,6 +31,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # Local environment files.
 # The project-generated .env holds only PUBLIC Lovable Cloud config
 # (URL, publishable key, project id, release-control flags) and is

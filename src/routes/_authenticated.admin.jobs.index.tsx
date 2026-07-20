@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
+import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/jobs/")({
   ssr: false,
@@ -24,7 +27,18 @@ const STATUSES = [
   "archived",
 ] as const;
 
+const STATUS_LABEL_KEY: Record<(typeof STATUSES)[number], TranslationKey> = {
+  all: "admin.jobs.list.filterAll",
+  draft: "admin.jobs.status.draft",
+  pending_review: "admin.jobs.status.pending_review",
+  published: "admin.jobs.status.published",
+  expired: "admin.jobs.status.expired",
+  rejected: "admin.jobs.status.rejected",
+  archived: "admin.jobs.status.archived",
+};
+
 function AdminJobsList() {
+  const { t, lang } = useT();
   const listFn = useServerFn(adminListJobs);
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
   const [search, setSearch] = useState("");
@@ -44,13 +58,13 @@ function AdminJobsList() {
               <button
                 key={s}
                 onClick={() => setStatus(s)}
-                className={`rounded-md px-3 py-1 text-xs border ${
+                className={`rounded-md border px-3 py-1 text-xs ${
                   status === s
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted"
                 }`}
               >
-                {s.replace("_", " ")}
+                {t(STATUS_LABEL_KEY[s])}
               </button>
             ))}
           </div>
@@ -64,11 +78,11 @@ function AdminJobsList() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title, slug…"
+              placeholder={t("admin.jobs.list.searchPlaceholder")}
               className="w-64"
             />
             <Button type="submit" variant="outline" size="sm">
-              Search
+              {t("admin.jobs.list.searchButton")}
             </Button>
           </form>
           <Link
@@ -76,15 +90,17 @@ function AdminJobsList() {
             params={{ id: "new" }}
             className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
           >
-            + New job
+            {t("admin.jobs.list.newJob")}
           </Link>
         </div>
 
-        {q.isLoading && <p className="text-sm text-muted-foreground">Loading jobs…</p>}
+        {q.isLoading && (
+          <p className="text-sm text-muted-foreground">{t("admin.jobs.list.loading")}</p>
+        )}
         {q.isError && <p className="text-sm text-destructive">{(q.error as Error).message}</p>}
 
         {q.data && q.data.length === 0 && (
-          <p className="text-sm text-muted-foreground">No jobs match this filter.</p>
+          <p className="text-sm text-muted-foreground">{t("admin.jobs.list.empty")}</p>
         )}
 
         {q.data && q.data.length > 0 && (
@@ -92,11 +108,11 @@ function AdminJobsList() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left">
                 <tr>
-                  <th className="p-3 font-medium">Title</th>
-                  <th className="p-3 font-medium">Employer</th>
-                  <th className="p-3 font-medium">Status</th>
-                  <th className="p-3 font-medium">Family</th>
-                  <th className="p-3 font-medium">Updated</th>
+                  <th className="p-3 font-medium">{t("admin.jobs.list.column.title")}</th>
+                  <th className="p-3 font-medium">{t("admin.jobs.list.column.employer")}</th>
+                  <th className="p-3 font-medium">{t("admin.jobs.list.column.status")}</th>
+                  <th className="p-3 font-medium">{t("admin.jobs.list.column.family")}</th>
+                  <th className="p-3 font-medium">{t("admin.jobs.list.column.updated")}</th>
                   <th className="p-3" />
                 </tr>
               </thead>
@@ -106,18 +122,23 @@ function AdminJobsList() {
                     <td className="p-3">
                       <div className="font-medium">
                         {j.title_sv || j.title_en || (
-                          <em className="text-muted-foreground">Untitled</em>
+                          <em className="text-muted-foreground">{t("admin.jobs.list.untitled")}</em>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">{j.slug}</div>
                     </td>
                     <td className="p-3">{j.employer?.name ?? "—"}</td>
                     <td className="p-3">
-                      <Badge variant="outline">{j.status}</Badge>
+                      <Badge variant="outline">
+                        {t(
+                          STATUS_LABEL_KEY[j.status as (typeof STATUSES)[number]] ??
+                            "admin.jobs.status.draft",
+                        )}
+                      </Badge>
                     </td>
                     <td className="p-3 text-xs">{j.family_id ?? "—"}</td>
                     <td className="p-3 text-xs text-muted-foreground">
-                      {new Date(j.updated_at).toLocaleString()}
+                      {formatDateTime(j.updated_at, lang)}
                     </td>
                     <td className="p-3 text-right">
                       <Link
@@ -125,7 +146,7 @@ function AdminJobsList() {
                         params={{ id: j.id }}
                         className="text-primary hover:underline"
                       >
-                        Open
+                        {t("admin.jobs.list.open")}
                       </Link>
                     </td>
                   </tr>

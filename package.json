@@ -14,7 +14,8 @@
     "cie:check": "bun run scripts/cie-check.ts",
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts",
     "employer-job-form:check": "bun run scripts/employer-job-form-check.ts",
-    "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts"
+    "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -76,6 +77,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.7.6",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
