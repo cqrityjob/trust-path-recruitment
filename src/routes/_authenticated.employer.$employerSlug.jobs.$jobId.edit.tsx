@@ -9,6 +9,7 @@ import { useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
+import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerJob,
@@ -147,13 +148,17 @@ function EmployerJobEditPage() {
 
   return (
     <SiteLayout>
-      <Section containerClassName="max-w-4xl">
+      <EmployerWorkspaceChrome
+        employerSlug={employerSlug}
+        employerName={workspace.employerName}
+        role={workspace.role}
+        status={workspace.employerStatus}
+        activeSection="jobs"
+        hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+      >
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {workspace.employerName}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
+            <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
               {t("employer.jobs.edit.heading")}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -163,26 +168,17 @@ function EmployerJobEditPage() {
               </span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {job.status === "published" && (
-              <Link
-                to="/jobs/$slug"
-                params={{ slug: job.slug }}
-                className="text-sm font-medium text-accent hover:underline"
-                target="_blank"
-                rel="noopener"
-              >
-                {t("employer.jobs.edit.viewPublic")} ↗
-              </Link>
-            )}
+          {job.status === "published" && (
             <Link
-              to="/employer/$employerSlug/jobs"
-              params={{ employerSlug }}
+              to="/jobs/$slug"
+              params={{ slug: job.slug }}
               className="text-sm font-medium text-accent hover:underline"
+              target="_blank"
+              rel="noopener"
             >
-              ← {t("employer.jobs.list.heading")}
+              {t("employer.jobs.edit.viewPublic")} ↗
             </Link>
-          </div>
+          )}
         </div>
 
         {!editable && (
@@ -241,7 +237,7 @@ function EmployerJobEditPage() {
               : undefined
           }
         />
-      </Section>
+      </EmployerWorkspaceChrome>
     </SiteLayout>
   );
 }

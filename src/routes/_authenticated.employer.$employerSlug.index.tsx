@@ -1,9 +1,9 @@
-// Phase G2 — /employer/$employerSlug: the minimal per-organisation
-// shell. The route param is a lookup key only, never a credential — it
-// is located exclusively within the caller's own fresh, RLS-scoped
-// listMyEmployerWorkspaces() result (same function and same query key
-// as the index route, so React Query's cache is naturally shared and a
-// picker->shell navigation doesn't refetch unnecessarily).
+// Phase G2/G3, updated H3.2 — /employer/$employerSlug: the per-organisation
+// dashboard ("Overview"). The route param is a lookup key only, never a
+// credential — it is located exclusively within the caller's own fresh,
+// RLS-scoped listMyEmployerWorkspaces() result (same function and same
+// query key as the index route, so React Query's cache is naturally
+// shared and a picker->shell navigation doesn't refetch unnecessarily).
 //
 // Every one of these produces the exact same neutral "access not
 // available" state, by construction, because none of them appear in an
@@ -12,14 +12,28 @@
 // localStorage selection. This route never distinguishes them in the
 // UI — doing so would reveal whether an inaccessible organisation
 // exists at all.
+//
+// H3.2: now wraps its content in the shared EmployerWorkspaceChrome
+// (navigation + status badge + account menu), and the "assessment
+// invitations" stat/quick-action is explicitly marked "coming soon"
+// rather than presented as a real 0 count or a working action — no
+// assessment-invitation backend exists anywhere in this schema
+// (confirmed by repository audit). "Organisation settings" is now a real
+// link (H3.2 built that route + its RLS foundation); "Create job"/
+// "Manage jobs" were already real.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
+import {
+  EmployerWorkspaceChrome,
+  type EmployerRole,
+  type EmployerStatus,
+} from "@/components/employer/EmployerWorkspaceChrome";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   getEmployerDashboardStats,
@@ -120,7 +134,8 @@ function EmployerWorkspaceShell() {
       employerSlug={workspace.employerSlug}
       employerName={workspace.employerName}
       role={workspace.role}
-      showSwitcher={workspaces.length > 1}
+      status={workspace.employerStatus}
+      hasMultipleWorkspaces={workspaces.length > 1}
     />
   );
 }
@@ -130,13 +145,15 @@ function EmployerDashboard({
   employerSlug,
   employerName,
   role,
-  showSwitcher,
+  status,
+  hasMultipleWorkspaces,
 }: {
   employerId: string;
   employerSlug: string;
   employerName: string;
-  role: "owner" | "admin" | "member";
-  showSwitcher: boolean;
+  role: EmployerRole;
+  status: EmployerStatus;
+  hasMultipleWorkspaces: boolean;
 }) {
   const { t } = useT();
   const loadStats = useServerFn(getEmployerDashboardStats);
@@ -144,8 +161,6 @@ function EmployerDashboard({
     queryKey: ["employer", employerId, "dashboard-stats"],
     queryFn: () => loadStats({ data: { employerId } }),
   });
-
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -157,95 +172,42 @@ function EmployerDashboard({
   const noJobsYet =
     stats.isSuccess && data.activeJobs === 0 && data.draftJobs === 0 && data.applications === 0;
 
-  const cards: Array<{ key: string; label: string; value: number }> = [
-    { key: "activeJobs", label: t("employer.dashboard.card.activeJobs"), value: data.activeJobs },
-    { key: "draftJobs", label: t("employer.dashboard.card.draftJobs"), value: data.draftJobs },
-    {
-      key: "applications",
-      label: t("employer.dashboard.card.applications"),
-      value: data.applications,
-    },
-    {
-      key: "assessmentInvitations",
-      label: t("employer.dashboard.card.assessmentInvitations"),
-      value: data.assessmentInvitations,
-    },
-  ];
-
-  type Action =
-    | { key: string; label: string; kind: "link"; to: "/employer/$employerSlug/jobs" | "/employer/$employerSlug/jobs/new" }
-    | { key: string; label: string; kind: "coming-next" };
-  const actions: Array<Action> = [
-    {
-      key: "createJob",
-      label: t("employer.dashboard.action.createJob"),
-      kind: "link",
-      to: "/employer/$employerSlug/jobs/new",
-    },
-    {
-      key: "manageJobs",
-      label: t("employer.dashboard.action.manageJobs"),
-      kind: "link",
-      to: "/employer/$employerSlug/jobs",
-    },
-    {
-      key: "inviteAssessment",
-      label: t("employer.dashboard.action.inviteAssessment"),
-      kind: "coming-next",
-    },
-    {
-      key: "orgSettings",
-      label: t("employer.dashboard.action.orgSettings"),
-      kind: "coming-next",
-    },
-  ];
-
   return (
     <SiteLayout>
-      <Section containerClassName="max-w-5xl">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {t("employer.workspace.label")}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
-              {employerName}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("employer.shell.roleLabel")}:{" "}
-              <span className="font-medium text-foreground">{t(`employer.role.${role}`)}</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            {showSwitcher && (
-              <Link to="/employer" className="font-medium text-accent hover:underline">
-                {t("employer.switchOrg")}
-              </Link>
-            )}
-            <Link to="/my-career" className="font-medium text-accent hover:underline">
-              {t("sca.report.backToMyCareer")}
-            </Link>
-          </div>
-        </div>
-
+      <EmployerWorkspaceChrome
+        employerSlug={employerSlug}
+        employerName={employerName}
+        role={role}
+        status={status}
+        activeSection="overview"
+        hasMultipleWorkspaces={hasMultipleWorkspaces}
+      >
         {/* Overview cards */}
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {cards.map((c) => (
-            <div
-              key={c.key}
-              className="rounded-lg border border-border bg-background p-4 sm:p-5"
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {c.label}
-              </p>
-              <p
-                className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl"
-                aria-live="polite"
-              >
-                {stats.isLoading ? "—" : c.value}
-              </p>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <StatCard
+            label={t("employer.dashboard.card.activeJobs")}
+            value={data.activeJobs}
+            loading={stats.isLoading}
+          />
+          <StatCard
+            label={t("employer.dashboard.card.draftJobs")}
+            value={data.draftJobs}
+            loading={stats.isLoading}
+          />
+          <StatCard
+            label={t("employer.dashboard.card.applications")}
+            value={data.applications}
+            loading={stats.isLoading}
+            href={`/employer/${employerSlug}/applications`}
+          />
+          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 sm:p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t("employer.dashboard.card.assessmentInvitations")}
+            </p>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              {t("employer.comingSoonShort")}
+            </p>
+          </div>
         </div>
         {stats.isError && (
           <p className="mt-3 text-sm text-destructive">{t("employer.dashboard.statsError")}</p>
@@ -257,44 +219,22 @@ function EmployerDashboard({
             {t("employer.dashboard.actions.heading")}
           </h2>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {actions.map((a) => {
-              const active = pendingAction === a.key;
-              return (
-                <div
-                  key={a.key}
-                  className="rounded-lg border border-border bg-background p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-foreground">{a.label}</span>
-                    {a.kind === "link" ? (
-                      <Link
-                        to={a.to}
-                        params={{ employerSlug }}
-                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      >
-                        {t("employer.dashboard.action.open")}
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setPendingAction(active ? null : a.key)}
-                        aria-expanded={active}
-                        className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                      >
-                        {active
-                          ? t("employer.dashboard.action.hideInfo")
-                          : t("employer.dashboard.action.open")}
-                      </button>
-                    )}
-                  </div>
-                  {a.kind === "coming-next" && active && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {t("employer.dashboard.comingNext")}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            <QuickAction
+              label={t("employer.dashboard.action.createJob")}
+              href={`/employer/${employerSlug}/jobs/new`}
+            />
+            <QuickAction
+              label={t("employer.dashboard.action.manageJobs")}
+              href={`/employer/${employerSlug}/jobs`}
+            />
+            <QuickAction
+              label={t("employer.dashboard.action.orgSettings")}
+              href={`/employer/${employerSlug}/settings`}
+            />
+            <QuickAction
+              label={t("employer.dashboard.action.inviteAssessment")}
+              disabledReason={t("employer.comingSoonShort")}
+            />
           </div>
         </div>
 
@@ -314,7 +254,70 @@ function EmployerDashboard({
             </ol>
           </div>
         )}
-      </Section>
+      </EmployerWorkspaceChrome>
     </SiteLayout>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  loading,
+  href,
+}: {
+  label: string;
+  value: number;
+  loading: boolean;
+  href?: string;
+}) {
+  const content = (
+    <div className="rounded-lg border border-border bg-background p-4 transition-colors hover:border-accent/50 sm:p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl" aria-live="polite">
+        {loading ? "—" : value}
+      </p>
+    </div>
+  );
+  if (href) {
+    return (
+      <Link to={href} className="block">
+        {content}
+      </Link>
+    );
+  }
+  return content;
+}
+
+function QuickAction({
+  label,
+  href,
+  disabledReason,
+}: {
+  label: string;
+  href?: string;
+  disabledReason?: string;
+}) {
+  const { t } = useT();
+  return (
+    <div className="rounded-lg border border-border bg-background p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        {href ? (
+          <Link
+            to={href}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {t("employer.dashboard.action.open")}
+          </Link>
+        ) : (
+          <span className="rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            {t("employer.comingSoonShort")}
+          </span>
+        )}
+      </div>
+      {disabledReason && !href && (
+        <p className="mt-3 text-xs text-muted-foreground">{disabledReason}</p>
+      )}
+    </div>
   );
 }

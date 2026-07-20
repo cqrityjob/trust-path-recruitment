@@ -146,11 +146,20 @@ export const listMyEmployerMemberships = createServerFn({ method: "GET" })
 // employers.status filter here would second-guess that already-approved
 // RLS design from application code — out of scope for G2 to change.
 
+export type EmployerOrgStatus =
+  | "draft"
+  | "pending"
+  | "active"
+  | "rejected"
+  | "suspended"
+  | "archived";
+
 export type MyEmployerWorkspace = {
   employerId: string;
   employerSlug: string;
   employerName: string;
   employerLogoUrl: string | null;
+  employerStatus: EmployerOrgStatus;
   role: EmployerRole;
 };
 
@@ -159,6 +168,7 @@ type EmployerWorkspaceEmbed = {
   slug: string;
   name: string;
   logo_url: string | null;
+  status: EmployerOrgStatus;
 };
 
 type EmployerWorkspaceRow = {
@@ -173,9 +183,15 @@ export const listMyEmployerWorkspaces = createServerFn({ method: "GET" })
     // Same identity rationale as listMyEmployerMemberships: ctx.userId is
     // verified-claims-only, never client-supplied; the explicit .eq is
     // defense-in-depth alongside RLS, not the boundary itself.
+    //
+    // H3.2: added `status` to the embedded employers select so callers
+    // (the dashboard status badge, in particular) can display the real
+    // backend organisation status rather than inferring or hardcoding it
+    // — this is a pure additive read, no RLS/security change, since
+    // employers_member_select already permitted reading this column.
     const { data, error } = await ctx.supabase
       .from("employer_memberships")
-      .select("role, employers(id, slug, name, logo_url)")
+      .select("role, employers(id, slug, name, logo_url, status)")
       .eq("user_id", ctx.userId)
       .eq("status", "active")
       .order("created_at", { ascending: false });
@@ -202,6 +218,7 @@ export const listMyEmployerWorkspaces = createServerFn({ method: "GET" })
         employerSlug: employer.slug,
         employerName: employer.name,
         employerLogoUrl: employer.logo_url,
+        employerStatus: employer.status,
         role: row.role,
       });
     }

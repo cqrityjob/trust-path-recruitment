@@ -38,10 +38,7 @@ async function loadApplication(ctx: Ctx, applicationId: string) {
   };
 }
 
-async function assertActiveEmployerMember(
-  ctx: Ctx,
-  employerId: string,
-): Promise<void> {
+async function assertActiveEmployerMember(ctx: Ctx, employerId: string): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("has_employer_role", {
     _user_id: ctx.userId,
     _employer_id: employerId,
@@ -50,19 +47,16 @@ async function assertActiveEmployerMember(
   if (error) throw new Error(`Membership check failed: ${error.message}`);
   if (!data) throw new Error("Forbidden: employer membership required");
 
-  const { data: isActive, error: activeErr } = await ctx.supabase.rpc(
-    "employer_is_active_status",
-    { _employer_id: employerId },
-  );
+  const { data: isActive, error: activeErr } = await ctx.supabase.rpc("employer_is_active_status", {
+    _employer_id: employerId,
+  });
   if (activeErr) throw new Error(`Employer status check failed: ${activeErr.message}`);
   if (!isActive) throw new Error("Forbidden: employer is not active");
 }
 
 export const withdrawMyApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ applicationId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     const app = await loadApplication(ctx, data.applicationId);
@@ -113,11 +107,99 @@ export const updateApplicationAsEmployer = createServerFn({ method: "POST" })
     return { ok: true, changed: true };
   });
 
+// -----------------------------------------------------------------------------
+// Phase H3.2 addition — listApplicationsForEmployer.
+//
+// The candidate applicant's display name lives in `public.profiles`, which
+// is self-select-only (profiles_self_select: id = auth.uid()) -- an
+// employer's own RLS-scoped client cannot join to it. This function
+// therefore follows the same two-step pattern already established
+// elsewhere in this codebase (getEmployerDashboardStats,
+// updateApplicationAsEmployer's own use of supabaseAdmin after an
+// app-level check): verify the caller's active employer membership first
+// via assertActiveEmployerMember() (RLS-scoped RPC calls, not trusted from
+// any client-supplied role/status), THEN use supabaseAdmin only for the
+// actual privileged read, scoped explicitly by employer_id (and,
+// optionally, job_id) in the query itself -- never a blanket unscoped
+// select. No CV bytes are returned here; only cv_storage_path's presence
+// (boolean) is surfaced, so the UI can offer a signed-URL download via the
+// existing getApplicationCvSignedUrl, which re-checks authorization again
+// independently.
+// -----------------------------------------------------------------------------
+
+const listApplicationsForEmployerSchema = z.object({
+  employerId: z.string().uuid(),
+  jobId: z.string().uuid().optional(),
+});
+
+export type EmployerApplicationRow = {
+  id: string;
+  jobId: string;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  applicantDisplayName: string | null;
+  phone: string | null;
+  coverNote: string | null;
+  status: "submitted" | "viewed" | "withdrawn";
+  hasCv: boolean;
+  createdAt: string;
+};
+
+export const listApplicationsForEmployer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => listApplicationsForEmployerSchema.parse(input))
+  .handler(async ({ data, context }): Promise<EmployerApplicationRow[]> => {
+    const ctx = context as unknown as Ctx;
+    await assertActiveEmployerMember(ctx, data.employerId);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("job_applications")
+      .select(
+        "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, created_at, jobs(title_sv, title_en)",
+      )
+      .eq("employer_id", data.employerId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (data.jobId) query = query.eq("job_id", data.jobId);
+
+    const { data: rows, error } = await query;
+    if (error) throw new Error("Could not load applications.");
+
+    const applicantIds = Array.from(
+      new Set((rows ?? []).map((r: any) => r.applicant_user_id as string)),
+    );
+    const namesByUserId = new Map<string, string | null>();
+    if (applicantIds.length > 0) {
+      const { data: profileRows } = await supabaseAdmin
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", applicantIds);
+      for (const p of profileRows ?? []) {
+        namesByUserId.set(p.id as string, (p.display_name as string | null) ?? null);
+      }
+    }
+
+    return (rows ?? []).map((r: any) => {
+      const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
+      return {
+        id: r.id as string,
+        jobId: r.job_id as string,
+        jobTitleSv: (job?.title_sv as string | null) ?? null,
+        jobTitleEn: (job?.title_en as string | null) ?? null,
+        applicantDisplayName: namesByUserId.get(r.applicant_user_id as string) ?? null,
+        phone: r.phone as string | null,
+        coverNote: r.cover_note as string | null,
+        status: r.status as EmployerApplicationRow["status"],
+        hasCv: Boolean(r.cv_storage_path),
+        createdAt: r.created_at as string,
+      };
+    });
+  });
+
 export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
-    z.object({ applicationId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const ctx = context as unknown as Ctx;
     const app = await loadApplication(ctx, data.applicationId);

@@ -18,9 +18,14 @@
 //      check) — the caller never controls the filter, only the
 //      already-authorised employer_id.
 //
-// Applications and assessment_invitations tables do not exist yet
-// (deferred to a later phase); those counters return 0 rather than
-// invent records.
+// Phase H3.2 update: `job_applications` now exists (Jobs MVP v1 H1) with
+// `employer_id` denormalized directly on the row — `applications` is now a
+// real count. `assessment_invitations` still has no backing table
+// anywhere in this schema (confirmed by repository audit, H3.2); that
+// counter stays a literal 0 rather than inventing a query against
+// something that doesn't exist. The UI layer is responsible for not
+// presenting that 0 as a real, current statistic (Part H3.2 spec) —
+// showing a "Coming soon" state instead of a bare number.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -64,7 +69,7 @@ export const getEmployerDashboardStats = createServerFn({ method: "POST" })
     // filter beyond the already-authorised employer_id.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [publishedRes, draftRes] = await Promise.all([
+    const [publishedRes, draftRes, applicationsRes] = await Promise.all([
       supabaseAdmin
         .from("jobs")
         .select("id", { count: "exact", head: true })
@@ -75,17 +80,22 @@ export const getEmployerDashboardStats = createServerFn({ method: "POST" })
         .select("id", { count: "exact", head: true })
         .eq("employer_id", data.employerId)
         .eq("status", "draft"),
+      supabaseAdmin
+        .from("job_applications")
+        .select("id", { count: "exact", head: true })
+        .eq("employer_id", data.employerId),
     ]);
 
-    if (publishedRes.error || draftRes.error) {
+    if (publishedRes.error || draftRes.error || applicationsRes.error) {
       throw new Error("Could not load dashboard.");
     }
 
     return {
       activeJobs: publishedRes.count ?? 0,
       draftJobs: draftRes.count ?? 0,
-      // No tables yet — return literal zeros rather than fabricate rows.
-      applications: 0,
+      applications: applicationsRes.count ?? 0,
+      // No assessment_invitations table anywhere in this schema (H3.2
+      // audit confirmed) — literal 0, never a fabricated query.
       assessmentInvitations: 0,
     };
   });

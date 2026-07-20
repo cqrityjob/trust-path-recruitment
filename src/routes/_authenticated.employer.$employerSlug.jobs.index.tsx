@@ -9,6 +9,11 @@ import { useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
+import {
+  EmployerWorkspaceChrome,
+  type EmployerRole,
+  type EmployerStatus,
+} from "@/components/employer/EmployerWorkspaceChrome";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   listEmployerJobs,
@@ -71,17 +76,32 @@ function EmployerJobsListPage() {
     );
   }
 
-  return <JobsList employerId={workspace.employerId} employerSlug={workspace.employerSlug} employerName={workspace.employerName} />;
+  return (
+    <JobsList
+      employerId={workspace.employerId}
+      employerSlug={workspace.employerSlug}
+      employerName={workspace.employerName}
+      role={workspace.role}
+      status={workspace.employerStatus}
+      hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+    />
+  );
 }
 
 function JobsList({
   employerId,
   employerSlug,
   employerName,
+  role,
+  status,
+  hasMultipleWorkspaces,
 }: {
   employerId: string;
   employerSlug: string;
   employerName: string;
+  role: EmployerRole;
+  status: EmployerStatus;
+  hasMultipleWorkspaces: boolean;
 }) {
   const { t } = useT();
   const qc = useQueryClient();
@@ -118,32 +138,25 @@ function JobsList({
 
   return (
     <SiteLayout>
-      <Section containerClassName="max-w-5xl">
+      <EmployerWorkspaceChrome
+        employerSlug={employerSlug}
+        employerName={employerName}
+        role={role}
+        status={status}
+        activeSection="jobs"
+        hasMultipleWorkspaces={hasMultipleWorkspaces}
+      >
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {employerName}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
-              {t("employer.jobs.list.heading")}
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/employer/$employerSlug"
-              params={{ employerSlug }}
-              className="text-sm font-medium text-accent hover:underline"
-            >
-              ← {t("employer.workspace.label")}
-            </Link>
-            <Link
-              to="/employer/$employerSlug/jobs/new"
-              params={{ employerSlug }}
-              className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
-            >
-              {t("employer.jobs.list.newJob")}
-            </Link>
-          </div>
+          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+            {t("employer.jobs.list.heading")}
+          </h1>
+          <Link
+            to="/employer/$employerSlug/jobs/new"
+            params={{ employerSlug }}
+            className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
+          >
+            {t("employer.jobs.list.newJob")}
+          </Link>
         </div>
 
         {actionError && (
@@ -179,7 +192,9 @@ function JobsList({
                       <tr key={r.id} className="align-top">
                         <td className="px-4 py-3">
                           <div className="font-medium text-foreground">
-                            {r.title_sv || r.title_en || <span className="text-muted-foreground">(untitled)</span>}
+                            {r.title_sv || r.title_en || (
+                              <span className="text-muted-foreground">(untitled)</span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">{r.short_id}</div>
                         </td>
@@ -243,7 +258,7 @@ function JobsList({
             </div>
           )}
         </div>
-      </Section>
+      </EmployerWorkspaceChrome>
     </SiteLayout>
   );
 }

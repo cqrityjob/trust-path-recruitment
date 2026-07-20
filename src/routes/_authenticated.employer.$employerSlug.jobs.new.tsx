@@ -1,12 +1,13 @@
 // Phase H3 — /employer/$employerSlug/jobs/new: create a new draft.
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
+import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   saveEmployerJobDraft,
@@ -100,26 +101,21 @@ function EmployerJobNewPage() {
 
   return (
     <SiteLayout>
-      <Section containerClassName="max-w-4xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {workspace.employerName}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
-              {t("employer.jobs.new.heading")}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              {t("employer.jobs.new.lede")}
-            </p>
-          </div>
-          <Link
-            to="/employer/$employerSlug/jobs"
-            params={{ employerSlug }}
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            ← {t("employer.jobs.list.heading")}
-          </Link>
+      <EmployerWorkspaceChrome
+        employerSlug={employerSlug}
+        employerName={workspace.employerName}
+        role={workspace.role}
+        status={workspace.employerStatus}
+        activeSection="jobs"
+        hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+      >
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+            {t("employer.jobs.new.heading")}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {t("employer.jobs.new.lede")}
+          </p>
         </div>
 
         <EmployerJobForm
@@ -136,7 +132,7 @@ function EmployerJobNewPage() {
             submitMutation.mutate(v);
           }}
         />
-      </Section>
+      </EmployerWorkspaceChrome>
     </SiteLayout>
   );
 }
