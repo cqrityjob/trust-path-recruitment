@@ -28,36 +28,36 @@ export const questions: Question[] = [
     type: "single",
     topic: { sv: "Tillförlitlighet", en: "Reliability" },
     prompt: {
-      sv: "Tänk på återkommande uppgifter du ansvarar för – kontroller, loggar, uppföljningar. Vilket alternativ beskriver bäst ditt faktiska mönster, inte din avsikt?",
-      en: "Think about routine tasks you're responsible for — checks, logs, follow-ups. Which best describes your actual pattern, not your intention?",
+      sv: "Det är mot slutet av ett långt pass. En rutinkontroll återstår – ingen skulle märka om du hoppade över den, och inget har verkat avvikande under dagen. Vad gör du?",
+      en: "It's near the end of a long shift. One routine check remains — no one would notice if you skipped it, and nothing has seemed unusual all day. What do you actually do?",
     },
     options: [
       {
         id: "always",
         label: {
-          sv: "Jag slutför dem fullt ut, varje gång, även när ingen skulle märka om jag hoppade över en",
-          en: "I complete them fully, every time, even when no one would notice if I skipped one",
+          sv: "Genomför den fullt ut, precis som vanligt",
+          en: "Complete it fully, exactly as usual",
         },
       },
       {
         id: "mostly",
         label: {
-          sv: "Jag slutför dem nästan alltid, med enstaka undantag vid hög arbetsbelastning",
-          en: "I complete them almost every time, with rare lapses under heavy workload",
+          sv: "Genomför den, men något snabbare än vanligt eftersom inget verkar fel",
+          en: "Complete it, but a little faster than usual since nothing seems wrong",
         },
       },
       {
         id: "variable",
         label: {
-          sv: "Det beror mycket på hur upptagen eller motiverad jag är just den dagen",
-          en: "It depends a lot on how busy or motivated I am that day",
+          sv: "Hoppar över den den här gången – jag är säker på att allt är okej",
+          en: "Skip it this time — I'm confident everything's fine",
         },
       },
       {
         id: "deprioritize",
         label: {
-          sv: "Rutinuppgifter är oftast det första jag nedprioriterar när något annat dyker upp",
-          en: "Routine tasks are usually the first thing I deprioritize when something else comes up",
+          sv: "Rutinkontroller i slutet av passet är oftast det första jag hoppar över när jag är trött eller sen",
+          en: "End-of-shift routine checks are usually the first thing I skip when I'm tired or running late",
         },
       },
     ],
@@ -96,8 +96,8 @@ export const questions: Question[] = [
       {
         id: "adopt_it",
         label: {
-          sv: "Börjar göra likadant själv eftersom det uppenbarligen fungerar",
-          en: "Start doing the same thing myself since it clearly works",
+          sv: "Noterar att det verkar fungera för dem, och utesluter inte att göra något liknande själv när det passar",
+          en: "Note that it seems to work for them, and don't rule out doing something similar myself when it's convenient",
         },
       },
     ],
@@ -108,36 +108,36 @@ export const questions: Question[] = [
     type: "single",
     topic: { sv: "Situationsmedvetenhet", en: "Situational awareness" },
     prompt: {
-      sv: "Du gör en rutinmässig genomgång av ett område du känner väl. Vad skulle du mest sannolikt lägga märke till utan att bli ombedd att leta efter det?",
-      en: "You're doing a routine walk-through of an area you know well. What would you be most likely to notice without being told to look for it?",
+      sv: "Du går igenom ett område du känner väl under en rutinkontroll. En hög besöksbrickor ligger lite fel, en dörr som brukar stå uppställd är stängd, och en person du inte känner igen står vid lastintaget och tittar på sin telefon. Vad skulle du faktiskt lägga märke till först, utan att bli ombedd att leta efter något av detta?",
+      en: "You're walking through an area you know well during a routine check. A stack of visitor badges is slightly out of place, a door that's normally propped open is closed, and someone you don't recognise is standing near the loading area, looking at their phone. What would you actually register first, without being told to look for any of it?",
     },
     options: [
       {
         id: "unexplained",
         label: {
-          sv: "Något litet som skiljer sig från hur det brukar se ut, även om jag inte genast vet varför det spelar roll",
-          en: "Something small that's slightly different from how it normally looks, even if I can't say why it matters yet",
+          sv: "De små sakerna som skiljer sig lite från det normala – brickorna, den stängda dörren",
+          en: "The small things that are slightly off from normal — the badges, the closed door",
         },
       },
       {
         id: "unusual_person",
         label: {
-          sv: "En person vars beteende inte passar sammanhanget, även om inget annat verkar fel",
-          en: "A person behaving in a way that doesn't match the context, even if nothing else seems wrong",
+          sv: "Personen vid lastintaget som inte verkar höra hemma där",
+          en: "The person near the loading area who doesn't look like they belong there",
         },
       },
       {
         id: "schedule_only",
         label: {
-          sv: "Mest bara det som är ett uttalat, schemalagt kontrollmoment – annars registrerar jag det sällan",
-          en: "Mainly the things that are an explicit, scheduled check-item — otherwise it rarely registers",
+          sv: "Ärligt talat, förmodligen inget av det om det inte står på min schemalagda checklista",
+          en: "Honestly, probably none of it unless it's part of my scheduled checklist",
         },
       },
       {
         id: "told_only",
         label: {
-          sv: "Realistiskt sett främst det jag specifikt blir tillsagd att kontrollera den dagen",
-          en: "Realistically, mainly what I'm specifically told to check that day",
+          sv: "Realistiskt sett bara om någon specifikt hade bett mig kontrollera det",
+          en: "Realistically, only if someone had specifically told me to check for it",
         },
       },
     ],
@@ -145,50 +145,122 @@ export const questions: Question[] = [
 
   {
     id: "q4",
-    type: "rating",
+    type: "single",
     topic: { sv: "Riskmedvetenhet", en: "Risk recognition" },
     prompt: {
-      sv: "Jag funderar aktivt på vad som skulle kunna gå fel innan det händer, inte bara reagerar när det redan skett.",
-      en: "I actively think about what could go wrong before it happens, not just react once it does.",
+      sv: "Innan du påbörjar en rutinuppgift, vad ligger närmast det som faktiskt går genom huvudet på dig?",
+      en: "Before starting a routine task, what's closest to what actually goes through your mind?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "proactive",
+        label: {
+          sv: "Jag tänker på vad som realistiskt skulle kunna gå fel och hur jag skulle upptäcka det tidigt",
+          en: "I think about what could realistically go wrong and how I'd notice it early",
+        },
+      },
+      {
+        id: "task_focused",
+        label: {
+          sv: "Jag fokuserar mest på att göra uppgiften rätt – problem löser jag om de dyker upp",
+          en: "I mostly focus on doing the task correctly; I'll deal with problems if they come up",
+        },
+      },
+      {
+        id: "reactive",
+        label: {
+          sv: "Jag tänker inte direkt på det i förväg – jag reagerar om något går fel",
+          en: "I don't really think about it in advance — I react if something goes wrong",
+        },
+      },
+      {
+        id: "assume_fine",
+        label: {
+          sv: "Jag utgår från att det kommer gå bra, eftersom det oftast gör det",
+          en: "I assume it'll be fine, since it usually is",
+        },
+      },
+    ],
   },
 
   {
     id: "q5",
-    type: "rating",
+    type: "single",
     topic: { sv: "Rutindisciplin", en: "Procedural discipline" },
     prompt: {
-      sv: "Även när jag är säker på att jag vet ett bättre sätt följer jag den etablerade rutinen om jag inte har uttryckligt godkännande att avvika.",
-      en: "Even when I'm confident I know a better way, I follow the established procedure unless I have explicit approval to deviate.",
+      sv: "Du är säker på att du hittat ett snabbare sätt att genomföra en rutinkontroll, men det är inte formellt godkänt. Det är slutet på ett långt pass. Vad gör du?",
+      en: "You're confident you've found a faster way to complete a routine check, but it hasn't been formally approved. It's the end of a long shift. What do you actually do?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "follow_and_raise",
+        label: {
+          sv: "Följer den fastställda rutinen exakt, och tar upp min idé efteråt",
+          en: "Follow the established procedure exactly, and raise my idea afterward",
+        },
+      },
+      {
+        id: "follow_and_note",
+        label: {
+          sv: "Följer rutinen, men noterar för mig själv att ta upp det senare",
+          en: "Follow the procedure, but make a mental note to bring it up later",
+        },
+      },
+      {
+        id: "use_own_this_time",
+        label: {
+          sv: "Använder mitt eget sätt den här gången, eftersom jag är säker på att det är bättre",
+          en: "Use my own approach this time, since I'm confident it's better",
+        },
+      },
+      {
+        id: "use_own_regularly",
+        label: {
+          sv: "Använder mitt eget sätt och tänker inte mer på det",
+          en: "Use my own approach and don't think much more about it",
+        },
+      },
+    ],
   },
 
   {
     id: "q6",
-    type: "rating",
+    type: "single",
     topic: { sv: "Kommunikation", en: "Communication" },
     prompt: {
-      sv: "Jag kan förklara en komplicerad situation tydligt och lugnt, även för någon som är frustrerad eller stressad.",
-      en: "I can explain a complicated situation clearly and calmly, even to someone who is frustrated or in a hurry.",
+      sv: 'Något oklart har precis hänt. Din chef frågar "vad hände?" med bara en minut kvar innan nästa samtal. Vad börjar du med?',
+      en: 'Something ambiguous just happened. Your supervisor asks "what happened?" with only a minute before their next call. What do you lead with?',
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "facts_first",
+        label: {
+          sv: "De rena fakta om vad som hände, tydligt och i ordning",
+          en: "The plain facts of what happened, clearly and in order",
+        },
+      },
+      {
+        id: "facts_and_read",
+        label: {
+          sv: "Fakta, plus vad jag tror det kan betyda",
+          en: "The facts, plus what I think it might mean",
+        },
+      },
+      {
+        id: "next_steps",
+        label: {
+          sv: "Mest vad jag tycker borde hända härnäst",
+          en: "Mainly what I think should happen next",
+        },
+      },
+      {
+        id: "whatever_urgent",
+        label: {
+          sv: "Det som känns mest akut för stunden, även om det blir lite osorterat",
+          en: "Whatever feels most urgent in the moment, even if it comes out a bit disorganised",
+        },
+      },
+    ],
   },
 
   {
@@ -224,8 +296,8 @@ export const questions: Question[] = [
       {
         id: "handle_alone",
         label: {
-          sv: "Hanterar det själv, eftersom att eskalera kan få mig att verka oförmögen",
-          en: "Handle it myself, since escalating might make me look unable to cope",
+          sv: "Hanterar det själv för tillfället – att eskalera kanske inte är värt det om det visar sig vara ingenting",
+          en: "Handle it myself for now — escalating might not be worth it if it turns out to be nothing",
         },
       },
     ],
@@ -233,18 +305,42 @@ export const questions: Question[] = [
 
   {
     id: "q8",
-    type: "rating",
+    type: "single",
     topic: { sv: "Beslutskvalitet", en: "Decision quality" },
     prompt: {
-      sv: "När jag har tillräckligt med information för att agera fattar jag ett beslut istället för att fortsätta tveka.",
-      en: "Once I have enough information to act, I commit to a decision rather than continuing to second-guess it.",
+      sv: "Du har fattat ett beslut och börjat agera utifrån det. Ny information dyker upp – inte avgörande, men den väcker viss tvekan. Vad gör du faktiskt?",
+      en: "You've made a decision and started acting on it. New information arrives — not conclusive, but it raises some doubt. What do you actually do?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "continue_alert",
+        label: {
+          sv: "Fortsätter med mitt beslut, men håller mig uppmärksam och omprövar om starkare belägg dyker upp",
+          en: "Continue with my decision, but stay alert and reconsider if stronger evidence appears",
+        },
+      },
+      {
+        id: "pause_then_continue",
+        label: {
+          sv: "Pausar kort för att väga in den nya informationen, fortsätter sedan eller justerar",
+          en: "Pause briefly to weigh the new information, then continue or adjust",
+        },
+      },
+      {
+        id: "second_guess",
+        label: {
+          sv: "Börjar tvivla på mig själv och saktar ner, även utan tydlig anledning att ändra kurs",
+          en: "Start second-guessing myself and slow down, even without a clear reason to change course",
+        },
+      },
+      {
+        id: "reverse_to_be_safe",
+        label: {
+          sv: "Ändrar kurs direkt för säkerhets skull",
+          en: "Immediately reverse course to be safe",
+        },
+      },
+    ],
   },
 
   {
@@ -289,66 +385,162 @@ export const questions: Question[] = [
 
   {
     id: "q10",
-    type: "rating",
+    type: "single",
     topic: { sv: "Anpassningsförmåga", en: "Adaptability" },
     prompt: {
-      sv: "När en känd process ändras justerar jag snabbt mitt arbetssätt utan att behöva bli genomgången upprepade gånger.",
-      en: "When a familiar process changes, I adjust my approach quickly without needing to be walked through it repeatedly.",
+      sv: "En rutin du känner väl förändras – till exempel införs ett nytt passersteg mitt under passet. Vad ligger närmast det som faktiskt händer?",
+      en: "A procedure you know well changes — for example, a new access-control step is introduced mid-shift. What's closest to what actually happens?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "adjust_same_shift",
+        label: {
+          sv: "Jag ställer om under samma pass, kollar detaljer när jag är osäker",
+          en: "I adjust within the same shift, checking details when I'm unsure",
+        },
+      },
+      {
+        id: "adjust_with_guidance",
+        label: {
+          sv: "Jag ställer om, men behöver lite extra vägledning de första gångerna",
+          en: "I adjust, but need a bit of extra guidance the first couple of times",
+        },
+      },
+      {
+        id: "revert_to_old",
+        label: {
+          sv: "Jag ertappar mig med att falla tillbaka på det gamla sättet mer än en gång, av vana",
+          en: "I catch myself reverting to the old way more than once, out of habit",
+        },
+      },
+      {
+        id: "find_it_frustrating",
+        label: {
+          sv: "Jag tycker förändringen är frustrerande, och det tar ett tag innan det sitter",
+          en: "I find the change frustrating, and it takes a while to stick",
+        },
+      },
+    ],
   },
 
   {
     id: "q11",
-    type: "rating",
+    type: "single",
     topic: { sv: "Lärandeorientering", en: "Learning orientation" },
     prompt: {
-      sv: "På en skala 1–10: hur säker är du på din förmåga att snabbt sätta dig in i en obekant rutin, ett system eller en ny miljö?",
-      en: "On a scale of 1 to 10, how confident are you in your ability to quickly get up to speed on an unfamiliar procedure, system, or environment?",
+      sv: "Tänk på senaste gången du behövde sätta dig in i något obekant på jobbet – ett system, en rutin eller en ny miljö. Vad hände egentligen?",
+      en: "Think about the last time you had to get up to speed on something unfamiliar at work — a system, procedure, or environment. What actually happened?",
     },
-    scaleMin: 1,
-    scaleMax: 10,
-    scaleLabels: {
-      min: { sv: "Inte alls säker", en: "Not confident at all" },
-      max: { sv: "Extremt säker", en: "Extremely confident" },
-    },
+    options: [
+      {
+        id: "fast_proactive",
+        label: {
+          sv: "Jag lärde mig det snabbt och frågade när jag behövde",
+          en: "I picked it up quickly, asking questions when I needed to",
+        },
+      },
+      {
+        id: "normal_pace",
+        label: {
+          sv: "Jag lärde mig det i normal takt, ungefär som de flesta",
+          en: "I picked it up at a normal pace, similar to most people",
+        },
+      },
+      {
+        id: "slower_than_liked",
+        label: {
+          sv: "Det tog märkbart längre tid än jag hade velat",
+          en: "It took me noticeably longer than I would have liked",
+        },
+      },
+      {
+        id: "still_not_comfortable",
+        label: {
+          sv: "Jag känner mig fortfarande inte helt bekväm med det",
+          en: "I'm still not fully comfortable with it",
+        },
+      },
+    ],
   },
 
   {
     id: "q12",
-    type: "rating",
+    type: "single",
     topic: { sv: "Lugn under press", en: "Calmness under pressure" },
     prompt: {
-      sv: "Jag förblir effektiv och klartänkt när flera brådskande saker händer samtidigt.",
-      en: "I stay effective and clear-headed when several urgent things are happening at once.",
+      sv: "Du hanterar samtidigt två brådskande situationer. Ingen av dem kan bara vänta. Vad gör du faktiskt först?",
+      en: "You are simultaneously handling two urgent situations. Neither can simply wait. What do you actually do first?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Sällan", en: "Rarely" },
-      max: { sv: "Konsekvent", en: "Consistently" },
-    },
+    options: [
+      {
+        id: "triage_and_flag",
+        label: {
+          sv: "Bedömer snabbt vilken som har störst potentiell konsekvens, tar den först och flaggar den andra för omedelbar uppföljning",
+          en: "Quickly judge which one has the higher potential consequence, address that first, and flag the other for immediate follow-up",
+        },
+      },
+      {
+        id: "fastest_first",
+        label: {
+          sv: "Tar den jag snabbast kan lösa först, sedan den andra",
+          en: "Handle whichever one I can resolve fastest first, then move to the other",
+        },
+      },
+      {
+        id: "both_at_once",
+        label: {
+          sv: "Försöker göra framsteg på båda samtidigt",
+          en: "Try to make progress on both at the same time",
+        },
+      },
+      {
+        id: "freeze",
+        label: {
+          sv: "Fryser till ett ögonblick, osäker på vilken jag ska prioritera",
+          en: "Freeze for a moment, unsure which to prioritise",
+        },
+      },
+    ],
   },
 
   {
     id: "q13",
-    type: "rating",
+    type: "single",
     topic: { sv: "Samarbete", en: "Teamwork" },
     prompt: {
-      sv: "Jag samordnar väl med andra under en gemensam uppgift, även under tidspress.",
-      en: "I coordinate well with others during a shared task, even under time pressure.",
+      sv: "Du och en kollega samordnar en gemensam uppgift, men ni är oense om hur brådskande en del av den är. Vad gör du faktiskt?",
+      en: "You and a colleague are coordinating a shared task, but you disagree about how urgent part of it is. What do you actually do?",
     },
-    scaleMin: 1,
-    scaleMax: 5,
-    scaleLabels: {
-      min: { sv: "Instämmer inte", en: "Strongly disagree" },
-      max: { sv: "Instämmer helt", en: "Strongly agree" },
-    },
+    options: [
+      {
+        id: "discuss_and_agree",
+        label: {
+          sv: "Diskuterar det kort, kommer överens om ett tillvägagångssätt och fortsätter tillsammans",
+          en: "Discuss it briefly, agree on an approach, and proceed together",
+        },
+      },
+      {
+        id: "defer_to_them",
+        label: {
+          sv: "Går på deras linje för tillfället, eftersom det skulle bromsa upp att diskutera",
+          en: "Go with their view for now, since arguing would slow things down",
+        },
+      },
+      {
+        id: "split_and_go_own_way",
+        label: {
+          sv: "Gör min del på mitt sätt och låter dem sköta sin del separat",
+          en: "Do my part my own way and let them handle theirs separately",
+        },
+      },
+      {
+        id: "push_my_view",
+        label: {
+          sv: "Driver min ståndpunkt eftersom jag är säker på att jag har rätt",
+          en: "Push my view since I'm confident I'm right",
+        },
+      },
+    ],
   },
 
   {
@@ -356,8 +548,8 @@ export const questions: Question[] = [
     type: "single",
     topic: { sv: "Rapportering och dokumentation", en: "Reporting and documentation" },
     prompt: {
-      sv: "Efter att något anmärkningsvärt hänt, hur brukar du faktiskt dokumentera det?",
-      en: "After something notable happens, how do you actually tend to document it?",
+      sv: "Något anmärkningsvärt har precis hänt i slutet av ditt pass, och du vill gärna komma hem. Vad gör du faktiskt?",
+      en: "Something notable just happened at the very end of your shift, and you're eager to head home. What do you actually do?",
     },
     options: [
       {

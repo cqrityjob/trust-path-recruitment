@@ -24,20 +24,25 @@ function pick(b: Bi, lang: Lang): string {
 // A presentational-layer lookup only -- does not affect scoring.
 type EvidenceCategory = "self_report" | "scenario_based" | "behavioural" | "preference";
 
+// Public Assessment v2.0 (Security Assessment Quality Review revision):
+// most items were converted from abstract Likert self-report to concrete
+// scenario-based single-select questions, so evidence-type coverage shifted
+// accordingly -- this table reflects the revised content, not the original
+// authoring spec.
 const QUESTION_EVIDENCE_CATEGORY: Record<string, EvidenceCategory> = {
   q1: "behavioural",
   q2: "scenario_based",
   q3: "scenario_based",
-  q4: "self_report",
-  q5: "self_report",
-  q6: "self_report",
+  q4: "scenario_based",
+  q5: "scenario_based",
+  q6: "scenario_based",
   q7: "scenario_based",
-  q8: "self_report",
+  q8: "scenario_based",
   q9: "scenario_based",
-  q10: "self_report",
-  q11: "self_report",
-  q12: "self_report",
-  q13: "self_report",
+  q10: "scenario_based",
+  q11: "behavioural",
+  q12: "scenario_based",
+  q13: "scenario_based",
   q14: "behavioural",
   q15: "preference",
   q16: "preference",
@@ -49,6 +54,18 @@ const CATEGORY_LABEL: Record<EvidenceCategory, Bi> = {
   behavioural: { sv: "Beteendebaserat", en: "Behavioural" },
   preference: { sv: "Preferens", en: "Preference" },
 };
+
+// Dimensions whose only evidence source is a preference-framed item (Q15
+// service-orientation fit, Q16 environment/role fit). Per the Security
+// Assessment Quality Review's result-model requirement, these must never be
+// presented as competency evidence -- they inform career/role fit only.
+const PREFERENCE_DIMENSIONS = new Set<DimensionId>([
+  "service_orientation",
+  "leadership_orientation",
+  "strategic_orientation",
+  "technical_orientation",
+  "investigation_orientation",
+]);
 
 function questionIdsForDimension(dim: DimensionId): string[] {
   const ids: string[] = [];
@@ -125,6 +142,14 @@ export function EmployerReportView({
   assessmentVersionLabel,
 }: EmployerReportViewProps) {
   const top = result.matches[0] as Match | undefined;
+  const competencyStrengths =
+    top?.strongestDimensions.filter((d) => !PREFERENCE_DIMENSIONS.has(d)) ?? [];
+  const competencyDevelopment =
+    top?.developmentAreas.filter((d) => !PREFERENCE_DIMENSIONS.has(d)) ?? [];
+  const preferenceInterest =
+    top?.strongestDimensions.filter((d) => PREFERENCE_DIMENSIONS.has(d)) ?? [];
+  const preferenceLowInterest =
+    top?.developmentAreas.filter((d) => PREFERENCE_DIMENSIONS.has(d)) ?? [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-10 text-sm">
@@ -181,7 +206,7 @@ export function EmployerReportView({
               {lang === "sv" ? "Kompetensevidens – styrkor" : "Competency evidence — strengths"}
             </h2>
             <ul className="mt-2 space-y-2">
-              {top.strongestDimensions.map((dim) => (
+              {competencyStrengths.map((dim) => (
                 <li key={dim} className="rounded border border-border p-3">
                   <div className="font-medium text-foreground">
                     {pick(dimensionById[dim]?.name ?? { sv: dim, en: dim }, lang)}
@@ -194,6 +219,13 @@ export function EmployerReportView({
                   </div>
                 </li>
               ))}
+              {competencyStrengths.length === 0 && (
+                <li className="text-muted-foreground">
+                  {lang === "sv"
+                    ? "Inget område med starkt underlag identifierat."
+                    : "No area with strong evidence identified."}
+                </li>
+              )}
             </ul>
           </section>
 
@@ -202,7 +234,7 @@ export function EmployerReportView({
               {lang === "sv" ? "Utvecklingsområden" : "Development areas"}
             </h2>
             <ul className="mt-2 space-y-2">
-              {top.developmentAreas.map((dim) => (
+              {competencyDevelopment.map((dim) => (
                 <li key={dim} className="rounded border border-border p-3">
                   <div className="font-medium text-foreground">
                     {pick(dimensionById[dim]?.name ?? { sv: dim, en: dim }, lang)}
@@ -220,16 +252,64 @@ export function EmployerReportView({
                   </div>
                 </li>
               ))}
+              {competencyDevelopment.length === 0 && (
+                <li className="text-muted-foreground">
+                  {lang === "sv"
+                    ? "Inget tydligt utvecklingsområde identifierat."
+                    : "No clear development area identified."}
+                </li>
+              )}
             </ul>
           </section>
+
+          {(preferenceInterest.length > 0 || preferenceLowInterest.length > 0) && (
+            <section>
+              <h2 className="text-base font-semibold text-foreground">
+                {lang === "sv"
+                  ? "Angivna intressen och preferenser"
+                  : "Stated interests and preferences"}
+              </h2>
+              <p className="mt-1 text-xs italic text-muted-foreground">
+                {lang === "sv"
+                  ? "Preferens är inte kompetens. Dessa signaler kommer från kandidatens egna miljö- och rollpreferenser, inte från demonstrerat beteende, och ska aldrig läsas som ett kompetensomdöme."
+                  : "Preference is not competence. These signals come from the candidate's own stated environment and role preferences, not demonstrated behaviour, and should never be read as a competency judgement."}
+              </p>
+              <ul className="mt-2 space-y-2">
+                {preferenceInterest.map((dim) => (
+                  <li key={dim} className="rounded border border-border p-3">
+                    <div className="font-medium text-foreground">
+                      {pick(dimensionById[dim]?.name ?? { sv: dim, en: dim }, lang)}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {lang === "sv"
+                        ? "Kandidaten angav intresse för detta."
+                        : "The candidate indicated interest in this."}
+                    </div>
+                  </li>
+                ))}
+                {preferenceLowInterest.map((dim) => (
+                  <li key={dim} className="rounded border border-border p-3">
+                    <div className="font-medium text-foreground">
+                      {pick(dimensionById[dim]?.name ?? { sv: dim, en: dim }, lang)}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {lang === "sv"
+                        ? "Kandidaten angav begränsat intresse för detta."
+                        : "The candidate indicated limited interest in this."}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section>
             <h2 className="text-base font-semibold text-foreground">
               {lang === "sv" ? "Intervjufokus" : "Interview focus areas"}
             </h2>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-              {top.developmentAreas
-                .concat(top.strongestDimensions.slice(0, 1))
+              {competencyDevelopment
+                .concat(competencyStrengths.slice(0, 1))
                 .filter((dim, i, arr) => arr.indexOf(dim) === i)
                 .map(
                   (dim) =>

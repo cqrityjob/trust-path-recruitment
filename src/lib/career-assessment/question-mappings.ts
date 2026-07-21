@@ -79,17 +79,44 @@ export const questionMappings: QuestionMapping[] = [
   {
     questionId: "q4",
     maxAbsPerDimension: 3,
-    rating: [{ dimension: "risk_awareness", factor: 1.5 }],
+    options: [
+      { optionId: "proactive", weights: [{ dimension: "risk_awareness", weight: 3 }] },
+      { optionId: "task_focused", weights: [{ dimension: "risk_awareness", weight: 1 }] },
+      { optionId: "reactive", weights: [{ dimension: "risk_awareness", weight: -1 }] },
+      { optionId: "assume_fine", weights: [{ dimension: "risk_awareness", weight: -2 }] },
+    ],
   },
   {
     questionId: "q5",
     maxAbsPerDimension: 3,
-    rating: [{ dimension: "structure_documentation", factor: 1.5 }],
+    options: [
+      {
+        optionId: "follow_and_raise",
+        weights: [{ dimension: "structure_documentation", weight: 3 }],
+      },
+      {
+        optionId: "follow_and_note",
+        weights: [{ dimension: "structure_documentation", weight: 2 }],
+      },
+      {
+        optionId: "use_own_this_time",
+        weights: [{ dimension: "structure_documentation", weight: -1 }],
+      },
+      {
+        optionId: "use_own_regularly",
+        weights: [{ dimension: "structure_documentation", weight: -2 }],
+      },
+    ],
   },
   {
     questionId: "q6",
     maxAbsPerDimension: 3,
-    rating: [{ dimension: "communication", factor: 1.5 }],
+    options: [
+      { optionId: "facts_first", weights: [{ dimension: "communication", weight: 3 }] },
+      { optionId: "facts_and_read", weights: [{ dimension: "communication", weight: 2 }] },
+      { optionId: "next_steps", weights: [{ dimension: "communication", weight: 0 }] },
+      { optionId: "whatever_urgent", weights: [{ dimension: "communication", weight: -1 }] },
+    ],
   },
   {
     questionId: "q7",
@@ -116,9 +143,29 @@ export const questionMappings: QuestionMapping[] = [
   {
     questionId: "q8",
     maxAbsPerDimension: 3,
-    rating: [
-      { dimension: "independent_decision_making", factor: 1.5 },
-      { dimension: "analytical_orientation", factor: 0.5 },
+    options: [
+      {
+        optionId: "continue_alert",
+        weights: [
+          { dimension: "independent_decision_making", weight: 3 },
+          { dimension: "analytical_orientation", weight: 1 },
+        ],
+      },
+      {
+        optionId: "pause_then_continue",
+        weights: [
+          { dimension: "independent_decision_making", weight: 2 },
+          { dimension: "analytical_orientation", weight: 1 },
+        ],
+      },
+      {
+        optionId: "second_guess",
+        weights: [{ dimension: "independent_decision_making", weight: -1 }],
+      },
+      {
+        optionId: "reverse_to_be_safe",
+        weights: [{ dimension: "independent_decision_making", weight: -2 }],
+      },
     ],
   },
   {
@@ -146,32 +193,89 @@ export const questionMappings: QuestionMapping[] = [
   {
     questionId: "q10",
     maxAbsPerDimension: 3,
-    rating: [
-      { dimension: "learning_development", factor: 1.25 },
-      { dimension: "operational_orientation", factor: 0.5 },
+    options: [
+      {
+        optionId: "adjust_same_shift",
+        weights: [
+          { dimension: "learning_development", weight: 3 },
+          { dimension: "operational_orientation", weight: 1 },
+        ],
+      },
+      {
+        optionId: "adjust_with_guidance",
+        weights: [{ dimension: "learning_development", weight: 2 }],
+      },
+      { optionId: "revert_to_old", weights: [{ dimension: "learning_development", weight: -1 }] },
+      {
+        optionId: "find_it_frustrating",
+        weights: [{ dimension: "learning_development", weight: -2 }],
+      },
     ],
   },
   {
     questionId: "q11",
     maxAbsPerDimension: 3,
-    // 1-10 scale (Measurement Framework §2: confidence-rating exception) --
-    // center must be set explicitly; the type's default of 3 assumes a 1-5 scale.
-    rating: [{ dimension: "learning_development", factor: 0.75, center: 5.5 }],
+    options: [
+      { optionId: "fast_proactive", weights: [{ dimension: "learning_development", weight: 3 }] },
+      { optionId: "normal_pace", weights: [{ dimension: "learning_development", weight: 1 }] },
+      {
+        optionId: "slower_than_liked",
+        weights: [{ dimension: "learning_development", weight: -1 }],
+      },
+      {
+        optionId: "still_not_comfortable",
+        weights: [{ dimension: "learning_development", weight: -2 }],
+      },
+    ],
   },
   {
     questionId: "q12",
     maxAbsPerDimension: 3,
-    rating: [
-      { dimension: "operational_orientation", factor: 1.25 },
-      { dimension: "conflict_management", factor: 0.5 },
+    options: [
+      {
+        optionId: "triage_and_flag",
+        weights: [
+          { dimension: "operational_orientation", weight: 3 },
+          { dimension: "conflict_management", weight: 1 },
+        ],
+      },
+      { optionId: "fastest_first", weights: [{ dimension: "operational_orientation", weight: 1 }] },
+      { optionId: "both_at_once", weights: [{ dimension: "operational_orientation", weight: -1 }] },
+      {
+        optionId: "freeze",
+        weights: [
+          { dimension: "operational_orientation", weight: -2 },
+          { dimension: "conflict_management", weight: -1 },
+        ],
+      },
     ],
   },
   {
     questionId: "q13",
     maxAbsPerDimension: 3,
-    rating: [
-      { dimension: "teamwork", factor: 1.25 },
-      { dimension: "independent_decision_making", factor: -0.5 },
+    options: [
+      { optionId: "discuss_and_agree", weights: [{ dimension: "teamwork", weight: 3 }] },
+      {
+        optionId: "defer_to_them",
+        weights: [
+          { dimension: "teamwork", weight: 1 },
+          { dimension: "independent_decision_making", weight: -1 },
+        ],
+      },
+      {
+        optionId: "split_and_go_own_way",
+        weights: [
+          { dimension: "teamwork", weight: -1 },
+          { dimension: "independent_decision_making", weight: 1 },
+        ],
+      },
+      {
+        optionId: "push_my_view",
+        weights: [
+          { dimension: "teamwork", weight: -2 },
+          { dimension: "independent_decision_making", weight: 1 },
+        ],
+      },
     ],
   },
   {
