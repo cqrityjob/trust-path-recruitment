@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +36,43 @@ import type { CurrentStatus } from "@/lib/security-career-profile/types";
 const ASSESSMENT_DEFINITION_ID = "public-career-assessment";
 
 type Phase = "landing" | "intro" | "current-situation" | "questions" | "results";
+
+// sessionStorage key + shape for in-progress assessment persistence.
+// Bumped when the persisted shape changes so stale payloads are ignored.
+const PROGRESS_STORAGE_KEY = "cqj:assessment:progress:v1";
+
+type PersistedProgress = {
+  v: 1;
+  phase: Phase;
+  index: number;
+  answers: Record<string, Answer>;
+  currentStatus: CurrentStatus | null;
+  completionId: string;
+};
+
+function readPersistedProgress(): PersistedProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedProgress;
+    if (!parsed || parsed.v !== 1 || typeof parsed.completionId !== "string") return null;
+    // Never restore into a terminal or pre-flow phase — those clear storage.
+    if (parsed.phase !== "questions" && parsed.phase !== "current-situation") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersistedProgress() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PROGRESS_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export const Route = createFileRoute("/security-career-assessment")({
   head: () => ({
