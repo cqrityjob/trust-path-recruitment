@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +36,43 @@ import type { CurrentStatus } from "@/lib/security-career-profile/types";
 const ASSESSMENT_DEFINITION_ID = "public-career-assessment";
 
 type Phase = "landing" | "intro" | "current-situation" | "questions" | "results";
+
+// sessionStorage key + shape for in-progress assessment persistence.
+// Bumped when the persisted shape changes so stale payloads are ignored.
+const PROGRESS_STORAGE_KEY = "cqj:assessment:progress:v1";
+
+type PersistedProgress = {
+  v: 1;
+  phase: Phase;
+  index: number;
+  answers: Record<string, Answer>;
+  currentStatus: CurrentStatus | null;
+  completionId: string;
+};
+
+function readPersistedProgress(): PersistedProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedProgress;
+    if (!parsed || parsed.v !== 1 || typeof parsed.completionId !== "string") return null;
+    // Never restore into a terminal or pre-flow phase — those clear storage.
+    if (parsed.phase !== "questions" && parsed.phase !== "current-situation") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearPersistedProgress() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(PROGRESS_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export const Route = createFileRoute("/security-career-assessment")({
   head: () => ({
@@ -82,8 +119,53 @@ function AssessmentApp() {
   // remount within the same attempt (React StrictMode double-invoke, a
   // saver component re-rendering) because it lives on this stable ancestor.
   // Only reset() below mints a new one — a genuine retake, even with
-  // identical answers, must be treated as a new completion.
+  // identical answers, must be treated as a new completion. When a run is
+  // restored from sessionStorage the same completionId is reused so a
+  // resumed attempt saves as one report, not two.
   const [completionId, setCompletionId] = useState<string>(() => crypto.randomUUID());
+
+  // Hydrate from sessionStorage after mount. Done in an effect (not a lazy
+  // useState initializer) to keep SSR/CSR HTML identical and avoid
+  // hydration mismatches. `hydrated` guards the persist effect so we do
+  // not overwrite storage with the default state before restore runs.
+  const hydrated = useRef(false);
+  useEffect(() => {
+    const p = readPersistedProgress();
+    if (p) {
+      setPhase(p.phase);
+      setIndex(p.index);
+      setAnswers(p.answers);
+      setCurrentStatus(p.currentStatus);
+      setCompletionId(p.completionId);
+    }
+    hydrated.current = true;
+  }, []);
+
+  // Persist only while a run is in flight. Landing / intro / results all
+  // clear storage so a refresh cannot resurrect a stale or completed run.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    if (phase === "questions" || phase === "current-situation") {
+      try {
+        window.sessionStorage.setItem(
+          PROGRESS_STORAGE_KEY,
+          JSON.stringify({
+            v: 1,
+            phase,
+            index,
+            answers,
+            currentStatus,
+            completionId,
+          } satisfies PersistedProgress),
+        );
+      } catch {
+        /* ignore quota/serialisation errors — persistence is best-effort */
+      }
+    } else {
+      // landing | intro | results → completed, aborted, or not yet started
+      clearPersistedProgress();
+    }
+  }, [phase, index, answers, currentStatus, completionId]);
 
   const profileId = useMemo(() => profileForCurrentStatus(currentStatus), [currentStatus]);
   const questionSet = useMemo(
@@ -92,6 +174,7 @@ function AssessmentApp() {
   );
 
   const reset = () => {
+    clearPersistedProgress();
     setAnswers({});
     setIndex(0);
     setCurrentStatus(null);
