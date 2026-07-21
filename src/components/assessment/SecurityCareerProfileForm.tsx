@@ -13,8 +13,10 @@ import {
 } from "@/lib/security-career-profile/profession-options";
 import {
   isAlreadyWorkingInSecurity,
+  type CurrentStatus,
   type SecurityCareerProfileDraft,
 } from "@/lib/security-career-profile/types";
+import type { Bi } from "@/lib/career-center/types";
 
 const OTHER_PROFESSION_VALUE = "__other__";
 
@@ -70,9 +72,17 @@ function OptionGroup<T extends string>({
 export function SecurityCareerProfileForm({
   value,
   onChange,
+  statusOptions = currentStatusOptions,
+  statusBodyOverride,
 }: {
   value: SecurityCareerProfileDraft;
   onChange: (next: SecurityCareerProfileDraft) => void;
+  // Overridable so the Public Career Assessment's Current Situation step can
+  // offer its 5 supported options (dropping "other", which has no defined
+  // question-profile mapping) without changing the /my-career profile
+  // card's full 6-option editor, which reuses this same form.
+  statusOptions?: readonly { id: CurrentStatus; label: Bi }[];
+  statusBodyOverride?: string;
 }) {
   const { t, lang } = useT();
   const [professionOptions, setProfessionOptions] = useState<CurrentProfessionOption[]>([]);
@@ -104,10 +114,12 @@ export function SecurityCareerProfileForm({
         <h3 className="text-sm font-semibold uppercase tracking-widest text-accent">
           {t("sca.scp.status.title")}
         </h3>
-        <p className="mt-2 text-sm text-muted-foreground">{t("sca.scp.status.body")}</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {statusBodyOverride ?? t("sca.scp.status.body")}
+        </p>
         <div className="mt-5">
           <OptionGroup
-            options={currentStatusOptions}
+            options={statusOptions}
             selected={value.currentStatus}
             onSelect={(id) =>
               onChange({

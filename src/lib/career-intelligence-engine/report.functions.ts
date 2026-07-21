@@ -17,13 +17,10 @@ import { GRAPH_VERSION } from "@/lib/knowledge-graph/graph-meta";
 import type { AnswerMap } from "@/lib/career-assessment/types";
 import { computeEngineResultV1 } from "./index";
 import { buildTargetVectorsFromLegacy } from "./target-vector";
-import { loadEnrichmentForSlugs } from "./compute.functions";
+import { loadEnrichmentForSlugs, resolveQuestionSet } from "./compute.functions";
 import { buildCareerProfileForJobs } from "./profile-for-jobs";
 import { readSecurityCareerProfileSnapshot } from "@/lib/security-career-profile/snapshot";
-import {
-  REPORT_VERSION,
-  type SavedCareerReportV1,
-} from "./report-types";
+import { REPORT_VERSION, type SavedCareerReportV1 } from "./report-types";
 import { ASSESSMENT_ID, buildCompareEnrichment } from "./report.server";
 import { validateSavedReportV1 } from "./report-validator";
 
@@ -34,6 +31,12 @@ const saveReportSchema = z.object({
   answers: z.record(z.string(), z.any()),
   locale: z.enum(["sv", "en"]).default("sv"),
   topN: z.number().int().min(1).max(10).optional(),
+  // Career Intelligence as a platform service: which Assessment Catalog
+  // definition/profile this run belongs to. Omitted, this defaults to the
+  // legacy 'career-guidance' definition (ASSESSMENT_ID below) -- the exact
+  // pre-existing behavior for any caller that hasn't been updated.
+  assessmentDefinitionId: z.string().optional(),
+  profileId: z.enum(["student_or_new", "security_professional", "career_changer"]).optional(),
 });
 
 export const saveMyCareerReport = createServerFn({ method: "POST" })
@@ -45,6 +48,8 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
     // Compute via the existing, unmodified scoring engine. Never trust a
     // client-supplied EngineResultV1 — this is the only source of report
     // content, and it is computed here, not accepted as input.
+    const assessmentDefinitionId = data.assessmentDefinitionId ?? ASSESSMENT_ID;
+    const questionSet = resolveQuestionSet(data.assessmentDefinitionId, data.profileId);
     const targets = buildTargetVectorsFromLegacy();
     const enrichmentByLegacySlug = await loadEnrichmentForSlugs(targets.map((t) => t.legacySlug));
     const engineResult = computeEngineResultV1({
@@ -52,13 +57,15 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
       targets,
       enrichmentByLegacySlug,
       options: { topN: data.topN ?? 3 },
+      assessmentDefinitionId,
+      questionSet,
     });
     const compareEnrichment = buildCompareEnrichment(engineResult.matches);
 
     // Still populate result_summary.careerProfileForJobs in its current
     // shape, unchanged, for 100% backward compatibility with
     // getMyCareerProfileForJobs and the /jobs relevance UI.
-    const careerProfileForJobs = buildCareerProfileForJobs(data.answers as AnswerMap);
+    const careerProfileForJobs = buildCareerProfileForJobs(data.answers as AnswerMap, questionSet);
 
     // One read, reused for both the assessment_runs.profile_snapshot copy
     // and the report's embedded copy — no risk of the two diverging.
@@ -67,7 +74,7 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
     const { data: version } = await supabase
       .from("assessment_versions")
       .select("id")
-      .eq("assessment_id", ASSESSMENT_ID)
+      .eq("assessment_id", assessmentDefinitionId)
       .order("published_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -86,6 +93,8 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
       engineResult,
       compareEnrichment,
       profileSnapshot,
+      assessmentDefinitionId,
+      profileId: data.profileId,
     };
 
     // Consistency validation. Structural defects (version drift, out-of-bounds
@@ -112,7 +121,7 @@ export const saveMyCareerReport = createServerFn({ method: "POST" })
     const { data: rpcResult, error } = await (supabaseAdmin as any).rpc("save_career_report", {
       p_user_id: userId,
       p_completion_id: data.completionId,
-      p_assessment_id: ASSESSMENT_ID,
+      p_assessment_id: assessmentDefinitionId,
       p_assessment_version_id: version.id,
       p_graph_version: GRAPH_VERSION,
       p_locale: data.locale,

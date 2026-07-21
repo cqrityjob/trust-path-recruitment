@@ -582,6 +582,8 @@ export const dictionaries = {
     "sca.scp.continue": "Fortsätt",
     "sca.scp.status.title": "Var befinner du dig idag?",
     "sca.scp.status.body": "Valfritt. Påverkar inte ditt testresultat.",
+    "sca.cs.status.body":
+      "Detta avgör vilka av de återstående frågorna du får. Det påverkar aldrig hur dina svar poängsätts.",
     "sca.scp.profession.title": "Nuvarande yrke",
     "sca.scp.profession.placeholder": "Välj ett yrke",
     "sca.scp.profession.other": "Annat",
@@ -1843,6 +1845,8 @@ export const dictionaries = {
     "sca.scp.continue": "Continue",
     "sca.scp.status.title": "Where are you today?",
     "sca.scp.status.body": "Optional. Does not affect your test result.",
+    "sca.cs.status.body":
+      "This determines which of the remaining questions you'll get. It never affects how your answers are scored.",
     "sca.scp.profession.title": "Current profession",
     "sca.scp.profession.placeholder": "Select a profession",
     "sca.scp.profession.other": "Other",

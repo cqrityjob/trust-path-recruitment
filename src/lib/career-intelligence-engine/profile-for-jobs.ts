@@ -19,7 +19,10 @@
 //     "why this role may suit you" panel).
 
 import type { AnswerMap, DimensionId } from "@/lib/career-assessment/types";
-import { computeUserVector } from "@/lib/career-assessment/matching-engine";
+import {
+  computeUserVector,
+  type ScoringQuestionSet,
+} from "@/lib/career-assessment/matching-engine";
 import { deriveCareerProfile } from "./career-profile";
 import { computeCurrentFit, computePotential } from "./scoring";
 import { rankFamilies } from "./family-ranking";
@@ -84,10 +87,11 @@ function truncate<T>(arr: readonly T[], n: number): T[] {
  */
 export function buildCareerProfileForJobs(
   answers: AnswerMap,
+  questionSet?: ScoringQuestionSet,
   now: () => string = () => new Date().toISOString(),
 ): CareerProfileForJobsV1 {
   const targets = buildTargetVectorsFromLegacy();
-  const vector = computeUserVector(answers);
+  const vector = computeUserVector(answers, questionSet);
   const profile = deriveCareerProfile(vector);
 
   const slugScores: Record<string, SlugScoreForJobs> = {};
@@ -152,9 +156,7 @@ export function buildCareerProfileForJobs(
  * a persisted snapshot so unknown or stale shapes are treated as
  * "no profile" rather than crashing the jobs UI.
  */
-export function isCareerProfileForJobsV1(
-  value: unknown,
-): value is CareerProfileForJobsV1 {
+export function isCareerProfileForJobsV1(value: unknown): value is CareerProfileForJobsV1 {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   if (v.version !== PROFILE_FOR_JOBS_VERSION) return false;

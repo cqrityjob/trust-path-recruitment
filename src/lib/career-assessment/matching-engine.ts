@@ -1,4 +1,4 @@
-import { questions } from "@/lib/assessment-content";
+import { questions, type Question } from "@/lib/assessment-content";
 import { allDimensionIds, dimensionById } from "./dimensions";
 import { questionMappingById, questionMappings } from "./question-mappings";
 import { professionProfileById, professionProfiles } from "./profession-profiles";
@@ -12,7 +12,23 @@ import type {
   EngineResult,
   MatchResult,
   ProfessionTargetProfile,
+  QuestionMapping,
 } from "./types";
+
+// A question set the scoring engine can be pointed at, in place of the
+// module-level legacy `questions`/`questionMappingById`. Used by the
+// Question Library's `assembleQuestionSet()` to score a Public Career
+// Assessment profile's assembled 16 questions with the exact same math as
+// the frozen legacy content. Every function below defaults to the legacy
+// set, so every existing caller (security-guard-foundation, historical
+// scoring, the persona harness) behaves byte-for-byte identically with zero
+// code change.
+export interface ScoringQuestionSet {
+  questions: Question[];
+  mappingById: Record<string, QuestionMapping>;
+}
+
+const legacyQuestionSet: ScoringQuestionSet = { questions, mappingById: questionMappingById };
 
 // Engine settings — provisional and testable.
 const settings = {
@@ -34,13 +50,16 @@ const settings = {
 };
 
 // -------- Score bounds (theoretical raw min/max per dimension) --------
-function computeDimensionBounds(): Record<DimensionId, { min: number; max: number }> {
-  const bounds = Object.fromEntries(
-    allDimensionIds.map((d) => [d, { min: 0, max: 0 }]),
-  ) as Record<DimensionId, { min: number; max: number }>;
+function computeDimensionBounds(
+  set: ScoringQuestionSet = legacyQuestionSet,
+): Record<DimensionId, { min: number; max: number }> {
+  const bounds = Object.fromEntries(allDimensionIds.map((d) => [d, { min: 0, max: 0 }])) as Record<
+    DimensionId,
+    { min: number; max: number }
+  >;
 
-  for (const q of questions) {
-    const m = questionMappingById[q.id];
+  for (const q of set.questions) {
+    const m = set.mappingById[q.id];
     if (!m) continue;
     // Per-dimension min/max contribution for this question.
     const perDim = Object.fromEntries(
@@ -50,7 +69,8 @@ function computeDimensionBounds(): Record<DimensionId, { min: number; max: numbe
     if (q.type === "single" && m.options) {
       // Best-case = max option per dim, worst-case = min option per dim.
       for (const d of allDimensionIds) {
-        let mn = 0, mx = 0;
+        let mn = 0,
+          mx = 0;
         for (const opt of m.options) {
           const w = opt.weights.find((x) => x.dimension === d)?.weight ?? 0;
           if (w < mn) mn = w;
@@ -61,7 +81,8 @@ function computeDimensionBounds(): Record<DimensionId, { min: number; max: numbe
     } else if (q.type === "multi" && m.options) {
       // User can pick multiple: sum positives for max, sum negatives for min.
       for (const d of allDimensionIds) {
-        let mn = 0, mx = 0;
+        let mn = 0,
+          mx = 0;
         for (const opt of m.options) {
           const w = opt.weights.find((x) => x.dimension === d)?.weight ?? 0;
           if (w > 0) mx += w;
@@ -97,22 +118,44 @@ function computeDimensionBounds(): Record<DimensionId, { min: number; max: numbe
 
 export const dimensionBounds = computeDimensionBounds();
 
-// -------- User vector --------
-export function computeUserVector(answers: AnswerMap): DimensionScore[] {
-  const raw = Object.fromEntries(allDimensionIds.map((d) => [d, 0])) as Record<DimensionId, number>;
-  const evidence = Object.fromEntries(
-    allDimensionIds.map((d) => [d, 0]),
-  ) as Record<DimensionId, number>;
+// Bounds are static per question set (they depend only on the mapping
+// tables, never on answers), so a non-legacy set's bounds are computed once
+// and cached by a stable signature of its question ids.
+const boundsCache = new Map<string, Record<DimensionId, { min: number; max: number }>>();
 
-  for (const q of questions) {
+function boundsFor(set: ScoringQuestionSet): Record<DimensionId, { min: number; max: number }> {
+  if (set === legacyQuestionSet) return dimensionBounds;
+  const signature = set.questions.map((q) => q.id).join(",");
+  let cached = boundsCache.get(signature);
+  if (!cached) {
+    cached = computeDimensionBounds(set);
+    boundsCache.set(signature, cached);
+  }
+  return cached;
+}
+
+// -------- User vector --------
+export function computeUserVector(
+  answers: AnswerMap,
+  questionSet: ScoringQuestionSet = legacyQuestionSet,
+): DimensionScore[] {
+  const raw = Object.fromEntries(allDimensionIds.map((d) => [d, 0])) as Record<DimensionId, number>;
+  const evidence = Object.fromEntries(allDimensionIds.map((d) => [d, 0])) as Record<
+    DimensionId,
+    number
+  >;
+  const bounds = boundsFor(questionSet);
+
+  for (const q of questionSet.questions) {
     const val = answers[q.id];
     if (val === undefined || (Array.isArray(val) && val.length === 0)) continue;
-    const m = questionMappingById[q.id];
+    const m = questionSet.mappingById[q.id];
     if (!m) continue;
     const cap = m.maxAbsPerDimension;
-    const contrib = Object.fromEntries(
-      allDimensionIds.map((d) => [d, 0]),
-    ) as Record<DimensionId, number>;
+    const contrib = Object.fromEntries(allDimensionIds.map((d) => [d, 0])) as Record<
+      DimensionId,
+      number
+    >;
 
     if (q.type === "single" && typeof val === "string" && m.options) {
       const opt = m.options.find((o) => o.optionId === val);
@@ -136,7 +179,7 @@ export function computeUserVector(answers: AnswerMap): DimensionScore[] {
   }
 
   return allDimensionIds.map((d) => {
-    const b = dimensionBounds[d];
+    const b = bounds[d];
     const span = b.max - b.min;
     const observed = evidence[d] > 0;
     const normalized = observed && span > 0 ? ((raw[d] - b.min) / span) * 100 : 50;
@@ -330,12 +373,7 @@ function confidenceFor(
   const distinguishingOk = distinguishingCoverage >= 0.5;
 
   let level: ConfidenceLevel;
-  if (
-    frac >= settings.confidenceStrong &&
-    meetsMinEvidence &&
-    gatePassed &&
-    distinguishingOk
-  ) {
+  if (frac >= settings.confidenceStrong && meetsMinEvidence && gatePassed && distinguishingOk) {
     level = "stronger";
   } else if (frac >= settings.confidenceMod && observedImportant >= 2) {
     level = "moderate";
@@ -376,8 +414,7 @@ export function computeMatches(answers: AnswerMap): EngineResult {
     // Evidence scaling: important dims with no answered evidence dampen the
     // similarity so missing signal cannot inflate a match.
     const minEv = profile.minRelevantEvidence ?? 3;
-    const evidenceScale =
-      0.4 + 0.6 * Math.min(1, sim.importantWithEvidence / Math.max(1, minEv));
+    const evidenceScale = 0.4 + 0.6 * Math.min(1, sim.importantWithEvidence / Math.max(1, minEv));
     raw = raw * evidenceScale;
 
     if (!gate.passed) raw = Math.min(raw, settings.gateFailCap);

@@ -10,17 +10,16 @@
 // enrichment from the CIG catalogue via server-side reads.
 
 import type { AnswerMap } from "@/lib/career-assessment/types";
-import { computeUserVector } from "@/lib/career-assessment/matching-engine";
+import {
+  computeUserVector,
+  type ScoringQuestionSet,
+} from "@/lib/career-assessment/matching-engine";
 
 import { deriveCareerProfile } from "./career-profile";
 import { computeCurrentFit, computePotential } from "./scoring";
 import { rankFamilies, enforceFamilyDiversity } from "./family-ranking";
 import { computeEvidenceScore } from "./evidence-score";
-import {
-  explainMatch,
-  explainCareerProfile,
-  explainFamily,
-} from "./explanations";
+import { explainMatch, explainCareerProfile, explainFamily } from "./explanations";
 import { hashInputs } from "./inputs-hash";
 import { buildTargetVectorsFromLegacy } from "./target-vector";
 import {
@@ -64,6 +63,15 @@ export interface ComputeInput {
   enrichmentByLegacySlug?: Record<string, EnrichmentBundle>;
   publishedCigSlugs?: Set<string>; // if provided, restrict matching to those with cigSlug in set
   options?: ComputeOptions;
+  // Platform-service parameters (Career Intelligence as a service any
+  // Assessment Definition can call, not just the Public Career Assessment).
+  // `assessmentDefinitionId` is carried through purely for caller bookkeeping
+  // (e.g. report self-identification) -- the engine itself never branches on
+  // it. `questionSet` lets a caller score against an assembled Question
+  // Library set (see src/lib/question-library/query.ts) instead of the
+  // legacy fixed 16 questions; omitted, everything behaves exactly as before.
+  assessmentDefinitionId?: string;
+  questionSet?: ScoringQuestionSet;
 }
 
 export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
@@ -73,10 +81,11 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
     enrichmentByLegacySlug = {},
     publishedCigSlugs,
     options = {},
+    questionSet,
   } = input;
   const topN = Math.max(1, options.topN ?? 3);
 
-  const vector = computeUserVector(answers);
+  const vector = computeUserVector(answers, questionSet);
   const careerProfile = deriveCareerProfile(vector);
 
   // Filter matching set to published CIG when requested. Absence of a CIG
@@ -124,8 +133,7 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
 
   const matches: Match[] = topScored.map((s, i) => {
     const enrichment =
-      (s.target.legacySlug && enrichmentByLegacySlug[s.target.legacySlug]) ||
-      emptyEnrichment();
+      (s.target.legacySlug && enrichmentByLegacySlug[s.target.legacySlug]) || emptyEnrichment();
     const evidenceScore = computeEvidenceScore({
       answers,
       breakdown: s.dual.currentFit,
@@ -138,8 +146,7 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
       enrichment,
       evidenceScore,
       rankIndex: i,
-      topReferenceKey:
-        i > 0 && topReferenceKey ? topReferenceKey : undefined,
+      topReferenceKey: i > 0 && topReferenceKey ? topReferenceKey : undefined,
     });
     return {
       professionKey: s.target.professionKey,
@@ -178,9 +185,7 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
   const overallEvidenceScore =
     matches.length === 0
       ? 0
-      : Math.round(
-          matches.reduce((sum, m) => sum + m.evidenceScore, 0) / matches.length,
-        );
+      : Math.round(matches.reduce((sum, m) => sum + m.evidenceScore, 0) / matches.length);
 
   const disclaimers = matches
     .filter((m) => m.regulated && m.enrichment.disclaimer)
@@ -192,11 +197,7 @@ export function computeEngineResultV1(input: ComputeInput): EngineResultV1 {
   );
 
   const dataStatus: EngineResultV1["dataStatus"] =
-    matches.length === 0
-      ? "no_matches"
-      : !cigEnrichmentPresent
-        ? "cig_enrichment_missing"
-        : "ok";
+    matches.length === 0 ? "no_matches" : !cigEnrichmentPresent ? "cig_enrichment_missing" : "ok";
 
   const journeyHooks: JourneyHooks = {
     developmentRoadmap: null,

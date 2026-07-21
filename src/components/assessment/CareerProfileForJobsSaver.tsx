@@ -20,15 +20,23 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { AnswerMap } from "@/lib/career-assessment/types";
 import { saveMyCareerReport } from "@/lib/career-intelligence-engine/report.functions";
+import type { AssessmentProfileId } from "@/lib/question-library/types";
 
 export function CareerProfileForJobsSaver({
   answers,
   lang,
   completionId,
+  assessmentDefinitionId,
+  profileId,
 }: {
   answers: AnswerMap;
   lang: "sv" | "en";
   completionId: string;
+  // Assessment Catalog self-identification (optional, additive) -- see
+  // SavedCareerReportV1.assessmentDefinitionId/profileId. Omitted, the save
+  // defaults to the legacy 'career-guidance' definition, same as before.
+  assessmentDefinitionId?: string;
+  profileId?: AssessmentProfileId;
 }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const saved = useRef(false);
@@ -36,7 +44,8 @@ export function CareerProfileForJobsSaver({
   const queryClient = useQueryClient();
 
   const mut = useMutation({
-    mutationFn: () => save({ data: { completionId, answers, locale: lang } }),
+    mutationFn: () =>
+      save({ data: { completionId, answers, locale: lang, assessmentDefinitionId, profileId } }),
     retry: 2,
     onSuccess: (result) => {
       if (!result.saved) return;

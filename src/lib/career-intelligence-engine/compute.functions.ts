@@ -14,11 +14,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 import type { AnswerMap } from "@/lib/career-assessment/types";
-import {
-  buildTargetVectorsFromLegacy,
-  computeEngineResultV1,
-  toCigSlug,
-} from "./index";
+import type { ScoringQuestionSet } from "@/lib/career-assessment/matching-engine";
+import { assembleQuestionSet } from "@/lib/question-library/query";
+import type { AssessmentProfileId } from "@/lib/question-library/types";
+import { buildTargetVectorsFromLegacy, computeEngineResultV1, toCigSlug } from "./index";
 import type { EnrichmentBundle, EnrichmentSource } from "./types";
 
 type EnrichmentMap = Record<string, EnrichmentBundle>;
@@ -42,9 +41,7 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
 
   const { data: professions } = await supabase
     .from("cig_professions")
-    .select(
-      "id, slug, title_sv, title_en, disclaimer_sv, disclaimer_en, is_regulated",
-    )
+    .select("id, slug, title_sv, title_en, disclaimer_sv, disclaimer_en, is_regulated")
     .eq("content_status", "published")
     .in(
       "slug",
@@ -69,9 +66,7 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
     .from("cig_career_transitions")
     .select("from_profession_id, to_profession_id, transition_kind, rationale_sv, rationale_en")
     .eq("content_status", "published")
-    .or(
-      `from_profession_id.in.(${ids.join(",")}),to_profession_id.in.(${ids.join(",")})`,
-    );
+    .or(`from_profession_id.in.(${ids.join(",")}),to_profession_id.in.(${ids.join(",")})`);
 
   const eduPromise = supabase
     .from("cig_profession_education_pathways")
@@ -91,9 +86,7 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
 
   const sourcesPromise = supabase
     .from("cig_profession_source_references")
-    .select(
-      "profession_id, source:cig_source_references(title, url, source_type, accessed_at)",
-    )
+    .select("profession_id, source:cig_source_references(title, url, source_type, accessed_at)")
     .eq("content_status", "published")
     .in("profession_id", ids);
 
@@ -116,7 +109,12 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
       legal_blocker: boolean | null;
       country: string | null;
       jurisdiction: string | null;
-      requirement: { title_sv: string | null; title_en: string | null; authority_sv: string | null; authority_en: string | null } | null;
+      requirement: {
+        title_sv: string | null;
+        title_en: string | null;
+        authority_sv: string | null;
+        authority_en: string | null;
+      } | null;
     };
     const formalRows = ((formal.data ?? []) as unknown as FormalRow[]).filter(
       (r) => r.profession_id === profId,
@@ -174,9 +172,7 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
     );
 
     const disclaimer =
-      p.disclaimer_sv || p.disclaimer_en
-        ? bi(p.disclaimer_sv, p.disclaimer_en)
-        : null;
+      p.disclaimer_sv || p.disclaimer_en ? bi(p.disclaimer_sv, p.disclaimer_en) : null;
 
     const enrichedSources: EnrichmentSource[] = [];
     for (const r of srcRows) {
@@ -200,7 +196,8 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
         label: bi(r.requirement?.title_sv, r.requirement?.title_en),
         isLegal: !!r.legal_blocker,
         // No dedicated is_employer column; treat non-legal 'mandatory' rows as employer-required.
-        isEmployer: !r.legal_blocker && (r.criticality === "mandatory" || r.criticality === "preferred"),
+        isEmployer:
+          !r.legal_blocker && (r.criticality === "mandatory" || r.criticality === "preferred"),
         kind: optStr(r.criticality),
         jurisdiction: optStr(r.jurisdiction),
       })),
@@ -211,10 +208,7 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
             ? String(r.to_profession_id)
             : String(r.from_profession_id),
         effort: optStr(r.transition_kind),
-        notes:
-          r.rationale_sv || r.rationale_en
-            ? bi(r.rationale_sv, r.rationale_en)
-            : undefined,
+        notes: r.rationale_sv || r.rationale_en ? bi(r.rationale_sv, r.rationale_en) : undefined,
       })),
       educationPathways: eduRows
         .filter((r): r is EduRow & { pathway: NonNullable<EduRow["pathway"]> } => !!r.pathway)
@@ -230,7 +224,10 @@ export async function loadEnrichmentForSlugs(legacySlugs: string[]): Promise<Enr
               : undefined,
         })),
       certifications: certRows
-        .filter((r): r is CertRow & { certification: NonNullable<CertRow["certification"]> } => !!r.certification)
+        .filter(
+          (r): r is CertRow & { certification: NonNullable<CertRow["certification"]> } =>
+            !!r.certification,
+        )
         .map((r) => ({
           slug: r.certification.slug,
           title: bi(r.certification.title_sv, r.certification.title_en),
@@ -254,13 +251,48 @@ async function loadPublishedCigSlugs(): Promise<Set<string>> {
   return new Set((data ?? []).map((r) => r.slug));
 }
 
+// Builds a ScoringQuestionSet from the Question Library's assembled
+// questions/mappings for a given Assessment Definition + profile. Returns
+// undefined for the legacy (no assessmentDefinitionId) call shape, which
+// leaves computeEngineResultV1 -> computeUserVector on their default,
+// unchanged, module-level legacy question set.
+export function resolveQuestionSet(
+  assessmentDefinitionId: string | undefined,
+  profileId: AssessmentProfileId | undefined,
+): ScoringQuestionSet | undefined {
+  if (!assessmentDefinitionId) return undefined;
+  const { questions, mappings } = assembleQuestionSet(assessmentDefinitionId, profileId);
+  return {
+    questions,
+    mappingById: Object.fromEntries(mappings.map((m) => [m.questionId, m])),
+  };
+}
+
 export const computeCareerIntelligenceMatches = createServerFn({ method: "POST" })
-  .inputValidator((input: { answers: AnswerMap; topN?: number; restrictToPublished?: boolean }) => {
-    if (!input || typeof input !== "object" || typeof input.answers !== "object" || input.answers === null) {
-      throw new Error("answers is required");
-    }
-    return input;
-  })
+  .inputValidator(
+    (input: {
+      answers: AnswerMap;
+      topN?: number;
+      restrictToPublished?: boolean;
+      // Career Intelligence as a platform service: any Assessment Definition in
+      // the catalog may pass its own id + (optionally) a Question Library
+      // profile to score against its own assembled question set. Omitted
+      // entirely, this call behaves exactly as it did before -- the legacy,
+      // fixed 16-question `security-guard-foundation` content.
+      assessmentDefinitionId?: string;
+      profileId?: AssessmentProfileId;
+    }) => {
+      if (
+        !input ||
+        typeof input !== "object" ||
+        typeof input.answers !== "object" ||
+        input.answers === null
+      ) {
+        throw new Error("answers is required");
+      }
+      return input;
+    },
+  )
   .handler(async ({ data }) => {
     const targets = buildTargetVectorsFromLegacy();
     const legacySlugs = targets.map((t) => t.legacySlug);
@@ -278,11 +310,15 @@ export const computeCareerIntelligenceMatches = createServerFn({ method: "POST" 
       // graceful fallback — envelope reports dataStatus='cig_enrichment_missing'.
     }
 
+    const questionSet = resolveQuestionSet(data.assessmentDefinitionId, data.profileId);
+
     return computeEngineResultV1({
       answers: data.answers,
       targets,
       enrichmentByLegacySlug,
       publishedCigSlugs,
       options: { topN: data.topN ?? 3 },
+      assessmentDefinitionId: data.assessmentDefinitionId,
+      questionSet,
     });
   });

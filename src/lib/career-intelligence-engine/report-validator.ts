@@ -30,7 +30,11 @@ export function validateSavedReportV1(report: SavedCareerReportV1): ReportValida
 
   // -- Envelope --
   if (report.reportVersion !== REPORT_VERSION) {
-    issues.push({ code: "report_version_mismatch", message: `Expected ${REPORT_VERSION}`, path: "reportVersion" });
+    issues.push({
+      code: "report_version_mismatch",
+      message: `Expected ${REPORT_VERSION}`,
+      path: "reportVersion",
+    });
   }
   if (report.engineResult.engineVersion !== ENGINE_VERSION) {
     issues.push({
@@ -54,30 +58,82 @@ export function validateSavedReportV1(report: SavedCareerReportV1): ReportValida
     });
   }
 
+  // -- Assessment Catalog self-identification (optional, additive) --
+  if (report.assessmentDefinitionId !== undefined && report.assessmentDefinitionId.trim() === "") {
+    issues.push({
+      code: "empty_assessment_definition_id",
+      message: "assessmentDefinitionId, if present, must not be an empty string",
+      path: "assessmentDefinitionId",
+    });
+  }
+  if (report.profileId !== undefined && !report.assessmentDefinitionId) {
+    issues.push({
+      code: "profile_id_without_definition",
+      message: "profileId is present without an assessmentDefinitionId",
+      path: "profileId",
+    });
+  }
+
   // -- Overall bounds --
   if (!pct(report.engineResult.overallEvidenceScore)) {
-    issues.push({ code: "overall_evidence_out_of_bounds", message: "overallEvidenceScore must be 0..100", path: "engineResult.overallEvidenceScore" });
+    issues.push({
+      code: "overall_evidence_out_of_bounds",
+      message: "overallEvidenceScore must be 0..100",
+      path: "engineResult.overallEvidenceScore",
+    });
   }
 
   // -- Matches --
   const matches = report.engineResult.matches ?? [];
   if (matches.length === 0 && report.engineResult.dataStatus === "ok") {
-    issues.push({ code: "no_matches_but_status_ok", message: "dataStatus=ok requires at least one match", path: "engineResult.matches" });
+    issues.push({
+      code: "no_matches_but_status_ok",
+      message: "dataStatus=ok requires at least one match",
+      path: "engineResult.matches",
+    });
   }
   const seenKeys = new Set<string>();
   matches.forEach((m, i) => {
     const p = `engineResult.matches[${i}]`;
-    if (!pct(m.currentFit)) issues.push({ code: "match_currentFit_bounds", message: "currentFit must be 0..100", path: `${p}.currentFit` });
-    if (!pct(m.potential)) issues.push({ code: "match_potential_bounds", message: "potential must be 0..100", path: `${p}.potential` });
-    if (!pct(m.evidenceScore)) issues.push({ code: "match_evidence_bounds", message: "evidenceScore must be 0..100", path: `${p}.evidenceScore` });
+    if (!pct(m.currentFit))
+      issues.push({
+        code: "match_currentFit_bounds",
+        message: "currentFit must be 0..100",
+        path: `${p}.currentFit`,
+      });
+    if (!pct(m.potential))
+      issues.push({
+        code: "match_potential_bounds",
+        message: "potential must be 0..100",
+        path: `${p}.potential`,
+      });
+    if (!pct(m.evidenceScore))
+      issues.push({
+        code: "match_evidence_bounds",
+        message: "evidenceScore must be 0..100",
+        path: `${p}.evidenceScore`,
+      });
     if (m.potential + 1e-6 < m.currentFit) {
       // Semantic invariant: potential is an upper envelope on current fit.
-      issues.push({ code: "potential_below_current_fit", message: "potential must be >= currentFit", path: `${p}` });
+      issues.push({
+        code: "potential_below_current_fit",
+        message: "potential must be >= currentFit",
+        path: `${p}`,
+      });
     }
-    if (!m.professionKey) issues.push({ code: "match_missing_key", message: "professionKey is required", path: `${p}.professionKey` });
+    if (!m.professionKey)
+      issues.push({
+        code: "match_missing_key",
+        message: "professionKey is required",
+        path: `${p}.professionKey`,
+      });
     if (m.professionKey) {
       if (seenKeys.has(m.professionKey)) {
-        issues.push({ code: "duplicate_profession_key", message: `duplicate professionKey ${m.professionKey}`, path: `${p}.professionKey` });
+        issues.push({
+          code: "duplicate_profession_key",
+          message: `duplicate professionKey ${m.professionKey}`,
+          path: `${p}.professionKey`,
+        });
       }
       seenKeys.add(m.professionKey);
     }
@@ -87,14 +143,18 @@ export function validateSavedReportV1(report: SavedCareerReportV1): ReportValida
       const ep = `${p}.enrichment.educationPathways[${j}]`;
       if (edu.durationMonths != null) {
         if (!Number.isInteger(edu.durationMonths) || edu.durationMonths < 0) {
-          issues.push({ code: "edu_duration_invalid", message: "durationMonths must be a non-negative integer", path: `${ep}.durationMonths` });
+          issues.push({
+            code: "edu_duration_invalid",
+            message: "durationMonths must be a non-negative integer",
+            path: `${ep}.durationMonths`,
+          });
         }
       }
       // A newly-computed report must not carry the legacy English-only "N months" string.
       if (edu.level && /^\d+\s+months$/i.test(edu.level) && edu.durationMonths == null) {
         issues.push({
           code: "edu_english_only_duration",
-          message: "Legacy English-only `\"N months\"` string; use durationMonths",
+          message: 'Legacy English-only `"N months"` string; use durationMonths',
           path: `${ep}.level`,
         });
       }
@@ -104,8 +164,18 @@ export function validateSavedReportV1(report: SavedCareerReportV1): ReportValida
   // -- Family ranking sanity --
   (report.engineResult.familyRanking ?? []).forEach((f, i) => {
     const p = `engineResult.familyRanking[${i}]`;
-    if (!pct(f.currentFit)) issues.push({ code: "family_currentFit_bounds", message: "currentFit must be 0..100", path: `${p}.currentFit` });
-    if (!pct(f.potential)) issues.push({ code: "family_potential_bounds", message: "potential must be 0..100", path: `${p}.potential` });
+    if (!pct(f.currentFit))
+      issues.push({
+        code: "family_currentFit_bounds",
+        message: "currentFit must be 0..100",
+        path: `${p}.currentFit`,
+      });
+    if (!pct(f.potential))
+      issues.push({
+        code: "family_potential_bounds",
+        message: "potential must be 0..100",
+        path: `${p}.potential`,
+      });
   });
 
   return { ok: issues.length === 0, issues };

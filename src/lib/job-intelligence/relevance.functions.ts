@@ -137,11 +137,16 @@ export const getMyCareerProfileForJobs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<CareerProfileForJobsResponse> => {
     const { supabase, userId } = context as { supabase: any; userId: string };
+    // Deliberately not filtered by assessment_id: the Assessment Catalog can
+    // hold multiple definitions a candidate may have completed (the legacy
+    // 'career-guidance' id, the new 'public-career-assessment' definition,
+    // etc.) -- job relevance should reflect whichever the user most recently
+    // completed, not be pinned to one product. RLS already scopes this to
+    // the caller's own rows.
     const { data, error } = await supabase
       .from("assessment_runs")
       .select("id, completed_at, result_summary")
       .eq("user_id", userId)
-      .eq("assessment_id", ASSESSMENT_ID)
       .eq("status", "completed")
       .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(10);

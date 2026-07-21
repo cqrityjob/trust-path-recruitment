@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "kg:check": "bun run scripts/kg-check.ts",
     "cie:check": "bun run scripts/cie-check.ts",
+    "question-library:check": "bun run scripts/question-library-check.ts",
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts",
     "employer-job-form:check": "bun run scripts/employer-job-form-check.ts",
     "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",

@@ -10,6 +10,7 @@
 import type { Bi } from "@/lib/career-center/types";
 import type { EngineResultV1 } from "./types";
 import type { SecurityCareerProfileSnapshotV1 } from "@/lib/security-career-profile/types";
+import type { AssessmentProfileId } from "@/lib/question-library/types";
 
 export const REPORT_VERSION = "car-v1" as const;
 
@@ -39,4 +40,11 @@ export interface SavedCareerReportV1 {
   engineResult: EngineResultV1; // verbatim, unmodified — the exact object the results page rendered
   compareEnrichment: CompareEnrichmentMap;
   profileSnapshot: SecurityCareerProfileSnapshotV1 | null;
+  // Optional, additive (Assessment Catalog / Question Library platform
+  // layer). Self-identifies which catalog definition/profile produced this
+  // report. Absent on every report saved before this field existed --
+  // readers must treat a missing assessmentDefinitionId as the legacy
+  // 'career-guidance' definition, not as an error.
+  assessmentDefinitionId?: string;
+  profileId?: AssessmentProfileId;
 }

@@ -1,7 +1,11 @@
-// Optional pre-assessment "Security Career Profile" step. Phase 1 only:
-// this component collects and (for signed-in users) persists profile data,
-// but nothing here is ever passed into the scoring flow — AssessmentApp
-// does not lift this state up into Questions/Results at all.
+// Pre-assessment "Current Situation" step (Public Career Assessment). This
+// component collects and (for signed-in users) persists the Security Career
+// Profile exactly as before, but its `currentStatus` choice is now lifted up
+// to AssessmentApp via `onContinue`, which resolves it to an
+// AssessmentProfileId (see src/lib/question-library/current-situation.ts)
+// that determines which 8 profile questions are assembled alongside the 8
+// Universal Core questions. This never affects scoring weights themselves —
+// only which questions are asked.
 
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
@@ -17,10 +21,16 @@ import {
 } from "@/lib/security-career-profile/profile.functions";
 import {
   EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
+  type CurrentStatus,
   type SecurityCareerProfileDraft,
 } from "@/lib/security-career-profile/types";
+import { CURRENT_SITUATION_OPTIONS } from "@/lib/question-library/current-situation";
 
-export function ProfileStep({ onContinue }: { onContinue: () => void }) {
+export function ProfileStep({
+  onContinue,
+}: {
+  onContinue: (currentStatus: CurrentStatus | null) => void;
+}) {
   const { t } = useT();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [draft, setDraft] = useState<SecurityCareerProfileDraft>(
@@ -111,7 +121,7 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
         setSaving(false);
       }
     }
-    onContinue();
+    onContinue(draft.currentStatus);
   };
 
   return (
@@ -128,13 +138,18 @@ export function ProfileStep({ onContinue }: { onContinue: () => void }) {
       <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("sca.scp.body")}</p>
 
       <div className="mt-10">
-        <SecurityCareerProfileForm value={draft} onChange={setDraft} />
+        <SecurityCareerProfileForm
+          value={draft}
+          onChange={setDraft}
+          statusOptions={CURRENT_SITUATION_OPTIONS}
+          statusBodyOverride={t("sca.cs.status.body")}
+        />
       </div>
 
       <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
         <button
           type="button"
-          onClick={onContinue}
+          onClick={() => onContinue(draft.currentStatus)}
           className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           {t("sca.scp.skip")}

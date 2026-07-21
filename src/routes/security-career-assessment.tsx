@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -17,13 +17,25 @@ import { AssessmentQuestion, type Answer } from "@/components/assessment/Assessm
 import { ProfileStep } from "@/components/assessment/ProfileStep";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { questions } from "@/lib/assessment-content";
+import type { Question } from "@/lib/assessment-content";
 import { computeCareerIntelligenceMatches } from "@/lib/career-intelligence-engine/compute.functions";
 import { EngineResultView } from "@/components/assessment/result/engine-view";
 import type { AnswerMap } from "@/lib/career-assessment/types";
 import { CareerProfileForJobsSaver } from "@/components/assessment/CareerProfileForJobsSaver";
+import { assembleQuestionSet } from "@/lib/question-library/query";
+import { profileForCurrentStatus } from "@/lib/question-library/current-situation";
+import type { AssessmentProfileId } from "@/lib/question-library/types";
+import type { CurrentStatus } from "@/lib/security-career-profile/types";
 
-type Phase = "landing" | "intro" | "profile" | "questions" | "results";
+// This route is the Public Career Assessment's live entry point. The
+// Assessment Catalog definition it saves against (see supabase/migrations/
+// ..._assessment_catalog_public_career_assessment.sql) -- distinct from the
+// preserved 'security-guard-foundation' definition, whose original static
+// 16-question run this route no longer renders directly, though 8 of its
+// questions are reused verbatim as the security_professional profile pool.
+const ASSESSMENT_DEFINITION_ID = "public-career-assessment";
+
+type Phase = "landing" | "intro" | "current-situation" | "questions" | "results";
 
 export const Route = createFileRoute("/security-career-assessment")({
   head: () => ({
@@ -41,10 +53,18 @@ export const Route = createFileRoute("/security-career-assessment")({
           "Discover which security careers may suit you. Free, about 5 minutes, no account required.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/security-career-assessment" },
+      {
+        property: "og:url",
+        content: "https://trust-path-recruitment.lovable.app/security-career-assessment",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/security-career-assessment" }],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://trust-path-recruitment.lovable.app/security-career-assessment",
+      },
+    ],
   }),
   component: AssessmentApp,
 });
@@ -53,6 +73,10 @@ function AssessmentApp() {
   const [phase, setPhase] = useState<Phase>("landing");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  // Current Situation: drives which 8 profile questions are assembled
+  // alongside the 8 Universal Core questions (src/lib/question-library/).
+  // Never fed into scoring weights directly — see ProfileStep.tsx.
+  const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null);
   // Idempotency key for one genuine assessment-completion attempt. Generated
   // once per mount, reused across every phase transition and any component
   // remount within the same attempt (React StrictMode double-invoke, a
@@ -61,19 +85,41 @@ function AssessmentApp() {
   // identical answers, must be treated as a new completion.
   const [completionId, setCompletionId] = useState<string>(() => crypto.randomUUID());
 
+  const profileId = useMemo(() => profileForCurrentStatus(currentStatus), [currentStatus]);
+  const questionSet = useMemo(
+    () => assembleQuestionSet(ASSESSMENT_DEFINITION_ID, profileId),
+    [profileId],
+  );
+
   const reset = () => {
     setAnswers({});
     setIndex(0);
+    setCurrentStatus(null);
     setPhase("landing");
     setCompletionId(crypto.randomUUID());
   };
 
   if (phase === "landing") return <Landing onStart={() => setPhase("intro")} />;
-  if (phase === "intro") return <Intro onContinue={() => setPhase("profile")} />;
-  if (phase === "profile") return <ProfileStep onContinue={() => setPhase("questions")} />;
+  if (phase === "intro")
+    return (
+      <Intro
+        questionCount={questionSet.questions.length}
+        onContinue={() => setPhase("current-situation")}
+      />
+    );
+  if (phase === "current-situation")
+    return (
+      <ProfileStep
+        onContinue={(status) => {
+          setCurrentStatus(status);
+          setPhase("questions");
+        }}
+      />
+    );
   if (phase === "questions")
     return (
       <Questions
+        questions={questionSet.questions}
         index={index}
         setIndex={setIndex}
         answers={answers}
@@ -82,7 +128,9 @@ function AssessmentApp() {
         onBack={() => setPhase("intro")}
       />
     );
-  return <Results answers={answers} onRetake={reset} completionId={completionId} />;
+  return (
+    <Results answers={answers} profileId={profileId} onRetake={reset} completionId={completionId} />
+  );
 }
 
 /* -------------------------------- Landing -------------------------------- */
@@ -168,11 +216,11 @@ function Landing({ onStart }: { onStart: () => void }) {
 
 /* --------------------------------- Intro --------------------------------- */
 
-function Intro({ onContinue }: { onContinue: () => void }) {
+function Intro({ questionCount, onContinue }: { questionCount: number; onContinue: () => void }) {
   const { t } = useT();
   const stats = [
     { label: t("sca.intro.stat.time"), value: t("sca.intro.stat.time.value") },
-    { label: t("sca.intro.stat.questions"), value: String(questions.length) },
+    { label: t("sca.intro.stat.questions"), value: String(questionCount) },
     { label: t("sca.intro.stat.privacy"), value: t("sca.intro.stat.privacy.value") },
   ];
   return (
@@ -207,7 +255,7 @@ function Intro({ onContinue }: { onContinue: () => void }) {
       </div>
 
       <div className="mt-8">
-        <AssessmentProgress current={0} total={questions.length} />
+        <AssessmentProgress current={0} total={questionCount} />
       </div>
 
       <div className="mt-10 flex items-start gap-3 rounded-md border border-border bg-muted/40 p-5 text-sm text-muted-foreground">
@@ -228,6 +276,7 @@ function Intro({ onContinue }: { onContinue: () => void }) {
 /* ------------------------------- Questions ------------------------------- */
 
 function Questions({
+  questions,
   index,
   setIndex,
   answers,
@@ -235,6 +284,7 @@ function Questions({
   onFinish,
   onBack,
 }: {
+  questions: Question[];
   index: number;
   setIndex: (i: number) => void;
   answers: Record<string, Answer>;
@@ -246,8 +296,7 @@ function Questions({
   const q = questions[index];
   const value = answers[q.id];
   const isLast = index === questions.length - 1;
-  const hasAnswer =
-    value !== undefined && !(Array.isArray(value) && value.length === 0);
+  const hasAnswer = value !== undefined && !(Array.isArray(value) && value.length === 0);
 
   const setValue = (v: Answer) => setAnswers({ ...answers, [q.id]: v });
 
@@ -302,10 +351,12 @@ function Questions({
 
 function Results({
   answers,
+  profileId,
   onRetake,
   completionId,
 }: {
   answers: Record<string, Answer>;
+  profileId: AssessmentProfileId;
   onRetake: () => void;
   completionId: string;
 }) {
@@ -315,8 +366,16 @@ function Results({
   const answerMap = answers as AnswerMap;
 
   const query = useQuery({
-    queryKey: ["cie-v1", answerMap],
-    queryFn: () => compute({ data: { answers: answerMap, topN: 5 } }),
+    queryKey: ["cie-v1", answerMap, ASSESSMENT_DEFINITION_ID, profileId],
+    queryFn: () =>
+      compute({
+        data: {
+          answers: answerMap,
+          topN: 5,
+          assessmentDefinitionId: ASSESSMENT_DEFINITION_ID,
+          profileId,
+        },
+      }),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -379,7 +438,13 @@ function Results({
 
   return (
     <AssessmentLayout>
-      <CareerProfileForJobsSaver answers={answerMap} lang={lang} completionId={completionId} />
+      <CareerProfileForJobsSaver
+        answers={answerMap}
+        lang={lang}
+        completionId={completionId}
+        assessmentDefinitionId={ASSESSMENT_DEFINITION_ID}
+        profileId={profileId}
+      />
       <EngineResultView result={result} lang={lang} onRetake={onRetake} />
     </AssessmentLayout>
   );
