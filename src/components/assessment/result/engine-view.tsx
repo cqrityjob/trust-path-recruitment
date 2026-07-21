@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import type { Lang } from "@/i18n/dictionaries";
 import { getFamily, getProfession } from "@/lib/career-center";
-import { dimensionById } from "@/lib/career-assessment";
+import { dimensionById, type DimensionId } from "@/lib/career-assessment";
 import type {
   CareerProfile,
   EngineResultV1,
@@ -340,7 +340,9 @@ function Hero({
   const potLbl = potentialLabel(potBand);
   const insufficientFit = primary.confidence === "limited" || primary.currentFit <= 0;
   const insufficientPot = primary.confidence === "limited" || primary.potential <= 0;
-  const primaryHref = primary.legacySlug ? `/career-center/${primary.legacySlug}` : "/career-center";
+  const primaryHref = primary.legacySlug
+    ? `/career-center/${primary.legacySlug}`
+    : "/career-center";
   const [regOpen, setRegOpen] = useState(false);
   const [evOpen, setEvOpen] = useState(false);
   // Phase 2 final pass, section 3: strongest profession's family may differ
@@ -348,8 +350,7 @@ function Hero({
   // independent; explain the distinction only when they actually differ.
   const topFamilyKey = result.familyRanking[0]?.familyKey;
   const professionFamilyKey = primary.family.key;
-  const familiesDiffer =
-    !!topFamilyKey && topFamilyKey !== professionFamilyKey;
+  const familiesDiffer = !!topFamilyKey && topFamilyKey !== professionFamilyKey;
   const professionFamilyName = familyLabel(professionFamilyKey, lang);
   const topFamilyName = topFamilyKey ? familyLabel(topFamilyKey, lang) : "";
   const scrollTo = (id: string) => {
@@ -419,9 +420,7 @@ function Hero({
         className="mt-6 text-4xl font-semibold tracking-tight text-foreground md:text-5xl"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        {lang === "sv"
-          ? "Din möjliga väg inom säkerhet"
-          : "Your possible path in security"}
+        {lang === "sv" ? "Din möjliga väg inom säkerhet" : "Your possible path in security"}
       </h1>
       <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
         {lang === "sv"
@@ -544,6 +543,20 @@ function Hero({
   );
 }
 
+// Dimensions whose only evidence source is a preference-framed item (Q15
+// service-orientation fit, Q16 environment/role fit). Per the Security
+// Assessment Quality Review's result-model requirement, these must never be
+// presented as demonstrated competence/evidence -- they inform career/role
+// fit (Career Profile motivations, environment fit) elsewhere on this page,
+// not the "observed strengths" / "areas that stood out" sections below.
+const PREFERENCE_DIMENSIONS = new Set<DimensionId>([
+  "service_orientation",
+  "leadership_orientation",
+  "strategic_orientation",
+  "technical_orientation",
+  "investigation_orientation",
+]);
+
 // -------------------- Why this result --------------------
 
 function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
@@ -556,12 +569,12 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
     .filter((d) => {
       if (seen.has(d)) return false;
       seen.add(d);
-      return dimensionById[d];
+      return dimensionById[d] && !PREFERENCE_DIMENSIONS.has(d);
     })
     .slice(0, 3);
 
   const weakEvidence = match.developmentAreas
-    .filter((d) => !seen.has(d) && dimensionById[d])
+    .filter((d) => !seen.has(d) && dimensionById[d] && !PREFERENCE_DIMENSIONS.has(d))
     .slice(0, 2);
 
   const kinds: StructuredExplanation["kind"][] = [
@@ -575,8 +588,22 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
   const rewrite = (text: Bi): Bi => {
     const soften = (s: string) =>
       s
-        .replace(/baseline signal[s]?[^.]*\./i, "The assessment did not find sufficiently clear information across all areas that are relevant to this profession.")
-        .replace(/basvärde[t]?[^.]*inte tydligt[^.]*\./i, "Testet gav inte tillräckligt tydlig information inom alla områden som är relevanta för yrket.")
+        // Polarity-aware: matched separately from the "not clearly present"
+        // case below so a passed gate never gets replaced with the failed-gate
+        // wording (and so the leading "The" already in the source sentence
+        // isn't duplicated by the replacement).
+        .replace(
+          /(?:the\s+)?baseline signal[s]?[^.]*not clearly present[^.]*\./i,
+          "The assessment did not find sufficiently clear information across all areas that are relevant to this profession.",
+        )
+        .replace(
+          /(?:the\s+)?baseline signal[s]?[^.]*are present[^.]*\./i,
+          "The assessment found sufficiently clear information across the areas that are relevant to this profession.",
+        )
+        .replace(
+          /basvärde[t]?[^.]*inte tydligt[^.]*\./i,
+          "Testet gav inte tillräckligt tydlig information inom alla områden som är relevanta för yrket.",
+        )
         .replace(/\barchetype[s]?\b/gi, lang === "sv" ? "profil" : "profile")
         .replace(/\barketyp(?:er)?\b/gi, "profil")
         .replace(/supporting profile/gi, lang === "sv" ? "stödjande profil" : "supporting signal")
@@ -611,14 +638,19 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
       {strongest.length > 0 && (
         <div className="mt-6">
           <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {lang === "sv" ? "Områden som framträdde i dina svar" : "Areas that stood out in your answers"}
+            {lang === "sv"
+              ? "Områden som framträdde i dina svar"
+              : "Areas that stood out in your answers"}
           </h3>
           <ul className="mt-3 space-y-3">
             {strongest.map((d) => {
               const dim = dimensionById[d];
               return (
                 <li key={d} className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
+                  <CheckCircle2
+                    className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                    strokeWidth={1.75}
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">{pick(dim.name, lang)}</p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
@@ -640,7 +672,10 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
           <ul className="mt-3 space-y-2 text-sm text-foreground">
             {contextual.map((r, i) => (
               <li key={`${r.kind}-${i}`} className="flex items-start gap-2">
-                <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                <Info
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                  strokeWidth={1.75}
+                />
                 <span className="leading-relaxed">{pick(r.text, lang)}</span>
               </li>
             ))}
@@ -676,13 +711,7 @@ function WhyThisResult({ match, lang }: { match: Match; lang: Lang }) {
 
 // -------------------- Career Profile --------------------
 
-function CareerProfileBlock({
-  profile,
-  lang,
-}: {
-  profile: CareerProfile;
-  lang: Lang;
-}) {
+function CareerProfileBlock({ profile, lang }: { profile: CareerProfile; lang: Lang }) {
   const topArchs = profile.archetypes.slice(0, 3);
   const topMots = profile.motivationSignals.slice(0, 3);
   return (
@@ -724,39 +753,69 @@ function CareerProfileBlock({
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <ScoreWithHelp
           label={lang === "sv" ? "Självständighet" : "Independence"}
-          help={lang === "sv" ? "Hur självständigt du föredrar att arbeta enligt dina svar." : "How independently you prefer to work based on your answers."}
+          help={
+            lang === "sv"
+              ? "Hur självständigt du föredrar att arbeta enligt dina svar."
+              : "How independently you prefer to work based on your answers."
+          }
           value={profile.workingStyle.independence}
           tone="muted"
           insufficient={profile.workingStyle.independence <= 0}
           insufficientHelp={pick(insufficientEvidenceHelp, lang)}
-          interpretation={profile.workingStyle.independence <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
+          interpretation={
+            profile.workingStyle.independence <= 0
+              ? pick(insufficientEvidenceLabel, lang)
+              : undefined
+          }
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Samarbete" : "Teamwork"}
-          help={lang === "sv" ? "Hur mycket du föredrar att arbeta i team enligt dina svar." : "How much you prefer working in teams based on your answers."}
+          help={
+            lang === "sv"
+              ? "Hur mycket du föredrar att arbeta i team enligt dina svar."
+              : "How much you prefer working in teams based on your answers."
+          }
           value={profile.workingStyle.teamwork}
           tone="muted"
           insufficient={profile.workingStyle.teamwork <= 0}
           insufficientHelp={pick(insufficientEvidenceHelp, lang)}
-          interpretation={profile.workingStyle.teamwork <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
+          interpretation={
+            profile.workingStyle.teamwork <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined
+          }
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Struktur" : "Structure"}
-          help={lang === "sv" ? "Hur mycket du föredrar tydliga rutiner och struktur." : "How much you prefer clear routines and structure."}
+          help={
+            lang === "sv"
+              ? "Hur mycket du föredrar tydliga rutiner och struktur."
+              : "How much you prefer clear routines and structure."
+          }
           value={profile.workingStyle.structurePreference}
           tone="muted"
           insufficient={profile.workingStyle.structurePreference <= 0}
           insufficientHelp={pick(insufficientEvidenceHelp, lang)}
-          interpretation={profile.workingStyle.structurePreference <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
+          interpretation={
+            profile.workingStyle.structurePreference <= 0
+              ? pick(insufficientEvidenceLabel, lang)
+              : undefined
+          }
         />
         <ScoreWithHelp
           label={lang === "sv" ? "Risktolerans" : "Risk tolerance"}
-          help={lang === "sv" ? "Hur bekväm du är med osäkerhet och pressade situationer." : "How comfortable you are with uncertainty and high-pressure situations."}
+          help={
+            lang === "sv"
+              ? "Hur bekväm du är med osäkerhet och pressade situationer."
+              : "How comfortable you are with uncertainty and high-pressure situations."
+          }
           value={profile.workingStyle.riskTolerance}
           tone="muted"
           insufficient={profile.workingStyle.riskTolerance <= 0}
           insufficientHelp={pick(insufficientEvidenceHelp, lang)}
-          interpretation={profile.workingStyle.riskTolerance <= 0 ? pick(insufficientEvidenceLabel, lang) : undefined}
+          interpretation={
+            profile.workingStyle.riskTolerance <= 0
+              ? pick(insufficientEvidenceLabel, lang)
+              : undefined
+          }
         />
       </div>
     </SectionCard>
@@ -845,7 +904,9 @@ function CareerFamilyBlock({
           to="/career-center"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-foreground"
         >
-          {lang === "sv" ? "Utforska familjen i Career Center" : "Explore the family in the Career Center"}
+          {lang === "sv"
+            ? "Utforska familjen i Career Center"
+            : "Explore the family in the Career Center"}
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -874,7 +935,9 @@ function CompareCard({
   const saved = compareEnrichment?.[match.legacySlug];
   const cc = compareEnrichment ? undefined : getProfession(match.legacySlug);
   const level = levelLabel(saved ? saved.level : cc?.level);
-  const envs = saved ? (saved.workEnvironments?.slice(0, 2) ?? []) : (cc?.workEnvironments?.slice(0, 2) ?? []);
+  const envs = saved
+    ? (saved.workEnvironments?.slice(0, 2) ?? [])
+    : (cc?.workEnvironments?.slice(0, 2) ?? []);
   const nextRoleTitle = saved
     ? saved.nextRoleTitle
     : cc?.nextRoles?.[0]
@@ -1005,7 +1068,9 @@ function ComparisonBlock({
       id="compare"
       eyebrow={lang === "sv" ? "Jämför yrken" : "Compare professions"}
       icon={<Target className="h-3.5 w-3.5" strokeWidth={2} />}
-      title={lang === "sv" ? "Dina starkaste yrkesmatchningar" : "Your strongest profession matches"}
+      title={
+        lang === "sv" ? "Dina starkaste yrkesmatchningar" : "Your strongest profession matches"
+      }
     >
       <p className="text-sm leading-relaxed text-muted-foreground">
         {lang === "sv"
@@ -1030,10 +1095,12 @@ function ComparisonBlock({
 // -------------------- Strengths & development --------------------
 
 function StrengthsBlock({ match, lang }: { match: Match; lang: Lang }) {
-  const strengths = match.strongestDimensions.filter((d) => dimensionById[d]).slice(0, 4);
+  const strengths = match.strongestDimensions
+    .filter((d) => dimensionById[d] && !PREFERENCE_DIMENSIONS.has(d))
+    .slice(0, 4);
   const seen = new Set(strengths);
   const development = match.developmentAreas
-    .filter((d) => dimensionById[d] && !seen.has(d))
+    .filter((d) => dimensionById[d] && !PREFERENCE_DIMENSIONS.has(d) && !seen.has(d))
     .slice(0, 4);
 
   return (
@@ -1059,9 +1126,14 @@ function StrengthsBlock({ match, lang }: { match: Match; lang: Lang }) {
                 return (
                   <li key={d} className="rounded-md border border-border/60 bg-background p-3">
                     <div className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
+                      <CheckCircle2
+                        className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                        strokeWidth={1.75}
+                      />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{pick(dim.name, lang)}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {pick(dim.name, lang)}
+                        </p>
                         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                           {pick(dim.description, lang)}
                         </p>
@@ -1091,9 +1163,14 @@ function StrengthsBlock({ match, lang }: { match: Match; lang: Lang }) {
                 return (
                   <li key={d} className="rounded-md border border-border/60 bg-background p-3">
                     <div className="flex items-start gap-2">
-                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <Info
+                        className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                        strokeWidth={1.75}
+                      />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{pick(dim.name, lang)}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {pick(dim.name, lang)}
+                        </p>
                         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                           {lang === "sv"
                             ? "Ytterligare erfarenhet kan stärka din profil inom detta område."
@@ -1127,7 +1204,9 @@ function GuidingProfileBlock({ result, lang }: { result: EngineResultV1; lang: L
 
   const bandBlock = (title: string, tone: "accent" | "muted", items: typeof arch) => (
     <div>
-      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{title}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {title}
+      </h3>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
           {lang === "sv" ? "Inget att visa i denna kategori." : "Nothing to show in this band."}
@@ -1157,7 +1236,11 @@ function GuidingProfileBlock({ result, lang }: { result: EngineResultV1; lang: L
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
         {bandBlock(lang === "sv" ? "Framträdande" : "Prominent", "accent", prominent)}
         {bandBlock(lang === "sv" ? "Måttliga" : "Moderate", "muted", moderate)}
-        {bandBlock(lang === "sv" ? "Områden att utforska vidare" : "Areas to explore further", "muted", develop)}
+        {bandBlock(
+          lang === "sv" ? "Områden att utforska vidare" : "Areas to explore further",
+          "muted",
+          develop,
+        )}
       </div>
       {result.careerProfile.evidenceCoverage < 0.5 && (
         <div className="mt-6 flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 p-4 text-sm text-muted-foreground">
@@ -1199,14 +1282,21 @@ function FormalRequirementsBlock({ match, lang }: { match: Match; lang: Lang }) 
               className="flex items-start gap-2 rounded-md border border-border/60 bg-background p-3 text-sm text-foreground"
             >
               <ShieldAlert
-                className={cn("mt-0.5 h-4 w-4 shrink-0", r.isLegal ? "text-amber-600" : "text-muted-foreground")}
+                className={cn(
+                  "mt-0.5 h-4 w-4 shrink-0",
+                  r.isLegal ? "text-amber-600" : "text-muted-foreground",
+                )}
                 strokeWidth={1.75}
               />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{pick(r.label, lang)}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {r.isLegal && <TokenBadge tone="warn">{lang === "sv" ? "Lagkrav" : "Legal"}</TokenBadge>}
-                  {r.isEmployer && <TokenBadge>{lang === "sv" ? "Arbetsgivarkrav" : "Employer"}</TokenBadge>}
+                  {r.isLegal && (
+                    <TokenBadge tone="warn">{lang === "sv" ? "Lagkrav" : "Legal"}</TokenBadge>
+                  )}
+                  {r.isEmployer && (
+                    <TokenBadge>{lang === "sv" ? "Arbetsgivarkrav" : "Employer"}</TokenBadge>
+                  )}
                   {r.jurisdiction && <TokenBadge>{r.jurisdiction}</TokenBadge>}
                 </div>
               </div>
@@ -1363,7 +1453,9 @@ function RelatedAndTransitionsBlock({ match, lang }: { match: Match; lang: Lang 
             </ul>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              {lang === "sv" ? "Data för närliggande yrken byggs ut." : "Data for related professions is being expanded."}
+              {lang === "sv"
+                ? "Data för närliggande yrken byggs ut."
+                : "Data for related professions is being expanded."}
             </p>
           )}
         </div>
@@ -1379,24 +1471,35 @@ function RelatedAndTransitionsBlock({ match, lang }: { match: Match; lang: Lang 
           {hasTransitions ? (
             <ul className="mt-3 space-y-2">
               {e.transitions.slice(0, 4).map((t, i) => (
-                <li key={`${t.otherSlug}-${i}`} className="rounded-md border border-border/60 bg-background p-3 text-sm text-foreground">
+                <li
+                  key={`${t.otherSlug}-${i}`}
+                  className="rounded-md border border-border/60 bg-background p-3 text-sm text-foreground"
+                >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <TokenBadge tone={t.direction === "to" ? "accent" : "default"}>
                       {t.direction === "to"
-                        ? lang === "sv" ? "Framåt" : "Onward"
-                        : lang === "sv" ? "Från" : "From"}
+                        ? lang === "sv"
+                          ? "Framåt"
+                          : "Onward"
+                        : lang === "sv"
+                          ? "Från"
+                          : "From"}
                     </TokenBadge>
                     {t.effort && <TokenBadge>{t.effort}</TokenBadge>}
                   </div>
                   {t.notes && (
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{pick(t.notes, lang)}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {pick(t.notes, lang)}
+                    </p>
                   )}
                 </li>
               ))}
             </ul>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              {lang === "sv" ? "Data för karriärövergångar byggs ut." : "Data for career transitions is being expanded."}
+              {lang === "sv"
+                ? "Data för karriärövergångar byggs ut."
+                : "Data for career transitions is being expanded."}
             </p>
           )}
         </div>
@@ -1422,12 +1525,16 @@ function ActionPlanBlock({
 
   const horizon = (title: string, items: typeof plan.now) => (
     <div>
-      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{title}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {title}
+      </h3>
       <ul className="mt-3 space-y-3">
         {items.map((it, i) => (
           <li key={i} className="rounded-md border border-border/60 bg-background p-4">
             <p className="text-sm font-medium text-foreground">{pick(it.title, lang)}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{pick(it.body, lang)}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {pick(it.body, lang)}
+            </p>
             {it.href && (
               <a
                 href={it.href}
@@ -1451,7 +1558,10 @@ function ActionPlanBlock({
       title={lang === "sv" ? "Din praktiska plan" : "Your practical plan"}
       actions={
         <div className="min-w-[180px]">
-          <label htmlFor="cq-bg" className="block text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          <label
+            htmlFor="cq-bg"
+            className="block text-[10px] font-medium uppercase tracking-widest text-muted-foreground"
+          >
             {lang === "sv" ? "Din bakgrund" : "Your background"}
           </label>
           <select
@@ -1507,7 +1617,10 @@ function NextStepsBlock({ match, lang }: { match: Match; lang: Lang }) {
     },
     {
       title: { sv: "Utforska karriärfamiljen", en: "Explore the career family" },
-      body: { sv: "Se breda alternativ inom samma fält.", en: "See broad alternatives within the same field." },
+      body: {
+        sv: "Se breda alternativ inom samma fält.",
+        en: "See broad alternatives within the same field.",
+      },
       href: "/career-center",
       icon: <Compass className="h-5 w-5" strokeWidth={1.75} />,
     },
@@ -1551,8 +1664,12 @@ function NextStepsBlock({ match, lang }: { match: Match; lang: Lang }) {
               {c.note && <TokenBadge tone="warn">{pick(c.note, lang)}</TokenBadge>}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold tracking-tight text-foreground">{pick(c.title, lang)}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{pick(c.body, lang)}</p>
+              <p className="text-sm font-semibold tracking-tight text-foreground">
+                {pick(c.title, lang)}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {pick(c.body, lang)}
+              </p>
             </div>
           </a>
         ))}
@@ -1684,7 +1801,13 @@ export function EngineResultView({
 
   return (
     <div className="space-y-8 md:space-y-10">
-      <Hero result={result} primary={primary} profile={result.careerProfile} lang={lang} onRetake={onRetake} />
+      <Hero
+        result={result}
+        primary={primary}
+        profile={result.careerProfile}
+        lang={lang}
+        onRetake={onRetake}
+      />
       <WhyThisResult match={primary} lang={lang} />
       <CareerProfileBlock profile={result.careerProfile} lang={lang} />
       <CareerFamilyBlock ranking={result.familyRanking} matches={result.matches} lang={lang} />
@@ -1694,7 +1817,12 @@ export function EngineResultView({
       <FormalRequirementsBlock match={primary} lang={lang} />
       <EducationCertsBlock match={primary} lang={lang} />
       <RelatedAndTransitionsBlock match={primary} lang={lang} />
-      <ActionPlanBlock match={primary} background={background} onBackgroundChange={setBackground} lang={lang} />
+      <ActionPlanBlock
+        match={primary}
+        background={background}
+        onBackgroundChange={setBackground}
+        lang={lang}
+      />
       <NextStepsBlock match={primary} lang={lang} />
       {mode === "live" && <SavePromptBlock lang={lang} />}
       <SharePreviewBlock match={primary} lang={lang} />
