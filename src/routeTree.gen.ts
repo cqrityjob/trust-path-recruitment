@@ -61,6 +61,7 @@ import { Route as AuthenticatedEmployerEmployerSlugSettingsRouteImport } from '.
 import { Route as AuthenticatedEmployerEmployerSlugApplicationsRouteImport } from './routes/_authenticated.employer.$employerSlug.applications'
 import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenticated.admin.jobs.$id'
 import { Route as AuthenticatedAdminEmployersEmployerIdRouteImport } from './routes/_authenticated.admin.employers.$employerId'
+import { Route as AuthenticatedAdminCandidateReportsRunIdRouteImport } from './routes/_authenticated.admin.candidate-reports.$runId'
 import { Route as AuthenticatedEmployerEmployerSlugJobsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsNewRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.new'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
@@ -345,6 +346,12 @@ const AuthenticatedAdminEmployersEmployerIdRoute =
     path: '/$employerId',
     getParentRoute: () => AuthenticatedAdminEmployersRoute,
   } as any)
+const AuthenticatedAdminCandidateReportsRunIdRoute =
+  AuthenticatedAdminCandidateReportsRunIdRouteImport.update({
+    id: '/candidate-reports/$runId',
+    path: '/candidate-reports/$runId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedEmployerEmployerSlugJobsIndexRoute =
   AuthenticatedEmployerEmployerSlugJobsIndexRouteImport.update({
     id: '/jobs/',
@@ -409,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/employer/': typeof AuthenticatedEmployerIndexRoute
   '/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
@@ -458,6 +466,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/employer': typeof AuthenticatedEmployerIndexRoute
   '/my-career': typeof AuthenticatedMyCareerIndexRoute
+  '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
@@ -516,6 +525,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/employer/': typeof AuthenticatedEmployerIndexRoute
   '/_authenticated/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/_authenticated/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/_authenticated/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
@@ -574,6 +584,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/employer/'
     | '/my-career/'
+    | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
     | '/admin/jobs/$id'
     | '/employer/$employerSlug/applications'
@@ -623,6 +634,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/employer'
     | '/my-career'
+    | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
     | '/admin/jobs/$id'
     | '/employer/$employerSlug/applications'
@@ -680,6 +692,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/employer/'
     | '/_authenticated/my-career/'
+    | '/_authenticated/admin/candidate-reports/$runId'
     | '/_authenticated/admin/employers/$employerId'
     | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/employer/$employerSlug/applications'
@@ -1084,6 +1097,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEmployersEmployerIdRouteImport
       parentRoute: typeof AuthenticatedAdminEmployersRoute
     }
+    '/_authenticated/admin/candidate-reports/$runId': {
+      id: '/_authenticated/admin/candidate-reports/$runId'
+      path: '/candidate-reports/$runId'
+      fullPath: '/admin/candidate-reports/$runId'
+      preLoaderRoute: typeof AuthenticatedAdminCandidateReportsRunIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/employer/$employerSlug/jobs/': {
       id: '/_authenticated/employer/$employerSlug/jobs/'
       path: '/jobs'
@@ -1144,6 +1164,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminFeedbackRoute: typeof AuthenticatedAdminFeedbackRoute
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminCandidateReportsRunIdRoute: typeof AuthenticatedAdminCandidateReportsRunIdRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -1152,6 +1173,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminFeedbackRoute: AuthenticatedAdminFeedbackRoute,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRouteWithChildren,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminCandidateReportsRunIdRoute:
+    AuthenticatedAdminCandidateReportsRunIdRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
