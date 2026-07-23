@@ -22,7 +22,7 @@
 // link (H3.2 built that route + its RLS foundation); "Create job"/
 // "Manage jobs" were already real.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, type LinkComponentProps } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, type ReactNode } from "react";
@@ -197,7 +197,8 @@ function EmployerDashboard({
             </p>
           </div>
           <Link
-            to={`/employer/${employerSlug}/jobs/new`}
+            to="/employer/$employerSlug/jobs/new"
+            params={{ employerSlug }}
             className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
           >
             <PlusCircle className="h-4 w-4" aria-hidden="true" />
@@ -226,7 +227,7 @@ function EmployerDashboard({
             label={t("employer.dashboard.card.applications")}
             value={data.applications}
             loading={stats.isLoading}
-            href={`/employer/${employerSlug}/applications`}
+            linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
             emphasis
           />
           <ComingSoonStat
@@ -254,7 +255,7 @@ function EmployerDashboard({
               t("employer.dashboard.empty.step3"),
             ]}
             ctaLabel={t("employer.dashboard.empty.cta")}
-            ctaHref={`/employer/${employerSlug}/jobs/new`}
+            ctaLinkProps={{ to: "/employer/$employerSlug/jobs/new", params: { employerSlug } }}
           />
         )}
 
@@ -272,21 +273,21 @@ function EmployerDashboard({
               icon={<PlusCircle className="h-5 w-5" />}
               title={t("employer.dashboard.action.createJob")}
               description={t("employer.dashboard.action.createJob.desc")}
-              href={`/employer/${employerSlug}/jobs/new`}
+              linkProps={{ to: "/employer/$employerSlug/jobs/new", params: { employerSlug } }}
               openLabel={t("employer.dashboard.action.open")}
             />
             <ActionCard
               icon={<ClipboardList className="h-5 w-5" />}
               title={t("employer.dashboard.action.manageJobs")}
               description={t("employer.dashboard.action.manageJobs.desc")}
-              href={`/employer/${employerSlug}/jobs`}
+              linkProps={{ to: "/employer/$employerSlug/jobs", params: { employerSlug } }}
               openLabel={t("employer.dashboard.action.open")}
             />
             <ActionCard
               icon={<Users className="h-5 w-5" />}
               title={t("employer.dashboard.action.applications")}
               description={t("employer.dashboard.action.applications.desc")}
-              href={`/employer/${employerSlug}/applications`}
+              linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
               openLabel={t("employer.dashboard.action.open")}
             />
           </ActionGroup>
@@ -300,7 +301,7 @@ function EmployerDashboard({
               icon={<Settings2 className="h-5 w-5" />}
               title={t("employer.dashboard.action.orgSettings")}
               description={t("employer.dashboard.action.orgSettings.desc")}
-              href={`/employer/${employerSlug}/settings`}
+              linkProps={{ to: "/employer/$employerSlug/settings", params: { employerSlug } }}
               openLabel={t("employer.dashboard.action.open")}
             />
           </ActionGroup>
@@ -328,21 +329,21 @@ function StatCard({
   label,
   value,
   loading,
-  href,
+  linkProps,
   emphasis,
 }: {
   icon: ReactNode;
   label: string;
   value: number;
   loading: boolean;
-  href?: string;
+  linkProps?: LinkComponentProps;
   emphasis?: boolean;
 }) {
   const content = (
     <div
       className={
         "group h-full rounded-xl border border-border bg-background p-4 shadow-sm transition-all sm:p-5 " +
-        (href
+        (linkProps
           ? "hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md focus-within:border-accent"
           : "")
       }
@@ -359,7 +360,7 @@ function StatCard({
         >
           {icon}
         </span>
-        {href && (
+        {linkProps && (
           <ArrowRight
             className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground"
             aria-hidden="true"
@@ -377,10 +378,10 @@ function StatCard({
       </p>
     </div>
   );
-  if (href) {
+  if (linkProps) {
     return (
       <Link
-        to={href}
+        {...linkProps}
         aria-label={`${label}: ${loading ? "—" : value}`}
         className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
       >
@@ -457,18 +458,18 @@ function ActionCard({
   icon,
   title,
   description,
-  href,
+  linkProps,
   openLabel,
 }: {
   icon: ReactNode;
   title: string;
   description: string;
-  href: string;
+  linkProps: LinkComponentProps;
   openLabel: string;
 }) {
   return (
     <Link
-      to={href}
+      {...linkProps}
       aria-label={title}
       className="group flex h-full flex-col rounded-xl border border-border bg-background p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
     >
@@ -547,13 +548,13 @@ function EmptyStateCard({
   body,
   steps,
   ctaLabel,
-  ctaHref,
+  ctaLinkProps,
 }: {
   title: string;
   body: string;
   steps: string[];
   ctaLabel: string;
-  ctaHref: string;
+  ctaLinkProps: LinkComponentProps;
 }) {
   return (
     <div className="mt-8 rounded-xl border border-border bg-gradient-to-br from-accent/5 via-background to-background p-6 shadow-sm">
@@ -576,7 +577,7 @@ function EmptyStateCard({
           </ol>
         </div>
         <Link
-          to={ctaHref}
+          {...ctaLinkProps}
           className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           <PlusCircle className="h-4 w-4" aria-hidden="true" />
