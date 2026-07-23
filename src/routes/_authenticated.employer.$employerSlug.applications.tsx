@@ -13,19 +13,17 @@
 // allow-list permits from the current status are ever offered as buttons —
 // an employer can never be shown (or send) 'withdrawn'.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
-import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
-  EmployerWorkspaceChrome,
+  EmployerAppShell,
   type EmployerRole,
   type EmployerStatus,
-} from "@/components/employer/EmployerWorkspaceChrome";
+} from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -57,14 +55,12 @@ function EmployerApplicationsPage() {
 
   if (!employerPortalEnabled()) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.comingSoon.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.comingSoon.body")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <h1 className="text-2xl font-semibold text-foreground">
+          {t("employer.comingSoon.heading")}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t("employer.comingSoon.body")}</p>
+      </div>
     );
   }
 
@@ -72,20 +68,14 @@ function EmployerApplicationsPage() {
 
   if (workspacesQuery.isLoading) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+      </div>
     );
   }
 
   if (workspacesQuery.isError || !workspace) {
-    return (
-      <SiteLayout>
-        <EmployerAccessDenied workspaces={workspacesQuery.data} />
-      </SiteLayout>
-    );
+    return <EmployerAccessDenied workspaces={workspacesQuery.data} />;
   }
 
   return (
@@ -178,87 +168,85 @@ function ApplicationsList({
   const rows: EmployerApplicationRow[] = query.data ?? [];
 
   return (
-    <SiteLayout>
-      <EmployerWorkspaceChrome
-        employerSlug={employerSlug}
-        employerName={employerName}
-        role={role}
-        status={status}
-        activeSection="applications"
-        hasMultipleWorkspaces={hasMultipleWorkspaces}
-      >
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {t("employer.applications.heading")}
-        </h1>
+    <EmployerAppShell
+      employerSlug={employerSlug}
+      employerName={employerName}
+      role={role}
+      status={status}
+      activeSection="applications"
+      hasMultipleWorkspaces={hasMultipleWorkspaces}
+    >
+      <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+        {t("employer.applications.heading")}
+      </h1>
 
-        {actionError && (
-          <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-            {actionError}
-          </div>
-        )}
-
-        <div className="mt-6">
-          {query.isLoading ? (
-            <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-          ) : query.isError ? (
-            <p className="text-sm text-destructive">{t("employer.applications.error.load")}</p>
-          ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-              {t("employer.applications.empty")}
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {rows.map((r) => {
-                const jobTitle =
-                  (lang === "sv" ? r.jobTitleSv : r.jobTitleEn) ||
-                  r.jobTitleSv ||
-                  r.jobTitleEn ||
-                  "—";
-                return (
-                  <li key={r.id} className="rounded-lg border border-border bg-background p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{jobTitle}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {r.applicantDisplayName ?? t("employer.applications.anonymousCandidate")}
-                          {" · "}
-                          {formatDate(r.createdAt, lang)}
-                        </p>
-                      </div>
-                      <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                        {t(STATUS_LABEL_KEY[r.status])}
-                      </span>
-                    </div>
-                    {r.coverNote && <p className="mt-3 text-sm text-foreground">{r.coverNote}</p>}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(EMPLOYER_NEXT_STATUSES[r.status] ?? []).map((next) => (
-                        <button
-                          key={next}
-                          type="button"
-                          disabled={setStatus.isPending}
-                          onClick={() => setStatus.mutate({ applicationId: r.id, newStatus: next })}
-                          className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                        >
-                          {t(ACTION_LABEL_KEY[next])}
-                        </button>
-                      ))}
-                      {r.hasCv && (
-                        <button
-                          type="button"
-                          onClick={() => onDownloadCv(r.id)}
-                          className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                        >
-                          {t("employer.applications.action.downloadCv")}
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+      {actionError && (
+        <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {actionError}
         </div>
-      </EmployerWorkspaceChrome>
-    </SiteLayout>
+      )}
+
+      <div className="mt-6">
+        {query.isLoading ? (
+          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+        ) : query.isError ? (
+          <p className="text-sm text-destructive">{t("employer.applications.error.load")}</p>
+        ) : rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
+            {t("employer.applications.empty")}
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {rows.map((r) => {
+              const jobTitle =
+                (lang === "sv" ? r.jobTitleSv : r.jobTitleEn) ||
+                r.jobTitleSv ||
+                r.jobTitleEn ||
+                "—";
+              return (
+                <li key={r.id} className="rounded-lg border border-border bg-background p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{jobTitle}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {r.applicantDisplayName ?? t("employer.applications.anonymousCandidate")}
+                        {" · "}
+                        {formatDate(r.createdAt, lang)}
+                      </p>
+                    </div>
+                    <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
+                      {t(STATUS_LABEL_KEY[r.status])}
+                    </span>
+                  </div>
+                  {r.coverNote && <p className="mt-3 text-sm text-foreground">{r.coverNote}</p>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(EMPLOYER_NEXT_STATUSES[r.status] ?? []).map((next) => (
+                      <button
+                        key={next}
+                        type="button"
+                        disabled={setStatus.isPending}
+                        onClick={() => setStatus.mutate({ applicationId: r.id, newStatus: next })}
+                        className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                      >
+                        {t(ACTION_LABEL_KEY[next])}
+                      </button>
+                    ))}
+                    {r.hasCv && (
+                      <button
+                        type="button"
+                        onClick={() => onDownloadCv(r.id)}
+                        className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                      >
+                        {t("employer.applications.action.downloadCv")}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </EmployerAppShell>
   );
 }

@@ -641,6 +641,9 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs": "Hantera annonser",
     "employer.dashboard.action.inviteAssessment": "Bjud in kandidat till bedömning",
     "employer.dashboard.action.orgSettings": "Organisationsinställningar",
+    "employer.dashboard.action.viewAssessments": "Visa tester",
+    "employer.dashboard.assessmentCenter.available":
+      "Bedömningscentret är nu tillgängligt. Inbjudan av kandidater kommer i en senare fas.",
     "employer.dashboard.action.open": "Öppna",
     "employer.dashboard.action.hideInfo": "Dölj",
     "employer.dashboard.comingNext":
@@ -669,8 +672,7 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs.desc":
       "Redigera, publicera och stäng befintliga annonser.",
     "employer.dashboard.action.applications": "Ansökningar",
-    "employer.dashboard.action.applications.desc":
-      "Granska kandidater som har sökt era annonser.",
+    "employer.dashboard.action.applications.desc": "Granska kandidater som har sökt era annonser.",
     "employer.dashboard.action.orgSettings.desc":
       "Hantera företagsprofil, kontaktuppgifter och synlighet.",
     "employer.dashboard.assessmentCenter.heading": "Bedömningscenter",
@@ -772,6 +774,7 @@ export const dictionaries = {
     "employer.nav.overview": "Översikt",
     "employer.nav.jobs": "Jobbannonser",
     "employer.nav.applications": "Ansökningar",
+    "employer.nav.assessments": "Assessment Center",
     "employer.nav.settings": "Organisationsinställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
@@ -793,6 +796,225 @@ export const dictionaries = {
     "employer.accountMenu.signOut": "Logga ut",
 
     "employer.comingSoonShort": "Kommer snart",
+
+    "employer.assessments.heading": "Tester och bedömningar",
+    "employer.assessments.subheading":
+      "Använd strukturerade bedömningar för att stödja rekrytering, rollmatchning och kompetensutveckling inom säkerhetsverksamhet.",
+    "employer.assessments.categoryNav.ariaLabel": "Kategorival",
+    "employer.assessments.tab.operational": "Operativa roller",
+    "employer.assessments.tab.strategic": "Strategiska roller",
+    "employer.assessments.useCase.heading": "Användningsområden",
+    "employer.assessments.useCase.recruitment.title": "Rekrytering",
+    "employer.assessments.useCase.recruitment.body":
+      "Bedöm en kandidats lämplighet för en roll inför ett anställningsbeslut.",
+    "employer.assessments.useCase.development.title": "Kompetensutveckling",
+    "employer.assessments.useCase.development.body":
+      "Bedöm och utveckla befintlig personals kompetens och identifiera utvecklingsbehov.",
+    "employer.assessments.card.roleCategory": "Rollkategori",
+    "employer.assessments.card.intendedFor": "Avsett för",
+    "employer.assessments.card.questionCount": "Antal frågor",
+    "employer.assessments.card.duration": "Beräknad tid",
+    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.languages": "Språk",
+    "employer.assessments.card.competencies": "Kompetenser som bedöms",
+    "employer.assessments.card.viewDetails": "Visa detaljer",
+    "employer.assessments.status.published": "Tillgängligt",
+    "employer.assessments.status.unpublished": "Ej publicerad",
+    "employer.assessments.error.load": "Vi kunde inte läsa in bedömningskatalogen just nu.",
+    "employer.assessments.error.retry": "Försök igen",
+    "employer.assessments.strategic.empty":
+      "Tester för strategiska roller förbereds. De kommer att omfatta specialist-, analys- och ledningsroller inom säkerhetsområdet.",
+    "employer.assessments.operational.empty": "Inga tester tillgängliga just nu.",
+    "employer.assessments.sgf.description":
+      "En grundläggande bedömning för operativa säkerhetsroller, till exempel väktare, ordningsvakter, skyddsvakter och annan platsbunden säkerhetspersonal.",
+    "employer.assessments.sgf.intendedFor":
+      "Väktare, ordningsvakter, skyddsvakter, larmoperatörer, receptions- och passagepersonal, mobila väktare, evenemangssäkerhet och annan operativ säkerhetspersonal.",
+    "employer.assessments.details.back": "Tillbaka till bedömningar",
+    "employer.assessments.details.overview": "Översikt",
+    "employer.assessments.details.intendedRoles": "Avsedda roller",
+    "employer.assessments.details.intendedUse": "Avsedd användning",
+    "employer.assessments.details.competencies": "Kompetenser som bedöms",
+    "employer.assessments.details.dimensions": "Dimensioner som bedöms",
+    "employer.assessments.details.questionCount": "Antal frågor",
+    "employer.assessments.details.duration": "Beräknad tid",
+    "employer.assessments.details.languages": "Språk",
+    "employer.assessments.details.version": "Version",
+    "employer.assessments.details.status": "Publiceringsstatus",
+    "employer.assessments.details.lastUpdated": "Senast uppdaterad",
+    "employer.assessments.details.disclaimer":
+      "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
+    "employer.assessments.details.notFound": "Testet kunde inte hittas.",
+    "employer.assessments.action.assign": "Tilldela test",
+    "employer.assessments.action.viewResults": "Visa resultat",
+    "employer.assessments.action.analytics": "Testanalys",
+    "employer.assessments.tab.leadership": "Ledarskap",
+    "employer.assessments.tab.compliance": "Regelefterlevnad",
+    "employer.assessments.tab.custom": "Företagsspecifika tester",
+    "employer.assessments.tab.ai": "AI-genererade tester",
+
+    "employer.nav.commandCenter": "Command Center",
+    "employer.nav.recruitment": "Rekrytering",
+    "employer.nav.workforce": "Personal",
+    "employer.nav.competencies": "Kompetenser och certifikat",
+    "employer.nav.training": "Utbildning",
+    "employer.nav.sites": "Platser och risk",
+    "employer.nav.reports": "Rapporter och regelefterlevnad",
+    "employer.nav.analytics": "Analys",
+    "employer.nav.askCqrity": "Fråga CQrity",
+    "employer.nav.organisation": "Organisation",
+    "employer.nav.openMenu": "Öppna meny",
+
+    "employer.module.comingSoon.badge": "Kommer snart",
+    "employer.module.comingSoon.purpose": "Syfte",
+    "employer.module.comingSoon.value": "Värde för arbetsgivaren",
+    "employer.module.comingSoon.milestone": "Nästa milstolpe",
+
+    "employer.competencies.heading": "Kompetenser och certifikat",
+    "employer.competencies.purpose":
+      "Ett gemensamt kompetensramverk som beskriver vad varje roll kräver, och ett register över personalens certifikat och deras giltighetstid.",
+    "employer.competencies.value":
+      "Se i realtid vilka kompetensluckor som finns och vilka certifikat som snart går ut, innan de blir ett problem vid en revision eller ett uppdrag.",
+    "employer.competencies.milestone":
+      "Kompetensramverk kopplat till Assessment Center och personalregistret.",
+
+    "employer.training.heading": "Utbildning",
+    "employer.training.purpose":
+      "Rekommendera och följa upp riktad utbildning utifrån identifierade kompetensluckor hos befintlig personal.",
+    "employer.training.value":
+      "Stäng kompetensluckor systematiskt istället för ad hoc, och dokumentera genomförd utbildning per medarbetare.",
+    "employer.training.milestone": "Kopplas till kompetensramverket när det finns på plats.",
+
+    "employer.sites.heading": "Platser och risk",
+    "employer.sites.purpose":
+      "Ett register över era platser och verksamhetsställen, med kommande riskindikatorer kopplade till bemanning och kompetens.",
+    "employer.sites.value":
+      "Se vilka platser som är väl bemannade och kompetensmässigt redo, och vilka som behöver uppmärksamhet.",
+    "employer.sites.milestone":
+      "Fullständigt platsregister. Under tiden visar Personal-modulen platser/team som redan angetts där.",
+
+    "employer.reports.heading": "Rapporter och regelefterlevnad",
+    "employer.reports.purpose":
+      "Granskningsklara rapporter som visar personalens kompetens- och certifikatsstatus vid en given tidpunkt.",
+    "employer.reports.value":
+      "Var alltid förberedd inför kund- eller myndighetsrevisioner utan att behöva samla ihop underlag manuellt.",
+    "employer.reports.milestone": "Byggs ovanpå kompetens- och certifikatsregistret.",
+
+    "employer.analytics.heading": "Analys",
+    "employer.analytics.purpose":
+      "Trender över tid för rekrytering, bedömningar och personalens beredskap, samt jämförelser mellan platser och team.",
+    "employer.analytics.value":
+      "Fatta beslut baserat på utveckling över tid, inte enstaka ögonblicksbilder.",
+    "employer.analytics.milestone": "Kräver historisk data från flera moduler.",
+
+    "employer.preferences.heading": "Inställningar",
+    "employer.preferences.purpose":
+      "Kontoinställningar som notifieringar, fakturering och integrationer — skilt från organisationens företagsprofil.",
+    "employer.preferences.value":
+      "Anpassa hur ni arbetar i CQrityjob utan att påverka organisationens grunduppgifter.",
+    "employer.preferences.milestone":
+      "Första inställningarna tillkommer i takt med att fler funktioner lanseras.",
+
+    "employer.askCqrity.heading": "Fråga CQrity",
+    "employer.askCqrity.body":
+      "En framtida AI-assistent som kan svara på frågor om rekrytering och personal utifrån er egen data. Idag ger den genvägar till verklig information — inga påhittade svar.",
+    "employer.askCqrity.shortcutsHeading": "Genvägar",
+    "employer.askCqrity.query.applications": "Visa ansökningar som väntar på granskning",
+    "employer.askCqrity.query.assessments": "Visa tillgängliga tester",
+    "employer.askCqrity.query.employeesWithoutRole": "Visa medarbetare utan angiven roll",
+    "employer.askCqrity.query.draftJobs": "Visa jobbannonser i utkast",
+
+    "employer.workforce.heading": "Personal",
+    "employer.workforce.subheading":
+      "Ert register över befintlig personal — grunden för framtida kompetens- och beredskapsbild.",
+    "employer.workforce.action.add": "Lägg till medarbetare",
+    "employer.workforce.action.edit": "Redigera",
+    "employer.workforce.action.deactivate": "Inaktivera",
+    "employer.workforce.action.reactivate": "Återaktivera",
+    "employer.workforce.error.save": "Kunde inte spara medarbetaren.",
+    "employer.workforce.error.load": "Kunde inte läsa in personalregistret.",
+    "employer.workforce.empty.heading": "Inga medarbetare ännu",
+    "employer.workforce.empty.body":
+      "Lägg till er personal för att börja bygga en verifierad bild av beredskap och kompetens.",
+    "employer.workforce.status.active": "Aktiv",
+    "employer.workforce.status.inactive": "Inaktiv",
+    "employer.workforce.form.firstName": "Förnamn",
+    "employer.workforce.form.lastName": "Efternamn",
+    "employer.workforce.form.email": "E-post",
+    "employer.workforce.form.roleTitle": "Roll/titel",
+    "employer.workforce.form.siteName": "Plats/team",
+    "employer.workforce.form.startDate": "Startdatum",
+    "employer.workforce.form.save": "Spara",
+    "employer.workforce.form.cancel": "Avbryt",
+
+    "employer.commandCenter.heading": "Command Center",
+    "employer.commandCenter.subheading":
+      "Er samlade vy över rekrytering och personalberedskap hos CQrityjob.",
+    "employer.commandCenter.action.createJob": "Skapa jobbannons",
+    "employer.commandCenter.action.viewApplications": "Visa ansökningar",
+    "employer.commandCenter.action.viewAssessments": "Visa tester",
+    "employer.commandCenter.action.addEmployee": "Lägg till medarbetare",
+
+    "employer.readiness.eyebrow": "Beredskap",
+    "employer.readiness.heading": "Beredskapsbild byggs upp",
+    "employer.readiness.body":
+      "En samlad beredskapspoäng kräver mer verifierad data. Den kommer att byggas av testtäckning, kompetenstäckning, certifikat samt personal- och platsdata.",
+    "employer.readiness.progress": "{n} av {total} datakällor kopplade",
+    "employer.readiness.source.assessments": "Testtäckning",
+    "employer.readiness.source.workforce": "Personaldata",
+    "employer.readiness.source.competencies": "Kompetensdata",
+    "employer.readiness.source.certificates": "Certifikatsdata",
+
+    "employer.attention.heading": "Behöver din uppmärksamhet",
+    "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
+    "employer.attention.severity.critical": "Kritiskt",
+    "employer.attention.severity.attention": "Uppmärksamhet",
+    "employer.attention.severity.opportunity": "Möjlighet",
+    "employer.attention.severity.ready": "Klart",
+    "employer.attention.orgSuspended":
+      "Företagskontot är avstängt. Kontakta oss för att lösa detta.",
+    "employer.attention.orgRejected":
+      "Företagskontot har inte godkänts. Kontakta oss om ni har frågor.",
+    "employer.attention.orgPending": "Företagskontot väntar på godkännande.",
+    "employer.attention.orgActive": "Företagskontot är godkänt och aktivt.",
+    "employer.attention.orgIncomplete": "Organisationsprofilen saknar beskrivning och webbplats.",
+    "employer.attention.applicationsAwaiting": "ansökningar väntar på granskning",
+    "employer.attention.jobsNoApplications":
+      "publicerade jobbannonser har ännu inte fått några ansökningar",
+    "employer.attention.draftJobs": "jobbannonser sparade som utkast",
+    "employer.attention.assessmentsAvailable": "tester tillgängliga i Assessment Center",
+    "employer.attention.workforceEmpty":
+      "Lägg till er personal för att börja bygga en verifierad beredskaps- och kompetensbild.",
+    "employer.attention.source.organisation": "Källa: Organisationsstatus",
+    "employer.attention.source.applications": "Källa: Ansökningar",
+    "employer.attention.source.jobs": "Källa: Jobbannonser",
+    "employer.attention.source.assessments": "Källa: Assessment Center",
+    "employer.attention.source.workforce": "Källa: Personalregister",
+    "employer.attention.action.viewOrganisation": "Visa organisation",
+    "employer.attention.action.reviewApplications": "Granska ansökningar",
+    "employer.attention.action.manageJobs": "Hantera annonser",
+    "employer.attention.action.viewAssessments": "Visa tester",
+    "employer.attention.action.openWorkforce": "Öppna Personal",
+
+    "employer.lane.recruitment.heading": "Rekrytering",
+    "employer.lane.recruitment.awaitingReview": "Väntar på granskning",
+    "employer.lane.recruitment.reviewApplications": "Granska ansökningar",
+    "employer.lane.workforce.heading": "Personal",
+    "employer.lane.workforce.empty":
+      "Lägg till er personal för att börja bygga en verifierad beredskaps- och kompetensbild.",
+    "employer.lane.workforce.activeEmployees": "Aktiva medarbetare",
+    "employer.lane.workforce.roles": "Roller",
+    "employer.lane.workforce.sites": "Platser/team",
+    "employer.lane.workforce.open": "Öppna Personal",
+
+    "employer.assessmentActivity.heading": "Testaktivitet",
+    "employer.assessmentActivity.viewCenter": "Öppna Assessment Center",
+
+    "employer.sitesFoundation.heading": "Platser och risk",
+    "employer.sitesFoundation.bodyWithData":
+      "{n} plats(er)/team registrerade via Personal. Ett fullständigt platsregister med riskindikatorer är under utveckling.",
+    "employer.sitesFoundation.bodyEmpty":
+      "Inga platser registrerade ännu. Ett fullständigt platsregister med riskindikatorer är under utveckling.",
+    "employer.sitesFoundation.open": "Öppna Platser och risk",
 
     "employer.applications.heading": "Ansökningar",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
@@ -1931,6 +2153,9 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs": "Manage jobs",
     "employer.dashboard.action.inviteAssessment": "Invite candidate to assessment",
     "employer.dashboard.action.orgSettings": "Organisation settings",
+    "employer.dashboard.action.viewAssessments": "View assessments",
+    "employer.dashboard.assessmentCenter.available":
+      "The Assessment Center is now available. Inviting candidates is coming in a later phase.",
     "employer.dashboard.action.open": "Open",
     "employer.dashboard.action.hideInfo": "Hide",
     "employer.dashboard.comingNext":
@@ -1945,16 +2170,14 @@ export const dictionaries = {
       "Here's what your employer workspace looks like right now. Create jobs, track applications, and prepare upcoming assessments — all in one place.",
     "employer.dashboard.primaryCta": "Create new job",
     "employer.dashboard.section.recruitment": "Recruitment",
-    "employer.dashboard.section.recruitment.desc":
-      "Publish jobs and manage incoming applications.",
+    "employer.dashboard.section.recruitment.desc": "Publish jobs and manage incoming applications.",
     "employer.dashboard.section.company": "Organisation",
     "employer.dashboard.section.company.desc":
       "Update company information, contact details, and members.",
     "employer.dashboard.section.assessment": "Assessment Center",
     "employer.dashboard.section.assessment.desc":
       "Structured, professional assessments of candidates and employees.",
-    "employer.dashboard.action.createJob.desc":
-      "Draft and submit a new job posting for review.",
+    "employer.dashboard.action.createJob.desc": "Draft and submit a new job posting for review.",
     "employer.dashboard.action.manageJobs.desc":
       "Edit, publish, and close your existing job postings.",
     "employer.dashboard.action.applications": "Applications",
@@ -2057,6 +2280,7 @@ export const dictionaries = {
     "employer.nav.overview": "Overview",
     "employer.nav.jobs": "Job advertisements",
     "employer.nav.applications": "Applications",
+    "employer.nav.assessments": "Assessments",
     "employer.nav.settings": "Organisation settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
@@ -2078,6 +2302,224 @@ export const dictionaries = {
     "employer.accountMenu.signOut": "Sign out",
 
     "employer.comingSoonShort": "Coming soon",
+
+    "employer.assessments.heading": "Assessments",
+    "employer.assessments.subheading":
+      "Use structured assessments to support recruitment, role matching and competence development within security operations.",
+    "employer.assessments.categoryNav.ariaLabel": "Category selection",
+    "employer.assessments.tab.operational": "Operational roles",
+    "employer.assessments.tab.strategic": "Strategic roles",
+    "employer.assessments.useCase.heading": "Use cases",
+    "employer.assessments.useCase.recruitment.title": "Recruitment",
+    "employer.assessments.useCase.recruitment.body":
+      "Assess a candidate's suitability for a role ahead of a hiring decision.",
+    "employer.assessments.useCase.development.title": "Workforce development",
+    "employer.assessments.useCase.development.body":
+      "Assess and develop existing employees' competence and identify development needs.",
+    "employer.assessments.card.roleCategory": "Role category",
+    "employer.assessments.card.intendedFor": "Intended for",
+    "employer.assessments.card.questionCount": "Number of questions",
+    "employer.assessments.card.duration": "Estimated duration",
+    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.languages": "Languages",
+    "employer.assessments.card.competencies": "Competencies assessed",
+    "employer.assessments.card.viewDetails": "View details",
+    "employer.assessments.status.published": "Available",
+    "employer.assessments.status.unpublished": "Not published",
+    "employer.assessments.error.load": "We couldn't load the assessment catalogue right now.",
+    "employer.assessments.error.retry": "Retry",
+    "employer.assessments.strategic.empty":
+      "Assessments for strategic roles are being prepared. They will cover specialist, analytical and leadership roles within security.",
+    "employer.assessments.operational.empty": "No assessments available right now.",
+    "employer.assessments.sgf.description":
+      "A foundation assessment for operational security roles, such as security guards, public order guards, protective security guards and other frontline security personnel.",
+    "employer.assessments.sgf.intendedFor":
+      "Security guards, public order guards, protective security guards, control room operators, reception and access-control personnel, mobile patrol personnel, event security personnel and other frontline security roles.",
+    "employer.assessments.details.back": "Back to assessments",
+    "employer.assessments.details.overview": "Overview",
+    "employer.assessments.details.intendedRoles": "Intended roles",
+    "employer.assessments.details.intendedUse": "Intended use",
+    "employer.assessments.details.competencies": "Competencies assessed",
+    "employer.assessments.details.dimensions": "Dimensions assessed",
+    "employer.assessments.details.questionCount": "Number of questions",
+    "employer.assessments.details.duration": "Estimated duration",
+    "employer.assessments.details.languages": "Languages",
+    "employer.assessments.details.version": "Assessment version",
+    "employer.assessments.details.status": "Publication status",
+    "employer.assessments.details.lastUpdated": "Last updated",
+    "employer.assessments.details.disclaimer":
+      "The result is decision support. The employer always remains responsible for the final decision.",
+    "employer.assessments.details.notFound": "This assessment could not be found.",
+    "employer.assessments.action.assign": "Assign assessment",
+    "employer.assessments.action.viewResults": "View results",
+    "employer.assessments.action.analytics": "Assessment analytics",
+    "employer.assessments.tab.leadership": "Leadership",
+    "employer.assessments.tab.compliance": "Compliance",
+    "employer.assessments.tab.custom": "Custom company assessments",
+    "employer.assessments.tab.ai": "AI-generated assessments",
+
+    "employer.nav.commandCenter": "Command Center",
+    "employer.nav.recruitment": "Recruitment",
+    "employer.nav.workforce": "Workforce",
+    "employer.nav.competencies": "Competencies & Certificates",
+    "employer.nav.training": "Training",
+    "employer.nav.sites": "Sites & Risk",
+    "employer.nav.reports": "Reports & Compliance",
+    "employer.nav.analytics": "Analytics",
+    "employer.nav.askCqrity": "Ask CQrity",
+    "employer.nav.organisation": "Organisation",
+    "employer.nav.openMenu": "Open menu",
+
+    "employer.module.comingSoon.badge": "Coming soon",
+    "employer.module.comingSoon.purpose": "Purpose",
+    "employer.module.comingSoon.value": "Employer value",
+    "employer.module.comingSoon.milestone": "Next milestone",
+
+    "employer.competencies.heading": "Competencies & Certificates",
+    "employer.competencies.purpose":
+      "A shared competency framework describing what each role requires, and a register of employee certificates and their validity periods.",
+    "employer.competencies.value":
+      "See competence gaps and soon-to-expire certificates in real time, before they become a problem at an audit or on assignment.",
+    "employer.competencies.milestone":
+      "Competency framework connected to the Assessment Center and the employee directory.",
+
+    "employer.training.heading": "Training",
+    "employer.training.purpose":
+      "Recommend and track targeted training based on identified competence gaps in the existing workforce.",
+    "employer.training.value":
+      "Close competence gaps systematically instead of ad hoc, with documented training completion per employee.",
+    "employer.training.milestone": "Connects to the competency framework once it exists.",
+
+    "employer.sites.heading": "Sites & Risk",
+    "employer.sites.purpose":
+      "A register of your sites and locations, with future risk indicators tied to staffing and competence.",
+    "employer.sites.value":
+      "See which sites are well-staffed and competence-ready, and which need attention.",
+    "employer.sites.milestone":
+      "A full site register. In the meantime, the Workforce module shows the sites/teams already recorded there.",
+
+    "employer.reports.heading": "Reports & Compliance",
+    "employer.reports.purpose":
+      "Audit-ready reports showing workforce competence and certificate status at a given point in time.",
+    "employer.reports.value":
+      "Stay prepared for client or regulatory audits without gathering evidence manually.",
+    "employer.reports.milestone": "Built on top of the competency and certificate registers.",
+
+    "employer.analytics.heading": "Analytics",
+    "employer.analytics.purpose":
+      "Trends over time for recruitment, assessments and workforce readiness, plus comparisons across sites and teams.",
+    "employer.analytics.value": "Decide based on trends over time, not single snapshots.",
+    "employer.analytics.milestone": "Requires historical data across several modules.",
+
+    "employer.preferences.heading": "Settings",
+    "employer.preferences.purpose":
+      "Account-level preferences such as notifications, billing and integrations — distinct from the organisation's company profile.",
+    "employer.preferences.value":
+      "Adjust how you work in CQrityjob without affecting the organisation's core details.",
+    "employer.preferences.milestone": "First settings arrive as more features launch.",
+
+    "employer.askCqrity.heading": "Ask CQrity",
+    "employer.askCqrity.body":
+      "A future AI assistant that answers recruitment and workforce questions from your own data. Today it offers shortcuts to real information — never invented answers.",
+    "employer.askCqrity.shortcutsHeading": "Shortcuts",
+    "employer.askCqrity.query.applications": "Show applications awaiting review",
+    "employer.askCqrity.query.assessments": "Show available assessments",
+    "employer.askCqrity.query.employeesWithoutRole": "Show employees without a current role",
+    "employer.askCqrity.query.draftJobs": "Show draft jobs",
+
+    "employer.workforce.heading": "Workforce",
+    "employer.workforce.subheading":
+      "Your directory of existing employees — the foundation for a future competency and readiness picture.",
+    "employer.workforce.action.add": "Add employee",
+    "employer.workforce.action.edit": "Edit",
+    "employer.workforce.action.deactivate": "Deactivate",
+    "employer.workforce.action.reactivate": "Reactivate",
+    "employer.workforce.error.save": "Could not save this employee.",
+    "employer.workforce.error.load": "Could not load the employee directory.",
+    "employer.workforce.empty.heading": "No employees yet",
+    "employer.workforce.empty.body":
+      "Add your workforce to begin building a verified readiness and competency picture.",
+    "employer.workforce.status.active": "Active",
+    "employer.workforce.status.inactive": "Inactive",
+    "employer.workforce.form.firstName": "First name",
+    "employer.workforce.form.lastName": "Last name",
+    "employer.workforce.form.email": "Email",
+    "employer.workforce.form.roleTitle": "Role / title",
+    "employer.workforce.form.siteName": "Site / team",
+    "employer.workforce.form.startDate": "Start date",
+    "employer.workforce.form.save": "Save",
+    "employer.workforce.form.cancel": "Cancel",
+
+    "employer.commandCenter.heading": "Command Center",
+    "employer.commandCenter.subheading":
+      "Your combined view of recruitment and workforce readiness in CQrityjob.",
+    "employer.commandCenter.action.createJob": "Create job",
+    "employer.commandCenter.action.viewApplications": "View applications",
+    "employer.commandCenter.action.viewAssessments": "View assessments",
+    "employer.commandCenter.action.addEmployee": "Add employee",
+
+    "employer.readiness.eyebrow": "Readiness",
+    "employer.readiness.heading": "Readiness profile is being established",
+    "employer.readiness.body":
+      "A combined readiness score needs more verified data. It will be built from assessment coverage, competency coverage, certificates, and workforce/site data.",
+    "employer.readiness.progress": "{n} of {total} data sources connected",
+    "employer.readiness.source.assessments": "Assessment coverage",
+    "employer.readiness.source.workforce": "Workforce data",
+    "employer.readiness.source.competencies": "Competency data",
+    "employer.readiness.source.certificates": "Certificate data",
+
+    "employer.attention.heading": "Needs your attention",
+    "employer.attention.empty": "Nothing needs your attention right now.",
+    "employer.attention.severity.critical": "Critical",
+    "employer.attention.severity.attention": "Attention",
+    "employer.attention.severity.opportunity": "Opportunity",
+    "employer.attention.severity.ready": "Ready",
+    "employer.attention.orgSuspended":
+      "Your company account is suspended. Contact us to resolve this.",
+    "employer.attention.orgRejected":
+      "Your company account was not approved. Contact us if you have questions.",
+    "employer.attention.orgPending": "Your company account is awaiting approval.",
+    "employer.attention.orgActive": "Your company account is approved and active.",
+    "employer.attention.orgIncomplete":
+      "Your organisation profile is missing a description and website.",
+    "employer.attention.applicationsAwaiting": "applications awaiting review",
+    "employer.attention.jobsNoApplications":
+      "published job postings have not yet received any applications",
+    "employer.attention.draftJobs": "job postings saved as drafts",
+    "employer.attention.assessmentsAvailable": "assessments available in the Assessment Center",
+    "employer.attention.workforceEmpty":
+      "Add your workforce to begin building a verified readiness and competency picture.",
+    "employer.attention.source.organisation": "Source: Organisation status",
+    "employer.attention.source.applications": "Source: Applications",
+    "employer.attention.source.jobs": "Source: Job postings",
+    "employer.attention.source.assessments": "Source: Assessment Center",
+    "employer.attention.source.workforce": "Source: Employee directory",
+    "employer.attention.action.viewOrganisation": "View organisation",
+    "employer.attention.action.reviewApplications": "Review applications",
+    "employer.attention.action.manageJobs": "Manage jobs",
+    "employer.attention.action.viewAssessments": "View assessments",
+    "employer.attention.action.openWorkforce": "Open Workforce",
+
+    "employer.lane.recruitment.heading": "Recruitment",
+    "employer.lane.recruitment.awaitingReview": "Awaiting review",
+    "employer.lane.recruitment.reviewApplications": "Review applications",
+    "employer.lane.workforce.heading": "Workforce",
+    "employer.lane.workforce.empty":
+      "Add your workforce to begin building a verified readiness and competency picture.",
+    "employer.lane.workforce.activeEmployees": "Active employees",
+    "employer.lane.workforce.roles": "Roles",
+    "employer.lane.workforce.sites": "Sites/teams",
+    "employer.lane.workforce.open": "Open Workforce",
+
+    "employer.assessmentActivity.heading": "Assessment activity",
+    "employer.assessmentActivity.viewCenter": "Open Assessment Center",
+
+    "employer.sitesFoundation.heading": "Sites & Risk",
+    "employer.sitesFoundation.bodyWithData":
+      "{n} site(s)/team(s) recorded via Workforce. A full site register with risk indicators is under development.",
+    "employer.sitesFoundation.bodyEmpty":
+      "No sites recorded yet. A full site register with risk indicators is under development.",
+    "employer.sitesFoundation.open": "Open Sites & Risk",
 
     "employer.applications.heading": "Applications",
     "employer.applications.empty": "No applications have been received yet.",

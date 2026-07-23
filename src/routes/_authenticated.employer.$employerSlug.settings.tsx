@@ -6,19 +6,17 @@
 // for non-admins). Owner/admin can edit; a plain member sees a read-only
 // view. Status is always displayed, never editable here.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
-import { Section } from "@/components/site/Section";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import {
-  EmployerWorkspaceChrome,
+  EmployerAppShell,
   type EmployerRole,
   type EmployerStatus,
-} from "@/components/employer/EmployerWorkspaceChrome";
+} from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -46,14 +44,12 @@ function EmployerSettingsPage() {
 
   if (!employerPortalEnabled()) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t("employer.comingSoon.heading")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.comingSoon.body")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <h1 className="text-2xl font-semibold text-foreground">
+          {t("employer.comingSoon.heading")}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">{t("employer.comingSoon.body")}</p>
+      </div>
     );
   }
 
@@ -61,20 +57,14 @@ function EmployerSettingsPage() {
 
   if (workspacesQuery.isLoading) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-2xl">
-          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-2xl px-4 py-16">
+        <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+      </div>
     );
   }
 
   if (workspacesQuery.isError || !workspace) {
-    return (
-      <SiteLayout>
-        <EmployerAccessDenied workspaces={workspacesQuery.data} />
-      </SiteLayout>
-    );
+    return <EmployerAccessDenied workspaces={workspacesQuery.data} />;
   }
 
   return (
@@ -155,125 +145,123 @@ function SettingsForm({
   });
 
   return (
-    <SiteLayout>
-      <EmployerWorkspaceChrome
-        employerSlug={employerSlug}
-        employerName={employerName}
-        role={role}
-        status={status}
-        activeSection="settings"
-        hasMultipleWorkspaces={hasMultipleWorkspaces}
-      >
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {t("employer.settings.heading")}
-        </h1>
-        {!canEdit && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t("employer.settings.viewOnlyNotice")}
-          </p>
-        )}
+    <EmployerAppShell
+      employerSlug={employerSlug}
+      employerName={employerName}
+      role={role}
+      status={status}
+      activeSection="organisation"
+      hasMultipleWorkspaces={hasMultipleWorkspaces}
+    >
+      <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+        {t("employer.settings.heading")}
+      </h1>
+      {!canEdit && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t("employer.settings.viewOnlyNotice")}
+        </p>
+      )}
 
-        {query.isLoading ? (
-          <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
-        ) : query.isError ? (
-          <p className="mt-6 text-sm text-destructive">{t("employer.settings.loadError")}</p>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSaved(false);
-              mutation.mutate();
-            }}
-            className="mt-6 max-w-xl space-y-4"
-          >
-            <label className="block text-sm">
-              <span className="text-foreground">{t("employer.settings.field.name")}</span>
-              <input
-                type="text"
-                value={name}
-                disabled={!canEdit}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={200}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-foreground">{t("employer.settings.field.website")}</span>
-              <input
-                type="text"
-                value={website}
-                disabled={!canEdit}
-                onChange={(e) => setWebsite(e.target.value)}
-                maxLength={300}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-foreground">{t("employer.settings.field.country")}</span>
-              <input
-                type="text"
-                value={country}
-                disabled={!canEdit}
-                onChange={(e) => setCountry(e.target.value)}
-                maxLength={100}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-foreground">
-                {t("employer.settings.field.registrationNumber")}
-              </span>
-              <input
-                type="text"
-                value={registrationNumber}
-                disabled={!canEdit}
-                onChange={(e) => setRegistrationNumber(e.target.value)}
-                maxLength={100}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-foreground">{t("employer.settings.field.descriptionSv")}</span>
-              <textarea
-                value={descriptionSv}
-                disabled={!canEdit}
-                onChange={(e) => setDescriptionSv(e.target.value)}
-                maxLength={2000}
-                rows={3}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-foreground">{t("employer.settings.field.descriptionEn")}</span>
-              <textarea
-                value={descriptionEn}
-                disabled={!canEdit}
-                onChange={(e) => setDescriptionEn(e.target.value)}
-                maxLength={2000}
-                rows={3}
-                className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
-              />
-            </label>
+      {query.isLoading ? (
+        <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
+      ) : query.isError ? (
+        <p className="mt-6 text-sm text-destructive">{t("employer.settings.loadError")}</p>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSaved(false);
+            mutation.mutate();
+          }}
+          className="mt-6 max-w-xl space-y-4"
+        >
+          <label className="block text-sm">
+            <span className="text-foreground">{t("employer.settings.field.name")}</span>
+            <input
+              type="text"
+              value={name}
+              disabled={!canEdit}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={200}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-foreground">{t("employer.settings.field.website")}</span>
+            <input
+              type="text"
+              value={website}
+              disabled={!canEdit}
+              onChange={(e) => setWebsite(e.target.value)}
+              maxLength={300}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-foreground">{t("employer.settings.field.country")}</span>
+            <input
+              type="text"
+              value={country}
+              disabled={!canEdit}
+              onChange={(e) => setCountry(e.target.value)}
+              maxLength={100}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-foreground">
+              {t("employer.settings.field.registrationNumber")}
+            </span>
+            <input
+              type="text"
+              value={registrationNumber}
+              disabled={!canEdit}
+              onChange={(e) => setRegistrationNumber(e.target.value)}
+              maxLength={100}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-foreground">{t("employer.settings.field.descriptionSv")}</span>
+            <textarea
+              value={descriptionSv}
+              disabled={!canEdit}
+              onChange={(e) => setDescriptionSv(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-foreground">{t("employer.settings.field.descriptionEn")}</span>
+            <textarea
+              value={descriptionEn}
+              disabled={!canEdit}
+              onChange={(e) => setDescriptionEn(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+            />
+          </label>
 
-            {mutation.isError && (
-              <p role="alert" className="text-sm text-destructive">
-                {t("employer.settings.saveError")}
-              </p>
-            )}
-            {saved && !mutation.isPending && (
-              <p role="status" className="text-sm text-muted-foreground">
-                {t("employer.settings.saved")}
-              </p>
-            )}
+          {mutation.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("employer.settings.saveError")}
+            </p>
+          )}
+          {saved && !mutation.isPending && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {t("employer.settings.saved")}
+            </p>
+          )}
 
-            {canEdit && (
-              <PrimaryButton type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? t("employer.settings.saving") : t("employer.settings.save")}
-              </PrimaryButton>
-            )}
-          </form>
-        )}
-      </EmployerWorkspaceChrome>
-    </SiteLayout>
+          {canEdit && (
+            <PrimaryButton type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? t("employer.settings.saving") : t("employer.settings.save")}
+            </PrimaryButton>
+          )}
+        </form>
+      )}
+    </EmployerAppShell>
   );
 }
