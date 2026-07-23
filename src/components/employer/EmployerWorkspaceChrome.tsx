@@ -38,7 +38,7 @@ export type EmployerStatus = "draft" | "pending" | "active" | "rejected" | "susp
 // staying on an now-inaccessible employer page after sign-out would be a
 // worse experience than on the public-facing My Career page).
 
-export type EmployerNavSection = "overview" | "jobs" | "applications" | "settings";
+export type EmployerNavSection = "overview" | "jobs" | "applications" | "assessments" | "settings";
 
 export interface EmployerWorkspaceChromeProps {
   employerSlug: string;
@@ -131,6 +131,12 @@ export function EmployerWorkspaceChrome(props: EmployerWorkspaceChromeProps) {
       key: "applications",
       labelKey: "employer.nav.applications",
       to: `/employer/${employerSlug}/applications`,
+      enabled: true,
+    },
+    {
+      key: "assessments",
+      labelKey: "employer.nav.assessments",
+      to: `/employer/${employerSlug}/assessments`,
       enabled: true,
     },
     {

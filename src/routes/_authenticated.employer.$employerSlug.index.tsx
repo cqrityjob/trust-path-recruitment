@@ -211,6 +211,9 @@ function EmployerDashboard({
           <h2 className="text-lg font-semibold text-foreground">
             {t("employer.dashboard.actions.heading")}
           </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("employer.dashboard.assessmentCenter.available")}
+          </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <QuickAction
               label={t("employer.dashboard.action.createJob")}
@@ -219,6 +222,10 @@ function EmployerDashboard({
             <QuickAction
               label={t("employer.dashboard.action.manageJobs")}
               href={`/employer/${employerSlug}/jobs`}
+            />
+            <QuickAction
+              label={t("employer.dashboard.action.viewAssessments")}
+              href={`/employer/${employerSlug}/assessments`}
             />
             <QuickAction
               label={t("employer.dashboard.action.orgSettings")}

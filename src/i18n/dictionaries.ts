@@ -641,6 +641,9 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs": "Hantera annonser",
     "employer.dashboard.action.inviteAssessment": "Bjud in kandidat till bedömning",
     "employer.dashboard.action.orgSettings": "Organisationsinställningar",
+    "employer.dashboard.action.viewAssessments": "Visa tester",
+    "employer.dashboard.assessmentCenter.available":
+      "Bedömningscentret är nu tillgängligt. Inbjudan av kandidater kommer i en senare fas.",
     "employer.dashboard.action.open": "Öppna",
     "employer.dashboard.action.hideInfo": "Dölj",
     "employer.dashboard.comingNext":
@@ -746,6 +749,7 @@ export const dictionaries = {
     "employer.nav.overview": "Översikt",
     "employer.nav.jobs": "Jobbannonser",
     "employer.nav.applications": "Ansökningar",
+    "employer.nav.assessments": "Bedömningar",
     "employer.nav.settings": "Organisationsinställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
@@ -767,6 +771,57 @@ export const dictionaries = {
     "employer.accountMenu.signOut": "Logga ut",
 
     "employer.comingSoonShort": "Kommer snart",
+
+    "employer.assessments.heading": "Tester och bedömningar",
+    "employer.assessments.subheading":
+      "Använd strukturerade bedömningar för att stödja rekrytering, rollmatchning och kompetensutveckling inom säkerhetsverksamhet.",
+    "employer.assessments.categoryNav.ariaLabel": "Kategorival",
+    "employer.assessments.tab.operational": "Operativa roller",
+    "employer.assessments.tab.strategic": "Strategiska roller",
+    "employer.assessments.useCase.heading": "Användningsområden",
+    "employer.assessments.useCase.recruitment.title": "Rekrytering",
+    "employer.assessments.useCase.recruitment.body":
+      "Bedöm en kandidats lämplighet för en roll inför ett anställningsbeslut.",
+    "employer.assessments.useCase.development.title": "Kompetensutveckling",
+    "employer.assessments.useCase.development.body":
+      "Bedöm och utveckla befintlig personals kompetens och identifiera utvecklingsbehov.",
+    "employer.assessments.card.roleCategory": "Rollkategori",
+    "employer.assessments.card.intendedFor": "Avsett för",
+    "employer.assessments.card.questionCount": "Antal frågor",
+    "employer.assessments.card.duration": "Beräknad tid",
+    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.languages": "Språk",
+    "employer.assessments.card.competencies": "Kompetenser som bedöms",
+    "employer.assessments.card.viewDetails": "Visa detaljer",
+    "employer.assessments.status.published": "Tillgängligt",
+    "employer.assessments.status.unpublished": "Ej publicerad",
+    "employer.assessments.error.load": "Vi kunde inte läsa in bedömningskatalogen just nu.",
+    "employer.assessments.error.retry": "Försök igen",
+    "employer.assessments.strategic.empty":
+      "Tester för strategiska roller förbereds. De kommer att omfatta specialist-, analys- och ledningsroller inom säkerhetsområdet.",
+    "employer.assessments.operational.empty": "Inga tester tillgängliga just nu.",
+    "employer.assessments.sgf.description":
+      "En grundläggande bedömning för operativa säkerhetsroller, till exempel väktare, ordningsvakter, skyddsvakter och annan platsbunden säkerhetspersonal.",
+    "employer.assessments.sgf.intendedFor":
+      "Väktare, ordningsvakter, skyddsvakter, larmoperatörer, receptions- och passagepersonal, mobila väktare, evenemangssäkerhet och annan operativ säkerhetspersonal.",
+    "employer.assessments.details.back": "Tillbaka till bedömningar",
+    "employer.assessments.details.overview": "Översikt",
+    "employer.assessments.details.intendedRoles": "Avsedda roller",
+    "employer.assessments.details.intendedUse": "Avsedd användning",
+    "employer.assessments.details.competencies": "Kompetenser som bedöms",
+    "employer.assessments.details.dimensions": "Dimensioner som bedöms",
+    "employer.assessments.details.questionCount": "Antal frågor",
+    "employer.assessments.details.duration": "Beräknad tid",
+    "employer.assessments.details.languages": "Språk",
+    "employer.assessments.details.version": "Version",
+    "employer.assessments.details.status": "Publiceringsstatus",
+    "employer.assessments.details.lastUpdated": "Senast uppdaterad",
+    "employer.assessments.details.disclaimer":
+      "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
+    "employer.assessments.details.notFound": "Testet kunde inte hittas.",
+    "employer.assessments.action.assign": "Tilldela test",
+    "employer.assessments.action.viewResults": "Visa resultat",
+    "employer.assessments.action.analytics": "Testanalys",
 
     "employer.applications.heading": "Ansökningar",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
@@ -1905,6 +1960,9 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs": "Manage jobs",
     "employer.dashboard.action.inviteAssessment": "Invite candidate to assessment",
     "employer.dashboard.action.orgSettings": "Organisation settings",
+    "employer.dashboard.action.viewAssessments": "View assessments",
+    "employer.dashboard.assessmentCenter.available":
+      "The Assessment Center is now available. Inviting candidates is coming in a later phase.",
     "employer.dashboard.action.open": "Open",
     "employer.dashboard.action.hideInfo": "Hide",
     "employer.dashboard.comingNext":
@@ -2005,6 +2063,7 @@ export const dictionaries = {
     "employer.nav.overview": "Overview",
     "employer.nav.jobs": "Job advertisements",
     "employer.nav.applications": "Applications",
+    "employer.nav.assessments": "Assessments",
     "employer.nav.settings": "Organisation settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
@@ -2026,6 +2085,57 @@ export const dictionaries = {
     "employer.accountMenu.signOut": "Sign out",
 
     "employer.comingSoonShort": "Coming soon",
+
+    "employer.assessments.heading": "Assessments",
+    "employer.assessments.subheading":
+      "Use structured assessments to support recruitment, role matching and competence development within security operations.",
+    "employer.assessments.categoryNav.ariaLabel": "Category selection",
+    "employer.assessments.tab.operational": "Operational roles",
+    "employer.assessments.tab.strategic": "Strategic roles",
+    "employer.assessments.useCase.heading": "Use cases",
+    "employer.assessments.useCase.recruitment.title": "Recruitment",
+    "employer.assessments.useCase.recruitment.body":
+      "Assess a candidate's suitability for a role ahead of a hiring decision.",
+    "employer.assessments.useCase.development.title": "Workforce development",
+    "employer.assessments.useCase.development.body":
+      "Assess and develop existing employees' competence and identify development needs.",
+    "employer.assessments.card.roleCategory": "Role category",
+    "employer.assessments.card.intendedFor": "Intended for",
+    "employer.assessments.card.questionCount": "Number of questions",
+    "employer.assessments.card.duration": "Estimated duration",
+    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.languages": "Languages",
+    "employer.assessments.card.competencies": "Competencies assessed",
+    "employer.assessments.card.viewDetails": "View details",
+    "employer.assessments.status.published": "Available",
+    "employer.assessments.status.unpublished": "Not published",
+    "employer.assessments.error.load": "We couldn't load the assessment catalogue right now.",
+    "employer.assessments.error.retry": "Retry",
+    "employer.assessments.strategic.empty":
+      "Assessments for strategic roles are being prepared. They will cover specialist, analytical and leadership roles within security.",
+    "employer.assessments.operational.empty": "No assessments available right now.",
+    "employer.assessments.sgf.description":
+      "A foundation assessment for operational security roles, such as security guards, public order guards, protective security guards and other frontline security personnel.",
+    "employer.assessments.sgf.intendedFor":
+      "Security guards, public order guards, protective security guards, control room operators, reception and access-control personnel, mobile patrol personnel, event security personnel and other frontline security roles.",
+    "employer.assessments.details.back": "Back to assessments",
+    "employer.assessments.details.overview": "Overview",
+    "employer.assessments.details.intendedRoles": "Intended roles",
+    "employer.assessments.details.intendedUse": "Intended use",
+    "employer.assessments.details.competencies": "Competencies assessed",
+    "employer.assessments.details.dimensions": "Dimensions assessed",
+    "employer.assessments.details.questionCount": "Number of questions",
+    "employer.assessments.details.duration": "Estimated duration",
+    "employer.assessments.details.languages": "Languages",
+    "employer.assessments.details.version": "Assessment version",
+    "employer.assessments.details.status": "Publication status",
+    "employer.assessments.details.lastUpdated": "Last updated",
+    "employer.assessments.details.disclaimer":
+      "The result is decision support. The employer always remains responsible for the final decision.",
+    "employer.assessments.details.notFound": "This assessment could not be found.",
+    "employer.assessments.action.assign": "Assign assessment",
+    "employer.assessments.action.viewResults": "View results",
+    "employer.assessments.action.analytics": "Assessment analytics",
 
     "employer.applications.heading": "Applications",
     "employer.applications.empty": "No applications have been received yet.",
