@@ -203,24 +203,30 @@ export type Database = {
       assessments: {
         Row: {
           created_at: string
+          employer_visible: boolean
           id: string
           kind: string
           name_en: string
           name_sv: string
+          role_category: string | null
         }
         Insert: {
           created_at?: string
+          employer_visible?: boolean
           id: string
           kind: string
           name_en: string
           name_sv: string
+          role_category?: string | null
         }
         Update: {
           created_at?: string
+          employer_visible?: boolean
           id?: string
           kind?: string
           name_en?: string
           name_sv?: string
+          role_category?: string | null
         }
         Relationships: []
       }
@@ -2136,6 +2142,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      employees: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string | null
+          employer_id: string
+          employment_status: string
+          first_name: string
+          id: string
+          last_name: string
+          role_title: string | null
+          site_name: string | null
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email?: string | null
+          employer_id: string
+          employment_status?: string
+          first_name: string
+          id?: string
+          last_name: string
+          role_title?: string | null
+          site_name?: string | null
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          employer_id?: string
+          employment_status?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          role_title?: string | null
+          site_name?: string | null
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employer_access_requests: {
         Row: {
