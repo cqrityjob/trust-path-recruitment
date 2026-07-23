@@ -652,6 +652,32 @@ export const dictionaries = {
     "employer.dashboard.empty.step2": "Bjud in kandidater till CQrityjobs bedömning.",
     "employer.dashboard.empty.step3":
       "Följ ansökningar och matchningar direkt i din arbetsgivaryta.",
+    "employer.dashboard.hero.summary":
+      "Så här ser din arbetsgivaryta ut just nu. Skapa annonser, följ ansökningar och förbered kommande bedömningar från ett och samma ställe.",
+    "employer.dashboard.primaryCta": "Skapa ny annons",
+    "employer.dashboard.section.recruitment": "Rekrytering",
+    "employer.dashboard.section.recruitment.desc":
+      "Publicera annonser och hantera inkommande ansökningar.",
+    "employer.dashboard.section.company": "Organisation",
+    "employer.dashboard.section.company.desc":
+      "Uppdatera företagsinformation, kontaktuppgifter och medlemmar.",
+    "employer.dashboard.section.assessment": "Bedömningscenter",
+    "employer.dashboard.section.assessment.desc":
+      "Strukturerade professionella bedömningar av kandidater och medarbetare.",
+    "employer.dashboard.action.createJob.desc":
+      "Skriv och skicka en ny jobbannons till granskning.",
+    "employer.dashboard.action.manageJobs.desc":
+      "Redigera, publicera och stäng befintliga annonser.",
+    "employer.dashboard.action.applications": "Ansökningar",
+    "employer.dashboard.action.applications.desc":
+      "Granska kandidater som har sökt era annonser.",
+    "employer.dashboard.action.orgSettings.desc":
+      "Hantera företagsprofil, kontaktuppgifter och synlighet.",
+    "employer.dashboard.assessmentCenter.heading": "Bedömningscenter",
+    "employer.dashboard.assessmentCenter.body":
+      "Bedöm kandidater och medarbetare med strukturerade, professionella bedömningar. Lanseras snart.",
+    "employer.dashboard.assessmentCenter.badge": "Lanseras snart",
+    "employer.dashboard.empty.cta": "Skapa din första annons",
     "employer.jobs.list.heading": "Jobbannonser",
     "employer.jobs.list.title": "Titel",
     "employer.jobs.list.newJob": "Ny jobbannons",
