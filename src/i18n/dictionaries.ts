@@ -1941,6 +1941,32 @@ export const dictionaries = {
     "employer.dashboard.empty.step1": "Create a job and submit it for review.",
     "employer.dashboard.empty.step2": "Invite candidates to complete the CQrityjob assessment.",
     "employer.dashboard.empty.step3": "Track applications and matches directly in your workspace.",
+    "employer.dashboard.hero.summary":
+      "Here's what your employer workspace looks like right now. Create jobs, track applications, and prepare upcoming assessments — all in one place.",
+    "employer.dashboard.primaryCta": "Create new job",
+    "employer.dashboard.section.recruitment": "Recruitment",
+    "employer.dashboard.section.recruitment.desc":
+      "Publish jobs and manage incoming applications.",
+    "employer.dashboard.section.company": "Organisation",
+    "employer.dashboard.section.company.desc":
+      "Update company information, contact details, and members.",
+    "employer.dashboard.section.assessment": "Assessment Center",
+    "employer.dashboard.section.assessment.desc":
+      "Structured, professional assessments of candidates and employees.",
+    "employer.dashboard.action.createJob.desc":
+      "Draft and submit a new job posting for review.",
+    "employer.dashboard.action.manageJobs.desc":
+      "Edit, publish, and close your existing job postings.",
+    "employer.dashboard.action.applications": "Applications",
+    "employer.dashboard.action.applications.desc":
+      "Review candidates who have applied to your jobs.",
+    "employer.dashboard.action.orgSettings.desc":
+      "Manage company profile, contact details, and visibility.",
+    "employer.dashboard.assessmentCenter.heading": "Assessment Center",
+    "employer.dashboard.assessmentCenter.body":
+      "Assess candidates and employees using structured professional assessments. Launching soon.",
+    "employer.dashboard.assessmentCenter.badge": "Launching soon",
+    "employer.dashboard.empty.cta": "Create your first job",
     "employer.jobs.list.heading": "Job postings",
     "employer.jobs.list.title": "Title",
     "employer.jobs.list.newJob": "New job",
