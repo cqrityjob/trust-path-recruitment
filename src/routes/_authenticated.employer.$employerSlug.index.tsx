@@ -22,13 +22,27 @@
 // link (H3.2 built that route + its RLS foundation); "Create job"/
 // "Manage jobs" were already real.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, type LinkComponentProps } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
+import {
+  ArrowRight,
+  Briefcase,
+  Building2,
+  ClipboardList,
+  FileText,
+  GraduationCap,
+  Inbox,
+  PlusCircle,
+  Settings2,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   EmployerWorkspaceChrome,
   type EmployerRole,
@@ -175,112 +189,202 @@ function EmployerDashboard({
         activeSection="overview"
         hasMultipleWorkspaces={hasMultipleWorkspaces}
       >
-        {/* Overview cards */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {/* Hero: primary CTA + one-line summary of what the workspace is */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t("employer.dashboard.hero.summary")}
+            </p>
+          </div>
+          <Link
+            to="/employer/$employerSlug/jobs/new"
+            params={{ employerSlug }}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            <PlusCircle className="h-4 w-4" aria-hidden="true" />
+            {t("employer.dashboard.primaryCta")}
+          </Link>
+        </div>
+
+        {/* Overview stats — icon + value + label; Applications is the primary,
+            clickable card. Assessment invitations is a passive coming-soon
+            tile styled to match visually but clearly non-actionable. */}
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
+            icon={<Briefcase className="h-4 w-4" />}
             label={t("employer.dashboard.card.activeJobs")}
             value={data.activeJobs}
             loading={stats.isLoading}
           />
           <StatCard
+            icon={<FileText className="h-4 w-4" />}
             label={t("employer.dashboard.card.draftJobs")}
             value={data.draftJobs}
             loading={stats.isLoading}
           />
           <StatCard
+            icon={<Inbox className="h-4 w-4" />}
             label={t("employer.dashboard.card.applications")}
             value={data.applications}
             loading={stats.isLoading}
-            href={`/employer/${employerSlug}/applications`}
+            linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
+            emphasis
           />
-          <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 sm:p-5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {t("employer.dashboard.card.assessmentInvitations")}
-            </p>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              {t("employer.comingSoonShort")}
-            </p>
-          </div>
+          <ComingSoonStat
+            icon={<GraduationCap className="h-4 w-4" />}
+            label={t("employer.dashboard.card.assessmentInvitations")}
+            badge={t("employer.comingSoonShort")}
+          />
         </div>
         {stats.isError && (
-          <p className="mt-3 text-sm text-destructive">{t("employer.dashboard.statsError")}</p>
-        )}
-
-        {/* Primary actions */}
-        <div className="mt-10">
-          <h2 className="text-lg font-semibold text-foreground">
-            {t("employer.dashboard.actions.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("employer.dashboard.assessmentCenter.available")}
+          <p className="mt-3 text-sm text-destructive" role="alert">
+            {t("employer.dashboard.statsError")}
           </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <QuickAction
-              label={t("employer.dashboard.action.createJob")}
-              href={`/employer/${employerSlug}/jobs/new`}
-            />
-            <QuickAction
-              label={t("employer.dashboard.action.manageJobs")}
-              href={`/employer/${employerSlug}/jobs`}
-            />
-            <QuickAction
-              label={t("employer.dashboard.action.viewAssessments")}
-              href={`/employer/${employerSlug}/assessments`}
-            />
-            <QuickAction
-              label={t("employer.dashboard.action.orgSettings")}
-              href={`/employer/${employerSlug}/settings`}
-            />
-            <QuickAction
-              label={t("employer.dashboard.action.inviteAssessment")}
-              disabledReason={t("employer.comingSoonShort")}
-            />
-          </div>
-        </div>
-
-        {/* First-time empty state guidance */}
-        {noJobsYet && (
-          <div className="mt-10 rounded-lg border border-dashed border-border bg-muted/30 p-5">
-            <h2 className="text-base font-semibold text-foreground">
-              {t("employer.dashboard.empty.heading")}
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("employer.dashboard.empty.body")}
-            </p>
-            <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>{t("employer.dashboard.empty.step1")}</li>
-              <li>{t("employer.dashboard.empty.step2")}</li>
-              <li>{t("employer.dashboard.empty.step3")}</li>
-            </ol>
-          </div>
         )}
+
+        {/* First-time empty state guidance — surfaces before the actions
+            so a brand-new employer sees the "what happens next" narrative
+            first, then the action groups below carry them through it. */}
+        {noJobsYet && (
+          <EmptyStateCard
+            title={t("employer.dashboard.empty.heading")}
+            body={t("employer.dashboard.empty.body")}
+            steps={[
+              t("employer.dashboard.empty.step1"),
+              t("employer.dashboard.empty.step2"),
+              t("employer.dashboard.empty.step3"),
+            ]}
+            ctaLabel={t("employer.dashboard.empty.cta")}
+            ctaLinkProps={{ to: "/employer/$employerSlug/jobs/new", params: { employerSlug } }}
+          />
+        )}
+
+        {/* Grouped quick actions: Recruitment | Organisation | Assessment
+            Center. Each group has its own heading + description so a first-
+            time employer immediately reads the workspace as three coherent
+            areas of the product rather than a flat list of buttons. */}
+        <div className="mt-10 space-y-8">
+          <ActionGroup
+            icon={<Briefcase className="h-4 w-4" />}
+            title={t("employer.dashboard.section.recruitment")}
+            description={t("employer.dashboard.section.recruitment.desc")}
+          >
+            <ActionCard
+              icon={<PlusCircle className="h-5 w-5" />}
+              title={t("employer.dashboard.action.createJob")}
+              description={t("employer.dashboard.action.createJob.desc")}
+              linkProps={{ to: "/employer/$employerSlug/jobs/new", params: { employerSlug } }}
+              openLabel={t("employer.dashboard.action.open")}
+            />
+            <ActionCard
+              icon={<ClipboardList className="h-5 w-5" />}
+              title={t("employer.dashboard.action.manageJobs")}
+              description={t("employer.dashboard.action.manageJobs.desc")}
+              linkProps={{ to: "/employer/$employerSlug/jobs", params: { employerSlug } }}
+              openLabel={t("employer.dashboard.action.open")}
+            />
+            <ActionCard
+              icon={<Users className="h-5 w-5" />}
+              title={t("employer.dashboard.action.applications")}
+              description={t("employer.dashboard.action.applications.desc")}
+              linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
+              openLabel={t("employer.dashboard.action.open")}
+            />
+          </ActionGroup>
+
+          <ActionGroup
+            icon={<Building2 className="h-4 w-4" />}
+            title={t("employer.dashboard.section.company")}
+            description={t("employer.dashboard.section.company.desc")}
+          >
+            <ActionCard
+              icon={<Settings2 className="h-5 w-5" />}
+              title={t("employer.dashboard.action.orgSettings")}
+              description={t("employer.dashboard.action.orgSettings.desc")}
+              linkProps={{ to: "/employer/$employerSlug/settings", params: { employerSlug } }}
+              openLabel={t("employer.dashboard.action.open")}
+            />
+          </ActionGroup>
+
+          <ActionGroup
+            icon={<Sparkles className="h-4 w-4" />}
+            title={t("employer.dashboard.section.assessment")}
+            description={t("employer.dashboard.section.assessment.desc")}
+          >
+            <AssessmentCenterCard
+              title={t("employer.dashboard.assessmentCenter.heading")}
+              body={t("employer.dashboard.assessmentCenter.body")}
+              badge={t("employer.dashboard.assessmentCenter.badge")}
+              inviteLabelKey={"employer.dashboard.action.inviteAssessment"}
+            />
+          </ActionGroup>
+        </div>
       </EmployerWorkspaceChrome>
     </SiteLayout>
   );
 }
 
 function StatCard({
+  icon,
   label,
   value,
   loading,
-  href,
+  linkProps,
+  emphasis,
 }: {
+  icon: ReactNode;
   label: string;
   value: number;
   loading: boolean;
-  href?: string;
+  linkProps?: LinkComponentProps;
+  emphasis?: boolean;
 }) {
   const content = (
-    <div className="rounded-lg border border-border bg-background p-4 transition-colors hover:border-accent/50 sm:p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-foreground sm:text-3xl" aria-live="polite">
-        {loading ? "—" : value}
+    <div
+      className={
+        "group h-full rounded-xl border border-border bg-background p-4 shadow-sm transition-all sm:p-5 " +
+        (linkProps
+          ? "hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md focus-within:border-accent"
+          : "")
+      }
+    >
+      <div className="flex items-center justify-between">
+        <span
+          className={
+            "inline-flex h-8 w-8 items-center justify-center rounded-md " +
+            (emphasis
+              ? "bg-accent/10 text-accent"
+              : "bg-muted text-muted-foreground")
+          }
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        {linkProps && (
+          <ArrowRight
+            className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground"
+            aria-hidden="true"
+          />
+        )}
+      </div>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+        aria-live="polite"
+      >
+        {loading ? "—" : value.toLocaleString()}
       </p>
     </div>
   );
-  if (href) {
+  if (linkProps) {
     return (
-      <Link to={href} className="block">
+      <Link
+        {...linkProps}
+        aria-label={`${label}: ${loading ? "—" : value}`}
+        className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+      >
         {content}
       </Link>
     );
@@ -288,36 +392,198 @@ function StatCard({
   return content;
 }
 
-function QuickAction({
+function ComingSoonStat({
+  icon,
   label,
-  href,
-  disabledReason,
+  badge,
 }: {
+  icon: ReactNode;
   label: string;
-  href?: string;
-  disabledReason?: string;
+  badge: string;
+}) {
+  return (
+    <div className="h-full rounded-xl border border-dashed border-border bg-muted/20 p-4 sm:p-5">
+      <div className="flex items-center justify-between">
+        <span
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground"
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+          {badge}
+        </span>
+      </div>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-3xl font-semibold tracking-tight text-muted-foreground/70 sm:text-4xl">
+        —
+      </p>
+    </div>
+  );
+}
+
+function ActionGroup({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-label={title}>
+      <div className="flex items-start gap-3">
+        <span
+          className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">{title}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    </section>
+  );
+}
+
+function ActionCard({
+  icon,
+  title,
+  description,
+  linkProps,
+  openLabel,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  linkProps: LinkComponentProps;
+  openLabel: string;
+}) {
+  return (
+    <Link
+      {...linkProps}
+      aria-label={title}
+      className="group flex h-full flex-col rounded-xl border border-border bg-background p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+    >
+      <div className="flex items-start justify-between">
+        <span
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-accent/10 text-accent"
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        <ArrowRight
+          className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground"
+          aria-hidden="true"
+        />
+      </div>
+      <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
+      <p className="mt-1 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <span
+        className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent"
+        aria-hidden="true"
+      >
+        {openLabel}
+        <ArrowRight className="h-3 w-3" />
+      </span>
+    </Link>
+  );
+}
+
+function AssessmentCenterCard({
+  title,
+  body,
+  badge,
+  inviteLabelKey,
+}: {
+  title: string;
+  body: string;
+  badge: string;
+  inviteLabelKey: TranslationKey;
 }) {
   const { t } = useT();
   return (
-    <div className="rounded-lg border border-border bg-background p-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium text-foreground">{label}</span>
-        {href ? (
-          <Link
-            to={href}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <div className="col-span-1 rounded-xl border border-border bg-gradient-to-br from-muted/40 to-background p-6 shadow-sm sm:col-span-2 lg:col-span-3">
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-4">
+          <span
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"
+            aria-hidden="true"
           >
-            {t("employer.dashboard.action.open")}
-          </Link>
-        ) : (
-          <span className="rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            {t("employer.comingSoonShort")}
+            <GraduationCap className="h-5 w-5" />
           </span>
-        )}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
+              <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-accent">
+                {badge}
+              </span>
+            </div>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{body}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="inline-flex h-10 shrink-0 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-4 text-sm font-medium text-muted-foreground"
+        >
+          {t(inviteLabelKey)}
+        </button>
       </div>
-      {disabledReason && !href && (
-        <p className="mt-3 text-xs text-muted-foreground">{disabledReason}</p>
-      )}
+    </div>
+  );
+}
+
+function EmptyStateCard({
+  title,
+  body,
+  steps,
+  ctaLabel,
+  ctaLinkProps,
+}: {
+  title: string;
+  body: string;
+  steps: string[];
+  ctaLabel: string;
+  ctaLinkProps: LinkComponentProps;
+}) {
+  return (
+    <div className="mt-8 rounded-xl border border-border bg-gradient-to-br from-accent/5 via-background to-background p-6 shadow-sm">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+          <ol className="mt-5 grid gap-3 sm:grid-cols-3">
+            {steps.map((step, i) => (
+              <li
+                key={i}
+                className="rounded-lg border border-border bg-background p-3 text-sm text-foreground"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
+                  {i + 1}
+                </span>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <Link
+          {...ctaLinkProps}
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <PlusCircle className="h-4 w-4" aria-hidden="true" />
+          {ctaLabel}
+        </Link>
+      </div>
     </div>
   );
 }
