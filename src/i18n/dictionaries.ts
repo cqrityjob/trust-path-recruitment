@@ -652,6 +652,32 @@ export const dictionaries = {
     "employer.dashboard.empty.step2": "Bjud in kandidater till CQrityjobs bedömning.",
     "employer.dashboard.empty.step3":
       "Följ ansökningar och matchningar direkt i din arbetsgivaryta.",
+    "employer.dashboard.hero.summary":
+      "Så här ser din arbetsgivaryta ut just nu. Skapa annonser, följ ansökningar och förbered kommande bedömningar från ett och samma ställe.",
+    "employer.dashboard.primaryCta": "Skapa ny annons",
+    "employer.dashboard.section.recruitment": "Rekrytering",
+    "employer.dashboard.section.recruitment.desc":
+      "Publicera annonser och hantera inkommande ansökningar.",
+    "employer.dashboard.section.company": "Organisation",
+    "employer.dashboard.section.company.desc":
+      "Uppdatera företagsinformation, kontaktuppgifter och medlemmar.",
+    "employer.dashboard.section.assessment": "Bedömningscenter",
+    "employer.dashboard.section.assessment.desc":
+      "Strukturerade professionella bedömningar av kandidater och medarbetare.",
+    "employer.dashboard.action.createJob.desc":
+      "Skriv och skicka en ny jobbannons till granskning.",
+    "employer.dashboard.action.manageJobs.desc":
+      "Redigera, publicera och stäng befintliga annonser.",
+    "employer.dashboard.action.applications": "Ansökningar",
+    "employer.dashboard.action.applications.desc":
+      "Granska kandidater som har sökt era annonser.",
+    "employer.dashboard.action.orgSettings.desc":
+      "Hantera företagsprofil, kontaktuppgifter och synlighet.",
+    "employer.dashboard.assessmentCenter.heading": "Bedömningscenter",
+    "employer.dashboard.assessmentCenter.body":
+      "Bedöm kandidater och medarbetare med strukturerade, professionella bedömningar. Lanseras snart.",
+    "employer.dashboard.assessmentCenter.badge": "Lanseras snart",
+    "employer.dashboard.empty.cta": "Skapa din första annons",
     "employer.jobs.list.heading": "Jobbannonser",
     "employer.jobs.list.title": "Titel",
     "employer.jobs.list.newJob": "Ny jobbannons",
@@ -1915,6 +1941,32 @@ export const dictionaries = {
     "employer.dashboard.empty.step1": "Create a job and submit it for review.",
     "employer.dashboard.empty.step2": "Invite candidates to complete the CQrityjob assessment.",
     "employer.dashboard.empty.step3": "Track applications and matches directly in your workspace.",
+    "employer.dashboard.hero.summary":
+      "Here's what your employer workspace looks like right now. Create jobs, track applications, and prepare upcoming assessments — all in one place.",
+    "employer.dashboard.primaryCta": "Create new job",
+    "employer.dashboard.section.recruitment": "Recruitment",
+    "employer.dashboard.section.recruitment.desc":
+      "Publish jobs and manage incoming applications.",
+    "employer.dashboard.section.company": "Organisation",
+    "employer.dashboard.section.company.desc":
+      "Update company information, contact details, and members.",
+    "employer.dashboard.section.assessment": "Assessment Center",
+    "employer.dashboard.section.assessment.desc":
+      "Structured, professional assessments of candidates and employees.",
+    "employer.dashboard.action.createJob.desc":
+      "Draft and submit a new job posting for review.",
+    "employer.dashboard.action.manageJobs.desc":
+      "Edit, publish, and close your existing job postings.",
+    "employer.dashboard.action.applications": "Applications",
+    "employer.dashboard.action.applications.desc":
+      "Review candidates who have applied to your jobs.",
+    "employer.dashboard.action.orgSettings.desc":
+      "Manage company profile, contact details, and visibility.",
+    "employer.dashboard.assessmentCenter.heading": "Assessment Center",
+    "employer.dashboard.assessmentCenter.body":
+      "Assess candidates and employees using structured professional assessments. Launching soon.",
+    "employer.dashboard.assessmentCenter.badge": "Launching soon",
+    "employer.dashboard.empty.cta": "Create your first job",
     "employer.jobs.list.heading": "Job postings",
     "employer.jobs.list.title": "Title",
     "employer.jobs.list.newJob": "New job",
