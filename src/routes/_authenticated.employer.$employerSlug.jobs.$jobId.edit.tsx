@@ -6,10 +6,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
-import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
-import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -125,20 +123,14 @@ function EmployerJobEditPage() {
 
   if (workspacesQuery.isLoading || (workspace && jobQuery.isLoading)) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-3xl">
-          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+      </div>
     );
   }
 
   if (!workspace || jobQuery.isError || !jobQuery.data) {
-    return (
-      <SiteLayout>
-        <EmployerAccessDenied workspaces={workspacesQuery.data} />
-      </SiteLayout>
-    );
+    return <EmployerAccessDenied workspaces={workspacesQuery.data} />;
   }
 
   const job = jobQuery.data as Record<string, any>;
@@ -146,97 +138,95 @@ function EmployerJobEditPage() {
   const closeable = job.status === "published";
 
   return (
-    <SiteLayout>
-      <EmployerWorkspaceChrome
-        employerSlug={employerSlug}
-        employerName={workspace.employerName}
-        role={workspace.role}
-        status={workspace.employerStatus}
-        activeSection="jobs"
-        hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
-      >
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-              {t("employer.jobs.edit.heading")}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("employer.jobs.list.status")}:{" "}
-              <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                {jobStatusLabel(job.status, lang) || job.status}
-              </span>
-            </p>
-          </div>
-          {job.status === "published" && (
-            <Link
-              to="/jobs/$slug"
-              params={{ slug: job.slug }}
-              className="text-sm font-medium text-accent hover:underline"
-              target="_blank"
-              rel="noopener"
-            >
-              {t("employer.jobs.edit.viewPublic")} ↗
-            </Link>
-          )}
+    <EmployerAppShell
+      employerSlug={employerSlug}
+      employerName={workspace.employerName}
+      role={workspace.role}
+      status={workspace.employerStatus}
+      activeSection="jobs"
+      hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+    >
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+            {t("employer.jobs.edit.heading")}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("employer.jobs.list.status")}:{" "}
+            <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
+              {jobStatusLabel(job.status, lang) || job.status}
+            </span>
+          </p>
         </div>
+        {job.status === "published" && (
+          <Link
+            to="/jobs/$slug"
+            params={{ slug: job.slug }}
+            className="text-sm font-medium text-accent hover:underline"
+            target="_blank"
+            rel="noopener"
+          >
+            {t("employer.jobs.edit.viewPublic")} ↗
+          </Link>
+        )}
+      </div>
 
-        {!editable && (
-          <div className="mb-6 rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-            {t("employer.jobs.edit.notEditable")}
-            <div className="mt-3 flex flex-wrap gap-3">
+      {!editable && (
+        <div className="mb-6 rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          {t("employer.jobs.edit.notEditable")}
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={dupMutation.isPending}
+              onClick={() => {
+                if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
+                  setFormError(null);
+                  dupMutation.mutate();
+                }
+              }}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
+            >
+              {t("employer.jobs.edit.duplicate")}
+            </button>
+            {closeable && (
               <button
                 type="button"
-                disabled={dupMutation.isPending}
+                disabled={closeMutation.isPending}
                 onClick={() => {
-                  if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
+                  if (window.confirm(t("employer.jobs.list.confirmClose"))) {
                     setFormError(null);
-                    dupMutation.mutate();
+                    closeMutation.mutate();
                   }
                 }}
-                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
+                className="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
               >
-                {t("employer.jobs.edit.duplicate")}
+                {t("employer.jobs.edit.close")}
               </button>
-              {closeable && (
-                <button
-                  type="button"
-                  disabled={closeMutation.isPending}
-                  onClick={() => {
-                    if (window.confirm(t("employer.jobs.list.confirmClose"))) {
-                      setFormError(null);
-                      closeMutation.mutate();
-                    }
-                  }}
-                  className="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
-                >
-                  {t("employer.jobs.edit.close")}
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        <EmployerJobForm
-          initial={fromJobRow(job)}
-          readOnly={!editable}
-          editableStatus={job.status}
-          saving={saveMutation.isPending}
-          submitting={submitMutation.isPending}
-          error={formError}
-          onSaveDraft={(v) => {
-            setFormError(null);
-            saveMutation.mutate(v);
-          }}
-          onSubmitForReview={
-            editable
-              ? (v) => {
-                  setFormError(null);
-                  submitMutation.mutate(v);
-                }
-              : undefined
-          }
-        />
-      </EmployerWorkspaceChrome>
-    </SiteLayout>
+      <EmployerJobForm
+        initial={fromJobRow(job)}
+        readOnly={!editable}
+        editableStatus={job.status}
+        saving={saveMutation.isPending}
+        submitting={submitMutation.isPending}
+        error={formError}
+        onSaveDraft={(v) => {
+          setFormError(null);
+          saveMutation.mutate(v);
+        }}
+        onSubmitForReview={
+          editable
+            ? (v) => {
+                setFormError(null);
+                submitMutation.mutate(v);
+              }
+            : undefined
+        }
+      />
+    </EmployerAppShell>
   );
 }

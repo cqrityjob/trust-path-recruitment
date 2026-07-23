@@ -4,10 +4,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { SiteLayout } from "@/components/site/SiteLayout";
-import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
-import { EmployerWorkspaceChrome } from "@/components/employer/EmployerWorkspaceChrome";
+import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -81,56 +79,48 @@ function EmployerJobNewPage() {
 
   if (workspacesQuery.isLoading) {
     return (
-      <SiteLayout>
-        <Section containerClassName="max-w-3xl">
-          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        </Section>
-      </SiteLayout>
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+      </div>
     );
   }
 
   if (!workspace) {
-    return (
-      <SiteLayout>
-        <EmployerAccessDenied workspaces={workspacesQuery.data} />
-      </SiteLayout>
-    );
+    return <EmployerAccessDenied workspaces={workspacesQuery.data} />;
   }
 
   return (
-    <SiteLayout>
-      <EmployerWorkspaceChrome
-        employerSlug={employerSlug}
-        employerName={workspace.employerName}
-        role={workspace.role}
-        status={workspace.employerStatus}
-        activeSection="jobs"
-        hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
-      >
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-            {t("employer.jobs.new.heading")}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            {t("employer.jobs.new.lede")}
-          </p>
-        </div>
+    <EmployerAppShell
+      employerSlug={employerSlug}
+      employerName={workspace.employerName}
+      role={workspace.role}
+      status={workspace.employerStatus}
+      activeSection="jobs"
+      hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+    >
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+          {t("employer.jobs.new.heading")}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          {t("employer.jobs.new.lede")}
+        </p>
+      </div>
 
-        <EmployerJobForm
-          initial={emptyValues}
-          saving={saveMutation.isPending}
-          submitting={submitMutation.isPending}
-          error={formError}
-          onSaveDraft={(v) => {
-            setFormError(null);
-            saveMutation.mutate(v);
-          }}
-          onSubmitForReview={(v) => {
-            setFormError(null);
-            submitMutation.mutate(v);
-          }}
-        />
-      </EmployerWorkspaceChrome>
-    </SiteLayout>
+      <EmployerJobForm
+        initial={emptyValues}
+        saving={saveMutation.isPending}
+        submitting={submitMutation.isPending}
+        error={formError}
+        onSaveDraft={(v) => {
+          setFormError(null);
+          saveMutation.mutate(v);
+        }}
+        onSubmitForReview={(v) => {
+          setFormError(null);
+          submitMutation.mutate(v);
+        }}
+      />
+    </EmployerAppShell>
   );
 }
