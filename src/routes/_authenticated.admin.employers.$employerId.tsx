@@ -384,6 +384,116 @@ function AdminEmployerDetailPage() {
 
         <section className="mt-6 rounded-lg border border-border bg-background p-5">
           <h2 className="text-sm font-semibold text-foreground">
+            {t("admin.employers.detail.section.applications")}
+          </h2>
+          {employer.applications.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("admin.employers.detail.noApplications")}
+            </p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="py-1.5 pr-4">{t("employer.jobs.list.title")}</th>
+                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.status")}</th>
+                    <th className="py-1.5 pr-4">{t("admin.employers.detail.field.created")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {employer.applications.map((a) => (
+                    <tr key={a.id}>
+                      <td className="py-1.5 pr-4">{a.jobTitleSv || a.jobTitleEn || "—"}</td>
+                      <td className="py-1.5 pr-4">{a.status}</td>
+                      <td className="py-1.5 pr-4 text-xs text-muted-foreground">
+                        {formatDate(a.createdAt, lang)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-lg border border-border bg-background p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("admin.employers.detail.section.employees")}
+          </h2>
+          {employer.employees.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("admin.employers.detail.noEmployees")}
+            </p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.name")}</th>
+                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.status")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {employer.employees.map((e) => (
+                    <tr key={e.id}>
+                      <td className="py-1.5 pr-4">
+                        {e.firstName} {e.lastName}
+                      </td>
+                      <td className="py-1.5 pr-4">{e.employmentStatus}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-lg border border-border bg-background p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("admin.employers.detail.section.assignments")}
+          </h2>
+          {employer.assignments.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("admin.employers.detail.noAssignments")}
+            </p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.status")}</th>
+                    <th className="py-1.5 pr-4">{t("admin.users.detail.column.role")}</th>
+                    <th className="py-1.5 pr-4">{t("admin.employers.detail.field.created")}</th>
+                    <th className="py-1.5 pr-4" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {employer.assignments.map((a) => (
+                    <tr key={a.id}>
+                      <td className="py-1.5 pr-4">{a.status}</td>
+                      <td className="py-1.5 pr-4">{a.useCase}</td>
+                      <td className="py-1.5 pr-4 text-xs text-muted-foreground">
+                        {formatDate(a.invitedAt, lang)}
+                      </td>
+                      <td className="py-1.5 pr-4 text-right">
+                        <Link
+                          to="/admin/assignments/$assignmentId"
+                          params={{ assignmentId: a.id }}
+                          className="text-accent hover:underline"
+                        >
+                          {t("admin.employers.list.open")}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-lg border border-border bg-background p-5">
+          <h2 className="text-sm font-semibold text-foreground">
             {t("admin.employers.detail.section.history")}
           </h2>
           {employer.moderationHistory.length === 0 ? (
