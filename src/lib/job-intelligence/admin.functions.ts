@@ -125,7 +125,7 @@ export const adminListJobs = createServerFn({ method: "POST" })
     const employerIds = Array.from(
       new Set((rows ?? []).map((r: any) => r.employer_id).filter(Boolean)),
     );
-    let employersById: Record<string, { name: string; slug: string; status: string }> = {};
+    const employersById: Record<string, { name: string; slug: string; status: string }> = {};
     if (employerIds.length > 0) {
       const { data: emps, error: eErr } = await ctx.supabase
         .from("employers")
@@ -701,9 +701,16 @@ export const adminWhoAmI = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = context as Ctx;
-    const { data, error } = await ctx.supabase.rpc("is_platform_admin", {
-      _user_id: ctx.userId,
-    });
-    if (error) throw new Error(error.message);
-    return { userId: ctx.userId, isAdmin: Boolean(data) };
+    const [{ data: isAdminData, error: adminErr }, { data: isSuperadminData, error: superErr }] =
+      await Promise.all([
+        ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
+        ctx.supabase.rpc("is_superadmin", { _user_id: ctx.userId }),
+      ]);
+    if (adminErr) throw new Error(adminErr.message);
+    if (superErr) throw new Error(superErr.message);
+    return {
+      userId: ctx.userId,
+      isAdmin: Boolean(isAdminData),
+      isSuperadmin: Boolean(isSuperadminData),
+    };
   });
