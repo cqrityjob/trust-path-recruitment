@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import {
@@ -27,6 +27,10 @@ import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCaree
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
+import {
+  getMyLinkableAssignments,
+  claimAssessmentAssignment,
+} from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
@@ -129,6 +133,26 @@ function MyCareerPage() {
     queryKey: ["my-career", "runs"],
     queryFn: () => fetchRuns(),
     staleTime: 30_000,
+  });
+
+  // Employer-assigned assessments completed before this account existed or
+  // was signed in, matched by verified email, not yet linked to a real
+  // assessment_runs row -- surfaced so linking is always an explicit,
+  // signed-in action, never automatic.
+  const qc = useQueryClient();
+  const fetchLinkable = useServerFn(getMyLinkableAssignments);
+  const linkableQ = useQuery({
+    queryKey: ["my-career", "linkable-assignments"],
+    queryFn: () => fetchLinkable(),
+    staleTime: 30_000,
+  });
+  const claimFn = useServerFn(claimAssessmentAssignment);
+  const claimMutation = useMutation({
+    mutationFn: (assignmentId: string) => claimFn({ data: { assignmentId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-career", "runs"] });
+      qc.invalidateQueries({ queryKey: ["my-career", "linkable-assignments"] });
+    },
   });
 
   // Phase G2 — entry point is gated on BOTH the feature flag and having
@@ -322,6 +346,46 @@ function MyCareerPage() {
                 />
               )}
             </DashboardCard>
+
+            {/* Employer-assigned assessments completed before sign-in,
+                matched by verified email, offered for explicit linking. */}
+            {linkableQ.data && linkableQ.data.length > 0 && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(
+                  c("Bedömning att koppla till din profil", "Assessment ready to link"),
+                  lang,
+                )}
+              >
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {L(
+                    c(
+                      "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
+                      "You've completed an employer-assigned assessment with this email address. Link the result to your profile to see it under My Reports.",
+                    ),
+                    lang,
+                  )}
+                </p>
+                <ul className="divide-y divide-border">
+                  {linkableQ.data.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between gap-3 py-3">
+                      <span className="text-sm text-foreground">
+                        {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={claimMutation.isPending}
+                        onClick={() => claimMutation.mutate(a.id)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
+                      >
+                        {L(c("Koppla till min profil", "Link to my profile"), lang)}
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </DashboardCard>
+            )}
 
             {/* Previous reports — reuses runsQ.data, already fetched above;
                 no new query. Excludes the latest run, already linked from

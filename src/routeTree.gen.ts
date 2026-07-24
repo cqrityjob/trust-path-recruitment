@@ -26,6 +26,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EmployerRegisterRouteImport } from './routes/employer.register'
 import { Route as EmployerLoginRouteImport } from './routes/employer.login'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
@@ -73,8 +74,11 @@ import { Route as AuthenticatedEmployerEmployerSlugWorkforceIndexRouteImport } f
 import { Route as AuthenticatedEmployerEmployerSlugJobsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.index'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsNewRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.new'
+import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssignRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.assign'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.$assessmentSlug'
+import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.assignments.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
+import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.assignments.$assignmentId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -160,6 +164,11 @@ const JobsSlugRoute = JobsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => JobsRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmployerRegisterRoute = EmployerRegisterRouteImport.update({
   id: '/employer/register',
@@ -428,18 +437,40 @@ const AuthenticatedEmployerEmployerSlugJobsNewRoute =
     path: '/jobs/new',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute =
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignRouteImport.update({
+    id: '/assessments/assign',
+    path: '/assessments/assign',
+    getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+  } as any)
 const AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute =
   AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRouteImport.update({
     id: '/assessments/$assessmentSlug',
     path: '/assessments/$assessmentSlug',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute =
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRouteImport.update(
+    {
+      id: '/assessments/assignments/',
+      path: '/assessments/assignments/',
+      getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+    } as any,
+  )
 const AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute =
   AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport.update({
     id: '/jobs/$jobId/edit',
     path: '/jobs/$jobId/edit',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute =
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRouteImport.update(
+    {
+      id: '/assessments/assignments/$assignmentId',
+      path: '/assessments/assignments/$assignmentId',
+      getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -470,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -502,11 +534,14 @@ export interface FileRoutesByFullPath {
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
   '/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
+  '/employer/$employerSlug/assessments/assign': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/assessments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
   '/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -532,6 +567,7 @@ export interface FileRoutesByTo {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
@@ -562,11 +598,14 @@ export interface FileRoutesByTo {
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
+  '/employer/$employerSlug/assessments/assign': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/assessments': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
   '/employer/$employerSlug/jobs': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/employer/$employerSlug/workforce': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/employer/$employerSlug/assessments/assignments': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -599,6 +638,7 @@ export interface FileRoutesById {
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
@@ -631,11 +671,14 @@ export interface FileRoutesById {
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
   '/_authenticated/employer/$employerSlug/': typeof AuthenticatedEmployerEmployerSlugIndexRoute
   '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
+  '/_authenticated/employer/$employerSlug/assessments/assign': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute
   '/_authenticated/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/_authenticated/employer/$employerSlug/assessments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
   '/_authenticated/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/_authenticated/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  '/_authenticated/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -668,6 +711,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/employer/login'
     | '/employer/register'
+    | '/invite/$token'
     | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
@@ -700,11 +744,14 @@ export interface FileRouteTypes {
     | '/admin/jobs/'
     | '/employer/$employerSlug/'
     | '/employer/$employerSlug/assessments/$assessmentSlug'
+    | '/employer/$employerSlug/assessments/assign'
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/assessments/'
     | '/employer/$employerSlug/jobs/'
     | '/employer/$employerSlug/workforce/'
+    | '/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/employer/$employerSlug/jobs/$jobId/edit'
+    | '/employer/$employerSlug/assessments/assignments/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -730,6 +777,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/employer/login'
     | '/employer/register'
+    | '/invite/$token'
     | '/jobs/$slug'
     | '/career-center'
     | '/jobs'
@@ -760,11 +808,14 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/employer/$employerSlug'
     | '/employer/$employerSlug/assessments/$assessmentSlug'
+    | '/employer/$employerSlug/assessments/assign'
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/assessments'
     | '/employer/$employerSlug/jobs'
     | '/employer/$employerSlug/workforce'
+    | '/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/employer/$employerSlug/jobs/$jobId/edit'
+    | '/employer/$employerSlug/assessments/assignments'
   id:
     | '__root__'
     | '/'
@@ -796,6 +847,7 @@ export interface FileRouteTypes {
     | '/dev/career-assessment-calibration'
     | '/employer/login'
     | '/employer/register'
+    | '/invite/$token'
     | '/jobs/$slug'
     | '/career-center/'
     | '/jobs/'
@@ -828,11 +880,14 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/jobs/'
     | '/_authenticated/employer/$employerSlug/'
     | '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug'
+    | '/_authenticated/employer/$employerSlug/assessments/assign'
     | '/_authenticated/employer/$employerSlug/jobs/new'
     | '/_authenticated/employer/$employerSlug/assessments/'
     | '/_authenticated/employer/$employerSlug/jobs/'
     | '/_authenticated/employer/$employerSlug/workforce/'
+    | '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
+    | '/_authenticated/employer/$employerSlug/assessments/assignments/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -858,6 +913,7 @@ export interface RootRouteChildren {
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
   EmployerLoginRoute: typeof EmployerLoginRoute
   EmployerRegisterRoute: typeof EmployerRegisterRoute
+  InviteTokenRoute: typeof InviteTokenRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -981,6 +1037,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/jobs/$slug'
       preLoaderRoute: typeof JobsSlugRouteImport
       parentRoute: typeof JobsRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/employer/register': {
       id: '/employer/register'
@@ -1311,6 +1374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsNewRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/employer/$employerSlug/assessments/assign': {
+      id: '/_authenticated/employer/$employerSlug/assessments/assign'
+      path: '/assessments/assign'
+      fullPath: '/employer/$employerSlug/assessments/assign'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
     '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug': {
       id: '/_authenticated/employer/$employerSlug/assessments/$assessmentSlug'
       path: '/assessments/$assessmentSlug'
@@ -1318,11 +1388,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/employer/$employerSlug/assessments/assignments/': {
+      id: '/_authenticated/employer/$employerSlug/assessments/assignments/'
+      path: '/assessments/assignments'
+      fullPath: '/employer/$employerSlug/assessments/assignments/'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
     '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': {
       id: '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
       path: '/jobs/$jobId/edit'
       fullPath: '/employer/$employerSlug/jobs/$jobId/edit'
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
+    '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId': {
+      id: '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId'
+      path: '/assessments/assignments/$assignmentId'
+      fullPath: '/employer/$employerSlug/assessments/assignments/$assignmentId'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
   }
@@ -1392,11 +1476,14 @@ interface AuthenticatedEmployerEmployerSlugRouteChildren {
   AuthenticatedEmployerEmployerSlugTrainingRoute: typeof AuthenticatedEmployerEmployerSlugTrainingRoute
   AuthenticatedEmployerEmployerSlugIndexRoute: typeof AuthenticatedEmployerEmployerSlugIndexRoute
   AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute
   AuthenticatedEmployerEmployerSlugJobsNewRoute: typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
   AuthenticatedEmployerEmployerSlugJobsIndexRoute: typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   AuthenticatedEmployerEmployerSlugWorkforceIndexRoute: typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
+  AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
 }
 
 const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmployerSlugRouteChildren =
@@ -1423,6 +1510,8 @@ const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmplo
       AuthenticatedEmployerEmployerSlugIndexRoute,
     AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute:
       AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRoute,
+    AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute:
+      AuthenticatedEmployerEmployerSlugAssessmentsAssignRoute,
     AuthenticatedEmployerEmployerSlugJobsNewRoute:
       AuthenticatedEmployerEmployerSlugJobsNewRoute,
     AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute:
@@ -1431,8 +1520,12 @@ const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmplo
       AuthenticatedEmployerEmployerSlugJobsIndexRoute,
     AuthenticatedEmployerEmployerSlugWorkforceIndexRoute:
       AuthenticatedEmployerEmployerSlugWorkforceIndexRoute,
+    AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute:
+      AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute,
     AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute:
       AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute,
+    AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute:
+      AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute,
   }
 
 const AuthenticatedEmployerEmployerSlugRouteWithChildren =
@@ -1564,6 +1657,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
   EmployerLoginRoute: EmployerLoginRoute,
   EmployerRegisterRoute: EmployerRegisterRoute,
+  InviteTokenRoute: InviteTokenRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport

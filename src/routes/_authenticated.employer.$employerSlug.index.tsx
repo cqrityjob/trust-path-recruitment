@@ -58,6 +58,7 @@ import {
   type EmployerAssessmentCatalogEntry,
 } from "@/lib/job-intelligence/employer-assessment-catalog.functions";
 import { getEmployerWorkforceSummary } from "@/lib/job-intelligence/employer-workforce.functions";
+import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
@@ -196,6 +197,7 @@ function CommandCenter({
   const loadApplications = useServerFn(listApplicationsForEmployer);
   const loadCatalog = useServerFn(listEmployerAssessmentCatalog);
   const loadWorkforce = useServerFn(getEmployerWorkforceSummary);
+  const loadAssignments = useServerFn(listAssignmentsForEmployer);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -221,6 +223,10 @@ function CommandCenter({
     queryKey: ["employer", employerId, "workforce-summary"],
     queryFn: () => loadWorkforce({ data: { employerId } }),
   });
+  const assignmentsQuery = useQuery({
+    queryKey: ["employer", employerId, "assignments", "all"],
+    queryFn: () => loadAssignments({ data: { employerId, statusFilter: "all" } }),
+  });
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -235,6 +241,12 @@ function CommandCenter({
   const operationalCount = catalog.filter((c) => c.roleCategory === "operational").length;
   const strategicCount = catalog.filter((c) => c.roleCategory === "strategic").length;
   const sgf = catalog.find((c) => c.id === "security-guard-foundation");
+  const assignments = assignmentsQuery.data ?? [];
+  const invitedCount = assignments.filter(
+    (a) => a.status === "invited" || a.status === "opened",
+  ).length;
+  const inProgressCount = assignments.filter((a) => a.status === "started").length;
+  const completedAssignmentsCount = assignments.filter((a) => a.status === "completed").length;
 
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
   const publishedJobIds = new Set(jobs.filter((j) => j.status === "published").map((j) => j.id));
@@ -625,6 +637,28 @@ function CommandCenter({
             loading={catalogQuery.isLoading}
           />
         </div>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <MiniStat
+            label={t("employer.assessmentActivity.invited")}
+            value={invitedCount}
+            loading={assignmentsQuery.isLoading}
+          />
+          <MiniStat
+            label={t("employer.assessmentActivity.inProgress")}
+            value={inProgressCount}
+            loading={assignmentsQuery.isLoading}
+          />
+          <MiniStat
+            label={t("employer.assessmentActivity.completed")}
+            value={completedAssignmentsCount}
+            loading={assignmentsQuery.isLoading}
+          />
+        </div>
+        {assignmentsQuery.isSuccess && assignments.length === 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t("employer.assessmentActivity.empty")}
+          </p>
+        )}
         {sgf && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 p-3">
             <p className="text-sm text-foreground">{lang === "sv" ? sgf.name.sv : sgf.name.en}</p>
@@ -639,12 +673,24 @@ function CommandCenter({
         )}
         <div className="mt-4 flex flex-wrap gap-2">
           <LaneAction
+            label={t("employer.assessments.action.assign")}
+            linkProps={{
+              to: "/employer/$employerSlug/assessments/assign",
+              params: { employerSlug },
+              search: { assessmentId: "security-guard-foundation" },
+            }}
+          />
+          <LaneAction
+            label={t("employer.assessmentActivity.viewActivity")}
+            linkProps={{
+              to: "/employer/$employerSlug/assessments/assignments",
+              params: { employerSlug },
+            }}
+          />
+          <LaneAction
             label={t("employer.assessmentActivity.viewCenter")}
             linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
           />
-          <span className="inline-flex items-center rounded-md border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            {t("employer.assessments.action.assign")} · {t("employer.comingSoonShort")}
-          </span>
         </div>
       </section>
 
