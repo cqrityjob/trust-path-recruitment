@@ -116,19 +116,24 @@ export const adminListJobs = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    // Attach employer names in a second query to avoid embedding through RLS.
+    // Attach employer names + status in a second query to avoid embedding
+    // through RLS. Status is surfaced here (admin-audit fix) because a
+    // job's real-world visibility depends on its employer's moderation
+    // status (jobs_public_active_select requires employer_is_active_status)
+    // -- an admin reviewing this list needs to see that at a glance, not
+    // discover it as a silent mismatch after publishing.
     const employerIds = Array.from(
       new Set((rows ?? []).map((r: any) => r.employer_id).filter(Boolean)),
     );
-    let employersById: Record<string, { name: string; slug: string }> = {};
+    let employersById: Record<string, { name: string; slug: string; status: string }> = {};
     if (employerIds.length > 0) {
       const { data: emps, error: eErr } = await ctx.supabase
         .from("employers")
-        .select("id, name, slug")
+        .select("id, name, slug, status")
         .in("id", employerIds);
       if (eErr) throw new Error(eErr.message);
       for (const e of emps ?? []) {
-        employersById[e.id as string] = { name: e.name, slug: e.slug };
+        employersById[e.id as string] = { name: e.name, slug: e.slug, status: e.status };
       }
     }
 
@@ -161,7 +166,21 @@ export const adminGetJob = createServerFn({ method: "POST" })
       .eq("job_id", data.id)
       .maybeSingle();
 
-    return { job, meta: meta ?? null };
+    // Admin-audit fix: surface the employer's current moderation status
+    // alongside the job, so the editor can warn before a publish attempt
+    // that would otherwise succeed in the database yet stay invisible to
+    // the public (jobs_public_active_select requires employer_is_active).
+    let employerStatus: string | null = null;
+    if (job.employer_id) {
+      const { data: emp } = await ctx.supabase
+        .from("employers")
+        .select("status")
+        .eq("id", job.employer_id)
+        .maybeSingle();
+      employerStatus = (emp?.status as string) ?? null;
+    }
+
+    return { job, meta: meta ?? null, employerStatus };
   });
 
 // ---------------------------- JOBS: UPSERT (draft edits) ---------------------
@@ -380,6 +399,30 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
       return { id: data.id, status: "rejected" };
     }
 
+    // Admin-audit fix: a job may only become 'published' while its
+    // employer is 'active'. This was previously unchecked on the admin
+    // path -- jobs_validate_before_write()'s equivalent gate applied only
+    // to the employer's own self-service submit-for-review transition,
+    // so an admin could publish a job for a pending/rejected/suspended
+    // employer and the write would silently succeed while the job stayed
+    // invisible everywhere else (jobs_public_active_select independently
+    // requires employer_is_active_status). Checked here for a clean,
+    // typed, translatable error; the database trigger (see
+    // 20260724120000_admin_audit_job_publish_requires_active_employer.sql)
+    // is the actual, unconditional boundary -- this is a friendly
+    // pre-check, not the enforcement itself.
+    if (data.action === "publish") {
+      const { data: employer, error: empErr } = await ctx.supabase
+        .from("employers")
+        .select("status")
+        .eq("id", before.employer_id)
+        .maybeSingle();
+      if (empErr) throw new Error(empErr.message);
+      if (!employer || employer.status !== "active") {
+        throw new Error("EMPLOYER_NOT_ACTIVE");
+      }
+    }
+
     const patch: Record<string, unknown> = { updated_at: nowIso };
     let auditAction: string;
 
@@ -404,7 +447,18 @@ export const adminTransitionJob = createServerFn({ method: "POST" })
     }
 
     const { error: upErr } = await ctx.supabase.from("jobs").update(patch).eq("id", data.id);
-    if (upErr) throw new Error(upErr.message); // DB trigger enforces publish rules
+    if (upErr) {
+      // DB trigger enforces publish rules -- including, as of the
+      // admin-audit fix, the same employer-active requirement checked
+      // above. A 23514 here (check_violation) on a publish attempt means
+      // the employer's status changed between the pre-check and this
+      // write (race), so it's still reported as the same typed error
+      // rather than a raw Postgres message.
+      if (data.action === "publish" && upErr.code === "23514") {
+        throw new Error("EMPLOYER_NOT_ACTIVE");
+      }
+      throw new Error(upErr.message);
+    }
 
     // Record reviewer on publish
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -457,9 +511,13 @@ export const adminListEmployers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const ctx = context as Ctx;
     await assertAdmin(ctx);
+    // status included (admin-audit fix) so the job editor's employer
+    // picker can show it inline -- an admin choosing/reviewing an
+    // employer for a job needs to see it is not yet active without
+    // navigating away to /admin/employers first.
     const { data, error } = await ctx.supabase
       .from("employers")
-      .select("id, slug, name, country, website")
+      .select("id, slug, name, country, website, status")
       .order("name", { ascending: true })
       .limit(500);
     if (error) throw new Error(error.message);

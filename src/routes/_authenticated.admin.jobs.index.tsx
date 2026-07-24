@@ -37,6 +37,20 @@ const STATUS_LABEL_KEY: Record<(typeof STATUSES)[number], TranslationKey> = {
   archived: "admin.jobs.status.archived",
 };
 
+// Employer moderation status (distinct enum from job status above).
+// Admin-audit fix: surfaced here so a reviewer can see at a glance which
+// jobs belong to a not-yet-active employer, instead of discovering the
+// mismatch only after a publish attempt silently stays invisible to the
+// public.
+const EMPLOYER_STATUS_LABEL_KEY: Record<string, TranslationKey> = {
+  draft: "admin.employers.status.draft",
+  pending: "admin.employers.status.pending",
+  active: "admin.employers.status.active",
+  rejected: "admin.employers.status.rejected",
+  suspended: "admin.employers.status.suspended",
+  archived: "admin.employers.status.archived",
+};
+
 function AdminJobsList() {
   const { t, lang } = useT();
   const listFn = useServerFn(adminListJobs);
@@ -127,7 +141,27 @@ function AdminJobsList() {
                       </div>
                       <div className="text-xs text-muted-foreground">{j.slug}</div>
                     </td>
-                    <td className="p-3">{j.employer?.name ?? "—"}</td>
+                    <td className="p-3">
+                      {j.employer ? (
+                        <Link
+                          to="/admin/employers/$employerId"
+                          params={{ employerId: j.employer_id }}
+                          className="hover:underline"
+                        >
+                          {j.employer.name}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                      {j.employer?.status && j.employer.status !== "active" && (
+                        <Badge variant="destructive" className="ml-2 align-middle text-[10px]">
+                          {t(
+                            EMPLOYER_STATUS_LABEL_KEY[j.employer.status] ??
+                              "admin.employers.status.draft",
+                          )}
+                        </Badge>
+                      )}
+                    </td>
                     <td className="p-3">
                       <Badge variant="outline">
                         {t(

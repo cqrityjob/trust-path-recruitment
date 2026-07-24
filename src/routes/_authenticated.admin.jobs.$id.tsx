@@ -56,6 +56,18 @@ const STATUS_LABEL_KEY: Record<string, TranslationKey> = {
   archived: "admin.jobs.status.archived",
 };
 
+// Employer moderation status (distinct enum from job status above --
+// employers use draft/pending/active/rejected/suspended/archived).
+// Mirrors the labels already defined for /admin/employers/$employerId.
+const EMPLOYER_STATUS_LABEL_KEY: Record<string, TranslationKey> = {
+  draft: "admin.employers.status.draft",
+  pending: "admin.employers.status.pending",
+  active: "admin.employers.status.active",
+  rejected: "admin.employers.status.rejected",
+  suspended: "admin.employers.status.suspended",
+  archived: "admin.employers.status.archived",
+};
+
 type FormState = {
   employer_id: string;
   title_sv: string;
@@ -189,11 +201,13 @@ function AdminJobEditor() {
     },
     onError: (e: Error) => {
       setMessage(null);
-      setError(
-        e.message === "REJECTION_NOTE_REQUIRED"
-          ? t("admin.jobs.detail.error.rejectionNoteRequired")
-          : e.message,
-      );
+      if (e.message === "REJECTION_NOTE_REQUIRED") {
+        setError(t("admin.jobs.detail.error.rejectionNoteRequired"));
+      } else if (e.message === "EMPLOYER_NOT_ACTIVE") {
+        setError(t("admin.jobs.detail.error.employerNotActive"));
+      } else {
+        setError(e.message);
+      }
     },
   });
 
@@ -216,6 +230,8 @@ function AdminJobEditor() {
   }
 
   const currentStatus = (jobQ.data?.job as any)?.status ?? "draft";
+  const employerStatus = (jobQ.data as any)?.employerStatus as string | null | undefined;
+  const employerNotActive = !isNew && !!employerStatus && employerStatus !== "active";
 
   return (
     <SiteLayout>
@@ -257,11 +273,37 @@ function AdminJobEditor() {
                     {(employers.data ?? []).map((e: any) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.name}
+                        {e.status && e.status !== "active" && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            (
+                            {t(
+                              EMPLOYER_STATUS_LABEL_KEY[e.status] ?? "admin.employers.status.draft",
+                            )}
+                            )
+                          </span>
+                        )}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {employerNotActive && (
+                <div
+                  role="alert"
+                  className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
+                >
+                  <p>{t("admin.jobs.detail.employerStatusWarning")}</p>
+                  <Link
+                    to="/admin/employers/$employerId"
+                    params={{ employerId: form.employer_id }}
+                    className="mt-1 inline-block font-medium underline"
+                  >
+                    {t("admin.jobs.detail.employerStatusWarningLink")}
+                  </Link>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
@@ -437,7 +479,12 @@ function AdminJobEditor() {
                       <Button
                         type="button"
                         onClick={() => transition.mutate("publish")}
-                        disabled={transition.isPending}
+                        disabled={transition.isPending || employerNotActive}
+                        title={
+                          employerNotActive
+                            ? t("admin.jobs.detail.employerStatusWarning")
+                            : undefined
+                        }
                       >
                         {t("admin.jobs.detail.action.publish")}
                       </Button>

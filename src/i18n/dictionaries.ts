@@ -1292,6 +1292,11 @@ export const dictionaries = {
     "admin.jobs.detail.statusUpdated": "Statusen har uppdaterats.",
     "admin.jobs.detail.error.rejectionNoteRequired":
       "En intern anteckning krävs för att neka det här jobbet.",
+    "admin.jobs.detail.error.employerNotActive":
+      "Kan inte publiceras: arbetsgivaren är inte godkänd än. Godkänn arbetsgivaren först.",
+    "admin.jobs.detail.employerStatusWarning":
+      "Den här arbetsgivaren är inte aktiv. Jobbet kan inte publiceras förrän arbetsgivaren har godkänts.",
+    "admin.jobs.detail.employerStatusWarningLink": "Granska arbetsgivare →",
     "admin.jobs.detail.action.saveDraft": "Spara utkast",
     "admin.jobs.detail.action.saving": "Sparar…",
     "admin.jobs.detail.action.submitForReview": "Skicka för granskning",
@@ -2888,6 +2893,11 @@ export const dictionaries = {
     "admin.jobs.detail.statusUpdated": "Status updated.",
     "admin.jobs.detail.error.rejectionNoteRequired":
       "An internal note is required to reject this job.",
+    "admin.jobs.detail.error.employerNotActive":
+      "Cannot publish: the employer is not approved yet. Approve the employer first.",
+    "admin.jobs.detail.employerStatusWarning":
+      "This employer is not active. The job cannot be published until the employer is approved.",
+    "admin.jobs.detail.employerStatusWarningLink": "Review employer →",
     "admin.jobs.detail.action.saveDraft": "Save draft",
     "admin.jobs.detail.action.saving": "Saving…",
     "admin.jobs.detail.action.submitForReview": "Submit for review",
