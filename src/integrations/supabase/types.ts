@@ -14,6 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessment_assignments: {
+        Row: {
+          answers: Json | null
+          application_id: string | null
+          assessment_id: string
+          assessment_run_id: string | null
+          assessment_version_id: string
+          assigned_by: string
+          cancelled_at: string | null
+          completed_at: string | null
+          completion_id: string | null
+          created_at: string
+          employee_id: string | null
+          employer_id: string
+          employer_message: string | null
+          engine_result: Json | null
+          expires_at: string
+          id: string
+          invitation_token_hash: string
+          invited_at: string
+          job_id: string | null
+          language: string
+          opened_at: string | null
+          profile_id: string
+          recipient_email: string
+          recipient_user_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          use_case: string
+        }
+        Insert: {
+          answers?: Json | null
+          application_id?: string | null
+          assessment_id: string
+          assessment_run_id?: string | null
+          assessment_version_id: string
+          assigned_by: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          completion_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          employer_id: string
+          employer_message?: string | null
+          engine_result?: Json | null
+          expires_at: string
+          id?: string
+          invitation_token_hash: string
+          invited_at?: string
+          job_id?: string | null
+          language?: string
+          opened_at?: string | null
+          profile_id: string
+          recipient_email: string
+          recipient_user_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          use_case: string
+        }
+        Update: {
+          answers?: Json | null
+          application_id?: string | null
+          assessment_id?: string
+          assessment_run_id?: string | null
+          assessment_version_id?: string
+          assigned_by?: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          completion_id?: string | null
+          created_at?: string
+          employee_id?: string | null
+          employer_id?: string
+          employer_message?: string | null
+          engine_result?: Json | null
+          expires_at?: string
+          id?: string
+          invitation_token_hash?: string
+          invited_at?: string
+          job_id?: string | null
+          language?: string
+          opened_at?: string | null
+          profile_id?: string
+          recipient_email?: string
+          recipient_user_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          use_case?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_assessment_run_id_fkey"
+            columns: ["assessment_run_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_responses: {
         Row: {
           answer: Json
