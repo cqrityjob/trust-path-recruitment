@@ -1016,6 +1016,98 @@ export const dictionaries = {
       "Inga platser registrerade ännu. Ett fullständigt platsregister med riskindikatorer är under utveckling.",
     "employer.sitesFoundation.open": "Öppna Platser och risk",
 
+    "employer.assessmentActivity.invited": "Inbjudna",
+    "employer.assessmentActivity.inProgress": "Pågående",
+    "employer.assessmentActivity.completed": "Genomförda",
+    "employer.assessmentActivity.empty": "Inga tilldelade tester ännu.",
+    "employer.assessmentActivity.viewActivity": "Visa testaktivitet",
+
+    "assessment.disclaimer.decisionSupport":
+      "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
+
+    "assignment.action.assign": "Tilldela test",
+    "assignment.action.cancel": "Avbryt tilldelning",
+    "assignment.action.viewResult": "Visa resultat",
+
+    "assignment.filter.all": "Alla",
+    "assignment.filter.active": "Pågående",
+    "assignment.filter.completed": "Genomförda",
+    "assignment.filter.expired": "Utgångna",
+
+    "assignment.status.invited": "Inbjuden",
+    "assignment.status.opened": "Öppnad",
+    "assignment.status.started": "Påbörjad",
+    "assignment.status.completed": "Genomförd",
+    "assignment.status.expired": "Utgången",
+    "assignment.status.cancelled": "Avbruten",
+
+    "assignment.list.heading": "Tilldelade tester",
+    "assignment.list.subheading":
+      "Följ status för tilldelade bedömningar till kandidater och medarbetare.",
+    "assignment.list.empty": "Inga tilldelade tester ännu.",
+    "assignment.list.invited": "Inbjuden",
+    "assignment.list.completed": "Genomförd",
+    "assignment.list.expires": "Går ut",
+
+    "assignment.report.back": "Tillbaka till tilldelade tester",
+    "assignment.report.notFound": "Resultatet kunde inte hittas eller är inte klart än.",
+
+    "assignment.form.heading": "Tilldela bedömning",
+    "assignment.form.subheading":
+      "Skicka en säker inbjudan till en sökande, medarbetare eller e-postadress.",
+    "assignment.form.orgNotActive":
+      "Er organisation måste vara godkänd och aktiv för att kunna tilldela riktiga bedömningar.",
+    "assignment.form.useCase": "Syfte",
+    "assignment.form.recipient": "Mottagare",
+    "assignment.form.recipientMode.applicant": "Sökande",
+    "assignment.form.recipientMode.employee": "Medarbetare",
+    "assignment.form.recipientMode.email": "E-postadress",
+    "assignment.form.selectApplicant": "Välj sökande",
+    "assignment.form.selectEmployee": "Välj medarbetare",
+    "assignment.form.emailPlaceholder": "namn@exempel.se",
+    "assignment.form.language": "Språk",
+    "assignment.form.expiresAt": "Utgångsdatum (valfritt)",
+    "assignment.form.message": "Meddelande till mottagaren (valfritt)",
+    "assignment.form.submit": "Skicka inbjudan",
+    "assignment.form.error.selectApplicant": "Välj en sökande.",
+    "assignment.form.error.selectEmployee": "Välj en medarbetare.",
+    "assignment.form.error.enterEmail": "Ange en e-postadress.",
+    "assignment.form.error.generic": "Tilldelningen kunde inte skapas. Försök igen.",
+    "assignment.form.error.orgNotActive":
+      "Er organisation måste vara godkänd och aktiv för att tilldela bedömningar.",
+    "assignment.form.success.heading": "Inbjudan skapad",
+    "assignment.form.success.body":
+      "Kopiera länken nedan och skicka den till mottagaren. Länken är personlig och ska inte delas vidare.",
+    "assignment.form.success.copy": "Kopiera länk",
+    "assignment.form.success.copied": "Kopierad!",
+    "assignment.form.success.deliveryNote":
+      "CQrityjob skickar för närvarande inte e-post automatiskt — dela länken själv med mottagaren.",
+    "assignment.form.success.viewAssignments": "Visa tilldelade tester",
+    "assignment.form.success.assignAnother": "Tilldela ett till test",
+
+    "assignment.recipient.badge": "Säker inbjudan",
+    "assignment.recipient.notFound.heading": "Länken kunde inte hittas",
+    "assignment.recipient.notFound.body":
+      "Kontrollera att du använder hela länken du fick av arbetsgivaren.",
+    "assignment.recipient.expired.heading": "Länken har gått ut",
+    "assignment.recipient.expired.body":
+      "Den här inbjudan är inte längre giltig. Kontakta arbetsgivaren för en ny inbjudan.",
+    "assignment.recipient.cancelled.heading": "Inbjudan har återkallats",
+    "assignment.recipient.cancelled.body": "Den här inbjudan är inte längre aktiv.",
+    "assignment.recipient.invitedBy":
+      "Du har blivit inbjuden av {employer} att genomföra den här bedömningen.",
+    "assignment.recipient.privacyNote":
+      "Dina svar används endast för att beräkna ditt resultat. Du kan slutföra bedömningen utan att skapa ett konto.",
+    "assignment.recipient.start": "Starta bedömningen",
+    "assignment.recipient.error.submit": "Vi kunde inte spara ditt svar just nu. Försök igen.",
+    "assignment.recipient.alreadyCompleted": "Den här bedömningen är redan genomförd.",
+    "assignment.recipient.saveResult.heading": "Spara ditt resultat",
+    "assignment.recipient.saveResult.body":
+      "Skapa ett konto eller logga in med samma e-postadress för att se det här resultatet under Mina rapporter senare.",
+    "assignment.recipient.saveResult.createAccount": "Skapa konto",
+    "assignment.recipient.saveResult.signIn": "Logga in",
+    "assignment.recipient.saveResult.link": "Koppla resultatet till min profil",
+
     "employer.applications.heading": "Ansökningar",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
     "employer.applications.anonymousCandidate": "Kandidat",
@@ -2520,6 +2612,99 @@ export const dictionaries = {
     "employer.sitesFoundation.bodyEmpty":
       "No sites recorded yet. A full site register with risk indicators is under development.",
     "employer.sitesFoundation.open": "Open Sites & Risk",
+
+    "employer.assessmentActivity.invited": "Invited",
+    "employer.assessmentActivity.inProgress": "In progress",
+    "employer.assessmentActivity.completed": "Completed",
+    "employer.assessmentActivity.empty": "No assessments assigned yet.",
+    "employer.assessmentActivity.viewActivity": "View assessment activity",
+
+    "assessment.disclaimer.decisionSupport":
+      "The result is decision support. The employer always remains responsible for the final decision.",
+
+    "assignment.action.assign": "Assign assessment",
+    "assignment.action.cancel": "Cancel assignment",
+    "assignment.action.viewResult": "View result",
+
+    "assignment.filter.all": "All",
+    "assignment.filter.active": "In progress",
+    "assignment.filter.completed": "Completed",
+    "assignment.filter.expired": "Expired",
+
+    "assignment.status.invited": "Invited",
+    "assignment.status.opened": "Opened",
+    "assignment.status.started": "Started",
+    "assignment.status.completed": "Completed",
+    "assignment.status.expired": "Expired",
+    "assignment.status.cancelled": "Cancelled",
+
+    "assignment.list.heading": "Assigned assessments",
+    "assignment.list.subheading":
+      "Track the status of assessments assigned to candidates and employees.",
+    "assignment.list.empty": "No assessments assigned yet.",
+    "assignment.list.invited": "Invited",
+    "assignment.list.completed": "Completed",
+    "assignment.list.expires": "Expires",
+
+    "assignment.report.back": "Back to assigned assessments",
+    "assignment.report.notFound": "This result could not be found or is not ready yet.",
+
+    "assignment.form.heading": "Assign assessment",
+    "assignment.form.subheading":
+      "Send a secure invitation to an applicant, employee or email address.",
+    "assignment.form.orgNotActive":
+      "Your organisation must be approved and active to assign real assessments.",
+    "assignment.form.useCase": "Purpose",
+    "assignment.form.recipient": "Recipient",
+    "assignment.form.recipientMode.applicant": "Applicant",
+    "assignment.form.recipientMode.employee": "Employee",
+    "assignment.form.recipientMode.email": "Email address",
+    "assignment.form.selectApplicant": "Select applicant",
+    "assignment.form.selectEmployee": "Select employee",
+    "assignment.form.emailPlaceholder": "name@example.com",
+    "assignment.form.language": "Language",
+    "assignment.form.expiresAt": "Expiration date (optional)",
+    "assignment.form.message": "Message to recipient (optional)",
+    "assignment.form.submit": "Send invitation",
+    "assignment.form.error.selectApplicant": "Select an applicant.",
+    "assignment.form.error.selectEmployee": "Select an employee.",
+    "assignment.form.error.enterEmail": "Enter an email address.",
+    "assignment.form.error.generic": "This assignment could not be created. Please try again.",
+    "assignment.form.error.orgNotActive":
+      "Your organisation must be approved and active to assign assessments.",
+    "assignment.form.success.heading": "Invitation created",
+    "assignment.form.success.body":
+      "Copy the link below and send it to the recipient. The link is personal and should not be shared further.",
+    "assignment.form.success.copy": "Copy link",
+    "assignment.form.success.copied": "Copied!",
+    "assignment.form.success.deliveryNote":
+      "CQrityjob does not currently send email automatically — share the link with the recipient yourself.",
+    "assignment.form.success.viewAssignments": "View assigned assessments",
+    "assignment.form.success.assignAnother": "Assign another assessment",
+
+    "assignment.recipient.badge": "Secure invitation",
+    "assignment.recipient.notFound.heading": "This link could not be found",
+    "assignment.recipient.notFound.body":
+      "Check that you're using the complete link you received from the employer.",
+    "assignment.recipient.expired.heading": "This link has expired",
+    "assignment.recipient.expired.body":
+      "This invitation is no longer valid. Contact the employer for a new invitation.",
+    "assignment.recipient.cancelled.heading": "This invitation has been withdrawn",
+    "assignment.recipient.cancelled.body": "This invitation is no longer active.",
+    "assignment.recipient.invitedBy":
+      "You've been invited by {employer} to complete this assessment.",
+    "assignment.recipient.privacyNote":
+      "Your answers are used only to compute your result. You can complete the assessment without creating an account.",
+    "assignment.recipient.start": "Start the assessment",
+    "assignment.recipient.error.submit":
+      "We couldn't save your answer right now. Please try again.",
+    "assignment.recipient.alreadyCompleted": "This assessment has already been completed.",
+    "assignment.recipient.saveResult.heading": "Save your result",
+    "assignment.recipient.saveResult.body":
+      "Create an account or sign in with the same email address to see this result under My Reports later.",
+    "assignment.recipient.saveResult.createAccount": "Create account",
+    "assignment.recipient.saveResult.signIn": "Sign in",
+    "assignment.recipient.saveResult.link": "Link this result to my profile",
 
     "employer.applications.heading": "Applications",
     "employer.applications.empty": "No applications have been received yet.",

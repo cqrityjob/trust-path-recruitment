@@ -15,7 +15,7 @@
 // re-verified independently via listMyEmployerWorkspaces() on every load.
 
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Users } from "lucide-react";
@@ -37,6 +37,8 @@ import {
   setEmployerEmployeeStatus,
   type EmployerEmployeeRow,
 } from "@/lib/job-intelligence/employer-workforce.functions";
+import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
+import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/workforce/")({
   ssr: false,
@@ -141,6 +143,19 @@ function WorkforceDirectory({
     queryKey: ["employer", employerId, "employees"],
     queryFn: () => listFn({ data: { employerId } }),
   });
+
+  // Cross-referenced client-side against the same employer's assignments —
+  // no new "assignments by employee" server function needed.
+  const listAssignmentsFn = useServerFn(listAssignmentsForEmployer);
+  const assignmentsQuery = useQuery({
+    queryKey: ["employer", employerId, "assignments", "all"],
+    queryFn: () => listAssignmentsFn({ data: { employerId, statusFilter: "all" } }),
+  });
+  const assignmentByEmployee = new Map(
+    (assignmentsQuery.data ?? [])
+      .filter((a) => a.employeeId)
+      .map((a) => [a.employeeId as string, a]),
+  );
 
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ["employer", employerId, "employees"] });
@@ -349,6 +364,40 @@ function WorkforceDirectory({
                           : "employer.workforce.action.reactivate",
                       )}
                     </button>
+                    {(() => {
+                      const assignment = assignmentByEmployee.get(row.id);
+                      if (!assignment) {
+                        return (
+                          <Link
+                            to="/employer/$employerSlug/assessments/assign"
+                            params={{ employerSlug }}
+                            search={{
+                              assessmentId: "security-guard-foundation",
+                              employeeId: row.id,
+                            }}
+                            className="rounded-md border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10"
+                          >
+                            {t("assignment.action.assign")}
+                          </Link>
+                        );
+                      }
+                      if (assignment.status === "completed") {
+                        return (
+                          <Link
+                            to="/employer/$employerSlug/assessments/assignments/$assignmentId"
+                            params={{ employerSlug, assignmentId: assignment.id }}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
+                          >
+                            {t("assignment.action.viewResult")}
+                          </Link>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent">
+                          {t(`assignment.status.${assignment.status}` as TranslationKey)}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </li>
               ),

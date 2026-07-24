@@ -13,7 +13,7 @@
 // allow-list permits from the current status are ever offered as buttons —
 // an employer can never be shown (or send) 'withdrawn'.
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -36,6 +36,7 @@ import {
   type EmployerApplicationRow,
   type ApplicationStatus,
 } from "@/lib/job-intelligence/applications.functions";
+import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/applications")({
   ssr: false,
@@ -138,12 +139,25 @@ function ApplicationsList({
   const listFn = useServerFn(listApplicationsForEmployer);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
+  const listAssignmentsFn = useServerFn(listAssignmentsForEmployer);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["employer", employerId, "applications"],
     queryFn: () => listFn({ data: { employerId } }),
   });
+
+  // Cross-referenced client-side against the same employer's assignments —
+  // no new "assignments by application" server function needed.
+  const assignmentsQuery = useQuery({
+    queryKey: ["employer", employerId, "assignments", "all"],
+    queryFn: () => listAssignmentsFn({ data: { employerId, statusFilter: "all" } }),
+  });
+  const assignmentByApplication = new Map(
+    (assignmentsQuery.data ?? [])
+      .filter((a) => a.applicationId)
+      .map((a) => [a.applicationId as string, a]),
+  );
 
   const setStatus = useMutation({
     mutationFn: (vars: { applicationId: string; newStatus: EmployerSettableStatus }) =>
@@ -240,6 +254,40 @@ function ApplicationsList({
                         {t("employer.applications.action.downloadCv")}
                       </button>
                     )}
+                    {(() => {
+                      const assignment = assignmentByApplication.get(r.id);
+                      if (!assignment) {
+                        return (
+                          <Link
+                            to="/employer/$employerSlug/assessments/assign"
+                            params={{ employerSlug }}
+                            search={{
+                              assessmentId: "security-guard-foundation",
+                              applicationId: r.id,
+                            }}
+                            className="rounded-md border border-accent/50 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+                          >
+                            {t("assignment.action.assign")}
+                          </Link>
+                        );
+                      }
+                      if (assignment.status === "completed") {
+                        return (
+                          <Link
+                            to="/employer/$employerSlug/assessments/assignments/$assignmentId"
+                            params={{ employerSlug, assignmentId: assignment.id }}
+                            className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                          >
+                            {t("assignment.action.viewResult")}
+                          </Link>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                          {t(`assignment.status.${assignment.status}` as TranslationKey)}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </li>
               );

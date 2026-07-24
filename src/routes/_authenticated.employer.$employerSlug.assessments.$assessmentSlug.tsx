@@ -272,8 +272,25 @@ function AssessmentDetails({
                 {t("employer.dashboard.actions.heading")}
               </h2>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <DisabledAction label={t("employer.assessments.action.assign")} />
-                <DisabledAction label={t("employer.assessments.action.viewResults")} />
+                <Link
+                  to="/employer/$employerSlug/assessments/assign"
+                  params={{ employerSlug }}
+                  search={{ assessmentId: entry.id }}
+                  className="group flex flex-col rounded-lg border border-border bg-background p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {t("employer.assessments.action.assign")}
+                  </span>
+                </Link>
+                <Link
+                  to="/employer/$employerSlug/assessments/assignments"
+                  params={{ employerSlug }}
+                  className="group flex flex-col rounded-lg border border-border bg-background p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
+                >
+                  <span className="text-sm font-medium text-foreground">
+                    {t("employer.assessments.action.viewResults")}
+                  </span>
+                </Link>
                 <DisabledAction label={t("employer.assessments.action.analytics")} />
               </div>
             </div>
