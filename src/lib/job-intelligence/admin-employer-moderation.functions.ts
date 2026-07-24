@@ -238,6 +238,32 @@ export type AdminEmployerJobRow = {
   updatedAt: string;
 };
 
+export type AdminEmployerApplicationRow = {
+  id: string;
+  jobId: string;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  status: string;
+  createdAt: string;
+};
+
+export type AdminEmployerEmployeeRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  employmentStatus: string;
+};
+
+export type AdminEmployerAssignmentRow = {
+  id: string;
+  assessmentId: string;
+  useCase: string;
+  status: string;
+  recipientEmail: string;
+  invitedAt: string;
+  completedAt: string | null;
+};
+
 export type AdminEmployerDetail = {
   id: string;
   slug: string;
@@ -254,6 +280,9 @@ export type AdminEmployerDetail = {
   ownerEmail: string | null;
   memberships: AdminEmployerMembershipRow[];
   jobs: AdminEmployerJobRow[];
+  applications: AdminEmployerApplicationRow[];
+  employees: AdminEmployerEmployeeRow[];
+  assignments: AdminEmployerAssignmentRow[];
   moderationHistory: AdminEmployerModerationEvent[];
 };
 
@@ -279,30 +308,63 @@ export const adminGetEmployerForModeration = createServerFn({ method: "POST" })
     }
     if (!employer) throw new Error("EMPLOYER_NOT_FOUND");
 
-    const [membershipsRes, jobsRes, eventsRes] = await Promise.all([
-      ctx.supabase
-        .from("employer_memberships")
-        .select("id, user_id, role, status")
-        .eq("employer_id", data.employerId)
-        .order("created_at", { ascending: true }),
-      ctx.supabase
-        .from("jobs")
-        .select("id, slug, status, title_sv, title_en, updated_at")
-        .eq("employer_id", data.employerId)
-        .order("updated_at", { ascending: false })
-        .limit(200),
-      ctx.supabase
-        .from("employer_moderation_events")
-        .select("id, action, previous_status, new_status, admin_user_id, note, created_at")
-        .eq("employer_id", data.employerId)
-        .order("created_at", { ascending: false }),
-    ]);
-    if (membershipsRes.error || jobsRes.error || eventsRes.error) {
+    const [membershipsRes, jobsRes, eventsRes, applicationsRes, employeesRes, assignmentsRes] =
+      await Promise.all([
+        ctx.supabase
+          .from("employer_memberships")
+          .select("id, user_id, role, status")
+          .eq("employer_id", data.employerId)
+          .order("created_at", { ascending: true }),
+        ctx.supabase
+          .from("jobs")
+          .select("id, slug, status, title_sv, title_en, updated_at")
+          .eq("employer_id", data.employerId)
+          .order("updated_at", { ascending: false })
+          .limit(200),
+        ctx.supabase
+          .from("employer_moderation_events")
+          .select("id, action, previous_status, new_status, admin_user_id, note, created_at")
+          .eq("employer_id", data.employerId)
+          .order("created_at", { ascending: false }),
+        // job_applications_admin_select (H3.4A) already grants a verified
+        // admin every application row -- RLS-scoped read, no service role.
+        ctx.supabase
+          .from("job_applications")
+          .select("id, job_id, status, created_at, jobs(title_sv, title_en)")
+          .eq("employer_id", data.employerId)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        // employees_admin_select (this phase) -- same pattern.
+        ctx.supabase
+          .from("employees")
+          .select("id, first_name, last_name, employment_status")
+          .eq("employer_id", data.employerId)
+          .order("last_name", { ascending: true })
+          .limit(500),
+        // assignments_admin_select (this phase) -- same pattern.
+        ctx.supabase
+          .from("assessment_assignments")
+          .select("id, assessment_id, use_case, status, recipient_email, invited_at, completed_at")
+          .eq("employer_id", data.employerId)
+          .order("invited_at", { ascending: false })
+          .limit(200),
+      ]);
+    if (
+      membershipsRes.error ||
+      jobsRes.error ||
+      eventsRes.error ||
+      applicationsRes.error ||
+      employeesRes.error ||
+      assignmentsRes.error
+    ) {
       console.error(
         "[admin-employer-moderation] load employer detail failed",
         membershipsRes.error,
         jobsRes.error,
         eventsRes.error,
+        applicationsRes.error,
+        employeesRes.error,
+        assignmentsRes.error,
       );
       throw new Error("LOAD_EMPLOYER_FAILED");
     }
@@ -380,6 +442,32 @@ export const adminGetEmployerForModeration = createServerFn({ method: "POST" })
         titleSv: j.title_sv as string | null,
         titleEn: j.title_en as string | null,
         updatedAt: j.updated_at as string,
+      })),
+      applications: (applicationsRes.data ?? []).map((a: any) => {
+        const job = Array.isArray(a.jobs) ? a.jobs[0] : a.jobs;
+        return {
+          id: a.id as string,
+          jobId: a.job_id as string,
+          jobTitleSv: (job?.title_sv as string | null) ?? null,
+          jobTitleEn: (job?.title_en as string | null) ?? null,
+          status: a.status as string,
+          createdAt: a.created_at as string,
+        };
+      }),
+      employees: (employeesRes.data ?? []).map((e: any) => ({
+        id: e.id as string,
+        firstName: e.first_name as string,
+        lastName: e.last_name as string,
+        employmentStatus: e.employment_status as string,
+      })),
+      assignments: (assignmentsRes.data ?? []).map((a: any) => ({
+        id: a.id as string,
+        assessmentId: a.assessment_id as string,
+        useCase: a.use_case as string,
+        status: a.status as string,
+        recipientEmail: a.recipient_email as string,
+        invitedAt: a.invited_at as string,
+        completedAt: (a.completed_at as string | null) ?? null,
       })),
       moderationHistory: (eventsRes.data ?? []).map((e: any) => ({
         id: e.id as string,
