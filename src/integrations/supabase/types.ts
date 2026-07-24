@@ -22,7 +22,9 @@ export type Database = {
           assessment_run_id: string | null
           assessment_version_id: string
           assigned_by: string
+          cancellation_reason: string | null
           cancelled_at: string | null
+          cancelled_by: string | null
           completed_at: string | null
           completion_id: string | null
           created_at: string
@@ -52,7 +54,9 @@ export type Database = {
           assessment_run_id?: string | null
           assessment_version_id: string
           assigned_by: string
+          cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
@@ -82,7 +86,9 @@ export type Database = {
           assessment_run_id?: string | null
           assessment_version_id?: string
           assigned_by?: string
+          cancellation_reason?: string | null
           cancelled_at?: string | null
+          cancelled_by?: string | null
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
@@ -3432,6 +3438,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cancel_assessment_assignment: {
+        Args: { _assignment_id: string; _reason: string }
+        Returns: {
+          id: string
+          new_status: string
+          previous_status: string
+        }[]
+      }
+      admin_set_platform_role: {
+        Args: { _grant: boolean; _role: string; _target_user_id: string }
+        Returns: {
+          granted: boolean
+          granted_role: string
+          target_user_id: string
+        }[]
+      }
       approve_access_request: {
         Args: { _decision: string; _granted_role?: string; _request_id: string }
         Returns: {
@@ -3491,6 +3513,7 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       job_is_active: {
         Args: {
           p_deadline_at: string
