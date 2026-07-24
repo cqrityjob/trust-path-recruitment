@@ -177,18 +177,23 @@ expect(
 //    confirmed once here structurally rather than per-file, since it's
 //    the file-naming convention itself that guarantees the nesting.
 // -----------------------------------------------------------------------
+// Each list route is a sibling of its $id detail route under a shared
+// Outlet-only layout file (that layout file legitimately has no
+// AdminShellChrome of its own -- see the routing-bug fix commit for why
+// that split is required), so this check targets the .index.tsx list
+// content and the $id detail routes, not the bare layout files.
 const newAdminRoutes = [
-  "src/routes/_authenticated.admin.users.tsx",
+  "src/routes/_authenticated.admin.users.index.tsx",
   "src/routes/_authenticated.admin.users.$userId.tsx",
-  "src/routes/_authenticated.admin.applications.tsx",
+  "src/routes/_authenticated.admin.applications.index.tsx",
   "src/routes/_authenticated.admin.applications.$applicationId.tsx",
-  "src/routes/_authenticated.admin.assessments.tsx",
+  "src/routes/_authenticated.admin.assessments.index.tsx",
   "src/routes/_authenticated.admin.assessments.$assessmentId.tsx",
-  "src/routes/_authenticated.admin.assignments.tsx",
+  "src/routes/_authenticated.admin.assignments.index.tsx",
   "src/routes/_authenticated.admin.assignments.$assignmentId.tsx",
-  "src/routes/_authenticated.admin.results.tsx",
+  "src/routes/_authenticated.admin.results.index.tsx",
   "src/routes/_authenticated.admin.results.$assignmentId.tsx",
-  "src/routes/_authenticated.admin.workforce.tsx",
+  "src/routes/_authenticated.admin.workforce.index.tsx",
   "src/routes/_authenticated.admin.workforce.$employeeId.tsx",
 ];
 for (const routeFile of newAdminRoutes) {
@@ -208,6 +213,43 @@ expect(
   userDetailRoute.includes("whoAmI.data?.isSuperadmin"),
   "the user detail page must gate platform-role grant/revoke controls on isSuperadmin, not isAdmin",
 );
+
+// -----------------------------------------------------------------------
+// 7. List-route/detail-route sibling structure ("Granska" routing bug).
+//    A list route file that renders full page content directly (no
+//    <Outlet/>) while a $id detail route shares its dot-prefix gets
+//    nested as that list route's CHILD by TanStack Router's flat-file
+//    convention -- with no <Outlet/> in the parent, the child can never
+//    render (confirmed via routeTree.gen.ts's getParentRoute and the
+//    ?routes= debug marker on a live request). Every list module in this
+//    phase now follows the same layout(Outlet)+index split already
+//    proven correct by _authenticated.admin.jobs.tsx: the bare
+//    "_authenticated.admin.<name>.tsx" file must be Outlet-only, and the
+//    list content lives in "_authenticated.admin.<name>.index.tsx" with
+//    a route path ending in "/" (making it a sibling of the $id route
+//    under the shared layout, not its parent).
+// -----------------------------------------------------------------------
+const listModules = [
+  "employers",
+  "users",
+  "applications",
+  "assessments",
+  "assignments",
+  "results",
+  "workforce",
+];
+for (const name of listModules) {
+  const layout = read(`src/routes/_authenticated.admin.${name}.tsx`);
+  expect(
+    layout.includes("component: () => <Outlet />") && !layout.includes("AdminShellChrome"),
+    `_authenticated.admin.${name}.tsx must be an Outlet-only layout (list content belongs in ${name}.index.tsx) -- otherwise its $id sibling route can never render`,
+  );
+  const indexRoute = read(`src/routes/_authenticated.admin.${name}.index.tsx`);
+  expect(
+    indexRoute.includes(`createFileRoute("/_authenticated/admin/${name}/")`),
+    `_authenticated.admin.${name}.index.tsx must declare its route path with a trailing slash (a true index route, sibling of $id under the layout)`,
+  );
+}
 
 // -----------------------------------------------------------------------
 // Report
