@@ -30,7 +30,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { adminCountPendingEmployers } from "@/lib/job-intelligence/admin-employer-moderation.functions";
 
-export type AdminNavSection = "overview" | "employers" | "jobs" | "feedback";
+export type AdminNavSection =
+  | "overview"
+  | "employers"
+  | "users"
+  | "jobs"
+  | "applications"
+  | "assessments"
+  | "assignments"
+  | "results"
+  | "workforce"
+  | "feedback";
 
 export interface AdminShellChromeProps {
   activeSection: AdminNavSection;
@@ -68,7 +78,13 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
   const navItems: Array<{ key: AdminNavSection; labelKey: TranslationKey; to: string }> = [
     { key: "overview", labelKey: "admin.nav.overview", to: "/admin" },
     { key: "employers", labelKey: "admin.nav.employers", to: "/admin/employers" },
+    { key: "users", labelKey: "admin.nav.users", to: "/admin/users" },
     { key: "jobs", labelKey: "admin.nav.jobs", to: "/admin/jobs" },
+    { key: "applications", labelKey: "admin.nav.applications", to: "/admin/applications" },
+    { key: "assessments", labelKey: "admin.nav.assessments", to: "/admin/assessments" },
+    { key: "assignments", labelKey: "admin.nav.assignments", to: "/admin/assignments" },
+    { key: "results", labelKey: "admin.nav.results", to: "/admin/results" },
+    { key: "workforce", labelKey: "admin.nav.workforce", to: "/admin/workforce" },
     { key: "feedback", labelKey: "admin.nav.feedback", to: "/admin/feedback" },
   ];
 
