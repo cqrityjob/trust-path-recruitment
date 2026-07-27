@@ -255,14 +255,20 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin
           .from("assessment_assignments")
-          .update({ email_delivery_status: "failed", email_delivery_error: sendResult.error })
+          .update({
+            email_delivery_status: "failed",
+            email_delivery_error: sendResult.error,
+          } as never)
           .eq("id", inserted.id);
       } else if (sendResult.ok) {
         emailDeliveryStatus = "sent";
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin
           .from("assessment_assignments")
-          .update({ email_delivery_status: "sent", email_sent_at: new Date().toISOString() })
+          .update({
+            email_delivery_status: "sent",
+            email_sent_at: new Date().toISOString(),
+          } as never)
           .eq("id", inserted.id);
       }
 
