@@ -114,7 +114,12 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
     async ({
       data,
       context,
-    }): Promise<{ id: string; invitationToken: string; expiresAt: string }> => {
+    }): Promise<{
+      id: string;
+      invitationToken: string;
+      expiresAt: string;
+      emailDeliveryStatus: "not_attempted" | "sent" | "failed";
+    }> => {
       const ctx = context as Ctx;
       await assertActiveMembership(ctx, data.employerId);
       await assertOrgActiveForAssignment(ctx, data.employerId);
@@ -126,7 +131,7 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       // employer can only ever assign an assessment they were already shown.
       const { data: catalogRow, error: catalogErr } = await ctx.supabase
         .from("assessments")
-        .select("id")
+        .select("id, name_sv, name_en")
         .eq("id", data.assessmentId)
         .eq("employer_visible", true)
         .maybeSingle();
@@ -195,10 +200,49 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
         throw new Error("ASSIGNMENT_CREATE_FAILED");
       }
 
+      // MVP stabilization: attempt real email delivery. Inert (no network
+      // call) unless RESEND_API_KEY/RESEND_FROM_EMAIL are configured --
+      // see send-invitation-email.server.ts's own header for the full
+      // root-cause trace. Never blocks or fails the assignment itself:
+      // the row is already created and the copy-link path already works
+      // regardless of this outcome, matching this file's existing
+      // best-effort-side-effect convention (audit writes elsewhere in
+      // this codebase follow the same rule).
+      const { sendInvitationEmail } = await import("@/lib/email/send-invitation-email.server");
+      const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+      const invitationUrl = `${SITE_ORIGIN}/invite/${token}`;
+      const sendResult = await sendInvitationEmail({
+        recipientEmail: data.recipientEmail,
+        language: data.language,
+        assessmentNameSv: catalogRow.name_sv,
+        assessmentNameEn: catalogRow.name_en,
+        invitationUrl,
+        expiresAt: inserted.expires_at as string,
+        employerMessage: data.employerMessage ?? null,
+      });
+
+      let emailDeliveryStatus: "not_attempted" | "sent" | "failed" = "not_attempted";
+      if (!sendResult.ok && !sendResult.skipped) {
+        emailDeliveryStatus = "failed";
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("assessment_assignments")
+          .update({ email_delivery_status: "failed", email_delivery_error: sendResult.error })
+          .eq("id", inserted.id);
+      } else if (sendResult.ok) {
+        emailDeliveryStatus = "sent";
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("assessment_assignments")
+          .update({ email_delivery_status: "sent", email_sent_at: new Date().toISOString() })
+          .eq("id", inserted.id);
+      }
+
       return {
         id: inserted.id as string,
         invitationToken: token,
         expiresAt: inserted.expires_at as string,
+        emailDeliveryStatus,
       };
     },
   );
