@@ -7,7 +7,11 @@
 import type { PublicJobSsrDetail } from "./public-queries.functions";
 
 // Public site canonical origin — matches the sitemap.xml BASE_URL.
-const SITE_ORIGIN = "https://trust-path-recruitment.lovable.app";
+// Exported so any server-side code that must build an absolute URL
+// outside the browser (e.g. an email invitation link, which has no
+// window.location) reuses this single source of truth instead of a
+// second hardcoded copy.
+export const SITE_ORIGIN = "https://trust-path-recruitment.lovable.app";
 
 function pickLocalized(sv: string | null, en: string | null): string {
   return sv || en || "";
@@ -15,7 +19,10 @@ function pickLocalized(sv: string | null, en: string | null): string {
 
 /** Strip HTML and collapse whitespace to a plain sentence for meta description. */
 function toPlainText(s: string, max = 300): string {
-  const stripped = s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const stripped = s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (stripped.length <= max) return stripped;
   return stripped.slice(0, max - 1).trimEnd() + "…";
 }

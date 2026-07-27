@@ -28,6 +28,9 @@ export type Database = {
           completed_at: string | null
           completion_id: string | null
           created_at: string
+          email_delivery_error: string | null
+          email_delivery_status: string
+          email_sent_at: string | null
           employee_id: string | null
           employer_id: string
           employer_message: string | null
@@ -60,6 +63,9 @@ export type Database = {
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
+          email_delivery_error?: string | null
+          email_delivery_status?: string
+          email_sent_at?: string | null
           employee_id?: string | null
           employer_id: string
           employer_message?: string | null
@@ -92,6 +98,9 @@ export type Database = {
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
+          email_delivery_error?: string | null
+          email_delivery_status?: string
+          email_sent_at?: string | null
           employee_id?: string | null
           employer_id?: string
           employer_message?: string | null

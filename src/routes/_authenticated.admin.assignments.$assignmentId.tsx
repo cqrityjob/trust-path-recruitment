@@ -158,8 +158,31 @@ function AdminAssignmentDetailPage() {
               {a.employeeName && <Field label={t("admin.nav.workforce")} value={a.employeeName} />}
               <Field
                 label={t("admin.assignments.detail.field.delivery")}
-                value={t("admin.assignments.detail.deliveryCopyLink")}
+                value={
+                  <span className="flex items-center gap-2">
+                    <Badge
+                      variant={
+                        a.emailDeliveryStatus === "sent"
+                          ? "default"
+                          : a.emailDeliveryStatus === "failed"
+                            ? "destructive"
+                            : "outline"
+                      }
+                    >
+                      {t(
+                        `admin.assignments.detail.emailStatus.${a.emailDeliveryStatus}` as TranslationKey,
+                      )}
+                    </Badge>
+                    {a.emailSentAt && formatDateTime(a.emailSentAt, lang)}
+                  </span>
+                }
               />
+              {a.emailDeliveryStatus === "failed" && a.emailDeliveryError && (
+                <Field
+                  label={t("admin.assignments.detail.field.emailError")}
+                  value={a.emailDeliveryError}
+                />
+              )}
             </dl>
           </section>
 
