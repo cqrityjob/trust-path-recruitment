@@ -1082,6 +1082,9 @@ export const dictionaries = {
     "assignment.form.success.copied": "Kopierad!",
     "assignment.form.success.deliveryNote":
       "CQrityjob skickar för närvarande inte e-post automatiskt — dela länken själv med mottagaren.",
+    "assignment.form.success.deliveryNote.sent": "Ett e-postmeddelande med länken har skickats till mottagaren.",
+    "assignment.form.success.deliveryNote.failed":
+      "E-postmeddelandet kunde inte skickas. Dela länken ovan manuellt med mottagaren.",
     "assignment.form.success.viewAssignments": "Visa tilldelade tester",
     "assignment.form.success.assignAnother": "Tilldela ett till test",
 
@@ -1329,6 +1332,10 @@ export const dictionaries = {
     "admin.assignments.detail.field.useCase": "Användningsfall",
     "admin.assignments.detail.field.language": "Språk",
     "admin.assignments.detail.field.delivery": "Leveranssätt",
+    "admin.assignments.detail.field.emailError": "Leveransfel (e-post)",
+    "admin.assignments.detail.emailStatus.not_attempted": "E-post ej skickad (ingen leverantör konfigurerad)",
+    "admin.assignments.detail.emailStatus.sent": "E-post skickad",
+    "admin.assignments.detail.emailStatus.failed": "E-post misslyckades",
     "admin.assignments.detail.deliveryCopyLink": "Kopierad länk (ingen e-post skickad)",
     "admin.assignments.detail.field.opened": "Öppnad",
     "admin.assignments.detail.field.started": "Påbörjad",
@@ -2858,6 +2865,9 @@ export const dictionaries = {
     "assignment.form.success.copied": "Copied!",
     "assignment.form.success.deliveryNote":
       "CQrityjob does not currently send email automatically — share the link with the recipient yourself.",
+    "assignment.form.success.deliveryNote.sent": "An email with the link has been sent to the recipient.",
+    "assignment.form.success.deliveryNote.failed":
+      "The email could not be sent. Share the link above manually with the recipient.",
     "assignment.form.success.viewAssignments": "View assigned assessments",
     "assignment.form.success.assignAnother": "Assign another assessment",
 
@@ -3106,6 +3116,10 @@ export const dictionaries = {
     "admin.assignments.detail.field.useCase": "Use case",
     "admin.assignments.detail.field.language": "Language",
     "admin.assignments.detail.field.delivery": "Delivery method",
+    "admin.assignments.detail.field.emailError": "Email delivery error",
+    "admin.assignments.detail.emailStatus.not_attempted": "Email not sent (no provider configured)",
+    "admin.assignments.detail.emailStatus.sent": "Email sent",
+    "admin.assignments.detail.emailStatus.failed": "Email failed",
     "admin.assignments.detail.deliveryCopyLink": "Copied link (no email sent)",
     "admin.assignments.detail.field.opened": "Opened",
     "admin.assignments.detail.field.started": "Started",

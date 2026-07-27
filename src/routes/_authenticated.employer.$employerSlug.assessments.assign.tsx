@@ -144,6 +144,9 @@ function AssignForm({
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [createdLink, setCreatedLink] = useState<string | null>(null);
+  const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<
+    "not_attempted" | "sent" | "failed" | null
+  >(null);
   const [copied, setCopied] = useState(false);
 
   const listApplicationsFn = useServerFn(listApplicationsForEmployer);
@@ -202,6 +205,7 @@ function AssignForm({
       setFormError(null);
       const url = `${window.location.origin}/invite/${result.invitationToken}`;
       setCreatedLink(url);
+      setEmailDeliveryStatus(result.emailDeliveryStatus);
     },
     onError: (e: any) => setFormError(translateAssignmentError(e?.message, t)),
   });
@@ -258,8 +262,16 @@ function AssignForm({
               {copied ? t("assignment.form.success.copied") : t("assignment.form.success.copy")}
             </button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t("assignment.form.success.deliveryNote")}
+          <p
+            className={`mt-3 text-xs ${
+              emailDeliveryStatus === "failed" ? "text-destructive" : "text-muted-foreground"
+            }`}
+          >
+            {emailDeliveryStatus === "sent"
+              ? t("assignment.form.success.deliveryNote.sent")
+              : emailDeliveryStatus === "failed"
+                ? t("assignment.form.success.deliveryNote.failed")
+                : t("assignment.form.success.deliveryNote")}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

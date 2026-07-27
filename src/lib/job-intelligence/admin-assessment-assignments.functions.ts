@@ -28,6 +28,7 @@ const ASSIGNMENT_SELECT =
   "id, employer_id, assessment_id, use_case, status, recipient_email, recipient_user_id, " +
   "job_id, application_id, employee_id, language, expires_at, invited_at, opened_at, started_at, " +
   "completed_at, cancelled_at, cancellation_reason, cancelled_by, " +
+  "email_delivery_status, email_delivery_error, email_sent_at, " +
   "employers(name), assessments(name_sv, name_en), jobs(title_sv, title_en), " +
   "employees(first_name, last_name)";
 
@@ -125,7 +126,9 @@ export type AdminAssignmentDetail = AdminAssignmentListRow & {
   cancelledAt: string | null;
   cancellationReason: string | null;
   cancelledBy: string | null;
-  deliveryMethod: "copy_link";
+  emailDeliveryStatus: "not_attempted" | "sent" | "failed";
+  emailDeliveryError: string | null;
+  emailSentAt: string | null;
 };
 
 const detailSchema = z.object({ assignmentId: z.string().uuid() });
@@ -176,7 +179,9 @@ export const adminGetAssignmentDetail = createServerFn({ method: "POST" })
       cancelledAt: row.cancelled_at ?? null,
       cancellationReason: row.cancellation_reason ?? null,
       cancelledBy: row.cancelled_by ?? null,
-      deliveryMethod: "copy_link",
+      emailDeliveryStatus: row.email_delivery_status,
+      emailDeliveryError: row.email_delivery_error ?? null,
+      emailSentAt: row.email_sent_at ?? null,
     };
   });
 
