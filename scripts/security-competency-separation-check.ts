@@ -53,7 +53,13 @@ function walk(dir: string): string[] {
 }
 
 const SCP_DIR = path.join(root, "src/lib/security-competency");
-const SCP_MIGRATION = "supabase/migrations/20260727120000_scp_a1_security_competency_platform_domain.sql";
+
+// Every Security Competency migration, discovered rather than listed, so a
+// future one cannot quietly escape these checks by not being added here.
+const MIGRATIONS_DIR = path.join(root, "supabase/migrations");
+const SCP_MIGRATION_FILES = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => /_scp_a\d+_/.test(f) && f.endsWith(".sql"))
+  .sort();
 
 // ---------------------------------------------------------------------------
 // 1. Import isolation. No Security Competency module may reach into any
@@ -93,7 +99,16 @@ for (const file of walk(SCP_DIR)) {
 //    q1..q16 content ids and every Question Library asset id -- must be
 //    absent from the Security Competency schema and seeds.
 // ---------------------------------------------------------------------------
-const scpMigration = read(SCP_MIGRATION);
+expect(
+  SCP_MIGRATION_FILES.length >= 2,
+  `expected at least 2 Security Competency migrations, found ${SCP_MIGRATION_FILES.length}`,
+);
+
+// Concatenated, so every check below covers the whole schema rather than only
+// its first migration.
+const scpMigration = SCP_MIGRATION_FILES.map((f) =>
+  read(path.join("supabase/migrations", f)),
+).join("\n");
 
 const careerGuidanceIds = new Set<string>([
   ...careerGuidanceQuestions.map((q) => q.id),
@@ -173,8 +188,8 @@ const scpTableBlocks = scpMigration
   .filter((block) => block.startsWith("scp_"));
 
 expect(
-  scpTableBlocks.length >= 20,
-  `expected the Security Competency schema to define at least 20 tables, found ${scpTableBlocks.length}`,
+  scpTableBlocks.length >= 22,
+  `expected the Security Competency schema to define at least 22 tables, found ${scpTableBlocks.length}`,
 );
 
 for (const block of scpTableBlocks) {
@@ -277,6 +292,66 @@ for (const slug of Object.values(PROFESSION_SLUGS)) {
     `profession "${slug}" must be seeded with an explicit market of SE (directive section 7)`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// 8. Owner decision A -- the SJT/BIQ weighting is versioned data, not a
+//    hard-coded constant. A literal 0.7/0.3 pair anywhere in the application
+//    layer is exactly the "hard-coded across unrelated layers" the decision
+//    forbids, because two layers can then disagree about the live model.
+// ---------------------------------------------------------------------------
+for (const file of walk(SCP_DIR)) {
+  const source = readFileSync(file, "utf8");
+  const rel = path.relative(root, file);
+  const code = source
+    .split("\n")
+    .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l))
+    .join("\n");
+  expect(
+    !/\b0\.7\b[\s\S]{0,80}\b0\.3\b/.test(code),
+    `${rel} appears to hard-code the 0.7/0.3 SJT/BIQ weighting -- owner decision A requires it to be read from scp_scoring_versions`,
+  );
+}
+
+expect(
+  /CREATE TABLE public\.scp_scoring_versions/.test(scpMigration),
+  "owner decision A: a versioned scoring table must exist",
+);
+expect(
+  /scp_scoring_weights_sum_to_one/.test(scpMigration),
+  "owner decision A: scoring component weights must be constrained to form a complete model",
+);
+expect(
+  /scoring_version_id uuid REFERENCES public\.scp_scoring_versions/.test(scpMigration),
+  "owner decision A: bundles must reference a scoring version by foreign key, not by a free-text label",
+);
+
+// Owner decision B -- the assignability gate must exist and must fail closed.
+expect(
+  /FUNCTION public\.scp_bundle_version_assignability/.test(scpMigration),
+  "owner decision B: an assignability gate must exist to keep non-operational assessments away from real candidates",
+);
+expect(
+  /VALIDATION_STATUS_DESIGN/.test(scpMigration) && /'pilot_only'/.test(scpMigration),
+  "owner decision B: the gate must distinguish design (blocked) from pilot (pilot_only)",
+);
+
+// Owner decision C -- legally dependent content cannot publish unreviewed.
+expect(
+  /SCP_LEGAL_REVIEW_REQUIRED/.test(scpMigration) &&
+    /SCP_LEGAL_REVIEW_INCOMPLETE/.test(scpMigration),
+  "owner decision C: publication of legally dependent items must be blocked until a complete legal review is recorded",
+);
+
+// Owner decision D -- cross-profession reuse is explicit, and the three
+// Swedish roles keep separate identities.
+expect(
+  /CREATE TABLE public\.scp_item_version_professions/.test(scpMigration),
+  "owner decision D: cross-profession item reuse must be modelled explicitly",
+);
+expect(
+  new Set(Object.values(PROFESSION_SLUGS)).size === 3,
+  "owner decision D: Väktare, Ordningsvakt and Skyddsvakt must be three distinct profession identities",
+);
 
 // ---------------------------------------------------------------------------
 // Report

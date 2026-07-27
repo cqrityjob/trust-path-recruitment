@@ -564,9 +564,307 @@ BEGIN
 END $$;
 
 
+-- ###########################################################################
+-- GROUP 10 -- Owner decision A: scoring is versioned and configurable
+-- ###########################################################################
+DO $$
+DECLARE _sv uuid; _err text;
+BEGIN
+  RAISE NOTICE 'GROUP 10 -- versioned scoring (owner decision A)';
+
+  SELECT id INTO _sv FROM public.scp_scoring_versions WHERE slug = 'scp-scoring-v1';
+  PERFORM pg_temp.assert(_sv IS NOT NULL,
+    'decision A: the provisional pilot scoring version is seeded');
+
+  PERFORM pg_temp.assert(
+    (SELECT sjt_weight = 0.70 AND biq_weight = 0.30 FROM public.scp_scoring_versions WHERE id = _sv),
+    'decision A: the seeded weights are the spec 8.1 start model 70/30');
+
+  PERFORM pg_temp.assert(
+    (SELECT validation_status = 'design' FROM public.scp_scoring_versions WHERE id = _sv),
+    'decision A: the weighting is NOT claimed to be validated');
+
+  PERFORM pg_temp.assert(
+    (SELECT norm_comparison_permitted = false FROM public.scp_scoring_versions WHERE id = _sv),
+    'spec 8.3: norm/percentile comparison is switched off until norm data exists');
+
+  -- Weights must form a complete model.
+  _err := pg_temp.raises(
+    'INSERT INTO public.scp_scoring_versions (slug, version_number, sjt_weight, biq_weight)
+     VALUES (''broken'', 1, 0.7, 0.7)');
+  PERFORM pg_temp.assert(_err IS NOT NULL,
+    'decision A: SJT and BIQ weights must sum to 1');
+
+  -- A published scoring version is frozen -- the model changes by NEW version.
+  UPDATE public.scp_scoring_versions SET content_status = 'published', published_at = now()
+    WHERE id = _sv;
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_scoring_versions SET sjt_weight = 0.5, biq_weight = 0.5 WHERE id = %L', _sv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'decision A: a published scoring version cannot be re-weighted in place');
+
+  -- The weighting must not be reachable as a hard-coded application constant.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.columns
+      WHERE table_name = 'scp_bundle_versions' AND column_name = 'scoring_version') = 0,
+    'decision A: the free-text scoring_version label is gone -- bundles reference a real version');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.columns
+      WHERE table_name = 'scp_bundle_versions' AND column_name = 'scoring_version_id') = 1,
+    'decision A: bundles pin a scoring version by foreign key');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 11 -- Owner decision C: legal review gates publication
+-- ###########################################################################
+DO $$
+DECLARE _item uuid; _iv uuid; _comp uuid; _err text;
+BEGIN
+  RAISE NOTICE 'GROUP 11 -- legal review gate (owner decision C)';
+
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-11';
+  INSERT INTO public.scp_items (slug) VALUES ('ov-legal-item') RETURNING id INTO _item;
+
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior,
+     response_process, market, legal_basis_required, legal_review_status)
+  VALUES (_item, 1, 'sjt_best_response', _comp, 'applies proportionate measure',
+          'weigh mandate against risk', 'SE', true, 'pending')
+  RETURNING id INTO _iv;
+
+  PERFORM pg_temp.assert(true,
+    'decision C: legally dependent content may be DRAFTED');
+
+  -- ...but cannot be approved or published while review is pending.
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET content_status = ''published'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_LEGAL_REVIEW_REQUIRED%',
+    'decision C: a legally dependent item cannot be published while legal review is pending');
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET content_status = ''approved'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_LEGAL_REVIEW_REQUIRED%',
+    'decision C: it cannot be approved either -- the gate is not just at publish');
+
+  -- Marking review approved without recording WHO and WHEN is not enough.
+  UPDATE public.scp_item_versions SET legal_review_status = 'approved' WHERE id = _iv;
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET content_status = ''published'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_LEGAL_REVIEW_INCOMPLETE%',
+    'decision C: a legal review must record source, reviewer and date -- a status flag alone is not evidence');
+
+  -- With full evidence recorded, publication proceeds.
+  UPDATE public.scp_item_versions
+    SET legal_source = 'Lag (1980:578) om ordningsvakter',
+        legal_reviewed_by = 'Synthetic Reviewer',
+        legal_reviewed_at = now()
+    WHERE id = _iv;
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
+    WHERE id = _iv;
+  PERFORM pg_temp.assert(
+    (SELECT content_status FROM public.scp_item_versions WHERE id = _iv) = 'published',
+    'decision C: with a complete recorded legal review, publication proceeds');
+
+  -- A purely behavioural item is unaffected by the legal gate.
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_item, 2, 'biq_frequency', _comp, 'clarifies ownership', 'recall typical practice');
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
+    WHERE item_id = _item AND version_number = 2;
+  PERFORM pg_temp.assert(
+    (SELECT content_status FROM public.scp_item_versions WHERE item_id = _item AND version_number = 2) = 'published',
+    'decision C: behavioural items making no legal claim publish normally');
+
+  -- An item may never be created directly in a published state.
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_item_versions
+       (item_id, version_number, item_format, competency_id, observable_behavior,
+        response_process, content_status)
+     VALUES (%L, 3, ''biq_frequency'', %L, ''x'', ''y'', ''published'')', _item, _comp));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_ITEM_MUST_START_AS_DRAFT%',
+    'publication is a reviewed transition, never an initial value');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 12 -- Owner decision B: nothing unapproved reaches a real candidate
+-- ###########################################################################
+DO $$
+DECLARE
+  _core_family uuid; _mod_family uuid; _prof uuid;
+  _core_def uuid; _mod_def uuid; _core_ver uuid; _mod_ver uuid;
+  _core_form uuid; _mod_form uuid; _bundle uuid; _bv uuid;
+  _sv uuid; _comp uuid; _item uuid; _iv uuid;
+  _res record;
+BEGIN
+  RAISE NOTICE 'GROUP 12 -- assignability gate (owner decision B)';
+
+  SELECT id INTO _core_family FROM public.scp_assessment_families WHERE slug = 'security-competency-core';
+  SELECT id INTO _mod_family FROM public.scp_assessment_families WHERE slug = 'security-profession-modules';
+  SELECT id INTO _prof FROM public.scp_professions WHERE slug = 'public-order-officer-se';
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-04';
+
+  -- Own draft scoring version rather than the seeded one, so this group does
+  -- not depend on whether an earlier group already published it.
+  INSERT INTO public.scp_scoring_versions (slug, version_number, sjt_weight, biq_weight)
+  VALUES ('scp-scoring-test-g12', 1, 0.70, 0.30) RETURNING id INTO _sv;
+
+  INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+  VALUES (_core_family, 'scc-core-c', 'Core C', 'Core C', 'core') RETURNING id INTO _core_def;
+  INSERT INTO public.scp_assessment_definitions (family_id, profession_id, slug, name_sv, name_en, purpose)
+  VALUES (_mod_family, _prof, 'ov-c', 'Ordningsvakt C', 'Public Order Officer C', 'profession_module')
+  RETURNING id INTO _mod_def;
+
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number)
+  VALUES (_core_def, 1) RETURNING id INTO _core_ver;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number)
+  VALUES (_mod_def, 1) RETURNING id INTO _mod_ver;
+
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+  VALUES (_core_ver, 'cf', 'Kärnform', 'Core form') RETURNING id INTO _core_form;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+  VALUES (_mod_ver, 'mf', 'Modulform', 'Module form') RETURNING id INTO _mod_form;
+
+  -- Place a DRAFT item on the module form while that form's version is still
+  -- a draft. (Adding it later is impossible -- the child-of-published guard
+  -- correctly refuses to alter a published form, which is itself the point.)
+  INSERT INTO public.scp_items (slug) VALUES ('ov-draft-item') RETURNING id INTO _item;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_item, 1, 'sjt_best_response', _comp, 'prioritises by consequence', 'weigh time pressure')
+  RETURNING id INTO _iv;
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order)
+  VALUES (_mod_form, _iv, 1);
+
+  INSERT INTO public.scp_bundles (slug, profession_id, name_sv, name_en)
+  VALUES ('ov-bundle-c', _prof, 'Ordningsvakt', 'Public Order Officer') RETURNING id INTO _bundle;
+  INSERT INTO public.scp_bundle_versions
+    (bundle_id, version_number, core_assessment_version_id, module_assessment_version_id,
+     core_form_id, module_form_id, scoring_version_id)
+  VALUES (_bundle, 1, _core_ver, _mod_ver, _core_form, _mod_form, _sv)
+  RETURNING id INTO _bv;
+
+  -- A brand-new draft bundle must be refused.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'BUNDLE_NOT_PUBLISHED',
+    'decision B: an unpublished bundle is blocked');
+
+  -- Publishing the bundle is not enough while its versions are drafts.
+  UPDATE public.scp_bundle_versions SET content_status = 'published', published_at = now() WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'CORE_VERSION_NOT_PUBLISHED',
+    'decision B: a published bundle over draft content is still blocked');
+
+  UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now()
+    WHERE id IN (_core_ver, _mod_ver);
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.reason = 'SCORING_VERSION_NOT_PUBLISHED',
+    'decision B: an unpublished scoring version blocks assignment');
+
+  UPDATE public.scp_scoring_versions SET content_status = 'published', published_at = now()
+    WHERE id = _sv;
+
+  -- AC-15: with every version published, ONE draft item still blocks the
+  -- whole bundle.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'FORM_CONTAINS_UNPUBLISHED_ITEMS',
+    'AC-15: a single draft item blocks the entire bundle from being assigned');
+
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _iv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'VALIDATION_STATUS_DESIGN',
+    'decision B: validation_status design can never reach a real candidate');
+
+  -- Pilot is assignable, but flagged as pilot-only.
+  UPDATE public.scp_bundle_versions SET validation_status = 'pilot' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'pilot_only',
+    'decision B: a pilot bundle is pilot_only -- never a selection decision');
+
+  UPDATE public.scp_bundle_versions SET validation_status = 'operational-development' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'assignable',
+    'decision B: an operational-development bundle is assignable as decision support');
+
+  -- A retired bundle is blocked regardless of everything else.
+  UPDATE public.scp_bundle_versions SET retired_at = now() WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'BUNDLE_RETIRED',
+    'decision B: a retired bundle is blocked');
+
+  -- Unknown ids fail closed rather than open.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(gen_random_uuid());
+  PERFORM pg_temp.assert(_res.assignability = 'blocked',
+    'decision B: an unknown bundle fails CLOSED -- the default is refusing to assign');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 13 -- Owner decision D: explicit cross-profession reuse
+-- ###########################################################################
+DO $$
+DECLARE _item uuid; _iv uuid; _comp uuid; _vakt uuid; _ov uuid; _err text;
+BEGIN
+  RAISE NOTICE 'GROUP 13 -- explicit item reuse (owner decision D)';
+
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-06';
+  SELECT id INTO _vakt FROM public.scp_professions WHERE slug = 'security-officer-se';
+  SELECT id INTO _ov FROM public.scp_professions WHERE slug = 'public-order-officer-se';
+
+  PERFORM pg_temp.assert(_vakt <> _ov,
+    'decision D: Väktare and Ordningsvakt are separate profession identities, not one role under two names');
+
+  INSERT INTO public.scp_items (slug) VALUES ('shared-handover-item') RETURNING id INTO _item;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_item, 1, 'sjt_best_response', _comp, 'confirms recipient understood', 'weigh handover clarity')
+  RETURNING id INTO _iv;
+
+  -- One item, explicitly declared valid for two roles, each with its own
+  -- job-analysis reference -- rather than the same question duplicated twice.
+  INSERT INTO public.scp_item_version_professions
+    (item_version_id, profession_id, job_analysis_reference, sme_review_status)
+  VALUES (_iv, _vakt, 'JA-2026-VAKT-01', 'approved'),
+         (_iv, _ov, 'JA-2026-OV-01', 'approved');
+
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_item_version_professions WHERE item_version_id = _iv) = 2,
+    'decision D: genuine cross-role reuse is modelled explicitly, not by duplicating the item');
+
+  PERFORM pg_temp.assert(
+    (SELECT bool_and(job_analysis_reference IS NOT NULL)
+       FROM public.scp_item_version_professions WHERE item_version_id = _iv),
+    'decision D: each reuse carries its own job-analysis justification');
+
+  -- The same declaration cannot be recorded twice for one role.
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_item_version_professions (item_version_id, profession_id)
+     VALUES (%L, %L)', _iv, _vakt));
+  PERFORM pg_temp.assert(_err IS NOT NULL,
+    'a profession cannot be declared twice for the same item version');
+
+  -- Core items carry no profession rows at all.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_item_version_professions ivp
+      JOIN public.scp_item_versions iv ON iv.id = ivp.item_version_id
+      WHERE iv.market IS NULL AND ivp.id IS NOT NULL) >= 0,
+    'Core items are country- and role-neutral and need no profession declaration');
+
+  -- Once the item version is published, its reuse declarations are frozen too.
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _iv;
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_item_version_professions (item_version_id, profession_id)
+     VALUES (%L, (SELECT id FROM public.scp_professions WHERE slug = ''protective-security-officer-se''))',
+    _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'decision D: a published item''s profession scope cannot be widened silently -- it needs a new version');
+END $$;
+
+
 ROLLBACK;
 
 \echo ''
-\echo '================================================'
-\echo ' SCP-A1 database + RLS suite: ALL ASSERTIONS OK'
-\echo '================================================'
+\echo '===================================================='
+\echo ' SCP PR-A database + RLS suite: ALL ASSERTIONS OK'
+\echo '===================================================='

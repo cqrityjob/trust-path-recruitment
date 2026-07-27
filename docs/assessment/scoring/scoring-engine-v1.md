@@ -25,7 +25,9 @@ Core_Summary    = Σ(competency_score × approved_role_weight) / Σ(approved_rol
 
 Raw scores and the scoring version are persisted alongside the 0–100 presentation scale.
 
-**The 70/30 split is a pilot start model, not a scientific fact.** It changes by issuing a new scoring version, which never alters historical results.
+**The 70/30 split is an approved provisional pilot configuration, not a scientific fact** (owner decision A). It is **not** a constant in application code — it is versioned data in `scp_scoring_versions`, read at scoring time from the version the assignment pinned. Changing the model means publishing a new scoring version, which never alters a historical result. `security-competency-separation:check` fails CI if a `0.7`/`0.3` pair appears anywhere under `src/lib/security-competency/`.
+
+Two further policies are stored on the scoring version rather than left to the report layer: `core_summary_is_indicative` and `norm_comparison_permitted`.
 
 The Core Summary Index is *indicative only*. It may never be displayed without the full competency profile and uncertainty information beside it. There is deliberately no single hidden overall suitability score.
 

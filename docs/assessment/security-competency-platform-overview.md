@@ -53,6 +53,8 @@ The specification uses generic table names; three of them collide with live lega
 | `options` / `scoring_keys` | `scp_item_options` (key) + `scp_item_option_texts` (label) |
 | `module_links` | `scp_bundles` + `scp_bundle_versions` |
 | `role_weight_profiles` | `scp_role_weight_profiles` + `_weights` |
+| scoring model (spec 8.1) | `scp_scoring_versions` — versioned weights, owner decision A |
+| cross-role item reuse | `scp_item_version_professions` — owner decision D |
 | `audit_events` | `scp_content_events` |
 | `assignments` / `attempts` / `responses` | PR-C |
 | `score_results` | PR-D |
@@ -62,6 +64,8 @@ The specification uses generic table names; three of them collide with live lega
 ## Two structural decisions worth knowing
 
 **Scoring keys are in a different table from option labels.** `scp_item_options` holds `score_value` and `scoring_rationale`; `scp_item_option_texts` holds the candidate-visible label. The candidate runtime joins only the latter, so "no scoring key ever reaches the browser" (spec 12.1, acceptance criterion 12) is enforced by table design rather than by discipline in a SELECT list.
+
+**Nothing unapproved can be assigned by accident.** `scp_bundle_version_assignability()` fails closed — every unfinished, unknown or non-operational state returns `blocked`. See [owner decisions](./governance/owner-decisions.md) B.
 
 **Language is an adaptation object, not a column.** `scp_item_texts` is one row per language per item version, each with its own `adaptation_status`. Machine translation alone can never reach `approved` (spec 11). This is why the schema has no `text_sv`/`text_en` pair anywhere.
 
@@ -79,4 +83,5 @@ Assignments and candidate runtime (PR-C), the scoring engine (PR-D), reports (PR
 - [Publishing and versioning](./governance/publishing-and-versioning.md)
 - [Validation statuses](./governance/validation-statuses.md)
 - [AI and human oversight](./governance/ai-and-human-oversight.md)
+- [Owner decisions](./governance/owner-decisions.md) — A–D, decided 2026-07-27
 - [Scoring engine v1](./scoring/scoring-engine-v1.md)

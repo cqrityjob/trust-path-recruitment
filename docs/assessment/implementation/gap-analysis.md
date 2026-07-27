@@ -37,6 +37,10 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 | 14 | Role weight profiles with validation status (5.2, 13.1) | **missing** | **compliant** | `scp_role_weight_profiles` + weights, 0–12 scale, default `design` |
 | 15 | Published content immutable via UI/API/SQL/service role (13.2, AC-8/9, T-004) | **missing** | **compliant** | `BEFORE UPDATE` triggers on 4 version tables + 5 child tables; 8 assertions |
 | 16 | Two-person publication principle (13.3, T-013) | **missing** | **partial** | Table + roles + RLS in place; the enforcing publish RPC is PR-B |
+| 16a | Scoring weights versioned, configurable, not hard-coded (owner decision A) | **missing** | **compliant** | `scp_scoring_versions`; bundles hold an FK; CI fails on a hard-coded 0.7/0.3 |
+| 16b | Non-operational status prevents assignment to real candidates (owner decision B) | **missing** | **compliant** | `scp_bundle_version_assignability()`, fails closed; 9 assertions |
+| 16c | Legally dependent items unpublishable without recorded review (owner decision C) | **missing** | **compliant** | Publication trigger + second check at assignment; 6 assertions |
+| 16d | Explicit, reviewed cross-profession item reuse (owner decision D) | **missing** | **compliant** | `scp_item_version_professions` with per-role job-analysis reference |
 | 17 | Assessment editor / reviewer / publisher roles (13.3) | **partial** | **compliant** | Only `assessment_editor` existed; `scp_content_roles` adds all three without mutating `app_role` |
 | 18 | Append-only audit of critical actions (12.1, 13.1, AC-20) | **partial** | **compliant** | `scp_content_events`, no UPDATE/DELETE grant; retirement itself logged |
 | 19 | Legacy `security-guard-foundation` retired, never mutated (2.2, §6, AC-4/5/6, T-002/003) | **legacy-retire** | **compliant** | `retired_at` + `retired_reason` + catalogue hidden + INSERT-only guard; 4 assertions |
@@ -45,7 +49,7 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 | 22 | Legal review gate for Swedish regulated content (10.3) | **missing** | **compliant** | `legal_basis_required` + `legal_review_status` + CHECK constraint |
 | 23 | Bias / SME review evidence (7.4) | **missing** | **compliant** | First-class columns with review-status CHECKs |
 | 24 | AI-authored drafts never auto-operational (7.1, 7.5) | **missing** | **compliant** | `authored_by_ai` flag; validation status defaults to `design` |
-| 25 | Draft items cannot be assigned (AC-15) | **missing** | **partial** | Schema supports it; the assignment path is PR-C |
+| 25 | Draft items cannot be assigned (AC-15) | **missing** | **compliant** | The assignability gate blocks a bundle if any item in either form is unpublished; asserted |
 | 26 | Item bank not readable by employer (13.3, AC-13) | **missing** | **compliant** | RLS default-deny; proven by differential test (employer 0 rows, editor >0) |
 | 27 | Career Guidance content not reused (§5, 13.2, AC-2/3) | **conflicting** | **compliant** | This was the defect. Now: separation trigger + CI guard + no FKs |
 | 28 | Career Guidance unchanged and operational (§5, T-020) | — | **compliant** | Zero files touched; guard asserts 16/16/14 still intact |
@@ -72,14 +76,24 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 
 **5. Facets as reportable scales.** Spec 5.1 forbids reporting facets as separate psychometric scales before each has sufficient items and its own validity evidence. Facets are therefore stored for content coverage and item design only; no report surface reads them. Recorded as a table comment so a future implementer meets the constraint where they would otherwise violate it.
 
-## D. Open items requiring a decision that is not engineering's to make
+## D. Owner decisions — resolved 2026-07-27
+
+Four of the questions raised in the original PR-A report have been decided and implemented. Full text and implementation notes: [owner-decisions.md](../governance/owner-decisions.md).
+
+| Question | Decision | Status |
+|---|---|---|
+| Constructs and 70/30 weighting | Approved as provisional baseline; must be versioned and configurable | Implemented (A2 §1) |
+| DPIA | Required before real recruitment use; not a blocker for development or staging | Implemented as a non-operational assignability gate (A2 §4) |
+| Swedish legal review | Content may be drafted; may not publish or assign until review recorded | Implemented (A2 §2) |
+| Separate profession item banks | Separate identities and lineage; genuine reuse modelled explicitly | Implemented (A2 §3) |
+
+## E. Still requiring a decision that is not engineering's to make
 
 | Item | Owner |
 |---|---|
-| Psychometric sign-off on the twelve constructs and the 70/30 start weights | Psychometric specialist (Bilaga D) |
-| DPIA before any real recruitment use | Legal / DPO |
-| Legal review of Ordningsvakt and Skyddsvakt content | Qualified Swedish legal reviewer |
+| Psychometric sign-off before the weighting leaves `design` | Psychometric specialist (Bilaga D) |
+| The DPIA itself, before any real recruitment use | Legal / DPO |
+| The legal reviews the schema now demands for Ordningsvakt and Skyddsvakt items | Qualified Swedish legal reviewer |
 | SME panel composition (spec 14 wants ≥15 SMEs from ≥5 environments) | Product owner |
-| Whether Väktare and Ordningsvakt genuinely need separate modules or share one | Product owner + SME panel |
 | Retention periods per data class (spec 12) | Legal / DPO |
 | The unimplemented data export/deletion right already promised in UI copy (`dictionaries.ts:2243`) | Product owner — pre-existing, outside this specification, still a live exposure |

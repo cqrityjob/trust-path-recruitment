@@ -1,10 +1,16 @@
 # Migration and rollback — PR-A
 
-**Migration:** `supabase/migrations/20260727120000_scp_a1_security_competency_platform_domain.sql`
+**Migrations:**
+1. `20260727120000_scp_a1_security_competency_platform_domain.sql` — domain model + legacy retirement
+2. `20260727130000_scp_a2_scoring_versions_and_publication_gates.sql` — owner decisions A–D
+
+A2 is a second migration rather than an edit to A1 deliberately: A1 had been pushed, and a migration that has been pushed is one that might have been applied. A file whose content no longer matches what ran is unrecoverable, so additive-forward is the default even when the risk looks like zero.
 
 ## What it does
 
-Additive only. Creates 21 `scp_*` tables, 8 functions, 16 triggers, RLS on every new table, and seeds the twelve constructs, 48 facets, 3 families and 3 professions. Then retires the legacy `security-guard-foundation` definition.
+Additive only. A1 creates 21 `scp_*` tables, 8 functions, 16 triggers, RLS on every new table, and seeds the twelve constructs, 48 facets, 3 families and 3 professions. Then retires the legacy `security-guard-foundation` definition.
+
+A2 adds `scp_scoring_versions` and `scp_item_version_professions` (23 tables total), three guard functions, and replaces `scp_bundle_versions.scoring_version` (text) with `scoring_version_id` (FK). That column replacement targets a table A1 created in this same unmerged PR which has never held a row; the migration **aborts with `SCP_A2_ABORT`** rather than proceed if that is ever untrue.
 
 ## What it touches outside its own schema
 
@@ -28,15 +34,20 @@ Exactly three things, all additive or reversible:
 ## Post-migration verification
 
 ```sql
--- Must be 21
+-- Must be 23
 select count(*) from information_schema.tables
  where table_schema='public' and table_name like 'scp\_%';
 
--- Must be 12 / 48 / 3 / 3
+-- Must be 12 / 48 / 3 / 3 / 1
 select count(*) from scp_competencies;
 select count(*) from scp_competency_facets;
 select count(*) from scp_assessment_families;
 select count(*) from scp_professions;
+select count(*) from scp_scoring_versions;
+
+-- Owner decision A: bundles pin a scoring version by FK, not by a label
+select count(*) from information_schema.columns
+ where table_name='scp_bundle_versions' and column_name='scoring_version_id';
 
 -- Legacy retired but NOT mutated: count and scores unchanged
 select count(*) from assessment_assignments where assessment_id='security-guard-foundation';
@@ -60,7 +71,17 @@ UPDATE public.assessment_versions SET retired_at = NULL, retired_reason = NULL
  WHERE assessment_id = 'security-guard-foundation';
 ALTER TABLE public.assessment_versions DROP COLUMN IF EXISTS retired_reason;
 
--- 2. New schema, reverse dependency order
+-- 2. A2 objects
+DROP FUNCTION IF EXISTS public.scp_bundle_version_assignability(uuid);
+DROP TRIGGER IF EXISTS scp_item_versions_legal_gate ON public.scp_item_versions;
+DROP TRIGGER IF EXISTS scp_item_versions_insert_status ON public.scp_item_versions;
+DROP FUNCTION IF EXISTS public.scp_guard_legal_review_before_publish();
+DROP FUNCTION IF EXISTS public.scp_guard_item_insert_status();
+DROP TABLE IF EXISTS public.scp_item_version_professions CASCADE;
+ALTER TABLE public.scp_bundle_versions DROP COLUMN IF EXISTS scoring_version_id;
+DROP TABLE IF EXISTS public.scp_scoring_versions CASCADE;
+
+-- 3. A1 schema, reverse dependency order
 DROP TABLE IF EXISTS public.scp_publication_approvals CASCADE;
 DROP TABLE IF EXISTS public.scp_content_events CASCADE;
 DROP TABLE IF EXISTS public.scp_role_weight_profile_weights CASCADE;

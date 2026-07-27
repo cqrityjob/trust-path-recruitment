@@ -227,8 +227,49 @@ export const PRELIMINARY_BANDS = [
   { min: 80, max: 100, key: "very_clear_support" },
 ] as const;
 
-/** Spec 8.1 starting weights -- a pilot start model, not a permanent fact. */
-export const SCORING_START_WEIGHTS = { sjt: 0.7, biq: 0.3 } as const;
+/**
+ * The scoring model a bundle locks.
+ *
+ * Owner decision A: the 70/30 SJT/BIQ split is an approved PROVISIONAL pilot
+ * configuration, not a validated fact. It is therefore NOT a constant in this
+ * file -- it is versioned data in `scp_scoring_versions`, read at scoring time
+ * from the version the assignment pinned. Hard-coding it anywhere in the
+ * application would make it impossible to change the model without either
+ * editing history or shipping code, and would let two layers disagree.
+ *
+ * If you need the weights, load the scoring version. There is deliberately no
+ * default export of 0.7 / 0.3 to fall back on.
+ */
+export interface ScoringVersion {
+  id: string;
+  slug: string;
+  versionNumber: number;
+  contentStatus: ContentStatus;
+  validationStatus: ValidationStatus;
+  sjtWeight: number;
+  biqWeight: number;
+  /** Spec 8.1 -- the Core Summary Index may never be shown alone. */
+  coreSummaryIsIndicative: boolean;
+  /** Spec 8.3 -- false until approved norm data exists. */
+  normComparisonPermitted: boolean;
+}
+
+/** Slug of the seeded provisional pilot configuration (0.70 / 0.30). */
+export const PILOT_SCORING_VERSION_SLUG = "scp-scoring-v1";
+
+/**
+ * Owner decision B. Whether a bundle version may be assigned at all.
+ * Computed server-side by `scp_bundle_version_assignability()`; PR-C's
+ * assignment path must call it and must refuse on anything but `assignable`
+ * (or `pilot_only` for a consenting pilot participant).
+ */
+export type Assignability = "blocked" | "pilot_only" | "assignable";
+
+export interface AssignabilityResult {
+  assignability: Assignability;
+  /** Stable machine-readable reason, e.g. `LEGAL_REVIEW_PENDING`. */
+  reason: string;
+}
 
 /** Spec 8.4 quality flags. A flag lowers interpretation strength; it never accuses. */
 export type QualityFlag =

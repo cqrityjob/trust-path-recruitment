@@ -23,7 +23,7 @@ Runs in CI. Proves Career Guidance content is not reused.
 
 ### 2. Database + RLS suite — `supabase/tests/scp_a1_domain_model_test.sql`
 
-53 assertions, 9 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
+83 assertions, 13 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
 
 | Group | Assertions | Maps to |
 |---|---|---|
@@ -36,6 +36,10 @@ Runs in CI. Proves Career Guidance content is not reused.
 | 7 — separation of duties and audit | 6 | AC-16, AC-20; T-013 |
 | 8 — validation status | 3 | AC-15, AC-18 |
 | 9 — construct catalogue completeness | 6 | spec 5, 6 |
+| 10 — versioned scoring | 7 | owner decision A |
+| 11 — legal review gate | 6 | owner decision C; spec 10.3 |
+| 12 — assignability gate | 9 | owner decision B; AC-15 |
+| 13 — explicit item reuse | 6 | owner decision D |
 
 Group 6 is a **differential** test: an employer account and a candidate account see zero rows of the item bank and zero scoring keys, while an editor sees more than zero. Both halves are required — a suite where everyone sees zero would pass for the wrong reason.
 
