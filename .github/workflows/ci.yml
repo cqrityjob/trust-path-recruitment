@@ -44,3 +44,10 @@ jobs:
 
       - name: Knowledge graph integrity check
         run: bun run kg:check
+
+      # Proves the Security Competency Platform shares no item IDs, item
+      # objects, options, mappings, scoring keys or constructs with Career
+      # Guidance, and that the legacy definition is retired rather than
+      # mutated (implementation directive section 5 and 6).
+      - name: Security Competency / Career Guidance separation check
+        run: bun run security-competency-separation:check
