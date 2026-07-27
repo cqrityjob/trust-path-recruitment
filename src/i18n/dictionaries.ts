@@ -1075,6 +1075,8 @@ export const dictionaries = {
     "assignment.form.error.generic": "Tilldelningen kunde inte skapas. Försök igen.",
     "assignment.form.error.orgNotActive":
       "Er organisation måste vara godkänd och aktiv för att tilldela bedömningar.",
+    "assignment.form.error.alreadyActive":
+      "Den här personen har redan en pågående inbjudan till det här testet. Vänta tills den är klar, utgången eller avbruten innan du skickar en ny.",
     "assignment.form.success.heading": "Inbjudan skapad",
     "assignment.form.success.body":
       "Kopiera länken nedan och skicka den till mottagaren. Länken är personlig och ska inte delas vidare.",
@@ -2858,6 +2860,8 @@ export const dictionaries = {
     "assignment.form.error.generic": "This assignment could not be created. Please try again.",
     "assignment.form.error.orgNotActive":
       "Your organisation must be approved and active to assign assessments.",
+    "assignment.form.error.alreadyActive":
+      "This person already has an active invitation to this assessment. Wait until it is completed, expired, or cancelled before sending a new one.",
     "assignment.form.success.heading": "Invitation created",
     "assignment.form.success.body":
       "Copy the link below and send it to the recipient. The link is personal and should not be shared further.",

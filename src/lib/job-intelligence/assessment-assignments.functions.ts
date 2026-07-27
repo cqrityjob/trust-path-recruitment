@@ -127,6 +127,15 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       const profileId = ASSESSMENT_PROFILE_BY_DEFINITION[data.assessmentId];
       if (!profileId) throw new Error("ASSESSMENT_NOT_ASSIGNABLE");
 
+      // Pre-merge review fix (checklist item 15): the invitation email
+      // must name the inviting employer, not just "you've been invited".
+      const { data: employerRow, error: employerErr } = await ctx.supabase
+        .from("employers")
+        .select("name")
+        .eq("id", data.employerId)
+        .maybeSingle();
+      if (employerErr || !employerRow) throw new Error("ACCESS_NOT_AVAILABLE");
+
       // Same catalog-visibility gate as the employer catalogue itself — an
       // employer can only ever assign an assessment they were already shown.
       const { data: catalogRow, error: catalogErr } = await ctx.supabase
@@ -197,6 +206,15 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
         .single();
       if (error) {
         console.error("[assessment-assignments] create failed", error.code ?? error.message);
+        // Pre-merge review fix: a double-click, a resubmit-after-timeout,
+        // or two tabs submitting the same assign form must not silently
+        // create a second row and send a second email. The submit button
+        // is already disabled while pending (client-side first line of
+        // defense); assessment_assignments_active_unique_idx (migration
+        // 20260725100000) is the real, database-level guarantee -- 23505
+        // here means that index rejected a genuine duplicate-in-flight
+        // attempt, not an unexpected failure.
+        if (error.code === "23505") throw new Error("ASSIGNMENT_ALREADY_ACTIVE");
         throw new Error("ASSIGNMENT_CREATE_FAILED");
       }
 
@@ -210,12 +228,22 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       // this codebase follow the same rule).
       const { sendInvitationEmail } = await import("@/lib/email/send-invitation-email.server");
       const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
-      const invitationUrl = `${SITE_ORIGIN}/invite/${token}`;
+      // Pre-merge review fix (checklist item 5): PUBLIC_SITE_URL lets
+      // Mostafa point invitation links at the correct environment
+      // (Lovable Preview during testing, the real production domain once
+      // live) without a code change. Falls back to the existing
+      // SITE_ORIGIN constant (already used for every canonical/sitemap
+      // URL elsewhere in this app) so behaviour is unchanged until it's
+      // explicitly set.
+      const siteOrigin = process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+      const invitationUrl = `${siteOrigin}/invite/${token}`;
       const sendResult = await sendInvitationEmail({
         recipientEmail: data.recipientEmail,
         language: data.language,
+        employerName: employerRow.name,
         assessmentNameSv: catalogRow.name_sv,
         assessmentNameEn: catalogRow.name_en,
+        siteOrigin,
         invitationUrl,
         expiresAt: inserted.expires_at as string,
         employerMessage: data.employerMessage ?? null,
