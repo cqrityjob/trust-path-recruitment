@@ -105,6 +105,51 @@ expect(
 );
 
 // -----------------------------------------------------------------------
+// 5. Pre-merge review additions.
+// -----------------------------------------------------------------------
+
+// 5a. Duplicate-send protection: a real database-level guard must exist,
+//     not just a client-side disabled button.
+expect(
+  (() => {
+    try {
+      read("supabase/migrations/20260725100000_assignment_duplicate_send_guard.sql");
+      return true;
+    } catch {
+      return false;
+    }
+  })(),
+  "a duplicate-send guard migration must exist (assessment_assignments_active_unique_idx)",
+);
+expect(
+  assignmentFns.includes(
+    'if (error.code === "23505") throw new Error("ASSIGNMENT_ALREADY_ACTIVE")',
+  ),
+  "createAssessmentAssignment must translate a unique-violation into a clean ASSIGNMENT_ALREADY_ACTIVE error, not a raw DB error",
+);
+
+// 5b. Invitation link must be able to point at an environment-specific
+//     base URL, not only the hardcoded SITE_ORIGIN constant.
+expect(
+  assignmentFns.includes("process.env.PUBLIC_SITE_URL || SITE_ORIGIN"),
+  "createAssessmentAssignment must allow PUBLIC_SITE_URL to override the invitation link's base URL",
+);
+
+// 5c. Email content: employer identity, CQrityjob branding, decision-
+//     support disclaimer, and a support/contact path must all be present
+//     in both languages.
+expect(
+  sendFn.includes("employerName") && sendFn.includes("CQrityjob"),
+  "the invitation email must name the inviting employer and identify CQrityjob as the sender",
+);
+expect(
+  sendFn.includes("aldrig ensamt någon anställning") ||
+    sendFn.includes("never determines any employment outcome by itself"),
+  "the invitation email must state the assessment is decision support only, in both languages",
+);
+expect(sendFn.includes("/contact"), "the invitation email must include a support/contact path");
+
+// -----------------------------------------------------------------------
 // Report
 // -----------------------------------------------------------------------
 if (errors.length > 0) {
