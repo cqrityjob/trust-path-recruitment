@@ -40,11 +40,13 @@ type SendResult =
 export type InvitationEmailParams = {
   recipientEmail: string;
   language: "sv" | "en";
+  employerName: string;
   assessmentNameSv: string;
   assessmentNameEn: string;
   invitationUrl: string;
   expiresAt: string;
   employerMessage: string | null;
+  siteOrigin: string;
 };
 
 const SUBJECT: Record<"sv" | "en", (assessmentName: string) => string> = {
@@ -60,29 +62,40 @@ function renderBody(params: InvitationEmailParams): string {
     { year: "numeric", month: "long", day: "numeric" },
   );
 
+  const employerName = escapeHtml(params.employerName);
+
   const lines =
     params.language === "sv"
       ? {
           greeting: "Hej,",
-          body: `Du har blivit inbjuden att genomföra ett test: <strong>${assessmentName}</strong>.`,
+          body: `<strong>${employerName}</strong> har bjudit in dig att genomföra ett kompetenstest: <strong>${assessmentName}</strong>.`,
           messageLabel: "Meddelande från arbetsgivaren:",
           cta: "Öppna testet",
           expires: `Länken slutar gälla ${expiresLabel}.`,
+          disclaimer:
+            "Testet är ett beslutsstöd. Det avgör aldrig ensamt någon anställning — arbetsgivaren ansvarar alltid för det slutliga beslutet.",
+          support: "Frågor om den här inbjudan? Kontakta",
+          supportLinkText: "CQrityjob support",
           footer:
             "Länken är personlig och ska inte delas vidare. Om du inte förväntade dig detta e-postmeddelande kan du bortse från det.",
         }
       : {
           greeting: "Hi,",
-          body: `You have been invited to complete an assessment: <strong>${assessmentName}</strong>.`,
+          body: `<strong>${employerName}</strong> has invited you to complete an assessment: <strong>${assessmentName}</strong>.`,
           messageLabel: "Message from the employer:",
           cta: "Open the assessment",
           expires: `This link expires on ${expiresLabel}.`,
+          disclaimer:
+            "This assessment is decision support only. It never determines any employment outcome by itself — the employer always remains responsible for the final decision.",
+          support: "Questions about this invitation? Contact",
+          supportLinkText: "CQrityjob support",
           footer:
             "This link is personal and should not be shared. If you were not expecting this email, you can safely ignore it.",
         };
 
   return `
     <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1a1a1a;">
+      <p style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #111827;">CQrityjob</p>
       <p>${lines.greeting}</p>
       <p>${lines.body}</p>
       ${
@@ -96,7 +109,11 @@ function renderBody(params: InvitationEmailParams): string {
         </a>
       </p>
       <p style="font-size: 13px; color: #555;">${lines.expires}</p>
-      <p style="font-size: 12px; color: #888; margin-top: 32px;">${lines.footer}</p>
+      <p style="font-size: 12px; color: #555; margin-top: 20px;">${lines.disclaimer}</p>
+      <p style="font-size: 12px; color: #888; margin-top: 20px;">
+        ${lines.support} <a href="${params.siteOrigin}/contact" style="color: #555;">${lines.supportLinkText}</a>.
+      </p>
+      <p style="font-size: 12px; color: #888; margin-top: 12px;">${lines.footer}</p>
     </div>
   `;
 }
