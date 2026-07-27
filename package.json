@@ -17,6 +17,7 @@
     "employer-job-form:check": "bun run scripts/employer-job-form-check.ts",
     "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
+    "invitation-email-guard:check": "bun run scripts/invitation-email-guard-check.ts",
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts",
     "e2e": "playwright test"
   },
