@@ -2,7 +2,7 @@
 
 ## PR-A coverage
 
-Two suites. Both must pass before merge.
+Three suites. All must pass before merge.
 
 ### 1. Static separation guard — `bun run security-competency-separation:check`
 
@@ -43,18 +43,42 @@ Runs in CI. Proves Career Guidance content is not reused.
 
 Group 6 is a **differential** test: an employer account and a candidate account see zero rows of the item bank and zero scoring keys, while an editor sees more than zero. Both halves are required — a suite where everyone sees zero would pass for the wrong reason.
 
+### 3. Rollback verification — `supabase/tests/scp_a_rollback_test.sql`
+
+15 assertions. Executes the documented rollback verbatim, then proves the database is genuinely back to its pre-PR-A state: every `scp_` table, function and trigger gone; `retired_at`, `retired_reason` and `employer_visible` restored; the legacy definition accepting new assignments again.
+
+The assertions that matter most are the last three: a synthetic historical assignment, seeded before the rollback, still exists afterwards with its score and status **unchanged**. A rollback that removed the schema but altered history would be worse than none, because it would look successful.
+
+Destructive by design — it runs last, against a disposable database only.
+
+### What CI actually executes
+
+| Job | Steps |
+|---|---|
+| `verify` | lint (non-blocking) · `tsc --noEmit` · `cie:check` · `kg:check` · `security-competency-separation:check` · **production build** |
+| `database` | PostgreSQL 16 service container · full migration replay in order · A1→A2 ordering · 83 domain assertions · 15 rollback assertions |
+
+The `database` job runs `scripts/db-test.sh`, which is the same script used locally (`bun run db:test`) — CI and a developer's machine cannot drift apart.
+
+It fails the build on: any unexpected migration failure, any allowlisted failure that starts passing, a missing or out-of-order `scp` migration, evidence that A2 did not apply, any failed assertion, or an assertion **count** below the expected floor. That last check matters: a suite that silently stops running assertions would otherwise pass.
+
+The job holds no secrets and touches no real database. `scripts/db-test.sh` refuses to run if `PGHOST` looks like a managed host (`*.supabase.co`, `*.rds.amazonaws.com`, `*.neon.tech`).
+
+**Negative-tested.** Verified to fail on (a) an unexpected migration failure and (b) a deliberately inverted assertion — and, after a fix, to *name* the failing assertion in the log rather than reporting a bare exit code.
+
 ### Harness
 
-Postgres 16, disposable, TCP on 127.0.0.1 (the unix socket path exceeds the 103-byte limit under the scratchpad directory; `LC_ALL=C` is required or the postmaster refuses to start).
+One script, `scripts/db-test.sh`, used by both CI and local runs. It bootstraps `supabase/tests/00_bootstrap.sql` (the `anon`/`authenticated`/`service_role` roles, a minimal `auth.users`, and an `auth.uid()` that resolves from a transaction-local setting so RLS evaluates exactly as it would against a real JWT), then replays, asserts and rolls back.
 
 ```bash
-initdb -D "$PGDATA" -U postgres --auth=trust
-pg_ctl -D "$PGDATA" -o "-p 55432 -c listen_addresses=127.0.0.1 -c unix_socket_directories=" start
-createdb -h 127.0.0.1 -p 55432 -U postgres scptest
-psql -h 127.0.0.1 -p 55432 -U postgres -d scptest -f 00_bootstrap.sql   # anon/authenticated/service_role, auth.users, auth.uid()
-for f in supabase/migrations/*.sql; do psql ... -f "$f"; done
-psql -v ON_ERROR_STOP=1 ... -f supabase/tests/scp_a1_domain_model_test.sql
+# CI: against the postgres:16 service container (PGHOST=127.0.0.1 PGPORT=5432)
+bun run db:test
+
+# Locally against any disposable instance
+PGHOST=127.0.0.1 PGPORT=55432 PGUSER=postgres bun run db:test
 ```
+
+`service_role` is created `BYPASSRLS` to match Supabase — which is precisely why the immutability guards are triggers rather than RLS policies. A trigger still fires for a BYPASSRLS caller; a policy does not.
 
 **Known pre-existing replay failures (12).** Ten are duplicate Lovable-generated migrations that re-create objects an earlier migration already created; two require `storage.objects`, which the minimal bootstrap does not stub. All twelve fail identically on `origin/main` without this branch — they are not introduced here. The PR-A migration is not among them.
 
@@ -79,5 +103,6 @@ psql -v ON_ERROR_STOP=1 ... -f supabase/tests/scp_a1_domain_model_test.sql
 | `bun run question-library:check` | pass |
 | `bun run invitation-email-guard:check` | pass |
 | `bun run assessment-assignment:check` | pass |
-| `bun run build` | pass |
-| `supabase/tests/scp_a1_domain_model_test.sql` | 53/53 assertions, exit 0 |
+| `bun run build` | pass (now also a CI step) |
+| `bun run db:test` | 83 domain + 15 rollback assertions, exit 0 |
+| Negative tests (guard + DB job) | all four confirmed to fail on real violations |
