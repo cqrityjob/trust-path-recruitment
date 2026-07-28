@@ -256,8 +256,8 @@ fi
 
 echo "    ok  ${CD_PASSED} Career Discovery assertions passed"
 
-if [ "$CD_PASSED" -lt 44 ]; then
-  echo "FAIL: expected at least 44 Career Discovery assertions, only ${CD_PASSED} ran." >&2
+if [ "$CD_PASSED" -lt 92 ]; then
+  echo "FAIL: expected at least 92 Career Discovery assertions, only ${CD_PASSED} ran." >&2
   echo "      A suite that silently stops running assertions is worse than one that fails." >&2
   exit 1
 fi

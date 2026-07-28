@@ -554,6 +554,134 @@ DISCOVERY_SECTIONS.forEach((s, i) => {
 });
 
 // ---------------------------------------------------------------------------
+// Registry parity — the TypeScript definition and the database item
+// registry must describe the SAME instrument
+// ---------------------------------------------------------------------------
+//
+// cd_definition_items is what the database validates every answer against.
+// If it drifts from src/lib/career-discovery/, the database would accept or
+// reject items the application does not agree about. This parses the seed
+// out of the hardening migration and diffs it against the TS definition.
+
+const hardening = read(
+  "supabase/migrations/20260728130000_career_discovery_v3_phase1_hardening.sql",
+);
+
+type RegistryRow = {
+  itemId: string;
+  itemKind: string;
+  adaptivePath: string | null;
+  sectionId: string | null;
+  displayOrder: number;
+};
+
+const seedRows: RegistryRow[] = [
+  ...hardening.matchAll(
+    /^\s*\('([A-Za-z0-9_]+)'\s*,\s*'([a-z_]+)'\s*,\s*(NULL|'[A-E]')\s*,\s*(NULL|'[a-z]+')\s*,\s*(\d+)\)/gm,
+  ),
+].map((m) => ({
+  itemId: m[1],
+  itemKind: m[2],
+  adaptivePath: m[3] === "NULL" ? null : m[3].replaceAll("'", ""),
+  sectionId: m[4] === "NULL" ? null : m[4].replaceAll("'", ""),
+  displayOrder: Number(m[5]),
+}));
+
+expect(
+  seedRows.length === 42,
+  `registry parity: expected to parse 42 seeded registry rows from the hardening migration, got ${seedRows.length}`,
+);
+
+const seedById = new Map(seedRows.map((r) => [r.itemId, r]));
+
+// Every TypeScript item exists in the registry with the same kind.
+for (const item of allItems) {
+  const row = seedById.get(item.id);
+  if (!row) {
+    errors.push(
+      `registry parity: item ${item.id} exists in TypeScript but not in cd_definition_items`,
+    );
+    continue;
+  }
+  expect(
+    row.itemKind === item.kind,
+    `registry parity: item ${item.id} is kind '${item.kind}' in TypeScript but '${row.itemKind}' in the registry`,
+  );
+}
+// ...and nothing extra in the registry.
+for (const row of seedRows) {
+  expect(
+    idCounts.has(row.itemId),
+    `registry parity: cd_definition_items seeds item ${row.itemId}, which does not exist in TypeScript`,
+  );
+}
+
+// Adaptive ownership matches.
+for (const [itemId, path] of PATH_BY_ADAPTIVE_ITEM_ID) {
+  const row = seedById.get(itemId);
+  expect(
+    row?.adaptivePath === path,
+    `registry parity: adaptive item ${itemId} belongs to path ${path} in TypeScript but ${row?.adaptivePath ?? "none"} in the registry`,
+  );
+}
+
+// Section placement and display order match, for both core and adaptive.
+for (const status of ALL_STATUSES) {
+  const session = assembleSession(status);
+  for (const si of session.items) {
+    if (si.indexInSection === 0) continue; // the two context items
+    const row = seedById.get(si.item.id);
+    expect(
+      row?.sectionId === si.sectionId,
+      `registry parity: item ${si.item.id} sits in section '${si.sectionId}' in TypeScript but '${row?.sectionId ?? "none"}' in the registry`,
+    );
+    expect(
+      row?.displayOrder === si.indexInSection,
+      `registry parity: item ${si.item.id} has display order ${si.indexInSection} in TypeScript but ${row?.displayOrder ?? "none"} in the registry`,
+    );
+  }
+}
+
+// The database's path-derivation function must mirror PATH_BY_CONTEXT_STATUS.
+for (const [status, path] of Object.entries(PATH_BY_CONTEXT_STATUS)) {
+  expect(
+    new RegExp(`WHEN\\s+'${status}'\\s+THEN\\s+'${path}'`).test(hardening),
+    `registry parity: cd_derive_adaptive_path() must map ${status} -> ${path}, matching PATH_BY_CONTEXT_STATUS`,
+  );
+}
+
+// The hardening migration must remain additive against the legacy world.
+for (const forbidden of [
+  "DROP TABLE",
+  "TRUNCATE",
+  "ALTER TABLE public.assessment_runs",
+  "ALTER TABLE public.assessment_responses",
+  "ALTER TABLE public.assessment_run_reports",
+  "ALTER TABLE public.assessments",
+  "ALTER TABLE public.assessment_versions",
+]) {
+  expect(
+    !hardening.toUpperCase().includes(forbidden.toUpperCase()),
+    `separation: the hardening migration must be additive — it must not contain "${forbidden}"`,
+  );
+}
+
+// Completion must not be reachable while the Phase 3 report generator is
+// missing, and the internal-test route must require an administrator.
+expect(
+  hardening.includes("CD_REPORT_GENERATOR_NOT_IMPLEMENTED"),
+  "lifecycle: cd_complete_session() must refuse until the Phase 3 report generator exists",
+);
+expect(
+  hardening.includes("CD_INTERNAL_TEST_REQUIRES_ADMIN") && hardening.includes("is_platform_admin"),
+  "lifecycle: the internal-test route must require a platform administrator",
+);
+expect(
+  /_status = 'design'[\s\S]{0,240}CD_VERSION_NOT_ADMINISTRABLE/.test(hardening),
+  "lifecycle: a design-status version must be unreachable by every route, including internal test",
+);
+
+// ---------------------------------------------------------------------------
 // Lifecycle — directive §22 and §25 ("do not mark the version active")
 // ---------------------------------------------------------------------------
 

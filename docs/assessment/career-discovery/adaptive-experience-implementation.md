@@ -102,10 +102,42 @@ Contextual evidence **must not** influence Security Career DNA, Security Career 
 The boundary is enforced in three independent places:
 
 1. **Types** — adaptive and context items carry no axis loadings; `isScoredItem()` derives from the evidence class.
-2. **Database** — `cd_guard_evidence_scoring_boundary()` derives `is_scored` rather than trusting the caller, and rejects an adaptive or context answer submitted under a scoring class. A trigger, so it holds for `BYPASSRLS` callers.
+2. **Database** — every answer is resolved against `cd_definition_items`, and `item_version`, `item_kind`, `evidence_class`, `is_scored` and `adaptive_path` are **derived from the registry**, never accepted from the caller. Triggers, so they hold for `BYPASSRLS` callers.
 3. **Tests** — `career-discovery:check` and the SQL suite both fail if any of it is weakened. Both were negative-tested.
 
-**Adaptive answers are never required inputs.** A result generates from the 20 core items alone; `cd_guard_snapshot_requires_core_complete()` counts scored evidence, requires exactly 20, and does not consider adaptive answers at all.
+**Adaptive answers are never required inputs.** A result generates from the 20 core items alone; the completion guard compares the session's scored evidence to the registry's scored set and does not consider adaptive answers at all.
+
+### The item registry — `cd_definition_items`
+
+Counting 20 scored rows is not proof of identity: twenty fabricated item ids would satisfy a count. The registry is the authority on which items exist in a definition version, and completion is proved by **set equality in both directions** against it.
+
+| Rejected | Error code |
+|---|---|
+| Unknown item id, incl. a semantic duplicate under a new id | `CD_UNKNOWN_ITEM` |
+| Wrong item version | `CD_ITEM_VERSION_MISMATCH` |
+| Wrong item kind | `CD_ITEM_KIND_MISMATCH` |
+| Wrong evidence class | `CD_EVIDENCE_CLASS_MISMATCH` |
+| Incorrect `is_scored` | `CD_IS_SCORED_MISMATCH` |
+| Adaptive item from another path | `CD_ADAPTIVE_PATH_MISMATCH` |
+| Report tags on a non-adaptive item | `CD_REPORT_TAGS_ONLY_ON_ADAPTIVE` |
+| Duplicate answer | unique violation on `(session_id, item_id)` |
+| Missing / extra scored items at completion | `CD_CORE_INCOMPLETE` / `CD_CORE_UNEXPECTED_ITEMS` |
+
+`scripts/career-discovery-check.ts` diffs the registry seed against the TypeScript definition item by item — id, kind, owning path, section and display order — so the two cannot drift apart silently.
+
+### Derived, never accepted
+
+Three values a caller could previously get wrong are now computed inside the database:
+
+- **`cd_sessions.adaptive_path`** — derived from `context_status` by `cd_derive_adaptive_path()`, overwriting anything supplied. A client claiming `exploring_security` with path `E` persists as path `A`.
+- **`cd_report_snapshots`' version tuple** — `definition_version`, `content_version`, `scoring_version`, `taxonomy_version` are read from the session's definition version, and `context_status` / `discovery_goal` are copied from the session. A wrong tuple can no longer be frozen by the immutability guard.
+- **`cd_evidence`' metadata** — as above, from the registry.
+
+### Completion is server-side and transactional
+
+A client can update resume position, locale, consent and `discovery_goal`. It **cannot** declare its own run complete: `CD_COMPLETION_REQUIRES_SERVER_PATH`. `completed_at` cannot be set without completion, cannot be rewritten, and a completed session cannot reopen.
+
+The only route is `cd_complete_session()` — `service_role` only — which locks the session, refuses a repeat (`CD_ALREADY_COMPLETED`), verifies the exact core set, then writes the snapshot and flips status in one transaction. **In Phase 1 it deliberately raises `CD_REPORT_GENERATOR_NOT_IMPLEMENTED` at that final step**, because Phase 3 does not exist and a snapshot written today would carry empty `dna_scores` and `career_areas` — a false record. `cd_report_snapshots.session_id` is `UNIQUE`, so duplicate snapshots are structurally impossible.
 
 ---
 
@@ -140,10 +172,14 @@ Report generation itself is **Phase 3** — these rules are recorded now so the 
 - [x] All 20 adaptive items across 5 paths, bilingual, with contextual report tags
 - [x] Five Discovery sections, four transitions, preparation screen — all bilingual
 - [x] Session assembly, path resolution, progress model, completion rules
-- [x] Persistence: `cd_definition_versions`, `cd_sessions` (anonymous-capable), `cd_evidence`, `cd_report_snapshots`
-- [x] Six database guards, all triggers so they hold for `BYPASSRLS` callers
-- [x] RLS on all four tables, owner-scoped, fail-closed
-- [x] 47 SQL assertions + a deterministic guard script, both negative-tested, both in CI
+- [x] Persistence: `cd_definition_versions`, `cd_definition_items`, `cd_sessions`, `cd_evidence`, `cd_report_snapshots`
+- [x] Versioned item registry seeded with the exact 42-item definition (2 + 20 + 20), cross-checked against TypeScript by the guard script
+- [x] Ten database guards, all triggers so they hold for `BYPASSRLS` callers
+- [x] Derivation of adaptive path, evidence metadata and snapshot version tuple inside the database
+- [x] Server-only transactional completion path, currently blocked pending Phase 3
+- [x] Admin-authorised `internal_test` route; `design` unreachable
+- [x] RLS on all five tables, owner-scoped, fail-closed
+- [x] 92 SQL assertions + a deterministic guard script, both negative-tested, both in CI
 
 ### Not built — deliberately out of Phase 1
 
@@ -152,7 +188,8 @@ Report generation itself is **Phase 3** — these rules are recorded now so the 
 - [ ] **Report generation** — Phase 3
 - [ ] **Candidate UI**, transitions, progress display, accessibility — Phase 2
 - [ ] `careerDiscovery.*` i18n chrome keys — Phase 2, deliberately deferred (see §8)
-- [ ] Server functions for the anonymous session flow — Phase 2
+- [ ] **Anonymous session support** — Phase 2. Reserved structure only; nothing works today
+- [ ] **Step 4 of `cd_complete_session()`** — Phase 3. Until it exists, no session can be completed
 
 Until Phase 3 lands, **this definition cannot produce a report**. That is a further reason it is not administrable, independent of the review gates.
 
@@ -162,7 +199,9 @@ Until Phase 3 lands, **this definition cannot produce a report**. That is a furt
 
 **i18n chrome keys deferred to Phase 2.** The directive suggests a `careerDiscovery.*` namespace. Phase 1 builds no UI, so adding those keys now would create orphaned dictionary entries — the exact defect audit finding F-9 records, where ~120 of 182 `sca.*` keys are orphaned. All *instrument* content is bilingual today inside the versioned module, which is where it must live to be versioned and content-hashed; i18n dictionaries are not versioned. The guard script asserts sv/en parity on every string, and additionally fails if the two are identical, which would indicate an untranslated copy.
 
-**Anonymous sessions have no direct table access.** `cd_sessions` supports an anonymous run via `anon_session_token`, but no policy is granted to the `anon` role — an anonymous session is reachable only through a server function holding the token, matching the existing `save_career_report` pattern. The SQL suite proves `anon` is refused outright rather than merely filtered to zero rows.
+**Anonymous sessions are RESERVED, not implemented.** The Phase 1 migration comment claimed anonymous runs worked "through a server function holding the token". No such function exists. `anon_session_token` and its unique index remain as reserved structure; the `anon` role holds no privilege on `cd_sessions`, `cd_evidence` or `cd_report_snapshots`, and nothing can create or read an anonymous session today. The table comment now states this, and the SQL suite asserts both that `anon` is refused outright (not merely filtered to zero rows) and that the corrected comment is present. **Phase 2 must implement and test that path before any anonymous run is possible.**
+
+**`internal_test` has exactly one route.** The Phase 1 code described `internal_test` as being for named informed participants while the database permitted only `pilot` and `active`. Resolved without weakening the public guard: candidate administration is still `pilot`/`active` **plus** every review gate cleared; `internal_test` is reachable only via `cd_begin_internal_test_session()`, which requires `is_platform_admin()`, refuses any other lifecycle status, and marks the session `is_internal_test`. A candidate session may never carry that flag. **`design` is reachable by no route at all**, including this one. The version remains employer-invisible throughout.
 
 **Blueprint C1–C3 superseded.** The owner's two locked context questions replace the blueprint's three-question draft in full. Nothing is migrated; the draft was never administered. The tenure signal that is lost is recorded in the [ADR §5](../../architecture/adr-career-discovery-adaptive-experience.md).
 
