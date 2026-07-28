@@ -554,6 +554,243 @@ export type Database = {
           },
         ]
       }
+      cd_definition_versions: {
+        Row: {
+          assessment_id: string
+          assessment_version_id: string
+          available_locales: string[]
+          content_version: string
+          created_at: string
+          definition_version: string
+          id: string
+          lifecycle_status: string
+          review_status: Json
+          scoring_version: string
+          taxonomy_version: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          assessment_version_id: string
+          available_locales?: string[]
+          content_version: string
+          created_at?: string
+          definition_version: string
+          id?: string
+          lifecycle_status?: string
+          review_status?: Json
+          scoring_version: string
+          taxonomy_version: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          assessment_version_id?: string
+          available_locales?: string[]
+          content_version?: string
+          created_at?: string
+          definition_version?: string
+          id?: string
+          lifecycle_status?: string
+          review_status?: Json
+          scoring_version?: string
+          taxonomy_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_definition_versions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cd_definition_versions_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cd_evidence: {
+        Row: {
+          adaptive_path: string | null
+          answer_tags: string[]
+          answer_value: string
+          answered_at: string
+          evidence_class: string
+          id: string
+          is_scored: boolean
+          item_id: string
+          item_kind: string
+          item_version: number
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          adaptive_path?: string | null
+          answer_tags?: string[]
+          answer_value: string
+          answered_at?: string
+          evidence_class: string
+          id?: string
+          is_scored: boolean
+          item_id: string
+          item_kind: string
+          item_version: number
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          adaptive_path?: string | null
+          answer_tags?: string[]
+          answer_value?: string
+          answered_at?: string
+          evidence_class?: string
+          id?: string
+          is_scored?: boolean
+          item_id?: string
+          item_kind?: string
+          item_version?: number
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_evidence_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cd_report_snapshots: {
+        Row: {
+          career_areas: Json
+          confidence: Json
+          content_version: string
+          context_status: string | null
+          contextual_tags: string[]
+          coverage: Json
+          definition_version: string
+          discovery_goal: string | null
+          dna_scores: Json
+          generated_at: string
+          id: string
+          scoring_version: string
+          session_id: string
+          taxonomy_version: string
+        }
+        Insert: {
+          career_areas?: Json
+          confidence?: Json
+          content_version: string
+          context_status?: string | null
+          contextual_tags?: string[]
+          coverage?: Json
+          definition_version: string
+          discovery_goal?: string | null
+          dna_scores?: Json
+          generated_at?: string
+          id?: string
+          scoring_version: string
+          session_id: string
+          taxonomy_version: string
+        }
+        Update: {
+          career_areas?: Json
+          confidence?: Json
+          content_version?: string
+          context_status?: string | null
+          contextual_tags?: string[]
+          coverage?: Json
+          definition_version?: string
+          discovery_goal?: string | null
+          dna_scores?: Json
+          generated_at?: string
+          id?: string
+          scoring_version?: string
+          session_id?: string
+          taxonomy_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_report_snapshots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cd_sessions: {
+        Row: {
+          adaptive_path: string | null
+          anon_session_token: string | null
+          completed_at: string | null
+          consent: Json
+          context_status: string | null
+          created_at: string
+          current_item: string | null
+          current_section: string | null
+          definition_version_id: string
+          discovery_goal: string | null
+          id: string
+          locale: string
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          adaptive_path?: string | null
+          anon_session_token?: string | null
+          completed_at?: string | null
+          consent?: Json
+          context_status?: string | null
+          created_at?: string
+          current_item?: string | null
+          current_section?: string | null
+          definition_version_id: string
+          discovery_goal?: string | null
+          id?: string
+          locale?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          adaptive_path?: string | null
+          anon_session_token?: string | null
+          completed_at?: string | null
+          consent?: Json
+          context_status?: string | null
+          created_at?: string
+          current_item?: string | null
+          current_section?: string | null
+          definition_version_id?: string
+          discovery_goal?: string | null
+          id?: string
+          locale?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_sessions_definition_version_id_fkey"
+            columns: ["definition_version_id"]
+            isOneToOne: false
+            referencedRelation: "cd_definition_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cig_assessment_dimensions: {
         Row: {
           category: string | null
