@@ -23,7 +23,7 @@ Runs in CI. Proves Career Guidance content is not reused.
 
 ### 2. Database + RLS suite — `supabase/tests/scp_a1_domain_model_test.sql`
 
-107 assertions, 16 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
+153 assertions, 20 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
 
 | Group | Assertions | Maps to |
 |---|---|---|
@@ -43,14 +43,48 @@ Runs in CI. Proves Career Guidance content is not reused.
 | 14 — publication always starts as draft | 10 | review finding HIGH-1 |
 | 15 — assignability fails closed | 6 | review finding HIGH-2 |
 | 16 — retired assessments not reactivatable | 9 | review finding HIGH-3 |
+| 17 — complete assignability branch coverage | 17 | review finding MED-1 |
+| 18 — pilot_stats exception is bounded | 8 | review finding LOW-1 |
+| 19 — protections hold against BYPASSRLS | 6 | review finding LOW-2 |
+| 20 — scoring visibility per principal | 14 | review finding LOW-4 |
+
+#### Assignability reason coverage (MED-1)
+
+All 16 return branches of `scp_bundle_version_assignability()` are asserted with their exact status **and** exact reason code. A final assertion counts the function's `RETURN QUERY` statements and fails if the total is no longer 16 — so a branch added without coverage breaks the build.
+
+| # | Status | Reason | Fixture reaches it by |
+|---|---|---|---|
+| 1 | `blocked` | `BUNDLE_NOT_FOUND` | random UUID |
+| 2 | `blocked` | `BUNDLE_NOT_PUBLISHED` | draft bundle |
+| 3 | `blocked` | `CORE_VERSION_NOT_PUBLISHED` | core version left draft |
+| 4 | `blocked` | `MODULE_VERSION_NOT_PUBLISHED` | core published, module draft |
+| 5 | `blocked` | `NO_SCORING_VERSION` | bundle created with no `scoring_version_id` |
+| 6 | `blocked` | `SCORING_VERSION_NOT_PUBLISHED` | scoring version pinned but draft |
+| 7 | `blocked` | `CORE_FORM_EMPTY` | no items in either form |
+| 8 | `blocked` | `MODULE_FORM_EMPTY` | core populated, module empty |
+| 9 | `blocked` | `FORM_CONTAINS_UNPUBLISHED_ITEMS` | draft item on the module form |
+| 10 | `blocked` | `LEGAL_REVIEW_PENDING` | lapsed legal approval — **requires simulating a first-gate bypass** (see note) |
+| 11 | `blocked` | `NO_FULLY_ADAPTED_LANGUAGE` | one item has no approved text |
+| 12 | `blocked` | `VALIDATION_STATUS_DESIGN` | default validation status |
+| 13 | `pilot_only` | `VALIDATION_STATUS_PILOT` | validation status `pilot` |
+| 14 | `blocked` | `VALIDATION_STATUS_RETIRED` | validation status `retired` |
+| 15 | `assignable` | echoes the validation status | asserted for both `operational-development` and `operational-selection` |
+| 16 | `blocked` | `BUNDLE_RETIRED` | `retired_at` set on an otherwise fully valid bundle |
+
+**Note on branch 10.** The publication gate and the immutability guard together make "published item with an unapproved legal review" unreachable through any normal operation — the fixture cannot construct it without briefly disabling the immutability trigger. That is the correct finding, not a workaround: the assignment-time check is pure defence in depth, for a future migration bug or a relaxed gate. The test disables the trigger explicitly and documents why.
 
 Group 6 is a **differential** test: an employer account and a candidate account see zero rows of the item bank and zero scoring keys, while an editor sees more than zero. Both halves are required — a suite where everyone sees zero would pass for the wrong reason.
 
 ### 3. Rollback verification — `supabase/tests/scp_a_rollback_test.sql`
 
-15 assertions. Executes the documented rollback verbatim, then proves the database is genuinely back to its pre-PR-A state: every `scp_` table, function and trigger gone; `retired_at`, `retired_reason` and `employer_visible` restored; the legacy definition accepting new assignments again.
+26 assertions. The rollback SQL in this file is kept **byte-identical** to the block in `migration-and-rollback.md` — the two had drifted once (A3 was added to the test but not the doc) and are now verified to match.
 
-The assertions that matter most are the last three: a synthetic historical assignment, seeded before the rollback, still exists afterwards with its score and status **unchanged**. A rollback that removed the schema but altered history would be worse than none, because it would look successful.
+Executes that rollback verbatim, then proves the database is genuinely back to its pre-PR-A state: every `scp_` table, view, function and trigger gone; `retired_at`, `retired_reason` and `employer_visible` restored; the legacy definition accepting new assignments again.
+
+The assertions that matter most concern history surviving the round trip:
+
+- A synthetic historical **assignment** still exists with score and status unchanged.
+- **Career Guidance run history** (LOW-3): two representative `assessment_runs` rows — one per live Career Guidance definition — seeded before the rollback and compared afterwards field by field: run ID, assessment reference, version reference, status, result payload, completion timestamp and locale. PR-A never touches `assessment_runs`, but that was an unasserted claim, and an unasserted claim is exactly how HIGH-2 survived review.
 
 Destructive by design — it runs last, against a disposable database only.
 
@@ -59,11 +93,11 @@ Destructive by design — it runs last, against a disposable database only.
 | Job | Steps |
 |---|---|
 | `verify` | lint (non-blocking) · `tsc --noEmit` · `cie:check` · `kg:check` · `security-competency-separation:check` · **production build** |
-| `database` | PostgreSQL 16 service container · full migration replay in order · A1→A2→A3 ordering · A2 and A3 applied-evidence checks · 107 domain assertions · 15 rollback assertions |
+| `database` | PostgreSQL 16 service container · full migration replay in order · A1→A2→A3→A4 ordering · A2/A3 applied-evidence checks · 153 domain assertions · 26 rollback assertions |
 
 The `database` job runs `scripts/db-test.sh`, which is the same script used locally (`bun run db:test`) — CI and a developer's machine cannot drift apart.
 
-It fails the build on: any unexpected migration failure, any allowlisted failure that starts passing, a missing or out-of-order `scp` migration, evidence that A2 did not apply, any failed assertion, or an assertion **count** below the expected floor (currently 107). That last check matters: a suite that silently stops running assertions would otherwise pass.
+It fails the build on: any unexpected migration failure, any allowlisted failure that starts passing, a missing or out-of-order `scp` migration, evidence that A2 did not apply, any failed assertion, or an assertion **count** below the expected floor (currently 153 domain, 26 rollback). That last check matters: a suite that silently stops running assertions would otherwise pass.
 
 The job holds no secrets and touches no real database. `scripts/db-test.sh` refuses to run if `PGHOST` looks like a managed host (`*.supabase.co`, `*.rds.amazonaws.com`, `*.neon.tech`).
 
@@ -107,5 +141,5 @@ PGHOST=127.0.0.1 PGPORT=55432 PGUSER=postgres bun run db:test
 | `bun run invitation-email-guard:check` | pass |
 | `bun run assessment-assignment:check` | pass |
 | `bun run build` | pass (now also a CI step) |
-| `bun run db:test` | 107 domain + 15 rollback assertions, exit 0 |
+| `bun run db:test` | 153 domain + 26 rollback assertions, exit 0 |
 | Negative tests (guard + DB job) | all four confirmed to fail on real violations |

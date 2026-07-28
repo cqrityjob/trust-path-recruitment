@@ -24,7 +24,9 @@ Also stored as data rather than convention: `core_summary_is_indicative` (spec 8
 
 Condition: the system must support a non-operational status that prevents unapproved assessments from being assigned to real candidates.
 
-**Implemented as.** `scp_bundle_version_assignability(uuid)` returns `blocked` / `pilot_only` / `assignable` plus a stable machine-readable reason. PR-C's assignment path must call it and refuse on anything but `assignable` (or `pilot_only` for a consenting pilot participant).
+**Implemented as.** `scp_bundle_version_assignability(uuid)` returns `blocked` / `pilot_only` / `assignable` plus a stable machine-readable reason.
+
+> **Enforcement status — read before relying on this.** PR-A provides the function and the structural controls. It does **not** enforce the gate on any candidate-assignment workflow: no Security Competency assignment path exists in PR-A. **PR-C must call this function on every assignment path** and refuse on anything but `assignable` (or `pilot_only` for a consenting pilot participant). Until PR-C is implemented and tested, acceptance criterion 15 remains **partial**.
 
 It **fails closed**, and since A3 it does so by *proving the positive conditions* rather than only looking for known-bad rows. It refuses on: unpublished or retired bundle · unpublished core or module version · missing or unpublished scoring version · **an empty core form** · **an empty module form** · any draft item anywhere in either form · any legally dependent item without approved review · **no language completely adapted across every item of both forms** · `validation_status = design` · unknown IDs. `pilot` returns `pilot_only` — assignable to consenting pilot participants, never a selection decision.
 
@@ -40,7 +42,7 @@ Ordningsvakt and Skyddsvakt content **may be drafted and technically implemented
 
 **Implemented as.** A trigger on `scp_item_versions` blocks the transition into `approved` or `published` when `legal_basis_required = true` unless `legal_review_status = 'approved'` **and** `legal_source`, `legal_reviewed_by` and `legal_reviewed_at` are all recorded — a status flag alone is not evidence of a review. Drafting and reviewing such content is untouched, exactly as the decision permits.
 
-Enforced twice, on purpose: at publication, and again at assignment (`LEGAL_REVIEW_PENDING` in the assignability gate). A second, independent check on the path that actually reaches a candidate is worth the redundancy.
+Designed to be enforced twice: at publication (live now, a trigger) and again at assignment (`LEGAL_REVIEW_PENDING` in the assignability gate — present in the function, but only reached once PR-C calls it). The publication gate alone already makes the unsafe state unreachable through normal operations; the assignment-time check is defence in depth for a future migration bug or a relaxed gate.
 
 A related gap closed at the same time: an item version can no longer be *created* directly in a published state.
 

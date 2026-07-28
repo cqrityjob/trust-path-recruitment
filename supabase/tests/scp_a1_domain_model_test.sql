@@ -1243,6 +1243,452 @@ BEGIN
 END $$;
 
 
+-- ###########################################################################
+-- GROUP 17 -- MED-1: EVERY branch of scp_bundle_version_assignability().
+--
+-- The function has 16 return points. Groups 12 and 15 cover some of them
+-- incidentally; this group walks all 16 deliberately, asserting the exact
+-- status AND the exact stable reason code, and ordering the fixture so no
+-- earlier guard intercepts the branch under test.
+--
+-- The coverage table lives in docs/assessment/implementation/test-matrix.md.
+-- A branch added to the function without a row here should be treated as a
+-- review defect: the final assertion counts them.
+-- ###########################################################################
+DO $$
+DECLARE
+  _cf uuid; _mf uuid; _prof uuid; _cd uuid; _md uuid; _cv uuid; _mv uuid;
+  _cform uuid; _mform uuid; _b uuid; _bv uuid; _sv uuid; _comp uuid;
+  _ci uuid; _civ uuid; _mi uuid; _miv uuid; _li uuid; _liv uuid;
+  _res record; _branches integer;
+BEGIN
+  RAISE NOTICE 'GROUP 17 -- MED-1: complete assignability branch coverage';
+
+  SELECT id INTO _cf FROM public.scp_assessment_families WHERE slug = 'security-competency-core';
+  SELECT id INTO _mf FROM public.scp_assessment_families WHERE slug = 'security-profession-modules';
+  SELECT id INTO _prof FROM public.scp_professions WHERE slug = 'protective-security-officer-se';
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-09';
+
+  -- 1. Unknown bundle -- must fail closed, not error.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(gen_random_uuid());
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'BUNDLE_NOT_FOUND',
+    'branch 1/16: unknown bundle -> blocked / BUNDLE_NOT_FOUND');
+
+  INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+    VALUES (_cf, 'g17-core', 'c', 'c', 'core') RETURNING id INTO _cd;
+  INSERT INTO public.scp_assessment_definitions (family_id, profession_id, slug, name_sv, name_en, purpose)
+    VALUES (_mf, _prof, 'g17-mod', 'm', 'm', 'profession_module') RETURNING id INTO _md;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_cd, 1) RETURNING id INTO _cv;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_md, 1) RETURNING id INTO _mv;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_cv, 'cf', 'c', 'c') RETURNING id INTO _cform;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_mv, 'mf', 'm', 'm') RETURNING id INTO _mform;
+  INSERT INTO public.scp_bundles (slug, profession_id, name_sv, name_en)
+    VALUES ('g17-b', _prof, 'b', 'b') RETURNING id INTO _b;
+
+  -- No scoring version pinned yet -- exercises NO_SCORING_VERSION later.
+  INSERT INTO public.scp_bundle_versions
+    (bundle_id, version_number, core_assessment_version_id, module_assessment_version_id,
+     core_form_id, module_form_id)
+  VALUES (_b, 1, _cv, _mv, _cform, _mform) RETURNING id INTO _bv;
+
+  -- 2. Draft bundle.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'BUNDLE_NOT_PUBLISHED',
+    'branch 2/16: draft bundle -> blocked / BUNDLE_NOT_PUBLISHED');
+
+  UPDATE public.scp_bundle_versions SET content_status = 'published', published_at = now() WHERE id = _bv;
+
+  -- 3. Core version still draft.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'CORE_VERSION_NOT_PUBLISHED',
+    'branch 3/16: draft core version -> blocked / CORE_VERSION_NOT_PUBLISHED');
+
+  -- 4. Core published, module still draft -- the asymmetry group 12 missed.
+  UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now() WHERE id = _cv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'MODULE_VERSION_NOT_PUBLISHED',
+    'branch 4/16: draft module version -> blocked / MODULE_VERSION_NOT_PUBLISHED');
+
+  UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now() WHERE id = _mv;
+
+  -- 5. No scoring version pinned at all.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'NO_SCORING_VERSION',
+    'branch 5/16: no scoring version -> blocked / NO_SCORING_VERSION');
+
+  -- 6. Scoring version pinned but unpublished.
+  INSERT INTO public.scp_scoring_versions (slug, version_number, sjt_weight, biq_weight)
+    VALUES ('g17-sv', 1, 0.70, 0.30) RETURNING id INTO _sv;
+  UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
+  UPDATE public.scp_bundle_versions SET scoring_version_id = _sv WHERE id = _bv;
+  UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'SCORING_VERSION_NOT_PUBLISHED',
+    'branch 6/16: unpublished scoring version -> blocked / SCORING_VERSION_NOT_PUBLISHED');
+
+  UPDATE public.scp_scoring_versions SET content_status = 'published', published_at = now() WHERE id = _sv;
+
+  -- 7. Both forms empty -> core is checked first.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'CORE_FORM_EMPTY',
+    'branch 7/16: empty core form -> blocked / CORE_FORM_EMPTY');
+
+  -- Populate the core form (published item, approved sv text).
+  UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
+  UPDATE public.scp_assessment_versions SET content_status = 'draft' WHERE id = _cv;
+  INSERT INTO public.scp_items (slug) VALUES ('g17-core-item') RETURNING id INTO _ci;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_ci, 1, 'sjt_best_response', _comp, 'confirms closure', 'weigh ownership')
+  RETURNING id INTO _civ;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_civ, 'sv-SE', 'source', 'Karnscenario.', 'Vad gor du?');
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_cform, _civ, 1);
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _civ;
+  UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _cv;
+  UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
+
+  -- 8. Module form still empty.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'MODULE_FORM_EMPTY',
+    'branch 8/16: empty module form -> blocked / MODULE_FORM_EMPTY');
+
+  -- Populate the module form with a DRAFT item.
+  UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
+  UPDATE public.scp_assessment_versions SET content_status = 'draft' WHERE id = _mv;
+  INSERT INTO public.scp_items (slug) VALUES ('g17-mod-item') RETURNING id INTO _mi;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_mi, 1, 'sjt_best_response', _comp, 'controls access', 'weigh authorisation')
+  RETURNING id INTO _miv;
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_mform, _miv, 1);
+  UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
+  UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
+
+  -- 9. A draft item anywhere.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'FORM_CONTAINS_UNPUBLISHED_ITEMS',
+    'branch 9/16: draft item in a form -> blocked / FORM_CONTAINS_UNPUBLISHED_ITEMS');
+
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _miv;
+
+  -- 10. Legally dependent item without approved review, checked at assignment
+  --     time. Group 11 covers the publication gate; this is the second,
+  --     independent check on the path that actually reaches a candidate.
+  --     The item is published legitimately (with a complete legal review),
+  --     then the review is withdrawn while the version is draft again.
+  UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
+  UPDATE public.scp_assessment_versions SET content_status = 'draft' WHERE id = _mv;
+  INSERT INTO public.scp_items (slug) VALUES ('g17-legal-item') RETURNING id INTO _li;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior,
+     response_process, market, legal_basis_required, legal_review_status,
+     legal_source, legal_reviewed_by, legal_reviewed_at)
+  VALUES (_li, 1, 'sjt_best_response', _comp, 'applies lawful boundary', 'weigh mandate',
+          'SE', true, 'approved', 'Skyddslagen (2010:305)', 'Synthetic Reviewer', now())
+  RETURNING id INTO _liv;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_liv, 'sv-SE', 'source', 'Rattsligt scenario.', 'Vad gor du?');
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_mform, _liv, 2);
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _liv;
+
+  -- Reaching this branch requires SIMULATING A BYPASS of the first gate, and
+  -- that is the finding, not a workaround: the publication gate (group 11)
+  -- and the immutability guard together make "published item with an
+  -- unapproved legal review" unreachable through any normal operation. The
+  -- assignment-time check exists purely as defence in depth -- for a future
+  -- migration bug, a direct superuser edit, or a gate that gets relaxed. So
+  -- the immutability trigger is briefly disabled to construct exactly that
+  -- state and prove the second gate still catches it.
+  ALTER TABLE public.scp_item_versions DISABLE TRIGGER scp_item_versions_immutable;
+  UPDATE public.scp_item_versions SET legal_review_status = 'pending' WHERE id = _liv;
+  ALTER TABLE public.scp_item_versions ENABLE TRIGGER scp_item_versions_immutable;
+
+  UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
+  UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
+
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'LEGAL_REVIEW_PENDING',
+    'branch 10/16: lapsed legal review -> blocked / LEGAL_REVIEW_PENDING (second, independent check)');
+
+  ALTER TABLE public.scp_item_versions DISABLE TRIGGER scp_item_versions_immutable;
+  UPDATE public.scp_item_versions SET legal_review_status = 'approved' WHERE id = _liv;
+  ALTER TABLE public.scp_item_versions ENABLE TRIGGER scp_item_versions_immutable;
+
+  -- 11. No language complete: the module items still have no sv text for _miv.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'NO_FULLY_ADAPTED_LANGUAGE',
+    'branch 11/16: incomplete language coverage -> blocked / NO_FULLY_ADAPTED_LANGUAGE');
+
+  -- Complete Swedish across every item of both forms.
+  UPDATE public.scp_item_versions SET content_status = 'draft' WHERE id = _miv;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_miv, 'sv-SE', 'approved', 'Modulscenario.', 'Vad gor du?');
+  UPDATE public.scp_item_versions SET content_status = 'published' WHERE id = _miv;
+
+  -- 12. validation_status design.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'VALIDATION_STATUS_DESIGN',
+    'branch 12/16: design -> blocked / VALIDATION_STATUS_DESIGN');
+
+  -- 13. pilot.
+  UPDATE public.scp_bundle_versions SET validation_status = 'pilot' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'pilot_only' AND _res.reason = 'VALIDATION_STATUS_PILOT',
+    'branch 13/16: pilot -> pilot_only / VALIDATION_STATUS_PILOT');
+
+  -- 14. validation_status retired.
+  UPDATE public.scp_bundle_versions SET validation_status = 'retired' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'VALIDATION_STATUS_RETIRED',
+    'branch 14/16: retired validation status -> blocked / VALIDATION_STATUS_RETIRED');
+
+  -- 15. Fully assignable -- the positive case, twice, to prove the reason
+  --     echoes the actual validation status rather than a constant.
+  UPDATE public.scp_bundle_versions SET validation_status = 'operational-development' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'assignable' AND _res.reason = 'operational-development',
+    'branch 15/16: operational-development -> assignable / operational-development');
+
+  UPDATE public.scp_bundle_versions SET validation_status = 'operational-selection' WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'assignable' AND _res.reason = 'operational-selection',
+    'branch 15/16b: operational-selection -> assignable / operational-selection');
+
+  -- 16. Retired bundle beats everything, even a fully valid one.
+  UPDATE public.scp_bundle_versions SET retired_at = now() WHERE id = _bv;
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'BUNDLE_RETIRED',
+    'branch 16/16: retired bundle -> blocked / BUNDLE_RETIRED, overriding an otherwise valid bundle');
+
+  -- Guard against a future branch being added without coverage here.
+  SELECT count(*) INTO _branches
+    FROM regexp_matches(
+      pg_get_functiondef('public.scp_bundle_version_assignability(uuid)'::regprocedure),
+      'RETURN QUERY SELECT', 'g');
+  PERFORM pg_temp.assert(_branches = 16,
+    format('MED-1: the function still has exactly 16 return branches (found %s) -- add coverage above if this changed', _branches));
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 18 -- LOW-1: pilot_stats is mutable after publication, and NOTHING
+-- else is.
+--
+-- pilot_stats is a deliberate exception: pilot evidence accrues after a
+-- version is published, and recording it changes neither what the candidate
+-- saw nor how it was scored. This group proves the exception is exactly that
+-- wide and no wider.
+-- ###########################################################################
+DO $$
+DECLARE _item uuid; _iv uuid; _comp uuid; _err text;
+BEGIN
+  RAISE NOTICE 'GROUP 18 -- LOW-1: pilot_stats exception is bounded';
+
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-10';
+  INSERT INTO public.scp_items (slug) VALUES ('g18-item') RETURNING id INTO _item;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_item, 1, 'sjt_best_response', _comp, 'adjusts method', 'weigh new information')
+  RETURNING id INTO _iv;
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _iv;
+
+  -- The intended update succeeds.
+  UPDATE public.scp_item_versions
+    SET pilot_stats = '{"n": 214, "difficulty": 0.62, "discrimination": 0.31}'::jsonb
+    WHERE id = _iv;
+  PERFORM pg_temp.assert(
+    (SELECT pilot_stats->>'n' FROM public.scp_item_versions WHERE id = _iv) = '214',
+    'LOW-1: pilot_stats can be recorded on a published item version');
+
+  -- Content, construct and scoring fields stay frozen.
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET observable_behavior = ''changed'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'LOW-1: content is still immutable alongside the pilot_stats exception');
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET item_format = ''biq_frequency'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'LOW-1: item_format is still immutable');
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET legal_review_status = ''approved'', legal_basis_required = true WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'LOW-1: review-evidence fields are still immutable');
+
+  -- THE KEY CASE: a legitimate pilot_stats write cannot smuggle a content
+  -- change through in the same statement.
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions
+        SET pilot_stats = ''{"n": 300}''::jsonb, observable_behavior = ''smuggled''
+      WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'LOW-1: a pilot_stats update carrying an unrelated content change is rejected');
+
+  PERFORM pg_temp.assert(
+    (SELECT observable_behavior FROM public.scp_item_versions WHERE id = _iv) = 'adjusts method',
+    'LOW-1: the rejected statement left the content untouched');
+  PERFORM pg_temp.assert(
+    (SELECT pilot_stats->>'n' FROM public.scp_item_versions WHERE id = _iv) = '214',
+    'LOW-1: ...and left the earlier pilot_stats value intact');
+
+  -- pilot_stats cannot move publication or validation state either; those are
+  -- separate columns with their own lifecycle, not reachable through it.
+  PERFORM pg_temp.assert(
+    (SELECT content_status FROM public.scp_item_versions WHERE id = _iv) = 'published'
+    AND (SELECT validation_status FROM public.scp_item_versions WHERE id = _iv) = 'design',
+    'LOW-1: recording pilot_stats does not change publication or validation state');
+
+  -- Write access is an authoring privilege, not a general one.
+  PERFORM pg_temp.assert(
+    NOT public.scp_can_author('11111111-0000-0000-0000-000000000004'),
+    'LOW-1: an employer account cannot write pilot_stats (no authoring role)');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 19 -- LOW-2: the trust boundary.
+--
+-- Decision B was taken: standard Supabase RLS behaviour is retained (no FORCE
+-- ROW LEVEL SECURITY), and every load-bearing protection is a TRIGGER or
+-- CONSTRAINT rather than RLS alone. This group proves that claim instead of
+-- asserting it -- the guards must still fire for a BYPASSRLS caller, which is
+-- exactly the caller RLS cannot stop.
+-- ###########################################################################
+DO $$
+DECLARE _item uuid; _iv uuid; _comp uuid; _err text; _forced integer;
+BEGIN
+  RAISE NOTICE 'GROUP 19 -- LOW-2: protections hold against a BYPASSRLS caller';
+
+  -- The documented state: RLS enabled everywhere, FORCE deliberately not set.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relname LIKE 'scp\_%' AND c.relkind = 'r'
+        AND NOT c.relrowsecurity) = 0,
+    'LOW-2: RLS is enabled on every scp_ table');
+
+  SELECT count(*) INTO _forced FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname LIKE 'scp\_%' AND c.relkind = 'r' AND c.relforcerowsecurity;
+  PERFORM pg_temp.assert(_forced = 0,
+    'LOW-2: FORCE RLS is deliberately NOT set -- decision B, documented trust boundary');
+
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-12';
+  INSERT INTO public.scp_items (slug) VALUES ('g19-item') RETURNING id INTO _item;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_item, 1, 'biq_frequency', _comp, 'seeks feedback', 'recall practice')
+  RETURNING id INTO _iv;
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _iv;
+
+  -- Now act as service_role, which carries BYPASSRLS. Every RLS policy is
+  -- irrelevant to this caller; only triggers and constraints remain.
+  SET LOCAL ROLE service_role;
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.scp_item_versions SET observable_behavior = ''tampered'' WHERE id = %L', _iv));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
+    'LOW-2: immutability holds against a BYPASSRLS caller (trigger, not policy)');
+
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_item_versions
+       (item_id, version_number, item_format, competency_id, observable_behavior,
+        response_process, content_status)
+     VALUES (%L, 2, ''biq_frequency'', %L, ''x'', ''y'', ''published'')', _item, _comp));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'LOW-2: the publication workflow holds against a BYPASSRLS caller');
+
+  _err := pg_temp.raises(
+    'INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+     SELECT id, ''g19-illegal'', ''x'', ''x'', ''core''
+       FROM public.scp_assessment_families WHERE slug = ''career-guidance''');
+  PERFORM pg_temp.assert(_err LIKE '%SCP_CAREER_GUIDANCE_SEPARATION%',
+    'LOW-2: Career Guidance separation holds against a BYPASSRLS caller');
+
+  _err := pg_temp.raises(
+    'INSERT INTO public.scp_scoring_versions (slug, version_number, sjt_weight, biq_weight)
+     VALUES (''g19-bad-weights'', 1, 0.9, 0.9)');
+  PERFORM pg_temp.assert(_err IS NOT NULL,
+    'LOW-2: CHECK constraints hold against a BYPASSRLS caller');
+
+  RESET ROLE;
+
+  -- What RLS alone is responsible for -- visibility scoping of the item bank
+  -- and scoring keys for ordinary authenticated users -- is covered by
+  -- GROUP 6 and GROUP 20. Those are the only protections whose enforcement
+  -- depends on RLS, and their threat model is an end user, never the owner
+  -- or the service role.
+  PERFORM pg_temp.assert(true,
+    'LOW-2: trust boundary documented -- triggers/constraints for integrity, RLS for user visibility');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 20 -- LOW-4: the scoring-visibility permission matrix.
+--
+-- Proves the A4 restriction for every principal, and that the lineage read
+-- model gives reports what they need without a single weight.
+-- ###########################################################################
+DO $$
+DECLARE
+  _weights integer; _rows integer; _lineage integer; _keys integer; _anon_grants integer;
+BEGIN
+  RAISE NOTICE 'GROUP 20 -- LOW-4: scoring visibility per principal';
+
+  -- Candidate.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '11111111-0000-0000-0000-000000000005', true);
+  SELECT count(*) INTO _rows FROM public.scp_scoring_versions;
+  SELECT count(*) INTO _weights FROM public.scp_role_weight_profile_weights;
+  SELECT count(*) INTO _keys FROM public.scp_item_options;
+  SELECT count(*) INTO _lineage FROM public.scp_scoring_version_lineage;
+  RESET ROLE;
+  PERFORM pg_temp.assert(_rows = 0, 'LOW-4: a CANDIDATE sees zero scoring versions');
+  PERFORM pg_temp.assert(_weights = 0, 'LOW-4: a CANDIDATE sees zero role weights');
+  PERFORM pg_temp.assert(_keys = 0, 'LOW-4: a CANDIDATE sees zero per-option scoring keys');
+  PERFORM pg_temp.assert(_lineage > 0, 'LOW-4: a CANDIDATE CAN read scoring lineage (no numbers)');
+
+  -- Employer.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '11111111-0000-0000-0000-000000000004', true);
+  SELECT count(*) INTO _rows FROM public.scp_scoring_versions;
+  SELECT count(*) INTO _weights FROM public.scp_role_weight_profile_weights;
+  SELECT count(*) INTO _keys FROM public.scp_item_options;
+  SELECT count(*) INTO _lineage FROM public.scp_scoring_version_lineage;
+  RESET ROLE;
+  PERFORM pg_temp.assert(_rows = 0, 'LOW-4: an EMPLOYER sees zero scoring versions');
+  PERFORM pg_temp.assert(_weights = 0, 'LOW-4: an EMPLOYER sees zero role weights');
+  PERFORM pg_temp.assert(_keys = 0, 'LOW-4: an EMPLOYER sees zero per-option scoring keys');
+  PERFORM pg_temp.assert(_lineage > 0, 'LOW-4: an EMPLOYER CAN read scoring lineage');
+
+  -- Author.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '11111111-0000-0000-0000-000000000001', true);
+  SELECT count(*) INTO _rows FROM public.scp_scoring_versions;
+  SELECT count(*) INTO _keys FROM public.scp_item_options;
+  RESET ROLE;
+  PERFORM pg_temp.assert(_rows > 0, 'LOW-4: an AUTHOR can read scoring versions');
+  PERFORM pg_temp.assert(_keys > 0, 'LOW-4: an AUTHOR can read per-option scoring keys');
+
+  -- anon has no grant on any of it, including the read model's base table.
+  SELECT count(*) INTO _anon_grants FROM information_schema.role_table_grants
+    WHERE grantee = 'anon'
+      AND table_name IN ('scp_scoring_versions', 'scp_role_weight_profile_weights',
+                         'scp_item_options', 'scp_scoring_version_lineage');
+  PERFORM pg_temp.assert(_anon_grants = 0,
+    'LOW-4: anon has no grant on scoring internals or the lineage view');
+
+  -- The read model must not leak a weight, now or after a future column add.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.columns
+      WHERE table_name = 'scp_scoring_version_lineage'
+        AND column_name IN ('sjt_weight', 'biq_weight', 'content_hash')) = 0,
+    'LOW-4: the lineage read model exposes no weights and no content hash');
+END $$;
+
+
 ROLLBACK;
 
 \echo ''

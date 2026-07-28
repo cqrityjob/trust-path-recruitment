@@ -38,11 +38,11 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 | 15 | Published content immutable via UI/API/SQL/service role (13.2, AC-8/9, T-004) | **missing** | **compliant** | `BEFORE UPDATE` triggers on 4 version tables + 5 child tables; 8 assertions |
 | 16 | Two-person publication principle (13.3, T-013) | **missing** | **partial** | Table + roles + RLS in place; the enforcing publish RPC is PR-B |
 | 16a | Scoring weights versioned, configurable, not hard-coded (owner decision A) | **missing** | **compliant** | `scp_scoring_versions`; bundles hold an FK; CI fails on a hard-coded 0.7/0.3 |
-| 16b | Non-operational status prevents assignment to real candidates (owner decision B) | **missing** | **compliant** | `scp_bundle_version_assignability()`, fails closed; 9 assertions |
+| 16b | Non-operational status prevents assignment to real candidates (owner decision B) | **missing** | **partial** | `scp_bundle_version_assignability()` exists and fails closed (16/16 branches asserted). **Not wired** — PR-C must call it on every assignment path. |
 | 16c | Legally dependent items unpublishable without recorded review (owner decision C) | **missing** | **compliant** | Publication trigger + second check at assignment; 6 assertions |
 | 16d | Explicit, reviewed cross-profession item reuse (owner decision D) | **missing** | **compliant** | `scp_item_version_professions` with per-role job-analysis reference |
 | 16e | Publication is a reviewed transition on every versioned table (HIGH-1) | **missing** | **compliant** | Shared insert guard on all 6 versioned tables; 8 assertions |
-| 16f | Assignability proves positive conditions (HIGH-2) | **missing** | **compliant** | Non-empty forms + one fully adapted language; 6 assertions |
+| 16f | Assignability proves positive conditions (HIGH-2) | **missing** | **compliant** | Non-empty forms + one fully adapted language; 6 assertions. (The *function* is correct; wiring it is PR-C — see 16b and 25.) |
 | 16g | Retired assessments cannot be reactivated (HIGH-3) | **missing** | **compliant** | Terminal→active transition blocked on retired versions; 9 assertions |
 | 17 | Assessment editor / reviewer / publisher roles (13.3) | **partial** | **compliant** | Only `assessment_editor` existed; `scp_content_roles` adds all three without mutating `app_role` |
 | 18 | Append-only audit of critical actions (12.1, 13.1, AC-20) | **partial** | **compliant** | `scp_content_events`, no UPDATE/DELETE grant; retirement itself logged |
@@ -86,7 +86,7 @@ Four of the questions raised in the original PR-A report have been decided and i
 | Question | Decision | Status |
 |---|---|---|
 | Constructs and 70/30 weighting | Approved as provisional baseline; must be versioned and configurable | Implemented (A2 §1) |
-| DPIA | Required before real recruitment use; not a blocker for development or staging | Implemented as a non-operational assignability gate (A2 §4) |
+| DPIA | Required before real recruitment use; not a blocker for development or staging | Gate implemented (A2 §4, hardened A3 §2); enforcement on assignment paths is PR-C |
 | Swedish legal review | Content may be drafted; may not publish or assign until review recorded | Implemented (A2 §2) |
 | Separate profession item banks | Separate identities and lineage; genuine reuse modelled explicitly | Implemented (A2 §3) |
 

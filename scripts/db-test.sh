@@ -150,12 +150,12 @@ echo "    ok  migration replay matches the documented baseline"
 # ---------------------------------------------------------------------------
 echo "==> Verifying the Security Competency schema landed"
 SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
-  "select count(*) from information_schema.tables where table_schema='public' and table_name like 'scp\\_%';")"
+  "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name like 'scp\\_%';")"
 if [ "$SCP_TABLES" -ne 23 ]; then
   echo "FAIL: expected 23 scp_ tables, found $SCP_TABLES" >&2
   exit 1
 fi
-echo "    ok  23 scp_ tables present (A1 + A2 both applied)"
+echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
 
 # A2-specific evidence, so an A1-only replay cannot pass this job.
 psql_q -d "$TEST_DB" -c "
@@ -201,7 +201,7 @@ END \$\$;" >/dev/null
 echo "    ok  A3 applied (6 insert guards, reactivation guard, fail-closed assignability)"
 
 # ---------------------------------------------------------------------------
-# 5. The assertion suite (107 domain assertions across 16 groups)
+# 5. The assertion suite (153 domain assertions across 20 groups)
 #
 # ON_ERROR_STOP means any failed assertion aborts psql with a non-zero exit,
 # which -e propagates as a job failure.
@@ -227,8 +227,8 @@ fi
 
 echo "    ok  ${PASSED} assertions passed"
 
-if [ "$PASSED" -lt 107 ]; then
-  echo "FAIL: expected at least 107 assertions, only ${PASSED} ran." >&2
+if [ "$PASSED" -lt 153 ]; then
+  echo "FAIL: expected at least 153 assertions, only ${PASSED} ran." >&2
   echo "      A suite that silently stops running assertions is worse than one that fails." >&2
   exit 1
 fi
@@ -253,8 +253,8 @@ fi
 
 echo "    ok  ${ROLLBACK_PASSED} rollback assertions passed"
 
-if [ "$ROLLBACK_PASSED" -lt 13 ]; then
-  echo "FAIL: expected at least 13 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
+if [ "$ROLLBACK_PASSED" -lt 26 ]; then
+  echo "FAIL: expected at least 26 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
   exit 1
 fi
 

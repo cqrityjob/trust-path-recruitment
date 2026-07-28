@@ -89,11 +89,7 @@ export type ItemValidationStatus = "design" | "sme_reviewed" | "pilot" | "operat
 export type ItemFormat = "sjt_best_response" | "sjt_rate_effectiveness" | "biq_frequency";
 
 /** Spec 7.1 / 11 -- translation is an adaptation with its own review gate. */
-export type AdaptationStatus =
-  | "source"
-  | "adaptation_pending"
-  | "adaptation_reviewed"
-  | "approved";
+export type AdaptationStatus = "source" | "adaptation_pending" | "adaptation_reviewed" | "approved";
 
 export type ScpLanguage = "sv-SE" | "en-GB";
 

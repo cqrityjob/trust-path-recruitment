@@ -67,6 +67,43 @@ END $$;
 
 
 -- ---------------------------------------------------------------------------
+-- LOW-3: representative pre-PR-A Career Guidance history.
+--
+-- assessment_runs is where the real candidate history lives -- 13 completed
+-- runs in production. PR-A never touches the table, but "never touches it"
+-- is a claim, and an unasserted claim is how HIGH-2 survived review. These
+-- rows are seeded before the rollback and compared field by field after it.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  _candidate uuid := '88888888-0000-0000-0000-000000000001';
+  _cg_version uuid;
+  _pca_version uuid;
+BEGIN
+  INSERT INTO auth.users (id, email) VALUES (_candidate, 'cg-history@test.invalid')
+    ON CONFLICT (id) DO NOTHING;
+
+  SELECT id INTO _cg_version FROM public.assessment_versions
+    WHERE assessment_id = 'career-guidance' LIMIT 1;
+  SELECT id INTO _pca_version FROM public.assessment_versions
+    WHERE assessment_id = 'public-career-assessment' LIMIT 1;
+
+  -- One run per live Career Guidance definition, with a real result payload.
+  INSERT INTO public.assessment_runs
+    (id, user_id, assessment_id, assessment_version_id, graph_version, locale,
+     status, started_at, completed_at, result_summary)
+  VALUES
+    ('99999999-0000-0000-0000-000000000001', _candidate, 'career-guidance', _cg_version,
+     'cig-v1', 'sv', 'completed', now() - interval '30 days', now() - interval '30 days',
+     '{"topFamily": "protective-services", "overallEvidenceScore": 74}'::jsonb),
+    ('99999999-0000-0000-0000-000000000002', _candidate, 'public-career-assessment', _pca_version,
+     'cig-v1', 'en', 'completed', now() - interval '10 days', now() - interval '10 days',
+     '{"topFamily": "corporate-security", "overallEvidenceScore": 68}'::jsonb)
+  ON CONFLICT (id) DO NOTHING;
+END $$;
+
+
+-- ---------------------------------------------------------------------------
 -- Pre-rollback state.
 -- ---------------------------------------------------------------------------
 DO $$
@@ -74,8 +111,13 @@ BEGIN
   RAISE NOTICE 'ROLLBACK TEST -- pre-rollback state';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name LIKE 'scp\_%') = 23,
-    'pre-rollback: 23 scp_ tables exist');
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 23,
+    'pre-rollback: 23 scp_ base tables exist');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.views
+      WHERE table_schema = 'public' AND table_name = 'scp_scoring_version_lineage') = 1,
+    'pre-rollback: the LOW-4 lineage view exists');
   PERFORM pg_temp.assert(
     (SELECT retired_at IS NOT NULL FROM public.assessment_versions
       WHERE assessment_id = 'security-guard-foundation' LIMIT 1),
@@ -104,11 +146,14 @@ UPDATE public.assessment_versions SET retired_at = NULL, retired_reason = NULL
  WHERE assessment_id = 'security-guard-foundation';
 ALTER TABLE public.assessment_versions DROP COLUMN IF EXISTS retired_reason;
 
--- 2. A3 objects (the shared insert-status guard; its triggers fall with
+-- 2. A4 objects (the view depends on scp_scoring_versions, so it goes first)
+DROP VIEW IF EXISTS public.scp_scoring_version_lineage;
+
+-- 3. A3 objects (the shared insert-status guard; its triggers fall with
 --    their tables below, but the function must go explicitly)
 DROP FUNCTION IF EXISTS public.scp_guard_version_starts_as_draft() CASCADE;
 
--- 3. A2 objects
+-- 4. A2 objects
 DROP FUNCTION IF EXISTS public.scp_bundle_version_assignability(uuid);
 DROP TRIGGER IF EXISTS scp_item_versions_legal_gate ON public.scp_item_versions;
 DROP FUNCTION IF EXISTS public.scp_guard_legal_review_before_publish();
@@ -117,7 +162,7 @@ DROP TABLE IF EXISTS public.scp_item_version_professions CASCADE;
 ALTER TABLE public.scp_bundle_versions DROP COLUMN IF EXISTS scoring_version_id;
 DROP TABLE IF EXISTS public.scp_scoring_versions CASCADE;
 
--- 4. A1 schema, reverse dependency order
+-- 5. A1 schema, reverse dependency order
 DROP TABLE IF EXISTS public.scp_publication_approvals CASCADE;
 DROP TABLE IF EXISTS public.scp_content_events CASCADE;
 DROP TABLE IF EXISTS public.scp_role_weight_profile_weights CASCADE;
@@ -163,7 +208,7 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name LIKE 'scp\_%') = 0,
-    'rollback removes every scp_ table');
+    'rollback removes every scp_ table AND view');
 
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM pg_proc p
@@ -229,6 +274,49 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.assessments WHERE id = 'public-career-assessment') = 1,
     'Career Guidance catalogue rows are untouched by the rollback');
+END $$;
+
+
+-- ---------------------------------------------------------------------------
+-- LOW-3: Career Guidance run history, field by field, after the round trip.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE _r record;
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- Career Guidance history (LOW-3)';
+
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.assessment_runs
+      WHERE id IN ('99999999-0000-0000-0000-000000000001',
+                   '99999999-0000-0000-0000-000000000002')) = 2,
+    'LOW-3: both seeded Career Guidance runs still exist after the rollback');
+
+  SELECT * INTO _r FROM public.assessment_runs WHERE id = '99999999-0000-0000-0000-000000000001';
+  PERFORM pg_temp.assert(_r.assessment_id = 'career-guidance',
+    'LOW-3: run 1 assessment reference unchanged');
+  PERFORM pg_temp.assert(_r.assessment_version_id IS NOT NULL,
+    'LOW-3: run 1 version reference unchanged');
+  PERFORM pg_temp.assert(_r.status = 'completed',
+    'LOW-3: run 1 status unchanged');
+  PERFORM pg_temp.assert(_r.result_summary->>'overallEvidenceScore' = '74',
+    'LOW-3: run 1 result payload unchanged');
+  PERFORM pg_temp.assert(_r.completed_at IS NOT NULL,
+    'LOW-3: run 1 completion timestamp preserved');
+
+  SELECT * INTO _r FROM public.assessment_runs WHERE id = '99999999-0000-0000-0000-000000000002';
+  PERFORM pg_temp.assert(_r.assessment_id = 'public-career-assessment',
+    'LOW-3: run 2 assessment reference unchanged');
+  PERFORM pg_temp.assert(_r.status = 'completed'
+    AND _r.result_summary->>'topFamily' = 'corporate-security',
+    'LOW-3: run 2 status and result payload unchanged');
+  PERFORM pg_temp.assert(_r.locale = 'en',
+    'LOW-3: run 2 locale unchanged');
+
+  -- And the frozen Career Guidance catalogue itself is intact.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.assessments
+      WHERE id IN ('career-guidance', 'public-career-assessment', 'security_career_guidance')) = 3,
+    'LOW-3: every Career Guidance catalogue row survives the round trip');
 END $$;
 
 \echo ''

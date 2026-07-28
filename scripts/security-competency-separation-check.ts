@@ -16,7 +16,11 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
-import { COMPETENCY_CODES, FAMILY_SLUGS, PROFESSION_SLUGS } from "../src/lib/security-competency/types";
+import {
+  COMPETENCY_CODES,
+  FAMILY_SLUGS,
+  PROFESSION_SLUGS,
+} from "../src/lib/security-competency/types";
 
 // Career Guidance content, imported here ONLY so the guard can prove the two
 // sets are disjoint. This script is the one place both worlds may be named.
@@ -106,9 +110,9 @@ expect(
 
 // Concatenated, so every check below covers the whole schema rather than only
 // its first migration.
-const scpMigration = SCP_MIGRATION_FILES.map((f) =>
-  read(path.join("supabase/migrations", f)),
-).join("\n");
+const scpMigration = SCP_MIGRATION_FILES.map((f) => read(path.join("supabase/migrations", f))).join(
+  "\n",
+);
 
 const careerGuidanceIds = new Set<string>([
   ...careerGuidanceQuestions.map((q) => q.id),
@@ -221,10 +225,7 @@ expect(
   ),
   "the migration must never DELETE from any legacy assessment table -- history is preserved",
 );
-expect(
-  !/DROP\s+TABLE/i.test(scpMigration),
-  "the migration must never DROP a table",
-);
+expect(!/DROP\s+TABLE/i.test(scpMigration), "the migration must never DROP a table");
 expect(
   !/UPDATE\s+public\.assessment_assignments/i.test(scpMigration),
   "the migration must never UPDATE historical assignment rows",
@@ -279,9 +280,7 @@ expect(
   "no new product may reuse the slug security-guard-foundation",
 );
 expect(
-  !/'security-guard-foundation'/.test(
-    scpMigration.split("SECTION 16")[0] ?? scpMigration,
-  ),
+  !/'security-guard-foundation'/.test(scpMigration.split("SECTION 16")[0] ?? scpMigration),
   "security-guard-foundation may appear only in the legacy-retirement section, never as new product content",
 );
 

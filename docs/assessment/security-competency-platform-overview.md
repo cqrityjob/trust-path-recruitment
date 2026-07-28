@@ -65,15 +65,15 @@ The specification uses generic table names; three of them collide with live lega
 
 **Scoring keys are in a different table from option labels.** `scp_item_options` holds `score_value` and `scoring_rationale`; `scp_item_option_texts` holds the candidate-visible label. The candidate runtime joins only the latter, so "no scoring key ever reaches the browser" (spec 12.1, acceptance criterion 12) is enforced by table design rather than by discipline in a SELECT list.
 
-**Nothing unapproved can be assigned by accident.** `scp_bundle_version_assignability()` fails closed: it *proves* both forms are populated and that at least one language is completely adapted before it can return anything but `blocked`. An earlier version used count-based negative checks, which passed vacuously on an empty set — an empty bundle was reported assignable. Fixed in A3 (review finding HIGH-2). See [owner decisions](./governance/owner-decisions.md) B.
+**The assignability gate fails closed — but nothing calls it yet.** `scp_bundle_version_assignability()` it *proves* both forms are populated and that at least one language is completely adapted before it can return anything but `blocked`. An earlier version used count-based negative checks, which passed vacuously on an empty set — an empty bundle was reported assignable. Fixed in A3 (review finding HIGH-2). See [owner decisions](./governance/owner-decisions.md) B.
 
-**The gate exists but is not yet wired.** PR-C must call it; until then nothing in the product calls it, so this is an available protection rather than an enforced one.
+**The gate exists but is not yet wired.** PR-A builds the function and the structural controls around it. PR-A does **not** enforce it on any candidate-assignment workflow, because no Security Competency assignment path exists yet. PR-C must call it on every assignment path and refuse on anything but `assignable` (or `pilot_only` for a consenting pilot participant). Until PR-C is implemented and tested, this is an *available* protection, not an *enforced* one — and AC-15 stays partial.
 
 **Language is an adaptation object, not a column.** `scp_item_texts` is one row per language per item version, each with its own `adaptation_status`. Machine translation alone can never reach `approved` (spec 11). This is why the schema has no `text_sv`/`text_en` pair anywhere.
 
 ## What is deliberately not built yet
 
-Assignments and candidate runtime (PR-C), the scoring engine (PR-D), reports (PR-E), pilot analytics (PR-F). No item content exists; the item bank is empty by design — items are authored through PR-B's review-and-publish flow, and draft items can never be assigned.
+Assignments and candidate runtime (PR-C), the scoring engine (PR-D), reports (PR-E), pilot analytics (PR-F). No item content exists; the item bank is empty by design — items are authored through PR-B's review-and-publish flow. The assignability gate refuses any bundle containing a draft item, but nothing calls that gate until PR-C — see the enforcement note above.
 
 ## Related documents
 
@@ -86,4 +86,5 @@ Assignments and candidate runtime (PR-C), the scoring engine (PR-D), reports (PR
 - [Validation statuses](./governance/validation-statuses.md)
 - [AI and human oversight](./governance/ai-and-human-oversight.md)
 - [Owner decisions](./governance/owner-decisions.md) — A–D, decided 2026-07-27
+- [Trust boundary and scoring visibility](./governance/trust-boundary-and-scoring-visibility.md) — LOW-2 and LOW-4 decisions
 - [Scoring engine v1](./scoring/scoring-engine-v1.md)
