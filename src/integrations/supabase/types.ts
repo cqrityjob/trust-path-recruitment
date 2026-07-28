@@ -3505,7 +3505,7 @@ export type Database = {
           retired_at: string | null
           retired_reason: string | null
           role_weight_profile_id: string | null
-          scoring_version: string
+          scoring_version_id: string | null
           updated_at: string
           validation_status: string
           version_number: number
@@ -3529,7 +3529,7 @@ export type Database = {
           retired_at?: string | null
           retired_reason?: string | null
           role_weight_profile_id?: string | null
-          scoring_version?: string
+          scoring_version_id?: string | null
           updated_at?: string
           validation_status?: string
           version_number: number
@@ -3553,7 +3553,7 @@ export type Database = {
           retired_at?: string | null
           retired_reason?: string | null
           role_weight_profile_id?: string | null
-          scoring_version?: string
+          scoring_version_id?: string | null
           updated_at?: string
           validation_status?: string
           version_number?: number
@@ -3599,6 +3599,13 @@ export type Database = {
             columns: ["role_weight_profile_id"]
             isOneToOne: false
             referencedRelation: "scp_role_weight_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scoring_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -4058,6 +4065,54 @@ export type Database = {
           },
         ]
       }
+      scp_item_version_professions: {
+        Row: {
+          created_at: string
+          id: string
+          item_version_id: string
+          job_analysis_reference: string | null
+          profession_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sme_review_status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_version_id: string
+          job_analysis_reference?: string | null
+          profession_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sme_review_status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_version_id?: string
+          job_analysis_reference?: string | null
+          profession_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sme_review_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_version_professions_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_version_professions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_item_versions: {
         Row: {
           authored_by_ai: boolean
@@ -4356,6 +4411,72 @@ export type Database = {
           },
         ]
       }
+      scp_scoring_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          biq_weight: number
+          content_hash: string | null
+          content_status: string
+          core_summary_is_indicative: boolean
+          created_at: string
+          id: string
+          norm_comparison_permitted: boolean
+          notes: string | null
+          published_at: string | null
+          published_by: string | null
+          retired_at: string | null
+          retired_reason: string | null
+          sjt_weight: number
+          slug: string
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          biq_weight: number
+          content_hash?: string | null
+          content_status?: string
+          core_summary_is_indicative?: boolean
+          created_at?: string
+          id?: string
+          norm_comparison_permitted?: boolean
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          sjt_weight: number
+          slug: string
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          biq_weight?: number
+          content_hash?: string | null
+          content_status?: string
+          core_summary_is_indicative?: boolean
+          created_at?: string
+          id?: string
+          norm_comparison_permitted?: boolean
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          sjt_weight?: number
+          slug?: string
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       security_career_profiles: {
         Row: {
           created_at: string
@@ -4597,6 +4718,13 @@ export type Database = {
         Returns: {
           created_new: boolean
           run_id: string
+        }[]
+      }
+      scp_bundle_version_assignability: {
+        Args: { _bundle_version_id: string }
+        Returns: {
+          assignability: string
+          reason: string
         }[]
       }
       scp_can_author: { Args: { _user_id: string }; Returns: boolean }
