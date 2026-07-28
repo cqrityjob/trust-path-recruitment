@@ -95,10 +95,7 @@ function CareerCenterIndex() {
       {/* Three entry paths */}
       <Section className="bg-background">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-            {t("cc.hero.eyebrow")}
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
             {t("cc.paths.title")}
           </h2>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("cc.paths.subtitle")}</p>
