@@ -377,15 +377,17 @@ function EntryPathCard({
   return (
     <Link
       to={to}
-      className="group flex flex-col rounded-lg border border-border bg-background p-6 transition-colors hover:bg-muted/40"
+      className="group flex flex-col rounded-xl border border-border bg-card p-7 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <span className="text-accent">{icon}</span>
-      <p className="mt-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">{eyebrow}</p>
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-accent transition-colors group-hover:bg-accent/10">
+        {icon}
+      </span>
+      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p>
       <h3 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-accent group-hover:text-foreground">
+      <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-colors group-hover:text-[color:var(--accent-hover)]">
         {ctaLabel}
-        <ArrowRight className="h-4 w-4" />
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
       </span>
     </Link>
   );
