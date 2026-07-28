@@ -2,13 +2,18 @@ import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "ghost";
+type Variant = "primary" | "ghost" | "accent";
+
+const base =
+  "inline-flex h-11 items-center justify-center rounded-md px-5 text-sm font-semibold tracking-tight transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 const styles: Record<Variant, string> = {
   primary:
-    "inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50",
+    `${base} bg-primary text-primary-foreground shadow-sm hover:bg-[color:var(--primary-hover)] hover:shadow-md active:translate-y-px`,
+  accent:
+    `${base} bg-accent text-accent-foreground shadow-sm hover:bg-[color:var(--accent-hover)] hover:shadow-md active:translate-y-px`,
   ghost:
-    "inline-flex h-11 items-center justify-center rounded-md border border-border bg-transparent px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+    `${base} border border-border bg-background text-foreground hover:bg-secondary hover:border-[color:var(--accent)]/40`,
 };
 
 export const PrimaryButton = forwardRef<
