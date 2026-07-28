@@ -49,7 +49,7 @@ export function SiteHeader() {
         <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
-            <span className="uppercase tracking-[0.14em]">{t("brand.tagline") || "Where trust comes first"}</span>
+            <span className="uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
           </span>
           <div className="flex items-center gap-5">
             <Link
