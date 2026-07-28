@@ -20,6 +20,7 @@
     "invitation-email-guard:check": "bun run scripts/invitation-email-guard-check.ts",
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts",
     "security-competency-separation:check": "bun run scripts/security-competency-separation-check.ts",
+    "career-discovery:check": "bun run scripts/career-discovery-check.ts",
     "db:test": "bash scripts/db-test.sh",
     "e2e": "playwright test"
   },

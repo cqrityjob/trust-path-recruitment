@@ -52,7 +52,9 @@ The permanent product documentation for CQrityjob's Career Discovery experience 
 | 8 | [Career Intelligence Mapping](./career-intelligence-mapping-v3.0.md) | DNA → Security Career Areas → categories → roles, and how each recommendation is explained |
 | 9 | [Implementation Roadmap](./implementation-roadmap-v3.0.md) | MVP · Beta · V1 · V2 · Future, with exit gates |
 | — | [Current-state audit](./current-state-audit.md) | Why all of this exists — 20 findings against the live build |
+| — | [**Adaptive Experience — Implementation Status**](./adaptive-experience-implementation.md) | **What is actually built.** The 70/30 principle, the shared 20-item core, the five Discovery sections, the five adaptive paths, scoring vs contextual evidence, report-framing rules, validation status |
 | — | [ADR: construct model](../../architecture/adr-career-discovery-construct-model.md) | Which construct model governs which product |
+| — | [ADR: adaptive experience](../../architecture/adr-career-discovery-adaptive-experience.md) | Why personalisation is a framing layer and never touches measurement |
 
 Documents 1 and 2 are **peers**. One specifies the machine; the other specifies why anyone would love it.
 

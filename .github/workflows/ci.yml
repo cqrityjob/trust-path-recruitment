@@ -52,6 +52,14 @@ jobs:
       - name: Security Competency / Career Guidance separation check
         run: bun run security-competency-separation:check
 
+      # Proves the Career Discovery v3 instrument routes correctly across all
+      # five adaptive paths, that every path still receives all 20 shared core
+      # items, that adaptive and context answers are structurally unscored,
+      # and that the version cannot be marked active while review gates are
+      # outstanding (implementation directive section 23).
+      - name: Career Discovery v3 instrument check
+        run: bun run career-discovery:check
+
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.
