@@ -17,17 +17,20 @@ export function CategoryCard({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={[
-        "flex w-full flex-col items-start gap-3 rounded-lg border p-5 text-left transition-colors",
+        "group flex w-full flex-col items-start gap-3 rounded-xl border p-5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         active
-          ? "border-accent bg-accent/5"
-          : "border-border bg-background hover:bg-muted/40",
+          ? "border-accent bg-accent/[0.06] shadow-sm"
+          : "border-border bg-card hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md",
       ].join(" ")}
     >
-      <Icon className="h-5 w-5 text-accent" strokeWidth={1.5} />
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-accent transition-colors group-hover:bg-accent/10">
+        <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
+      </span>
       <div>
         <h3 className="text-sm font-semibold tracking-tight text-foreground">{name}</h3>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{desc}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{desc}</p>
       </div>
     </button>
   );

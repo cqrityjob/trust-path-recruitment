@@ -43,7 +43,31 @@ export function SiteHeader() {
   ] as const;
 
   return (
-    <header className="no-print sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur">
+    <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
+      {/* Slim utility bar — desktop only. Small trust signals + secondary access. */}
+      <div className="hidden bg-primary text-primary-foreground/85 md:block">
+        <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
+            <span className="uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
+          </span>
+          <div className="flex items-center gap-5">
+            <Link
+              to="/contact"
+              className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
+            >
+              {t("nav.contact")}
+            </Link>
+            <Link
+              to={signedIn ? "/employer" : "/employer/login"}
+              className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
+            >
+              {signedIn ? t("nav.employerPortal") : t("nav.employerSignin")}
+            </Link>
+          </div>
+        </Container>
+      </div>
+      <div className="border-b border-border bg-background/95 shadow-[0_1px_0_0_var(--color-border)]">
       <Container className="flex h-16 items-center justify-between gap-6">
         <Link
           to="/"
@@ -60,8 +84,11 @@ export function SiteHeader() {
             <Link
               key={item.to}
               to={item.to}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
+              className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              activeProps={{
+                className:
+                  "text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent",
+              }}
             >
               {item.label}
             </Link>
@@ -74,31 +101,25 @@ export function SiteHeader() {
             <>
               <Link
                 to="/my-career"
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                activeProps={{ className: "bg-muted" }}
+                className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                activeProps={{ className: "border-accent/50 bg-secondary" }}
               >
                 {t("nav.my_career")}
-              </Link>
-              <Link
-                to="/employer"
-                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t("nav.employerPortal")}
               </Link>
             </>
           ) : (
             <>
               <Link
                 to="/candidate/login"
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
               >
                 {t("nav.signin")}
               </Link>
               <Link
-                to="/employer/login"
-                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                to="/employers"
+                className="inline-flex items-center rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-[color:var(--primary-hover)] hover:shadow-md"
               >
-                {t("nav.employerSignin")}
+                {t("nav.employers")}
               </Link>
             </>
           )}
@@ -114,6 +135,7 @@ export function SiteHeader() {
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </Container>
+      </div>
 
       <div className={cn("border-t border-border md:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
