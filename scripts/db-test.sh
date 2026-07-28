@@ -234,6 +234,35 @@ if [ "$PASSED" -lt 153 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5b. Security Career Discovery v3.0 Phase 1 assertions
+#
+# Persistence, the database-side scoring boundary, the lifecycle guard, and
+# cross-user isolation. Runs before the destructive rollback step.
+# ---------------------------------------------------------------------------
+echo "==> Running Career Discovery v3 assertions"
+set +e
+CD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v3_test.sql 2>&1)"
+CD_RC=$?
+set -e
+
+CD_PASSED="$(echo "$CD_OUT" | grep -c "ok  " || true)"
+
+if [ "$CD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Career Discovery suite exited with code ${CD_RC}." >&2
+  echo "$CD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${CD_PASSED} Career Discovery assertions passed"
+
+if [ "$CD_PASSED" -lt 92 ]; then
+  echo "FAIL: expected at least 92 Career Discovery assertions, only ${CD_PASSED} ran." >&2
+  echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -266,5 +295,6 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
+echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
