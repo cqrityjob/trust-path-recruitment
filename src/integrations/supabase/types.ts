@@ -554,6 +554,62 @@ export type Database = {
           },
         ]
       }
+      cd_definition_items: {
+        Row: {
+          adaptive_path: string | null
+          created_at: string
+          definition_version_id: string
+          display_order: number
+          evidence_class: string
+          id: string
+          is_active: boolean
+          is_scored: boolean
+          item_id: string
+          item_kind: string
+          item_version: number
+          retired_at: string | null
+          section_id: string | null
+        }
+        Insert: {
+          adaptive_path?: string | null
+          created_at?: string
+          definition_version_id: string
+          display_order: number
+          evidence_class: string
+          id?: string
+          is_active?: boolean
+          is_scored: boolean
+          item_id: string
+          item_kind: string
+          item_version: number
+          retired_at?: string | null
+          section_id?: string | null
+        }
+        Update: {
+          adaptive_path?: string | null
+          created_at?: string
+          definition_version_id?: string
+          display_order?: number
+          evidence_class?: string
+          id?: string
+          is_active?: boolean
+          is_scored?: boolean
+          item_id?: string
+          item_kind?: string
+          item_version?: number
+          retired_at?: string | null
+          section_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_definition_items_definition_version_id_fkey"
+            columns: ["definition_version_id"]
+            isOneToOne: false
+            referencedRelation: "cd_definition_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cd_definition_versions: {
         Row: {
           assessment_id: string
@@ -620,12 +676,12 @@ export type Database = {
           answer_tags: string[]
           answer_value: string
           answered_at: string
-          evidence_class: string
+          evidence_class: string | null
           id: string
-          is_scored: boolean
+          is_scored: boolean | null
           item_id: string
-          item_kind: string
-          item_version: number
+          item_kind: string | null
+          item_version: number | null
           session_id: string
           updated_at: string
         }
@@ -634,12 +690,12 @@ export type Database = {
           answer_tags?: string[]
           answer_value: string
           answered_at?: string
-          evidence_class: string
+          evidence_class?: string | null
           id?: string
-          is_scored: boolean
+          is_scored?: boolean | null
           item_id: string
-          item_kind: string
-          item_version: number
+          item_kind?: string | null
+          item_version?: number | null
           session_id: string
           updated_at?: string
         }
@@ -648,12 +704,12 @@ export type Database = {
           answer_tags?: string[]
           answer_value?: string
           answered_at?: string
-          evidence_class?: string
+          evidence_class?: string | null
           id?: string
-          is_scored?: boolean
+          is_scored?: boolean | null
           item_id?: string
-          item_kind?: string
-          item_version?: number
+          item_kind?: string | null
+          item_version?: number | null
           session_id?: string
           updated_at?: string
         }
@@ -739,6 +795,7 @@ export type Database = {
           definition_version_id: string
           discovery_goal: string | null
           id: string
+          is_internal_test: boolean
           locale: string
           started_at: string
           status: string
@@ -757,6 +814,7 @@ export type Database = {
           definition_version_id: string
           discovery_goal?: string | null
           id?: string
+          is_internal_test?: boolean
           locale?: string
           started_at?: string
           status?: string
@@ -775,6 +833,7 @@ export type Database = {
           definition_version_id?: string
           discovery_goal?: string | null
           id?: string
+          is_internal_test?: boolean
           locale?: string
           started_at?: string
           status?: string
@@ -4899,6 +4958,28 @@ export type Database = {
         }[]
       }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      cd_begin_internal_test_session: {
+        Args: {
+          _context_status?: string
+          _definition_version_id: string
+          _locale?: string
+        }
+        Returns: string
+      }
+      cd_complete_session: { Args: { _session_id: string }; Returns: undefined }
+      cd_derive_adaptive_path: {
+        Args: { _context_status: string }
+        Returns: string
+      }
+      cd_session_core_completion: {
+        Args: { _session_id: string }
+        Returns: {
+          answered: number
+          expected: number
+          missing: string[]
+          unexpected: string[]
+        }[]
+      }
       cig_lifecycle_enforced: { Args: never; Returns: boolean }
       create_employer_self_service: {
         Args: {
