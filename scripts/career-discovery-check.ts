@@ -37,6 +37,9 @@ import {
   EXPECTED_TOTAL_QUESTIONS,
   progressFor,
 } from "../src/lib/career-discovery/session";
+import { rankCareerAreas } from "../src/lib/career-discovery/area-ranking";
+import { scoreDna } from "../src/lib/career-discovery/scoring";
+import type { ScoringInput } from "../src/lib/career-discovery/scoring";
 import type { AdaptivePath, ContextStatus, DiscoveryItem } from "../src/lib/career-discovery/types";
 import { isScoredItem } from "../src/lib/career-discovery/types";
 import {
@@ -773,6 +776,117 @@ for (const forbidden of [
     `separation: the migration must be additive — it must not contain "${forbidden}"`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Deterministic scoring and ranking — spec "Required automated tests"
+// ---------------------------------------------------------------------------
+
+const FULL_FIELD: ScoringInput[] = [
+  { itemId: "S1", answerValue: "full_presence" },
+  { itemId: "S2", answerValue: "central" },
+  { itemId: "S3", answerValue: "framework" },
+  { itemId: "S4", answerValue: "acute" },
+  { itemId: "S5", answerValue: "tool_only" },
+  { itemId: "S6", answerValue: "move_on" },
+  { itemId: "S7", answerValue: "own_work" },
+  { itemId: "S8", answerValue: "incident" },
+  { itemId: "T1", answerValue: "strong_a" },
+  { itemId: "T2", answerValue: "strong_a" },
+  { itemId: "T3", answerValue: "strong_b" },
+  { itemId: "T4", answerValue: "strong_a" },
+  { itemId: "T5", answerValue: "strong_a" },
+  { itemId: "T6", answerValue: "strong_a" },
+  { itemId: "T7", answerValue: "strong_a" },
+  { itemId: "T8", answerValue: "strong_a" },
+  { itemId: "B1", answerValue: "full" },
+  { itemId: "B2", answerValue: "brief_check" },
+  { itemId: "B3", answerValue: "lower_acknowledge" },
+  { itemId: "B4", answerValue: "changed" },
+];
+
+const dnaA = scoreDna(FULL_FIELD);
+const dnaB = scoreDna(FULL_FIELD);
+
+expect(
+  JSON.stringify(dnaA) === JSON.stringify(dnaB),
+  "scoring: scoreDna must be deterministic — identical answers produced different output",
+);
+expect(
+  dnaA.answeredCoreItemCount === CORE_ITEM_COUNT && dnaA.coverage === 1,
+  `scoring: 20 answered core items must give coverage 1, got ${dnaA.coverage}`,
+);
+expect(
+  dnaA.axes.length === AXIS_IDS.length,
+  `scoring: expected ${AXIS_IDS.length} axis scores, got ${dnaA.axes.length}`,
+);
+expect(
+  dnaA.signals.length === SIGNAL_IDS.length,
+  `scoring: expected ${SIGNAL_IDS.length} behavioural signal readings, got ${dnaA.signals.length}`,
+);
+
+// Answer order must not change the result — evidence comes back from the
+// database in arbitrary order.
+const shuffled = [...FULL_FIELD].reverse();
+expect(
+  JSON.stringify(scoreDna(shuffled)) === JSON.stringify(dnaA),
+  "scoring: answer order must not affect the DNA — results would not be reproducible",
+);
+
+// THE SCORING BOUNDARY, end to end: adding adaptive and context answers
+// must not move a single axis position, and must not move the ranking.
+const withContextual: ScoringInput[] = [
+  ...FULL_FIELD,
+  { itemId: "CTX_CURRENT_STATUS", answerValue: "security_leader" },
+  { itemId: "CTX_DISCOVERY_GOAL", answerValue: "confirm_direction" },
+  { itemId: "ADAPT_LEADER_01", answerValue: "d" },
+  { itemId: "ADAPT_LEADER_02", answerValue: "c" },
+];
+const dnaWith = scoreDna(withContextual);
+expect(
+  JSON.stringify(dnaWith.axes) === JSON.stringify(dnaA.axes),
+  "scoring boundary: adaptive and context answers changed the DNA axes — they must be invisible to scoring",
+);
+
+const rankA = rankCareerAreas(dnaA);
+const rankWith = rankCareerAreas(dnaWith);
+expect(
+  JSON.stringify(rankA.ranked.map((r) => [r.areaId, r.fit])) ===
+    JSON.stringify(rankWith.ranked.map((r) => [r.areaId, r.fit])),
+  "ranking: adaptive and context answers changed the Security Career Area ranking — they must never affect it",
+);
+expect(
+  JSON.stringify(rankCareerAreas(dnaA).ranked.map((r) => r.areaId)) ===
+    JSON.stringify(rankA.ranked.map((r) => r.areaId)),
+  "ranking: rankCareerAreas must be deterministic",
+);
+expect(
+  rankA.top.length === 3 && rankA.adjacent.length === 3,
+  `ranking: expected 3 top and 3 adjacent areas, got ${rankA.top.length} and ${rankA.adjacent.length}`,
+);
+expect(
+  rankA.top[0].areaId === "protective_operations",
+  `ranking: a maximally field-present, people-facing, low-tech, low-scope profile must rank protective_operations first, got ${rankA.top[0].areaId}`,
+);
+// Ranking is on fit alone — the list must be monotonically non-increasing.
+for (let i = 1; i < rankA.ranked.length; i += 1) {
+  expect(
+    rankA.ranked[i - 1].fit >= rankA.ranked[i].fit,
+    `ranking: results must be ordered by fit alone; position ${i} breaks the ordering`,
+  );
+}
+// Emerging axes contribute nothing rather than a reduced weight.
+const sparse = scoreDna(FULL_FIELD.slice(0, 4));
+expect(
+  rankCareerAreas(sparse).insufficientEvidence,
+  "ranking: with most axes emerging, the engine must report insufficient evidence rather than a confident list",
+);
+expect(
+  sparse.emergingAxes.length > 0 &&
+    rankCareerAreas(sparse).ranked.every((r) =>
+      r.evaluated.every((c) => !sparse.emergingAxes.includes(c.axis)),
+    ),
+  "ranking: an emerging axis must never appear as an evaluated contribution",
+);
 
 // ---------------------------------------------------------------------------
 // Report
