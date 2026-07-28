@@ -3605,6 +3605,13 @@ export type Database = {
             foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
             columns: ["scoring_version_id"]
             isOneToOne: false
+            referencedRelation: "scp_scoring_version_lineage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_scoring_version_id_fkey"
+            columns: ["scoring_version_id"]
+            isOneToOne: false
             referencedRelation: "scp_scoring_versions"
             referencedColumns: ["id"]
           },
@@ -4591,7 +4598,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      scp_scoring_version_lineage: {
+        Row: {
+          content_status: string | null
+          core_summary_is_indicative: boolean | null
+          id: string | null
+          norm_comparison_permitted: boolean | null
+          published_at: string | null
+          retired_at: string | null
+          slug: string | null
+          validation_status: string | null
+          version_number: number | null
+        }
+        Insert: {
+          content_status?: string | null
+          core_summary_is_indicative?: boolean | null
+          id?: string | null
+          norm_comparison_permitted?: boolean | null
+          published_at?: string | null
+          retired_at?: string | null
+          slug?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Update: {
+          content_status?: string | null
+          core_summary_is_indicative?: boolean | null
+          id?: string | null
+          norm_comparison_permitted?: boolean | null
+          published_at?: string | null
+          retired_at?: string | null
+          slug?: string | null
+          validation_status?: string | null
+          version_number?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_cancel_assessment_assignment: {
