@@ -64,11 +64,24 @@ if [ "$SCP_MIGRATION_COUNT" -lt 2 ]; then
   echo "FAIL: expected at least 2 scp migrations, found $SCP_MIGRATION_COUNT" >&2
   exit 1
 fi
-A1_FILE="$(printf '%s\n' "$SCP_MIGRATION_LIST" | sed -n '1p' | xargs basename)"
-A2_FILE="$(printf '%s\n' "$SCP_MIGRATION_LIST" | sed -n '2p' | xargs basename)"
-case "$A1_FILE" in *_scp_a1_*) ;; *) echo "FAIL: first scp migration is not a1: $A1_FILE" >&2; exit 1;; esac
-case "$A2_FILE" in *_scp_a2_*) ;; *) echo "FAIL: second scp migration is not a2: $A2_FILE" >&2; exit 1;; esac
-echo "    ok  $A1_FILE  ->  $A2_FILE"
+# Filename (timestamp) order must match aN order for every scp migration, so
+# a later one can safely depend on an earlier one's objects.
+_expected=1
+while read -r _path; do
+  [ -z "$_path" ] && continue
+  _name="$(basename "$_path")"
+  case "$_name" in
+    *_scp_a${_expected}_*) echo "    ok  #${_expected}  $_name" ;;
+    *)
+      echo "FAIL: scp migration #${_expected} in filename order is '$_name'," >&2
+      echo "      expected a file named *_scp_a${_expected}_*. Migration ordering is not safe." >&2
+      exit 1
+      ;;
+  esac
+  _expected=$((_expected + 1))
+done <<EOF
+$SCP_MIGRATION_LIST
+EOF
 
 # ---------------------------------------------------------------------------
 # 3. Replay the full migration history, in order
@@ -162,8 +175,33 @@ BEGIN
 END \$\$;" >/dev/null
 echo "    ok  A2 applied after A1 (scoring version table + FK column replacement)"
 
+# A3-specific evidence: the HIGH-finding fixes are actually present.
+psql_q -d "$TEST_DB" -c "
+DO \$\$
+DECLARE _guarded integer; _reactivation integer;
+BEGIN
+  SELECT count(DISTINCT c.relname) INTO _guarded
+    FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid JOIN pg_proc p ON p.oid = t.tgfoid
+   WHERE NOT t.tgisinternal AND p.proname = 'scp_guard_version_starts_as_draft';
+  IF _guarded <> 6 THEN
+    RAISE EXCEPTION 'A3 did not apply: expected 6 versioned tables guarded, found %', _guarded;
+  END IF;
+
+  SELECT count(*) INTO _reactivation FROM pg_trigger
+   WHERE NOT tgisinternal AND tgname = 'assessment_assignments_block_retired_reactivation_trg';
+  IF _reactivation <> 1 THEN
+    RAISE EXCEPTION 'A3 did not apply: the retirement reactivation guard is missing';
+  END IF;
+
+  IF pg_get_functiondef('public.scp_bundle_version_assignability(uuid)'::regprocedure)
+       NOT LIKE '%NO_FULLY_ADAPTED_LANGUAGE%' THEN
+    RAISE EXCEPTION 'A3 did not apply: assignability still uses the fail-open language check';
+  END IF;
+END \$\$;" >/dev/null
+echo "    ok  A3 applied (6 insert guards, reactivation guard, fail-closed assignability)"
+
 # ---------------------------------------------------------------------------
-# 5. The assertion suite
+# 5. The assertion suite (107 domain assertions across 16 groups)
 #
 # ON_ERROR_STOP means any failed assertion aborts psql with a non-zero exit,
 # which -e propagates as a job failure.
@@ -189,8 +227,8 @@ fi
 
 echo "    ok  ${PASSED} assertions passed"
 
-if [ "$PASSED" -lt 83 ]; then
-  echo "FAIL: expected at least 83 assertions, only ${PASSED} ran." >&2
+if [ "$PASSED" -lt 107 ]; then
+  echo "FAIL: expected at least 107 assertions, only ${PASSED} ran." >&2
   echo "      A suite that silently stops running assertions is worse than one that fails." >&2
   exit 1
 fi

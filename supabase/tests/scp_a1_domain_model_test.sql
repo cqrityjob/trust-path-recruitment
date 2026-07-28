@@ -682,7 +682,7 @@ BEGIN
        (item_id, version_number, item_format, competency_id, observable_behavior,
         response_process, content_status)
      VALUES (%L, 3, ''biq_frequency'', %L, ''x'', ''y'', ''published'')', _item, _comp));
-  PERFORM pg_temp.assert(_err LIKE '%SCP_ITEM_MUST_START_AS_DRAFT%',
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
     'publication is a reviewed transition, never an initial value');
 END $$;
 
@@ -695,7 +695,7 @@ DECLARE
   _core_family uuid; _mod_family uuid; _prof uuid;
   _core_def uuid; _mod_def uuid; _core_ver uuid; _mod_ver uuid;
   _core_form uuid; _mod_form uuid; _bundle uuid; _bv uuid;
-  _sv uuid; _comp uuid; _item uuid; _iv uuid;
+  _sv uuid; _comp uuid; _item uuid; _iv uuid; _core_item uuid; _core_iv uuid;
   _res record;
 BEGIN
   RAISE NOTICE 'GROUP 12 -- assignability gate (owner decision B)';
@@ -734,8 +734,25 @@ BEGIN
     (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
   VALUES (_item, 1, 'sjt_best_response', _comp, 'prioritises by consequence', 'weigh time pressure')
   RETURNING id INTO _iv;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_iv, 'sv-SE', 'source', 'Modulscenario.', 'Vad gör du?');
   INSERT INTO public.scp_form_items (form_id, item_version_id, display_order)
   VALUES (_mod_form, _iv, 1);
+
+  -- A complete, publishable item on the CORE form too. Without it, the
+  -- empty-core-form check added by HIGH-2 fires first and this group would
+  -- never reach the draft-item branch it exists to test.
+  INSERT INTO public.scp_items (slug) VALUES ('ov-core-item') RETURNING id INTO _core_item;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_core_item, 1, 'sjt_best_response', _comp, 'secures people first', 'triage by consequence')
+  RETURNING id INTO _core_iv;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_core_iv, 'sv-SE', 'source', 'Karnscenario.', 'Vad gor du forst?');
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order)
+  VALUES (_core_form, _core_iv, 1);
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
+    WHERE id = _core_iv;
 
   INSERT INTO public.scp_bundles (slug, profession_id, name_sv, name_en)
   VALUES ('ov-bundle-c', _prof, 'Ordningsvakt', 'Public Order Officer') RETURNING id INTO _bundle;
@@ -859,6 +876,370 @@ BEGIN
     _iv));
   PERFORM pg_temp.assert(_err LIKE '%SCP_PUBLISHED_IMMUTABLE%',
     'decision D: a published item''s profession scope cannot be widened silently -- it needs a new version');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 14 -- HIGH-1 regression: no versioned row may be born approved or
+-- published, on ANY versioned table.
+--
+-- The original defect: only scp_item_versions was guarded, so four other
+-- tables could be INSERTed straight into 'published'. Because
+-- scp_guard_published_immutable only fires on UPDATE from a non-draft OLD
+-- status, such a row was then permanently frozen -- unreviewed and
+-- unfixable. Every versioned table is asserted individually here; a future
+-- versioned table added without the guard must fail this group.
+-- ###########################################################################
+DO $$
+DECLARE
+  _fam uuid; _mod_fam uuid; _prof uuid; _def uuid; _comp uuid; _item uuid;
+  _cv uuid; _mv uuid; _cf uuid; _mf uuid; _b uuid; _cdef uuid; _mdef uuid;
+  _err text; _status text; _guarded integer;
+BEGIN
+  RAISE NOTICE 'GROUP 14 -- HIGH-1: publication is always a reviewed transition';
+
+  SELECT id INTO _fam FROM public.scp_assessment_families WHERE slug = 'security-competency-core';
+  SELECT id INTO _mod_fam FROM public.scp_assessment_families WHERE slug = 'security-profession-modules';
+  SELECT id INTO _prof FROM public.scp_professions WHERE slug = 'protective-security-officer-se';
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-02';
+
+  -- Every versioned table must carry the guard. Structural check first, so a
+  -- new table added without one is caught even if nobody writes its case.
+  SELECT count(DISTINCT c.relname) INTO _guarded
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    JOIN pg_proc p ON p.oid = t.tgfoid
+   WHERE NOT t.tgisinternal
+     AND p.proname = 'scp_guard_version_starts_as_draft'
+     AND c.relname IN ('scp_competency_versions','scp_assessment_versions','scp_item_versions',
+                       'scp_bundle_versions','scp_scoring_versions','scp_role_weight_profiles');
+  PERFORM pg_temp.assert(_guarded = 6,
+    format('HIGH-1: all six versioned tables carry the insert-status guard (found %s)', _guarded));
+
+  -- 1. scp_assessment_versions
+  INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+  VALUES (_fam, 'h1-core', 'h1', 'h1', 'core') RETURNING id INTO _def;
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_assessment_versions (definition_id, version_number, content_status, validation_status)
+     VALUES (%L, 1, ''published'', ''operational-selection'')', _def));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: an assessment version cannot be created as published');
+
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_assessment_versions (definition_id, version_number, content_status)
+     VALUES (%L, 2, ''approved'')', _def));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: an assessment version cannot be created as approved either');
+
+  -- 2. scp_scoring_versions -- the highest-impact case: arbitrary weights,
+  --    born published and immediately immutable.
+  _err := pg_temp.raises(
+    'INSERT INTO public.scp_scoring_versions
+       (slug, version_number, content_status, validation_status, sjt_weight, biq_weight)
+     VALUES (''h1-scoring'', 1, ''published'', ''operational-selection'', 0.99, 0.01)');
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: a scoring version cannot be created as published with arbitrary weights');
+
+  -- 3. scp_item_versions (the one table A2 already covered -- kept so a
+  --    regression in the generalisation is caught)
+  INSERT INTO public.scp_items (slug) VALUES ('h1-item') RETURNING id INTO _item;
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_item_versions
+       (item_id, version_number, item_format, competency_id, observable_behavior,
+        response_process, content_status)
+     VALUES (%L, 1, ''sjt_best_response'', %L, ''x'', ''y'', ''published'')', _item, _comp));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: an item version cannot be created as published');
+
+  -- 4. scp_role_weight_profiles
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_role_weight_profiles (profession_id, version_number, content_status)
+     VALUES (%L, 1, ''published'')', _prof));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: a role weight profile cannot be created as published');
+
+  -- 5. scp_competency_versions
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_competency_versions
+       (competency_id, version_number, content_status, name_sv, name_en, definition_sv, definition_en)
+     VALUES (%L, 99, ''published'', ''x'', ''x'', ''x'', ''x'')', _comp));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: a competency version cannot be created as published');
+
+  -- 6. scp_bundle_versions
+  INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+  VALUES (_fam, 'h1-core-b', 'h1', 'h1', 'core') RETURNING id INTO _cdef;
+  INSERT INTO public.scp_assessment_definitions (family_id, profession_id, slug, name_sv, name_en, purpose)
+  VALUES (_mod_fam, _prof, 'h1-mod-b', 'h1', 'h1', 'profession_module') RETURNING id INTO _mdef;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_cdef, 1) RETURNING id INTO _cv;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_mdef, 1) RETURNING id INTO _mv;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_cv, 'f', 'f', 'f') RETURNING id INTO _cf;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_mv, 'f', 'f', 'f') RETURNING id INTO _mf;
+  INSERT INTO public.scp_bundles (slug, profession_id, name_sv, name_en)
+    VALUES ('h1-bundle', _prof, 'b', 'b') RETURNING id INTO _b;
+
+  _err := pg_temp.raises(format(
+    'INSERT INTO public.scp_bundle_versions
+       (bundle_id, version_number, core_assessment_version_id, module_assessment_version_id,
+        core_form_id, module_form_id, content_status, validation_status)
+     VALUES (%L, 1, %L, %L, %L, %L, ''published'', ''operational-selection'')',
+    _b, _cv, _mv, _cf, _mf));
+  PERFORM pg_temp.assert(_err LIKE '%SCP_VERSION_MUST_START_AS_DRAFT%',
+    'HIGH-1: a bundle version cannot be created as published');
+
+  -- The legitimate path still works, on every table.
+  INSERT INTO public.scp_bundle_versions
+    (bundle_id, version_number, core_assessment_version_id, module_assessment_version_id,
+     core_form_id, module_form_id)
+  VALUES (_b, 1, _cv, _mv, _cf, _mf);
+  UPDATE public.scp_bundle_versions SET content_status = 'in_review' WHERE bundle_id = _b;
+  UPDATE public.scp_bundle_versions SET content_status = 'approved' WHERE bundle_id = _b;
+  UPDATE public.scp_bundle_versions SET content_status = 'published', published_at = now() WHERE bundle_id = _b;
+  SELECT content_status INTO _status FROM public.scp_bundle_versions WHERE bundle_id = _b;
+  PERFORM pg_temp.assert(_status = 'published',
+    'HIGH-1: the reviewed draft -> in_review -> approved -> published path still works');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 15 -- HIGH-2 regression: the assignability gate fails CLOSED.
+--
+-- The original defect: both content gates were `count(...) > 0`, which passes
+-- vacuously on an empty set. A bundle with no items, or items with no text in
+-- any language, reported 'assignable' at 'operational-selection'.
+-- ###########################################################################
+DO $$
+DECLARE
+  _cf uuid; _mf uuid; _prof uuid; _cd uuid; _md uuid; _cv uuid; _mv uuid;
+  _cform uuid; _mform uuid; _b uuid; _bv uuid; _sv uuid; _comp uuid;
+  _i1 uuid; _iv1 uuid; _i2 uuid; _iv2 uuid; _res record;
+BEGIN
+  RAISE NOTICE 'GROUP 15 -- HIGH-2: assignability fails closed';
+
+  SELECT id INTO _cf FROM public.scp_assessment_families WHERE slug = 'security-competency-core';
+  SELECT id INTO _mf FROM public.scp_assessment_families WHERE slug = 'security-profession-modules';
+  SELECT id INTO _prof FROM public.scp_professions WHERE slug = 'security-officer-se';
+  SELECT id INTO _comp FROM public.scp_competencies WHERE code = 'SCC-03';
+
+  INSERT INTO public.scp_assessment_definitions (family_id, slug, name_sv, name_en, purpose)
+    VALUES (_cf, 'h2-core', 'c', 'c', 'core') RETURNING id INTO _cd;
+  INSERT INTO public.scp_assessment_definitions (family_id, profession_id, slug, name_sv, name_en, purpose)
+    VALUES (_mf, _prof, 'h2-mod', 'm', 'm', 'profession_module') RETURNING id INTO _md;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_cd, 1) RETURNING id INTO _cv;
+  INSERT INTO public.scp_assessment_versions (definition_id, version_number) VALUES (_md, 1) RETURNING id INTO _mv;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_cv, 'cf', 'c', 'c') RETURNING id INTO _cform;
+  INSERT INTO public.scp_forms (assessment_version_id, slug, name_sv, name_en)
+    VALUES (_mv, 'mf', 'm', 'm') RETURNING id INTO _mform;
+  INSERT INTO public.scp_scoring_versions (slug, version_number, sjt_weight, biq_weight)
+    VALUES ('h2-sv', 1, 0.70, 0.30) RETURNING id INTO _sv;
+  INSERT INTO public.scp_bundles (slug, profession_id, name_sv, name_en)
+    VALUES ('h2-b', _prof, 'b', 'b') RETURNING id INTO _b;
+  INSERT INTO public.scp_bundle_versions
+    (bundle_id, version_number, core_assessment_version_id, module_assessment_version_id,
+     core_form_id, module_form_id, scoring_version_id)
+  VALUES (_b, 1, _cv, _mv, _cform, _mform, _sv) RETURNING id INTO _bv;
+
+  -- Two published items, one per form, each with an approved Swedish text.
+  INSERT INTO public.scp_items (slug) VALUES ('h2-core-item') RETURNING id INTO _i1;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_i1, 1, 'sjt_best_response', _comp, 'scans systematically', 'notice the anomaly')
+  RETURNING id INTO _iv1;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_iv1, 'sv-SE', 'source', 'Scenario A.', 'Vad gör du?');
+
+  INSERT INTO public.scp_items (slug) VALUES ('h2-mod-item') RETURNING id INTO _i2;
+  INSERT INTO public.scp_item_versions
+    (item_id, version_number, item_format, competency_id, observable_behavior, response_process)
+  VALUES (_i2, 1, 'sjt_best_response', _comp, 'checks authorisation', 'weigh access risk')
+  RETURNING id INTO _iv2;
+  -- Deliberately NO text row for this one yet.
+
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_cform, _iv1, 1);
+
+  UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
+    WHERE id IN (_iv1, _iv2);
+  UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now()
+    WHERE id IN (_cv, _mv);
+  UPDATE public.scp_scoring_versions SET content_status = 'published', published_at = now() WHERE id = _sv;
+  UPDATE public.scp_bundle_versions
+    SET content_status = 'published', validation_status = 'operational-selection', published_at = now()
+    WHERE id = _bv;
+
+  -- (a) module form is empty -> must block. Previously: 'assignable'.
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'MODULE_FORM_EMPTY',
+    'HIGH-2: an empty module form blocks the bundle');
+
+  -- (b) both forms populated, but the module item has no text at all.
+  --     Previously: 'assignable'. Now: no language is fully adapted.
+  UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
+  UPDATE public.scp_assessment_versions SET content_status = 'draft' WHERE id = _mv;
+  INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_mform, _iv2, 1);
+  UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
+  UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
+
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'NO_FULLY_ADAPTED_LANGUAGE',
+    'HIGH-2: an item with no text in any language blocks the bundle');
+
+  -- (c) partial coverage: the module item gets Swedish text, but only in a
+  --     PENDING adaptation -- still not a complete language.
+  UPDATE public.scp_item_versions SET content_status = 'draft' WHERE id = _iv2;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_iv2, 'sv-SE', 'adaptation_pending', 'Scenario B.', 'Vad gör du?');
+  UPDATE public.scp_item_versions SET content_status = 'published' WHERE id = _iv2;
+
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'NO_FULLY_ADAPTED_LANGUAGE',
+    'HIGH-2: an unapproved adaptation does not count towards language coverage');
+
+  -- (d) approve it -> Swedish is now complete across both forms.
+  UPDATE public.scp_item_versions SET content_status = 'draft' WHERE id = _iv2;
+  UPDATE public.scp_item_texts SET adaptation_status = 'approved'
+    WHERE item_version_id = _iv2 AND language = 'sv-SE';
+  UPDATE public.scp_item_versions SET content_status = 'published' WHERE id = _iv2;
+
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'assignable',
+    'HIGH-2: with both forms populated and one language complete, the bundle IS assignable');
+
+  -- (e) a half-finished SECOND language must not block a complete first one.
+  UPDATE public.scp_item_versions SET content_status = 'draft' WHERE id = _iv1;
+  INSERT INTO public.scp_item_texts (item_version_id, language, adaptation_status, scenario, prompt)
+    VALUES (_iv1, 'en-GB', 'adaptation_pending', 'Scenario A.', 'What do you do?');
+  UPDATE public.scp_item_versions SET content_status = 'published' WHERE id = _iv1;
+
+  SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
+  PERFORM pg_temp.assert(_res.assignability = 'assignable',
+    'HIGH-2: a partially drafted second language does not block a fully adapted first one');
+
+  -- (f) empty CORE form is caught too.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_form_items WHERE form_id = _cform) = 1,
+    'HIGH-2 fixture: the core form has exactly one item');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 16 -- HIGH-3 regression: a retired assessment cannot be reactivated.
+--
+-- The original defect: the retirement guard was BEFORE INSERT only, the
+-- pre-existing immutable guard does not protect `status`, and RLS permits an
+-- employer member to UPDATE their own assignment -- so a cancelled or expired
+-- legacy assignment could be revived to 'invited'.
+-- ###########################################################################
+DO $$
+DECLARE
+  _emp uuid := '66666666-0000-0000-0000-000000000001';
+  _actor uuid := '66666666-0000-0000-0000-000000000002';
+  _retired_version uuid;
+  _live_version uuid;
+  _cancelled uuid := '77777777-0000-0000-0000-000000000001';
+  _expired   uuid := '77777777-0000-0000-0000-000000000002';
+  _completed uuid := '77777777-0000-0000-0000-000000000003';
+  _inflight  uuid := '77777777-0000-0000-0000-000000000004';
+  _live      uuid := '77777777-0000-0000-0000-000000000005';
+  _err text;
+BEGIN
+  RAISE NOTICE 'GROUP 16 -- HIGH-3: retired assessments cannot be reactivated';
+
+  INSERT INTO auth.users (id, email) VALUES (_actor, 'h3@test.invalid') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.employers (id, name, slug, status)
+    VALUES (_emp, 'H3 Org', 'h3-org', 'active') ON CONFLICT (id) DO NOTHING;
+
+  SELECT id INTO _retired_version FROM public.assessment_versions
+    WHERE assessment_id = 'security-guard-foundation' LIMIT 1;
+  SELECT id INTO _live_version FROM public.assessment_versions
+    WHERE assessment_id = 'public-career-assessment' AND retired_at IS NULL LIMIT 1;
+
+  -- Historical rows, created while the version was still live.
+  UPDATE public.assessment_versions SET retired_at = NULL WHERE id = _retired_version;
+  INSERT INTO public.assessment_assignments
+    (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
+     recipient_email, assigned_by, invitation_token_hash, expires_at, status, cancelled_at)
+  VALUES (_cancelled, _emp, 'security-guard-foundation', _retired_version, 'security_professional',
+          'recruitment', 'c@test.invalid', _actor, 'h3-cancelled', now() + interval '7 days',
+          'cancelled', now());
+  INSERT INTO public.assessment_assignments
+    (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
+     recipient_email, assigned_by, invitation_token_hash, expires_at, status)
+  VALUES (_expired, _emp, 'security-guard-foundation', _retired_version, 'security_professional',
+          'recruitment', 'e@test.invalid', _actor, 'h3-expired', now() - interval '1 day', 'expired');
+  INSERT INTO public.assessment_assignments
+    (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
+     recipient_email, assigned_by, invitation_token_hash, expires_at, status,
+     completed_at, engine_result)
+  VALUES (_completed, _emp, 'security-guard-foundation', _retired_version, 'security_professional',
+          'workforce', 'd@test.invalid', _actor, 'h3-completed', now() + interval '7 days',
+          'completed', now(), '{"score": 61}'::jsonb);
+  INSERT INTO public.assessment_assignments
+    (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
+     recipient_email, assigned_by, invitation_token_hash, expires_at, status)
+  VALUES (_inflight, _emp, 'security-guard-foundation', _retired_version, 'security_professional',
+          'recruitment', 'f@test.invalid', _actor, 'h3-inflight', now() + interval '7 days', 'invited');
+  UPDATE public.assessment_versions SET retired_at = now() WHERE id = _retired_version;
+
+  -- THE EXPLOIT: revive a cancelled legacy assignment.
+  _err := pg_temp.raises(format(
+    'UPDATE public.assessment_assignments SET status = ''invited'', cancelled_at = NULL WHERE id = %L',
+    _cancelled));
+  PERFORM pg_temp.assert(_err LIKE '%ASSESSMENT_RETIRED%',
+    'HIGH-3: a CANCELLED legacy assignment cannot be revived to invited');
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.assessment_assignments SET status = ''invited'' WHERE id = %L', _expired));
+  PERFORM pg_temp.assert(_err LIKE '%ASSESSMENT_RETIRED%',
+    'HIGH-3: an EXPIRED legacy assignment cannot be revived');
+
+  _err := pg_temp.raises(format(
+    'UPDATE public.assessment_assignments SET status = ''started'' WHERE id = %L', _completed));
+  PERFORM pg_temp.assert(_err LIKE '%ASSESSMENT_RETIRED%',
+    'HIGH-3: a COMPLETED legacy assignment cannot be reopened');
+
+  -- AC-5 / AC-6: history stays readable and unchanged.
+  PERFORM pg_temp.assert(
+    (SELECT status FROM public.assessment_assignments WHERE id = _completed) = 'completed',
+    'HIGH-3: the completed historical assignment is still readable');
+  PERFORM pg_temp.assert(
+    (SELECT engine_result->>'score' FROM public.assessment_assignments WHERE id = _completed) = '61',
+    'HIGH-3: the historical score is unchanged');
+
+  -- An in-flight candidate on a version retired mid-journey is NOT stranded.
+  UPDATE public.assessment_assignments SET status = 'opened', opened_at = now() WHERE id = _inflight;
+  UPDATE public.assessment_assignments SET status = 'started', started_at = now() WHERE id = _inflight;
+  UPDATE public.assessment_assignments SET status = 'completed', completed_at = now() WHERE id = _inflight;
+  PERFORM pg_temp.assert(
+    (SELECT status FROM public.assessment_assignments WHERE id = _inflight) = 'completed',
+    'HIGH-3: an in-flight assignment on a retired version may still finish -- no candidate is stranded');
+
+  -- Terminal transitions on retired rows still work (expiry, cancellation).
+  UPDATE public.assessment_assignments SET status = 'cancelled', cancelled_at = now() WHERE id = _expired;
+  PERFORM pg_temp.assert(
+    (SELECT status FROM public.assessment_assignments WHERE id = _expired) = 'cancelled',
+    'HIGH-3: a retired assignment can still move between terminal states');
+
+  -- Non-retired assessments are completely unaffected.
+  IF _live_version IS NOT NULL THEN
+    INSERT INTO public.assessment_assignments
+      (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
+       recipient_email, assigned_by, invitation_token_hash, expires_at, status, cancelled_at)
+    VALUES (_live, _emp, 'public-career-assessment', _live_version, 'security_professional',
+            'recruitment', 'g@test.invalid', _actor, 'h3-live', now() + interval '7 days',
+            'cancelled', now());
+    UPDATE public.assessment_assignments SET status = 'invited', cancelled_at = NULL WHERE id = _live;
+    PERFORM pg_temp.assert(
+      (SELECT status FROM public.assessment_assignments WHERE id = _live) = 'invited',
+      'HIGH-3: a NON-retired assignment can still be reactivated -- the guard is surgical');
+
+    UPDATE public.assessment_assignments SET status = 'cancelled', cancelled_at = now() WHERE id = _live;
+    PERFORM pg_temp.assert(
+      (SELECT status FROM public.assessment_assignments WHERE id = _live) = 'cancelled',
+      'HIGH-3: normal cancellation of an active non-retired assignment still works');
+  END IF;
 END $$;
 
 

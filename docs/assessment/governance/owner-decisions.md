@@ -1,6 +1,6 @@
 # Owner decisions — Security Competency Platform
 
-Product decisions recorded so engineering does not need to stop for them. Implemented in `20260727130000_scp_a2_scoring_versions_and_publication_gates.sql`.
+Product decisions recorded so engineering does not need to stop for them. Implemented in `20260727130000_scp_a2_scoring_versions_and_publication_gates.sql`, hardened by `20260727140000_scp_a3_close_high_findings.sql` after independent review.
 
 **Decided:** 2026-07-27 · **Owner:** Mostafa Alshawi
 
@@ -26,7 +26,11 @@ Condition: the system must support a non-operational status that prevents unappr
 
 **Implemented as.** `scp_bundle_version_assignability(uuid)` returns `blocked` / `pilot_only` / `assignable` plus a stable machine-readable reason. PR-C's assignment path must call it and refuse on anything but `assignable` (or `pilot_only` for a consenting pilot participant).
 
-It **fails closed** — every unfinished, unknown or ambiguous state returns `blocked`, so a half-built bundle cannot reach a candidate through omission. It refuses on: unpublished or retired bundle, unpublished core or module version, missing or unpublished scoring version, any draft item anywhere in either form, any legally dependent item without approved review, any unapproved language adaptation, `validation_status = design`, and unknown IDs. `pilot` returns `pilot_only` — assignable to consenting pilot participants, never a selection decision.
+It **fails closed**, and since A3 it does so by *proving the positive conditions* rather than only looking for known-bad rows. It refuses on: unpublished or retired bundle · unpublished core or module version · missing or unpublished scoring version · **an empty core form** · **an empty module form** · any draft item anywhere in either form · any legally dependent item without approved review · **no language completely adapted across every item of both forms** · `validation_status = design` · unknown IDs. `pilot` returns `pilot_only` — assignable to consenting pilot participants, never a selection decision.
+
+The two bolded emphases correct review finding HIGH-2: the original formulation used `count(...) > 0` tests, which pass vacuously at zero, so a bundle with no items at all — or items with no candidate-readable text — was reported `assignable` at `operational-selection`.
+
+Requiring *one complete language* also fixes the opposite error: the previous "no unapproved adaptation anywhere" rule would have blocked a fully-ready Swedish bundle merely because an English adaptation had been started.
 
 Returning a reason rather than a boolean is deliberate: PR-B's admin UI can show exactly what is still missing, and PR-C can give the employer an accurate refusal.
 
@@ -38,7 +42,9 @@ Ordningsvakt and Skyddsvakt content **may be drafted and technically implemented
 
 Enforced twice, on purpose: at publication, and again at assignment (`LEGAL_REVIEW_PENDING` in the assignability gate). A second, independent check on the path that actually reaches a candidate is worth the redundancy.
 
-A related gap closed at the same time: an item version can no longer be *created* directly in a published state. Publication is a reviewed transition, never an initial value.
+A related gap closed at the same time: an item version can no longer be *created* directly in a published state.
+
+**Corrected in A3 (review finding HIGH-1).** That guard was originally attached to `scp_item_versions` only, so assessment versions, bundle versions, scoring versions and role weight profiles could still be INSERTed straight into `published` — and, because the immutability trigger only fires on UPDATE from a non-draft status, such a row was then permanently frozen. The guard is now shared by all six versioned tables. Publication is a reviewed transition on every one of them, never an initial value.
 
 ## D. Separate profession item banks
 

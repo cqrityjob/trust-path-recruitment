@@ -65,7 +65,9 @@ The specification uses generic table names; three of them collide with live lega
 
 **Scoring keys are in a different table from option labels.** `scp_item_options` holds `score_value` and `scoring_rationale`; `scp_item_option_texts` holds the candidate-visible label. The candidate runtime joins only the latter, so "no scoring key ever reaches the browser" (spec 12.1, acceptance criterion 12) is enforced by table design rather than by discipline in a SELECT list.
 
-**Nothing unapproved can be assigned by accident.** `scp_bundle_version_assignability()` fails closed — every unfinished, unknown or non-operational state returns `blocked`. See [owner decisions](./governance/owner-decisions.md) B.
+**Nothing unapproved can be assigned by accident.** `scp_bundle_version_assignability()` fails closed: it *proves* both forms are populated and that at least one language is completely adapted before it can return anything but `blocked`. An earlier version used count-based negative checks, which passed vacuously on an empty set — an empty bundle was reported assignable. Fixed in A3 (review finding HIGH-2). See [owner decisions](./governance/owner-decisions.md) B.
+
+**The gate exists but is not yet wired.** PR-C must call it; until then nothing in the product calls it, so this is an available protection rather than an enforced one.
 
 **Language is an adaptation object, not a column.** `scp_item_texts` is one row per language per item version, each with its own `adaptation_status`. Machine translation alone can never reach `approved` (spec 11). This is why the schema has no `text_sv`/`text_en` pair anywhere.
 

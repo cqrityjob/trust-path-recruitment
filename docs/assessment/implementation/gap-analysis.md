@@ -41,6 +41,9 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 | 16b | Non-operational status prevents assignment to real candidates (owner decision B) | **missing** | **compliant** | `scp_bundle_version_assignability()`, fails closed; 9 assertions |
 | 16c | Legally dependent items unpublishable without recorded review (owner decision C) | **missing** | **compliant** | Publication trigger + second check at assignment; 6 assertions |
 | 16d | Explicit, reviewed cross-profession item reuse (owner decision D) | **missing** | **compliant** | `scp_item_version_professions` with per-role job-analysis reference |
+| 16e | Publication is a reviewed transition on every versioned table (HIGH-1) | **missing** | **compliant** | Shared insert guard on all 6 versioned tables; 8 assertions |
+| 16f | Assignability proves positive conditions (HIGH-2) | **missing** | **compliant** | Non-empty forms + one fully adapted language; 6 assertions |
+| 16g | Retired assessments cannot be reactivated (HIGH-3) | **missing** | **compliant** | Terminal→active transition blocked on retired versions; 9 assertions |
 | 17 | Assessment editor / reviewer / publisher roles (13.3) | **partial** | **compliant** | Only `assessment_editor` existed; `scp_content_roles` adds all three without mutating `app_role` |
 | 18 | Append-only audit of critical actions (12.1, 13.1, AC-20) | **partial** | **compliant** | `scp_content_events`, no UPDATE/DELETE grant; retirement itself logged |
 | 19 | Legacy `security-guard-foundation` retired, never mutated (2.2, §6, AC-4/5/6, T-002/003) | **legacy-retire** | **compliant** | `retired_at` + `retired_reason` + catalogue hidden + INSERT-only guard; 4 assertions |
@@ -49,7 +52,7 @@ Classification: **compliant** · **partial** · **missing** · **conflicting** �
 | 22 | Legal review gate for Swedish regulated content (10.3) | **missing** | **compliant** | `legal_basis_required` + `legal_review_status` + CHECK constraint |
 | 23 | Bias / SME review evidence (7.4) | **missing** | **compliant** | First-class columns with review-status CHECKs |
 | 24 | AI-authored drafts never auto-operational (7.1, 7.5) | **missing** | **compliant** | `authored_by_ai` flag; validation status defaults to `design` |
-| 25 | Draft items cannot be assigned (AC-15) | **missing** | **compliant** | The assignability gate blocks a bundle if any item in either form is unpublished; asserted |
+| 25 | Draft items cannot be assigned (AC-15) | **missing** | **partial** | The gate blocks a bundle containing any unpublished item, and is asserted — but nothing *calls* the gate until PR-C wires the assignment path. The protection exists; it is not yet enforced. |
 | 26 | Item bank not readable by employer (13.3, AC-13) | **missing** | **compliant** | RLS default-deny; proven by differential test (employer 0 rows, editor >0) |
 | 27 | Career Guidance content not reused (§5, 13.2, AC-2/3) | **conflicting** | **compliant** | This was the defect. Now: separation trigger + CI guard + no FKs |
 | 28 | Career Guidance unchanged and operational (§5, T-020) | — | **compliant** | Zero files touched; guard asserts 16/16/14 still intact |

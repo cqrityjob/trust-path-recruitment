@@ -94,25 +94,30 @@ END $$;
 
 BEGIN;
 
--- 1. Legacy retirement
+-- 1. Legacy retirement (A1 insert guard + A3 reactivation guard)
 DROP TRIGGER IF EXISTS assessment_assignments_block_retired_trg ON public.assessment_assignments;
+DROP TRIGGER IF EXISTS assessment_assignments_block_retired_reactivation_trg ON public.assessment_assignments;
 DROP FUNCTION IF EXISTS public.assessment_assignments_block_retired();
+DROP FUNCTION IF EXISTS public.assessment_assignments_block_retired_reactivation();
 UPDATE public.assessments SET employer_visible = true WHERE id = 'security-guard-foundation';
 UPDATE public.assessment_versions SET retired_at = NULL, retired_reason = NULL
  WHERE assessment_id = 'security-guard-foundation';
 ALTER TABLE public.assessment_versions DROP COLUMN IF EXISTS retired_reason;
 
--- 2. A2 objects
+-- 2. A3 objects (the shared insert-status guard; its triggers fall with
+--    their tables below, but the function must go explicitly)
+DROP FUNCTION IF EXISTS public.scp_guard_version_starts_as_draft() CASCADE;
+
+-- 3. A2 objects
 DROP FUNCTION IF EXISTS public.scp_bundle_version_assignability(uuid);
 DROP TRIGGER IF EXISTS scp_item_versions_legal_gate ON public.scp_item_versions;
-DROP TRIGGER IF EXISTS scp_item_versions_insert_status ON public.scp_item_versions;
 DROP FUNCTION IF EXISTS public.scp_guard_legal_review_before_publish();
 DROP FUNCTION IF EXISTS public.scp_guard_item_insert_status();
 DROP TABLE IF EXISTS public.scp_item_version_professions CASCADE;
 ALTER TABLE public.scp_bundle_versions DROP COLUMN IF EXISTS scoring_version_id;
 DROP TABLE IF EXISTS public.scp_scoring_versions CASCADE;
 
--- 3. A1 schema, reverse dependency order
+-- 4. A1 schema, reverse dependency order
 DROP TABLE IF EXISTS public.scp_publication_approvals CASCADE;
 DROP TABLE IF EXISTS public.scp_content_events CASCADE;
 DROP TABLE IF EXISTS public.scp_role_weight_profile_weights CASCADE;

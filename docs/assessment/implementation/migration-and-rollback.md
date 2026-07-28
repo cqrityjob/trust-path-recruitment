@@ -3,6 +3,7 @@
 **Migrations:**
 1. `20260727120000_scp_a1_security_competency_platform_domain.sql` — domain model + legacy retirement
 2. `20260727130000_scp_a2_scoring_versions_and_publication_gates.sql` — owner decisions A–D
+3. `20260727140000_scp_a3_close_high_findings.sql` — closes review findings HIGH-1, HIGH-2, HIGH-3
 
 A2 is a second migration rather than an edit to A1 deliberately: A1 had been pushed, and a migration that has been pushed is one that might have been applied. A file whose content no longer matches what ran is unrecoverable, so additive-forward is the default even when the risk looks like zero.
 
@@ -11,6 +12,8 @@ A2 is a second migration rather than an edit to A1 deliberately: A1 had been pus
 Additive only. A1 creates 21 `scp_*` tables, 8 functions, 16 triggers, RLS on every new table, and seeds the twelve constructs, 48 facets, 3 families and 3 professions. Then retires the legacy `security-guard-foundation` definition.
 
 A2 adds `scp_scoring_versions` and `scp_item_version_professions` (23 tables total), three guard functions, and replaces `scp_bundle_versions.scoring_version` (text) with `scoring_version_id` (FK). That column replacement targets a table A1 created in this same unmerged PR which has never held a row; the migration **aborts with `SCP_A2_ABORT`** rather than proceed if that is ever untrue.
+
+A3 adds no tables. It generalises the insert-status guard across all six versioned tables, replaces `scp_bundle_version_assignability()` with a fail-closed implementation, and adds one `BEFORE UPDATE` trigger to `assessment_assignments` blocking reactivation of retired assignments.
 
 ## What it touches outside its own schema
 
@@ -22,8 +25,11 @@ Exactly three things, all additive or reversible:
 | `UPDATE ... SET retired_at, retired_reason` | `assessment_versions` where `assessment_id='security-guard-foundation'` (1 row) | Yes — set both back to NULL |
 | `UPDATE ... SET employer_visible=false` | `assessments` where `id='security-guard-foundation'` (1 row) | Yes — set back to true |
 | `CREATE TRIGGER assessment_assignments_block_retired_trg` | `assessment_assignments` (BEFORE INSERT) | Yes — `DROP TRIGGER` |
+| `CREATE TRIGGER assessment_assignments_block_retired_reactivation_trg` (A3) | `assessment_assignments` (BEFORE UPDATE) | Yes — `DROP TRIGGER` |
 
-**No existing column is altered or dropped. No existing RLS policy, grant or function is modified. No historical row's content is changed.** The trigger is INSERT-only, so no existing assignment is ever evaluated by it.
+**No existing column is altered or dropped. No existing RLS policy, grant or function is modified. No historical row's content is changed.**
+
+The A1 trigger is INSERT-only, so no existing assignment is evaluated by it. The A3 trigger fires on UPDATE but only refuses a *terminal → active* transition on a retired version: reads are untouched, in-flight assignments can still complete, and terminal-state changes (cancel, expire) still work. Historical rows therefore remain readable and unchanged in both cases.
 
 ## Pre-migration checklist
 

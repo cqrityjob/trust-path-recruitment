@@ -10,7 +10,11 @@ This is enforced by `BEFORE UPDATE` triggers (`scp_guard_published_immutable`, `
 
 Immutability begins at `content_status = 'approved'`, not at `published`. Approving content is the point at which a second person has signed off on it; letting it change afterwards would make the approval meaningless.
 
+**A version also cannot be *born* approved or published.** `scp_guard_version_starts_as_draft` is attached to all six versioned tables, so every row must enter as `draft` or `in_review`. Without it the immutability trigger became a liability rather than a protection: a row INSERTed straight into `published` was never subject to a review transition and was then permanently frozen. (Review finding HIGH-1.)
+
 Lifecycle columns stay writable so legitimate transitions still work: `content_status`, `validation_status`, `approved_by/at`, `published_by/at`, `retired_at`, `retired_reason`, `content_hash`, `updated_at`, `pilot_stats`.
+
+`pilot_stats` is a deliberate exception to immutability: pilot evidence accrues *after* a version is published, and recording it does not change what the candidate saw or how it was scored.
 
 ## Content lifecycle
 

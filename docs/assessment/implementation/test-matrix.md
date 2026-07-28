@@ -15,7 +15,7 @@ Runs in CI. Proves Career Guidance content is not reused.
 | 12 SCC codes vs 14 dimensions and 19 competency slugs | Constructs are disjoint in both directions |
 | No `scp_` FK into `cig_competencies`, `assessment_responses`, `assessment_run_*` or `assessments` | No database-level content dependency |
 | No `DELETE`/`DROP`/`UPDATE` against legacy assessment tables | Legacy is retired, not mutated |
-| `BEFORE INSERT` only on `assessment_assignments` | Historical rows are never re-evaluated |
+| A `BEFORE INSERT` guard on `assessment_assignments` | New legacy assignments are blocked; existing rows are never re-evaluated by it |
 | Career Guidance still 16 questions / 16 mappings / 14 dimensions | Career Guidance is untouched (T-020) |
 | Slug rules | `security-guard-foundation` is not reused; all three professions carry `market='SE'` |
 
@@ -23,7 +23,7 @@ Runs in CI. Proves Career Guidance content is not reused.
 
 ### 2. Database + RLS suite — `supabase/tests/scp_a1_domain_model_test.sql`
 
-83 assertions, 13 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
+107 assertions, 16 groups. Wrapped in `BEGIN`/`ROLLBACK` so it leaves no residue.
 
 | Group | Assertions | Maps to |
 |---|---|---|
@@ -40,6 +40,9 @@ Runs in CI. Proves Career Guidance content is not reused.
 | 11 — legal review gate | 6 | owner decision C; spec 10.3 |
 | 12 — assignability gate | 9 | owner decision B; AC-15 |
 | 13 — explicit item reuse | 6 | owner decision D |
+| 14 — publication always starts as draft | 10 | review finding HIGH-1 |
+| 15 — assignability fails closed | 6 | review finding HIGH-2 |
+| 16 — retired assessments not reactivatable | 9 | review finding HIGH-3 |
 
 Group 6 is a **differential** test: an employer account and a candidate account see zero rows of the item bank and zero scoring keys, while an editor sees more than zero. Both halves are required — a suite where everyone sees zero would pass for the wrong reason.
 
@@ -56,11 +59,11 @@ Destructive by design — it runs last, against a disposable database only.
 | Job | Steps |
 |---|---|
 | `verify` | lint (non-blocking) · `tsc --noEmit` · `cie:check` · `kg:check` · `security-competency-separation:check` · **production build** |
-| `database` | PostgreSQL 16 service container · full migration replay in order · A1→A2 ordering · 83 domain assertions · 15 rollback assertions |
+| `database` | PostgreSQL 16 service container · full migration replay in order · A1→A2→A3 ordering · A2 and A3 applied-evidence checks · 107 domain assertions · 15 rollback assertions |
 
 The `database` job runs `scripts/db-test.sh`, which is the same script used locally (`bun run db:test`) — CI and a developer's machine cannot drift apart.
 
-It fails the build on: any unexpected migration failure, any allowlisted failure that starts passing, a missing or out-of-order `scp` migration, evidence that A2 did not apply, any failed assertion, or an assertion **count** below the expected floor. That last check matters: a suite that silently stops running assertions would otherwise pass.
+It fails the build on: any unexpected migration failure, any allowlisted failure that starts passing, a missing or out-of-order `scp` migration, evidence that A2 did not apply, any failed assertion, or an assertion **count** below the expected floor (currently 107). That last check matters: a suite that silently stops running assertions would otherwise pass.
 
 The job holds no secrets and touches no real database. `scripts/db-test.sh` refuses to run if `PGHOST` looks like a managed host (`*.supabase.co`, `*.rds.amazonaws.com`, `*.neon.tech`).
 
@@ -80,7 +83,7 @@ PGHOST=127.0.0.1 PGPORT=55432 PGUSER=postgres bun run db:test
 
 `service_role` is created `BYPASSRLS` to match Supabase — which is precisely why the immutability guards are triggers rather than RLS policies. A trigger still fires for a BYPASSRLS caller; a policy does not.
 
-**Known pre-existing replay failures (12).** Ten are duplicate Lovable-generated migrations that re-create objects an earlier migration already created; two require `storage.objects`, which the minimal bootstrap does not stub. All twelve fail identically on `origin/main` without this branch — they are not introduced here. The PR-A migration is not among them.
+**Known pre-existing replay failures (12).** Ten are duplicate Lovable-generated migrations that re-create objects an earlier migration already created; two require `storage.objects`, which the minimal bootstrap does not stub. All twelve fail identically on `origin/main` without this branch — they are not introduced here. None of the three PR-A migrations is among them.
 
 ## Planned coverage for later PRs
 
@@ -104,5 +107,5 @@ PGHOST=127.0.0.1 PGPORT=55432 PGUSER=postgres bun run db:test
 | `bun run invitation-email-guard:check` | pass |
 | `bun run assessment-assignment:check` | pass |
 | `bun run build` | pass (now also a CI step) |
-| `bun run db:test` | 83 domain + 15 rollback assertions, exit 0 |
+| `bun run db:test` | 107 domain + 15 rollback assertions, exit 0 |
 | Negative tests (guard + DB job) | all four confirmed to fail on real violations |
