@@ -2,6 +2,8 @@
 
 *One page. Five questions.*
 
+> **The architecture is approved. The authored content is not.** Every question in this design is unreviewed draft, all Swedish text is an AI-authored first draft, and nothing may be administered to a real candidate until SME, language, accessibility, bias, privacy/legal and psychometric review are all complete. Validation status is `design` throughout.
+
 *Full documentation: [README](./README.md) · [Master Product Blueprint](./master-product-blueprint-v3.0.md) · [The Experience](./security-career-discovery-experience.md) · [Implementation Roadmap](./implementation-roadmap-v3.0.md)*
 
 ---
@@ -15,6 +17,8 @@ The product tells a person **what it is asking and why** before each question, *
 It also refuses things. It will not assign a personality type. It will not produce a score out of 100. It will not compare someone to other people. It will not let an employer see the private profile — not as policy, but as a structural property of the schema. Each refusal costs something, and that is precisely why it is credible.
 
 The user gets the full result before being asked to register. Value first, always.
+
+And the promises are kept: **export and deletion ship before public release**, not after. A person can take everything the platform holds about them, or remove all of it, in one action and without asking. Consent is per-purpose and revocable, and withdrawing it removes the evidence and recomputes the result rather than quietly keeping it. A DPIA and legal review remain mandatory before any real recruitment use — this document set makes no compliance claim.
 
 ---
 
@@ -36,7 +40,7 @@ Some of it is not. The questions could be copied in a week, the interface in a m
 
 Four things cannot:
 
-**The Swedish security taxonomy.** Fourteen canonical families, sixty-seven professions, real regulatory grounding, authority disclaimers for police and defence. Years of domain work requiring security expertise and regulatory accuracy — and it does not generalise across borders, so each market must be rebuilt.
+**The Swedish security taxonomy.** Fourteen canonical Security Career Areas, sixty-seven professions, real regulatory grounding, authority disclaimers for police and defence. Years of domain work requiring security expertise and regulatory accuracy — and it does not generalise across borders, so each market must be rebuilt.
 
 **The compounding evidence store.** A profile that improves with every interaction only works if evidence accumulates from the first day. A competitor who computes-and-discards cannot retrofit it; they must rebuild the engine and start their history at zero.
 
@@ -50,7 +54,7 @@ Four things cannot:
 
 The expensive parts are built once and reused.
 
-The **eight orientation axes are domain-general** — they apply to cyber, AML, crisis management and military work as directly as to protective operations. Ten of the twelve target domains already have a canonical family. Adding a domain is content: profession profiles and enrichment. **No new construct, no new item type, no engine change.**
+The **eight orientation axes are domain-general** — they apply to cyber, AML, crisis management and military work as directly as to protective operations. Ten of the twelve target domains already have a canonical Security Career Area. Adding a domain is content: profession profiles and enrichment. **No new construct, no new item type, no engine change.**
 
 Internationalisation is the same shape. Professions carry a market, regulatory content carries a jurisdiction, language is an adaptation object with its own approval status. A new country adds professions and an approved adaptation. The axes do not change, because how a person orients toward work is not Swedish — only what is regulated, and by whom.
 

@@ -192,10 +192,10 @@ Every paragraph is a deterministic template filled from licensed statements. **A
 
 - **Purpose** — make the profession legible before naming roles in it
 - **Primary** — See recommended directions
-- **Secondary** — explore any family
+- **Secondary** — explore any area
 - **Transition** — S-11
 
-Career families shown as fitting / adjacent / further away, each with a one-line reason. Includes an explicit **"what we don't know yet"** block naming the axis and what would resolve it.
+Security Career Areas shown as fitting / adjacent / further away, each with a one-line reason. Includes an explicit **"what we don't know yet"** block naming the axis and what would resolve it.
 
 ---
 
@@ -206,7 +206,7 @@ Career families shown as fitting / adjacent / further away, each with a one-line
 - **Secondary** — Why this one? · Compare
 - **Transition** — S-12 or profession guide
 
-Three to five professions. Each card: name · family · **fit and confidence as separate indicators** · why it fits (top contributing signals) · what it involves · formal requirements with Swedish regulatory context · honest note on what is uncertain.
+Three to five professions. Each card: name · area · **fit and confidence as separate indicators** · why it fits (top contributing signals) · what it involves · formal requirements with Swedish regulatory context · honest note on what is uncertain.
 
 > Fit and confidence are never combined into one number. Audit F-5 — the current engine sorts on confidence-capped values, so caps silently reorder results.
 
@@ -246,6 +246,23 @@ Both render **honest coverage**: *"we have good information for this profession;
 Offered **after** the full report. States what saving enables concretely: keep this · see what changes when you return · add to it over time.
 
 > Authentication must preserve the session. Audit F-14: the current save link has no return URL, so signing in destroys the report.
+
+---
+
+### S-15b Your data `[MVP]`
+
+- **Purpose** — make export and deletion real, not a support request
+- **Primary** — Download my data
+- **Secondary** — Delete everything · Manage consents
+- **Data** — none collected
+- **Decision** — export, deletion, or consent withdrawal
+- **Transition** — back to origin, or to a confirmation
+
+Reachable from the expectation-setting panel, the report footer and the account area. Shows what is held, in plain language, per [Master Blueprint §10.2](./master-product-blueprint-v3.0.md).
+
+> **This screen is why S-03 can make its promises.** The expectation-setting screen tells the user *"you can delete everything at any time"* — that statement is only permitted to ship because this screen ships with it. Deletion includes report snapshots; immutability protects them from modification, not from erasure by the person whose data they are.
+
+Consent withdrawal states its consequence before confirming: *"This removes those answers and recalculates your profile. Some of your result may change."*
 
 ---
 

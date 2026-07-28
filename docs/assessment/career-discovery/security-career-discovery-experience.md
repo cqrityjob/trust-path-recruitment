@@ -307,7 +307,7 @@ Honestly, some of it is not:
 
 What cannot be copied quickly:
 
-**The Swedish security taxonomy with real regulatory grounding.** 14 canonical families, 67 professions, formal requirements, authority disclaimers, alias discipline. Years of domain work, requiring security-industry expertise and regulatory accuracy — and it does not generalise across borders, so a competitor must redo it per market.
+**The Swedish security taxonomy with real regulatory grounding.** 14 canonical Security Career Areas, 67 professions, formal requirements, authority disclaimers, alias discipline. Years of domain work, requiring security-industry expertise and regulatory accuracy — and it does not generalise across borders, so a competitor must redo it per market.
 
 **The compounding Evidence Store.** A profile that improves with every interaction is only possible if evidence accumulates from day one. A competitor who computes-and-discards cannot retrofit this; they must rebuild and they start with zero history.
 

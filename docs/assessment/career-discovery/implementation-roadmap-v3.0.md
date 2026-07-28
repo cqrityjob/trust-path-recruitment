@@ -2,6 +2,16 @@
 
 **Status:** design.
 
+> ## ⚠ The architecture is approved. The authored content is NOT approved for production.
+>
+> **Approved in principle:** architecture, construct model, the eight axes, the evidence pipeline, the experience design, the roadmap.
+>
+> **NOT approved:** every question, option, scale and narrative statement. All authored draft; all Swedish an AI-authored first draft; nothing reviewed by anyone.
+>
+> **No question may be administered to any real candidate until all six gates are cleared:** SME review · language review · accessibility review · bias review · privacy/legal review · psychometric review.
+>
+> Validation status is `design`. Nothing here may be described to a candidate, employer, partner or investor as validated.
+
 > **How this document relates to the others**
 > Everything specified across the set, sequenced. Every item cross-references the document that specifies it.
 
@@ -13,7 +23,7 @@
 
 Placing Career Discovery on the merged `scp_*` machinery requires narrowing one guard.
 
-**Today:** `scp_guard_family_product_separation` (migration A1 §12) rejects any assessment definition attached to a family whose `product_type` is `career_guidance`. That was deliberate — it prevents the `security-guard-foundation` mistake recurring.
+**Today:** `scp_guard_family_product_separation` (migration A1 §12) rejects any assessment definition attached to an assessment family whose `product_type` is `career_guidance`. That was deliberate — it prevents the `security-guard-foundation` mistake recurring.
 
 **Needed:** the rule should enforce *separate content, constructs, scoring and reports* — which the foreign-key structure and the CI separation guard already enforce independently — rather than *separate tables*.
 
@@ -50,7 +60,7 @@ Placing Career Discovery on the merged `scp_*` machinery requires narrowing one 
 
 ### Data
 - [ ] Guard narrowed (prerequisite above)
-- [ ] Career Discovery family, 8 axes, 4 behavioural signals
+- [ ] Career Discovery SCP assessment family (internal governance concept), 8 axes, 4 behavioural signals
 - [ ] Items on `scp_items` / `scp_item_versions` / `scp_item_texts` / `scp_item_options`
 - [ ] **Evidence Object store, append-only** — the keystone; [Evidence Architecture §2](./evidence-architecture-v3.0.md)
 - [ ] Immutable, content-hashed report snapshots
@@ -64,6 +74,15 @@ Placing Career Discovery on the merged `scp_*` machinery requires narrowing one 
 - [ ] Fit computation; **rank on fit, confidence reported separately**
 - [ ] Deterministic narrative assembly; unlicensed statements not emitted
 - [ ] Traceability enforced internally
+
+### Data protection — **before public release**
+- [ ] **Data export** — everything held about the person, machine-readable, self-service — [Blueprint §10.6](./master-product-blueprint-v3.0.md)
+- [ ] **Data deletion** — one action, complete, including snapshots — [Blueprint §10.5](./master-product-blueprint-v3.0.md)
+- [ ] Consent records per purpose, with withdrawal and recomputation — [Blueprint §10.8](./master-product-blueprint-v3.0.md)
+- [ ] Retention schedule implemented to whatever durations legal review sets — [Blueprint §10.4](./master-product-blueprint-v3.0.md)
+- [ ] Every data-handling statement in the product verified true at render time
+
+> **Why these are MVP and not V1.** The product tells users *"you can delete everything at any time"* on the expectation-setting screen. A promise made in the product must be true when the product is public. Either these ship, or the promises do not — and a discovery product that cannot say what it does with answers is not shippable. This also closes a pre-existing platform exposure: `dictionaries.ts:2243` makes the same promise today with nothing behind it.
 
 ### Experience
 - [ ] Screens S-01 → S-15 — [Information Architecture](./information-architecture-v3.0.md)
@@ -104,7 +123,7 @@ Adaptive items · cross-session accumulation · reassessment · learning · jobs
 - [ ] Deidentified validation export
 - [ ] Fairness screening as sample allows
 
-**Exit gates.** Every item reviewed and piloted · axes show acceptable internal consistency · no stop-the-line finding · completion ≥60% · qualitative evidence of recognition.
+**Exit gates.** Every item reviewed and piloted · axes show acceptable internal consistency · no stop-the-line finding · completion ≥60% · qualitative evidence of recognition · **DPIA complete and legal/DPO review signed off** — mandatory before any real recruitment use, and before any beta involving real candidates.
 
 **Validation status moves `design` → `pilot`.** It may not move further without specialist review, and no marketing may describe the instrument as validated.
 
@@ -125,7 +144,6 @@ Adaptive items · cross-session accumulation · reassessment · learning · jobs
 - [ ] `/my-career` rebuilt on the living DNA
 - [ ] Empirical item weights replace authored estimates
 - [ ] Profession profiles reviewed; unreviewed profiles excluded from recommendation
-- [ ] Data export and deletion — *note: currently promised in UI copy platform-wide with no implementation; a live compliance exposure independent of this work*
 
 **Adds WOW-7** (it kept working while I was away) — seven of eight.
 
@@ -148,7 +166,7 @@ Adaptive items · cross-session accumulation · reassessment · learning · jobs
 - [ ] **Consented employer enrichment** — [DNA Model §11](./security-career-dna-model-v3.0.md). Explicit, purpose-specific, revocable, one-directional, evidence-level. **Adds WOW-8** — eight of eight
 - [ ] Longitudinal insight across a career
 - [ ] Conversational interface over the person's own evidence
-- [ ] Additional domains — ten of twelve already have a canonical family
+- [ ] Additional domains — ten of twelve already have a canonical Security Career Area
 - [ ] International markets: new professions, jurisdictions, approved adaptations. **Axes unchanged**
 - [ ] Norms and percentiles — only after representative data, per Assessment DNA Doc 09
 

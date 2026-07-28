@@ -20,7 +20,7 @@ Career DNA Axis           CDA-01 … CDA-08  (+ Behavioural Signals, separate tr
    ↓
 Career Intelligence Signal
    ↓
-Career Family
+Security Career Area
    ↓
 Career Category
    ↓
@@ -143,7 +143,7 @@ Only two triggers, and both must be *consequential*.
 
 ```
 axis.confidence == emerging
-  AND axis appears in the top-3 candidate families' Signals
+  AND axis appears in the top-3 candidate areas' Signals
   AND resolving it would change the ranking
 ```
 
@@ -152,7 +152,7 @@ The third clause matters. Uncertainty on an axis that does not affect this perso
 **Trigger B — a near-tie that evidence could break.**
 
 ```
-|family[1].fit − family[2].fit| < tie_threshold
+|area[1].fit − area[2].fit| < tie_threshold
   AND an axis exists that separates them
   AND that axis has capacity for more evidence
 ```
@@ -232,6 +232,21 @@ None invalidates a run. None appears in the candidate report as an accusation. `
 
 ---
 
+## 8b. Export, deletion and consent in the Evidence Store
+
+Append-only is a rule about *the platform*, not about the person. It prevents the system quietly rewriting what someone answered; it does not entitle the system to keep it.
+
+| Operation | Behaviour | Phase |
+|---|---|---|
+| **Export** | Every Evidence Object with full provenance — item version, response, timing, loadings, context, consent — in machine-readable form | `[MVP]` |
+| **Deletion** | All Evidence Objects, derived DNA state and report snapshots removed. Not a soft flag | `[MVP]` |
+| **Consent withdrawal** | Objects permitted by that consent are removed; the DNA is recomputed from what remains | `[MVP]` for platform consents · `[Future]` for employer enrichment |
+| **Recomputation** | Deterministic from the remaining store. The result may legitimately change, and the person is told | `[MVP]` |
+
+Provenance on every Evidence Object is what makes selective withdrawal possible at all — without `consent_ref`, the only options would be keeping everything or deleting everything. Full lifecycle in [Master Blueprint ch 10](./master-product-blueprint-v3.0.md).
+
+---
+
 ## 9. What this architecture forbids
 
 1. **No recommendation without a traceable chain.**
@@ -239,7 +254,8 @@ None invalidates a run. None appears in the candidate report as an accusation. `
 3. **No AI in the chain.** Every step from answer to recommendation is deterministic. AI operates on completed output — see [Master Blueprint](./master-product-blueprint-v3.0.md) ch 7.
 4. **No overwriting evidence.** Reassessment appends.
 5. **No inferred evidence.** The platform never manufactures an observation the person did not produce — no imputation, no "people like you", no filling gaps with population averages.
-6. **No cross-product leakage.** Career evidence and competence evidence live in separate construct spaces and meet only through the consented, one-directional, item-level path in [DNA Model](./security-career-dna-model-v3.0.md) §11.
+6. **No retention against the person's wishes.** Append-only constrains the platform, not the data subject.
+7. **No cross-product leakage.** Career evidence and competence evidence live in separate construct spaces and meet only through the consented, one-directional, item-level path in [DNA Model](./security-career-dna-model-v3.0.md) §11.
 
 ---
 

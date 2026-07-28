@@ -50,7 +50,7 @@ Career DNA
 
 Each axis is **bipolar** — both ends are legitimate professional orientations, and neither is better. This is not a scale from worse to better. It is a scale from one kind of security work to another.
 
-The axes were derived by asking what actually differentiates a person's fit across the 14 canonical Career Families already in the Career Intelligence Graph. An axis that does not separate at least three families from at least three others was cut.
+The axes were derived by asking what actually differentiates a person's fit across the 14 canonical Security Career Areas already in the Career Intelligence Graph. An axis that does not separate at least three areas from at least three others was cut.
 
 ---
 
@@ -97,7 +97,7 @@ The axes were derived by asking what actually differentiates a person's fit acro
 |---|---|
 | **Low end** | Prefers sustained, planned, deliberate work with long time horizons |
 | **High end** | Prefers acute, unpredictable, time-critical work |
-| **Why it exists** | Distinguishes crisis management from continuity planning, and incident response from architecture — families that share subject matter and differ entirely in rhythm. |
+| **Why it exists** | Distinguishes crisis management from continuity planning, and incident response from architecture — areas that share subject matter and differ entirely in rhythm. |
 | **Differentiates** | `crisis_management`, `public_safety_justice` ↔ `business_continuity_resilience`, `risk_management` |
 | **Evidence** | 3 items. |
 | **Never means** | Stress tolerance. Preferring calm work is not a weakness, and this axis must never be read as resilience. |
@@ -134,7 +134,7 @@ The axes were derived by asking what actually differentiates a person's fit acro
 | **Low end** | Prefers ownership of their own work and outcomes |
 | **High end** | Drawn to accountability for other people's work, decisions and development |
 | **Why it exists** | Being responsible for others is a *different job*, not a promotion. Many excellent practitioners do not want it, and a career product that treats leadership as the default upward path fails them. |
-| **Differentiates** | `security_leadership_governance` ↔ every individual-contributor family |
+| **Differentiates** | `security_leadership_governance` ↔ every individual-contributor area |
 | **Evidence** | 3 items. Must distinguish wanting *influence* from wanting *accountability* — they are commonly conflated and lead to different roles. |
 | **Never means** | Ambition. Declining responsibility for others is a legitimate, permanent, respectable choice. |
 
@@ -152,7 +152,7 @@ The axes were derived by asking what actually differentiates a person's fit acro
 
 ### Why eight
 
-Six could not separate the 14 families — investigative and technical orientations collapse into "analytical", losing two distinct career directions. Twelve produced axes that no item could cleanly distinguish, and Assessment DNA Doc 11 §4 already flags for its own twelve the risk that they are *"overlapping restatements of a smaller true factor structure."* Eight is the smallest set where every axis separates at least three families from at least three others and can be evidenced by three items inside the session budget. `[MVP]`
+Six could not separate the 14 areas — investigative and technical orientations collapse into "analytical", losing two distinct career directions. Twelve produced axes that no item could cleanly distinguish, and Assessment DNA Doc 11 §4 already flags for its own twelve the risk that they are *"overlapping restatements of a smaller true factor structure."* Eight is the smallest set where every axis separates at least three areas from at least three others and can be evidenced by three items inside the session budget. `[MVP]`
 
 ---
 
@@ -321,6 +321,18 @@ The construct separation in the [ADR](../../architecture/adr-career-discovery-co
 
 ---
 
+## 11b. Export, deletion and withdrawal
+
+The DNA belongs to the person, which has three concrete consequences — all `[MVP]`, all before public release. Full lifecycle in [Master Blueprint ch 10](./master-product-blueprint-v3.0.md).
+
+**Export.** Everything: axis positions, confidence, every contributing Evidence Object with its provenance, every report snapshot, reflection text, consent history. Machine-readable, self-service, no request process.
+
+**Deletion.** One action removes all of it, snapshots included. **Immutability protects a snapshot from modification, never from erasure by the person whose data it is.** Confusing those two would turn an integrity guarantee into a data-protection failure.
+
+**Withdrawal and recomputation.** Withdrawing a consent removes the Evidence Objects it permitted and recomputes the DNA from what remains. An axis may drop to lower confidence; a recommendation may move. The person is told plainly rather than shielded from it. Snapshots issued earlier are not retroactively rewritten — they record what someone was actually shown — but they remain deletable like everything else.
+
+---
+
 ## 12. What the DNA must never do
 
 Binding on every consumer — report, recommendation engine, AI layer, employer product, future agent.
@@ -343,7 +355,7 @@ Not an implementation, but the shape must be settled so the [Evidence Architectu
 
 | Concept | Home | Notes |
 |---|---|---|
-| Axis definitions | `scp_competencies`-equivalent, own family | Versioned, per the ADR's separate-content rule |
+| Axis definitions | `scp_competencies`-equivalent, own SCP assessment family | Versioned, per the ADR's separate-content rule. *"Assessment family" here is the internal SCP governance concept, not the candidate-facing Security Career Area* |
 | Items, options, scoring keys | `scp_items` / `scp_item_versions` / `scp_item_options` / `scp_item_texts` | Reuses PR-A machinery unchanged |
 | Evidence Objects | **new**, append-only | The keystone. See Evidence Architecture §2 |
 | DNA state | Computed, cached | Never the source of truth |

@@ -103,7 +103,7 @@ At two points — after item 7 and item 14 — a brief interstitial reflects som
 
 **Feels.** Attended to. Not interrogated.
 
-**Platform does.** Fires only when an uncertain axis is *consequential* — it appears in the top-3 candidate families and resolving it would change the ranking — or when a near-tie exists that evidence could break. Hard cap of eight. Stops early when confidence stops moving.
+**Platform does.** Fires only when an uncertain axis is *consequential* — it appears in the top-3 candidate areas and resolving it would change the ranking — or when a near-tie exists that evidence could break. Hard cap of eight. Stops early when confidence stops moving.
 
 **Why.** Adaptive here means *the platform noticed what it doesn't know that matters*, not difficulty targeting. A clear profile earns a shorter session and is told so — which is a reward, not a shortcut.
 
@@ -155,11 +155,11 @@ Never scored, because scoring self-prediction is exactly the "who do you think y
 
 ## Stage 10 · Career Intelligence `[MVP]`
 
-**Sees.** How their DNA maps onto the shape of the profession — which families fit, which are adjacent, which are further away and why. Includes what the platform does **not** know and what would resolve it.
+**Sees.** How their DNA maps onto the shape of the profession — which areas fit, which are adjacent, which are further away and why. Includes what the platform does **not** know and what would resolve it.
 
 **Feels.** Oriented. The profession stops being a fog.
 
-**Platform does.** Computes family-level fit from Signals, with tolerance bands rather than point targets.
+**Platform does.** Computes area-level fit from Signals, with tolerance bands rather than point targets.
 
 **Why.** Most people cannot name five security professions. Showing the map before the recommendation makes the recommendation legible instead of arbitrary.
 

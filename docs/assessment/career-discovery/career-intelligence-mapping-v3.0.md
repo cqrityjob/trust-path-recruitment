@@ -14,9 +14,9 @@ Career DNA          8 axis positions, each with a confidence level
      ↓
 Signals             per axis, per profession: position vs tolerance band
      ↓
-Career Family       14 canonical families, already in the CIG
+Security Career Area       14 canonical Security Career Areas, already in the CIG
      ↓
-Career Category     groupings within a family (entry · specialist · leadership)
+Career Category     groupings within an area (entry · specialist · leadership)
      ↓
 Individual Role     a named profession with real requirements
      ↓
@@ -27,13 +27,13 @@ Each arrow is deterministic and inspectable. No step consults a model, a heurist
 
 ---
 
-## 2. Career Families
+## 2. Security Career Areas
 
-The 14 canonical families already exist in the Career Intelligence Graph, with alias discipline, regulatory grounding and mandatory authority disclaimers for police and defence. **This is a genuine asset and v3.0 reuses it unchanged.**
+The 14 canonical Security Career Areas already exist in the Career Intelligence Graph, with alias discipline, regulatory grounding and mandatory authority disclaimers for police and defence. **This is a genuine asset and v3.0 reuses it unchanged.**
 
 `protective_operations` · `public_safety_justice` · `corrections_secure_transport` · `defence_national_security` · `corporate_security` · `critical_infrastructure_security` · `risk_management` · `crisis_management` · `business_continuity_resilience` · `cyber_information_security` · `financial_crime_compliance` · `security_technology` · `security_leadership_governance` · `investigations_intelligence`
 
-The eight axes were derived by asking what actually separates these families. Every axis differentiates at least three from at least three; an axis that did not was cut.
+The eight axes were derived by asking what actually separates these Security Career Areas. Every axis differentiates at least three from at least three; an axis that did not was cut.
 
 ---
 
@@ -44,7 +44,7 @@ Each profession declares, per axis, a **tolerance band** rather than a point tar
 ```
 ProfessionProfile {
   profession_ref
-  family_ref
+  career_area_id
   bands: [ { axis, low, high, importance } ]
   validation_status
   authored_by, reviewed_by, reviewed_at
@@ -98,9 +98,9 @@ Reported separately, from three inputs: how many of the profile's important axes
 
 ---
 
-## 5. Categories within a family
+## 5. Categories within an area
 
-Once a family fits, position within it is determined mostly by two axes:
+Once an area fits, position within it is determined mostly by two axes:
 
 | Category | Signal |
 |---|---|
@@ -139,7 +139,7 @@ The current product has three "under construction" sections and an empty state o
 | Situation | Response |
 |---|---|
 | An axis is emerging | Name it. Say what it would change. Offer the shortest route to resolving it. |
-| Two families tie | Show both. Name the axis that separates them. Offer the question that decides. `[V1]` |
+| Two areas tie | Show both. Name the axis that separates them. Offer the question that decides. `[V1]` |
 | Enrichment is thin | *"We have good information about formal requirements here; we're still building it for that one."* Never an empty section. |
 | No profession clears the threshold | **Cannot be a dead end.** DNA and narrative still render in full, with an explicit invitation to answer more. |
 
@@ -151,7 +151,7 @@ Certifications currently exist for 1 of 14 matchable professions (audit F-8). Na
 
 Two safeguards worth keeping from the current engine, and one to add:
 
-- **Family diversity.** If the top results all sit in one family, the last slot goes to the best-fitting alternative family within a small margin. Someone whose profile fits one family strongly should still see that the profession is bigger than that.
+- **Area diversity.** If the top results all sit in one area, the last slot goes to the best-fitting alternative area within a small margin. Someone whose profile fits one area strongly should still see that the profession is bigger than that.
 - **No single-profession dominance.** No result is presented as *the* answer. Language is always plural directions.
 - **New: no ladder framing.** Roles are not ranked by seniority or pay, and the report never implies one is an upgrade. Audit found the current compare section states *"We do not compare salary or employment outcomes"* — correct, and v3.0 keeps it explicit.
 
@@ -174,7 +174,7 @@ Two safeguards worth keeping from the current engine, and one to add:
 
 | | `[MVP]` | `[V1]` | `[V2]` / `[Future]` |
 |---|---|---|---|
-| Families | ✓ 14, from CIG | — | international variants |
+| Areas | ✓ 14, from CIG | — | international variants |
 | Profession profiles | authored, ~15 professions | ✓ reviewed, gate unreviewed out | full 41 published |
 | Fit computation | ✓ bands + importance | empirical band widths | — |
 | Confidence | ✓ reported separately | — | — |

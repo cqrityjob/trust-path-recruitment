@@ -3,6 +3,16 @@
 **Status:** design. No implementation. **Validation status: `design`** — nothing here may be described as validated.
 **Supersedes for this product area:** `Public_Assessment_MVP_v2.1.md`, `public-career-assessment-v1-spec.md`.
 
+> ## ⚠ The architecture is approved. The authored content is NOT approved for production.
+>
+> **Approved in principle:** architecture, construct model, the eight axes, the evidence pipeline, the experience design, the roadmap.
+>
+> **NOT approved:** every question, option, scale and narrative statement. All authored draft; all Swedish an AI-authored first draft; nothing reviewed by anyone.
+>
+> **No question may be administered to any real candidate until all six gates are cleared:** SME review · language review · accessibility review · bias review · privacy/legal review · psychometric review.
+>
+> Validation status is `design`. Nothing here may be described to a candidate, employer, partner or investor as validated.
+
 > **How this document relates to the others**
 > The technical spine. Peer to [the Experience blueprint](./security-career-discovery-experience.md), which carries the emotional and commercial case. Detail lives in the seven companion documents indexed in the [README](./README.md).
 
@@ -12,7 +22,7 @@
 
 ### Why this product exists
 
-Someone considering a career in Swedish security cannot currently find out where they would fit. The profession contains at least fourteen distinct families — from protective operations to financial-crime compliance to security technology — and almost none of them are visible from outside. People enter through whichever door they happened to find, and discover the mismatch years later.
+Someone considering a career in Swedish security cannot currently find out where they would fit. The profession contains at least fourteen distinct Security Career Areas — from protective operations to financial-crime compliance to security technology — and almost none of them are visible from outside. People enter through whichever door they happened to find, and discover the mismatch years later.
 
 The platform's job is to make the profession legible to one person at a time, using evidence about how they actually work rather than assertions about who they are.
 
@@ -76,11 +86,11 @@ Seventeen stages. Stages 1–15 are one sitting of 12–17 minutes; 16–17 are 
 | 7 | Reflection | One optional unscored prompt | Anticipation | Stores verbatim, scores nothing | Enables the comparison in stage 9 | `[MVP]` |
 | 8 | Career DNA | 8 axes with confidence | *"That's me"* | Computes and snapshots | Explain before recommend | `[MVP]` |
 | 9 | Career Narrative | 4–6 paragraphs | **The moment** | Assembles licensed statements | The product's central claim | `[MVP]` |
-| 10 | Career Intelligence | The profession, mapped | Oriented | Family-level fit | Makes recommendations legible | `[MVP]` |
+| 10 | Career Intelligence | The profession, mapped | Oriented | Area-level fit | Makes recommendations legible | `[MVP]` |
 | 11 | Recommendations | 3–5 named professions | *"I could look into that"* | Ranks on fit, reports confidence separately | The practical payload | `[MVP]` |
 | 12 | Action Plan | Three horizons | *"I know what to do Monday"* | Tailors by context | Insight without action fails | `[MVP]` |
 | 13 | Learning | Routes tied to gaps | Direction becomes route | Reads CIG, states coverage honestly | Closes the development loop | `[V1]` |
-| 14 | Jobs | Openings, pre-explained | Route becomes opportunity | Matches on family and profession | Closes the commercial loop | `[V1]` |
+| 14 | Jobs | Openings, pre-explained | Route becomes opportunity | Matches on Security Career Area and profession | Closes the commercial loop | `[V1]` |
 | 15 | Save | Offer **after** full value | A fair trade | Migrates evidence to account | Value first, always | `[MVP]` |
 | 16 | Return | What changed since last time | *"It kept working"* | Recomputes, diffs | One-time test → companion | `[V1]` |
 | 17 | Reassessment | Shorter; then before/after | Growth made visible | Appends, recency-weights, re-snapshots | Results decay; visible change beats silent staleness | `[V1]` |
@@ -125,7 +135,7 @@ The emotional journey is designed, not incidental.
 | 2 · Core Assessment | 20 scored items | 24 axis loadings + 4 behavioural observations | [Question Blueprint §3–5](./question-blueprint-v3.0.md) |
 | 3 · Adaptive Discovery | 0–8 items `[V1]` | Resolution of consequential uncertainty | [Evidence Architecture §6](./evidence-architecture-v3.0.md) |
 | 4 · Security Career DNA | — | 8 axis positions + confidence + behavioural signals | [DNA Model §3–4](./security-career-dna-model-v3.0.md) |
-| 5 · Career Intelligence Mapping | — | Ranked families, categories, professions | [Career Intelligence Mapping](./career-intelligence-mapping-v3.0.md) |
+| 5 · Career Intelligence Mapping | — | Ranked Security Career Areas, categories, professions | [Career Intelligence Mapping](./career-intelligence-mapping-v3.0.md) |
 | 6 · Personal Career Report | — | Narrative, recommendations, action plan, immutable snapshot | [DNA Model §10](./security-career-dna-model-v3.0.md) |
 
 The eight axes — CDA-01 Field Presence, CDA-02 People Interface, CDA-03 Procedural Structure, CDA-04 Acute Tempo, CDA-05 Systems & Technology, CDA-06 Investigative Depth, CDA-07 Responsibility for Others, CDA-08 Organisational Scope — are defined in full, with their evidence rules and the reasoning behind each, in the [Career DNA Model](./security-career-dna-model-v3.0.md).
@@ -247,9 +257,9 @@ The architecture must absorb twelve further domains without redesign.
 
 **The eight axes are domain-general.** Field presence, people interface, procedural structure, acute tempo, systems affinity, investigative depth, responsibility, organisational scope — every one applies to cyber, AML, emergency management and military work as directly as to protective operations. **No new axis is needed for a new domain.** This was the primary design criterion for the axis set.
 
-**Extension is content, not code.** A new domain needs a Career Family (or reuses one), profession requirement profiles expressed in the same eight axes, and Career Intelligence Graph enrichment. It needs no new construct, no new item type, no engine change.
+**Extension is content, not code.** A new domain needs a Security Career Area (or reuses one), profession requirement profiles expressed in the same eight axes, and Career Intelligence Graph enrichment. It needs no new construct, no new item type, no engine change.
 
-| Domain | Family | New axis needed? | Adds |
+| Domain | Area | New axis needed? | Adds |
 |---|---|---|---|
 | Cyber Security | `cyber_information_security` ✓ exists | No | Profiles, enrichment |
 | Corporate Security | `corporate_security` ✓ | No | Profiles |
@@ -261,10 +271,10 @@ The architecture must absorb twelve further domains without redesign.
 | Law Enforcement | `public_safety_justice` ✓ | No | Authority disclaimers (pattern exists) |
 | Military | `defence_national_security` ✓ | No | Authority disclaimers |
 | Emergency Management | `crisis_management` or new | No | Profiles |
-| Safety | New family | No | Family + profiles |
+| Safety | New area | No | Area + profiles |
 | Corrections | `corrections_secure_transport` ✓ | No | Profiles |
 
-**Ten of twelve already have a canonical family.** The taxonomy was built for this.
+**Ten of twelve already have a canonical Security Career Area.** The taxonomy was built for this.
 
 ### International expansion
 
@@ -293,7 +303,116 @@ Assessment DNA Doc 09 §7 is right that statistical properties need re-validatio
 
 ---
 
-## Chapter 10 · Final Recommendations
+## Chapter 10 · Data Protection and the Data Lifecycle
+
+> **Not a legal opinion.** This chapter describes what the system stores, why, and what a person can do about it. Whether that satisfies any particular legal obligation is for the DPIA and the legal/DPO review, both of which remain **mandatory before any real recruitment use**. Nothing here should be read as a compliance claim.
+
+### 10.1 The correction this chapter records
+
+An earlier draft of this document set deferred data export and deletion to `[V1]`, while the [Information Architecture](./information-architecture-v3.0.md) specified an expectation-setting screen telling users *"you can delete everything at any time"*.
+
+That combination is not acceptable. A promise made in the product must be true when the product is public.
+
+**Resolution: export and deletion move to `[MVP]`.** They ship before public release, or the promises do not ship either. The design principle stated in Chapter 1 — *nothing unbuilt is shown; every claim must be true at render time* — applies to data-handling claims exactly as it applies to feature claims. The platform already carries this exposure independently of Career Discovery: `dictionaries.ts:2243` promises export and deletion today with no implementation behind it.
+
+### 10.2 What is stored
+
+| Data | When | Why | Phase |
+|---|---|---|---|
+| **Context answers** (C1–C3) | Stage 4 | Tailor report voice and action-plan horizon. Never scored | `[MVP]` |
+| **Evidence Objects** — one per answer | Stage 5–6 | The evidence base. Item version, response, response time, loadings, provenance | `[MVP]` |
+| **Reflection text** | Stage 7 | Shown back beside the result. **Never scored, never processed** | `[MVP]` |
+| **DNA state** | Computed | Axis positions and confidence. Derived — never a separate source of truth | `[MVP]` |
+| **Report snapshots** | On report generation | Immutable record of what the person was shown, and what produced it | `[MVP]` |
+| **Account identity** | Only if they save | Email and authentication, via existing platform auth | `[MVP]` |
+| **Consent records** | On each consent event | Which purpose, which version, when granted, when withdrawn | `[MVP]` |
+| **Quality signals** | During the run | Response timing and pattern flags. Administration quality only — **never a judgement about the person** | `[V1]` |
+
+**Not stored:** no special-category data · no inferences about health, beliefs, politics or protected characteristics · no biometrics · no device fingerprinting · no third-party tracking inside the discovery flow.
+
+Anonymous sessions hold Evidence Objects in local storage and are not associated with an identity until the person chooses to save.
+
+### 10.3 Processing purposes
+
+Each purpose is separate, and consent to one is never consent to another.
+
+| Purpose | Lawful-basis question for legal review | Consent |
+|---|---|---|
+| Produce the person's own career result | The core service they asked for | Implicit in starting |
+| Save and revisit the result | Requires an account | Explicit, at save |
+| Improve the instrument (aggregate, deidentified) | Pilot statistics and item quality | Explicit, opt-in, separable `[V1]` |
+| Enrich the profile from employer assessment evidence | Cross-product flow | Explicit, purpose-specific, revocable `[Future]` |
+
+**Never a purpose:** sharing a candidate's Career DNA with an employer · advertising · sale or transfer to any third party · automated decision-making about the person.
+
+### 10.4 Retention
+
+| Data | Retained | Then |
+|---|---|---|
+| Anonymous session (local) | 30 days from last activity | Prompted before reuse; discarded |
+| Evidence Objects (account) | While the account exists | Deleted with the account |
+| Report snapshots | While the account exists | Deleted with the account |
+| Consent records | While the account exists, plus a retention period for audit | Per the schedule legal review sets |
+| Deidentified aggregate statistics | Indefinite | Carries no identifier and cannot be re-associated `[V1]` |
+
+**Exact durations are a legal/DPO decision, not an engineering one.** This is a standing open question in the repository's prior documentation and is still unresolved. The architecture must support any schedule chosen; it does not choose one.
+
+### 10.5 Deletion
+
+**`[MVP]` — before public release.**
+
+One action deletes everything: Evidence Objects, DNA state, report snapshots, reflection text, context answers, consent records other than the minimal record that a deletion occurred.
+
+**Immutability does not survive a deletion request.** Snapshots are immutable against *modification* — nobody may quietly rewrite what a person was shown. They are not immune to *erasure by the person whose data they are*. Confusing the two would turn a integrity guarantee into a data-protection failure, and the distinction is stated here because it is easy to get wrong.
+
+Deletion is complete, not a soft flag. It is confirmed to the person. It cannot be triggered by an employer, an admin acting alone without a logged reason, or any automated process.
+
+### 10.6 Export
+
+**`[MVP]` — before public release.**
+
+A person can export everything the platform holds about them, in a machine-readable format, without asking anyone: their answers, every Evidence Object with its provenance, their DNA state and confidence, every report snapshot, their reflection text, and their consent history.
+
+The export is the same data the platform reasons over — not a summary of it. If the platform used something to produce a recommendation, it appears in the export.
+
+### 10.7 Immutable snapshots, and how they coexist with a living profile
+
+| | Living DNA state | Report snapshot |
+|---|---|---|
+| Changes over time | Yes, as evidence accumulates | **Never** |
+| Purpose | The current best understanding | An exact record of what was shown, and why |
+| Modification | Recomputed from evidence | Impossible |
+| Deletion | On request | **On request** |
+
+A snapshot pins the DNA state, the exact evidence set, the model, scoring and narrative versions, and a content hash. This is what makes *"here is what we told you in March, and here is what changed"* honest rather than reconstructed. It is not a mechanism for retaining data against someone's wishes.
+
+### 10.8 Consent, withdrawal and recomputation
+
+Consent is **explicit, purpose-specific, revocable, and asked at the moment the data exists** — never bundled into terms, never pre-ticked, never inferred from continued use.
+
+Withdrawal is symmetrical with granting: same place, same effort, no retention conversation, no dark pattern.
+
+**Withdrawal triggers recomputation.** Removing a consent removes the Evidence Objects it permitted, and the DNA is recomputed from what remains. The result may legitimately change — an axis may drop to a lower confidence, or a recommendation may move — and the person is told that plainly rather than shielded from it.
+
+Report snapshots issued before a withdrawal are **not** retroactively altered. They are historical records of what the person was actually shown at the time, and rewriting them would be dishonest rather than protective. They remain deletable on request like everything else.
+
+### 10.9 Employer enrichment stays `[Future]`
+
+Unchanged by this chapter, and constrained absolutely: explicit purpose-specific revocable consent · one-directional, employer evidence into the candidate's profile and **never** the reverse · evidence-level, never score-level · withdrawal removes and recomputes · provenance always visible. Full treatment in [DNA Model §11](./security-career-dna-model-v3.0.md).
+
+### 10.10 What still requires legal review
+
+Mandatory before any real recruitment use, and none of it is an engineering decision:
+
+- **DPIA** for the discovery flow and for enrichment separately
+- **Lawful basis** per processing purpose
+- **Retention durations** per data class
+- **Cross-border** handling if a second market is added
+- **Wording** of every consent and data-handling statement in both languages
+
+---
+
+## Chapter 11 · Final Recommendations
 
 ### What I would change
 

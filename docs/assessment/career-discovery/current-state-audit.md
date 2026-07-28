@@ -75,7 +75,7 @@ Compounding, and worse: `importantWithEvidence` (`:293`) counts only dimensions 
 
 All 16 profession target vectors are TypeScript literals (`target-vector.ts:16-29` is a pure pass-through). Content status: **10 `provisional`, 6 `placeholder`, 0 `researched`, 0 `reviewed`**. The file header says so (`profession-profiles.ts:3-5`).
 
-The Career Intelligence Graph — 14 families, 67 professions, formal requirements, education pathways, certifications — **contributes zero scoring signal**. It supplies display enrichment only. `cig_profession_assessment_signals`, named in `target-vector.ts:8-10` as the intended home, does not exist.
+The Career Intelligence Graph — 14 Security Career Areas, 67 professions, formal requirements, education pathways, certifications — **contributes zero scoring signal**. It supplies display enrichment only. `cig_profession_assessment_signals`, named in `target-vector.ts:8-10` as the intended home, does not exist.
 
 ### F-7 — The frozen regression suite tests an engine production does not call `HIGH`
 
@@ -188,7 +188,7 @@ The audit is not an argument for starting over.
 - **The separation of enrichment from scoring.** Display data and scoring signal should not be the same pipeline.
 - **`deriveCareerProfile`.** Genuinely additive layer; the idea survives even though its inputs need replacing.
 - **Determinism, `inputsHash`, the versioned envelope, graceful degradation.**
-- **The Career Intelligence Graph itself** — 14 canonical families, 67 professions, real Swedish regulatory grounding, alias discipline, mandatory authority disclaimers for police and defence. Thin in places, but the taxonomy is a genuine asset and hard to rebuild.
+- **The Career Intelligence Graph itself** — 14 canonical Security Career Areas, 67 professions, real Swedish regulatory grounding, alias discipline, mandatory authority disclaimers for police and defence. Thin in places, but the taxonomy is a genuine asset and hard to rebuild.
 - **The `scp_*` platform merged in PR-A** — versioned item bank, per-option scoring keys separated from labels, language as adaptation objects, publication workflow, two-person principle, validation statuses, content hashing, immutability triggers that hold against `BYPASSRLS`. This is the right home for v3.0's content.
 - **Eight settled principles** consistent across every prior layer: the AI boundary · no pass/fail or ranking · immutability as a scientific requirement · preference ≠ competence · decision support only · self-report weakest where stakes are highest · the trainable/fixed trichotomy · honest limitation disclosure.
 

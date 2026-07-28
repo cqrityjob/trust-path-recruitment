@@ -1,7 +1,25 @@
 # Question Blueprint v3.0
 
-**Status:** design — authored content, **not reviewed**.
-**Validation status:** `design`. No item here may be administered to a real candidate until it has passed content review, SME review, bias and accessibility review, and language adaptation approval. Swedish text is a first draft pending native-speaker review.
+**Status:** design — authored content, **NOT approved for production**.
+
+> ## ⚠ Nothing in this document may be administered to a real candidate.
+>
+> Every item below is **authored draft**. All Swedish text is an **AI-authored first draft**. **No item has been reviewed by anyone.** The architecture that produced these items is approved; the items themselves are not.
+>
+> **All six gates must be cleared, per item, before any live use. None may be skipped, including under delivery pressure.**
+>
+> | # | Gate | What it requires | Status |
+> |---|---|---|---|
+> | 1 | **SME review** | ≥3 independent security professionals from ≥2 environments confirm realism, and that no option is transparently correct | ☐ not started |
+> | 2 | **Language review** | Native-speaker review of all Swedish. English approved as an *adaptation*, not a translation, with its own status | ☐ not started |
+> | 3 | **Accessibility review** | Reading level, plain language, no colour-only or sensory dependence, screen-reader viability | ☐ not started |
+> | 4 | **Bias review** | Cultural neutrality, no protected-characteristic proxies, balanced option desirability | ☐ not started |
+> | 5 | **Privacy / legal review** | GDPR, DPIA, lawful basis, consent wording. See [Blueprint ch 10](./master-product-blueprint-v3.0.md) | ☐ not started |
+> | 6 | **Psychometric review** | Construct validity, the ipsative trade-off design, item statistics after pilot | ☐ not started |
+>
+> **Validation status: `design`.** Advances to `pilot` only after gates 1–5 and a cognitive pilot; further only on documented evidence.
+
+**Validation status:** `design`.
 
 > **How this document relates to the others**
 > This is the instrument. [DNA Model](./security-career-dna-model-v3.0.md) defines the axes each item feeds; [Evidence Architecture](./evidence-architecture-v3.0.md) defines what happens to the answers; [Information Architecture](./information-architecture-v3.0.md) defines how each is presented.
@@ -275,7 +293,7 @@ Four options each, spanning the axis. Positions map to `0.00 · 0.33 · 0.67 · 
 | `accountable` | Jag vill vara den som svarar för att gruppen levererar | I want to be the one who answers for the group delivering | 1.00 |
 
 **Evidence:** Appetite for accountability over others, distinguished from willingness to help.
-**Career relevance:** Separates `security_leadership_governance` from every individual-contributor family.
+**Career relevance:** Separates `security_leadership_governance` from every individual-contributor area.
 **Reason for inclusion:** Option 2 exists specifically to catch the most common confusion in career guidance — wanting *influence* or wanting to *help* is not wanting *accountability*, and conflating them sends people into supervision they did not want. Wording is deliberately non-judgemental at the low end: declining this is a legitimate permanent choice, not a lack of ambition.
 
 ---
@@ -558,9 +576,9 @@ Administered only when a trigger in [Evidence Architecture](./evidence-architect
 | A5 | CDA-06 depth confirmation | S6 high, T2/T7 not confirming | 35 s | 4 |
 | A6 | CDA-07 influence vs accountability | S7 = `support_no_account` + T4 mild | 40 s | 5 |
 | A7 | CDA-08 altitude confirmation | S8 and T5 disagree | 35 s | 4 |
-| A8 | Family tie: operations ↔ technology | top-2 within tie threshold | 38 s | 5 |
-| A9 | Family tie: investigations ↔ compliance | top-2 within tie threshold | 38 s | 5 |
-| A10 | Family tie: leadership ↔ risk | top-2 within tie threshold | 38 s | 5 |
+| A8 | Area tie: operations ↔ technology | top-2 within tie threshold | 38 s | 5 |
+| A9 | Area tie: investigations ↔ compliance | top-2 within tie threshold | 38 s | 5 |
+| A10 | Area tie: leadership ↔ risk | top-2 within tie threshold | 38 s | 5 |
 
 Full wording is authored alongside the core bank in the same review cycle; they are held here as specifications rather than drafts because their exact framing depends on what pilot shows about the core items they follow.
 
@@ -580,13 +598,16 @@ Full wording is authored alongside the core bank in the same review cycle; they 
 
 ## 8. Review gates before any item is administered
 
-Per Question Library Doc 05 and owner decision C, none may be skipped.
+The six gates in the banner at the top of this document, in the order they are normally cleared. Per Question Library Doc 05 and owner decision C, **none may be skipped, including under delivery pressure** — the prior documentation named lifecycle bypass as its most realistic operational risk, and it happened within a week.
 
-1. **Content review** — against the ten construction principles and the three instrument-specific rules in §1.
-2. **Native-speaker review** — all Swedish text is AI-authored first draft. Non-negotiable.
-3. **SME review** — ≥3 independent security professionals from ≥2 environments confirm realism and that no option is transparently correct.
-4. **Bias and accessibility review** — reading level, cultural neutrality, no protected-characteristic proxies, no colour-only or time-pressure dependence.
-5. **Language adaptation approval** — English is an adaptation, not a translation, with its own approval status.
-6. **Pilot** — 20–30 cognitive interviews before any live use.
+0. **Content review** — against the ten construction principles and the three instrument-specific rules in §1. Precedes the six gates; catches defects before reviewer time is spent.
+1. **SME review** — ≥3 independent security professionals from ≥2 environments.
+2. **Language review** — native-speaker review of all Swedish; English approved as an adaptation with its own status.
+3. **Accessibility review** — reading level, plain language, no colour-only or sensory dependence.
+4. **Bias review** — cultural neutrality, no protected-characteristic proxies, balanced option desirability.
+5. **Privacy / legal review** — GDPR, DPIA, lawful basis, consent wording.
+6. **Psychometric review** — construct validity and the ipsative trade-off design before pilot; item statistics after.
+
+**Pilot** — 20–30 cognitive interviews — sits between gates 5 and 6 and is a precondition for the statistical half of gate 6.
 
 Legal review is **not** required for this instrument: no item makes a legal claim or depends on Swedish legislation. Any future profession-specific item that does falls under owner decision C and its `legal_review_status` gate.
