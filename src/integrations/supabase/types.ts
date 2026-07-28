@@ -28,6 +28,9 @@ export type Database = {
           completed_at: string | null
           completion_id: string | null
           created_at: string
+          email_delivery_error: string | null
+          email_delivery_status: string
+          email_sent_at: string | null
           employee_id: string | null
           employer_id: string
           employer_message: string | null
@@ -60,6 +63,9 @@ export type Database = {
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
+          email_delivery_error?: string | null
+          email_delivery_status?: string
+          email_sent_at?: string | null
           employee_id?: string | null
           employer_id: string
           employer_message?: string | null
@@ -92,6 +98,9 @@ export type Database = {
           completed_at?: string | null
           completion_id?: string | null
           created_at?: string
+          email_delivery_error?: string | null
+          email_delivery_status?: string
+          email_sent_at?: string | null
           employee_id?: string | null
           employer_id?: string
           employer_message?: string | null
@@ -320,6 +329,7 @@ export type Database = {
           notes: string | null
           published_at: string
           retired_at: string | null
+          retired_reason: string | null
         }
         Insert: {
           assessment_id: string
@@ -329,6 +339,7 @@ export type Database = {
           notes?: string | null
           published_at?: string
           retired_at?: string | null
+          retired_reason?: string | null
         }
         Update: {
           assessment_id?: string
@@ -338,6 +349,7 @@ export type Database = {
           notes?: string | null
           published_at?: string
           retired_at?: string | null
+          retired_reason?: string | null
         }
         Relationships: [
           {
@@ -3321,6 +3333,1029 @@ export type Database = {
           },
         ]
       }
+      scp_assessment_definitions: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          name_en: string
+          name_sv: string
+          profession_id: string | null
+          purpose: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          name_en: string
+          name_sv: string
+          profession_id?: string | null
+          purpose: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          name_en?: string
+          name_sv?: string
+          profession_id?: string | null
+          purpose?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_definitions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_definitions_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_assessment_families: {
+        Row: {
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          id: string
+          name_en: string
+          name_sv: string
+          product_type: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          name_en: string
+          name_sv: string
+          product_type: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          name_en?: string
+          name_sv?: string
+          product_type?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scp_assessment_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          content_hash: string | null
+          content_status: string
+          created_at: string
+          definition_id: string
+          id: string
+          language_scope: string[]
+          notes: string | null
+          published_at: string | null
+          published_by: string | null
+          retired_at: string | null
+          retired_reason: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          definition_id: string
+          id?: string
+          language_scope?: string[]
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          definition_id?: string
+          id?: string
+          language_scope?: string[]
+          notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          retired_at?: string | null
+          retired_reason?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_versions_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_bundle_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          bundle_id: string
+          content_hash: string | null
+          content_status: string
+          core_assessment_version_id: string
+          core_form_id: string
+          created_at: string
+          disclaimer_version: string
+          id: string
+          module_assessment_version_id: string
+          module_form_id: string
+          published_at: string | null
+          published_by: string | null
+          report_version: string
+          retired_at: string | null
+          retired_reason: string | null
+          role_weight_profile_id: string | null
+          scoring_version: string
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bundle_id: string
+          content_hash?: string | null
+          content_status?: string
+          core_assessment_version_id: string
+          core_form_id: string
+          created_at?: string
+          disclaimer_version?: string
+          id?: string
+          module_assessment_version_id: string
+          module_form_id: string
+          published_at?: string | null
+          published_by?: string | null
+          report_version?: string
+          retired_at?: string | null
+          retired_reason?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version?: string
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          bundle_id?: string
+          content_hash?: string | null
+          content_status?: string
+          core_assessment_version_id?: string
+          core_form_id?: string
+          created_at?: string
+          disclaimer_version?: string
+          id?: string
+          module_assessment_version_id?: string
+          module_form_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          report_version?: string
+          retired_at?: string | null
+          retired_reason?: string | null
+          role_weight_profile_id?: string | null
+          scoring_version?: string
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_bundle_versions_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "scp_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_assessment_version_id_fkey"
+            columns: ["core_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_core_form_id_fkey"
+            columns: ["core_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_assessment_version_id_fkey"
+            columns: ["module_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_module_form_id_fkey"
+            columns: ["module_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_bundle_versions_role_weight_profile_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_bundles: {
+        Row: {
+          created_at: string
+          id: string
+          name_en: string
+          name_sv: string
+          profession_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name_en: string
+          name_sv: string
+          profession_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name_en?: string
+          name_sv?: string
+          profession_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_bundles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_competencies: {
+        Row: {
+          code: string
+          created_at: string
+          display_order: number
+          id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_order: number
+          id?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+        }
+        Relationships: []
+      }
+      scp_competency_facets: {
+        Row: {
+          competency_id: string
+          created_at: string
+          definition_en: string
+          definition_sv: string
+          display_order: number
+          id: string
+          name_en: string
+          name_sv: string
+          slug: string
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string
+          definition_en: string
+          definition_sv: string
+          display_order?: number
+          id?: string
+          name_en: string
+          name_sv: string
+          slug: string
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string
+          definition_en?: string
+          definition_sv?: string
+          display_order?: number
+          id?: string
+          name_en?: string
+          name_sv?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_competency_facets_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_competency_versions: {
+        Row: {
+          competency_id: string
+          content_status: string
+          created_at: string
+          definition_en: string
+          definition_sv: string
+          development_indicators_sv: string[]
+          does_not_measure_sv: string[]
+          id: string
+          interpretation_rule_en: string | null
+          interpretation_rule_sv: string | null
+          name_en: string
+          name_sv: string
+          published_at: string | null
+          retired_at: string | null
+          risk_indicators_sv: string[]
+          strong_indicators_sv: string[]
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          definition_en: string
+          definition_sv: string
+          development_indicators_sv?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          interpretation_rule_en?: string | null
+          interpretation_rule_sv?: string | null
+          name_en: string
+          name_sv: string
+          published_at?: string | null
+          retired_at?: string | null
+          risk_indicators_sv?: string[]
+          strong_indicators_sv?: string[]
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          definition_en?: string
+          definition_sv?: string
+          development_indicators_sv?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          interpretation_rule_en?: string | null
+          interpretation_rule_sv?: string | null
+          name_en?: string
+          name_sv?: string
+          published_at?: string | null
+          retired_at?: string | null
+          risk_indicators_sv?: string[]
+          strong_indicators_sv?: string[]
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_competency_versions_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_content_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          id: string
+          metadata: Json
+          reason: string | null
+          subject_id: string | null
+          subject_ref: string | null
+          subject_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          subject_id?: string | null
+          subject_ref?: string | null
+          subject_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          subject_id?: string | null
+          subject_ref?: string | null
+          subject_type?: string
+        }
+        Relationships: []
+      }
+      scp_content_roles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scp_form_items: {
+        Row: {
+          block_key: string
+          created_at: string
+          display_order: number
+          form_id: string
+          id: string
+          item_version_id: string
+          randomise_options: boolean
+        }
+        Insert: {
+          block_key?: string
+          created_at?: string
+          display_order: number
+          form_id: string
+          id?: string
+          item_version_id: string
+          randomise_options?: boolean
+        }
+        Update: {
+          block_key?: string
+          created_at?: string
+          display_order?: number
+          form_id?: string
+          id?: string
+          item_version_id?: string
+          randomise_options?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_form_items_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_form_items_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_forms: {
+        Row: {
+          assessment_version_id: string
+          content_hash: string | null
+          created_at: string
+          id: string
+          name_en: string
+          name_sv: string
+          randomise_within_block: boolean
+          slug: string
+          target_minutes_max: number | null
+          target_minutes_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          assessment_version_id: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          name_en: string
+          name_sv: string
+          randomise_within_block?: boolean
+          slug: string
+          target_minutes_max?: number | null
+          target_minutes_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assessment_version_id?: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          name_en?: string
+          name_sv?: string
+          randomise_within_block?: boolean
+          slug?: string
+          target_minutes_max?: number | null
+          target_minutes_min?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_forms_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_option_texts: {
+        Row: {
+          created_at: string
+          id: string
+          item_option_id: string
+          label: string
+          language: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_option_id: string
+          label: string
+          language: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_option_id?: string
+          label?: string
+          language?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_option_texts_item_option_id_fkey"
+            columns: ["item_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_options: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          item_version_id: string
+          option_key: string
+          reverse_scored: boolean
+          score_value: number
+          scoring_rationale_en: string | null
+          scoring_rationale_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          id?: string
+          item_version_id: string
+          option_key: string
+          reverse_scored?: boolean
+          score_value: number
+          scoring_rationale_en?: string | null
+          scoring_rationale_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          item_version_id?: string
+          option_key?: string
+          reverse_scored?: boolean
+          score_value?: number
+          scoring_rationale_en?: string | null
+          scoring_rationale_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_options_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_texts: {
+        Row: {
+          adaptation_notes: string | null
+          adaptation_status: string
+          created_at: string
+          id: string
+          item_version_id: string
+          language: string
+          prompt: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scenario: string
+          updated_at: string
+        }
+        Insert: {
+          adaptation_notes?: string | null
+          adaptation_status?: string
+          created_at?: string
+          id?: string
+          item_version_id: string
+          language: string
+          prompt: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario: string
+          updated_at?: string
+        }
+        Update: {
+          adaptation_notes?: string | null
+          adaptation_status?: string
+          created_at?: string
+          id?: string
+          item_version_id?: string
+          language?: string
+          prompt?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scenario?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_texts_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_item_versions: {
+        Row: {
+          authored_by_ai: boolean
+          bias_review_notes: string | null
+          bias_review_status: string
+          competency_id: string
+          content_hash: string | null
+          content_status: string
+          created_at: string
+          difficulty_target: string | null
+          facet_id: string | null
+          id: string
+          intended_forms: string[]
+          intended_professions: string[]
+          item_format: string
+          item_id: string
+          legal_basis_required: boolean
+          legal_review_notes: string | null
+          legal_review_status: string
+          pilot_stats: Json
+          published_at: string | null
+          retired_at: string | null
+          scenario_type: string | null
+          secondary_competency_id: string | null
+          sme_review_notes: string | null
+          sme_review_status: string
+          sme_reviewer_count: number
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          authored_by_ai?: boolean
+          bias_review_notes?: string | null
+          bias_review_status?: string
+          competency_id: string
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          difficulty_target?: string | null
+          facet_id?: string | null
+          id?: string
+          intended_forms?: string[]
+          intended_professions?: string[]
+          item_format: string
+          item_id: string
+          legal_basis_required?: boolean
+          legal_review_notes?: string | null
+          legal_review_status?: string
+          pilot_stats?: Json
+          published_at?: string | null
+          retired_at?: string | null
+          scenario_type?: string | null
+          secondary_competency_id?: string | null
+          sme_review_notes?: string | null
+          sme_review_status?: string
+          sme_reviewer_count?: number
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          authored_by_ai?: boolean
+          bias_review_notes?: string | null
+          bias_review_status?: string
+          competency_id?: string
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          difficulty_target?: string | null
+          facet_id?: string | null
+          id?: string
+          intended_forms?: string[]
+          intended_professions?: string[]
+          item_format?: string
+          item_id?: string
+          legal_basis_required?: boolean
+          legal_review_notes?: string | null
+          legal_review_status?: string
+          pilot_stats?: Json
+          published_at?: string | null
+          retired_at?: string | null
+          scenario_type?: string | null
+          secondary_competency_id?: string | null
+          sme_review_notes?: string | null
+          sme_review_status?: string
+          sme_reviewer_count?: number
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_item_versions_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_facet_id_fkey"
+            columns: ["facet_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_facets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "scp_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_secondary_competency_id_fkey"
+            columns: ["secondary_competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_items: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      scp_professions: {
+        Row: {
+          created_at: string
+          description_en: string | null
+          description_sv: string | null
+          id: string
+          legally_regulated: boolean
+          market: string
+          name_en: string
+          name_sv: string
+          regulator_note_sv: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          legally_regulated?: boolean
+          market: string
+          name_en: string
+          name_sv: string
+          regulator_note_sv?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_en?: string | null
+          description_sv?: string | null
+          id?: string
+          legally_regulated?: boolean
+          market?: string
+          name_en?: string
+          name_sv?: string
+          regulator_note_sv?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scp_publication_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          id: string
+          notes: string | null
+          subject_id: string
+          subject_type: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          id?: string
+          notes?: string | null
+          subject_id: string
+          subject_type: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          id?: string
+          notes?: string | null
+          subject_id?: string
+          subject_type?: string
+        }
+        Relationships: []
+      }
+      scp_role_weight_profile_weights: {
+        Row: {
+          competency_id: string
+          created_at: string
+          id: string
+          role_weight_profile_id: string
+          weight: number
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string
+          id?: string
+          role_weight_profile_id: string
+          weight: number
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string
+          id?: string
+          role_weight_profile_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_role_weight_profile_weights_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_role_weight_profile_weights_role_weight_profile_id_fkey"
+            columns: ["role_weight_profile_id"]
+            isOneToOne: false
+            referencedRelation: "scp_role_weight_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_role_weight_profiles: {
+        Row: {
+          content_hash: string | null
+          content_status: string
+          created_at: string
+          id: string
+          notes: string | null
+          profession_id: string
+          published_at: string | null
+          retired_at: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          profession_id: string
+          published_at?: string | null
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          content_hash?: string | null
+          content_status?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          profession_id?: string
+          published_at?: string | null
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_role_weight_profiles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "scp_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_career_profiles: {
         Row: {
           created_at: string
@@ -3563,6 +4598,11 @@ export type Database = {
           created_new: boolean
           run_id: string
         }[]
+      }
+      scp_can_author: { Args: { _user_id: string }; Returns: boolean }
+      scp_has_content_role: {
+        Args: { _role: string; _user_id: string }
+        Returns: boolean
       }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
