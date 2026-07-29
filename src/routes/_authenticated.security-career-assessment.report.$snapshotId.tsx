@@ -19,7 +19,9 @@ import { useT } from "@/i18n/context";
 import { getDiscoveryReport } from "@/lib/career-discovery/discovery.functions";
 import type { DiscoveryReport } from "@/lib/career-discovery/report";
 
-export const Route = createFileRoute("/_authenticated/security-career-assessment/report/$snapshotId")({
+export const Route = createFileRoute(
+  "/_authenticated/security-career-assessment/report/$snapshotId",
+)({
   component: DiscoveryReportRoute,
 });
 
@@ -86,7 +88,24 @@ function DiscoveryReportRoute() {
         {t("careerDiscovery.report.backToHistory")}
       </Link>
 
-      {/* 1 · DNA */}
+      {/* 1 · Report header — what this is, when it was produced, and the
+          standing caveat while the instrument is in internal test. */}
+      <p className="mt-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        {t("careerDiscovery.report.header.product")} ·{" "}
+        {new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(data.generatedAt))}
+      </p>
+      <p
+        role="note"
+        className="mt-3 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
+      >
+        {t("careerDiscovery.report.header.internalTest")}
+      </p>
+
+      {/* 2 · DNA */}
       <h1
         className="mt-8 text-4xl font-semibold tracking-tight text-foreground md:text-5xl"
         style={{ fontFamily: "var(--font-display)" }}
@@ -269,6 +288,21 @@ function DiscoveryReportRoute() {
           </div>
         ))}
       </dl>
+      {/* Actions */}
+      <div className="mt-16 flex flex-wrap gap-3 border-t border-border pt-8">
+        <Link
+          to="/my-career"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.myCareer")}
+        </Link>
+        <Link
+          to="/security-career-assessment/history"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.allReports")}
+        </Link>
+      </div>
     </AssessmentLayout>
   );
 }

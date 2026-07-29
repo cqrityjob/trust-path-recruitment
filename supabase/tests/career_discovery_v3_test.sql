@@ -926,6 +926,134 @@ SELECT pg_temp.ok((SELECT count(*) FROM public.cd_my_report_history) = 0,
   'G14.20 another user sees none of the tester''s reports in the history view');
 RESET ROLE;
 
+-- =========================================================================
+-- Group 15 — report persistence, ownership and immutability
+-- =========================================================================
+
+-- Re-complete a session so this group has a stored report to reason about.
+-- Created as the real caller: the RPC reads auth.uid().
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+CREATE TEMP TABLE t_sess2 AS
+SELECT public.cd_begin_internal_test_session((SELECT defver FROM t2), 'sv', 'working_in_security') AS sid;
+RESET ROLE;
+GRANT SELECT ON t_sess2 TO authenticated;
+
+INSERT INTO public.cd_evidence (session_id, item_id, answer_value)
+SELECT (SELECT sid FROM t_sess2), v.item_id, 'x'
+FROM (VALUES ('S1'),('S2'),('S3'),('S4'),('S5'),('S6'),('S7'),('S8'),
+             ('T1'),('T2'),('T3'),('T4'),('T5'),('T6'),('T7'),('T8'),
+             ('B1'),('B2'),('B3'),('B4')) AS v(item_id);
+
+CREATE TEMP TABLE t_snap2 AS
+SELECT public.cd_complete_session(
+  (SELECT sid FROM t_sess2),
+  '{"axes":[{"axis":"CDA-01"}],"report":{"reportVersion":"scd-report-v1"}}'::jsonb,
+  '[{"areaId":"protective_operations","fit":0.91,"confidence":"strong"}]'::jsonb,
+  '{"axisCoverage":1}'::jsonb, '{"coverage":1}'::jsonb,
+  ARRAY['operational_energy']::text[]) AS snap;
+
+-- ONE durable report per completed session.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess2)) = 1,
+  'G15.1 a completed session stores exactly one report snapshot');
+
+-- Owned by the authenticated candidate who completed it.
+SELECT pg_temp.ok(
+  (SELECT s.user_id FROM public.cd_sessions s WHERE s.id = (SELECT sid FROM t_sess2))
+    = '33333333-3333-3333-3333-333333333333',
+  'G15.2 the report belongs to the candidate who completed it');
+
+-- The full report payload is STORED, not recomputed at read time.
+SELECT pg_temp.ok(
+  (SELECT dna_scores ? 'report' FROM public.cd_report_snapshots
+    WHERE session_id = (SELECT sid FROM t_sess2)),
+  'G15.3 the rendered report is persisted in the snapshot, not derived live on read');
+
+-- Reopening returns byte-identical stored content.
+CREATE TEMP TABLE t_first AS
+SELECT dna_scores, career_areas, confidence, coverage, contextual_tags,
+       definition_version, content_version, scoring_version, taxonomy_version
+FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess2);
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots r
+    JOIN t_first f ON r.dna_scores = f.dna_scores
+                  AND r.career_areas = f.career_areas
+                  AND r.scoring_version = f.scoring_version
+   WHERE r.session_id = (SELECT sid FROM t_sess2)) = 1,
+  'G15.4 reopening the report returns the identical stored snapshot');
+
+-- Duplicate completion cannot create a second report.
+SELECT pg_temp.must_fail(
+  format('SELECT public.cd_complete_session(%L, ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+         (SELECT sid FROM t_sess2)),
+  'CD_ALREADY_COMPLETED',
+  'G15.5 completing twice is rejected — double-click cannot duplicate a report');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess2)) = 1,
+  'G15.6 still exactly one report after a duplicate completion attempt');
+
+-- The unique constraint is the real guarantee, not the status check alone.
+SELECT pg_temp.must_fail(
+  format('INSERT INTO public.cd_report_snapshots (session_id, definition_version, content_version, scoring_version, taxonomy_version, career_areas) VALUES (%L, ''x'', ''x'', ''x'', ''x'', ''[{"areaId":"y"}]''::jsonb)',
+         (SELECT sid FROM t_sess2)),
+  'duplicate key',
+  'G15.7 a second snapshot row for the same session is refused by the database');
+
+-- Answers survive report generation — the candidate never loses them.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sid FROM t_sess2) AND is_scored) = 20,
+  'G15.8 all 20 scored answers remain after the report is generated');
+
+-- ---- Ownership and isolation ------------------------------------------
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess2)) = 1,
+  'G15.9 candidate A can open candidate A''s report');
+-- This candidate already completed a session in group 14, so assert the
+-- SPECIFIC report is listed rather than a total that would drift.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_my_report_history h
+    WHERE h.session_id = (SELECT sid FROM t_sess2)) = 1,
+  'G15.10 the report appears in candidate A''s own history');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess2)) = 0,
+  'G15.11 candidate B cannot open candidate A''s report');
+SELECT pg_temp.ok((SELECT count(*) FROM public.cd_my_report_history) = 0,
+  'G15.12 candidate B''s history does not leak candidate A''s report');
+-- An unknown id and a foreign id are indistinguishable: both return nothing,
+-- so a probe cannot confirm that another report exists.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots
+    WHERE id = '00000000-0000-0000-0000-000000000000') = 0,
+  'G15.13 an unknown snapshot id reveals nothing about other reports');
+RESET ROLE;
+
+SET LOCAL ROLE anon;
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_report_snapshots',
+  'permission denied', 'G15.14 signed-out users cannot read reports at all');
+RESET ROLE;
+
+-- Employer separation: no employer-facing grant exists on any cd_ object.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.role_table_grants
+    WHERE table_schema = 'public' AND table_name LIKE 'cd\_%'
+      AND grantee NOT IN ('postgres','service_role','authenticated','anon','sandbox_exec')) = 0,
+  'G15.15 no employer role holds any grant on Career Discovery data');
+
+-- Legacy separation: v3 completion wrote nothing into the legacy tables.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.assessment_runs
+    WHERE assessment_id = 'security-career-discovery-v3') = 0,
+  'G15.16 a v3 completion never writes into the legacy assessment_runs table');
+
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v3_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;

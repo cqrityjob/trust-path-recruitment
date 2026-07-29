@@ -24,6 +24,7 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
+import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -395,31 +396,11 @@ function MyCareerPage() {
                 icon={<ClipboardCheck className="h-5 w-5" />}
                 title={L(c("Tidigare rapporter", "Previous reports"), lang)}
               >
-                <ul className="divide-y divide-border">
-                  {runsQ.data.slice(1).map((run: any) => {
-                    const runDate = new Date(run.completed_at ?? run.started_at).toLocaleDateString(
-                      lang === "sv" ? "sv-SE" : "en-GB",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      },
-                    );
-                    return (
-                      <li key={run.id} className="flex items-center justify-between gap-3 py-3">
-                        <span className="text-sm text-foreground">{runDate}</span>
-                        <Link
-                          to="/my-career/reports/$runId"
-                          params={{ runId: run.id }}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
-                        >
-                          {L(c("Visa rapport", "View report"), lang)}
-                          <ArrowRight className="h-3 w-3" />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
+                {/* Unified history: Security Career Discovery v3 and legacy
+                    v2.1 in one chronological list, each labelled with the
+                    instrument that produced it. Legacy rows keep their
+                    existing /my-career/reports/$runId destination. */}
+                <ReportHistoryList legacyRuns={runsQ.data.slice(1) as never} />
               </DashboardCard>
             )}
 
