@@ -54,19 +54,22 @@ END $$;
 -- admin-authorised function. Group 14 proves both.
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE assessment_id = 'security-career-discovery-v3') = 'internal_test',
+    WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0') = 'internal_test',
   'G1.1 v3.0 sits at lifecycle_status = internal_test, never pilot or active');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_versions
     WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0'
       AND lifecycle_status IN ('pilot','active')) = 0,
   'G1.2 v3.0 is not in a status ordinary candidates can reach');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM jsonb_each(
       (SELECT review_status FROM public.cd_definition_versions
-        WHERE assessment_id = 'security-career-discovery-v3')) AS g(k, v)
+        WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0')) AS g(k, v)
     WHERE g.v = 'true'::jsonb) = 0,
   'G1.3 every review gate is outstanding');
 
@@ -89,7 +92,8 @@ SELECT pg_temp.ok(
 
 CREATE TEMP TABLE t_ids AS
 SELECT id AS defver FROM public.cd_definition_versions
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di JOIN t_ids ON di.definition_version_id = t_ids.defver) = 42,
@@ -151,7 +155,8 @@ $$, 'cd_definition_items_identity',
 
 -- Drop back to design transaction-locally to prove it is unreachable.
 UPDATE public.cd_definition_versions SET lifecycle_status = 'design'
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.must_fail($$
   INSERT INTO public.cd_sessions (definition_version_id, anon_session_token)
@@ -160,7 +165,8 @@ $$, 'CD_VERSION_NOT_ADMINISTRABLE',
   'G3.1 a session cannot start against a design-status version');
 
 UPDATE public.cd_definition_versions SET lifecycle_status = 'internal_test'
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.must_fail($$
   INSERT INTO public.cd_sessions (definition_version_id, anon_session_token, is_internal_test)
@@ -174,7 +180,8 @@ $$, 'CD_INTERNAL_TEST_NOT_AUTHORISED',
   'G3.3 the internal-test function refuses an unauthorised caller');
 
 UPDATE public.cd_definition_versions SET lifecycle_status = 'active'
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.must_fail($$
   INSERT INTO public.cd_sessions (definition_version_id, anon_session_token)
@@ -188,7 +195,8 @@ SET review_status = jsonb_build_object(
   'content_review', true, 'sme_review', true, 'language_review', true,
   'accessibility_review', true, 'bias_review', true,
   'privacy_legal_review', true, 'psychometric_review', true)
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.must_fail($$
   INSERT INTO public.cd_sessions (definition_version_id, anon_session_token, is_internal_test)
@@ -700,7 +708,13 @@ SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_report_snapshots',
 -- Structure metadata is deliberately public: no candidate data, no weights.
 SELECT pg_temp.ok((SELECT count(*) FROM public.cd_definition_versions) >= 1,
   'G12.4 anon may read definition metadata (carries no candidate data)');
-SELECT pg_temp.ok((SELECT count(*) FROM public.cd_definition_items) = 42,
+-- Scoped to v3.0's own definition version. The instrument is versioned, so a
+-- count across every version would change every time a new one is added and
+-- would assert nothing about v3.0.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_definition_items di
+     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+    WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
   'G12.5 anon may read the item registry (carries no candidate data, no weights)');
 RESET ROLE;
 
@@ -730,7 +744,9 @@ SELECT pg_temp.ok(
     WHERE session_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 0,
   'G13.2 deleting the session erases its report snapshot');
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_definition_items) = 42,
+  (SELECT count(*) FROM public.cd_definition_items di
+     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+    WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
   'G13.3 erasing a person leaves the definition registry intact');
 
 -- The legacy v2.1 world is entirely unaffected by all of the above.
@@ -764,11 +780,13 @@ SET lifecycle_status = 'internal_test',
       'content_review', false, 'sme_review', false, 'language_review', false,
       'accessibility_review', false, 'bias_review', false,
       'privacy_legal_review', false, 'psychometric_review', false)
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE assessment_id = 'security-career-discovery-v3') = 'internal_test',
+    WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0') = 'internal_test',
   'G14.1 the version is promoted to internal_test, not pilot or active');
 
 SELECT pg_temp.ok(
@@ -780,7 +798,8 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT count(*) FROM jsonb_each(
       (SELECT review_status FROM public.cd_definition_versions
-        WHERE assessment_id = 'security-career-discovery-v3')) AS g(k, v)
+        WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0')) AS g(k, v)
     WHERE g.v = 'true'::jsonb) = 0,
   'G14.3 internal testing runs before the review gates, which remain outstanding');
 
@@ -789,7 +808,8 @@ INSERT INTO auth.users (id, email) VALUES
 
 CREATE TEMP TABLE t2 AS
 SELECT id AS defver FROM public.cd_definition_versions
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 -- Readable under SET ROLE, so the fixtures below can run as a real caller.
 GRANT SELECT ON t2 TO authenticated;
 
@@ -823,7 +843,8 @@ RESET ROLE;
 -- An AUTHORISED tester still cannot reach a design-status version: the
 -- status branch is what refuses here, not the authorisation branch.
 UPDATE public.cd_definition_versions SET lifecycle_status = 'design'
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 SELECT pg_temp.must_fail(
@@ -832,7 +853,8 @@ SELECT pg_temp.must_fail(
   'G14.6b design is unreachable even for an authorised tester');
 RESET ROLE;
 UPDATE public.cd_definition_versions SET lifecycle_status = 'internal_test'
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0';
 
 SELECT pg_temp.ok(
   (SELECT adaptive_path FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)) = 'A',
