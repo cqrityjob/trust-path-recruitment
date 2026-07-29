@@ -723,6 +723,27 @@ export type Database = {
           },
         ]
       }
+      cd_internal_testers: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       cd_report_snapshots: {
         Row: {
           career_areas: Json
@@ -4894,6 +4915,31 @@ export type Database = {
       }
     }
     Views: {
+      cd_my_report_history: {
+        Row: {
+          content_version: string | null
+          context_status: string | null
+          definition_version: string | null
+          discovery_goal: string | null
+          generated_at: string | null
+          is_internal_test: boolean | null
+          locale: string | null
+          scoring_version: string | null
+          session_id: string | null
+          snapshot_id: string | null
+          taxonomy_version: string | null
+          top_area_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_report_snapshots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_scoring_version_lineage: {
         Row: {
           content_status: string | null
@@ -4966,11 +5012,28 @@ export type Database = {
         }
         Returns: string
       }
-      cd_complete_session: { Args: { _session_id: string }; Returns: undefined }
+      cd_complete_session:
+        | { Args: { _session_id: string }; Returns: undefined }
+        | {
+            Args: {
+              _career_areas: Json
+              _confidence: Json
+              _contextual_tags: string[]
+              _coverage: Json
+              _dna_scores: Json
+              _session_id: string
+            }
+            Returns: string
+          }
       cd_derive_adaptive_path: {
         Args: { _context_status: string }
         Returns: string
       }
+      cd_grant_internal_tester: {
+        Args: { _note?: string; _user_id: string }
+        Returns: undefined
+      }
+      cd_is_internal_tester: { Args: { _user_id: string }; Returns: boolean }
       cd_session_core_completion: {
         Args: { _session_id: string }
         Returns: {
