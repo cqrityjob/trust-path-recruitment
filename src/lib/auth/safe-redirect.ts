@@ -20,3 +20,29 @@ export function safeReturnPath(raw: string | null | undefined, fallback: string)
   if (raw === "/auth" || raw.startsWith("/auth?") || raw.startsWith("/auth/")) return fallback;
   return raw;
 }
+
+/** Split a validated return path into the parts TanStack Router needs.
+ *
+ *  `navigate({ to })` does not parse a query string out of `to` — passing
+ *  "/a/b?x=1" navigates to a literal path containing "?", silently losing
+ *  the params. Career Discovery carries its session uuid in the query
+ *  string, so the return target must be split before navigating.
+ *
+ *  Always run the raw value through safeReturnPath FIRST; this function
+ *  assumes an already-validated internal path and does not re-check origin. */
+export function splitReturnPath(safePath: string): {
+  to: string;
+  search: Record<string, string>;
+} {
+  const hashIndex = safePath.indexOf("#");
+  const withoutHash = hashIndex === -1 ? safePath : safePath.slice(0, hashIndex);
+  const q = withoutHash.indexOf("?");
+  if (q === -1) return { to: withoutHash, search: {} };
+
+  const to = withoutHash.slice(0, q);
+  const search: Record<string, string> = {};
+  for (const [k, v] of new URLSearchParams(withoutHash.slice(q + 1))) {
+    search[k] = v;
+  }
+  return { to, search };
+}

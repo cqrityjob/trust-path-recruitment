@@ -129,6 +129,12 @@ KNOWN_FAILURES=(
   "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql|||relation \"scp_scoring_version_lineage\" already exists"
   "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql|||relation \"cd_definition_versions\" already exists"
   "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
+  # Cloud re-issued 20260729090000 as 20260729075534, i.e. under an EARLIER
+  # timestamp, so on replay Cloud's copy runs first and the authored file
+  # then hits "already exists". Section 0 of the authored file (the
+  # scp_item_versions guard repair) still commits before that point, which
+  # the 6-guarded-tables assertion below independently confirms.
+  "20260729090000_career_discovery_v3_internal_test.sql|||relation \"cd_internal_testers\" already exists"
 )
 
 # Returns 0 and echoes the expected error when the file is allowlisted.

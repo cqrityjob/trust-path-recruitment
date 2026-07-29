@@ -566,6 +566,8 @@ export const dictionaries = {
     "careerDiscovery.landing.notTester":
       "Den här upplevelsen är under intern testning och är ännu inte öppen. Kontakta CQrityjob om du ska delta i testet.",
     "careerDiscovery.landing.error.start": "Vi kunde inte starta just nu. Försök igen.",
+    "careerDiscovery.landing.error.noSession":
+      "Vi kunde inte skapa din session. Ingenting har sparats — försök igen, eller kontakta CQrityjob om det upprepas.",
     "careerDiscovery.landing.internalNotice":
       "Intern testversion. Innehållet är framtaget men ännu inte granskat av sakkunniga, och resultatet ska behandlas som en utgångspunkt för samtal — inte som ett facit.",
 
@@ -582,7 +584,9 @@ export const dictionaries = {
     "careerDiscovery.session.discoveryOf": "Discovery {n} av {total}",
     "careerDiscovery.session.questionInSection": "Fråga {n} av {total} i det här avsnittet",
     "careerDiscovery.session.progressLabel": "Framsteg genom Discovery-avsnitten",
-    "careerDiscovery.session.error.missing": "Ingen session angiven.",
+    "careerDiscovery.session.error.missing":
+      "Vi kunde inte hitta din session. Gå tillbaka och starta din Discovery igen.",
+    "careerDiscovery.session.recovering": "Hämtar din session…",
     "careerDiscovery.session.error.load": "Vi kunde inte hämta din session.",
     "careerDiscovery.session.error.complete":
       "Vi kunde inte slutföra just nu. Dina svar är sparade — försök igen.",
@@ -2433,6 +2437,8 @@ export const dictionaries = {
     "careerDiscovery.landing.notTester":
       "This experience is in internal testing and is not open yet. Contact CQrityjob if you are taking part in the test.",
     "careerDiscovery.landing.error.start": "We could not start just now. Please try again.",
+    "careerDiscovery.landing.error.noSession":
+      "We could not create your session. Nothing was saved — please try again, or contact CQrityjob if it keeps happening.",
     "careerDiscovery.landing.internalNotice":
       "Internal test version. The content is authored but not yet reviewed by specialists, and the result should be treated as a starting point for a conversation — not as a verdict.",
 
@@ -2449,7 +2455,9 @@ export const dictionaries = {
     "careerDiscovery.session.discoveryOf": "Discovery {n} of {total}",
     "careerDiscovery.session.questionInSection": "Question {n} of {total} in this section",
     "careerDiscovery.session.progressLabel": "Progress through the Discovery sections",
-    "careerDiscovery.session.error.missing": "No session was specified.",
+    "careerDiscovery.session.error.missing":
+      "We could not find your session. Go back and start your Discovery again.",
+    "careerDiscovery.session.recovering": "Finding your session…",
     "careerDiscovery.session.error.load": "We could not load your session.",
     "careerDiscovery.session.error.complete":
       "We could not finish just now. Your answers are saved — please try again.",

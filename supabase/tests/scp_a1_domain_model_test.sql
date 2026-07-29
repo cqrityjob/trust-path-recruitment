@@ -15,6 +15,26 @@
 
 BEGIN;
 
+-- A test-owned, deliberately NON-RETIRED control definition.
+--
+-- These tests need a live definition to prove the retirement guards are
+-- surgical -- that they block the retired one and nothing else. They used
+-- to borrow 'public-career-assessment' for that, which silently coupled the
+-- suite to production catalog state: the moment the Career Discovery
+-- cutover retired it, three assertions stopped running and the suite went
+-- quiet rather than red. Owning the control removes that coupling.
+INSERT INTO public.assessments (id, name_sv, name_en, kind)
+VALUES ('scp-test-live-control', 'Testkontroll', 'Test control', 'career_guidance')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.assessment_versions (assessment_id, model_version, disclaimer_version, notes)
+SELECT 'scp-test-live-control', 'control-v1', 'v1', 'Never retired. Control fixture for the retirement guards.'
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.assessment_versions
+  WHERE assessment_id = 'scp-test-live-control' AND model_version = 'control-v1'
+);
+
+
 -- ---------------------------------------------------------------------------
 -- Fixtures. Synthetic only -- no real candidate name, email or answer is used
 -- anywhere in this file (implementation directive section 18).
@@ -166,12 +186,12 @@ BEGIN
   -- A NON-retired version must still accept new assignments -- the guard must
   -- be surgical, not a blanket block on the whole table.
   SELECT av.id INTO _live_version FROM public.assessment_versions av
-    WHERE av.assessment_id = 'public-career-assessment' AND av.retired_at IS NULL LIMIT 1;
+    WHERE av.assessment_id = 'scp-test-live-control' AND av.retired_at IS NULL LIMIT 1;
   IF _live_version IS NOT NULL THEN
     INSERT INTO public.assessment_assignments
       (employer_id, assessment_id, assessment_version_id, profile_id, use_case,
        recipient_email, assigned_by, invitation_token_hash, expires_at)
-    VALUES (_employer, 'public-career-assessment', _live_version, 'security_professional',
+    VALUES (_employer, 'scp-test-live-control', _live_version, 'security_professional',
             'recruitment', 'still-works@test.invalid',
             '11111111-0000-0000-0000-000000000004', 'hash-live-1', now() + interval '7 days');
     PERFORM pg_temp.assert(true,
@@ -1154,7 +1174,7 @@ BEGIN
   SELECT id INTO _retired_version FROM public.assessment_versions
     WHERE assessment_id = 'security-guard-foundation' LIMIT 1;
   SELECT id INTO _live_version FROM public.assessment_versions
-    WHERE assessment_id = 'public-career-assessment' AND retired_at IS NULL LIMIT 1;
+    WHERE assessment_id = 'scp-test-live-control' AND retired_at IS NULL LIMIT 1;
 
   -- Historical rows, created while the version was still live.
   UPDATE public.assessment_versions SET retired_at = NULL WHERE id = _retired_version;
@@ -1227,7 +1247,7 @@ BEGIN
     INSERT INTO public.assessment_assignments
       (id, employer_id, assessment_id, assessment_version_id, profile_id, use_case,
        recipient_email, assigned_by, invitation_token_hash, expires_at, status, cancelled_at)
-    VALUES (_live, _emp, 'public-career-assessment', _live_version, 'security_professional',
+    VALUES (_live, _emp, 'scp-test-live-control', _live_version, 'security_professional',
             'recruitment', 'g@test.invalid', _actor, 'h3-live', now() + interval '7 days',
             'cancelled', now());
     UPDATE public.assessment_assignments SET status = 'invited', cancelled_at = NULL WHERE id = _live;

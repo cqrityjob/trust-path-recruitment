@@ -7,7 +7,7 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
-import { safeReturnPath } from "@/lib/auth/safe-redirect";
+import { safeReturnPath, splitReturnPath } from "@/lib/auth/safe-redirect";
 
 // Phase H3.1 — shared auth form used by /candidate/login, /candidate/register,
 // /employer/login, /employer/register. Portal intent controls ONLY which
@@ -62,12 +62,20 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
     return safeReturnPath(params.get("redirect"), defaultDestination);
   }
 
+  /** Navigate to the return target, preserving its query string.
+   *  `to` alone cannot carry one, and the Career Discovery session uuid
+   *  lives there — dropping it produced a dead-end session page. */
+  function goToDestination() {
+    const { to, search } = splitReturnPath(resolveDestination());
+    navigate({ to, search: search as never });
+  }
+
   // If already signed in, bounce immediately — never render a login form to
   // an authenticated user.
   useEffect(() => {
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive && data.session) navigate({ to: resolveDestination() });
+      if (alive && data.session) goToDestination();
     });
     return () => {
       alive = false;
@@ -100,7 +108,7 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
-        navigate({ to: resolveDestination() });
+        goToDestination();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -118,7 +126,7 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
-      navigate({ to: resolveDestination() });
+      goToDestination();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

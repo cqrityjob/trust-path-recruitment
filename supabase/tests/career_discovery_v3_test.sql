@@ -610,8 +610,8 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.must_fail(
   'SELECT public.cd_complete_session(''99999999-9999-9999-9999-999999999999'', ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
-  'CD_UNKNOWN_SESSION',
-  'G9.9 the completion function refuses an unknown session');
+  'CD_SESSION_NOT_FOUND',
+  'G9.9 the completion function refuses an unknown session with the canonical code');
 
 -- =========================================================================
 -- Group 10 — the guards hold for BYPASSRLS callers
