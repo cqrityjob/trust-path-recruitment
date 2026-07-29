@@ -89,6 +89,15 @@ BEGIN
     WHERE assessment_id = 'public-career-assessment' LIMIT 1;
 
   -- One run per live Career Guidance definition, with a real result payload.
+  --
+  -- The public-career-assessment row represents a run created BEFORE the
+  -- Career Discovery cutover retired that definition. The retirement trigger
+  -- blocks new runs and cannot distinguish "seeding history" from "starting
+  -- one now", so it is disabled for this seed only. Nothing downstream is
+  -- weakened: every preservation assertion still runs, and the trigger's own
+  -- behaviour is asserted separately in the Career Discovery suite.
+  ALTER TABLE public.assessment_runs DISABLE TRIGGER assessment_runs_block_retired_definition_trg;
+
   INSERT INTO public.assessment_runs
     (id, user_id, assessment_id, assessment_version_id, graph_version, locale,
      status, started_at, completed_at, result_summary)
@@ -100,6 +109,8 @@ BEGIN
      'cig-v1', 'en', 'completed', now() - interval '10 days', now() - interval '10 days',
      '{"topFamily": "corporate-security", "overallEvidenceScore": 68}'::jsonb)
   ON CONFLICT (id) DO NOTHING;
+
+  ALTER TABLE public.assessment_runs ENABLE TRIGGER assessment_runs_block_retired_definition_trg;
 END $$;
 
 
