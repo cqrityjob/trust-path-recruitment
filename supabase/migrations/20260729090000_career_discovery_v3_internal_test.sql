@@ -22,6 +22,53 @@
 --      completed -- all in one transaction, or none of it.
 
 -- =========================================================================
+-- 0. Repair: restore the scp_item_versions draft guard on a clean replay
+-- =========================================================================
+--
+-- DEFECT FOUND DURING PRE-MERGE REVIEW, not introduced by this branch.
+--
+-- Lovable Cloud's sync re-issued the Security Competency migrations under
+-- its own filenames. One of them, 20260728181901, begins:
+--
+--     DROP TRIGGER IF EXISTS scp_item_versions_insert_status ON ...;
+--     CREATE TRIGGER scp_competency_versions_insert_status ...;   <-- line 15
+--     ...
+--     CREATE TRIGGER scp_item_versions_insert_status ...;         <-- line 17
+--
+-- On a clean replay the repository already carries those triggers from
+-- 20260727140000 (A3), so line 15 aborts with "already exists" and line 17
+-- never runs. The DROP has already taken effect. Net result: after a full
+-- replay, scp_item_versions carries NO draft guard, and an item version
+-- could be inserted directly as `published`, bypassing the HIGH-1 fix.
+--
+-- The LIVE Cloud database is unaffected -- it has all six guards, because
+-- Cloud applied Lovable's file in an ordering where the trigger did not yet
+-- exist. This is a replay-fidelity defect: the migration history no longer
+-- reproduces the live schema, so any environment provisioned from scratch
+-- would be missing a security guard.
+--
+-- Repaired here, idempotently and additively. No earlier migration is
+-- edited. Restoring the guard is preferred over relaxing the test that
+-- caught it.
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    JOIN pg_proc  p ON p.oid = t.tgfoid
+    WHERE NOT t.tgisinternal
+      AND c.relname = 'scp_item_versions'
+      AND p.proname = 'scp_guard_version_starts_as_draft'
+  ) THEN
+    EXECUTE 'CREATE TRIGGER scp_item_versions_insert_status
+             BEFORE INSERT ON public.scp_item_versions
+             FOR EACH ROW EXECUTE FUNCTION public.scp_guard_version_starts_as_draft()';
+    RAISE NOTICE 'Restored the scp_item_versions draft guard dropped by the Cloud sync re-issue.';
+  END IF;
+END $$;
+
+-- =========================================================================
 -- 1. Internal tester allowlist
 -- =========================================================================
 

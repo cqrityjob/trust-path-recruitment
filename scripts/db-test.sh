@@ -86,12 +86,20 @@ EOF
 # ---------------------------------------------------------------------------
 # 3. Replay the full migration history, in order
 #
-# Twelve migrations are known to fail on a clean replay and fail identically
-# on origin/main: ten are duplicate Lovable-generated files that re-create
-# objects an earlier migration already made, and two require storage.objects
-# which the harness deliberately does not stub. They are allowlisted BY NAME,
-# so a NEW failure -- or one of these starting to pass -- is caught rather
-# than silently absorbed.
+# Nineteen migrations are known to fail on a clean replay and fail identically
+# on origin/main: seventeen are duplicate Lovable-generated files that
+# re-create objects an earlier migration already made, and two require
+# storage.objects which the harness deliberately does not stub. They are
+# allowlisted BY NAME, so a NEW failure -- or one of these starting to pass --
+# is caught rather than silently absorbed.
+#
+# The 20260728 17:59-18:22 block is Lovable Cloud's own re-issue of the
+# Security Competency and Career Discovery migrations, generated when the
+# Cloud database was synced. Cloud applies them under its generated
+# filenames while this repository already carries the authored originals, so
+# on a clean replay the second copy hits "relation ... already exists". The
+# resulting schema is identical either way; only the replay double-applies.
+# Verified failing on origin/main at e1056e0 before being added here.
 # ---------------------------------------------------------------------------
 KNOWN_FAILURES=(
   "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql"
@@ -106,6 +114,15 @@ KNOWN_FAILURES=(
   "20260723192846_096c5154-1c66-4089-bd18-b5b349d69f18.sql"
   "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql"
   "20260724130000_admin_portal_operational_scope.sql"
+  # Lovable Cloud sync re-issue -- duplicates of migrations this repository
+  # already carries. Same schema, applied twice on a clean replay.
+  "20260728175944_126362c3-0bfe-4872-9364-decdeffaa734.sql"
+  "20260728181422_cff0d76a-c34f-46c1-98c1-dd28126902fb.sql"
+  "20260728181803_500542a9-3dc2-4e13-8505-7113dc859560.sql"
+  "20260728181901_0db6ed3c-faa0-4b55-8509-c24ed96e7b4a.sql"
+  "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql"
+  "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql"
+  "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql"
 )
 
 is_known_failure() {
