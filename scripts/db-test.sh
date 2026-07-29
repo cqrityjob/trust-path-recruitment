@@ -321,6 +321,39 @@ if [ "$CD_PASSED" -lt 130 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5c. Security Career Discovery v3.1 PR1 schema assertions
+#
+# The additive v3.1 schema: new item kinds, the option order seed, option
+# evidence, option loadings, Layer 4 calibration and sharing. Every guard is
+# mutated to prove it refuses what it exists to refuse.
+#
+# Runs before the destructive rollback step, like 5b.
+# ---------------------------------------------------------------------------
+echo "==> Running Career Discovery v3.1 schema assertions"
+set +e
+CD31_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_schema_test.sql 2>&1)"
+CD31_RC=$?
+set -e
+
+echo "$CD31_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CD31_PASSED="$(echo "$CD31_OUT" | grep -c "ok  " || true)"
+
+if [ "$CD31_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Career Discovery v3.1 suite exited with code ${CD31_RC}." >&2
+  echo "$CD31_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${CD31_PASSED} Career Discovery v3.1 assertions passed"
+
+if [ "$CD31_PASSED" -lt 45 ]; then
+  echo "FAIL: expected at least 45 Career Discovery v3.1 assertions, only ${CD31_PASSED} ran." >&2
+  echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -354,5 +387,6 @@ echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
 echo "              ${CD_PASSED} Career Discovery assertions,"
+echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
