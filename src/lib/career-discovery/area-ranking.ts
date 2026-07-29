@@ -151,9 +151,7 @@ function evaluateArea(area: SecurityCareerArea, dna: DnaResult): AreaRanking {
   // Strongest reasons: highest actual contribution, then highest importance,
   // then axis id — fully deterministic, no ties left to sort stability.
   const byStrength = (a: AxisContribution, b: AxisContribution) =>
-    b.contribution - a.contribution ||
-    b.importance - a.importance ||
-    a.axis.localeCompare(b.axis);
+    b.contribution - a.contribution || b.importance - a.importance || a.axis.localeCompare(b.axis);
 
   const topReasons = evaluated
     .filter((c) => c.insideBand)

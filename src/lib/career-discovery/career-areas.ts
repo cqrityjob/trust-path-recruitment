@@ -29,7 +29,11 @@
 
 import type { Bi, CareerOrientationAxisId } from "./types";
 
-export const AREA_PROFILE_VALIDATION_STATUS = "design" as const;
+/** Widened deliberately: the report branches on this, and a reviewer
+ *  flipping it to 'reviewed' must compile without touching report.ts. */
+export type AreaProfileValidationStatus = "design" | "in_review" | "reviewed";
+
+export const AREA_PROFILE_VALIDATION_STATUS: AreaProfileValidationStatus = "design";
 
 export type SecurityCareerAreaId =
   | "protective_operations"
@@ -266,7 +270,10 @@ export const SECURITY_CAREER_AREAS: readonly SecurityCareerArea[] = [
   },
   {
     id: "financial_crime_compliance",
-    name: { sv: "Finansiell brottslighet och regelefterlevnad", en: "Financial Crime & Compliance" },
+    name: {
+      sv: "Finansiell brottslighet och regelefterlevnad",
+      en: "Financial Crime & Compliance",
+    },
     summary: {
       sv: "Att upptäcka och förhindra ekonomisk brottslighet, och säkerställa att regler följs.",
       en: "Detecting and preventing financial crime, and ensuring rules are followed.",

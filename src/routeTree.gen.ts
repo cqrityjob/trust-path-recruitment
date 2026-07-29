@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as EmployersRouteImport } from './routes/employers'
+import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CareersRouteImport } from './routes/careers'
 import { Route as CareerCenterRouteImport } from './routes/career-center'
@@ -51,6 +52,8 @@ import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedEmployerOnboardingRouteImport } from './routes/_authenticated.employer.onboarding'
 import { Route as AuthenticatedEmployerEmployerSlugRouteImport } from './routes/_authenticated.employer.$employerSlug'
+import { Route as AuthenticatedDiscoverySessionRouteImport } from './routes/_authenticated.discovery.session'
+import { Route as AuthenticatedDiscoveryHistoryRouteImport } from './routes/_authenticated.discovery.history'
 import { Route as AuthenticatedAdminWorkforceRouteImport } from './routes/_authenticated.admin.workforce'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedAdminResultsRouteImport } from './routes/_authenticated.admin.results'
@@ -80,6 +83,7 @@ import { Route as AuthenticatedEmployerEmployerSlugCompetenciesRouteImport } fro
 import { Route as AuthenticatedEmployerEmployerSlugAskCqrityRouteImport } from './routes/_authenticated.employer.$employerSlug.ask-cqrity'
 import { Route as AuthenticatedEmployerEmployerSlugApplicationsRouteImport } from './routes/_authenticated.employer.$employerSlug.applications'
 import { Route as AuthenticatedEmployerEmployerSlugAnalyticsRouteImport } from './routes/_authenticated.employer.$employerSlug.analytics'
+import { Route as AuthenticatedDiscoveryReportSnapshotIdRouteImport } from './routes/_authenticated.discovery.report.$snapshotId'
 import { Route as AuthenticatedAdminWorkforceEmployeeIdRouteImport } from './routes/_authenticated.admin.workforce.$employeeId'
 import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated.admin.users.$userId'
 import { Route as AuthenticatedAdminResultsAssignmentIdRouteImport } from './routes/_authenticated.admin.results.$assignmentId'
@@ -128,6 +132,11 @@ const JobsRoute = JobsRouteImport.update({
 const EmployersRoute = EmployersRouteImport.update({
   id: '/employers',
   path: '/employers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoveryRoute = DiscoveryRouteImport.update({
+  id: '/discovery',
+  path: '/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -319,6 +328,18 @@ const AuthenticatedEmployerEmployerSlugRoute =
     path: '/$employerSlug',
     getParentRoute: () => AuthenticatedEmployerRoute,
   } as any)
+const AuthenticatedDiscoverySessionRoute =
+  AuthenticatedDiscoverySessionRouteImport.update({
+    id: '/discovery/session',
+    path: '/discovery/session',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDiscoveryHistoryRoute =
+  AuthenticatedDiscoveryHistoryRouteImport.update({
+    id: '/discovery/history',
+    path: '/discovery/history',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminWorkforceRoute =
   AuthenticatedAdminWorkforceRouteImport.update({
     id: '/workforce',
@@ -491,6 +512,12 @@ const AuthenticatedEmployerEmployerSlugAnalyticsRoute =
     path: '/analytics',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedDiscoveryReportSnapshotIdRoute =
+  AuthenticatedDiscoveryReportSnapshotIdRouteImport.update({
+    id: '/discovery/report/$snapshotId',
+    path: '/discovery/report/$snapshotId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminWorkforceEmployeeIdRoute =
   AuthenticatedAdminWorkforceEmployeeIdRouteImport.update({
     id: '/$employeeId',
@@ -612,6 +639,7 @@ export interface FileRoutesByFullPath {
   '/career-center': typeof CareerCenterRouteWithChildren
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
+  '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRouteWithChildren
   '/mcp': typeof McpRoute
@@ -647,6 +675,8 @@ export interface FileRoutesByFullPath {
   '/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
   '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/admin/workforce': typeof AuthenticatedAdminWorkforceRouteWithChildren
+  '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
+  '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -665,6 +695,7 @@ export interface FileRoutesByFullPath {
   '/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/workforce/$employeeId': typeof AuthenticatedAdminWorkforceEmployeeIdRoute
+  '/discovery/report/$snapshotId': typeof AuthenticatedDiscoveryReportSnapshotIdRoute
   '/employer/$employerSlug/analytics': typeof AuthenticatedEmployerEmployerSlugAnalyticsRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/employer/$employerSlug/ask-cqrity': typeof AuthenticatedEmployerEmployerSlugAskCqrityRoute
@@ -701,6 +732,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
+  '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -724,6 +756,8 @@ export interface FileRoutesByTo {
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
+  '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
+  '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
@@ -741,6 +775,7 @@ export interface FileRoutesByTo {
   '/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/admin/workforce/$employeeId': typeof AuthenticatedAdminWorkforceEmployeeIdRoute
+  '/discovery/report/$snapshotId': typeof AuthenticatedDiscoveryReportSnapshotIdRoute
   '/employer/$employerSlug/analytics': typeof AuthenticatedEmployerEmployerSlugAnalyticsRoute
   '/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/employer/$employerSlug/ask-cqrity': typeof AuthenticatedEmployerEmployerSlugAskCqrityRoute
@@ -780,6 +815,7 @@ export interface FileRoutesById {
   '/career-center': typeof CareerCenterRouteWithChildren
   '/careers': typeof CareersRoute
   '/contact': typeof ContactRoute
+  '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRouteWithChildren
   '/mcp': typeof McpRoute
@@ -815,6 +851,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/_authenticated/admin/workforce': typeof AuthenticatedAdminWorkforceRouteWithChildren
+  '/_authenticated/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
+  '/_authenticated/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -833,6 +871,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
   '/_authenticated/admin/workforce/$employeeId': typeof AuthenticatedAdminWorkforceEmployeeIdRoute
+  '/_authenticated/discovery/report/$snapshotId': typeof AuthenticatedDiscoveryReportSnapshotIdRoute
   '/_authenticated/employer/$employerSlug/analytics': typeof AuthenticatedEmployerEmployerSlugAnalyticsRoute
   '/_authenticated/employer/$employerSlug/applications': typeof AuthenticatedEmployerEmployerSlugApplicationsRoute
   '/_authenticated/employer/$employerSlug/ask-cqrity': typeof AuthenticatedEmployerEmployerSlugAskCqrityRoute
@@ -872,6 +911,7 @@ export interface FileRouteTypes {
     | '/career-center'
     | '/careers'
     | '/contact'
+    | '/discovery'
     | '/employers'
     | '/jobs'
     | '/mcp'
@@ -907,6 +947,8 @@ export interface FileRouteTypes {
     | '/admin/results'
     | '/admin/users'
     | '/admin/workforce'
+    | '/discovery/history'
+    | '/discovery/session'
     | '/employer/$employerSlug'
     | '/employer/onboarding'
     | '/journey/$targetId'
@@ -925,6 +967,7 @@ export interface FileRouteTypes {
     | '/admin/results/$assignmentId'
     | '/admin/users/$userId'
     | '/admin/workforce/$employeeId'
+    | '/discovery/report/$snapshotId'
     | '/employer/$employerSlug/analytics'
     | '/employer/$employerSlug/applications'
     | '/employer/$employerSlug/ask-cqrity'
@@ -961,6 +1004,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/careers'
     | '/contact'
+    | '/discovery'
     | '/employers'
     | '/mcp'
     | '/reset-password'
@@ -984,6 +1028,8 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/feedback'
+    | '/discovery/history'
+    | '/discovery/session'
     | '/employer/onboarding'
     | '/journey/$targetId'
     | '/my-career/applications'
@@ -1001,6 +1047,7 @@ export interface FileRouteTypes {
     | '/admin/results/$assignmentId'
     | '/admin/users/$userId'
     | '/admin/workforce/$employeeId'
+    | '/discovery/report/$snapshotId'
     | '/employer/$employerSlug/analytics'
     | '/employer/$employerSlug/applications'
     | '/employer/$employerSlug/ask-cqrity'
@@ -1039,6 +1086,7 @@ export interface FileRouteTypes {
     | '/career-center'
     | '/careers'
     | '/contact'
+    | '/discovery'
     | '/employers'
     | '/jobs'
     | '/mcp'
@@ -1074,6 +1122,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/results'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/workforce'
+    | '/_authenticated/discovery/history'
+    | '/_authenticated/discovery/session'
     | '/_authenticated/employer/$employerSlug'
     | '/_authenticated/employer/onboarding'
     | '/_authenticated/journey/$targetId'
@@ -1092,6 +1142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/results/$assignmentId'
     | '/_authenticated/admin/users/$userId'
     | '/_authenticated/admin/workforce/$employeeId'
+    | '/_authenticated/discovery/report/$snapshotId'
     | '/_authenticated/employer/$employerSlug/analytics'
     | '/_authenticated/employer/$employerSlug/applications'
     | '/_authenticated/employer/$employerSlug/ask-cqrity'
@@ -1131,6 +1182,7 @@ export interface RootRouteChildren {
   CareerCenterRoute: typeof CareerCenterRouteWithChildren
   CareersRoute: typeof CareersRoute
   ContactRoute: typeof ContactRoute
+  DiscoveryRoute: typeof DiscoveryRoute
   EmployersRoute: typeof EmployersRoute
   JobsRoute: typeof JobsRouteWithChildren
   McpRoute: typeof McpRoute
@@ -1191,6 +1243,13 @@ declare module '@tanstack/react-router' {
       path: '/employers'
       fullPath: '/employers'
       preLoaderRoute: typeof EmployersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discovery': {
+      id: '/discovery'
+      path: '/discovery'
+      fullPath: '/discovery'
+      preLoaderRoute: typeof DiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -1445,6 +1504,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugRouteImport
       parentRoute: typeof AuthenticatedEmployerRoute
     }
+    '/_authenticated/discovery/session': {
+      id: '/_authenticated/discovery/session'
+      path: '/discovery/session'
+      fullPath: '/discovery/session'
+      preLoaderRoute: typeof AuthenticatedDiscoverySessionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/discovery/history': {
+      id: '/_authenticated/discovery/history'
+      path: '/discovery/history'
+      fullPath: '/discovery/history'
+      preLoaderRoute: typeof AuthenticatedDiscoveryHistoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/workforce': {
       id: '/_authenticated/admin/workforce'
       path: '/workforce'
@@ -1647,6 +1720,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/employer/$employerSlug/analytics'
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAnalyticsRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
+    '/_authenticated/discovery/report/$snapshotId': {
+      id: '/_authenticated/discovery/report/$snapshotId'
+      path: '/discovery/report/$snapshotId'
+      fullPath: '/discovery/report/$snapshotId'
+      preLoaderRoute: typeof AuthenticatedDiscoveryReportSnapshotIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/workforce/$employeeId': {
       id: '/_authenticated/admin/workforce/$employeeId'
@@ -2076,6 +2156,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedbackRoute: typeof AuthenticatedFeedbackRoute
   AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
   AuthenticatedMyCareerRoute: typeof AuthenticatedMyCareerRouteWithChildren
+  AuthenticatedDiscoveryHistoryRoute: typeof AuthenticatedDiscoveryHistoryRoute
+  AuthenticatedDiscoverySessionRoute: typeof AuthenticatedDiscoverySessionRoute
+  AuthenticatedDiscoveryReportSnapshotIdRoute: typeof AuthenticatedDiscoveryReportSnapshotIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -2084,6 +2167,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedbackRoute: AuthenticatedFeedbackRoute,
   AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
   AuthenticatedMyCareerRoute: AuthenticatedMyCareerRouteWithChildren,
+  AuthenticatedDiscoveryHistoryRoute: AuthenticatedDiscoveryHistoryRoute,
+  AuthenticatedDiscoverySessionRoute: AuthenticatedDiscoverySessionRoute,
+  AuthenticatedDiscoveryReportSnapshotIdRoute:
+    AuthenticatedDiscoveryReportSnapshotIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -2131,6 +2218,7 @@ const rootRouteChildren: RootRouteChildren = {
   CareerCenterRoute: CareerCenterRouteWithChildren,
   CareersRoute: CareersRoute,
   ContactRoute: ContactRoute,
+  DiscoveryRoute: DiscoveryRoute,
   EmployersRoute: EmployersRoute,
   JobsRoute: JobsRouteWithChildren,
   McpRoute: McpRoute,

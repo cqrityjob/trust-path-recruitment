@@ -549,6 +549,80 @@ export const dictionaries = {
       "Upptäck vilka karriärer inom säkerhet som kan passa dig. Kostnadsfri, cirka 5 minuter, inget konto krävs.",
     "sca.badge": "Karriärvägledning",
     "sca.landing.title": "Upptäck vilka karriärer inom säkerhet som kan passa dig.",
+    // ---- Security Career Discovery v3 (internal test) ----
+    "careerDiscovery.landing.badge": "Karriärvägledning",
+    "careerDiscovery.landing.title": "Din karriär inom säkerhet.",
+    "careerDiscovery.landing.lead":
+      "Det här är inte ett prov. Vi utforskar vilken typ av säkerhetsarbete som bäst passar dina styrkor, drivkrafter och arbetssätt — och du bestämmer själv vad du gör med svaret.",
+    "careerDiscovery.landing.point.time": "Cirka 12–15 minuter",
+    "careerDiscovery.landing.point.questions": "26 frågor",
+    "careerDiscovery.landing.point.autosave": "Sparas automatiskt — du kan pausa och fortsätta",
+    "careerDiscovery.landing.point.noPassFail": "Inget godkänt eller underkänt",
+    "careerDiscovery.landing.point.guidance":
+      "Karriärvägledning, inte en bedömning av anställningsbarhet",
+    "careerDiscovery.landing.cta.start": "Starta din Security Career Discovery",
+    "careerDiscovery.landing.cta.resume": "Fortsätt där du slutade",
+    "careerDiscovery.landing.cta.history": "Mina rapporter",
+    "careerDiscovery.landing.notTester":
+      "Den här upplevelsen är under intern testning och är ännu inte öppen. Kontakta CQrityjob om du ska delta i testet.",
+    "careerDiscovery.landing.error.start": "Vi kunde inte starta just nu. Försök igen.",
+    "careerDiscovery.landing.internalNotice":
+      "Intern testversion. Innehållet är framtaget men ännu inte granskat av sakkunniga, och resultatet ska behandlas som en utgångspunkt för samtal — inte som ett facit.",
+
+    "careerDiscovery.session.loading": "Hämtar din session…",
+    "careerDiscovery.session.contextStep": "Innan vi börjar",
+    "careerDiscovery.session.continue": "Fortsätt",
+    "careerDiscovery.session.next": "Nästa",
+    "careerDiscovery.session.previous": "Föregående",
+    "careerDiscovery.session.finish": "Slutför",
+    "careerDiscovery.session.saving": "Sparar…",
+    "careerDiscovery.session.saved": "Sparat",
+    "careerDiscovery.session.retry": "Kunde inte spara. Försök igen",
+    "careerDiscovery.session.generating": "Vi tar fram din rapport…",
+    "careerDiscovery.session.discoveryOf": "Discovery {n} av {total}",
+    "careerDiscovery.session.questionInSection": "Fråga {n} av {total} i det här avsnittet",
+    "careerDiscovery.session.progressLabel": "Framsteg genom Discovery-avsnitten",
+    "careerDiscovery.session.error.missing": "Ingen session angiven.",
+    "careerDiscovery.session.error.load": "Vi kunde inte hämta din session.",
+    "careerDiscovery.session.error.complete":
+      "Vi kunde inte slutföra just nu. Dina svar är sparade — försök igen.",
+
+    "careerDiscovery.report.loading": "Hämtar din rapport…",
+    "careerDiscovery.report.error": "Vi kunde inte hämta rapporten.",
+    "careerDiscovery.report.backToHistory": "Alla mina rapporter",
+    "careerDiscovery.report.dna.title": "Ditt Security Career DNA",
+    "careerDiscovery.report.dna.lead":
+      "Din profil visar hur du föredrar att arbeta, tänka, samarbeta och ta ansvar i olika typer av säkerhetsarbete.",
+    "careerDiscovery.report.axis.established": "Tydlig bild",
+    "careerDiscovery.report.axis.emerging": "Tidig bild",
+    "careerDiscovery.report.axis.contextDependent": "Beror på situationen",
+    "careerDiscovery.report.axis.emergingNote":
+      "Vi har en tidig bild här — inte tillräckligt för att luta oss mot ännu, så den har lämnats utanför rangordningen.",
+    "careerDiscovery.report.summary.title": "Sammanfattning",
+    "careerDiscovery.report.strengths.title": "Dina tydligaste mönster",
+    "careerDiscovery.report.topAreas.title": "Säkerhetsområden som stämmer väl överens",
+    "careerDiscovery.report.why.title": "Varför de här områdena",
+    "careerDiscovery.report.why.unknowns": "Det här vet vi ännu inte",
+    "careerDiscovery.report.adjacent.title": "Närliggande riktningar att utforska",
+    "careerDiscovery.report.development.title": "Utvecklingsområden",
+    "careerDiscovery.report.nextSteps.title": "Möjliga nästa steg",
+    "careerDiscovery.report.method.title": "Så här togs resultatet fram",
+    "careerDiscovery.report.method.definition": "Definition",
+    "careerDiscovery.report.method.content": "Innehåll",
+    "careerDiscovery.report.method.scoring": "Beräkning",
+    "careerDiscovery.report.method.taxonomy": "Taxonomi",
+    "careerDiscovery.report.confidence.strong": "Väl underbyggt av det du berättat",
+    "careerDiscovery.report.confidence.moderate":
+      "Ser ut att passa — några fler svar skulle bekräfta det",
+    "careerDiscovery.report.confidence.exploratory":
+      "Värt att titta på, men vi har inte tillräckligt än",
+
+    "careerDiscovery.history.title": "Mina Discovery-rapporter",
+    "careerDiscovery.history.lead": "Dina sparade rapporter, senaste först. Bara du kan se dem.",
+    "careerDiscovery.history.loading": "Hämtar…",
+    "careerDiscovery.history.empty": "Du har inga rapporter ännu.",
+    "careerDiscovery.history.startCta": "Gör din Discovery",
+    "careerDiscovery.history.report": "Discovery-rapport",
     "sca.landing.lead":
       "En strukturerad karriärbedömning som hjälper dig utforska roller inom säkerhet — baserad på dina intressen, styrkor och sätt att arbeta.",
     "sca.landing.point.time": "Cirka 5 minuter",
@@ -1084,7 +1158,8 @@ export const dictionaries = {
     "assignment.form.success.copied": "Kopierad!",
     "assignment.form.success.deliveryNote":
       "CQrityjob skickar för närvarande inte e-post automatiskt — dela länken själv med mottagaren.",
-    "assignment.form.success.deliveryNote.sent": "Ett e-postmeddelande med länken har skickats till mottagaren.",
+    "assignment.form.success.deliveryNote.sent":
+      "Ett e-postmeddelande med länken har skickats till mottagaren.",
     "assignment.form.success.deliveryNote.failed":
       "E-postmeddelandet kunde inte skickas. Dela länken ovan manuellt med mottagaren.",
     "assignment.form.success.viewAssignments": "Visa tilldelade tester",
@@ -1335,7 +1410,8 @@ export const dictionaries = {
     "admin.assignments.detail.field.language": "Språk",
     "admin.assignments.detail.field.delivery": "Leveranssätt",
     "admin.assignments.detail.field.emailError": "Leveransfel (e-post)",
-    "admin.assignments.detail.emailStatus.not_attempted": "E-post ej skickad (ingen leverantör konfigurerad)",
+    "admin.assignments.detail.emailStatus.not_attempted":
+      "E-post ej skickad (ingen leverantör konfigurerad)",
     "admin.assignments.detail.emailStatus.sent": "E-post skickad",
     "admin.assignments.detail.emailStatus.failed": "E-post misslyckades",
     "admin.assignments.detail.deliveryCopyLink": "Kopierad länk (ingen e-post skickad)",
@@ -2340,6 +2416,80 @@ export const dictionaries = {
       "Discover which security careers may suit you. Free, about 5 minutes, no account required.",
     "sca.badge": "Career guidance",
     "sca.landing.title": "Discover which security careers may suit you.",
+    // ---- Security Career Discovery v3 (internal test) ----
+    "careerDiscovery.landing.badge": "Career guidance",
+    "careerDiscovery.landing.title": "Your career in security.",
+    "careerDiscovery.landing.lead":
+      "This is not a test. We explore which kinds of security work best align with your strengths, motivations and preferred way of working — and what you do with the answer is entirely yours.",
+    "careerDiscovery.landing.point.time": "About 12–15 minutes",
+    "careerDiscovery.landing.point.questions": "26 questions",
+    "careerDiscovery.landing.point.autosave": "Saved automatically — pause and pick it up later",
+    "careerDiscovery.landing.point.noPassFail": "No pass and no fail",
+    "careerDiscovery.landing.point.guidance":
+      "Career guidance, not a judgement about employability",
+    "careerDiscovery.landing.cta.start": "Start your Security Career Discovery",
+    "careerDiscovery.landing.cta.resume": "Pick up where you left off",
+    "careerDiscovery.landing.cta.history": "My reports",
+    "careerDiscovery.landing.notTester":
+      "This experience is in internal testing and is not open yet. Contact CQrityjob if you are taking part in the test.",
+    "careerDiscovery.landing.error.start": "We could not start just now. Please try again.",
+    "careerDiscovery.landing.internalNotice":
+      "Internal test version. The content is authored but not yet reviewed by specialists, and the result should be treated as a starting point for a conversation — not as a verdict.",
+
+    "careerDiscovery.session.loading": "Loading your session…",
+    "careerDiscovery.session.contextStep": "Before we begin",
+    "careerDiscovery.session.continue": "Continue",
+    "careerDiscovery.session.next": "Next",
+    "careerDiscovery.session.previous": "Previous",
+    "careerDiscovery.session.finish": "Finish",
+    "careerDiscovery.session.saving": "Saving…",
+    "careerDiscovery.session.saved": "Saved",
+    "careerDiscovery.session.retry": "Could not save. Try again",
+    "careerDiscovery.session.generating": "Preparing your report…",
+    "careerDiscovery.session.discoveryOf": "Discovery {n} of {total}",
+    "careerDiscovery.session.questionInSection": "Question {n} of {total} in this section",
+    "careerDiscovery.session.progressLabel": "Progress through the Discovery sections",
+    "careerDiscovery.session.error.missing": "No session was specified.",
+    "careerDiscovery.session.error.load": "We could not load your session.",
+    "careerDiscovery.session.error.complete":
+      "We could not finish just now. Your answers are saved — please try again.",
+
+    "careerDiscovery.report.loading": "Loading your report…",
+    "careerDiscovery.report.error": "We could not load the report.",
+    "careerDiscovery.report.backToHistory": "All my reports",
+    "careerDiscovery.report.dna.title": "Your Security Career DNA",
+    "careerDiscovery.report.dna.lead":
+      "Your profile reflects how you prefer to work, think, collaborate and take responsibility across different types of security work.",
+    "careerDiscovery.report.axis.established": "Clear read",
+    "careerDiscovery.report.axis.emerging": "Early read",
+    "careerDiscovery.report.axis.contextDependent": "Depends on the situation",
+    "careerDiscovery.report.axis.emergingNote":
+      "We have an early read here — not enough to lean on yet, so it was left out of the ranking.",
+    "careerDiscovery.report.summary.title": "Summary",
+    "careerDiscovery.report.strengths.title": "Your clearest patterns",
+    "careerDiscovery.report.topAreas.title": "Security Career Areas that align closely",
+    "careerDiscovery.report.why.title": "Why these areas",
+    "careerDiscovery.report.why.unknowns": "What we do not know yet",
+    "careerDiscovery.report.adjacent.title": "Adjacent directions worth exploring",
+    "careerDiscovery.report.development.title": "Development areas",
+    "careerDiscovery.report.nextSteps.title": "Possible next steps",
+    "careerDiscovery.report.method.title": "How this result was produced",
+    "careerDiscovery.report.method.definition": "Definition",
+    "careerDiscovery.report.method.content": "Content",
+    "careerDiscovery.report.method.scoring": "Scoring",
+    "careerDiscovery.report.method.taxonomy": "Taxonomy",
+    "careerDiscovery.report.confidence.strong": "Well supported by what you told us",
+    "careerDiscovery.report.confidence.moderate":
+      "This looks like a fit — a few more answers would confirm it",
+    "careerDiscovery.report.confidence.exploratory":
+      "Worth looking at, but we do not have enough yet",
+
+    "careerDiscovery.history.title": "My Discovery reports",
+    "careerDiscovery.history.lead": "Your saved reports, newest first. Only you can see them.",
+    "careerDiscovery.history.loading": "Loading…",
+    "careerDiscovery.history.empty": "You do not have any reports yet.",
+    "careerDiscovery.history.startCta": "Take your Discovery",
+    "careerDiscovery.history.report": "Discovery report",
     "sca.landing.lead":
       "A structured career assessment that helps you explore security roles — based on your interests, strengths and preferred ways of working.",
     "sca.landing.point.time": "About 5 minutes",
@@ -2869,7 +3019,8 @@ export const dictionaries = {
     "assignment.form.success.copied": "Copied!",
     "assignment.form.success.deliveryNote":
       "CQrityjob does not currently send email automatically — share the link with the recipient yourself.",
-    "assignment.form.success.deliveryNote.sent": "An email with the link has been sent to the recipient.",
+    "assignment.form.success.deliveryNote.sent":
+      "An email with the link has been sent to the recipient.",
     "assignment.form.success.deliveryNote.failed":
       "The email could not be sent. Share the link above manually with the recipient.",
     "assignment.form.success.viewAssignments": "View assigned assessments",
