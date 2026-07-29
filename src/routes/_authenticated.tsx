@@ -28,7 +28,10 @@ function AuthenticatedLayout() {
         navigate({
           to: "/auth",
           search: {
-            redirect: window.location.pathname,
+            // pathname + search: a bare pathname discards the query
+            // string, which silently destroyed the Career Discovery
+            // session uuid on every login round trip.
+            redirect: window.location.pathname + window.location.search,
             ...(isAdminPath ? { intent: "admin" } : {}),
           } as any,
         });
@@ -37,11 +40,22 @@ function AuthenticatedLayout() {
       }
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       setSignedIn(!!session);
-      if (!session) {
+      // INITIAL_SESSION fires while the session is still being restored from
+      // storage and can carry a null session for an already-signed-in user.
+      // Redirecting on it bounced people out mid-navigation and threw away
+      // their query string. getSession() above is the authority for the
+      // first decision; this handler only reacts to a real sign-out.
+      if (!session && event !== "INITIAL_SESSION") {
         const isAdminPath = window.location.pathname.startsWith("/admin");
-        navigate({ to: "/auth", search: isAdminPath ? ({ intent: "admin" } as any) : undefined });
+        navigate({
+          to: "/auth",
+          search: {
+            redirect: window.location.pathname + window.location.search,
+            ...(isAdminPath ? { intent: "admin" } : {}),
+          } as any,
+        });
       }
     });
     return () => {

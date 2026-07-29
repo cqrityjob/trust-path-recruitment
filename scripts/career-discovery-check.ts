@@ -40,6 +40,16 @@ import {
 import { rankCareerAreas } from "../src/lib/career-discovery/area-ranking";
 import { scoreDna } from "../src/lib/career-discovery/scoring";
 import { isValidSessionId, parseSessionId } from "../src/lib/career-discovery/session-id";
+import {
+  ALIAS_ASSESSMENT_PATH,
+  ALIAS_SESSION_PATH,
+  CANONICAL_ASSESSMENT_PATH,
+  CANONICAL_REPORT_PATH,
+  CANONICAL_SESSION_PATH,
+  isAliasPath,
+  isCanonicalPath,
+} from "../src/lib/career-discovery/routes";
+import { safeReturnPath, splitReturnPath } from "../src/lib/auth/safe-redirect";
 import type { ScoringInput } from "../src/lib/career-discovery/scoring";
 import type { AdaptivePath, ContextStatus, DiscoveryItem } from "../src/lib/career-discovery/types";
 import { isScoredItem } from "../src/lib/career-discovery/types";
@@ -931,8 +941,8 @@ for (const bad of [
 
 // ---- Route wiring, asserted statically --------------------------------
 
-const landing = read("src/routes/discovery.tsx");
-const sessionRoute = read("src/routes/_authenticated.discovery.session.tsx");
+const landing = read("src/components/career-discovery/DiscoveryLanding.tsx");
+const sessionRoute = read("src/components/career-discovery/DiscoverySessionView.tsx");
 
 // The navigate must be gated on a parsed id, and the raw RPC value must not
 // go straight into the search param.
@@ -963,7 +973,7 @@ expect(
 // The invalid-id branch must also return without navigating.
 const guardBlock = beginBody.slice(
   beginBody.indexOf("if (!sessionId) {"),
-  beginBody.indexOf('navigate({ to: "/discovery/session"'),
+  beginBody.indexOf("navigate({ to: sessionPath"),
 );
 expect(
   guardBlock.includes("return;") && !guardBlock.includes("navigate("),
@@ -1002,11 +1012,177 @@ expect(
   "start flow: the recovery path must document that it cannot create a duplicate session",
 );
 
-// The legacy instrument must remain untouched by this fix.
+// The shared components must stay path-agnostic: paths arrive as props so
+// one implementation serves both the canonical route and the alias.
 expect(
-  !landing.includes("security-career-assessment") &&
-    !sessionRoute.includes("security-career-assessment"),
-  "scope: the start-flow fix must not reference the legacy assessment route",
+  landing.includes("sessionPath") && landing.includes("returnPath"),
+  "cutover: the landing component must take its paths as props, not hard-code them",
+);
+expect(
+  sessionRoute.includes("sessionPath") && sessionRoute.includes("reportPath"),
+  "cutover: the session component must take its paths as props, not hard-code them",
+);
+
+// ---------------------------------------------------------------------------
+// Canonical route cutover
+// ---------------------------------------------------------------------------
+
+expect(
+  CANONICAL_ASSESSMENT_PATH === "/security-career-assessment",
+  "cutover: the canonical route must remain /security-career-assessment",
+);
+expect(
+  isCanonicalPath(CANONICAL_SESSION_PATH) && isCanonicalPath(CANONICAL_REPORT_PATH),
+  "cutover: session and report paths must live under the canonical route",
+);
+
+// Loop safety: an alias may never redirect to another alias.
+expect(
+  isAliasPath(ALIAS_ASSESSMENT_PATH) && isAliasPath(ALIAS_SESSION_PATH),
+  "cutover: alias detection must recognise the temporary /discovery paths",
+);
+expect(
+  !isCanonicalPath(ALIAS_ASSESSMENT_PATH) && !isAliasPath(CANONICAL_ASSESSMENT_PATH),
+  "cutover: canonical and alias namespaces must be disjoint — otherwise a redirect could loop",
+);
+
+const canonicalLanding = read("src/routes/security-career-assessment.tsx");
+const canonicalSession = read("src/routes/_authenticated.security-career-assessment.session.tsx");
+const aliasLanding = read("src/routes/discovery.tsx");
+const aliasSession = read("src/routes/_authenticated.discovery.session.tsx");
+
+// ONE implementation: the canonical route must render the shared component,
+// never a second copy of the flow.
+expect(
+  canonicalLanding.includes("DiscoveryLanding") &&
+    canonicalLanding.includes("@/components/career-discovery/DiscoveryLanding"),
+  "cutover: the canonical route must render the shared DiscoveryLanding component",
+);
+expect(
+  canonicalSession.includes("DiscoverySessionView"),
+  "cutover: the canonical session route must render the shared DiscoverySessionView",
+);
+
+// The legacy 16-question instrument must no longer be the active journey.
+const canonicalLandingCode = canonicalLanding
+  .split("\n")
+  .filter((l) => !l.trim().startsWith("//"))
+  .join("\n");
+expect(
+  !canonicalLandingCode.includes("assembleQuestionSet") &&
+    !canonicalLandingCode.includes("public-career-assessment"),
+  "cutover: the canonical route must not render the legacy 16-question instrument",
+);
+
+// Aliases must redirect, and must carry the uuid across.
+for (const [name, src] of [
+  ["/discovery", aliasLanding],
+  ["/discovery/session", aliasSession],
+] as const) {
+  expect(src.includes("redirect("), `cutover: ${name} must redirect, not render a second product`);
+  expect(
+    src.includes("replace: true"),
+    `cutover: ${name} must replace rather than push, so the alias leaves no history entry`,
+  );
+}
+expect(
+  aliasSession.includes("parseSessionId") && aliasSession.includes("session: sessionId"),
+  "cutover: /discovery/session must preserve a valid session uuid across the redirect",
+);
+// The alias must target a CANONICAL constant, never a literal that could drift.
+expect(
+  aliasLanding.includes("CANONICAL_ASSESSMENT_PATH") &&
+    aliasSession.includes("CANONICAL_SESSION_PATH"),
+  "cutover: aliases must redirect via the canonical constants, so they cannot drift or loop",
+);
+
+// ---------------------------------------------------------------------------
+// Auth redirect: query strings must survive login
+// ---------------------------------------------------------------------------
+
+const SESSION_URL =
+  "/security-career-assessment/session?session=ba7787d2-5a07-48fd-ab17-3191afc90990";
+
+expect(
+  safeReturnPath(SESSION_URL, "/my-career") === SESSION_URL,
+  "auth redirect: a canonical session URL with a query string must be an allowed return target",
+);
+
+const split = splitReturnPath(SESSION_URL);
+expect(
+  split.to === "/security-career-assessment/session",
+  `auth redirect: the path must split off cleanly, got "${split.to}"`,
+);
+expect(
+  split.search.session === "ba7787d2-5a07-48fd-ab17-3191afc90990",
+  "auth redirect: the session uuid must survive the split into search params",
+);
+expect(
+  parseSessionId(split.search.session) !== null,
+  "auth redirect: the uuid recovered from the return URL must still validate",
+);
+expect(
+  splitReturnPath("/my-career").to === "/my-career" &&
+    Object.keys(splitReturnPath("/my-career").search).length === 0,
+  "auth redirect: a plain path must split to itself with no search params",
+);
+
+// Unsafe targets must still be rejected — this fix must not widen the
+// open-redirect surface.
+for (const evil of [
+  "https://evil.example/x",
+  "//evil.example/x",
+  "javascript:alert(1)",
+  "/auth",
+  "/auth?redirect=/x",
+  "http://evil.example",
+]) {
+  expect(
+    safeReturnPath(evil, "/my-career") === "/my-career",
+    `auth redirect: unsafe target ${JSON.stringify(evil)} must fall back, never be followed`,
+  );
+}
+
+// The shared gate must preserve the query string and must not bounce on the
+// initial (still-restoring) auth event.
+const authLayout = read("src/routes/_authenticated.tsx");
+expect(
+  authLayout.includes("window.location.pathname + window.location.search"),
+  "auth redirect: the gate must preserve pathname AND search when building the return target",
+);
+expect(
+  authLayout.includes('event !== "INITIAL_SESSION"'),
+  "auth redirect: the gate must not redirect on INITIAL_SESSION, which fires with a null session mid-restore",
+);
+const portalForm = read("src/components/auth/PortalAuthForm.tsx");
+expect(
+  portalForm.includes("splitReturnPath") &&
+    !portalForm.includes("navigate({ to: resolveDestination() })"),
+  "auth redirect: the login form must navigate with split path + search, not a path containing a query string",
+);
+
+// ---------------------------------------------------------------------------
+// Legacy retirement — enforced in the database, not by hiding links
+// ---------------------------------------------------------------------------
+
+const retirement = read(
+  "supabase/migrations/20260729140000_retire_legacy_public_career_assessment.sql",
+);
+expect(
+  retirement.includes("BEFORE INSERT ON public.assessment_runs"),
+  "legacy retirement: new runs must be blocked by a trigger at the database layer",
+);
+expect(
+  !/DELETE FROM public\.assessment_runs|DROP TABLE|TRUNCATE/i.test(retirement),
+  "legacy retirement: no historical run may be deleted",
+);
+expect(
+  retirement.includes("ASSESSMENT_RETIRED_FOR_NEW_RUNS"),
+  "legacy retirement: an outdated client must get a clear, stable error code",
+);
+expect(
+  /BEFORE INSERT/.test(retirement) && !/BEFORE (UPDATE|DELETE|SELECT)/.test(retirement),
+  "legacy retirement: only INSERT may be blocked — reads and existing runs must keep working",
 );
 
 // ---------------------------------------------------------------------------
