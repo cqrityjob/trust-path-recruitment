@@ -25,6 +25,11 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
+import {
+  DiscoveryCareerSummary,
+  DiscoveryNextStep,
+} from "@/components/career-discovery/DiscoveryCareerSummary";
+import { getActiveCareerReport } from "@/lib/career-discovery/active-report.functions";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -130,6 +135,19 @@ function MyCareerPage() {
   }, []);
 
   const fetchRuns = useServerFn(listAssessmentRuns);
+  // ONE selection point, resolved on the server before the summary renders.
+  // Doing this client-side would flash the legacy summary first.
+  const activeFn = useServerFn(getActiveCareerReport);
+  const activeQ = useQuery({
+    queryKey: ["my-career", "active-report"],
+    queryFn: () => activeFn({}),
+    staleTime: 60_000,
+  });
+  const activeIsDiscovery = activeQ.data?.kind === "discovery_v3";
+  // Legacy renders ONLY when it is genuinely the active report — never as a
+  // fallback while v3 is still loading or has failed.
+  const activeIsLegacy = activeQ.data?.kind === "legacy_v21";
+
   const runsQ = useQuery({
     queryKey: ["my-career", "runs"],
     queryFn: () => fetchRuns(),
@@ -201,8 +219,14 @@ function MyCareerPage() {
   const latestRun = runsQ.data?.[0];
   const hasCompletedAssessment = !!latestRun && latestRun.status === "completed";
   const hasProfile = profileState.status === "ready" && !!profile;
+  // A newer v3 completion must never be overwritten by legacy state: a
+  // candidate whose only assessment is v3 has no legacy run and no legacy
+  // profile, and must still count as having completed an assessment.
   const noAssessment =
-    runsQ.status === "success" && (runsQ.data.length === 0 || profileState.status === "no_profile");
+    !activeIsDiscovery &&
+    activeQ.status !== "pending" &&
+    runsQ.status === "success" &&
+    (runsQ.data.length === 0 || profileState.status === "no_profile");
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -255,9 +279,11 @@ function MyCareerPage() {
           <CareerJourney
             lang={lang}
             steps={{
-              assessment: hasCompletedAssessment,
-              profile: hasProfile,
-              explore: hasProfile && topProfessions.length > 0,
+              // v3 completion counts as both a completed assessment and a
+              // created career profile — the snapshot IS the profile.
+              assessment: hasCompletedAssessment || activeIsDiscovery,
+              profile: hasProfile || activeIsDiscovery,
+              explore: (hasProfile && topProfessions.length > 0) || activeIsDiscovery,
               apply: false,
               develop: false,
             }}
@@ -298,94 +324,146 @@ function MyCareerPage() {
         <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-6">
             {/* Assessment summary */}
-            <DashboardCard
-              icon={<ClipboardCheck className="h-5 w-5" />}
-              title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-            >
-              {runsQ.isLoading && (
-                <p className="text-sm text-muted-foreground">{L(c("Laddar…", "Loading…"), lang)}</p>
-              )}
-              {runsQ.isError && (
-                <p className="text-sm text-destructive">
-                  {L(
-                    c(
-                      "Kunde inte hämta din bedömning just nu. Försök igen om en stund.",
-                      "Couldn't load your assessment right now. Please try again shortly.",
-                    ),
-                    lang,
-                  )}
-                </p>
-              )}
-              {runsQ.data && runsQ.data.length === 0 && (
-                <EmptyState
-                  what={L(
-                    c(
-                      "Här visas din bedömningssammanfattning så snart testet är klart.",
-                      "Your assessment summary appears here as soon as the test is complete.",
-                    ),
-                    lang,
-                  )}
-                  why={L(
-                    c(
-                      "Bedömningen är grunden för alla rekommendationer på plattformen.",
-                      "The assessment is the foundation of every recommendation on the platform.",
-                    ),
-                    lang,
-                  )}
-                  ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
-                  ctaTo="/security-career-assessment"
-                />
-              )}
-              {latestRun && (
-                <AssessmentSummary
-                  lang={lang}
-                  completedAt={latestRun.completed_at ?? latestRun.started_at}
-                  profile={profile}
-                  topProfession={topProfTitle}
-                  topArea={topAreaLabel}
-                  runId={latestRun.id}
-                />
-              )}
-            </DashboardCard>
-
-            {/* Employer-assigned assessments completed before sign-in,
-                matched by verified email, offered for explicit linking. */}
-            {linkableQ.data && linkableQ.data.length > 0 && (
+            {/* Assessment summary — driven by the ACTIVE report.
+                Selection is resolved server-side first, so the legacy
+                summary can never flash before a newer v3 result. */}
+            {activeQ.isLoading && (
               <DashboardCard
                 icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(
-                  c("Bedömning att koppla till din profil", "Assessment ready to link"),
-                  lang,
-                )}
+                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
               >
-                <p className="mb-3 text-sm text-muted-foreground">
-                  {L(
-                    c(
-                      "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
-                      "You've completed an employer-assigned assessment with this email address. Link the result to your profile to see it under My Reports.",
-                    ),
-                    lang,
-                  )}
-                </p>
-                <ul className="divide-y divide-border">
-                  {linkableQ.data.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-3 py-3">
-                      <span className="text-sm text-foreground">
-                        {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={claimMutation.isPending}
-                        onClick={() => claimMutation.mutate(a.id)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
-                      >
-                        {L(c("Koppla till min profil", "Link to my profile"), lang)}
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3" role="status" aria-live="polite">
+                  <p className="text-sm text-muted-foreground">
+                    {t("careerDiscovery.dashboard.loading")}
+                  </p>
+                  <div className="h-24 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+                </div>
               </DashboardCard>
+            )}
+
+            {activeQ.isError && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
+              >
+                {/* Sanitised, and deliberately NOT a silent fall back to an
+                    older legacy report presented as current. */}
+                <p role="alert" className="text-sm text-destructive">
+                  {t("careerDiscovery.dashboard.error")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => activeQ.refetch()}
+                  className="mt-3 inline-flex h-9 items-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  {t("careerDiscovery.dashboard.retry")}
+                </button>
+              </DashboardCard>
+            )}
+
+            {activeIsDiscovery && activeQ.data?.kind === "discovery_v3" && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
+              >
+                <DiscoveryCareerSummary active={activeQ.data} />
+              </DashboardCard>
+            )}
+
+            {activeIsLegacy && (
+              <>
+                <DashboardCard
+                  icon={<ClipboardCheck className="h-5 w-5" />}
+                  title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
+                >
+                  {runsQ.isLoading && (
+                    <p className="text-sm text-muted-foreground">
+                      {L(c("Laddar…", "Loading…"), lang)}
+                    </p>
+                  )}
+                  {runsQ.isError && (
+                    <p className="text-sm text-destructive">
+                      {L(
+                        c(
+                          "Kunde inte hämta din bedömning just nu. Försök igen om en stund.",
+                          "Couldn't load your assessment right now. Please try again shortly.",
+                        ),
+                        lang,
+                      )}
+                    </p>
+                  )}
+                  {runsQ.data && runsQ.data.length === 0 && (
+                    <EmptyState
+                      what={L(
+                        c(
+                          "Här visas din bedömningssammanfattning så snart testet är klart.",
+                          "Your assessment summary appears here as soon as the test is complete.",
+                        ),
+                        lang,
+                      )}
+                      why={L(
+                        c(
+                          "Bedömningen är grunden för alla rekommendationer på plattformen.",
+                          "The assessment is the foundation of every recommendation on the platform.",
+                        ),
+                        lang,
+                      )}
+                      ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
+                      ctaTo="/security-career-assessment"
+                    />
+                  )}
+                  {latestRun && (
+                    <AssessmentSummary
+                      lang={lang}
+                      completedAt={latestRun.completed_at ?? latestRun.started_at}
+                      profile={profile}
+                      topProfession={topProfTitle}
+                      topArea={topAreaLabel}
+                      runId={latestRun.id}
+                    />
+                  )}
+                </DashboardCard>
+
+                {/* Employer-assigned assessments completed before sign-in,
+                matched by verified email, offered for explicit linking. */}
+                {linkableQ.data && linkableQ.data.length > 0 && (
+                  <DashboardCard
+                    icon={<ClipboardCheck className="h-5 w-5" />}
+                    title={L(
+                      c("Bedömning att koppla till din profil", "Assessment ready to link"),
+                      lang,
+                    )}
+                  >
+                    <p className="mb-3 text-sm text-muted-foreground">
+                      {L(
+                        c(
+                          "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
+                          "You've completed an employer-assigned assessment with this email address. Link the result to your profile to see it under My Reports.",
+                        ),
+                        lang,
+                      )}
+                    </p>
+                    <ul className="divide-y divide-border">
+                      {linkableQ.data.map((a) => (
+                        <li key={a.id} className="flex items-center justify-between gap-3 py-3">
+                          <span className="text-sm text-foreground">
+                            {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={claimMutation.isPending}
+                            onClick={() => claimMutation.mutate(a.id)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
+                          >
+                            {L(c("Koppla till min profil", "Link to my profile"), lang)}
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </DashboardCard>
+                )}
+              </>
             )}
 
             {/* Previous reports — reuses runsQ.data, already fetched above;
@@ -413,7 +491,10 @@ function MyCareerPage() {
             </DashboardCard>
 
             {/* Career profile */}
-            {hasProfile && profile && (
+            {/* Legacy career profile — Karriärprofil, Toppyrke, Primär
+                drivkraft, Konfidensnivå. Rendered ONLY when the legacy
+                report is the active one. */}
+            {activeIsLegacy && hasProfile && profile && (
               <DashboardCard
                 icon={<UserIcon className="h-5 w-5" />}
                 title={L(c("Din karriärprofil", "Your career profile"), lang)}
@@ -428,7 +509,7 @@ function MyCareerPage() {
             )}
 
             {/* Recommended professions */}
-            {hasProfile && topProfessions.length > 0 && (
+            {activeIsLegacy && hasProfile && topProfessions.length > 0 && (
               <DashboardCard
                 icon={<Compass className="h-5 w-5" />}
                 title={L(c("Rekommenderade yrken", "Recommended professions"), lang)}
@@ -560,13 +641,26 @@ function MyCareerPage() {
               icon={<Target className="h-5 w-5" />}
               title={L(c("Nästa steg", "Recommended next step"), lang)}
             >
-              <NextStep
-                lang={lang}
-                noAssessment={noAssessment}
-                topAreaLabel={topAreaLabel}
-                topProfTitle={topProfTitle}
-                topSlug={topProfession?.slug}
-              />
+              {/* Derived from the ACTIVE report. A legacy profession such as
+                  Skyddsvakt must never be suggested merely because an older
+                  report exists. */}
+              {activeIsDiscovery && activeQ.data?.kind === "discovery_v3" ? (
+                <DiscoveryNextStep active={activeQ.data} />
+              ) : activeQ.isLoading ? (
+                <div
+                  className="h-16 animate-pulse rounded-md bg-muted motion-reduce:animate-none"
+                  role="status"
+                  aria-label={t("careerDiscovery.dashboard.loading")}
+                />
+              ) : (
+                <NextStep
+                  lang={lang}
+                  noAssessment={noAssessment}
+                  topAreaLabel={topAreaLabel}
+                  topProfTitle={topProfTitle}
+                  topSlug={topProfession?.slug}
+                />
+              )}
             </DashboardCard>
 
             <DashboardCard title={L(c("Snabbåtgärder", "Quick actions"), lang)}>

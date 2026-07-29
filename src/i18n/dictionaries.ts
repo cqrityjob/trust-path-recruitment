@@ -636,6 +636,22 @@ export const dictionaries = {
     "careerDiscovery.history.type.legacy": "Karriärtest (tidigare version)",
     "careerDiscovery.history.internalTest": "Intern testversion",
     "careerDiscovery.history.open": "Öppna rapport",
+    "careerDiscovery.dashboard.directionTitle": "Din karriärriktning",
+    "careerDiscovery.dashboard.dnaTitle": "Ditt Security Career DNA",
+    "careerDiscovery.dashboard.developmentTitle": "Utveckling och nästa steg",
+    "careerDiscovery.dashboard.viewFullReport": "Visa hela rapporten",
+    "careerDiscovery.dashboard.exploreAreas": "Utforska säkerhetsområden",
+    "careerDiscovery.dashboard.allReports": "Alla mina rapporter",
+    "careerDiscovery.dashboard.nextStepFallback":
+      "Läs mer om de säkerhetsområden som stämmer bäst med din profil.",
+    "careerDiscovery.dashboard.internalTestNote":
+      "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
+    "careerDiscovery.dashboard.snapshotUnreadable":
+      "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
+    "careerDiscovery.dashboard.loading": "Hämtar din senaste rapport…",
+    "careerDiscovery.dashboard.error":
+      "Vi kunde inte hämta din senaste rapport just nu. Försök igen — dina tidigare rapporter finns kvar.",
+    "careerDiscovery.dashboard.retry": "Försök igen",
     "sca.landing.lead":
       "En strukturerad karriärbedömning som hjälper dig utforska roller inom säkerhet — baserad på dina intressen, styrkor och sätt att arbeta.",
     "sca.landing.point.time": "Cirka 5 minuter",
@@ -2516,6 +2532,22 @@ export const dictionaries = {
     "careerDiscovery.history.type.legacy": "Career assessment (earlier version)",
     "careerDiscovery.history.internalTest": "Internal test version",
     "careerDiscovery.history.open": "Open report",
+    "careerDiscovery.dashboard.directionTitle": "Your career direction",
+    "careerDiscovery.dashboard.dnaTitle": "Your Security Career DNA",
+    "careerDiscovery.dashboard.developmentTitle": "Development and next steps",
+    "careerDiscovery.dashboard.viewFullReport": "View the full report",
+    "careerDiscovery.dashboard.exploreAreas": "Explore Security Career Areas",
+    "careerDiscovery.dashboard.allReports": "All my reports",
+    "careerDiscovery.dashboard.nextStepFallback":
+      "Read more about the Security Career Areas that best match your profile.",
+    "careerDiscovery.dashboard.internalTestNote":
+      "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
+    "careerDiscovery.dashboard.snapshotUnreadable":
+      "This report was saved in an earlier format. Open the full report to see its contents.",
+    "careerDiscovery.dashboard.loading": "Loading your latest report…",
+    "careerDiscovery.dashboard.error":
+      "We could not load your latest report just now. Please try again — your earlier reports are still here.",
+    "careerDiscovery.dashboard.retry": "Try again",
     "sca.landing.lead":
       "A structured career assessment that helps you explore security roles — based on your interests, strengths and preferred ways of working.",
     "sca.landing.point.time": "About 5 minutes",
