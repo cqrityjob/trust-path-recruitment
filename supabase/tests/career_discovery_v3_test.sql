@@ -48,16 +48,20 @@ END $$;
 -- Group 1 — the definition ships inert
 -- =========================================================================
 
+-- After the internal-test migration the version sits at internal_test.
+-- It is still NOT reachable by an ordinary candidate: only pilot/active
+-- with every review gate cleared is, and internal_test needs the
+-- admin-authorised function. Group 14 proves both.
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE assessment_id = 'security-career-discovery-v3') = 'design',
-  'G1.1 v3.0 ships with lifecycle_status = design');
+    WHERE assessment_id = 'security-career-discovery-v3') = 'internal_test',
+  'G1.1 v3.0 sits at lifecycle_status = internal_test, never pilot or active');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_versions
     WHERE assessment_id = 'security-career-discovery-v3'
       AND lifecycle_status IN ('pilot','active')) = 0,
-  'G1.2 v3.0 is not in an administrable status');
+  'G1.2 v3.0 is not in a status ordinary candidates can reach');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM jsonb_each(
@@ -145,13 +149,16 @@ $$, 'cd_definition_items_identity',
 -- Group 3 — a session cannot start against a non-administrable version
 -- =========================================================================
 
+-- Drop back to design transaction-locally to prove it is unreachable.
+UPDATE public.cd_definition_versions SET lifecycle_status = 'design'
+WHERE assessment_id = 'security-career-discovery-v3';
+
 SELECT pg_temp.must_fail($$
   INSERT INTO public.cd_sessions (definition_version_id, anon_session_token)
   SELECT defver, gen_random_uuid() FROM t_ids
 $$, 'CD_VERSION_NOT_ADMINISTRABLE',
   'G3.1 a session cannot start against a design-status version');
 
--- BLOCKER 5: design is not reachable even through the internal-test route.
 UPDATE public.cd_definition_versions SET lifecycle_status = 'internal_test'
 WHERE assessment_id = 'security-career-discovery-v3';
 
@@ -163,8 +170,8 @@ $$, 'CD_INTERNAL_TEST_REQUIRES_AUTHORISED_FUNCTION',
 
 SELECT pg_temp.must_fail($$
   SELECT public.cd_begin_internal_test_session((SELECT defver FROM t_ids), 'sv', 'exploring_security')
-$$, 'CD_INTERNAL_TEST_REQUIRES_ADMIN',
-  'G3.3 the internal-test function refuses a non-administrator');
+$$, 'CD_INTERNAL_TEST_NOT_AUTHORISED',
+  'G3.3 the internal-test function refuses an unauthorised caller');
 
 UPDATE public.cd_definition_versions SET lifecycle_status = 'active'
 WHERE assessment_id = 'security-career-discovery-v3';
@@ -569,34 +576,42 @@ SELECT pg_temp.ok(
     WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002') = 'in_progress',
   'G9.4 a failed completion attempt leaves the session in_progress');
 
--- The transactional path exists, reaches its verification steps, and then
--- refuses because Phase 3 does not exist.
-SELECT pg_temp.must_fail($$
-  SELECT public.cd_complete_session('aaaaaaaa-0000-0000-0000-000000000001')
-$$, 'CD_REPORT_GENERATOR_NOT_IMPLEMENTED',
-  'G9.5 the completion function verifies the core set, then refuses: Phase 3 missing');
+-- The Phase 1 single-argument stub is GONE: Phase 3 replaced it with the
+-- six-argument function and dropped rather than overloaded it, so no
+-- payload-free completion path survives.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'cd_complete_session'
+      AND p.pronargs = 1) = 0,
+  'G9.5 the payload-free cd_complete_session(uuid) stub no longer exists');
 
--- Beta is missing B4's sibling? No — beta has all 20. Remove one to prove
--- the function's own core verification fires before the Phase 3 refusal.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'cd_complete_session'
+      AND p.pronargs = 6) = 1,
+  'G9.6 exactly one completion function exists, and it requires the report payload');
+
+-- Removing a core item still blocks completion. Group 14 exercises the
+-- full transactional path end to end.
 DELETE FROM public.cd_evidence
 WHERE session_id = 'bbbbbbbb-0000-0000-0000-000000000002' AND item_id = 'B4';
 
-SELECT pg_temp.must_fail($$
-  SELECT public.cd_complete_session('bbbbbbbb-0000-0000-0000-000000000002')
-$$, 'CD_CORE_INCOMPLETE',
-  'G9.6 the completion function refuses an incomplete core before anything else');
+SELECT pg_temp.must_fail(
+  'SELECT public.cd_complete_session(''bbbbbbbb-0000-0000-0000-000000000002'', ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+  'CD_CORE_INCOMPLETE',
+  'G9.7 the completion function refuses an incomplete core');
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions
     WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002') = 'in_progress'
   AND (SELECT count(*) FROM public.cd_report_snapshots
         WHERE session_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0,
-  'G9.7 a refused completion writes no snapshot and does not change status');
+  'G9.8 a refused completion writes no snapshot and does not change status');
 
-SELECT pg_temp.must_fail($$
-  SELECT public.cd_complete_session('99999999-9999-9999-9999-999999999999')
-$$, 'CD_UNKNOWN_SESSION',
-  'G9.8 the completion function refuses an unknown session');
+SELECT pg_temp.must_fail(
+  'SELECT public.cd_complete_session(''99999999-9999-9999-9999-999999999999'', ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+  'CD_UNKNOWN_SESSION',
+  'G9.9 the completion function refuses an unknown session');
 
 -- =========================================================================
 -- Group 10 — the guards hold for BYPASSRLS callers
@@ -736,6 +751,180 @@ SELECT pg_temp.ok(
   'G13.6 no cd_ trigger was attached to any legacy assessment table');
 
 -- =========================================================================
+
+-- =========================================================================
+-- Group 14 — internal-test enablement and ATOMIC completion (Phase 3)
+-- =========================================================================
+
+-- Groups 2-13 leave the version at `active` with gates cleared so candidate
+-- fixtures could be built. Restore the shipped state for group 14.
+UPDATE public.cd_definition_versions
+SET lifecycle_status = 'internal_test',
+    review_status = jsonb_build_object(
+      'content_review', false, 'sme_review', false, 'language_review', false,
+      'accessibility_review', false, 'bias_review', false,
+      'privacy_legal_review', false, 'psychometric_review', false)
+WHERE assessment_id = 'security-career-discovery-v3';
+
+SELECT pg_temp.ok(
+  (SELECT lifecycle_status FROM public.cd_definition_versions
+    WHERE assessment_id = 'security-career-discovery-v3') = 'internal_test',
+  'G14.1 the version is promoted to internal_test, not pilot or active');
+
+SELECT pg_temp.ok(
+  (SELECT employer_visible FROM public.assessments
+    WHERE id = 'security-career-discovery-v3') = false,
+  'G14.2 promotion did not make the definition visible to employers');
+
+-- Review gates stay outstanding: that is the point of an internal test.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM jsonb_each(
+      (SELECT review_status FROM public.cd_definition_versions
+        WHERE assessment_id = 'security-career-discovery-v3')) AS g(k, v)
+    WHERE g.v = 'true'::jsonb) = 0,
+  'G14.3 internal testing runs before the review gates, which remain outstanding');
+
+INSERT INTO auth.users (id, email) VALUES
+  ('33333333-3333-3333-3333-333333333333', 'gamma@example.test');
+
+CREATE TEMP TABLE t2 AS
+SELECT id AS defver FROM public.cd_definition_versions
+WHERE assessment_id = 'security-career-discovery-v3';
+-- Readable under SET ROLE, so the fixtures below can run as a real caller.
+GRANT SELECT ON t2 TO authenticated;
+
+-- A non-tester cannot open a session, even though the version is now
+-- internal_test.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+SELECT pg_temp.must_fail(
+  'SELECT public.cd_begin_internal_test_session((SELECT defver FROM t2), ''sv'', NULL)',
+  'CD_INTERNAL_TEST_NOT_AUTHORISED',
+  'G14.4 an unauthorised user cannot open an internal-test session');
+RESET ROLE;
+
+-- Authorise them, then it works and is idempotent.
+INSERT INTO public.cd_internal_testers (user_id) VALUES ('33333333-3333-3333-3333-333333333333');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+CREATE TEMP TABLE t_sess AS
+SELECT public.cd_begin_internal_test_session((SELECT defver FROM t2), 'sv', 'exploring_security') AS sid;
+GRANT SELECT ON t_sess TO authenticated;
+
+SELECT pg_temp.ok((SELECT sid FROM t_sess) IS NOT NULL,
+  'G14.5 an authorised tester can open an internal-test session');
+SELECT pg_temp.ok(
+  public.cd_begin_internal_test_session((SELECT defver FROM t2), 'sv', 'exploring_security')
+    = (SELECT sid FROM t_sess),
+  'G14.6 opening again returns the SAME session — no duplicate runs');
+RESET ROLE;
+
+-- An AUTHORISED tester still cannot reach a design-status version: the
+-- status branch is what refuses here, not the authorisation branch.
+UPDATE public.cd_definition_versions SET lifecycle_status = 'design'
+WHERE assessment_id = 'security-career-discovery-v3';
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+SELECT pg_temp.must_fail(
+  'SELECT public.cd_begin_internal_test_session((SELECT defver FROM t2), ''sv'', NULL)',
+  'CD_NOT_AN_INTERNAL_TEST_VERSION',
+  'G14.6b design is unreachable even for an authorised tester');
+RESET ROLE;
+UPDATE public.cd_definition_versions SET lifecycle_status = 'internal_test'
+WHERE assessment_id = 'security-career-discovery-v3';
+
+SELECT pg_temp.ok(
+  (SELECT adaptive_path FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)) = 'A',
+  'G14.7 the path is derived from context_status on the tester session');
+SELECT pg_temp.ok(
+  (SELECT is_internal_test FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)),
+  'G14.8 the session is marked as an internal test');
+
+-- Completion refuses an incomplete core, and leaves nothing behind.
+SELECT pg_temp.must_fail(
+  format('SELECT public.cd_complete_session(%L, ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+         (SELECT sid FROM t_sess)),
+  'CD_CORE_INCOMPLETE',
+  'G14.9 completion refuses an incomplete core set');
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)) = 'in_progress'
+  AND (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess)) = 0,
+  'G14.10 a refused completion leaves the session in_progress with no snapshot');
+
+-- Answer all 20 core items.
+INSERT INTO public.cd_evidence (session_id, item_id, answer_value)
+SELECT (SELECT sid FROM t_sess), v.item_id, 'x'
+FROM (VALUES ('S1'),('S2'),('S3'),('S4'),('S5'),('S6'),('S7'),('S8'),
+             ('T1'),('T2'),('T3'),('T4'),('T5'),('T6'),('T7'),('T8'),
+             ('B1'),('B2'),('B3'),('B4')) AS v(item_id);
+
+-- An empty ranking is refused: a report with no areas is not a report.
+SELECT pg_temp.must_fail(
+  format('SELECT public.cd_complete_session(%L, ''{}''::jsonb, ''[]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+         (SELECT sid FROM t_sess)),
+  'CD_EMPTY_RANKING',
+  'G14.11 completion refuses a report with no ranked Security Career Areas');
+
+-- The real completion: atomic.
+CREATE TEMP TABLE t_snap AS
+SELECT public.cd_complete_session(
+  (SELECT sid FROM t_sess),
+  '{"axes":[]}'::jsonb,
+  '[{"areaId":"protective_operations","fit":0.98,"confidence":"strong"}]'::jsonb,
+  '{"axisCoverage":1}'::jsonb,
+  '{"coverage":1}'::jsonb,
+  ARRAY['operational_interest']::text[]) AS snap;
+
+SELECT pg_temp.ok((SELECT snap FROM t_snap) IS NOT NULL,
+  'G14.12 completion returns a snapshot id');
+SELECT pg_temp.ok(
+  (SELECT status FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)) = 'completed'
+  AND (SELECT completed_at FROM public.cd_sessions WHERE id = (SELECT sid FROM t_sess)) IS NOT NULL,
+  'G14.13 the session is completed and stamped, in the same transaction');
+
+-- Versions are DERIVED, not taken from the caller.
+SELECT pg_temp.ok(
+  (SELECT definition_version||'|'||content_version||'|'||scoring_version||'|'||taxonomy_version
+     FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess))
+  = '2026-scd-v3.0.0|scd-content-v3.0.0|scd-scoring-v3.0.0|cig-areas-v1',
+  'G14.14 the stored version tuple is derived, not the literal ''derived'' placeholders passed in');
+
+SELECT pg_temp.ok(
+  (SELECT context_status FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess))
+    = 'exploring_security',
+  'G14.15 context_status is copied from the session onto the snapshot');
+
+-- Repeat completion is rejected with a stable code, and creates nothing.
+SELECT pg_temp.must_fail(
+  format('SELECT public.cd_complete_session(%L, ''{}''::jsonb, ''[{"areaId":"x"}]''::jsonb, ''{}''::jsonb, ''{}''::jsonb, ARRAY[]::text[])',
+         (SELECT sid FROM t_sess)),
+  'CD_ALREADY_COMPLETED',
+  'G14.16 repeat completion is rejected with a stable error code');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sid FROM t_sess)) = 1,
+  'G14.17 a session can never accumulate a second snapshot');
+
+-- A completed session is terminal and its client still cannot touch status.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+SELECT pg_temp.must_fail(
+  format('UPDATE public.cd_sessions SET status = ''in_progress'' WHERE id = %L', (SELECT sid FROM t_sess)),
+  'CD_COMPLETED_IS_TERMINAL',
+  'G14.18 a completed session cannot be reopened by its owner');
+
+-- History view is owner-scoped.
+SELECT pg_temp.ok((SELECT count(*) FROM public.cd_my_report_history) = 1,
+  'G14.19 the tester sees exactly their own report in the history view');
+RESET ROLE;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+SELECT pg_temp.ok((SELECT count(*) FROM public.cd_my_report_history) = 0,
+  'G14.20 another user sees none of the tester''s reports in the history view');
+RESET ROLE;
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v3_test: ALL ASSERTIONS PASSED'; END $$;
 
