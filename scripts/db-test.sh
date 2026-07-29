@@ -101,34 +101,43 @@ EOF
 # resulting schema is identical either way; only the replay double-applies.
 # Verified failing on origin/main at e1056e0 before being added here.
 # ---------------------------------------------------------------------------
+# Each entry is  <filename>|||<expected error substring>
+#
+# The expected error is asserted, not merely the filename. A file on this
+# list that fails for a DIFFERENT reason, stops at a different statement,
+# or starts passing, is reported as a deviation. Blanket-suppressing every
+# error from a named file would hide exactly the drift this list exists to
+# make visible.
 KNOWN_FAILURES=(
-  "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql"
-  "20260719115332_aa5ec826-c781-4d2d-a03e-f6c744d43272.sql"
-  "20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql"
-  "20260719220600_0e43ff83-6b6a-4bd0-ab65-f16e86f79946.sql"
-  "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql"
-  "20260720124636_c5e57833-aa14-4466-a5ec-03c29424eac0.sql"
-  "20260720150000_h3_4a_candidate_application_core.sql"
-  "20260720160000_h3_4b_beta_feedback.sql"
-  "20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql"
-  "20260723192846_096c5154-1c66-4089-bd18-b5b349d69f18.sql"
-  "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql"
-  "20260724130000_admin_portal_operational_scope.sql"
-  # Lovable Cloud sync re-issue -- duplicates of migrations this repository
-  # already carries. Same schema, applied twice on a clean replay.
-  "20260728175944_126362c3-0bfe-4872-9364-decdeffaa734.sql"
-  "20260728181422_cff0d76a-c34f-46c1-98c1-dd28126902fb.sql"
-  "20260728181803_500542a9-3dc2-4e13-8505-7113dc859560.sql"
-  "20260728181901_0db6ed3c-faa0-4b55-8509-c24ed96e7b4a.sql"
-  "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql"
-  "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql"
-  "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql"
+  "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql|||relation \"security_career_profiles\" already exists"
+  "20260719115332_aa5ec826-c781-4d2d-a03e-f6c744d43272.sql|||column \"status\" of relation \"employers\" already exists"
+  "20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql|||relation \"storage.objects\" does not exist"
+  "20260719220600_0e43ff83-6b6a-4bd0-ab65-f16e86f79946.sql|||column \"registration_number\" of relation \"employers\" already exists"
+  "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql|||policy \"employers_owner_admin_update\" for table \"employers\" already exists"
+  "20260720124636_c5e57833-aa14-4466-a5ec-03c29424eac0.sql|||relation \"employer_moderation_events\" already exists"
+  "20260720150000_h3_4a_candidate_application_core.sql|||relation \"job_application_status_events\" already exists"
+  "20260720160000_h3_4b_beta_feedback.sql|||relation \"beta_feedback\" already exists"
+  "20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql|||relation \"storage.objects\" does not exist"
+  "20260723192846_096c5154-1c66-4089-bd18-b5b349d69f18.sql|||relation \"employees\" already exists"
+  "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql|||relation \"assessment_assignments\" already exists"
+  "20260724130000_admin_portal_operational_scope.sql|||policy \"employees_admin_select\" for table \"employees\" already exists"
+  # ---- Lovable Cloud sync re-issue (see the note above) ----
+  "20260728175944_126362c3-0bfe-4872-9364-decdeffaa734.sql|||relation \"supabase_migrations.schema_migrations\" does not exist"
+  "20260728181422_cff0d76a-c34f-46c1-98c1-dd28126902fb.sql|||relation \"scp_content_roles\" already exists"
+  "20260728181803_500542a9-3dc2-4e13-8505-7113dc859560.sql|||relation \"scp_scoring_versions\" already exists"
+  "20260728181901_0db6ed3c-faa0-4b55-8509-c24ed96e7b4a.sql|||trigger \"scp_competency_versions_insert_status\" for relation \"scp_competency_versions\" already exists"
+  "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql|||relation \"scp_scoring_version_lineage\" already exists"
+  "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql|||relation \"cd_definition_versions\" already exists"
+  "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
 )
 
-is_known_failure() {
-  local name="$1"
-  for known in "${KNOWN_FAILURES[@]}"; do
-    [ "$name" = "$known" ] && return 0
+# Returns 0 and echoes the expected error when the file is allowlisted.
+expected_failure_for() {
+  local name="$1" entry
+  for entry in "${KNOWN_FAILURES[@]}"; do
+    case "$entry" in
+      "$name|||"*) printf '%s' "${entry#*|||}"; return 0 ;;
+    esac
   done
   return 1
 }
@@ -137,21 +146,47 @@ echo "==> Replaying full migration history"
 UNEXPECTED=()
 for f in supabase/migrations/*.sql; do
   name="$(basename "$f")"
-  if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" >/dev/null 2>&1; then
-    if is_known_failure "$name"; then
+  set +e
+  ERR_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" 2>&1 >/dev/null)"
+  RC=$?
+  set -e
+
+  EXPECTED=""
+  if EXPECTED="$(expected_failure_for "$name")"; then IS_KNOWN=1; else IS_KNOWN=0; fi
+
+  if [ "$RC" -eq 0 ]; then
+    if [ "$IS_KNOWN" -eq 1 ]; then
       echo "    !!  $name is allowlisted as a known failure but PASSED."
       echo "        Remove it from KNOWN_FAILURES in scripts/db-test.sh."
       UNEXPECTED+=("$name (unexpectedly passed)")
     fi
-  else
-    if is_known_failure "$name"; then
-      echo "    --  $name (known pre-existing failure, also fails on main)"
-    else
-      echo "    XX  $name FAILED"
-      psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" 2>&1 | grep -iE "error|FEL" | head -3 || true
-      UNEXPECTED+=("$name")
-    fi
+    continue
   fi
+
+  # Failed. The first reported error line is the one that stopped it.
+  ACTUAL="$(printf '%s' "$ERR_OUT" | grep -m1 -E '(ERROR|FEL):' || true)"
+
+  if [ "$IS_KNOWN" -eq 0 ]; then
+    echo "    XX  $name FAILED (not allowlisted)"
+    printf '%s\n' "$ERR_OUT" | grep -iE "error|FEL" | head -3 || true
+    UNEXPECTED+=("$name")
+    continue
+  fi
+
+  # Allowlisted: the failure must be the EXPECTED one. A different error, a
+  # different failing statement, or an earlier stop is a deviation, not a
+  # known failure.
+  case "$ACTUAL" in
+    *"$EXPECTED"*)
+      echo "    --  $name (known failure, expected error confirmed)"
+      ;;
+    *)
+      echo "    XX  $name failed with an UNEXPECTED error."
+      echo "        expected: $EXPECTED"
+      echo "        actual:   $ACTUAL"
+      UNEXPECTED+=("$name (error changed)")
+      ;;
+  esac
 done
 
 if [ "${#UNEXPECTED[@]}" -gt 0 ]; then
