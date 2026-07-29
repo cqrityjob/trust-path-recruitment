@@ -1186,6 +1186,110 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
+// My Career — active-report selection and v3 dashboard
+// ---------------------------------------------------------------------------
+
+const activeFns = read("src/lib/career-discovery/active-report.functions.ts");
+const dashboard = read("src/routes/_authenticated.my-career.index.tsx");
+const v3Summary = read("src/components/career-discovery/DiscoveryCareerSummary.tsx");
+
+// Selection happens ONCE, on the server, before render.
+expect(
+  activeFns.includes("createServerFn") && activeFns.includes("getActiveCareerReport"),
+  "my-career: active-report selection must be a server function, not client render order",
+);
+// v3 wins whenever it exists; legacy is only a fallback.
+expect(
+  activeFns.indexOf("cd_report_snapshots") < activeFns.indexOf("assessment_runs"),
+  "my-career: the v3 lookup must precede the legacy fallback",
+);
+expect(
+  /kind: "discovery_v3"|kind: "legacy_v21"|kind: "none"/.test(activeFns),
+  "my-career: selection must return an explicit report-type discriminator",
+);
+expect(
+  activeFns.includes('.order("generated_at", { ascending: false })') &&
+    activeFns.includes('.order("completed_at", { ascending: false })'),
+  "my-career: both sources must be ordered by stored completion timestamp",
+);
+
+// The dashboard must gate legacy behind the discriminator, and must not fall
+// back to legacy while v3 is loading or has failed.
+expect(
+  dashboard.includes("activeIsDiscovery") && dashboard.includes("activeIsLegacy"),
+  "my-career: the dashboard must branch on the active report type",
+);
+expect(
+  /activeIsLegacy && hasProfile && profile &&/.test(dashboard),
+  "my-career: the legacy career-profile card must render only when legacy is active",
+);
+expect(
+  dashboard.includes("activeQ.isLoading") && dashboard.includes("animate-pulse"),
+  "my-career: a neutral skeleton must show while selection resolves, preventing a legacy flash",
+);
+expect(
+  dashboard.includes("activeQ.isError") && dashboard.includes("careerDiscovery.dashboard.error"),
+  "my-career: a v3 load failure must show a sanitised error, not an older legacy report",
+);
+
+// Career journey must not let legacy state overwrite a newer v3 completion.
+expect(
+  dashboard.includes("hasCompletedAssessment || activeIsDiscovery"),
+  "my-career: a v3 completion must mark the assessment step complete",
+);
+expect(
+  /const noAssessment =\s*\n\s*!activeIsDiscovery/.test(dashboard),
+  "my-career: a v3 completion must not be treated as 'no assessment'",
+);
+
+// The v3 summary must render only from the stored snapshot.
+for (const live of [
+  "career-areas",
+  "SECURITY_CAREER_AREAS",
+  "AREAS_BY_ID",
+  "scoreDna",
+  "rankCareerAreas",
+  "buildReport",
+]) {
+  expect(
+    !v3Summary.includes(live),
+    `my-career: the v3 summary must not import live module "${live}" — every value comes from the snapshot`,
+  );
+}
+
+// Legacy vocabulary must never appear in the v3 summary's OUTPUT. Comments
+// are stripped first: naming what a component deliberately excludes is
+// documentation, not a violation.
+const v3SummaryCode = v3Summary
+  .split("\n")
+  .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+  .join("\n");
+for (const legacyLabel of [
+  "Toppyrke",
+  "Primär drivkraft",
+  "Konfidensnivå",
+  "Skyddsvakt",
+  "Operativ väktare",
+]) {
+  expect(
+    !v3SummaryCode.includes(legacyLabel),
+    `my-career: legacy label "${legacyLabel}" must not appear when v3 is the active report`,
+  );
+}
+
+// The next-step card must not invent a profession match.
+expect(
+  v3Summary.includes('to="/career-center"'),
+  "my-career: the v3 next step must link to the Security Career Center rather than a guessed profession",
+);
+
+// No route may start a new legacy assessment.
+expect(
+  !dashboard.includes('to="/assessment"'),
+  "my-career: the dashboard must not offer a legacy assessment start",
+);
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
