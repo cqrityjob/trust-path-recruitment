@@ -29,7 +29,9 @@ import {
   completeDiscoverySession,
   getDiscoverySessionState,
   saveDiscoveryAnswer,
+  startDiscoverySession,
 } from "@/lib/career-discovery/discovery.functions";
+import { parseSessionId } from "@/lib/career-discovery/session-id";
 import { PREPARATION_SCREEN } from "@/lib/career-discovery/sections";
 import { assembleSession, progressFor } from "@/lib/career-discovery/session";
 import type { AssembledSession, ContextStatus, DiscoveryItem } from "@/lib/career-discovery/types";
@@ -49,6 +51,7 @@ function DiscoverySessionRoute() {
   const navigate = useNavigate();
 
   const loadState = useServerFn(getDiscoverySessionState);
+  const startSession = useServerFn(startDiscoverySession);
   const saveAnswer = useServerFn(saveDiscoveryAnswer);
   const complete = useServerFn(completeDiscoverySession);
 
@@ -62,18 +65,53 @@ function DiscoverySessionRoute() {
   const [transitionFor, setTransitionFor] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastFailed, setLastFailed] = useState<{ itemId: string; value: string } | null>(null);
+  const [recovering, setRecovering] = useState(false);
 
   const headingRef = useRef<HTMLHeadingElement | null>(null);
 
   // ---- resume ------------------------------------------------------------
   useEffect(() => {
     let mounted = true;
-    if (!sessionId) {
-      setFatal(t("careerDiscovery.session.error.missing"));
-      setLoading(false);
-      return;
+
+    // Recovery path. The session id travels in the URL, and a query string
+    // does not survive every round trip into an authenticated route — the
+    // auth gate rebuilds the redirect from `window.location.pathname`,
+    // which drops it. Rather than dead-end on an empty param, re-resolve
+    // the session: startDiscoverySession is idempotent and returns the
+    // caller's existing in-progress session, so this recovers the SAME run
+    // and never creates a second one. The URL is then corrected in place.
+    const resolved = parseSessionId(sessionId);
+    if (!resolved) {
+      setRecovering(true);
+      startSession({ data: { locale: lang } })
+        .then((r) => {
+          if (!mounted) return;
+          const recovered = parseSessionId(r?.sessionId);
+          if (!recovered) {
+            setFatal(t("careerDiscovery.session.error.missing"));
+            setLoading(false);
+            setRecovering(false);
+            return;
+          }
+          // replace, not push: the broken URL must not stay in history.
+          navigate({
+            to: "/discovery/session",
+            search: { session: recovered } as never,
+            replace: true,
+          });
+        })
+        .catch(() => {
+          if (!mounted) return;
+          setFatal(t("careerDiscovery.session.error.missing"));
+          setLoading(false);
+          setRecovering(false);
+        });
+      return () => {
+        mounted = false;
+      };
     }
-    loadState({ data: { sessionId } })
+
+    loadState({ data: { sessionId: resolved } })
       .then((s) => {
         if (!mounted) return;
         if (s.session.status === "completed" && s.snapshotId) {
@@ -106,7 +144,7 @@ function DiscoverySessionRoute() {
     return () => {
       mounted = false;
     };
-  }, [sessionId, loadState, navigate, t]);
+  }, [sessionId, loadState, startSession, navigate, t, lang]);
 
   const built: AssembledSession | null = useMemo(
     () => (contextStatus ? assembleSession(contextStatus) : null),
@@ -151,6 +189,15 @@ function DiscoverySessionRoute() {
 
   // ---- rendering helpers -------------------------------------------------
 
+  if (recovering) {
+    return (
+      <AssessmentLayout narrow>
+        <p role="status" className="text-sm text-muted-foreground">
+          {t("careerDiscovery.session.recovering")}
+        </p>
+      </AssessmentLayout>
+    );
+  }
   if (loading) {
     return (
       <AssessmentLayout narrow>

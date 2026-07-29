@@ -39,6 +39,7 @@ import {
 } from "../src/lib/career-discovery/session";
 import { rankCareerAreas } from "../src/lib/career-discovery/area-ranking";
 import { scoreDna } from "../src/lib/career-discovery/scoring";
+import { isValidSessionId, parseSessionId } from "../src/lib/career-discovery/session-id";
 import type { ScoringInput } from "../src/lib/career-discovery/scoring";
 import type { AdaptivePath, ContextStatus, DiscoveryItem } from "../src/lib/career-discovery/types";
 import { isScoredItem } from "../src/lib/career-discovery/types";
@@ -886,6 +887,126 @@ expect(
       r.evaluated.every((c) => !sparse.emergingAxes.includes(c.axis)),
     ),
   "ranking: an emerging axis must never appear as an evaluated contribution",
+);
+
+// ---------------------------------------------------------------------------
+// Start flow — session id must be a real UUID before it reaches the URL
+// ---------------------------------------------------------------------------
+//
+// Regression cover for the start-flow defect: the landing page navigated
+// with whatever the RPC returned, so a lost or malformed id produced
+// `/discovery/session?session=` and a dead end.
+
+const VALID_UUID = "ba7787d2-5a07-48fd-ab17-3191afc90990";
+
+expect(isValidSessionId(VALID_UUID), "session id: a real uuid must validate");
+expect(parseSessionId(VALID_UUID) === VALID_UUID, "session id: a real uuid must parse to itself");
+expect(
+  parseSessionId("  " + VALID_UUID.toUpperCase() + "  ") === VALID_UUID,
+  "session id: case and surrounding whitespace must normalise, not reject",
+);
+
+// Every shape the broken flow could produce must be rejected.
+for (const bad of [
+  "", // String(undefined ?? "") -- exactly what produced `?session=`
+  " ",
+  "undefined",
+  "null",
+  "ba7787d2", // truncated
+  "ba7787d2-5a07-48fd-ab17", // truncated
+  "ba7787d2-5a07-48fd-ab17-3191afc9099g", // non-hex
+  "ba7787d2_5a07_48fd_ab17_3191afc90990", // wrong separators
+  undefined,
+  null,
+  0,
+  {},
+  [],
+]) {
+  expect(
+    parseSessionId(bad) === null,
+    `session id: ${JSON.stringify(bad)} must be rejected, never sent to the router`,
+  );
+  expect(!isValidSessionId(bad), `session id: ${JSON.stringify(bad)} must not validate`);
+}
+
+// ---- Route wiring, asserted statically --------------------------------
+
+const landing = read("src/routes/discovery.tsx");
+const sessionRoute = read("src/routes/_authenticated.discovery.session.tsx");
+
+// The navigate must be gated on a parsed id, and the raw RPC value must not
+// go straight into the search param.
+expect(
+  landing.includes("parseSessionId(result?.sessionId)"),
+  "start flow: the landing page must validate the RPC result before navigating",
+);
+expect(
+  !/search:\s*\{\s*session:\s*result/.test(landing) &&
+    !/search:\s*\{\s*session:\s*sessionId\s*\}\s*as never/.test(
+      landing.slice(0, landing.indexOf("const sessionId = parseSessionId")),
+    ),
+  "start flow: the unvalidated RPC value must never be placed in the search param",
+);
+
+// Error path: the catch block must set an error and must NOT navigate.
+// Anchored inside beginOrResume -- the first `} catch {` in the file belongs
+// to the access-check effect, not to the start handler.
+const beginStart = landing.indexOf("const beginOrResume");
+const beginEnd = landing.indexOf("\n  };", beginStart);
+const beginBody = landing.slice(beginStart, beginEnd);
+const catchBlock = beginBody.slice(beginBody.indexOf("} catch {"));
+expect(
+  catchBlock.includes("setError(") && !catchBlock.includes("navigate("),
+  "start flow: a failed RPC must set an error and must NOT navigate",
+);
+
+// The invalid-id branch must also return without navigating.
+const guardBlock = beginBody.slice(
+  beginBody.indexOf("if (!sessionId) {"),
+  beginBody.indexOf('navigate({ to: "/discovery/session"'),
+);
+expect(
+  guardBlock.includes("return;") && !guardBlock.includes("navigate("),
+  "start flow: an invalid session id must return early without navigating",
+);
+
+// Sanitised errors only: no raw ids, codes or database vocabulary surfaced.
+for (const leak of ["sessionId}", "error.message", "CD_", "supabase", "rpc"]) {
+  const inUserFacing = /setError\([^)]*/g;
+  const calls = beginBody.match(inUserFacing) ?? [];
+  expect(
+    !calls.some((c) => c.includes(leak)),
+    `start flow: setError must not surface "${leak}" to the candidate`,
+  );
+}
+
+// Recovery: a missing/invalid param must re-resolve rather than dead-end,
+// and must replace the broken URL rather than push it.
+expect(
+  sessionRoute.includes("startSession({ data: { locale: lang } })"),
+  "start flow: the session route must recover a lost session id via the idempotent start RPC",
+);
+expect(
+  sessionRoute.includes("replace: true"),
+  "start flow: the corrected URL must replace the broken one, not push a second history entry",
+);
+expect(
+  sessionRoute.includes("parseSessionId(sessionId)"),
+  "start flow: the session route must validate its search param",
+);
+
+// The recovery must reuse the idempotent RPC, which returns the caller's
+// existing in-progress session -- so recovery can never fork a second run.
+expect(
+  /returns the caller's existing in-progress session|never creates a second one/.test(sessionRoute),
+  "start flow: the recovery path must document that it cannot create a duplicate session",
+);
+
+// The legacy instrument must remain untouched by this fix.
+expect(
+  !landing.includes("security-career-assessment") &&
+    !sessionRoute.includes("security-career-assessment"),
+  "scope: the start-flow fix must not reference the legacy assessment route",
 );
 
 // ---------------------------------------------------------------------------

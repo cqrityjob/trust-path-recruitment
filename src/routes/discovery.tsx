@@ -21,6 +21,7 @@ import {
   getDiscoveryAccess,
   startDiscoverySession,
 } from "@/lib/career-discovery/discovery.functions";
+import { parseSessionId } from "@/lib/career-discovery/session-id";
 
 export const Route = createFileRoute("/discovery")({
   ssr: false,
@@ -77,9 +78,23 @@ function DiscoveryLanding() {
     setBusy(true);
     setError(null);
     try {
-      const { sessionId } = await start({ data: { locale: lang } });
+      const result = await start({ data: { locale: lang } });
+
+      // Never navigate on anything other than a real session id. Previously
+      // the raw value went straight into the URL, so a missing or malformed
+      // id produced `/discovery/session?session=` and a dead end that looked
+      // like a broken product rather than a failed call.
+      const sessionId = parseSessionId(result?.sessionId);
+      if (!sessionId) {
+        setError(t("careerDiscovery.landing.error.noSession"));
+        setBusy(false);
+        return;
+      }
+
       navigate({ to: "/discovery/session", search: { session: sessionId } as never });
     } catch {
+      // Sanitised: the user is told it failed and what to do, never the
+      // error code, the session id, or anything about the database.
       setError(t("careerDiscovery.landing.error.start"));
       setBusy(false);
     }
