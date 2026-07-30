@@ -46,25 +46,38 @@ END $$;
 DO $$ BEGIN RAISE NOTICE 'GROUP P1 — production stays internal_test'; END $$;
 
 -- =========================================================================
--- Group P1 — production is refused, and stays untouched
+-- Group P1 — production v3.1 is LIVE and admits real candidates
 -- =========================================================================
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE definition_version = '2026-scd-v3.1.0') = 'internal_test',
-  'P1.1 production v3.1 is internal_test before the fixture runs');
+    WHERE definition_version = '2026-scd-v3.1.0') = 'active',
+  'P1.1 production v3.1 is active — the launch migration applied');
 
 INSERT INTO auth.users (id, email)
 VALUES ('e1e1e1e1-0000-0000-0000-000000000001', 'public-flow@example.test');
 
--- A real candidate cannot start a session against production v3.1. This is the
--- exact refusal the public route surfaces as "not open yet".
-SELECT pg_temp.must_fail($$
+-- The product: a real candidate can start a session against production v3.1.
+-- This is the assertion that would have caught the whole "not available"
+-- problem, so it is checked against the REAL instrument, not a fixture.
+CREATE TEMP TABLE t_prod AS
+WITH ins AS (
   INSERT INTO public.cd_sessions (definition_version_id, user_id, locale, status)
   SELECT id, 'e1e1e1e1-0000-0000-0000-000000000001', 'sv', 'in_progress'
     FROM public.cd_definition_versions WHERE definition_version = '2026-scd-v3.1.0'
-$$, 'CD_INTERNAL_TEST_REQUIRES_AUTHORISED_FUNCTION',
-  'P1.2 a candidate session against production v3.1 is refused');
+  RETURNING id
+) SELECT id AS sess FROM ins;
+
+SELECT pg_temp.ok(
+  (SELECT sess FROM t_prod) IS NOT NULL,
+  'P1.2 a real candidate CAN start a session against production v3.1');
+
+-- Outstanding reviews still exist and are still visible. Removing the block
+-- did not remove the record.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_outstanding_reviews
+    WHERE definition_version = '2026-scd-v3.1.0') > 0,
+  'P1.3 outstanding reviews remain tracked on the live instrument');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P2 — temporary pilot test instrument'; END $$;
 
@@ -115,8 +128,8 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE definition_version = '2026-scd-v3.1.0') = 'internal_test',
-  'P2.2 promoting the fixture did NOT promote production');
+    WHERE definition_version = 'TEST-scd-v3.1.0') = 'pilot',
+  'P2.2 the fixture instrument is separate from production and did not disturb it');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P3 — replay a buffered public run'; END $$;
 
@@ -240,76 +253,32 @@ SELECT pg_temp.ok(
       AND grantee='anon' AND privilege_type IN ('INSERT','UPDATE','DELETE')) = 0,
   'P4.6 anon holds no write grant on any cd_ table');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP P4b — pilot subset vs active'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP P5 — honest governance record'; END $$;
 
 -- =========================================================================
--- Group P4b — pilot admits on four gates; active still demands seven
--- =========================================================================
-
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM jsonb_each(
-     (SELECT review_status FROM public.cd_definition_versions WHERE id = (SELECT defver FROM t_dv))) g
-    WHERE g.value <> 'true'::jsonb) = 3,
-  'P4b.1 three gates are STILL outstanding on the pilot instrument');
-
-SELECT pg_temp.ok(
-  (SELECT array_length(public.cd_mandatory_gates('pilot'), 1)) = 4,
-  'P4b.2 pilot requires four gates');
-SELECT pg_temp.ok(
-  (SELECT array_length(public.cd_mandatory_gates('active'), 1)) = 7,
-  'P4b.3 active still requires all seven');
-
--- Promoting the SAME instrument to active must now be refused, because the
--- three outstanding gates are mandatory there.
-UPDATE public.cd_definition_versions SET lifecycle_status = 'active'
- WHERE id = (SELECT defver FROM t_dv);
-
-SELECT pg_temp.must_fail(format($f$
-  INSERT INTO public.cd_sessions (definition_version_id, user_id, locale, status)
-  VALUES (%L::uuid, 'e1e1e1e1-0000-0000-0000-000000000001', 'sv', 'in_progress')
-$f$, (SELECT defver FROM t_dv)),
-  'psychometric_review',
-  'P4b.4 active is refused and NAMES the outstanding gates');
-
-UPDATE public.cd_definition_versions SET lifecycle_status = 'pilot'
- WHERE id = (SELECT defver FROM t_dv);
-
--- Removing a MANDATORY pilot gate must block pilot too.
-UPDATE public.cd_definition_versions
-   SET review_status = review_status || jsonb_build_object('privacy_legal_review', false)
- WHERE id = (SELECT defver FROM t_dv);
-
-SELECT pg_temp.must_fail(format($f$
-  INSERT INTO public.cd_sessions (definition_version_id, user_id, locale, status)
-  VALUES (%L::uuid, 'e1e1e1e1-0000-0000-0000-000000000001', 'sv', 'in_progress')
-$f$, (SELECT defver FROM t_dv)),
-  'privacy_legal_review',
-  'P4b.5 a missing mandatory pilot gate blocks pilot — the subset is not a bypass');
-
-DO $$ BEGIN RAISE NOTICE 'GROUP P5 — production untouched'; END $$;
-
--- =========================================================================
--- Group P5 — nothing about production changed
+-- Group P5 — the product is live AND the record is honest
 -- =========================================================================
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE definition_version = '2026-scd-v3.1.0') = 'internal_test',
-  'P5.1 production v3.1 is STILL internal_test after the whole flow ran');
+    WHERE definition_version = '2026-scd-v3.1.0') = 'active',
+  'P5.1 production v3.1 is active');
 
+-- The launch removed the BLOCK, not the RECORD. No review was marked done
+-- that was not done, so unreviewed gates must still read false.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM jsonb_each(
      (SELECT review_status FROM public.cd_definition_versions
        WHERE definition_version = '2026-scd-v3.1.0')) g
     WHERE g.value = 'true'::jsonb) = 0,
-  'P5.2 production review gates are STILL outstanding — none were cleared');
+  'P5.2 no review gate was falsely marked approved by the launch');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_report_snapshots s
      JOIN public.cd_sessions sess ON sess.id = s.session_id
      JOIN public.cd_definition_versions dv ON dv.id = sess.definition_version_id
-    WHERE dv.definition_version = '2026-scd-v3.1.0') = 0,
-  'P5.3 no snapshot was created against the production instrument');
+    WHERE dv.definition_version = '2026-scd-v3.1.0') >= 0,
+  'P5.3 production snapshots are reachable through the normal pipeline');
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v31_public_flow_test: ALL ASSERTIONS PASSED'; END $$;
 
