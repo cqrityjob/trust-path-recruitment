@@ -354,6 +354,36 @@ if [ "$CD31_PASSED" -lt 45 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5d. Security Career Discovery v3.1 completion, idempotency and snapshot
+#     stability.
+#
+# The stability group mutates the real definition, item registry and option
+# matrix tables and then proves the stored snapshot bytes are unchanged.
+# ---------------------------------------------------------------------------
+echo "==> Running Career Discovery v3.1 completion + stability assertions"
+set +e
+CDC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_completion_test.sql 2>&1)"
+CDC_RC=$?
+set -e
+
+echo "$CDC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CDC_PASSED="$(echo "$CDC_OUT" | grep -c "ok  " || true)"
+
+if [ "$CDC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Career Discovery v3.1 completion suite exited with code ${CDC_RC}." >&2
+  echo "$CDC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${CDC_PASSED} Career Discovery v3.1 completion assertions passed"
+
+if [ "$CDC_PASSED" -lt 35 ]; then
+  echo "FAIL: expected at least 35 completion assertions, only ${CDC_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -388,5 +418,6 @@ echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
 echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
+echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

@@ -15,6 +15,9 @@ export * from "./option-matrix";
 export * from "./scoring";
 export * from "./patterns";
 export * from "./contract";
+export * from "./career-areas";
+export * from "./story";
+export * from "./snapshot";
 
 import { DIMENSION_IDS } from "./dimensions";
 import { PATTERNS } from "./patterns";
