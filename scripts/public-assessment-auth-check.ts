@@ -325,6 +325,64 @@ try {
 ok(!activationIsMigration, "4.7 activation is not present in supabase/migrations");
 
 // =========================================================================
+group("5 · The public route serves v3.1 only");
+// =========================================================================
+
+const canonicalRoute = read("src/routes/security-career-assessment.tsx");
+const flow = read("src/components/career-discovery/v31/PublicAssessmentFlow.tsx");
+
+ok(
+  canonicalRoute.includes("<PublicAssessmentFlow"),
+  "5.1 the canonical public route renders the v3.1 flow",
+);
+// The v3.0 fallback is gone: silently routing a candidate into the old
+// assessment means they answer a different instrument from the one the page
+// describes, scored by a retired model.
+for (const v30 of ["DiscoveryLanding", "DiscoverySessionView", "unavailableFallback"]) {
+  ok(!canonicalRoute.includes(v30), `5.2 the canonical route no longer references ${v30}`);
+}
+for (const v30Module of [
+  "career-discovery/report",
+  "career-discovery/scoring",
+  "career-discovery/axes",
+  "career-discovery/area-ranking",
+  "career-discovery/core-items",
+  "career-intelligence-engine",
+]) {
+  ok(!flow.includes(v30Module), `5.3 the v3.1 flow imports no v3.0 module: ${v30Module}`);
+}
+ok(
+  flow.includes("v31/core-items") && flow.includes("v31/option-matrix"),
+  "5.4 questions come from the v3.1 modules",
+);
+// An unavailable instrument must say so, not degrade into another assessment.
+ok(
+  flow.includes("cd.public.unavailableTitle"),
+  "5.5 an unavailable v3.1 shows an explicit v3.1 state",
+);
+
+// The pilot gate subset must narrow, never diverge.
+const gateMigration = read(
+  "supabase/migrations/20260731090000_career_discovery_pilot_gate_subset.sql",
+);
+for (const mandatory of [
+  "content_review",
+  "language_review",
+  "privacy_legal_review",
+  "accessibility_review",
+]) {
+  ok(gateMigration.includes(mandatory), `5.6 ${mandatory} is mandatory for pilot`);
+}
+ok(
+  /WHEN 'active' THEN[\s\S]{0,300}psychometric_review/.test(gateMigration),
+  "5.7 active still requires psychometric_review",
+);
+ok(
+  !/UPDATE[\s\S]*cd_definition_versions[\s\S]*SET[\s\S]*review_status/i.test(gateMigration),
+  "5.8 the migration clears no gate and promotes no version",
+);
+
+// =========================================================================
 console.log("");
 if (failures > 0) {
   console.error(`FAILED: ${failures} of ${checks} checks failed.`);

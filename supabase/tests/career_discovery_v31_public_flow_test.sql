@@ -85,10 +85,13 @@ WITH ins AS (
          -- Reuses the real scoring version so the seeded 164 option loadings
          -- apply. The instrument is a fixture; the scoring contract is not.
          'v3.1-draft-1', 'cig-areas-v1', 'pilot',
+         -- ONLY the four gates mandatory for pilot. The other three stay
+         -- false, exactly as they are in production, so this fixture proves
+         -- the new pilot rule rather than the old all-seven rule.
          jsonb_build_object(
-           'content_review', true, 'sme_review', true, 'language_review', true,
-           'accessibility_review', true, 'bias_review', true,
-           'privacy_legal_review', true, 'psychometric_review', true)
+           'content_review', true, 'language_review', true,
+           'privacy_legal_review', true, 'accessibility_review', true,
+           'sme_review', false, 'bias_review', false, 'psychometric_review', false)
     FROM public.assessment_versions av
    WHERE av.assessment_id = 'security-career-discovery-v3'
      AND av.model_version = 'TEST-scd-v3.1.0'
@@ -236,6 +239,52 @@ SELECT pg_temp.ok(
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
       AND grantee='anon' AND privilege_type IN ('INSERT','UPDATE','DELETE')) = 0,
   'P4.6 anon holds no write grant on any cd_ table');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP P4b — pilot subset vs active'; END $$;
+
+-- =========================================================================
+-- Group P4b — pilot admits on four gates; active still demands seven
+-- =========================================================================
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM jsonb_each(
+     (SELECT review_status FROM public.cd_definition_versions WHERE id = (SELECT defver FROM t_dv))) g
+    WHERE g.value <> 'true'::jsonb) = 3,
+  'P4b.1 three gates are STILL outstanding on the pilot instrument');
+
+SELECT pg_temp.ok(
+  (SELECT array_length(public.cd_mandatory_gates('pilot'), 1)) = 4,
+  'P4b.2 pilot requires four gates');
+SELECT pg_temp.ok(
+  (SELECT array_length(public.cd_mandatory_gates('active'), 1)) = 7,
+  'P4b.3 active still requires all seven');
+
+-- Promoting the SAME instrument to active must now be refused, because the
+-- three outstanding gates are mandatory there.
+UPDATE public.cd_definition_versions SET lifecycle_status = 'active'
+ WHERE id = (SELECT defver FROM t_dv);
+
+SELECT pg_temp.must_fail(format($f$
+  INSERT INTO public.cd_sessions (definition_version_id, user_id, locale, status)
+  VALUES (%L::uuid, 'e1e1e1e1-0000-0000-0000-000000000001', 'sv', 'in_progress')
+$f$, (SELECT defver FROM t_dv)),
+  'psychometric_review',
+  'P4b.4 active is refused and NAMES the outstanding gates');
+
+UPDATE public.cd_definition_versions SET lifecycle_status = 'pilot'
+ WHERE id = (SELECT defver FROM t_dv);
+
+-- Removing a MANDATORY pilot gate must block pilot too.
+UPDATE public.cd_definition_versions
+   SET review_status = review_status || jsonb_build_object('privacy_legal_review', false)
+ WHERE id = (SELECT defver FROM t_dv);
+
+SELECT pg_temp.must_fail(format($f$
+  INSERT INTO public.cd_sessions (definition_version_id, user_id, locale, status)
+  VALUES (%L::uuid, 'e1e1e1e1-0000-0000-0000-000000000001', 'sv', 'in_progress')
+$f$, (SELECT defver FROM t_dv)),
+  'privacy_legal_review',
+  'P4b.5 a missing mandatory pilot gate blocks pilot — the subset is not a bypass');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P5 — production untouched'; END $$;
 

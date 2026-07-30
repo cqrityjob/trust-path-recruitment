@@ -18,7 +18,6 @@
 // their result cannot be saved would be the worst possible version of this
 // feature, so availability is resolved before the first question renders.
 
-import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,13 +63,7 @@ function permute<T>(items: readonly T[], seed: string): T[] {
   return out;
 }
 
-export function PublicAssessmentFlow({
-  unavailableFallback,
-}: {
-  /** Rendered when v3.1 is not yet administrable, so the existing
-   *  internal-test path continues to work unchanged. */
-  unavailableFallback?: React.ReactNode;
-}) {
+export function PublicAssessmentFlow() {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const checkAvailability = useServerFn(getV31Availability);
@@ -176,7 +169,6 @@ export function PublicAssessmentFlow({
   }
 
   if (phase === "unavailable") {
-    if (unavailableFallback) return <>{unavailableFallback}</>;
     return (
       <div role="status" className="rounded-lg border border-border bg-background p-6">
         <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">

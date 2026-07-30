@@ -1052,12 +1052,19 @@ const canonicalSession = read("src/routes/_authenticated.security-career-assessm
 const aliasLanding = read("src/routes/discovery.tsx");
 const aliasSession = read("src/routes/_authenticated.discovery.session.tsx");
 
-// ONE implementation: the canonical route must render the shared component,
-// never a second copy of the flow.
+// The canonical route now serves the PUBLIC v3.1 flow, and must never route a
+// candidate into the v3.0 assessment. This assertion previously required
+// DiscoveryLanding here; that was correct for the v3.0 cutover and is wrong now
+// — a silent fallback means the candidate answers a different instrument from
+// the one the page describes, scored by a retired model. Retargeted rather than
+// deleted, so the rule is still enforced, just the current one.
 expect(
-  canonicalLanding.includes("DiscoveryLanding") &&
-    canonicalLanding.includes("@/components/career-discovery/DiscoveryLanding"),
-  "cutover: the canonical route must render the shared DiscoveryLanding component",
+  canonicalLanding.includes("PublicAssessmentFlow"),
+  "cutover: the canonical route must render the public v3.1 flow",
+);
+expect(
+  !canonicalLanding.includes("DiscoveryLanding"),
+  "cutover: the canonical route must NOT fall back to the v3.0 landing",
 );
 expect(
   canonicalSession.includes("DiscoverySessionView"),
