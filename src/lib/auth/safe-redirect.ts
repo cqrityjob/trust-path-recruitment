@@ -13,6 +13,12 @@ export function safeReturnPath(raw: string | null | undefined, fallback: string)
   // Must start with a single "/" — rejects protocol-relative ("//evil.com"),
   // absolute URLs ("https://..."), and anything not path-shaped.
   if (!raw.startsWith("/") || raw.startsWith("//")) return fallback;
+  // Browsers normalise a backslash to a forward slash in the authority
+  // position, so "/\\evil.test" and "/\evil.test" navigate OFF-SITE exactly
+  // like "//evil.test". The leading-"//" check above does not see them.
+  // Found by scripts/public-assessment-auth-check.ts, not by review.
+  if (raw.startsWith("/\\") || raw.startsWith("\\")) return fallback;
+  if (raw.includes("\\")) return fallback;
   // Rejects "javascript:", "https://", embedded scheme markers anywhere in
   // the string (defence in depth beyond the leading-character check above).
   if (raw.includes("://")) return fallback;

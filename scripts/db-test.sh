@@ -384,6 +384,30 @@ if [ "$CDC_PASSED" -lt 35 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5e. Public v3.1 assessment flow (replay-on-login), isolated fixture.
+#
+# Creates its OWN pilot test instrument, runs the flow, and proves production
+# v3.1 stays internal_test with every review gate outstanding.
+# ---------------------------------------------------------------------------
+echo "==> Running public v3.1 flow assertions"
+set +e
+PUB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_public_flow_test.sql 2>&1)"
+PUB_RC=$?
+set -e
+echo "$PUB_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PUB_PASSED="$(echo "$PUB_OUT" | grep -c "ok  " || true)"
+if [ "$PUB_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the public v3.1 flow suite exited with code ${PUB_RC}." >&2
+  echo "$PUB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${PUB_PASSED} public v3.1 flow assertions passed"
+if [ "$PUB_PASSED" -lt 20 ]; then
+  echo "FAIL: expected at least 20 public-flow assertions, only ${PUB_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -419,5 +443,6 @@ echo " DB suite OK: ${PASSED} domain assertions,"
 echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
+echo "              ${PUB_PASSED} public v3.1 flow assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
