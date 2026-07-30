@@ -29,7 +29,14 @@ import {
   DiscoveryCareerSummary,
   DiscoveryNextStep,
 } from "@/components/career-discovery/DiscoveryCareerSummary";
-import { getActiveCareerReport } from "@/lib/career-discovery/active-report.functions";
+import {
+  getActiveCareerReport,
+  isRenderableDiscovery,
+} from "@/lib/career-discovery/active-report.functions";
+import {
+  DiscoveryReportUnreadable,
+  DiscoveryV31Pending,
+} from "@/components/career-discovery/DiscoveryReportStates";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -143,9 +150,15 @@ function MyCareerPage() {
     queryFn: () => activeFn({}),
     staleTime: 60_000,
   });
-  const activeIsDiscovery = activeQ.data?.kind === "discovery_v3";
+  // Two v3 report contracts now exist and they store genuinely different
+  // payloads, so each reaches its own renderer. isRenderableDiscovery() covers
+  // both, which is what keeps the legacy branch suppressed for either.
+  const activeIsDiscovery = isRenderableDiscovery(activeQ.data);
+  // A v3 report this build cannot read. Shown explicitly — never degraded into
+  // an empty-looking report, and never replaced by a legacy one.
+  const activeIsUnreadable = activeQ.data?.kind === "discovery_unreadable";
   // Legacy renders ONLY when it is genuinely the active report — never as a
-  // fallback while v3 is still loading or has failed.
+  // fallback while v3 is still loading, has failed, or is unreadable.
   const activeIsLegacy = activeQ.data?.kind === "legacy_v21";
 
   const runsQ = useQuery({
@@ -361,12 +374,30 @@ function MyCareerPage() {
               </DashboardCard>
             )}
 
-            {activeIsDiscovery && activeQ.data?.kind === "discovery_v3" && (
+            {activeQ.data?.kind === "discovery_v3_0" && (
               <DashboardCard
                 icon={<ClipboardCheck className="h-5 w-5" />}
                 title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
               >
                 <DiscoveryCareerSummary active={activeQ.data} />
+              </DashboardCard>
+            )}
+
+            {activeQ.data?.kind === "discovery_v3_1" && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
+              >
+                <DiscoveryV31Pending active={activeQ.data} />
+              </DashboardCard>
+            )}
+
+            {activeIsUnreadable && activeQ.data?.kind === "discovery_unreadable" && (
+              <DashboardCard
+                icon={<ClipboardCheck className="h-5 w-5" />}
+                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
+              >
+                <DiscoveryReportUnreadable active={activeQ.data} />
               </DashboardCard>
             )}
 
@@ -644,8 +675,16 @@ function MyCareerPage() {
               {/* Derived from the ACTIVE report. A legacy profession such as
                   Skyddsvakt must never be suggested merely because an older
                   report exists. */}
-              {activeIsDiscovery && activeQ.data?.kind === "discovery_v3" ? (
+              {activeQ.data?.kind === "discovery_v3_0" ? (
                 <DiscoveryNextStep active={activeQ.data} />
+              ) : activeQ.data?.kind === "discovery_v3_1" ||
+                activeQ.data?.kind === "discovery_unreadable" ? (
+                // A v3.1 or unreadable report must not fall through to the
+                // legacy next step: it would suggest a v2.1 profession such as
+                // Skyddsvakt on the strength of a report that never said so.
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {t("careerDiscovery.dashboard.nextStepFallback")}
+                </p>
               ) : activeQ.isLoading ? (
                 <div
                   className="h-16 animate-pulse rounded-md bg-muted motion-reduce:animate-none"

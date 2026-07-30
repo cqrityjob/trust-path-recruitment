@@ -648,6 +648,13 @@ export const dictionaries = {
       "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
+    "careerDiscovery.dashboard.v31Title": "Din nya rapport är klar",
+    "careerDiscovery.dashboard.v31Body":
+      "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Hela den nya presentationen — Career DNA, ditt karriärmönster och din berättelse — lanseras i nästa rapportsläpp. Rapporten är sparad och ingenting försvinner.",
+    "careerDiscovery.dashboard.v31Completed": "Genomförd",
+    "careerDiscovery.dashboard.unreadableTitle": "Rapporten kan inte visas här",
+    "careerDiscovery.dashboard.unreadableBody":
+      "Rapporten är sparad och oförändrad, men den här versionen av sidan kan inte visa den. Vi visar hellre det här än en rapport som ser tom ut. Kontakta oss om det inte löser sig.",
     "careerDiscovery.dashboard.loading": "Hämtar din senaste rapport…",
     "careerDiscovery.dashboard.error":
       "Vi kunde inte hämta din senaste rapport just nu. Försök igen — dina tidigare rapporter finns kvar.",
@@ -2544,6 +2551,13 @@ export const dictionaries = {
       "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
+    "careerDiscovery.dashboard.v31Title": "Your new report is ready",
+    "careerDiscovery.dashboard.v31Body":
+      "You completed the updated version of Security Career Discovery. The full new presentation — Career DNA, your career pattern and your story — arrives in the next report release. Your report is saved and nothing is lost.",
+    "careerDiscovery.dashboard.v31Completed": "Completed",
+    "careerDiscovery.dashboard.unreadableTitle": "This report can't be shown here",
+    "careerDiscovery.dashboard.unreadableBody":
+      "Your report is saved and unchanged, but this version of the page cannot display it. We would rather tell you that than show you a report that looks empty. Get in touch if it does not resolve.",
     "careerDiscovery.dashboard.loading": "Loading your latest report…",
     "careerDiscovery.dashboard.error":
       "We could not load your latest report just now. Please try again — your earlier reports are still here.",
