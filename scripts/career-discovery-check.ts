@@ -21,6 +21,7 @@ import {
   ALL_REPORT_TAGS,
   PATH_BY_ADAPTIVE_ITEM_ID,
 } from "../src/lib/career-discovery/adaptive-items";
+import { classifyStoredReport } from "../src/lib/career-discovery/active-report.classify";
 import { AXIS_IDS, MIN_ITEMS_PER_AXIS, SIGNAL_IDS } from "../src/lib/career-discovery/axes";
 import {
   CONTEXT_ITEMS,
@@ -1288,6 +1289,163 @@ expect(
   !dashboard.includes('to="/assessment"'),
   "my-career: the dashboard must not offer a legacy assessment start",
 );
+
+// ---------------------------------------------------------------------------
+// Report-contract discrimination
+//
+// v3.0 and v3.1 store genuinely different payloads under the same
+// dna_scores.report key. Handing a v3.1 payload to the v3.0 renderer produces
+// a page where every field is undefined and the component's `?? []` fallbacks
+// absorb it — an almost-empty report with no error raised anywhere.
+//
+// classifyStoredReport is pure, so these are real unit tests of the behaviour
+// rather than assertions about file contents.
+// ---------------------------------------------------------------------------
+
+const V30_PAYLOAD = {
+  topAreas: [{ areaId: "SCA01" }],
+  dna: { axes: [{ axis: "CDA-01", usable: true }] },
+  why: [],
+  strengths: [],
+};
+const V31_PAYLOAD = {
+  versions: { reportSchemaVersion: "cd-report-v3.1.0" },
+  outputA: { leadingPattern: "CP01" },
+  outputB: { presentedPattern: "CP01" },
+};
+
+// 1. A v3.0 report selects the v3.0 renderer.
+{
+  const c = classifyStoredReport("2026-scd-v3.0.0", V30_PAYLOAD);
+  expect(c.contract === "v3.0", "classify: a v3.0 snapshot resolves to the v3.0 contract");
+  expect(
+    c.contract === "v3.0" && (c.report as { topAreas?: unknown[] }).topAreas?.length === 1,
+    "classify: the v3.0 payload is passed through untransformed",
+  );
+}
+
+// 2. A v3.1 report selects the v3.1 path.
+{
+  const c = classifyStoredReport("2026-scd-v3.1.0", V31_PAYLOAD);
+  expect(c.contract === "v3.1", "classify: a v3.1 snapshot resolves to the v3.1 contract");
+  expect(
+    c.contract === "v3.1" && c.identity.reportSchemaVersion === "cd-report-v3.1.0",
+    "classify: a v3.1 snapshot exposes its report schema version",
+  );
+}
+
+// 3. A v3.1 payload is NEVER classified as v3.0 — the silent-empty-render defect.
+{
+  const mislabelled = classifyStoredReport("2026-scd-v3.0.0", V31_PAYLOAD);
+  expect(
+    mislabelled.contract === "malformed",
+    "classify: a v3.1 payload under a v3.0 version is malformed, never rendered as v3.0",
+  );
+  const reverse = classifyStoredReport("2026-scd-v3.1.0", V30_PAYLOAD);
+  expect(
+    reverse.contract === "malformed",
+    "classify: a v3.0 payload under a v3.1 version is malformed, never rendered as v3.1",
+  );
+}
+
+// 4. An unknown definition version fails safely.
+for (const unknownVersion of ["2027-scd-v4.0.0", "", "2026-scd-v3.0", "garbage"]) {
+  const c = classifyStoredReport(unknownVersion, V30_PAYLOAD);
+  expect(
+    c.contract === "unsupported" || c.contract === "malformed",
+    `classify: unknown version '${unknownVersion}' fails safely rather than guessing`,
+  );
+}
+expect(
+  classifyStoredReport(null, V30_PAYLOAD).contract === "malformed",
+  "classify: a snapshot with no definition version is malformed",
+);
+
+// 5. A malformed payload fails safely.
+for (const bad of ["a string", 42, [], true]) {
+  expect(
+    classifyStoredReport("2026-scd-v3.1.0", bad).contract === "malformed",
+    "classify: a non-object v3.1 payload is malformed",
+  );
+}
+expect(
+  classifyStoredReport("2026-scd-v3.1.0", {}).contract === "malformed",
+  "classify: a v3.1 payload missing both outputA and outputB is malformed",
+);
+// A null v3.0 payload is NOT malformed: an older snapshot may predate a field
+// and the v3.0 renderer already shows a safe generic label for it.
+expect(
+  classifyStoredReport("2026-scd-v3.0.0", null).contract === "v3.0",
+  "classify: a null v3.0 payload stays v3.0 and reaches the renderer's own fallback",
+);
+
+// 6. No legacy fallback after a v3 selection error.
+expect(
+  /Deliberately does NOT continue to the legacy branch/.test(activeFns) &&
+    /kind: "discovery_unreadable"/.test(activeFns),
+  "my-career: an unreadable v3 report must return its own kind, never fall through to legacy",
+);
+expect(
+  activeFns.indexOf('kind: "discovery_unreadable"') < activeFns.indexOf('.from("assessment_runs")'),
+  "my-career: the unreadable branch must return BEFORE the legacy query is reached",
+);
+
+// 7. The route must send each contract to its own renderer, and must never send
+//    a v3.1 report into the v3.0 summary component.
+expect(
+  /kind === "discovery_v3_0"[\s\S]{0,400}<DiscoveryCareerSummary/.test(dashboard),
+  "my-career: DiscoveryCareerSummary must be reached only from the v3.0 discriminant",
+);
+expect(
+  /kind === "discovery_v3_1"[\s\S]{0,400}<DiscoveryV31Pending/.test(dashboard),
+  "my-career: a v3.1 report must reach the v3.1 state, not the v3.0 summary",
+);
+expect(
+  !/discovery_v3_1[\s\S]{0,300}<DiscoveryCareerSummary/.test(dashboard),
+  "my-career: a v3.1 report must never be passed to DiscoveryCareerSummary",
+);
+expect(
+  /kind === "discovery_unreadable"[\s\S]{0,400}<DiscoveryReportUnreadable/.test(dashboard),
+  "my-career: an unreadable report must reach its own explicit state",
+);
+
+// The temporary v3.1 state must not read v3.0 report fields.
+const v31State = read("src/components/career-discovery/DiscoveryReportStates.tsx");
+for (const v30Field of ["topAreas", "dna.axes", ".why", "strengths", "development", "nextSteps"]) {
+  expect(
+    !v31State.includes(v30Field),
+    `my-career: the v3.1 state must not read the v3.0 field '${v30Field}'`,
+  );
+}
+// It must also not render report content at all: no payload reaches it.
+expect(
+  !/active\.payload|active\.report/.test(v31State),
+  "my-career: the v3.1 state must not read a report payload it cannot yet render",
+);
+// Both new states must be visible, not silent.
+expect(
+  v31State.includes("careerDiscovery.dashboard.v31Title") &&
+    v31State.includes("careerDiscovery.dashboard.unreadableTitle"),
+  "my-career: both new states must render a visible message",
+);
+
+// Every new dictionary key must exist in BOTH languages.
+{
+  const dict = read("src/i18n/dictionaries.ts");
+  for (const key of [
+    "careerDiscovery.dashboard.v31Title",
+    "careerDiscovery.dashboard.v31Body",
+    "careerDiscovery.dashboard.v31Completed",
+    "careerDiscovery.dashboard.unreadableTitle",
+    "careerDiscovery.dashboard.unreadableBody",
+  ]) {
+    const occurrences = dict.split(`"${key}"`).length - 1;
+    expect(
+      occurrences === 2,
+      `i18n: ${key} must be defined in both sv and en (found ${occurrences})`,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Report
