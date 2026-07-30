@@ -49,11 +49,14 @@ DO $$ BEGIN RAISE NOTICE 'GROUP V0 — v3.0 is undisturbed'; END $$;
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
-    WHERE assessment_id = 'security-career-discovery-v3') = 'internal_test',
+    WHERE assessment_id = 'security-career-discovery-v3'
+      AND definition_version = '2026-scd-v3.0.0') = 'internal_test',
   'V0.1 the v3.0 definition still holds its pre-migration lifecycle status');
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_definition_items) = 42,
+  (SELECT count(*) FROM public.cd_definition_items di
+     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+    WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
   'V0.2 the v3.0 item registry still holds exactly 42 items');
 
 -- Widening item_kind must not have weakened the scoring boundary.
@@ -65,6 +68,7 @@ SELECT pg_temp.must_fail($$
          true, 'approach', 900
     FROM public.cd_definition_versions
    WHERE assessment_id = 'security-career-discovery-v3'
+   AND definition_version = '2026-scd-v3.0.0'
 $$, 'cd_definition_items_scoring_boundary',
   'V0.3 a contextual item still cannot be marked scored');
 
@@ -76,6 +80,7 @@ SELECT pg_temp.must_fail($$
          true, 'A', 'approach', 901
     FROM public.cd_definition_versions
    WHERE assessment_id = 'security-career-discovery-v3'
+   AND definition_version = '2026-scd-v3.0.0'
 $$, 'cd_definition_items_contextual_kinds',
   'V0.4 an adaptive item still cannot produce scored orientation evidence');
 
@@ -85,9 +90,12 @@ DO $$ BEGIN RAISE NOTICE 'GROUP V1 — new item kinds'; END $$;
 -- Group V1 — 'scale' and 'single_choice'
 -- =========================================================================
 
+-- The instrument is versioned and more than one version now exists, so the
+-- fixture names the version it uses rather than assuming there is only one.
 CREATE TEMP TABLE t_v31 AS
 SELECT id AS defver FROM public.cd_definition_versions
-WHERE assessment_id = 'security-career-discovery-v3';
+WHERE assessment_id = 'security-career-discovery-v3'
+  AND definition_version = '2026-scd-v3.0.0';
 
 INSERT INTO public.cd_definition_items
   (definition_version_id, item_id, item_version, item_kind, evidence_class,
@@ -253,9 +261,16 @@ DO $$ BEGIN RAISE NOTICE 'GROUP V4 — option loadings'; END $$;
 SELECT pg_temp.ok(to_regclass('public.cd_option_loadings') IS NOT NULL,
   'V4.1 cd_option_loadings exists');
 
+-- PR1 created this table empty; PR2 seeded it from option-matrix.ts. The
+-- assertion moved with the code rather than being deleted: what matters is
+-- that the table holds exactly the approved matrix and nothing else.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_option_loadings) = 0,
-  'V4.2 PR1 seeds no loadings — content lands with its code in PR2');
+  (SELECT count(*) FROM public.cd_option_loadings
+    WHERE scoring_version = 'v3.1-draft-1') = 164,
+  'V4.2 the v3.1 option matrix is seeded with all 164 loadings');
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT scoring_version) FROM public.cd_option_loadings) = 1,
+  'V4.2b only the approved scoring version is present');
 
 INSERT INTO public.cd_option_loadings
   (scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)
