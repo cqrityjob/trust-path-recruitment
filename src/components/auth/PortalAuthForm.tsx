@@ -8,6 +8,13 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { safeReturnPath, splitReturnPath } from "@/lib/auth/safe-redirect";
+import {
+  clearOAuthReturn,
+  consumeOAuthReturn,
+  oauthErrorMessage,
+  oauthRedirectUri,
+  rememberOAuthReturn,
+} from "@/lib/auth/oauth-return";
 
 // Phase H3.1 — shared auth form used by /candidate/login, /candidate/register,
 // /employer/login, /employer/register. Portal intent controls ONLY which
@@ -75,7 +82,16 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
   useEffect(() => {
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive && data.session) goToDestination();
+      if (!alive || !data.session) return;
+      // Returning from OAuth onto the auth page means the broker ignored the
+      // path in redirect_uri. The stashed destination is the fallback.
+      const pending = consumeOAuthReturn();
+      if (pending) {
+        const { to, search } = splitReturnPath(pending);
+        navigate({ to, search: search as never });
+        return;
+      }
+      goToDestination();
     });
     return () => {
       alive = false;
@@ -120,15 +136,27 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
   async function onGoogle() {
     setError(null);
     setBusy(true);
+    // The browser is about to leave the app, so the destination has to survive
+    // outside React state. Stored AND carried in redirect_uri: a broker that
+    // normalises the path away is exactly the failure that was observed, so
+    // relying on redirect_uri alone would trust the thing that broke.
+    const destination = rememberOAuthReturn(resolveDestination(), defaultDestination);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: oauthRedirectUri(destination),
       });
       if (result.error) throw result.error;
+      // Leaving for the provider. Do NOT clear busy — the page is unloading,
+      // and dropping it here makes the button look clickable mid-redirect.
       if (result.redirected) return;
       goToDestination();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Raw provider, Supabase and Lovable errors are never shown: they leak
+      // infrastructure detail and read as a crash. The real error still goes
+      // to the console, which is where a developer will look.
+      console.error("[auth] Google sign-in failed", err);
+      clearOAuthReturn();
+      setError(oauthErrorMessage(lang === "sv" ? "sv" : "en"));
     } finally {
       setBusy(false);
     }

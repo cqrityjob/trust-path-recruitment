@@ -29,6 +29,7 @@ import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { oauthErrorMessage } from "@/lib/auth/oauth-return";
 import { safeReturnPath } from "@/lib/auth/safe-redirect";
 import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
 
@@ -50,7 +51,7 @@ function resolveDestination(): string {
 }
 
 function AdminLoginPage() {
-  const { t } = useT();
+  const { t, lang } = useT();
   const navigate = useNavigate();
   const whoAmIFn = useServerFn(adminWhoAmI);
 
@@ -126,7 +127,9 @@ function AdminLoginPage() {
       if (result.redirected) return;
       await verifyAdminAndProceed();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      // Never surface raw provider/Supabase/Lovable text to the screen.
+      console.error("[auth] admin Google sign-in failed", err);
+      setError(oauthErrorMessage(lang === "sv" ? "sv" : "en"));
     } finally {
       setBusy(false);
     }
