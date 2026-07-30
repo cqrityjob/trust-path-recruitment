@@ -50,6 +50,27 @@ import {
 } from "../src/lib/career-discovery/v31/patterns";
 import { computeCareerIntelligence } from "../src/lib/career-discovery/v31";
 import {
+  CAREER_AREAS,
+  CAREER_AREA_IDS,
+  rankCareerAreas,
+} from "../src/lib/career-discovery/v31/career-areas";
+import {
+  buildPatternStory,
+  STORY_HEADINGS,
+  STORY_PATTERN_IDS,
+  STORY_QUESTIONS,
+  STORY_TEMPLATE_VERSION,
+} from "../src/lib/career-discovery/v31/story";
+import {
+  buildSnapshot,
+  buildValidatedSnapshot,
+  REPORT_SCHEMA_VERSION,
+  SnapshotValidationError,
+  validateSnapshot,
+} from "../src/lib/career-discovery/v31/snapshot";
+import type { ResolvedPatternId } from "../src/lib/career-discovery/v31/patterns";
+import type { Locale } from "../src/lib/career-discovery/v31/version";
+import {
   CONTENT_VERSION,
   OPTION_MATRIX_VERSION,
   PATTERN_DEFINITION_VERSION,
@@ -595,6 +616,15 @@ eq(CONTENT_VERSION, "v3.1-draft-1", "9.4 content version is pinned");
 eq(SCORING_VERSION, "v3.1-draft-1", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-1", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-1", "9.7 pattern definition version is pinned");
+eq(STORY_TEMPLATE_VERSION, "v3.1-draft-2", "9.7b story template version is pinned");
+// The story template version must move INDEPENDENTLY of the scoring and
+// pattern contracts. If it ever equals them again, either a content change
+// went unversioned or a scoring version was bumped for a content-only edit.
+ok(
+  STORY_TEMPLATE_VERSION !== SCORING_VERSION &&
+    STORY_TEMPLATE_VERSION !== PATTERN_DEFINITION_VERSION,
+  "9.7c the story template version is tracked separately from scoring and patterns",
+);
 ok(
   Object.values(runA.versions).every((v) => typeof v === "string" && v.length > 0),
   "9.8 every output carries its full version tuple",
@@ -755,6 +785,340 @@ for (const v of [
 ok(
   migration.includes("'internal_test'") && !migration.includes("'active'"),
   "11.9 v3.1 is registered as internal_test and never as active",
+);
+
+// =========================================================================
+group("12 · Career Areas");
+// =========================================================================
+
+eq(CAREER_AREA_IDS.length, 10, "12.1 exactly ten Career Areas");
+ok(
+  CAREER_AREA_IDS.every((a) => Object.keys(CAREER_AREAS[a].targets).length === 16),
+  "12.2 every area carries a target for all sixteen dimensions",
+);
+ok(
+  CAREER_AREA_IDS.every(
+    (a) => CAREER_AREAS[a].name.sv && CAREER_AREAS[a].name.en && CAREER_AREAS[a].description.sv,
+  ),
+  "12.3 every area is named and described in both languages",
+);
+
+const areasForCp01 = rankCareerAreas(scoreDimensions(archetype("CP01")));
+eq(areasForCp01.ranked.length, 10, "12.4 a complete run ranks all ten areas");
+ok(areasForCp01.sufficientEvidence, "12.5 a complete run has sufficient evidence to rank");
+ok(
+  areasForCp01.ranked.every((a, i, arr) => i === 0 || arr[i - 1].score >= a.score),
+  "12.6 areas are returned in descending score order",
+);
+ok(
+  areasForCp01.ranked.every((a) => a.score >= 0 && a.score <= 100),
+  "12.7 every area score is within 0..100",
+);
+
+// Thin evidence must refuse to rank rather than rank on almost nothing.
+const thin = rankCareerAreas(scoreDimensions([{ itemId: "CQ01", format: "scale", value: 8 }]));
+ok(!thin.sufficientEvidence, "12.8 a nearly-empty run refuses to rank areas");
+eq(thin.ranked.length, 0, "12.9 an unrankable run returns no areas rather than a guess");
+
+// Exceeding a target must never be penalised (matching rule PMR001).
+// Built from a synthetic maximal profile rather than from answers: no real
+// answer set puts every dimension at 1.0, because single-choice options
+// trade dimensions off against each other by design.
+const maximal = scoreDimensions(archetype("CP01"));
+const maxProfile = {
+  ...maximal,
+  dimensions: Object.fromEntries(
+    DIMENSION_IDS.map((d) => [d, { ...maximal.dimensions[d], score: 1 }]),
+  ),
+} as typeof maximal;
+const allTopAreas = rankCareerAreas(maxProfile);
+ok(
+  allTopAreas.ranked.every((a) => a.score === 100),
+  "12.10 exceeding every target scores full fit — extra strengths are not penalised",
+);
+
+// And the converse: a profile at the floor must not score full fit, or the
+// metric is measuring nothing.
+const minProfile = {
+  ...maximal,
+  dimensions: Object.fromEntries(
+    DIMENSION_IDS.map((d) => [d, { ...maximal.dimensions[d], score: 0 }]),
+  ),
+} as typeof maximal;
+ok(
+  rankCareerAreas(minProfile).ranked.every((a) => a.score < 50),
+  "12.10b a profile at the floor scores poorly — the metric discriminates",
+);
+
+// CID15 must not influence area ranking.
+ok(
+  !JSON.stringify(areasForCp01.ranked).includes("CID15"),
+  "12.11 CID15 never appears in area evidence (owner decision A-4)",
+);
+
+// =========================================================================
+group("13 · Output B content rules");
+// =========================================================================
+
+const ALL_STORY_PATTERNS: ResolvedPatternId[] = ["CP00", ...PATTERN_IDS];
+const LOCALES: Locale[] = ["sv", "en"];
+
+eq(STORY_PATTERN_IDS.length, 11, "13.1 every pattern plus CP00 has a story");
+
+for (const p of ALL_STORY_PATTERNS) {
+  for (const loc of LOCALES) {
+    const s = buildPatternStory(p, loc);
+    ok(
+      STORY_QUESTIONS.every((q) => s.answers[q] && s.answers[q].trim().length > 40),
+      `13.2 ${p}/${loc} answers all seven questions with real content`,
+    );
+    ok(
+      s.name.length > 0 && s.shareSummary.length > 0,
+      `13.3 ${p}/${loc} has a name and a share line`,
+    );
+  }
+}
+
+// No numerals anywhere in candidate-facing story text (owner decision B-5).
+for (const p of ALL_STORY_PATTERNS) {
+  for (const loc of LOCALES) {
+    const s = buildPatternStory(p, loc);
+    const text = [...Object.values(s.answers), s.name, s.shareSummary].join(" ");
+    ok(!/\d/.test(text), `13.4 ${p}/${loc} contains no numeral`);
+    ok(!/\bCID\d{2}\b/i.test(text), `13.5 ${p}/${loc} names no dimension`);
+    ok(!/\bCP\d{2}\b/i.test(text), `13.6 ${p}/${loc} exposes no pattern id`);
+  }
+}
+
+// Deficit and eligibility language is banned outright: no hedge makes
+// "du saknar" or "qualified" acceptable.
+const BANNED_ABSOLUTE = [
+  "du saknar",
+  "du har svårt för",
+  "du kan inte",
+  "du har alltid",
+  "you lack",
+  "you struggle with",
+  "you cannot",
+  "you're not good at",
+  "svaghet",
+  "weakness",
+  "shortcoming",
+  "needs improvement",
+  "kvalificerad",
+  "qualified",
+  "behörig",
+  "eligible",
+  "lämplig för",
+  "suitable for",
+  "personlighetstyp",
+  "personality type",
+  "integritet",
+  "integrity",
+];
+for (const p of ALL_STORY_PATTERNS) {
+  for (const loc of LOCALES) {
+    const s = buildPatternStory(p, loc);
+    const text = [...Object.values(s.answers), s.name, s.shareSummary].join(" ").toLowerCase();
+    const hit = BANNED_ABSOLUTE.find((b) => text.includes(b));
+    ok(hit === undefined, `13.7 ${p}/${loc} uses no banned phrase (found "${hit}")`);
+  }
+}
+
+// Bare assertions about the person are banned, but only when they escape a
+// hedge. "when you're the one who's there" is a situational clause, not a
+// personality claim, so the check is scoped to the SENTENCE: an assertion is
+// a violation only if its own sentence carries no hedge.
+const ASSERTIONS = [/\bdu är\b/, /\bdu blir\b/, /\byou are\b/, /\byou always\b/];
+const HEDGES = [
+  /dina svar (tyder|visar|pekar)/,
+  /du verkar/,
+  /verkar /,
+  /brukar/,
+  /du tappar ofta/,
+  /det brukar betyda/,
+  /your answers (suggest|show|point)/,
+  /you seem/,
+  /you may find/,
+  /tend to/,
+  /it usually means/,
+  /people tend/,
+];
+for (const p of ALL_STORY_PATTERNS) {
+  for (const loc of LOCALES) {
+    const story = buildPatternStory(p, loc);
+    const unhedged: string[] = [];
+    for (const [q, text] of Object.entries(story.answers)) {
+      for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+        const lower = sentence.toLowerCase();
+        if (!ASSERTIONS.some((a) => a.test(lower))) continue;
+        if (HEDGES.some((h) => h.test(lower))) continue;
+        // An assertion inside a conditional or relative clause describes a
+        // SITUATION ("when you're the one who's there"), not the person.
+        // Questions 2 and 3 are lists of conditions by design.
+        if (/\b(när|when|om|if|där|where)\b[^.]*\b(du är|you are)\b/.test(lower)) continue;
+        unhedged.push(`${q}: ${sentence.slice(0, 60)}`);
+      }
+    }
+    ok(
+      unhedged.length === 0,
+      `13.7b ${p}/${loc} makes no unhedged claim about the person (${unhedged[0] ?? ""})`,
+    );
+  }
+}
+
+// The energy frame: question 3 must describe conditions, and questions 1 and
+// 3 must hedge rather than assert.
+for (const p of ALL_STORY_PATTERNS) {
+  for (const loc of LOCALES) {
+    const s = buildPatternStory(p, loc);
+    const hedges =
+      loc === "sv"
+        ? ["dina svar tyder", "du verkar", "du tappar ofta", "brukar", "dina svar visar"]
+        : ["your answers suggest", "you seem", "you may find", "tend to", "your answers show"];
+    ok(
+      hedges.some((h) => s.answers.howYouWork.toLowerCase().includes(h)),
+      `13.8 ${p}/${loc} question 1 hedges rather than asserts`,
+    );
+    ok(
+      hedges.some((h) => s.answers.takesEnergy.toLowerCase().includes(h)),
+      `13.9 ${p}/${loc} question 3 uses the energy frame`,
+    );
+  }
+}
+
+ok(
+  Object.keys(STORY_HEADINGS.sv).length === 7 && Object.keys(STORY_HEADINGS.en).length === 7,
+  "13.10 seven headings exist in both languages",
+);
+
+// =========================================================================
+group("14 · Snapshot");
+// =========================================================================
+
+const SNAP_AT = "2026-07-30T12:00:00.000Z";
+const snap = buildValidatedSnapshot({
+  answers: archetype("CP01"),
+  locale: "sv",
+  completedAt: SNAP_AT,
+});
+
+eq(validateSnapshot(snap).length, 0, "14.1 a well-formed snapshot passes validation");
+eq(snap.completedAt, SNAP_AT, "14.2 the completion timestamp is supplied, not generated");
+eq(
+  snap.versions.reportSchemaVersion,
+  REPORT_SCHEMA_VERSION,
+  "14.3 the report schema version is stored",
+);
+ok(
+  Object.values(snap.versions).filter((v) => v !== null).length === 8,
+  "14.4 eight version identifiers are stored (profession calibration stays null)",
+);
+eq(
+  snap.versions.professionCalibrationVersion,
+  null,
+  "14.5 no calibration version while none is approved",
+);
+eq(snap.professions.available, false, "14.6 Layer 4 is present and explicitly unavailable");
+eq(snap.professions.matches.length, 0, "14.7 no profession match is stored");
+eq(snap.outputA.dimensions.length, 16, "14.8 all sixteen dimensions are stored");
+ok(
+  snap.outputA.dimensions.every((d) => d.sources.length > 0 || d.score === null),
+  "14.9 every scored dimension stores its evidence sources",
+);
+ok(
+  snap.outputA.dimensions.find((d) => d.id === "CID15")!.usedForMatching === false,
+  "14.10 CID15 is stored as not used for matching",
+);
+ok(snap.outputA.areas.length === 10, "14.11 ranked areas are stored");
+ok(
+  snap.outputB.leading.answers.howYouWork.length > 0,
+  "14.12 Output B is rendered, not referenced",
+);
+
+// Self-containment: the stored payload must carry rendered text, not ids
+// that would need a live lookup table later.
+ok(
+  snap.outputA.dimensions.every((d) => d.name.length > 0),
+  "14.13 dimensions store their rendered name, not just an id",
+);
+ok(
+  snap.outputA.areas.every((a) => a.name.length > 0 && a.description.length > 0),
+  "14.14 areas store rendered name and description",
+);
+ok(
+  snap.outputA.areas.every((a) => a.alignedWith.every((n) => !/^CID\d{2}$/.test(n))),
+  "14.15 area evidence stores dimension names, not ids",
+);
+
+// Balanced profiles must store CP00 with a full story.
+const balancedSnap = buildValidatedSnapshot({
+  answers: allHigh,
+  locale: "en",
+  completedAt: SNAP_AT,
+});
+eq(
+  balancedSnap.outputA.leadingPattern,
+  null,
+  "14.16 an undifferentiated profile stores no leading pattern",
+);
+eq(balancedSnap.outputB.presentedPattern, "CP00", "14.17 CP00 is presented instead");
+ok(
+  STORY_QUESTIONS.every((q) => balancedSnap.outputB.leading.answers[q].length > 40),
+  "14.18 CP00 receives the same seven-answer story as any pattern",
+);
+eq(validateSnapshot(balancedSnap).length, 0, "14.19 a CP00 snapshot is valid");
+eq(balancedSnap.outputA.leaningToward.length, 3, "14.20 CP00 stores three directions to explore");
+
+// Validation must reject, not repair.
+const incomplete = buildSnapshot({
+  answers: [{ itemId: "CQ01", format: "scale", value: 5 }],
+  locale: "sv",
+  completedAt: SNAP_AT,
+});
+ok(
+  validateSnapshot(incomplete).some((f) => f.code === "CD_INCOMPLETE_EVIDENCE"),
+  "14.21 an incomplete run is refused rather than scored",
+);
+let threwOnInvalid = false;
+try {
+  buildValidatedSnapshot({
+    answers: [{ itemId: "CQ01", format: "scale", value: 5 }],
+    locale: "sv",
+    completedAt: SNAP_AT,
+  });
+} catch (e) {
+  threwOnInvalid = e instanceof SnapshotValidationError;
+}
+ok(threwOnInvalid, "14.22 buildValidatedSnapshot throws rather than storing invalid data");
+
+// Tampered snapshots must fail validation.
+const tampered = JSON.parse(JSON.stringify(snap)) as ReturnType<typeof buildSnapshot>;
+(tampered.outputA as { leadingPattern: string | null }).leadingPattern = "CP08";
+ok(
+  validateSnapshot(tampered).some((f) => f.code === "CD_PATTERN_MISMATCH"),
+  "14.23 Output A and Output B disagreeing on the pattern is caught",
+);
+
+const tampered2 = JSON.parse(JSON.stringify(snap)) as ReturnType<typeof buildSnapshot>;
+(tampered2.outputB.leading.answers as Record<string, string>).superpower =
+  "You are strong in 3 areas.";
+const t2 = validateSnapshot(tampered2);
+ok(
+  t2.some((f) => f.code === "CD_STORY_CONTAINS_NUMERAL"),
+  "14.24 a numeral introduced into story text is caught",
+);
+
+// Determinism, at the snapshot level.
+eq(
+  hash(buildSnapshot({ answers: archetype("CP01"), locale: "sv", completedAt: SNAP_AT })),
+  hash(snap),
+  "14.25 the same inputs produce a byte-identical snapshot",
+);
+ok(
+  hash(buildSnapshot({ answers: archetype("CP01"), locale: "en", completedAt: SNAP_AT })) !==
+    hash(snap),
+  "14.26 locale genuinely changes the stored content",
 );
 
 // =========================================================================
