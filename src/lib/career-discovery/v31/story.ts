@@ -35,8 +35,20 @@ import type { ResolvedPatternId } from "./patterns";
 import type { Locale } from "./version";
 
 /** Bumped whenever any string in this file changes. Stored on every snapshot
- *  so a report always names the templates that produced it. */
-export const STORY_TEMPLATE_VERSION = "v3.1-draft-1" as const;
+ *  so a report always names the templates that produced it.
+ *
+ *  draft-2: five bare assertions about the candidate were reworded to comply
+ *  with the Output B safety rules ("och du är bekväm" -> "och verkar bekväm";
+ *  "one default you always return to" -> "one fixed default to fall back on";
+ *  "how right you are" -> "how right the analysis is"). No candidate had
+ *  received a v3.1 report, but the approved content changed after the first
+ *  frozen draft, so the version moves with it. Version discipline is worth
+ *  nothing if it only starts once someone is watching.
+ *
+ *  Deliberately NOT bumped alongside this: the scoring, option matrix,
+ *  pattern definition and report schema versions. None of those contracts
+ *  changed, and moving them would falsely imply a report scored differently. */
+export const STORY_TEMPLATE_VERSION = "v3.1-draft-2" as const;
 
 /** The seven questions, in presentation order. */
 export const STORY_QUESTIONS = [

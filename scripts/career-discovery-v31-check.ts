@@ -59,6 +59,7 @@ import {
   STORY_HEADINGS,
   STORY_PATTERN_IDS,
   STORY_QUESTIONS,
+  STORY_TEMPLATE_VERSION,
 } from "../src/lib/career-discovery/v31/story";
 import {
   buildSnapshot,
@@ -615,6 +616,15 @@ eq(CONTENT_VERSION, "v3.1-draft-1", "9.4 content version is pinned");
 eq(SCORING_VERSION, "v3.1-draft-1", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-1", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-1", "9.7 pattern definition version is pinned");
+eq(STORY_TEMPLATE_VERSION, "v3.1-draft-2", "9.7b story template version is pinned");
+// The story template version must move INDEPENDENTLY of the scoring and
+// pattern contracts. If it ever equals them again, either a content change
+// went unversioned or a scoring version was bumped for a content-only edit.
+ok(
+  STORY_TEMPLATE_VERSION !== SCORING_VERSION &&
+    STORY_TEMPLATE_VERSION !== PATTERN_DEFINITION_VERSION,
+  "9.7c the story template version is tracked separately from scoring and patterns",
+);
 ok(
   Object.values(runA.versions).every((v) => typeof v === "string" && v.length > 0),
   "9.8 every output carries its full version tuple",
