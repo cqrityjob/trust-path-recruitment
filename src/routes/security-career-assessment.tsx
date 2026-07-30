@@ -23,6 +23,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { DiscoveryLanding } from "@/components/career-discovery/DiscoveryLanding";
+import { PublicAssessmentFlow } from "@/components/career-discovery/v31/PublicAssessmentFlow";
 import {
   CANONICAL_ASSESSMENT_PATH,
   CANONICAL_HISTORY_PATH,
@@ -48,11 +49,22 @@ export const Route = createFileRoute("/security-career-assessment")({
 });
 
 function CanonicalAssessmentRoute() {
+  // The public v3.1 flow is the candidate journey: a signed-out visitor answers
+  // every question with nothing written to the database, and signs in only to
+  // save. It restores the capability that existed before commit 15949db.
+  //
+  // While v3.1 is not yet administrable, PublicAssessmentFlow renders its own
+  // "not open yet" state and falls back to the existing landing, so the current
+  // internal-test path keeps working and nothing that works today stops.
   return (
-    <DiscoveryLanding
-      sessionPath={CANONICAL_SESSION_PATH}
-      returnPath={CANONICAL_ASSESSMENT_PATH}
-      historyPath={CANONICAL_HISTORY_PATH}
+    <PublicAssessmentFlow
+      unavailableFallback={
+        <DiscoveryLanding
+          sessionPath={CANONICAL_SESSION_PATH}
+          returnPath={CANONICAL_ASSESSMENT_PATH}
+          historyPath={CANONICAL_HISTORY_PATH}
+        />
+      }
     />
   );
 }

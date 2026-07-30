@@ -648,6 +648,33 @@ export const dictionaries = {
       "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
+    "cd.public.loading": "Förbereder testet…",
+    "cd.public.unavailableTitle": "Testet är inte öppet ännu",
+    "cd.public.unavailableBody":
+      "Den uppdaterade versionen av Din karriär inom säkerhet genomgår just nu granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+    "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
+    "cd.public.introTitle": "Din karriär inom säkerhet",
+    "cd.public.introBody":
+      "Tjugo frågor om hur du föredrar att arbeta. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cd.public.introNoAccount":
+      "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
+    "cd.public.start": "Börja testet",
+    "cd.public.progress": "Fråga",
+    "cd.public.scaleLow": "Stämmer inte alls",
+    "cd.public.scaleHigh": "Stämmer helt",
+    "cd.public.back": "Tillbaka",
+    "cd.public.toResult": "Till resultatet",
+    "cd.public.doneTitle": "Alla frågor är besvarade",
+    "cd.public.doneBody":
+      "Logga in eller skapa ett konto för att spara rapporten och kunna öppna den igen. Dina svar ligger kvar medan du gör det.",
+    "cd.public.signInToSave": "Logga in och spara rapporten",
+    "cd.public.saveNow": "Spara rapporten",
+    "cd.public.answersKept": "Dina svar finns kvar i den här fliken tills rapporten är sparad.",
+    "cd.public.saving": "Sparar din rapport…",
+    "cd.public.failedTitle": "Rapporten kunde inte sparas",
+    "cd.public.failedBody":
+      "Något gick fel när rapporten skulle sparas. Dina svar finns kvar — försök igen.",
+    "cd.public.retry": "Försök igen",
     "careerDiscovery.dashboard.v31Title": "Din nya rapport är klar",
     "careerDiscovery.dashboard.v31Body":
       "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Hela den nya presentationen — Career DNA, ditt karriärmönster och din berättelse — lanseras i nästa rapportsläpp. Rapporten är sparad och ingenting försvinner.",
@@ -2551,6 +2578,33 @@ export const dictionaries = {
       "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
+    "cd.public.loading": "Preparing the assessment…",
+    "cd.public.unavailableTitle": "The assessment isn't open yet",
+    "cd.public.unavailableBody":
+      "The updated version of Security Career Discovery is going through review before it opens to everyone. We'll open it as soon as that review is complete.",
+    "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
+    "cd.public.introTitle": "Security Career Discovery",
+    "cd.public.introBody":
+      "Twenty questions about how you prefer to work. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
+    "cd.public.introNoAccount":
+      "You don't need an account to start. Your answers stay in this tab, and you only sign in when you want to save the result.",
+    "cd.public.start": "Start the assessment",
+    "cd.public.progress": "Question",
+    "cd.public.scaleLow": "Not at all like me",
+    "cd.public.scaleHigh": "Exactly like me",
+    "cd.public.back": "Back",
+    "cd.public.toResult": "To the result",
+    "cd.public.doneTitle": "You've answered every question",
+    "cd.public.doneBody":
+      "Sign in or create an account to save your report and reopen it later. Your answers stay put while you do.",
+    "cd.public.signInToSave": "Sign in and save the report",
+    "cd.public.saveNow": "Save the report",
+    "cd.public.answersKept": "Your answers stay in this tab until the report is saved.",
+    "cd.public.saving": "Saving your report…",
+    "cd.public.failedTitle": "The report could not be saved",
+    "cd.public.failedBody":
+      "Something went wrong while saving. Your answers are still here — please try again.",
+    "cd.public.retry": "Try again",
     "careerDiscovery.dashboard.v31Title": "Your new report is ready",
     "careerDiscovery.dashboard.v31Body":
       "You completed the updated version of Security Career Discovery. The full new presentation — Career DNA, your career pattern and your story — arrives in the next report release. Your report is saved and nothing is lost.",

@@ -202,7 +202,15 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       // a non-administrable version. Surfaced as not_available so the UI can
       // say "not yet available" rather than "something went wrong".
       const code = String(sessionError?.message ?? "");
-      if (code.includes("CD_VERSION_NOT_ADMINISTRABLE") || code.includes("CD_REVIEW_GATES")) {
+      if (
+        code.includes("CD_VERSION_NOT_ADMINISTRABLE") ||
+        code.includes("CD_REVIEW_GATES") ||
+        // internal_test is refused by its own, stronger guard: the version is
+        // reachable only through the admin-authorised function. Surfaced as
+        // not_available so the candidate reads "not open yet" rather than
+        // "something went wrong". Found by the public-flow fixture.
+        code.includes("CD_INTERNAL_TEST_REQUIRES_AUTHORISED_FUNCTION")
+      ) {
         throw new V31PublicError("not_available", dv.lifecycle_status as string);
       }
       throw new V31PublicError("persist_failed", "session");
