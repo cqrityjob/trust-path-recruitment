@@ -28,11 +28,12 @@ function ok(cond: boolean, label: string) {
 
 const AT = "2026-07-31T05:55:13.296Z";
 
-// Every core item answered, mid-scale — a complete, ordinary run.
-const answers: Answer[] = CORE_ITEMS.map((item) => ({
-  itemId: item.id,
-  optionId: item.options[Math.min(2, item.options.length - 1)].id,
-}));
+// Every core item answered — a complete, ordinary run.
+const answers: Answer[] = CORE_ITEMS.map((item) =>
+  item.format === "scale"
+    ? { itemId: item.id, format: "scale" as const, value: 7 }
+    : { itemId: item.id, format: "single_choice" as const, optionId: `${item.id}_A` },
+);
 
 const snapshot = buildSnapshot({ answers, locale: "sv", completedAt: AT });
 const stored = JSON.parse(JSON.stringify(snapshot)) as unknown;
