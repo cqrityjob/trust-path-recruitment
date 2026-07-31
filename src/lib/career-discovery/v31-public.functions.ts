@@ -288,6 +288,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       ) {
         throw new V31PublicError("not_available", dv.lifecycle_status as string);
       }
+      console.error("[persistPublicV31Run] session insert failed", {
+        code: sessionError?.code,
+        message: sessionError?.message,
+      });
       throw new V31PublicError("persist_failed", "session");
     }
 
@@ -301,7 +305,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       item_version: 1,
       answer_value: a.format === "scale" ? String(a.value) : a.optionId,
       option_id: a.format === "single_choice" ? a.optionId : null,
-      answer_tags: null,
+      // Empty array, never null: cd_evidence.answer_tags is NOT NULL with a
+      // default of '{}', and an explicit null overrides that default and
+      // fails the whole insert. Career DNA items never carry report tags.
+      answer_tags: [] as string[],
     }));
 
     // The personal layer. `answer_tags` are the structured Career Context
@@ -316,14 +323,24 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         item_version: 1,
         answer_value: value,
         option_id: null,
-        answer_tags: tags.length > 0 ? tags : null,
+        // Same NOT NULL contract as above. Context items legitimately have no
+        // tags, and the database refuses tags on anything non-adaptive, so an
+        // empty array is the correct value rather than null.
+        answer_tags: tags,
       };
     });
 
     const { error: evidenceError } = await ctx.supabase
       .from("cd_evidence")
       .insert([...coreRows, ...personalRows]);
-    if (evidenceError) throw new V31PublicError("persist_failed", "evidence");
+    if (evidenceError) {
+      // Diagnostics only: a database code and message, never an answer value.
+      console.error("[persistPublicV31Run] evidence insert failed", {
+        code: evidenceError.code,
+        message: evidenceError.message,
+      });
+      throw new V31PublicError("persist_failed", "evidence");
+    }
 
     // 6. Atomic completion. Idempotent: a retry returns the same snapshot.
     const { data: result, error: completeError } = await ctx.supabase.rpc(
@@ -335,7 +352,13 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         _completed_at: completedAt,
       },
     );
-    if (completeError) throw new V31PublicError("persist_failed", "completion");
+    if (completeError) {
+      console.error("[persistPublicV31Run] completion failed", {
+        code: completeError.code,
+        message: completeError.message,
+      });
+      throw new V31PublicError("persist_failed", "completion");
+    }
 
     const row = Array.isArray(result) ? result[0] : result;
     if (!row?.snapshot_id) throw new V31PublicError("persist_failed", "completion");
