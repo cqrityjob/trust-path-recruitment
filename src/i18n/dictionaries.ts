@@ -694,7 +694,7 @@ export const dictionaries = {
     "cd.public.retry": "Försök igen",
     "careerDiscovery.dashboard.v31Title": "Din nya rapport är klar",
     "careerDiscovery.dashboard.v31Body":
-      "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Hela den nya presentationen — Career DNA, ditt karriärmönster och din berättelse — lanseras i nästa rapportsläpp. Rapporten är sparad och ingenting försvinner.",
+      "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Rapporten innehåller ditt karriärmönster, din berättelse och de karriärområden som passar dig bäst.",
     "careerDiscovery.dashboard.v31Completed": "Genomförd",
     "careerDiscovery.dashboard.v31Open": "Öppna rapporten",
     "careerDiscovery.dashboard.unreadableTitle": "Rapporten kan inte visas här",
@@ -2642,7 +2642,7 @@ export const dictionaries = {
     "cd.public.retry": "Try again",
     "careerDiscovery.dashboard.v31Title": "Your new report is ready",
     "careerDiscovery.dashboard.v31Body":
-      "You completed the updated version of Security Career Discovery. The full new presentation — Career DNA, your career pattern and your story — arrives in the next report release. Your report is saved and nothing is lost.",
+      "You completed the updated version of Security Career Discovery. Your report covers your career pattern, your story and the career areas that fit you best.",
     "careerDiscovery.dashboard.v31Completed": "Completed",
     "careerDiscovery.dashboard.v31Open": "Open the report",
     "careerDiscovery.dashboard.unreadableTitle": "This report can't be shown here",
