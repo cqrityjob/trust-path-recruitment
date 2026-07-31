@@ -10,49 +10,46 @@
 // The first screen opens with "Your Security Career DNA" — never with
 // "You are best suited for…".
 
-import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
+import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { useT } from "@/i18n/context";
-import { getDiscoveryReport } from "@/lib/career-discovery/discovery.functions";
+import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
 import type { DiscoveryReport } from "@/lib/career-discovery/report";
 
 export const Route = createFileRoute(
   "/_authenticated/security-career-assessment/report/$snapshotId",
 )({
+  // Client-only: the report is owner-scoped and must not be prerendered,
+  // and the Supabase session has to be restored before the read runs.
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Your Security Career report — CQrityjob" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: DiscoveryReportRoute,
 });
 
 function DiscoveryReportRoute() {
   const { snapshotId } = Route.useParams();
   const { t, lang } = useT();
-  const load = useServerFn(getDiscoveryReport);
+  const load = useServerFn(getStoredDiscoveryReport);
 
-  const [data, setData] = useState<Awaited<ReturnType<typeof getDiscoveryReport>> | null>(null);
-  const [error, setError] = useState(false);
+  // useQuery rather than a hand-rolled effect: it retries a transient
+  // auth-restoration failure instead of latching a permanent error state,
+  // and it re-runs cleanly on refresh and on re-login.
+  const query = useQuery({
+    queryKey: ["discovery", "report", snapshotId],
+    queryFn: () => load({ data: { snapshotId } }),
+    retry: 1,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    load({ data: { snapshotId } })
-      .then((d) => mounted && setData(d))
-      .catch(() => mounted && setError(true));
-    return () => {
-      mounted = false;
-    };
-  }, [snapshotId, load]);
-
-  if (error) {
-    return (
-      <AssessmentLayout narrow>
-        <p role="alert" className="text-sm text-destructive">
-          {t("careerDiscovery.report.error")}
-        </p>
-      </AssessmentLayout>
-    );
-  }
-  if (!data) {
+  if (query.isPending) {
     return (
       <AssessmentLayout narrow>
         <p className="text-sm text-muted-foreground">{t("careerDiscovery.report.loading")}</p>
@@ -60,14 +57,56 @@ function DiscoveryReportRoute() {
     );
   }
 
+  if (query.isError || !query.data) {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.error")}
+        body={t("careerDiscovery.report.unreadable.body")}
+        tone="error"
+      />
+    );
+  }
+
+  const data = query.data;
+
+  if (data.status === "not_found") {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.notFound.title")}
+        body={t("careerDiscovery.report.notFound.body")}
+      />
+    );
+  }
+
+  if (data.status === "unreadable") {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.unreadable.title")}
+        body={t("careerDiscovery.report.unreadable.body")}
+        detail={data.definitionVersion}
+      />
+    );
+  }
+
+  if (data.status === "v3.1") {
+    return (
+      <AssessmentLayout>
+        <V31ReportView
+          snapshot={data.snapshot}
+          generatedAt={data.generatedAt}
+          versions={data.versions}
+        />
+      </AssessmentLayout>
+    );
+  }
+
   const r = data.report as DiscoveryReport | null;
   if (!r) {
     return (
-      <AssessmentLayout narrow>
-        <p role="alert" className="text-sm text-destructive">
-          {t("careerDiscovery.report.error")}
-        </p>
-      </AssessmentLayout>
+      <ReportMessage
+        title={t("careerDiscovery.report.unreadable.title")}
+        body={t("careerDiscovery.report.unreadable.body")}
+      />
     );
   }
 
@@ -290,6 +329,71 @@ function DiscoveryReportRoute() {
       </dl>
       {/* Actions */}
       <div className="mt-16 flex flex-wrap gap-3 border-t border-border pt-8">
+        <Link
+          to="/my-career"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.myCareer")}
+        </Link>
+        <Link
+          to="/security-career-assessment/history"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.allReports")}
+        </Link>
+      </div>
+    </AssessmentLayout>
+  );
+}
+
+/**
+ * Every non-rendering outcome, stated plainly.
+ *
+ * Exists so a missing report, a foreign-owned report or a payload this build
+ * cannot read is never surfaced as the router's generic "This page didn't
+ * load". The candidate is always told what happened and where their other
+ * reports are.
+ *
+ * "Not found" and "not yours" share this component deliberately: RLS returns
+ * no row in both cases, and distinguishing them would confirm the existence
+ * of another person's report.
+ */
+function ReportMessage({
+  title,
+  body,
+  detail,
+  tone = "info",
+}: {
+  title: string;
+  body: string;
+  detail?: string | null;
+  tone?: "info" | "error";
+}) {
+  const { t } = useT();
+  return (
+    <AssessmentLayout narrow>
+      <Link
+        to="/security-career-assessment/history"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("careerDiscovery.report.backToHistory")}
+      </Link>
+
+      <div
+        role={tone === "error" ? "alert" : "status"}
+        data-report-state={tone}
+        className="mt-8 rounded-lg border border-border bg-background p-6"
+      >
+        <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+          <AlertTriangle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          {title}
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        {detail && <p className="mt-3 font-mono text-xs text-muted-foreground">{detail}</p>}
+      </div>
+
+      <div className="mt-8 flex flex-wrap gap-3">
         <Link
           to="/my-career"
           className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
