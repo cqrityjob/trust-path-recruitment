@@ -134,6 +134,66 @@ export interface PersistResult {
   readonly created: boolean;
 }
 
+/** One row as it is sent to cd_evidence.
+ *
+ *  Only the columns the caller is allowed to supply. item_version, item_kind,
+ *  evidence_class, is_scored and adaptive_path are DERIVED by the database
+ *  from the item registry and are deliberately absent — sending them would
+ *  mean a client could assert that a context answer is scored. */
+export interface EvidenceRow {
+  readonly session_id: string;
+  readonly item_id: string;
+  readonly item_version: number;
+  readonly answer_value: string;
+  readonly option_id: string | null;
+  /** NEVER null. `cd_evidence.answer_tags` is `text[] NOT NULL DEFAULT '{}'`,
+   *  so an explicit null overrides the default and fails the column's NOT NULL
+   *  constraint with SQLSTATE 23502 — for the whole statement, not just the
+   *  offending row. Empty array for everything that is not an adaptive item;
+   *  the database refuses tags on any other kind
+   *  (CD_REPORT_TAGS_ONLY_ON_ADAPTIVE). */
+  readonly answer_tags: readonly string[];
+}
+
+/**
+ * Build the evidence rows for one completed run.
+ *
+ * Extracted and exported so the payload is directly testable. It previously
+ * lived inline inside the handler, which meant the SQL suite could only test a
+ * hand-written approximation of it — and that approximation omitted
+ * `answer_tags` entirely, letting the column default apply. The real payload
+ * sent `answer_tags: null`, which the default cannot rescue. Every one of the
+ * 26 rows was rejected, and no test could see it.
+ */
+export function buildEvidenceRows(
+  sessionId: string,
+  coreAnswers: readonly Answer[],
+  personalAnswers: ReadonlyMap<string, string>,
+): EvidenceRow[] {
+  const core: EvidenceRow[] = coreAnswers.map((a) => ({
+    session_id: sessionId,
+    item_id: a.itemId,
+    item_version: 1,
+    answer_value: a.format === "scale" ? String(a.value) : a.optionId,
+    option_id: a.format === "single_choice" ? a.optionId : null,
+    answer_tags: [],
+  }));
+
+  // The personal layer. `answer_tags` carry the structured Career Context
+  // Signals the Career Intelligence Engine reads after the assessment. Context
+  // items produce none, so they send [] — not null.
+  const personal: EvidenceRow[] = [...personalAnswers.entries()].map(([itemId, value]) => ({
+    session_id: sessionId,
+    item_id: itemId,
+    item_version: 1,
+    answer_value: value,
+    option_id: null,
+    answer_tags: reportTagsFor(itemId, value),
+  }));
+
+  return [...core, ...personal];
+}
+
 /**
  * Replay a buffered public run into the authenticated v3.1 pipeline.
  *
@@ -299,47 +359,32 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     //    evidence_class, is_scored, adaptive_path) is derived by the database
     //    from the item registry; only the answer itself is supplied, so a
     //    caller cannot assert that a context answer is scored.
-    const coreRows = answers.map((a) => ({
-      session_id: session.id,
-      item_id: a.itemId,
-      item_version: 1,
-      answer_value: a.format === "scale" ? String(a.value) : a.optionId,
-      option_id: a.format === "single_choice" ? a.optionId : null,
-      // Empty array, never null: cd_evidence.answer_tags is NOT NULL with a
-      // default of '{}', and an explicit null overrides that default and
-      // fails the whole insert. Career DNA items never carry report tags.
-      answer_tags: [] as string[],
-    }));
+    const rows = buildEvidenceRows(session.id as string, answers, personal);
 
-    // The personal layer. `answer_tags` are the structured Career Context
-    // Signals the Career Intelligence Engine reads after the assessment; they
-    // are stored here so the matching model has them, and the database
-    // refuses tags on anything that is not an adaptive item.
-    const personalRows = [...personal.entries()].map(([itemId, value]) => {
-      const tags = reportTagsFor(itemId, value);
-      return {
-        session_id: session.id,
-        item_id: itemId,
-        item_version: 1,
-        answer_value: value,
-        option_id: null,
-        // Same NOT NULL contract as above. Context items legitimately have no
-        // tags, and the database refuses tags on anything non-adaptive, so an
-        // empty array is the correct value rather than null.
-        answer_tags: tags,
-      };
-    });
-
-    const { error: evidenceError } = await ctx.supabase
-      .from("cd_evidence")
-      .insert([...coreRows, ...personalRows]);
+    const { error: evidenceError } = await ctx.supabase.from("cd_evidence").insert(rows);
     if (evidenceError) {
-      // Diagnostics only: a database code and message, never an answer value.
-      console.error("[persistPublicV31Run] evidence insert failed", {
+      // The database's own words, not a summary of them.
+      //
+      // This previously threw a bare "evidence", which is how a NOT NULL
+      // violation on answer_tags reached production looking identical to a
+      // network failure: the UI said "Rapporten kunde inte sparas" and the one
+      // fact that would have identified it in seconds -- the SQLSTATE and the
+      // column name -- was discarded here.
+      //
+      // Server-side only. `detail` is returned to the client as a short code;
+      // the full record goes to the server log.
+      console.error("[v31] cd_evidence insert rejected", {
         code: evidenceError.code,
         message: evidenceError.message,
+        details: evidenceError.details,
+        hint: evidenceError.hint,
+        rowCount: rows.length,
+        sessionId: session.id,
       });
-      throw new V31PublicError("persist_failed", "evidence");
+      throw new V31PublicError(
+        "persist_failed",
+        `evidence:${evidenceError.code ?? "unknown"}:${evidenceError.message ?? ""}`,
+      );
     }
 
     // 6. Atomic completion. Idempotent: a retry returns the same snapshot.

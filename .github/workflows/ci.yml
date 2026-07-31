@@ -60,6 +60,13 @@ jobs:
       - name: Career Discovery v3 instrument check
         run: bun run career-discovery:check
 
+      # Asserts the EXACT payload persistPublicV31Run sends to cd_evidence.
+      # A NOT NULL violation on answer_tags emptied every save in the live
+      # environment while the SQL suite passed, because the suite wrote its own
+      # INSERT and omitted the column. This checks the shipping payload itself.
+      - name: v3.1 cd_evidence payload check
+        run: bun run v31-evidence-payload:check
+
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.
