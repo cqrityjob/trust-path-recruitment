@@ -348,6 +348,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       ) {
         throw new V31PublicError("not_available", dv.lifecycle_status as string);
       }
+      console.error("[persistPublicV31Run] session insert failed", {
+        code: sessionError?.code,
+        message: sessionError?.message,
+      });
       throw new V31PublicError("persist_failed", "session");
     }
 
@@ -393,7 +397,13 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         _completed_at: completedAt,
       },
     );
-    if (completeError) throw new V31PublicError("persist_failed", "completion");
+    if (completeError) {
+      console.error("[persistPublicV31Run] completion failed", {
+        code: completeError.code,
+        message: completeError.message,
+      });
+      throw new V31PublicError("persist_failed", "completion");
+    }
 
     const row = Array.isArray(result) ? result[0] : result;
     if (!row?.snapshot_id) throw new V31PublicError("persist_failed", "completion");
