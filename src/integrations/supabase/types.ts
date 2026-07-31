@@ -676,12 +676,14 @@ export type Database = {
           answer_tags: string[]
           answer_value: string
           answered_at: string
+          display_order: number | null
           evidence_class: string | null
           id: string
           is_scored: boolean | null
           item_id: string
           item_kind: string | null
           item_version: number | null
+          option_id: string | null
           session_id: string
           updated_at: string
         }
@@ -690,12 +692,14 @@ export type Database = {
           answer_tags?: string[]
           answer_value: string
           answered_at?: string
+          display_order?: number | null
           evidence_class?: string | null
           id?: string
           is_scored?: boolean | null
           item_id: string
           item_kind?: string | null
           item_version?: number | null
+          option_id?: string | null
           session_id: string
           updated_at?: string
         }
@@ -704,12 +708,14 @@ export type Database = {
           answer_tags?: string[]
           answer_value?: string
           answered_at?: string
+          display_order?: number | null
           evidence_class?: string | null
           id?: string
           is_scored?: boolean | null
           item_id?: string
           item_kind?: string | null
           item_version?: number | null
+          option_id?: string | null
           session_id?: string
           updated_at?: string
         }
@@ -744,8 +750,146 @@ export type Database = {
         }
         Relationships: []
       }
+      cd_option_loadings: {
+        Row: {
+          created_at: string
+          dimension_id: string
+          id: string
+          option_id: string
+          question_id: string
+          rationale: string
+          role: string
+          role_weight: number
+          scoring_version: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          dimension_id: string
+          id?: string
+          option_id: string
+          question_id: string
+          rationale: string
+          role: string
+          role_weight: number
+          scoring_version: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          dimension_id?: string
+          id?: string
+          option_id?: string
+          question_id?: string
+          rationale?: string
+          role?: string
+          role_weight?: number
+          scoring_version?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      cd_profession_profiles: {
+        Row: {
+          band_high: number
+          band_low: number
+          calibration_version: string
+          centrality: string
+          confidence: string
+          created_at: string
+          dimension_id: string
+          evidence_basis: string
+          profession_id: string
+          source_reference: string | null
+          weight: number
+        }
+        Insert: {
+          band_high: number
+          band_low: number
+          calibration_version: string
+          centrality: string
+          confidence: string
+          created_at?: string
+          dimension_id: string
+          evidence_basis: string
+          profession_id: string
+          source_reference?: string | null
+          weight?: number
+        }
+        Update: {
+          band_high?: number
+          band_low?: number
+          calibration_version?: string
+          centrality?: string
+          confidence?: string
+          created_at?: string
+          dimension_id?: string
+          evidence_basis?: string
+          profession_id?: string
+          source_reference?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_profession_profiles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cd_professions"
+            referencedColumns: ["profession_id"]
+          },
+        ]
+      }
+      cd_professions: {
+        Row: {
+          approved_for_ranking: boolean
+          career_area_id: string
+          career_stage: string
+          created_at: string
+          derived_from_area: boolean
+          entry_role: boolean
+          profession_id: string
+          regulated: boolean
+          review_state: string
+          title_en: string
+          title_sv: string
+          transition_difficulty: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_for_ranking?: boolean
+          career_area_id: string
+          career_stage: string
+          created_at?: string
+          derived_from_area?: boolean
+          entry_role?: boolean
+          profession_id: string
+          regulated?: boolean
+          review_state?: string
+          title_en: string
+          title_sv: string
+          transition_difficulty?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_for_ranking?: boolean
+          career_area_id?: string
+          career_stage?: string
+          created_at?: string
+          derived_from_area?: boolean
+          entry_role?: boolean
+          profession_id?: string
+          regulated?: boolean
+          review_state?: string
+          title_en?: string
+          title_sv?: string
+          transition_difficulty?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cd_report_snapshots: {
         Row: {
+          candidate_story: Json
           career_areas: Json
           confidence: Json
           content_version: string
@@ -757,11 +901,14 @@ export type Database = {
           dna_scores: Json
           generated_at: string
           id: string
+          pattern_definition_version: string | null
+          patterns: Json
           scoring_version: string
           session_id: string
           taxonomy_version: string
         }
         Insert: {
+          candidate_story?: Json
           career_areas?: Json
           confidence?: Json
           content_version: string
@@ -773,11 +920,14 @@ export type Database = {
           dna_scores?: Json
           generated_at?: string
           id?: string
+          pattern_definition_version?: string | null
+          patterns?: Json
           scoring_version: string
           session_id: string
           taxonomy_version: string
         }
         Update: {
+          candidate_story?: Json
           career_areas?: Json
           confidence?: Json
           content_version?: string
@@ -789,6 +939,8 @@ export type Database = {
           dna_scores?: Json
           generated_at?: string
           id?: string
+          pattern_definition_version?: string | null
+          patterns?: Json
           scoring_version?: string
           session_id?: string
           taxonomy_version?: string
@@ -818,6 +970,7 @@ export type Database = {
           id: string
           is_internal_test: boolean
           locale: string
+          option_order_seed: number | null
           started_at: string
           status: string
           updated_at: string
@@ -837,6 +990,7 @@ export type Database = {
           id?: string
           is_internal_test?: boolean
           locale?: string
+          option_order_seed?: number | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -856,6 +1010,7 @@ export type Database = {
           id?: string
           is_internal_test?: boolean
           locale?: string
+          option_order_seed?: number | null
           started_at?: string
           status?: string
           updated_at?: string
@@ -867,6 +1022,48 @@ export type Database = {
             columns: ["definition_version_id"]
             isOneToOne: false
             referencedRelation: "cd_definition_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cd_shared_reports: {
+        Row: {
+          created_at: string
+          locale: string
+          revoked_at: string | null
+          snapshot_id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          locale: string
+          revoked_at?: string | null
+          snapshot_id: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          locale?: string
+          revoked_at?: string | null
+          snapshot_id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_shared_reports_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "cd_my_report_history"
+            referencedColumns: ["snapshot_id"]
+          },
+          {
+            foreignKeyName: "cd_shared_reports_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "cd_report_snapshots"
             referencedColumns: ["id"]
           },
         ]
@@ -5029,6 +5226,16 @@ export type Database = {
         Args: { _context_status: string }
         Returns: string
       }
+      cd_get_shared_report: {
+        Args: { _token: string }
+        Returns: {
+          locale: string
+          pattern_id: string
+          pattern_name: string
+          shared_at: string
+          summary: string
+        }[]
+      }
       cd_grant_internal_tester: {
         Args: { _note?: string; _user_id: string }
         Returns: undefined
@@ -5041,6 +5248,13 @@ export type Database = {
           expected: number
           missing: string[]
           unexpected: string[]
+        }[]
+      }
+      cd_validate_option_matrix: {
+        Args: { _scoring_version: string }
+        Returns: {
+          question_id: string
+          violation: string
         }[]
       }
       cig_lifecycle_enforced: { Args: never; Returns: boolean }
