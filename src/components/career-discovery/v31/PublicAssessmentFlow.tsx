@@ -18,7 +18,7 @@
 // their result cannot be saved would be the worst possible version of this
 // feature, so availability is resolved before the first question renders.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
@@ -73,6 +73,8 @@ export function PublicAssessmentFlow() {
   const [buffer, setBuffer] = useState<PublicBuffer | null>(null);
   const [index, setIndex] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
+  /** In-flight guard for persistence. See onSaveAndSignIn. */
+  const persistingRef = useRef(false);
 
   // Availability and auth state, resolved together before anything renders.
   useEffect(() => {
@@ -127,6 +129,16 @@ export function PublicAssessmentFlow() {
 
   async function onSaveAndSignIn() {
     if (!buffer) return;
+    // Persistence creates a NEW session per call, so the completion RPC's
+    // idempotency — which is keyed on session — does not protect against a
+    // double submit. Two calls would produce two sessions and therefore two
+    // reports for one run.
+    //
+    // A ref, not state: it updates synchronously, so a second call that
+    // arrives before React re-renders still sees the flag. That is precisely
+    // the case a state flag would miss, and it is reachable from a
+    // StrictMode double-invoked effect or from the effect racing the button.
+    if (persistingRef.current) return;
     if (!signedIn) {
       // Return here after login. The buffer is untouched and survives the hop.
       navigate({
@@ -135,6 +147,7 @@ export function PublicAssessmentFlow() {
       });
       return;
     }
+    persistingRef.current = true;
     setPhase("persisting");
     try {
       const result = await persist({ data: { locale: buffer.locale, answers: buffer.answers } });
@@ -146,7 +159,9 @@ export function PublicAssessmentFlow() {
         params: { snapshotId: result.snapshotId },
       });
     } catch {
-      // The buffer is deliberately left intact so the candidate can retry.
+      // The buffer is deliberately left intact so the candidate can retry, and
+      // the guard is released so the retry is actually possible.
+      persistingRef.current = false;
       setPhase("failed");
     }
   }

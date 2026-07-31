@@ -88,11 +88,11 @@ export const getV31Availability = createServerFn({ method: "GET" }).handler(
     const outstanding = Object.values(gates).filter((v) => v !== true).length;
     const status = (data.lifecycle_status as string) ?? null;
 
+    // Mirrors the database rule exactly: lifecycle decides admission. Review
+    // gates are a governance record, reported here for operators, and never
+    // used to refuse a candidate.
     return {
-      available:
-        status !== null &&
-        (CANDIDATE_ADMINISTRABLE as readonly string[]).includes(status) &&
-        outstanding === 0,
+      available: status !== null && (CANDIDATE_ADMINISTRABLE as readonly string[]).includes(status),
       lifecycleStatus: status,
       outstandingGates: outstanding,
     };

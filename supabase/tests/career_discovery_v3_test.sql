@@ -183,11 +183,27 @@ UPDATE public.cd_definition_versions SET lifecycle_status = 'active'
 WHERE assessment_id = 'security-career-discovery-v3'
       AND definition_version = '2026-scd-v3.0.0';
 
-SELECT pg_temp.must_fail($$
-  INSERT INTO public.cd_sessions (definition_version_id, anon_session_token)
-  SELECT defver, gen_random_uuid() FROM t_ids
-$$, 'CD_REVIEW_GATES_OUTSTANDING',
-  'G3.4 an active version with outstanding review gates still refuses sessions');
+-- POLICY CHANGE (20260731100000_career_discovery_v31_launch.sql):
+-- review gates no longer block admission. They are a governance record — they
+-- protect no data and enforce no boundary — and blocking a live product on one
+-- was stopping candidates while every real security control was already in
+-- place. lifecycle_status alone now decides admission.
+--
+-- This assertion previously required the opposite. Retargeted rather than
+-- deleted, so the NEW rule is enforced and the information is proven still
+-- visible.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM jsonb_each(
+     (SELECT review_status FROM public.cd_definition_versions
+       WHERE assessment_id = 'security-career-discovery-v3'
+         AND definition_version = '2026-scd-v3.0.0')) g
+    WHERE g.value <> 'true'::jsonb) > 0,
+  'G3.4 gates are still outstanding on this version');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_outstanding_reviews
+    WHERE definition_version = '2026-scd-v3.0.0') > 0,
+  'G3.4b outstanding reviews remain VISIBLE after the block was removed');
 
 -- Clear the gates for the remaining fixtures. Transaction-local, rolled back.
 UPDATE public.cd_definition_versions

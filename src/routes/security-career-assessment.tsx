@@ -23,11 +23,6 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicAssessmentFlow } from "@/components/career-discovery/v31/PublicAssessmentFlow";
-import {
-  CANONICAL_ASSESSMENT_PATH,
-  CANONICAL_HISTORY_PATH,
-  CANONICAL_SESSION_PATH,
-} from "@/lib/career-discovery/routes";
 
 export const Route = createFileRoute("/security-career-assessment")({
   ssr: false,

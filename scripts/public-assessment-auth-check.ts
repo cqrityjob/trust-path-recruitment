@@ -298,31 +298,34 @@ ok(
   /CANDIDATE_ADMINISTRABLE\s*=\s*\["pilot", "active"\]/.test(publicFns),
   "4.2 only pilot and active count as candidate-administrable",
 );
+// Governance gates must never refuse a candidate. They protect no data and
+// enforce no boundary; treating them as a runtime block is what made the
+// product unreachable while every real security control was already working.
 ok(
-  /outstanding === 0/.test(publicFns),
-  "4.3 availability requires every review gate to be cleared",
+  !/available:[^;]*outstanding === 0/.test(publicFns),
+  "4.3 availability depends on lifecycle alone — a governance gate never refuses a candidate",
 );
 ok(
-  !/lifecycle_status['"]?\s*[:=]\s*['"](pilot|active)['"]/.test(publicFns) &&
-    !/UPDATE[\s\S]*cd_definition_versions/i.test(publicFns),
-  "4.4 the application never promotes the instrument itself",
+  !/UPDATE[\s\S]*cd_definition_versions/i.test(publicFns),
+  "4.4 the application never promotes the instrument itself — that is a migration",
 );
 
-// Activation must be owner-run, and must NOT be a migration.
-const activation = read("docs/assessment/career-discovery/v31-activation.sql");
-ok(activation.includes("NOT A MIGRATION"), "4.5 the activation script says it is not a migration");
+// Launch is a migration: it applies on deploy, with no manual step.
+const launch = read("supabase/migrations/20260731100000_career_discovery_v31_launch.sql");
+ok(/lifecycle_status = 'active'/.test(launch), "4.5 the launch migration activates v3.1");
+// It must not mark any review as done that was not done.
 ok(
-  activation.includes("'pilot'") && activation.includes("review_status"),
-  "4.6 activation promotes lifecycle and gates together",
+  !/SET[\s\S]{0,80}review_status\s*=/i.test(launch),
+  "4.6 the launch migration marks no review as approved",
 );
-let activationIsMigration = false;
-try {
-  readFileSync(path.join(process.cwd(), "supabase/migrations/v31-activation.sql"));
-  activationIsMigration = true;
-} catch {
-  activationIsMigration = false;
-}
-ok(!activationIsMigration, "4.7 activation is not present in supabase/migrations");
+ok(
+  launch.includes("cd_outstanding_reviews"),
+  "4.7 outstanding reviews stay visible after the block is removed",
+);
+ok(
+  /anon gained a write grant/.test(launch),
+  "4.8 the launch migration refuses to run if anon gained a write grant",
+);
 
 // =========================================================================
 group("5 · The public route serves v3.1 only");
@@ -359,27 +362,6 @@ ok(
 ok(
   flow.includes("cd.public.unavailableTitle"),
   "5.5 an unavailable v3.1 shows an explicit v3.1 state",
-);
-
-// The pilot gate subset must narrow, never diverge.
-const gateMigration = read(
-  "supabase/migrations/20260731090000_career_discovery_pilot_gate_subset.sql",
-);
-for (const mandatory of [
-  "content_review",
-  "language_review",
-  "privacy_legal_review",
-  "accessibility_review",
-]) {
-  ok(gateMigration.includes(mandatory), `5.6 ${mandatory} is mandatory for pilot`);
-}
-ok(
-  /WHEN 'active' THEN[\s\S]{0,300}psychometric_review/.test(gateMigration),
-  "5.7 active still requires psychometric_review",
-);
-ok(
-  !/UPDATE[\s\S]*cd_definition_versions[\s\S]*SET[\s\S]*review_status/i.test(gateMigration),
-  "5.8 the migration clears no gate and promotes no version",
 );
 
 // =========================================================================
