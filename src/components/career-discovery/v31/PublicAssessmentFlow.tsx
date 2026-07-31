@@ -194,7 +194,13 @@ export function PublicAssessmentFlow() {
         to: "/security-career-assessment/report/$snapshotId",
         params: { snapshotId: result.snapshotId },
       });
-    } catch {
+    } catch (err) {
+      // Log the real reason. The candidate still sees the calm failure state,
+      // but "Rapporten kunde inte sparas" with nothing in the console is what
+      // turned a NOT NULL violation on cd_evidence.answer_tags into a
+      // reproduce-and-isolate cycle in the live environment. The server now
+      // puts the SQLSTATE and message in the error's detail; print it.
+      console.error("[v31] saving the report failed", err);
       // The buffer is deliberately left intact so the candidate can retry, and
       // the guard is released so the retry is actually possible.
       persistingRef.current = false;

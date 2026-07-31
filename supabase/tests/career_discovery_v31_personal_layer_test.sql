@@ -204,6 +204,104 @@ SELECT pg_temp.ok(
       AND array_length(answer_tags, 1) > 0) = 4,
   'L3.5 all four Discovery Path answers carry Career Context Signals');
 
+DO $$ BEGIN RAISE NOTICE 'GROUP L3b — the payload the APPLICATION actually sends'; END $$;
+
+-- =========================================================================
+-- Group L3b — answer_tags: the column default is not a safety net
+-- =========================================================================
+--
+-- The production failure this group exists to prevent: persistPublicV31Run
+-- sent `answer_tags: null` on every row. cd_evidence.answer_tags is
+-- `text[] NOT NULL DEFAULT ARRAY[]::text[]`, and an EXPLICIT null is not an
+-- omitted column — the default only applies when the column is absent. All 26
+-- rows were rejected with SQLSTATE 23502, the whole multi-row statement
+-- aborted, cd_evidence stayed empty, and the candidate lost a completed run.
+--
+-- Group L3 above inserts WITHOUT naming answer_tags, so it exercises the
+-- default and could never have caught this. These assertions insert the column
+-- explicitly, exactly as the application does.
+
+INSERT INTO auth.users (id, email)
+VALUES ('11111111-aaaa-0000-0000-000000000003', 'payload@example.test');
+
+CREATE TEMP TABLE t_payload AS
+WITH ins AS (
+  INSERT INTO public.cd_sessions
+    (definition_version_id, user_id, locale, status, context_status)
+  SELECT id, '11111111-aaaa-0000-0000-000000000003', 'sv', 'in_progress', 'exploring_security'
+    FROM public.cd_definition_versions WHERE definition_version = '2026-scd-v3.1.0'
+  RETURNING id
+) SELECT id AS sess FROM ins;
+
+-- The regression. An explicit null must be refused, and refused as 23502 on
+-- answer_tags specifically — not silently coerced to the default.
+SELECT pg_temp.must_fail(
+  format('INSERT INTO public.cd_evidence
+            (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+          VALUES (%L, ''CQ01'', 1, ''7'', NULL, NULL)', (SELECT sess FROM t_payload)),
+  'answer_tags',
+  'L3b.1 an explicit null answer_tags is rejected (the production defect)');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_evidence
+    WHERE session_id = (SELECT sess FROM t_payload)) = 0,
+  'L3b.2 the rejected statement left no partial rows');
+
+-- The corrected payload: every column the application sends, named explicitly,
+-- with [] on the twenty-two non-adaptive rows.
+INSERT INTO public.cd_evidence
+  (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+SELECT (SELECT sess FROM t_payload), di.item_id, 1,
+       CASE WHEN di.item_kind = 'scale' THEN '7' ELSE di.item_id || '_A' END,
+       CASE WHEN di.item_kind = 'single_choice' THEN di.item_id || '_A' END,
+       ARRAY[]::text[]
+  FROM public.cd_definition_items di
+  JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+ WHERE dv.definition_version = '2026-scd-v3.1.0'
+   AND di.item_kind IN ('scale','single_choice');
+
+INSERT INTO public.cd_evidence
+  (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+VALUES
+  ((SELECT sess FROM t_payload), 'CTX_CURRENT_STATUS',  1, 'exploring_security', NULL, ARRAY[]::text[]),
+  ((SELECT sess FROM t_payload), 'CTX_DISCOVERY_GOAL',  1, 'find_direction',     NULL, ARRAY[]::text[]);
+
+INSERT INTO public.cd_evidence
+  (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+SELECT (SELECT sess FROM t_payload), di.item_id, 1, 'a', NULL, ARRAY['operational_interest']
+  FROM public.cd_definition_items di
+  JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+ WHERE dv.definition_version = '2026-scd-v3.1.0'
+   AND di.item_kind = 'adaptive' AND di.adaptive_path = 'A';
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_evidence
+    WHERE session_id = (SELECT sess FROM t_payload)) = 26,
+  'L3b.3 the corrected payload persists all twenty-six rows');
+
+-- An empty array is stored as empty, never as null — so a later read cannot
+-- reintroduce the same confusion.
+SELECT pg_temp.ok(
+  (SELECT bool_and(answer_tags IS NOT NULL) FROM public.cd_evidence
+    WHERE session_id = (SELECT sess FROM t_payload)),
+  'L3b.4 every stored row holds a non-null answer_tags');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_evidence
+    WHERE session_id = (SELECT sess FROM t_payload)
+      AND cardinality(answer_tags) = 0) = 22,
+  'L3b.5 the twenty-two non-adaptive rows store an empty tag array');
+
+-- A non-empty array on a non-adaptive item is still refused. The fix must not
+-- have been "send tags everywhere".
+SELECT pg_temp.must_fail(
+  format('INSERT INTO public.cd_evidence
+            (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+          VALUES (%L, ''CTX_CURRENT_STATUS'', 1, ''exploring_security'', NULL, ARRAY[''x''])',
+         (SELECT sess FROM t_payload)),
+  'CD_REPORT_TAGS_ONLY_ON_ADAPTIVE',
+  'L3b.6 a context row still may not carry Career Context Signals');
+
 DO $$ BEGIN RAISE NOTICE 'GROUP L4 — the guards still refuse what they should'; END $$;
 
 -- =========================================================================
@@ -316,6 +414,150 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
      (SELECT sess FROM t_sess))) = 0,
   'L5.4 removing all six personal answers leaves the report path intact');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP L6 — every path completes and produces a report'; END $$;
+
+-- =========================================================================
+-- Group L6 — all five Discovery Paths, end to end
+-- =========================================================================
+--
+-- 26 answers -> validation -> cd_v31_complete_session -> one immutable
+-- snapshot, for every path. This is the journey the candidate actually takes,
+-- and it is what the answer_tags defect broke: the run reached this point and
+-- died on the evidence insert.
+
+DO $$
+DECLARE
+  _status text; _path text; _uid uuid; _sess uuid;
+  _created boolean; _snap uuid; _n int;
+  _statuses text[] := ARRAY['exploring_security','working_in_security',
+                            'developing_current_role','changing_career_area','security_leader'];
+BEGIN
+  FOREACH _status IN ARRAY _statuses LOOP
+    _uid := gen_random_uuid();
+    INSERT INTO auth.users (id, email) VALUES (_uid, _status || '@e2e.test');
+
+    INSERT INTO public.cd_sessions
+      (definition_version_id, user_id, locale, status, context_status)
+    SELECT id, _uid, 'sv', 'in_progress', _status
+      FROM public.cd_definition_versions WHERE definition_version = '2026-scd-v3.1.0'
+    RETURNING id INTO _sess;
+
+    SELECT adaptive_path INTO _path FROM public.cd_sessions WHERE id = _sess;
+
+    -- The 20 Career DNA answers, with answer_tags named explicitly, as the
+    -- application sends them.
+    INSERT INTO public.cd_evidence
+      (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+    SELECT _sess, di.item_id, 1,
+           CASE WHEN di.item_kind = 'scale' THEN '7' ELSE di.item_id || '_A' END,
+           CASE WHEN di.item_kind = 'single_choice' THEN di.item_id || '_A' END,
+           ARRAY[]::text[]
+      FROM public.cd_definition_items di
+      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+     WHERE dv.definition_version = '2026-scd-v3.1.0'
+       AND di.item_kind IN ('scale','single_choice');
+
+    -- The 2 context answers.
+    INSERT INTO public.cd_evidence
+      (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+    VALUES (_sess, 'CTX_CURRENT_STATUS', 1, _status, NULL, ARRAY[]::text[]),
+           (_sess, 'CTX_DISCOVERY_GOAL', 1, 'find_direction', NULL, ARRAY[]::text[]);
+
+    -- The 4 Discovery Path answers, carrying their Career Context Signals.
+    INSERT INTO public.cd_evidence
+      (session_id, item_id, item_version, answer_value, option_id, answer_tags)
+    SELECT _sess, di.item_id, 1, 'a', NULL, ARRAY['signal_' || di.item_id]
+      FROM public.cd_definition_items di
+      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+     WHERE dv.definition_version = '2026-scd-v3.1.0'
+       AND di.item_kind = 'adaptive' AND di.adaptive_path = _path;
+
+    SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess;
+    PERFORM pg_temp.ok(_n = 26, format('L6.1 %s: all twenty-six answers persist', _status));
+
+    SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess AND is_scored;
+    PERFORM pg_temp.ok(_n = 20,
+      format('L6.2 %s: Career DNA rests on exactly the twenty scored answers', _status));
+
+    SELECT count(*) INTO _n FROM public.cd_evidence
+     WHERE session_id = _sess AND NOT is_scored;
+    PERFORM pg_temp.ok(_n = 6,
+      format('L6.3 %s: the six context and Discovery Path answers stay unscored', _status));
+
+    PERFORM pg_temp.ok(
+      NOT EXISTS (SELECT 1 FROM public.cd_v31_validate_session_evidence(_sess)),
+      format('L6.4 %s: the run passes validation with no failures', _status));
+
+    PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+    SELECT was_created, snapshot_id INTO _created, _snap
+      FROM public.cd_v31_complete_session(
+        _sess,
+        jsonb_build_object(
+          'versions', jsonb_build_object(
+            'reportSchemaVersion','cd-report-v3.1.0','patternDefinitionVersion','v3.1-draft-1'),
+          'locale','sv','completedAt','2026-08-01T12:00:00.000Z',
+          'outputA', jsonb_build_object('leadingPattern','CP01',
+            'areas', jsonb_build_array(jsonb_build_object('id','SCA01','rank',1,'score',88)),
+            'dimensions', jsonb_build_array(
+              jsonb_build_object('id','CID01','name','Operativ orientering'))),
+          'outputB', jsonb_build_object('locale','sv','presentedPattern','CP01',
+            'leading', jsonb_build_object('name','Operativ trygghetsskapare')),
+          'professions', jsonb_build_object('available', false,
+                                            'matches', jsonb_build_array())),
+        'v3.1-draft-1', '2026-08-01T12:00:00.000Z'::timestamptz);
+
+    PERFORM pg_temp.ok(_created AND _snap IS NOT NULL,
+      format('L6.5 %s: completion creates exactly one report snapshot', _status));
+
+    PERFORM pg_temp.ok(
+      (SELECT status FROM public.cd_sessions WHERE id = _sess) = 'completed',
+      format('L6.6 %s: the session completes atomically with its report', _status));
+
+    -- The report must open for its owner. Read under that user's own RLS, not
+    -- as superuser, because "the report opens" is an RLS question.
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+    SELECT count(*) INTO _n FROM public.cd_report_snapshots WHERE id = _snap;
+    RESET ROLE;
+    PERFORM pg_temp.ok(_n = 1, format('L6.7 %s: the owner can open the report', _status));
+
+    -- Re-reading is what "opens after refresh, and after logout/login" is at
+    -- the database layer: a fresh authenticated read of the same row.
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+    SELECT count(*) INTO _n FROM public.cd_report_snapshots WHERE id = _snap;
+    RESET ROLE;
+    PERFORM pg_temp.ok(_n = 1,
+      format('L6.8 %s: the report opens again on a later session', _status));
+
+    -- And only for its owner.
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', gen_random_uuid()::text, true);
+    SELECT count(*) INTO _n FROM public.cd_report_snapshots WHERE id = _snap;
+    RESET ROLE;
+    PERFORM pg_temp.ok(_n = 0, format('L6.9 %s: nobody else can open it', _status));
+
+    -- Idempotent: a double-tap on Save returns the same report.
+    PERFORM set_config('request.jwt.claim.sub', _uid::text, true);
+    SELECT was_created INTO _created FROM public.cd_v31_complete_session(
+      _sess,
+      jsonb_build_object(
+        'versions', jsonb_build_object(
+          'reportSchemaVersion','cd-report-v3.1.0','patternDefinitionVersion','v3.1-draft-1'),
+        'locale','sv','completedAt','2026-08-01T12:00:00.000Z',
+        'outputA', jsonb_build_object('leadingPattern','CP01',
+          'areas', jsonb_build_array(jsonb_build_object('id','SCA01','rank',1,'score',88)),
+          'dimensions', jsonb_build_array(
+            jsonb_build_object('id','CID01','name','Operativ orientering'))),
+        'outputB', jsonb_build_object('locale','sv','presentedPattern','CP01',
+          'leading', jsonb_build_object('name','Operativ trygghetsskapare')),
+        'professions', jsonb_build_object('available', false, 'matches', jsonb_build_array())),
+      'v3.1-draft-1', '2026-08-01T12:00:00.000Z'::timestamptz);
+    PERFORM pg_temp.ok(NOT _created,
+      format('L6.10 %s: a retry returns the same report, not a second one', _status));
+  END LOOP;
+END $$;
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v31_personal_layer_test: ALL ASSERTIONS PASSED'; END $$;
 
