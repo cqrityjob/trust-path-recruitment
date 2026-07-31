@@ -345,3 +345,68 @@ function DiscoveryReportRoute() {
     </AssessmentLayout>
   );
 }
+
+/**
+ * Every non-rendering outcome, stated plainly.
+ *
+ * Exists so a missing report, a foreign-owned report or a payload this build
+ * cannot read is never surfaced as the router's generic "This page didn't
+ * load". The candidate is always told what happened and where their other
+ * reports are.
+ *
+ * "Not found" and "not yours" share this component deliberately: RLS returns
+ * no row in both cases, and distinguishing them would confirm the existence
+ * of another person's report.
+ */
+function ReportMessage({
+  title,
+  body,
+  detail,
+  tone = "info",
+}: {
+  title: string;
+  body: string;
+  detail?: string | null;
+  tone?: "info" | "error";
+}) {
+  const { t } = useT();
+  return (
+    <AssessmentLayout narrow>
+      <Link
+        to="/security-career-assessment/history"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("careerDiscovery.report.backToHistory")}
+      </Link>
+
+      <div
+        role={tone === "error" ? "alert" : "status"}
+        data-report-state={tone}
+        className="mt-8 rounded-lg border border-border bg-background p-6"
+      >
+        <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground">
+          <AlertTriangle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          {title}
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        {detail && <p className="mt-3 font-mono text-xs text-muted-foreground">{detail}</p>}
+      </div>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link
+          to="/my-career"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.myCareer")}
+        </Link>
+        <Link
+          to="/security-career-assessment/history"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("careerDiscovery.report.actions.allReports")}
+        </Link>
+      </div>
+    </AssessmentLayout>
+  );
+}
