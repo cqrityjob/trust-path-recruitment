@@ -1066,6 +1066,13 @@ export type Database = {
             referencedRelation: "cd_report_snapshots"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cd_shared_reports_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "cd_v31_stored_reports"
+            referencedColumns: ["snapshot_id"]
+          },
         ]
       }
       cig_assessment_dimensions: {
@@ -5137,6 +5144,59 @@ export type Database = {
           },
         ]
       }
+      cd_v31_stored_reports: {
+        Row: {
+          career_areas: Json | null
+          content_version: string | null
+          definition_version: string | null
+          generated_at: string | null
+          locale: Json | null
+          output_a: Json | null
+          output_b: Json | null
+          pattern_definition_version: string | null
+          scoring_version: string | null
+          session_id: string | null
+          snapshot_id: string | null
+          versions: Json | null
+        }
+        Insert: {
+          career_areas?: Json | null
+          content_version?: string | null
+          definition_version?: string | null
+          generated_at?: string | null
+          locale?: never
+          output_a?: Json | null
+          output_b?: Json | null
+          pattern_definition_version?: string | null
+          scoring_version?: string | null
+          session_id?: string | null
+          snapshot_id?: string | null
+          versions?: never
+        }
+        Update: {
+          career_areas?: Json | null
+          content_version?: string | null
+          definition_version?: string | null
+          generated_at?: string | null
+          locale?: never
+          output_a?: Json | null
+          output_b?: Json | null
+          pattern_definition_version?: string | null
+          scoring_version?: string | null
+          session_id?: string | null
+          snapshot_id?: string | null
+          versions?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_report_snapshots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_scoring_version_lineage: {
         Row: {
           content_status: string | null
@@ -5248,6 +5308,25 @@ export type Database = {
           expected: number
           missing: string[]
           unexpected: string[]
+        }[]
+      }
+      cd_v31_complete_session: {
+        Args: {
+          _completed_at: string
+          _pattern_definition_version: string
+          _payload: Json
+          _session_id: string
+        }
+        Returns: {
+          snapshot_id: string
+          was_created: boolean
+        }[]
+      }
+      cd_v31_validate_session_evidence: {
+        Args: { _session_id: string }
+        Returns: {
+          code: string
+          detail: string
         }[]
       }
       cd_validate_option_matrix: {
