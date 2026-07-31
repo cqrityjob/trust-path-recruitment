@@ -5,11 +5,21 @@
 // sessionStorage (v31-public-buffer.ts); persistence goes through the normal
 // authenticated v3.1 pipeline.
 //
-// ── ONLY v3.1 ──────────────────────────────────────────────────────────
+// ── THE FROZEN MVP: 26 QUESTIONS ───────────────────────────────────────
 //
-// Questions come from v31/core-items and v31/option-matrix. Nothing here
-// imports a v3.0 module, and no scoring happens client-side — the server builds
-// the report from the replayed answers exactly as it does for a signed-in run.
+//     Stage 1 ·  2 Career Context questions   → decides the Discovery Path
+//     Stage 2 · 20 Career DNA questions       → the only scored items
+//     Stage 3 ·  4 Discovery Path questions   → contextual, never scored
+//
+// The Career DNA questions come from v31/core-items and v31/option-matrix. The
+// context and Discovery Path questions come from the owner-locked banks in
+// ../context-items and ../adaptive-items via v31/personal-layer — reused
+// unchanged, not re-authored, and not replaced by the Career Intelligence
+// Excel's wording. The Excel is the engine that runs after the assessment.
+//
+// No scoring happens client-side: the server builds the report from the
+// replayed answers exactly as it does for a signed-in run, and it builds it
+// from the 20 Career DNA answers alone.
 //
 // ── AVAILABILITY IS CHECKED FIRST, NOT LAST ────────────────────────────
 //
@@ -24,13 +34,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
-import { CORE_ITEMS } from "@/lib/career-discovery/v31/core-items";
+import { CORE_ITEM_BY_ID } from "@/lib/career-discovery/v31/core-items";
 import { OPTION_SET_BY_QUESTION } from "@/lib/career-discovery/v31/option-matrix";
 import {
+  isAdaptiveItemId,
+  isPersonalItemId,
+  MVP_QUESTION_COUNT,
+  personalItem,
+} from "@/lib/career-discovery/v31/personal-layer";
+import {
   clearBuffer,
+  contextStatusOf,
   isComplete,
   readBuffer,
   recordAnswer,
+  sessionItemIds,
   startBuffer,
   type PublicBuffer,
 } from "@/lib/career-discovery/v31-public-buffer";
@@ -91,9 +109,10 @@ export function PublicAssessmentFlow() {
         const existing = readBuffer();
         if (existing) {
           setBuffer(existing);
+          const ids = sessionItemIds(contextStatusOf(existing));
           const answered = new Set(existing.answers.map((a) => a.itemId));
-          const next = CORE_ITEMS.findIndex((i) => !answered.has(i.id));
-          setIndex(next === -1 ? CORE_ITEMS.length - 1 : next);
+          const next = ids.findIndex((id) => !answered.has(id));
+          setIndex(next === -1 ? Math.max(0, ids.length - 1) : next);
           setPhase(isComplete(existing) ? "save" : "questions");
           return;
         }
@@ -105,13 +124,27 @@ export function PublicAssessmentFlow() {
     };
   }, [checkAvailability]);
 
-  const item = CORE_ITEMS[index];
-  const options = useMemo(() => {
-    if (!item || item.format !== "single_choice" || !buffer) return [];
-    return permute(OPTION_SET_BY_QUESTION[item.id].options, `${buffer.startedAt}:${item.id}`);
-  }, [item, buffer]);
+  // The run's own question order: 2 context → 20 Career DNA → 4 Discovery
+  // Path. Twenty-two ids until C1 is answered, because the Discovery Path —
+  // and therefore its four questions — is not decided before then.
+  const itemIds = useMemo(() => sessionItemIds(contextStatusOf(buffer)), [buffer]);
+  const itemId = itemIds[index];
 
-  const answerFor = (itemId: string) => buffer?.answers.find((a) => a.itemId === itemId);
+  const coreItem = itemId && !isPersonalItemId(itemId) ? CORE_ITEM_BY_ID[itemId] : undefined;
+  const personal = itemId && isPersonalItemId(itemId) ? personalItem(itemId) : undefined;
+
+  const options = useMemo(() => {
+    if (!coreItem || coreItem.format !== "single_choice" || !buffer) return [];
+    return permute(
+      OPTION_SET_BY_QUESTION[coreItem.id].options,
+      `${buffer.startedAt}:${coreItem.id}`,
+    );
+    // Context and Discovery Path options keep their authored order. They are a
+    // sequence of distinct situations rather than interchangeable statements,
+    // and shuffling them would only make the list harder to read.
+  }, [coreItem, buffer]);
+
+  const answerFor = (id: string) => buffer?.answers.find((a) => a.itemId === id);
 
   const advance = useCallback(
     (next: PublicBuffer) => {
@@ -120,9 +153,12 @@ export function PublicAssessmentFlow() {
         setPhase("save");
         return;
       }
+      // Recomputed from `next`, not from `itemIds`: answering C1 decides the
+      // path, which is what makes the last four questions exist at all.
+      const ids = sessionItemIds(contextStatusOf(next));
       const answered = new Set(next.answers.map((a) => a.itemId));
-      const nextIndex = CORE_ITEMS.findIndex((i) => !answered.has(i.id));
-      setIndex(nextIndex === -1 ? Math.min(index + 1, CORE_ITEMS.length - 1) : nextIndex);
+      const nextIndex = ids.findIndex((id) => !answered.has(id));
+      setIndex(nextIndex === -1 ? Math.min(index + 1, ids.length - 1) : nextIndex);
     },
     [index],
   );
@@ -231,22 +267,60 @@ export function PublicAssessmentFlow() {
     );
   }
 
-  if (phase === "questions" && item && buffer) {
-    const current = answerFor(item.id);
+  if (phase === "questions" && itemId && buffer && (coreItem || personal)) {
+    const current = answerFor(itemId);
     const answeredCount = buffer.answers.length;
+    const locale = lang === "en" ? "en" : "sv";
+
+    // Which of the three stages this question belongs to. Named so the
+    // candidate can see the shape of what they are doing rather than facing an
+    // undifferentiated run of twenty-six.
+    const stageLabel = personal
+      ? isAdaptiveItemId(itemId)
+        ? t("cd.public.stageDiscoveryPath")
+        : t("cd.public.stageContext")
+      : t("cd.public.stageCareerDna");
+
     return (
       <div className="max-w-prose">
         {/* Progress: text, not colour or bar alone. */}
         <p className="text-xs uppercase tracking-widest text-muted-foreground" aria-live="polite">
-          {t("cd.public.progress")} {answeredCount} / {CORE_ITEMS.length}
+          {stageLabel} · {t("cd.public.progress")} {answeredCount} / {MVP_QUESTION_COUNT}
         </p>
 
         <fieldset className="mt-4 border-0 p-0">
           <legend className="text-lg font-medium leading-snug text-foreground">
-            {item.stem[lang === "en" ? "en" : "sv"]}
+            {personal ? personal.prompt[locale] : coreItem!.stem[locale]}
           </legend>
 
-          {item.format === "scale" ? (
+          {personal ? (
+            <div className="mt-6 space-y-3">
+              {personal.options.map((o) => (
+                <label
+                  key={o.value}
+                  className="flex min-h-[44px] w-full cursor-pointer items-start gap-3 rounded-md border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground transition-colors hover:bg-muted has-[:checked]:border-accent has-[:checked]:bg-muted"
+                >
+                  <input
+                    type="radio"
+                    name={itemId}
+                    value={o.value}
+                    checked={current?.format === "personal" && current.value === o.value}
+                    onChange={() =>
+                      advance(
+                        recordAnswer(buffer, {
+                          itemId,
+                          format: "personal",
+                          value: o.value,
+                        }),
+                      )
+                    }
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--accent)]"
+                  />
+                  <span>{o.label[locale]}</span>
+                </label>
+              ))}
+            </div>
+          ) : coreItem!.format === "scale" ? (
             <div className="mt-6 space-y-2">
               {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
                 <label
@@ -255,11 +329,11 @@ export function PublicAssessmentFlow() {
                 >
                   <input
                     type="radio"
-                    name={item.id}
+                    name={itemId}
                     value={v}
                     checked={current?.format === "scale" && current.value === v}
                     onChange={() =>
-                      advance(recordAnswer(buffer, { itemId: item.id, format: "scale", value: v }))
+                      advance(recordAnswer(buffer, { itemId, format: "scale", value: v }))
                     }
                     className="h-4 w-4 accent-[var(--accent)]"
                   />
@@ -286,13 +360,13 @@ export function PublicAssessmentFlow() {
                 >
                   <input
                     type="radio"
-                    name={item.id}
+                    name={itemId}
                     value={o.id}
                     checked={current?.format === "single_choice" && current.optionId === o.id}
                     onChange={() =>
                       advance(
                         recordAnswer(buffer, {
-                          itemId: item.id,
+                          itemId,
                           format: "single_choice",
                           optionId: o.id,
                         }),
@@ -300,7 +374,7 @@ export function PublicAssessmentFlow() {
                     }
                     className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--accent)]"
                   />
-                  <span>{o.text[lang === "en" ? "en" : "sv"]}</span>
+                  <span>{o.text[locale]}</span>
                 </label>
               ))}
             </div>

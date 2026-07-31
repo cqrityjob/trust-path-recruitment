@@ -53,6 +53,7 @@ The permanent product documentation for CQrityjob's Career Discovery experience 
 | 9 | [Implementation Roadmap](./implementation-roadmap-v3.0.md) | MVP · Beta · V1 · V2 · Future, with exit gates |
 | — | [Current-state audit](./current-state-audit.md) | Why all of this exists — 20 findings against the live build |
 | — | [**Adaptive Experience — Implementation Status**](./adaptive-experience-implementation.md) | **What is actually built.** The 70/30 principle, the shared 20-item core, the five Discovery sections, the five adaptive paths, scoring vs contextual evidence, report-framing rules, validation status |
+| — | [**v3.1 personal layer**](./v31-personal-layer.md) | **The frozen 26-question MVP.** 2 Context + 20 Career DNA + 4 Discovery Path — why it was a registration rather than a rebuild, why the Excel is the engine and not the question bank, and the four mechanisms that keep Career DNA from moving |
 | — | [ADR: construct model](../../architecture/adr-career-discovery-construct-model.md) | Which construct model governs which product |
 | — | [ADR: adaptive experience](../../architecture/adr-career-discovery-adaptive-experience.md) | Why personalisation is a framing layer and never touches measurement |
 
