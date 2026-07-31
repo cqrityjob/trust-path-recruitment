@@ -69,6 +69,17 @@ export function DiscoveryV31Pending({ active }: { active: ActiveDiscoveryV31Repo
           {t("careerDiscovery.dashboard.v31Body")}
         </p>
 
+        {/* The v3.1 renderer exists now, so the dashboard links straight to
+            the report rather than telling the candidate to wait for it. */}
+        <Link
+          to="/security-career-assessment/report/$snapshotId"
+          params={{ snapshotId: active.snapshotId }}
+          className="mt-5 inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-accent px-4 text-xs font-medium text-accent-foreground transition-opacity hover:opacity-90"
+        >
+          {t("careerDiscovery.dashboard.v31Open")}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+
         {active.isInternalTest && (
           <p
             role="note"
