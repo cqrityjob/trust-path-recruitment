@@ -1706,6 +1706,108 @@ BEGIN
       WHERE table_name = 'scp_scoring_version_lineage'
         AND column_name IN ('sjt_weight', 'biq_weight', 'content_hash')) = 0,
     'LOW-4: the lineage read model exposes no weights and no content hash');
+
+  -- Stronger than a denylist: the projection is EXACTLY these nine columns, so
+  -- a future column added to scp_scoring_versions under any name cannot appear
+  -- here unnoticed.
+  PERFORM pg_temp.assert(
+    (SELECT array_agg(column_name::text ORDER BY column_name::text)
+       FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'scp_scoring_version_lineage')
+    = ARRAY['content_status','core_summary_is_indicative','id',
+            'norm_comparison_permitted','published_at','retired_at','slug',
+            'validation_status','version_number']::text[],
+    'LOW-4: the lineage read model is exactly its nine authorised columns');
+
+  -- Lineage rows must carry real content. A view that returned rows of NULLs
+  -- would satisfy `count(*) > 0` while telling a report nothing.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '11111111-0000-0000-0000-000000000005', true);
+  SELECT count(*) INTO _lineage FROM public.scp_scoring_version_lineage
+   WHERE id IS NOT NULL AND slug IS NOT NULL AND validation_status IS NOT NULL;
+  RESET ROLE;
+  PERFORM pg_temp.assert(_lineage > 0,
+    'LOW-4: a CANDIDATE reads lineage rows with real identity and validation status');
+END $$;
+
+
+-- ###########################################################################
+-- GROUP 20b -- LOW-4 regression guard: the mechanism, not just the outcome.
+--
+-- Migration 20260731053218 set security_invoker = true on the lineage view as
+-- part of a Supabase security-linter sweep. Because LOW-4 restricts the base
+-- table to authoring roles, invoker semantics made lineage unreadable for the
+-- exact two audiences the read model exists to serve — candidates and
+-- employers — and every report lost its ability to state which scoring version
+-- produced it.
+--
+-- GROUP 20 above catches the OUTCOME. This group pins the MECHANISM, so the
+-- next generic "security definer view" warning cannot silently reopen it.
+-- ###########################################################################
+DO $$
+DECLARE _invoker text; _err text; _relkind "char";
+BEGIN
+  RAISE NOTICE 'GROUP 20b -- LOW-4: lineage read model mechanism';
+
+  PERFORM pg_temp.assert(
+    (SELECT relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relname = 'scp_scoring_version_lineage') = 'v',
+    'LOW-4: lineage is a view, not a table or materialised copy');
+
+  -- reloptions omits the option entirely when it is default (false), so absence
+  -- is the passing case just as much as an explicit false.
+  SELECT coalesce(
+           (SELECT option FROM pg_class c
+              JOIN pg_namespace n ON n.oid = c.relnamespace,
+              unnest(coalesce(c.reloptions, '{}'::text[])) AS option
+             WHERE n.nspname = 'public'
+               AND c.relname = 'scp_scoring_version_lineage'
+               AND option LIKE 'security_invoker=%'
+             LIMIT 1),
+           'security_invoker=false')
+    INTO _invoker;
+
+  PERFORM pg_temp.assert(_invoker = 'security_invoker=false',
+    format('LOW-4: the lineage view runs with definer rights (found %s) -- '
+           'invoker semantics make it unreadable for candidates and employers',
+           _invoker));
+
+  -- anon: no access, proven behaviourally rather than by reading grants.
+  SET LOCAL ROLE anon;
+  _err := pg_temp.raises('SELECT count(*) FROM public.scp_scoring_version_lineage');
+  RESET ROLE;
+  PERFORM pg_temp.assert(_err IS NOT NULL AND position('permission denied' in _err) > 0,
+    'LOW-4: anon cannot read the lineage view');
+
+  SET LOCAL ROLE anon;
+  _err := pg_temp.raises('SELECT count(*) FROM public.scp_scoring_versions');
+  RESET ROLE;
+  PERFORM pg_temp.assert(_err IS NOT NULL AND position('permission denied' in _err) > 0,
+    'LOW-4: anon cannot read scp_scoring_versions');
+
+  SET LOCAL ROLE anon;
+  _err := pg_temp.raises('SELECT count(*) FROM public.scp_role_weight_profile_weights');
+  RESET ROLE;
+  PERFORM pg_temp.assert(_err IS NOT NULL AND position('permission denied' in _err) > 0,
+    'LOW-4: anon cannot read scp_role_weight_profile_weights');
+
+  SET LOCAL ROLE anon;
+  _err := pg_temp.raises('SELECT count(*) FROM public.scp_item_options');
+  RESET ROLE;
+  PERFORM pg_temp.assert(_err IS NOT NULL AND position('permission denied' in _err) > 0,
+    'LOW-4: anon cannot read scp_item_options');
+
+  -- The base tables must carry no unconditional read policy. Without this, the
+  -- weights would be reachable directly and the view's narrowness would stop
+  -- being the security boundary.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename IN ('scp_scoring_versions', 'scp_role_weight_profile_weights')
+        AND cmd IN ('SELECT', 'ALL')
+        AND coalesce(qual, '') IN ('true', '(true)')) = 0,
+    'LOW-4: no unconditional read policy exists on the scoring tables');
 END $$;
 
 
