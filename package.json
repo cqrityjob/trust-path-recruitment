@@ -14,6 +14,7 @@
     "cie:check": "bun run scripts/cie-check.ts",
     "question-library:check": "bun run scripts/question-library-check.ts",
     "career-discovery-v31:check": "bun run scripts/career-discovery-v31-check.ts",
+    "career-discovery-report:check": "bun run scripts/career-discovery-report-render-check.ts",
     "public-assessment-auth:check": "bun run scripts/public-assessment-auth-check.ts",
     "employer-taxonomy:check": "bun run scripts/employer-taxonomy-check.ts",
     "employer-job-form:check": "bun run scripts/employer-job-form-check.ts",
