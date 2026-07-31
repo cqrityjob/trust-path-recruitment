@@ -593,6 +593,23 @@ export const dictionaries = {
 
     "careerDiscovery.report.loading": "Hämtar din rapport…",
     "careerDiscovery.report.error": "Vi kunde inte hämta rapporten.",
+    "careerDiscovery.report.notFound.title": "Vi hittar inte den här rapporten",
+    "careerDiscovery.report.notFound.body":
+      "Rapporten finns inte, eller så tillhör den ett annat konto. Alla dina egna rapporter finns samlade under Mina rapporter.",
+    "careerDiscovery.report.unreadable.title": "Rapporten kan inte visas i den här versionen",
+    "careerDiscovery.report.unreadable.body":
+      "Din rapport är sparad och oförändrad, men den här versionen av tjänsten kan inte visa den. Försök igen senare.",
+    "careerDiscovery.report.v31.patternEyebrow": "Ditt Security Career DNA",
+    "careerDiscovery.report.v31.patternFallback": "Din profil",
+    "careerDiscovery.report.v31.balancedNote":
+      "Dina svar visar flera lika starka arbetssätt snarare än ett tydligt dominerande. Det är ett resultat i sig.",
+    "careerDiscovery.report.v31.supportingTitle": "Det här finns också i din profil",
+    "careerDiscovery.report.v31.areasTitle": "Karriärområden som passar dig",
+    "careerDiscovery.report.v31.areasThinEvidence":
+      "Underlaget för områdesrankningen är tunt. Läs den som en riktning, inte ett facit.",
+    "careerDiscovery.report.v31.alignedWith": "Bygger på",
+    "careerDiscovery.report.v31.professionsPending":
+      "Yrkesmatchning ingår inte i den här versionen av rapporten. Den läggs till när yrkesprofilerna är kalibrerade och granskade.",
     "careerDiscovery.report.backToHistory": "Alla mina rapporter",
     "careerDiscovery.report.dna.title": "Ditt Security Career DNA",
     "careerDiscovery.report.dna.lead":
@@ -2523,6 +2540,23 @@ export const dictionaries = {
 
     "careerDiscovery.report.loading": "Loading your report…",
     "careerDiscovery.report.error": "We could not load the report.",
+    "careerDiscovery.report.notFound.title": "We can't find this report",
+    "careerDiscovery.report.notFound.body":
+      "This report doesn't exist, or it belongs to another account. All of your own reports are listed under My reports.",
+    "careerDiscovery.report.unreadable.title": "This report can't be shown in this version",
+    "careerDiscovery.report.unreadable.body":
+      "Your report is stored and unchanged, but this version of the service cannot display it. Please try again later.",
+    "careerDiscovery.report.v31.patternEyebrow": "Your Security Career DNA",
+    "careerDiscovery.report.v31.patternFallback": "Your profile",
+    "careerDiscovery.report.v31.balancedNote":
+      "Your answers show several equally strong ways of working rather than one clearly dominant one. That is a result in itself.",
+    "careerDiscovery.report.v31.supportingTitle": "Also present in your profile",
+    "careerDiscovery.report.v31.areasTitle": "Career areas that fit you",
+    "careerDiscovery.report.v31.areasThinEvidence":
+      "The evidence behind this area ranking is thin. Read it as a direction, not a verdict.",
+    "careerDiscovery.report.v31.alignedWith": "Based on",
+    "careerDiscovery.report.v31.professionsPending":
+      "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
     "careerDiscovery.report.backToHistory": "All my reports",
     "careerDiscovery.report.dna.title": "Your Security Career DNA",
     "careerDiscovery.report.dna.lead":

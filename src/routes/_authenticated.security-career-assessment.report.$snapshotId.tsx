@@ -10,49 +10,46 @@
 // The first screen opens with "Your Security Career DNA" — never with
 // "You are best suited for…".
 
-import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
+import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { useT } from "@/i18n/context";
-import { getDiscoveryReport } from "@/lib/career-discovery/discovery.functions";
+import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
 import type { DiscoveryReport } from "@/lib/career-discovery/report";
 
 export const Route = createFileRoute(
   "/_authenticated/security-career-assessment/report/$snapshotId",
 )({
+  // Client-only: the report is owner-scoped and must not be prerendered,
+  // and the Supabase session has to be restored before the read runs.
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Your Security Career report — CQrityjob" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: DiscoveryReportRoute,
 });
 
 function DiscoveryReportRoute() {
   const { snapshotId } = Route.useParams();
   const { t, lang } = useT();
-  const load = useServerFn(getDiscoveryReport);
+  const load = useServerFn(getStoredDiscoveryReport);
 
-  const [data, setData] = useState<Awaited<ReturnType<typeof getDiscoveryReport>> | null>(null);
-  const [error, setError] = useState(false);
+  // useQuery rather than a hand-rolled effect: it retries a transient
+  // auth-restoration failure instead of latching a permanent error state,
+  // and it re-runs cleanly on refresh and on re-login.
+  const query = useQuery({
+    queryKey: ["discovery", "report", snapshotId],
+    queryFn: () => load({ data: { snapshotId } }),
+    retry: 1,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    load({ data: { snapshotId } })
-      .then((d) => mounted && setData(d))
-      .catch(() => mounted && setError(true));
-    return () => {
-      mounted = false;
-    };
-  }, [snapshotId, load]);
-
-  if (error) {
-    return (
-      <AssessmentLayout narrow>
-        <p role="alert" className="text-sm text-destructive">
-          {t("careerDiscovery.report.error")}
-        </p>
-      </AssessmentLayout>
-    );
-  }
-  if (!data) {
+  if (query.isPending) {
     return (
       <AssessmentLayout narrow>
         <p className="text-sm text-muted-foreground">{t("careerDiscovery.report.loading")}</p>
@@ -60,14 +57,56 @@ function DiscoveryReportRoute() {
     );
   }
 
+  if (query.isError || !query.data) {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.error")}
+        body={t("careerDiscovery.report.unreadable.body")}
+        tone="error"
+      />
+    );
+  }
+
+  const data = query.data;
+
+  if (data.status === "not_found") {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.notFound.title")}
+        body={t("careerDiscovery.report.notFound.body")}
+      />
+    );
+  }
+
+  if (data.status === "unreadable") {
+    return (
+      <ReportMessage
+        title={t("careerDiscovery.report.unreadable.title")}
+        body={t("careerDiscovery.report.unreadable.body")}
+        detail={data.definitionVersion}
+      />
+    );
+  }
+
+  if (data.status === "v3.1") {
+    return (
+      <AssessmentLayout>
+        <V31ReportView
+          snapshot={data.snapshot}
+          generatedAt={data.generatedAt}
+          versions={data.versions}
+        />
+      </AssessmentLayout>
+    );
+  }
+
   const r = data.report as DiscoveryReport | null;
   if (!r) {
     return (
-      <AssessmentLayout narrow>
-        <p role="alert" className="text-sm text-destructive">
-          {t("careerDiscovery.report.error")}
-        </p>
-      </AssessmentLayout>
+      <ReportMessage
+        title={t("careerDiscovery.report.unreadable.title")}
+        body={t("careerDiscovery.report.unreadable.body")}
+      />
     );
   }
 
