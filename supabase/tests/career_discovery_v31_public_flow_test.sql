@@ -111,20 +111,31 @@ WITH ins AS (
   RETURNING id
 ) SELECT id AS defver FROM ins;
 
--- Copy production's 20-item registry so evidence metadata derives identically.
+-- Copy production's full 42-item registry so evidence metadata derives
+-- identically. `adaptive_path` is copied too: since the personal layer was
+-- registered, an adaptive row without its path violates
+-- cd_definition_items_adaptive_path_presence.
 INSERT INTO public.cd_definition_items
   (definition_version_id, item_id, item_version, item_kind, evidence_class,
-   is_scored, section_id, display_order)
+   is_scored, adaptive_path, section_id, display_order)
 SELECT (SELECT defver FROM t_dv), di.item_id, di.item_version, di.item_kind,
-       di.evidence_class, di.is_scored, di.section_id, di.display_order
+       di.evidence_class, di.is_scored, di.adaptive_path, di.section_id,
+       di.display_order
   FROM public.cd_definition_items di
   JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
  WHERE dv.definition_version = '2026-scd-v3.1.0';
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items
-    WHERE definition_version_id = (SELECT defver FROM t_dv)) = 20,
-  'P2.1 the test instrument carries the same twenty items');
+    WHERE definition_version_id = (SELECT defver FROM t_dv)) = 42,
+  'P2.1 the test instrument carries the same forty-two items');
+
+-- The half that matters for this fixture: the scored set it will be validated
+-- against is still exactly twenty.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_definition_items
+    WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored) = 20,
+  'P2.1b the fixture''s scored set is still exactly twenty items');
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions

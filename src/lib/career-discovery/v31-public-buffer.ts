@@ -32,19 +32,42 @@
 // answers are about how someone wants to work.
 
 import { CORE_ITEMS } from "./v31/core-items";
+import {
+  adaptiveItemsForStatus,
+  CONTEXT_ITEMS,
+  CONTEXT_STATUS_ITEM_ID,
+  isContextStatus,
+  isValidPersonalAnswer,
+  type ContextStatus,
+} from "./v31/personal-layer";
 import { CONTENT_VERSION, DEFINITION_VERSION, type Locale } from "./v31/version";
 
 /** Buffer format version. Bumped when the stored SHAPE changes, so a stale
- *  buffer from an older build is discarded rather than misread. */
-const BUFFER_VERSION = 1;
+ *  buffer from an older build is discarded rather than misread.
+ *
+ *  v1 → v2: the buffer gained the personal layer (2 context + 4 adaptive
+ *  answers alongside the 20 Career DNA answers). A v1 buffer holds a
+ *  20-question run and is discarded rather than replayed as a 26-question
+ *  one, because completing it would silently produce a session with no
+ *  context_status and therefore no Discovery Path. */
+const BUFFER_VERSION = 2;
 
 const KEY = "cqj:discovery:v31:public-buffer:v1";
 
-/** One buffered answer. Mirrors the domain `Answer` union, but kept structural
- *  so the buffer never depends on a domain value import. */
+/** One buffered answer.
+ *
+ *  `scale` and `single_choice` are the scored Career DNA formats and mirror
+ *  the domain `Answer` union, kept structural so the buffer never depends on a
+ *  domain value import.
+ *
+ *  `personal` covers both context and adaptive items: each is a pick from an
+ *  authored option list, identified by the option's stable `value`. It is a
+ *  separate variant precisely so it can never be mistaken for a scored answer
+ *  — nothing that reads Career DNA accepts this shape. */
 export type BufferedAnswer =
   | { readonly itemId: string; readonly format: "scale"; readonly value: number }
-  | { readonly itemId: string; readonly format: "single_choice"; readonly optionId: string };
+  | { readonly itemId: string; readonly format: "single_choice"; readonly optionId: string }
+  | { readonly itemId: string; readonly format: "personal"; readonly value: string };
 
 export interface PublicBuffer {
   readonly bufferVersion: number;
@@ -80,10 +103,16 @@ export function readBuffer(): PublicBuffer | null {
     if (parsed.locale !== "sv" && parsed.locale !== "en") return null;
     if (!Array.isArray(parsed.answers)) return null;
 
-    const validItemIds = new Set(CORE_ITEMS.map((i) => i.id));
+    const coreItemIds = new Set(CORE_ITEMS.map((i) => i.id));
     for (const a of parsed.answers) {
-      if (!a || typeof a.itemId !== "string" || !validItemIds.has(a.itemId)) return null;
-      if (a.format === "scale") {
+      if (!a || typeof a.itemId !== "string") return null;
+      if (a.format === "personal") {
+        // Validated against the authored option list, so a hand-edited buffer
+        // cannot introduce a value the instrument never offered.
+        if (typeof a.value !== "string" || !isValidPersonalAnswer(a.itemId, a.value)) return null;
+      } else if (!coreItemIds.has(a.itemId)) {
+        return null;
+      } else if (a.format === "scale") {
         if (!Number.isFinite(a.value) || a.value < 1 || a.value > 10) return null;
       } else if (a.format === "single_choice") {
         if (typeof a.optionId !== "string" || !a.optionId.startsWith(`${a.itemId}_`)) return null;
@@ -91,6 +120,16 @@ export function readBuffer(): PublicBuffer | null {
         return null;
       }
     }
+
+    // An adaptive answer from a path the candidate is not on means the buffer
+    // has been edited or the bank has changed under it. Either way the run is
+    // no longer coherent, and the database would refuse the evidence anyway.
+    const status = contextStatusOf(parsed);
+    const servedIds = new Set(sessionItemIds(status));
+    if (parsed.answers.some((a) => a.format === "personal" && !servedIds.has(a.itemId))) {
+      return null;
+    }
+
     return parsed;
   } catch {
     return null;
@@ -127,14 +166,73 @@ function writeBuffer(buffer: PublicBuffer): void {
  *  answer behave the way a candidate expects, and keeps exactly one answer per
  *  item — which the completion path requires. */
 export function recordAnswer(buffer: PublicBuffer, answer: BufferedAnswer): PublicBuffer {
-  const answers = buffer.answers.filter((a) => a.itemId !== answer.itemId).concat(answer);
-  const next: PublicBuffer = { ...buffer, answers };
-  writeBuffer(next);
-  return next;
+  let kept = buffer.answers.filter((a) => a.itemId !== answer.itemId);
+
+  // Changing C1 changes the Discovery Path, which makes any adaptive answer
+  // already given belong to a path this run is no longer on. Those answers are
+  // dropped here rather than left to fail validation later, because `readBuffer`
+  // discards a buffer it cannot fully trust — which would throw away all 20
+  // Career DNA answers over a corrected first question.
+  //
+  // Career DNA answers are never dropped: the same 20 items are asked on every
+  // path, so none of them is invalidated by a routing change.
+  if (answer.itemId === CONTEXT_STATUS_ITEM_ID) {
+    const previous = contextStatusOf(buffer);
+    const next =
+      answer.format === "personal" && isContextStatus(answer.value) ? answer.value : null;
+    if (previous !== next) {
+      const stillServed = new Set(sessionItemIds(next));
+      kept = kept.filter((a) => a.format !== "personal" || stillServed.has(a.itemId));
+    }
+  }
+
+  const nextBuffer: PublicBuffer = { ...buffer, answers: kept.concat(answer) };
+  writeBuffer(nextBuffer);
+  return nextBuffer;
 }
 
-/** True when every core item has an answer. */
+/** The candidate's C1 answer, or null before they have given one.
+ *
+ *  This is the run's routing state: until it exists there is no Discovery
+ *  Path, and therefore no way to know which four adaptive items to serve. */
+export function contextStatusOf(buffer: PublicBuffer | null): ContextStatus | null {
+  const a = buffer?.answers.find((x) => x.itemId === CONTEXT_STATUS_ITEM_ID);
+  if (!a || a.format !== "personal") return null;
+  return isContextStatus(a.value) ? a.value : null;
+}
+
+/** The full 26-question sequence for this run, in the frozen MVP order:
+ *  2 Context → 20 Career DNA → 4 Discovery Path.
+ *
+ *  Ids rather than items, because the three stages are different shapes and
+ *  the caller resolves each against its own bank. Before C1 is answered the
+ *  tail is not yet knowable, so this returns the 22 ids that are — which is
+ *  exactly what the flow can render at that point. */
+export function sessionItemIds(status: ContextStatus | null): readonly string[] {
+  return [
+    ...CONTEXT_ITEMS.map((i) => i.id),
+    ...CORE_ITEMS.map((i) => i.id),
+    ...(status ? adaptiveItemsForStatus(status).map((i) => i.id) : []),
+  ];
+}
+
+/** True when all 26 questions have an answer.
+ *
+ *  Deliberately includes the personal layer: a run missing C1 has no
+ *  Discovery Path, and one missing an adaptive answer is a 25-question run.
+ *  Either would be persisted as complete if this only counted core items. */
 export function isComplete(buffer: PublicBuffer | null): boolean {
+  if (!buffer) return false;
+  const status = contextStatusOf(buffer);
+  if (!status) return false;
+  const answered = new Set(buffer.answers.map((a) => a.itemId));
+  return sessionItemIds(status).every((id) => answered.has(id));
+}
+
+/** True when every scored Career DNA item has an answer. Separate from
+ *  `isComplete` because the two are asked at different points and only this
+ *  one bears on whether a report can be produced. */
+export function isCoreComplete(buffer: PublicBuffer | null): boolean {
   if (!buffer) return false;
   const answered = new Set(buffer.answers.map((a) => a.itemId));
   return CORE_ITEMS.every((i) => answered.has(i.id));
@@ -156,8 +254,11 @@ export function clearBuffer(): void {
   }
 }
 
-/** Items still unanswered, in display order. Drives "resume where you left off". */
+/** Items still unanswered, in display order. Drives "resume where you left off".
+ *
+ *  Spans all 26 questions. Before C1 is answered the adaptive tail is unknown
+ *  and simply absent — it appears as soon as the path is decided. */
 export function remainingItemIds(buffer: PublicBuffer | null): string[] {
   const answered = new Set((buffer?.answers ?? []).map((a) => a.itemId));
-  return CORE_ITEMS.filter((i) => !answered.has(i.id)).map((i) => i.id);
+  return sessionItemIds(contextStatusOf(buffer)).filter((id) => !answered.has(id));
 }

@@ -655,11 +655,14 @@ export const dictionaries = {
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Din karriär inom säkerhet",
     "cd.public.introBody":
-      "Tjugo frågor om hur du föredrar att arbeta. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
+      "Tjugosex frågor om hur du föredrar att arbeta: två om din situation, tjugo som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
     "cd.public.introNoAccount":
       "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
     "cd.public.start": "Börja testet",
     "cd.public.progress": "Fråga",
+    "cd.public.stageContext": "Din situation",
+    "cd.public.stageCareerDna": "Security Career DNA",
+    "cd.public.stageDiscoveryPath": "Din inriktning",
     "cd.public.scaleLow": "Stämmer inte alls",
     "cd.public.scaleHigh": "Stämmer helt",
     "cd.public.back": "Tillbaka",
@@ -2585,11 +2588,14 @@ export const dictionaries = {
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Security Career Discovery",
     "cd.public.introBody":
-      "Twenty questions about how you prefer to work. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
+      "Twenty-six questions about how you prefer to work: two about where you are now, twenty that build your Security Career DNA, and four that follow from where you are. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
     "cd.public.introNoAccount":
       "You don't need an account to start. Your answers stay in this tab, and you only sign in when you want to save the result.",
     "cd.public.start": "Start the assessment",
     "cd.public.progress": "Question",
+    "cd.public.stageContext": "Where you are",
+    "cd.public.stageCareerDna": "Security Career DNA",
+    "cd.public.stageDiscoveryPath": "Your direction",
     "cd.public.scaleLow": "Not at all like me",
     "cd.public.scaleHigh": "Exactly like me",
     "cd.public.back": "Back",

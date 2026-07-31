@@ -31,6 +31,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabase as publicClient } from "@/integrations/supabase/client";
 
 import { CORE_ITEM_BY_ID, CORE_ITEMS } from "./v31/core-items";
+import {
+  ADAPTIVE_ITEMS_PER_SESSION,
+  adaptiveItemsForStatus,
+  CONTEXT_ITEMS,
+  CONTEXT_STATUS_ITEM_ID,
+  isContextStatus,
+  isValidPersonalAnswer,
+  reportTagsFor,
+  type ContextStatus,
+} from "./v31/personal-layer";
 import { buildValidatedSnapshot, SnapshotValidationError } from "./v31/snapshot";
 import type { Answer } from "./v31/scoring";
 import { DEFINITION_VERSION, PATTERN_DEFINITION_VERSION, type Locale } from "./v31/version";
@@ -110,6 +120,13 @@ const bufferedAnswerSchema = z.union([
     format: z.literal("single_choice"),
     optionId: z.string(),
   }),
+  // Context and Discovery Path answers. Never scored — see the split in the
+  // handler, where these are excluded from the snapshot inputs by type.
+  z.object({
+    itemId: z.string(),
+    format: z.literal("personal"),
+    value: z.string(),
+  }),
 ]);
 
 export interface PersistResult {
@@ -141,10 +158,26 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<PersistResult> => {
     const ctx = context as Ctx;
 
-    // 1. Every core item must be answered exactly once. Checked before any
-    //    write, so an incomplete buffer never creates a half-finished session.
+    // 1. Split the run into its scored and unscored halves, and validate each
+    //    against its own bank. Checked before any write, so an incomplete
+    //    buffer never creates a half-finished session.
+    //
+    //    THE SPLIT IS THE SCORING BOUNDARY. `byItem` — and only `byItem` —
+    //    reaches `buildValidatedSnapshot`. A personal answer cannot enter it,
+    //    because `CORE_ITEM_BY_ID` does not contain personal item ids and a
+    //    `personal` answer carries neither a scale value nor an option id.
     const byItem = new Map<string, Answer>();
+    const personal = new Map<string, string>();
+
     for (const a of data.answers) {
+      if (a.format === "personal") {
+        if (!isValidPersonalAnswer(a.itemId, a.value)) {
+          throw new V31PublicError("invalid_answers", "unknown context or discovery-path answer");
+        }
+        personal.set(a.itemId, a.value);
+        continue;
+      }
+
       const item = CORE_ITEM_BY_ID[a.itemId];
       if (!item) throw new V31PublicError("invalid_answers", "unknown item");
       if (item.format !== a.format) {
@@ -155,8 +188,46 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       }
       byItem.set(a.itemId, a as Answer);
     }
+
     if (byItem.size !== CORE_ITEMS.length) {
       throw new V31PublicError("incomplete_buffer", `${byItem.size} of ${CORE_ITEMS.length}`);
+    }
+
+    // 1b. The personal layer: 2 context answers, then exactly the four
+    //     Discovery Path items the candidate's own path serves.
+    const rawStatus = personal.get(CONTEXT_STATUS_ITEM_ID);
+    if (!isContextStatus(rawStatus)) {
+      throw new V31PublicError("incomplete_buffer", "no routing answer");
+    }
+    const contextStatus: ContextStatus = rawStatus;
+
+    for (const item of CONTEXT_ITEMS) {
+      if (!personal.has(item.id)) {
+        throw new V31PublicError("incomplete_buffer", `context item ${item.id}`);
+      }
+    }
+
+    const servedAdaptive = adaptiveItemsForStatus(contextStatus);
+    for (const item of servedAdaptive) {
+      if (!personal.has(item.id)) {
+        throw new V31PublicError("incomplete_buffer", `discovery-path item ${item.id}`);
+      }
+    }
+    // An answer to an item outside this run's own path is rejected rather
+    // than dropped. The database would refuse it too
+    // (CD_ADAPTIVE_PATH_MISMATCH); failing here means failing before a session
+    // row exists, so nothing partial is left behind.
+    const expectedPersonal = new Set([
+      ...CONTEXT_ITEMS.map((i) => i.id),
+      ...servedAdaptive.map((i) => i.id),
+    ]);
+    for (const id of personal.keys()) {
+      if (!expectedPersonal.has(id)) {
+        throw new V31PublicError("invalid_answers", "answer from another Discovery Path");
+      }
+    }
+    if (servedAdaptive.length !== ADAPTIVE_ITEMS_PER_SESSION) {
+      throw new V31PublicError("invalid_answers", "discovery path is not four items");
     }
 
     // 2. Resolve the definition version. Its lifecycle is enforced by the
@@ -182,10 +253,13 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       throw err;
     }
 
-    // 4. Session. `context_status` stays NULL: v3.1's twenty items do not
-    //    include the v3.0 routing questions, and the derive trigger already
-    //    treats NULL as "no routing answer, therefore no adaptive path". No
-    //    new question is introduced to satisfy a column.
+    // 4. Session. `context_status` carries the C1 answer; `adaptive_path` is
+    //    deliberately NOT sent. `cd_guard_derive_adaptive_path` derives it
+    //    from context_status and overwrites anything supplied, so the path
+    //    stored is the database's own conclusion, not the client's claim.
+    //    That derivation is also what makes the adaptive evidence below
+    //    insertable at all — evidence for an adaptive item is refused unless
+    //    the session already carries the matching path.
     const { data: session, error: sessionError } = await ctx.supabase
       .from("cd_sessions")
       .insert({
@@ -193,6 +267,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         user_id: ctx.userId,
         locale: data.locale,
         status: "in_progress",
+        context_status: contextStatus,
       })
       .select("id")
       .single();
@@ -216,17 +291,38 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       throw new V31PublicError("persist_failed", "session");
     }
 
-    // 5. Evidence. Metadata is derived by the database from the item registry;
-    //    only the answer itself is supplied.
-    const rows = answers.map((a) => ({
+    // 5. Evidence — all 26 answers. Metadata (item_version, item_kind,
+    //    evidence_class, is_scored, adaptive_path) is derived by the database
+    //    from the item registry; only the answer itself is supplied, so a
+    //    caller cannot assert that a context answer is scored.
+    const coreRows = answers.map((a) => ({
       session_id: session.id,
       item_id: a.itemId,
       item_version: 1,
       answer_value: a.format === "scale" ? String(a.value) : a.optionId,
       option_id: a.format === "single_choice" ? a.optionId : null,
+      answer_tags: null,
     }));
 
-    const { error: evidenceError } = await ctx.supabase.from("cd_evidence").insert(rows);
+    // The personal layer. `answer_tags` are the structured Career Context
+    // Signals the Career Intelligence Engine reads after the assessment; they
+    // are stored here so the matching model has them, and the database
+    // refuses tags on anything that is not an adaptive item.
+    const personalRows = [...personal.entries()].map(([itemId, value]) => {
+      const tags = reportTagsFor(itemId, value);
+      return {
+        session_id: session.id,
+        item_id: itemId,
+        item_version: 1,
+        answer_value: value,
+        option_id: null,
+        answer_tags: tags.length > 0 ? tags : null,
+      };
+    });
+
+    const { error: evidenceError } = await ctx.supabase
+      .from("cd_evidence")
+      .insert([...coreRows, ...personalRows]);
     if (evidenceError) throw new V31PublicError("persist_failed", "evidence");
 
     // 6. Atomic completion. Idempotent: a retry returns the same snapshot.

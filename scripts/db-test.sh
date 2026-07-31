@@ -408,6 +408,31 @@ if [ "$PUB_PASSED" -lt 20 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5b. The v3.1 personal layer — the frozen 26-question MVP
+#
+# Proves 2 context + 20 Career DNA + 4 Discovery Path are all administrable
+# against production v3.1, and — the assertion that matters most — that the
+# scored set is still exactly the twenty Career DNA items.
+# ---------------------------------------------------------------------------
+echo "==> Running v3.1 personal layer assertions"
+set +e
+PL_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_personal_layer_test.sql 2>&1)"
+PL_RC=$?
+set -e
+echo "$PL_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PL_PASSED="$(echo "$PL_OUT" | grep -c "ok  " || true)"
+if [ "$PL_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the v3.1 personal layer suite exited with code ${PL_RC}." >&2
+  echo "$PL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${PL_PASSED} personal layer assertions passed"
+if [ "$PL_PASSED" -lt 24 ]; then
+  echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -444,5 +469,6 @@ echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${PUB_PASSED} public v3.1 flow assertions,"
+echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
