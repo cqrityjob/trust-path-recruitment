@@ -5144,6 +5144,15 @@ export type Database = {
           },
         ]
       }
+      cd_outstanding_reviews: {
+        Row: {
+          cleared: boolean | null
+          definition_version: string | null
+          lifecycle_status: string | null
+          review_gate: string | null
+        }
+        Relationships: []
+      }
       cd_v31_stored_reports: {
         Row: {
           career_areas: Json | null
