@@ -696,6 +696,7 @@ export const dictionaries = {
     "careerDiscovery.dashboard.v31Body":
       "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Hela den nya presentationen — Career DNA, ditt karriärmönster och din berättelse — lanseras i nästa rapportsläpp. Rapporten är sparad och ingenting försvinner.",
     "careerDiscovery.dashboard.v31Completed": "Genomförd",
+    "careerDiscovery.dashboard.v31Open": "Öppna rapporten",
     "careerDiscovery.dashboard.unreadableTitle": "Rapporten kan inte visas här",
     "careerDiscovery.dashboard.unreadableBody":
       "Rapporten är sparad och oförändrad, men den här versionen av sidan kan inte visa den. Vi visar hellre det här än en rapport som ser tom ut. Kontakta oss om det inte löser sig.",
@@ -2643,6 +2644,7 @@ export const dictionaries = {
     "careerDiscovery.dashboard.v31Body":
       "You completed the updated version of Security Career Discovery. The full new presentation — Career DNA, your career pattern and your story — arrives in the next report release. Your report is saved and nothing is lost.",
     "careerDiscovery.dashboard.v31Completed": "Completed",
+    "careerDiscovery.dashboard.v31Open": "Open the report",
     "careerDiscovery.dashboard.unreadableTitle": "This report can't be shown here",
     "careerDiscovery.dashboard.unreadableBody":
       "Your report is saved and unchanged, but this version of the page cannot display it. We would rather tell you that than show you a report that looks empty. Get in touch if it does not resolve.",
