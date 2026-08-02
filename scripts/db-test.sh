@@ -209,8 +209,16 @@ echo "    ok  migration replay matches the documented baseline"
 echo "==> Verifying the Security Competency schema landed"
 SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
   "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name like 'scp\\_%';")"
-if [ "$SCP_TABLES" -ne 23 ]; then
-  echo "FAIL: expected 23 scp_ tables, found $SCP_TABLES" >&2
+# 23 from PR-A (A1 + A2), plus the 15 Competency Graph tables added by Phase 0
+# (20260802090000): the identity pair (scp_subjects, scp_subject_identities),
+# the interpretation registries (jurisdictions, evidence_source_types,
+# processing_purposes, purpose_versions), the spine (roles, role_versions,
+# observable_behaviours, behaviour_versions, and the two maps), the evidence
+# ledger, the maturity thresholds and the read-model contract.
+# 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
+# + scp_review_requirements from Phase 1F.
+if [ "$SCP_TABLES" -ne 61 ]; then
+  echo "FAIL: expected 61 scp_ tables (23 PR-A + 15 graph + 23 Academy), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -433,6 +441,79 @@ if [ "$PL_PASSED" -lt 24 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5c. The Security Competency Graph (Phase 0)
+#
+# Proves the graph is connected, the evidence ledger is append-only and
+# accumulating, maturity is a LEVEL decided by two independent gates rather than
+# a percentage, and the Career Guidance separation survived widening the family
+# guard.
+# ---------------------------------------------------------------------------
+echo "==> Running Competency Graph assertions"
+set +e
+GRAPH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_competency_graph_test.sql 2>&1)"
+GRAPH_RC=$?
+set -e
+echo "$GRAPH_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+GRAPH_PASSED="$(echo "$GRAPH_OUT" | grep -c "ok  " || true)"
+if [ "$GRAPH_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Competency Graph suite exited with code ${GRAPH_RC}." >&2
+  echo "$GRAPH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${GRAPH_PASSED} Competency Graph assertions passed"
+if [ "$GRAPH_PASSED" -lt 45 ]; then
+  echo "FAIL: expected at least 45 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5d. Security Competence Academy (Phase 1)
+#
+# Proves the programme domain closes the development loop, Learning and
+# Assessment content are disjoint, rubrics cannot publish incomplete, no
+# external AI provider is enabled, and employers have no direct path to
+# identities, attempts or responses.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Competence Academy assertions"
+set +e
+ACAD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_academy_phase1_test.sql 2>&1)"
+ACAD_RC=$?
+set -e
+echo "$ACAD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ACAD_PASSED="$(echo "$ACAD_OUT" | grep -c "ok  " || true)"
+if [ "$ACAD_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Academy suite exited with code ${ACAD_RC}." >&2
+  echo "$ACAD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${ACAD_PASSED} Academy assertions passed"
+if [ "$ACAD_PASSED" -lt 39 ]; then
+  echo "FAIL: expected at least 39 Academy assertions, only ${ACAD_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5e. Phase 1F content completeness and the candidate-payload boundary
+# ---------------------------------------------------------------------------
+echo "==> Running Phase 1F content assertions"
+set +e
+CONT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_phase1f_test.sql 2>&1)"
+CONT_RC=$?
+set -e
+echo "$CONT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CONT_PASSED="$(echo "$CONT_OUT" | grep -c "ok  " || true)"
+if [ "$CONT_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 1F content suite exited with code ${CONT_RC}." >&2
+  echo "$CONT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${CONT_PASSED} content assertions passed"
+if [ "$CONT_PASSED" -lt 50 ]; then
+  echo "FAIL: expected at least 50 content assertions, only ${CONT_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -470,5 +551,8 @@ echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${PUB_PASSED} public v3.1 flow assertions,"
 echo "              ${PL_PASSED} v3.1 personal layer assertions,"
+echo "              ${GRAPH_PASSED} Competency Graph assertions,"
+echo "              ${ACAD_PASSED} Academy assertions,"
+echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

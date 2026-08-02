@@ -115,6 +115,135 @@ END $$;
 
 
 -- ---------------------------------------------------------------------------
+-- Phase 0 rolls back FIRST.
+--
+-- Layers unwind in reverse order. The Competency Graph (20260802090000) was
+-- added on top of PR-A, so it must come off before PR-A's own documented
+-- procedure runs -- which is left byte-for-byte unchanged below.
+--
+-- Everything here is additive-only in the forward direction, so the rollback is
+-- a plain DROP of objects nothing else references. The evidence ledger is
+-- dropped with it: at Phase 0 there is no evidence to preserve, and once there
+-- is, this rollback stops being available -- which is stated in the Phase 0
+-- migration's own header.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- Phase 1 (Academy) then Phase 0 (Graph) unwind first';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 61,
+    'pre-rollback: 61 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy)');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_competency_evidence) = 0,
+    'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
+END $$;
+
+-- Phase 1 (Academy) comes off first: it sits on top of Phase 0.
+DROP TABLE IF EXISTS public.scp_review_requirements     CASCADE;
+DELETE FROM public.scp_item_option_texts iot USING public.scp_item_options o,
+       public.scp_item_versions iv
+ WHERE iot.item_option_id = o.id AND o.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DELETE FROM public.scp_item_texts t USING public.scp_item_versions iv
+ WHERE t.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DELETE FROM public.scp_item_options o USING public.scp_item_versions iv
+ WHERE o.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DROP FUNCTION IF EXISTS public.scp_guard_learning_counterpart() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_best_worst_keys()      CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_construct_honesty()    CASCADE;
+DROP TRIGGER IF EXISTS scp_assignments_target_published_trg ON public.assessment_assignments;
+DROP FUNCTION IF EXISTS public.scp_guard_assignment_targets_published() CASCADE;
+ALTER TABLE public.assessment_assignments DROP CONSTRAINT IF EXISTS assessment_assignments_single_lineage;
+ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_assessment_version_id;
+DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
+DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
+DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;
+DROP TABLE IF EXISTS public.scp_prompt_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_ai_providers            CASCADE;
+DROP TABLE IF EXISTS public.scp_report_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_integrity_flags         CASCADE;
+DROP TABLE IF EXISTS public.scp_item_exposure           CASCADE;
+DROP TABLE IF EXISTS public.scp_candidate_responses     CASCADE;
+DROP TABLE IF EXISTS public.scp_attempts                CASCADE;
+DROP TABLE IF EXISTS public.scp_anchor_responses        CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_levels           CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_dimensions       CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_rubrics                 CASCADE;
+DROP TABLE IF EXISTS public.scp_scenario_versions       CASCADE;
+DROP TABLE IF EXISTS public.scp_scenarios               CASCADE;
+DROP TABLE IF EXISTS public.scp_module_behaviour_map    CASCADE;
+DROP TABLE IF EXISTS public.scp_module_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_modules                 CASCADE;
+DROP TABLE IF EXISTS public.scp_program_versions        CASCADE;
+DROP TABLE IF EXISTS public.scp_programs                CASCADE;
+-- The Academy's own assessment definition, before Phase 0 removes its family.
+DELETE FROM public.scp_form_items;
+DELETE FROM public.scp_forms f USING public.scp_assessment_versions av,
+       public.scp_assessment_definitions d
+ WHERE f.assessment_version_id = av.id AND av.definition_id = d.id
+   AND d.purpose = 'development_programme';
+DELETE FROM public.scp_assessment_versions av USING public.scp_assessment_definitions d
+ WHERE av.definition_id = d.id AND d.purpose = 'development_programme';
+DELETE FROM public.scp_assessment_definitions WHERE purpose = 'development_programme';
+DELETE FROM public.scp_item_versions WHERE mode IS NOT NULL;
+DELETE FROM public.scp_items WHERE slug LIKE 'sg-b-%' OR slug LIKE 'sg-learn-%';
+DROP FUNCTION IF EXISTS public.scp_guard_item_behaviour_agrees()  CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_item_mode_disjoint()     CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_form_single_mode()       CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_programme_states_limits() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_rubric_complete()        CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_attempt_mode_matches_form() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_response_matches_format() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_single_enabled_provider() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_scoring_run_append_only() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_scoring_run_consistent()  CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_review_immutable_once_done() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_report_states_limits()   CASCADE;
+ALTER TABLE public.scp_item_versions DROP COLUMN IF EXISTS primary_behaviour_id;
+ALTER TABLE public.scp_item_versions DROP COLUMN IF EXISTS mode;
+
+DROP VIEW  IF EXISTS public.scp_rm_competency_profile;
+DROP FUNCTION IF EXISTS public.scp_compute_maturity(uuid, uuid, text, timestamptz);
+DROP FUNCTION IF EXISTS public.scp_guard_evidence_append_only() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_behaviour_has_competency() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_has_writer() CASCADE;
+DROP TABLE IF EXISTS public.scp_competency_evidence       CASCADE;
+DROP TABLE IF EXISTS public.scp_role_competency_map       CASCADE;
+DROP TABLE IF EXISTS public.scp_behaviour_competency_map  CASCADE;
+DROP TABLE IF EXISTS public.scp_behaviour_versions        CASCADE;
+DROP TABLE IF EXISTS public.scp_observable_behaviours     CASCADE;
+DROP TABLE IF EXISTS public.scp_role_versions             CASCADE;
+DROP TABLE IF EXISTS public.scp_roles                     CASCADE;
+DROP TABLE IF EXISTS public.scp_maturity_thresholds       CASCADE;
+DROP TABLE IF EXISTS public.scp_contract_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_purpose_versions          CASCADE;
+DROP TABLE IF EXISTS public.scp_processing_purposes       CASCADE;
+DROP TABLE IF EXISTS public.scp_evidence_source_types     CASCADE;
+DROP TABLE IF EXISTS public.scp_jurisdictions             CASCADE;
+DROP TABLE IF EXISTS public.scp_subject_identities        CASCADE;
+DROP TABLE IF EXISTS public.scp_subjects                  CASCADE;
+DELETE FROM public.scp_assessment_families WHERE slug = 'security-competence-academy';
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 23,
+    'Phase 0 rollback: back to PR-A''s 23 scp_ base tables');
+  -- The widened vocabularies are deliberately LEFT in place: they are supersets,
+  -- so no existing row becomes invalid, and narrowing them again would be the
+  -- only genuinely destructive step in this rollback.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_assessment_families
+      WHERE product_type = 'development_programme') = 0,
+    'Phase 0 rollback: the Academy family is gone');
+END $$;
+
+
+-- ---------------------------------------------------------------------------
 -- Pre-rollback state.
 -- ---------------------------------------------------------------------------
 DO $$
