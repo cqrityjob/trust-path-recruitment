@@ -115,6 +115,64 @@ END $$;
 
 
 -- ---------------------------------------------------------------------------
+-- Phase 0 rolls back FIRST.
+--
+-- Layers unwind in reverse order. The Competency Graph (20260802090000) was
+-- added on top of PR-A, so it must come off before PR-A's own documented
+-- procedure runs -- which is left byte-for-byte unchanged below.
+--
+-- Everything here is additive-only in the forward direction, so the rollback is
+-- a plain DROP of objects nothing else references. The evidence ledger is
+-- dropped with it: at Phase 0 there is no evidence to preserve, and once there
+-- is, this rollback stops being available -- which is stated in the Phase 0
+-- migration's own header.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- Phase 0 (Competency Graph) unwinds first';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 32,
+    'pre-rollback: 32 scp_ base tables exist (23 PR-A + 9 Competency Graph)');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_competency_evidence) = 0,
+    'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
+END $$;
+
+DROP VIEW  IF EXISTS public.scp_rm_competency_profile;
+DROP FUNCTION IF EXISTS public.scp_compute_maturity(uuid, uuid, text, timestamptz);
+DROP FUNCTION IF EXISTS public.scp_guard_evidence_append_only() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_behaviour_has_competency() CASCADE;
+DROP TABLE IF EXISTS public.scp_competency_evidence       CASCADE;
+DROP TABLE IF EXISTS public.scp_role_competency_map       CASCADE;
+DROP TABLE IF EXISTS public.scp_behaviour_competency_map  CASCADE;
+DROP TABLE IF EXISTS public.scp_behaviour_versions        CASCADE;
+DROP TABLE IF EXISTS public.scp_observable_behaviours     CASCADE;
+DROP TABLE IF EXISTS public.scp_role_versions             CASCADE;
+DROP TABLE IF EXISTS public.scp_roles                     CASCADE;
+DROP TABLE IF EXISTS public.scp_maturity_thresholds       CASCADE;
+DROP TABLE IF EXISTS public.scp_contract_versions         CASCADE;
+DELETE FROM public.scp_assessment_families WHERE slug = 'security-competence-academy';
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 23,
+    'Phase 0 rollback: back to PR-A''s 23 scp_ base tables');
+  -- The widened vocabularies are deliberately LEFT in place: they are supersets,
+  -- so no existing row becomes invalid, and narrowing them again would be the
+  -- only genuinely destructive step in this rollback.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_assessment_families
+      WHERE product_type = 'development_programme') = 0,
+    'Phase 0 rollback: the Academy family is gone');
+END $$;
+
+
+-- ---------------------------------------------------------------------------
 -- Pre-rollback state.
 -- ---------------------------------------------------------------------------
 DO $$

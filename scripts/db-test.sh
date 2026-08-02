@@ -209,8 +209,12 @@ echo "    ok  migration replay matches the documented baseline"
 echo "==> Verifying the Security Competency schema landed"
 SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
   "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name like 'scp\\_%';")"
-if [ "$SCP_TABLES" -ne 23 ]; then
-  echo "FAIL: expected 23 scp_ tables, found $SCP_TABLES" >&2
+# 23 from PR-A (A1 + A2), plus the 9 Competency Graph tables added by Phase 0
+# (20260802090000): scp_roles, scp_role_versions, scp_observable_behaviours,
+# scp_behaviour_versions, scp_behaviour_competency_map, scp_role_competency_map,
+# scp_competency_evidence, scp_maturity_thresholds, scp_contract_versions.
+if [ "$SCP_TABLES" -ne 32 ]; then
+  echo "FAIL: expected 32 scp_ tables (23 PR-A + 9 Competency Graph), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -433,6 +437,32 @@ if [ "$PL_PASSED" -lt 24 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5c. The Security Competency Graph (Phase 0)
+#
+# Proves the graph is connected, the evidence ledger is append-only and
+# accumulating, maturity is a LEVEL decided by two independent gates rather than
+# a percentage, and the Career Guidance separation survived widening the family
+# guard.
+# ---------------------------------------------------------------------------
+echo "==> Running Competency Graph assertions"
+set +e
+GRAPH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_competency_graph_test.sql 2>&1)"
+GRAPH_RC=$?
+set -e
+echo "$GRAPH_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+GRAPH_PASSED="$(echo "$GRAPH_OUT" | grep -c "ok  " || true)"
+if [ "$GRAPH_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Competency Graph suite exited with code ${GRAPH_RC}." >&2
+  echo "$GRAPH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${GRAPH_PASSED} Competency Graph assertions passed"
+if [ "$GRAPH_PASSED" -lt 28 ]; then
+  echo "FAIL: expected at least 28 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -470,5 +500,6 @@ echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${PUB_PASSED} public v3.1 flow assertions,"
 echo "              ${PL_PASSED} v3.1 personal layer assertions,"
+echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
