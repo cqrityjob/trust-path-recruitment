@@ -95,7 +95,7 @@ export function SelectableAnswer({
       className={cn(
         "group flex min-h-[52px] w-full cursor-pointer items-start gap-3.5 rounded-[12px] border bg-card px-4 py-3.5 text-sm leading-relaxed text-foreground",
         "transition-[background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none",
-        "border-border hover:border-accent/50 hover:bg-[color:var(--surface-subtle)]",
+        "border-border hover:border-accent/50 hover:bg-muted/60",
         "has-[:checked]:border-accent has-[:checked]:bg-[color:var(--secondary)] has-[:checked]:shadow-[var(--shadow-xs)]",
         "has-[:focus-visible]:outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
       )}
@@ -149,7 +149,7 @@ export function LikertScale({
                 "transition-[background-color,border-color,color,box-shadow] duration-150 motion-reduce:transition-none",
                 checked
                   ? "border-accent bg-accent text-accent-foreground shadow-[var(--shadow-xs)]"
-                  : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-[color:var(--surface-subtle)]",
+                  : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-muted/60",
                 "has-[:focus-visible]:outline-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background",
               )}
             >
@@ -193,7 +193,7 @@ export function AssessmentNavigation({
         type="button"
         disabled={backDisabled}
         onClick={onBack}
-        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("cd.public.back")}
