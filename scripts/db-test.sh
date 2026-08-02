@@ -216,8 +216,9 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # observable_behaviours, behaviour_versions, and the two maps), the evidence
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
-if [ "$SCP_TABLES" -ne 60 ]; then
-  echo "FAIL: expected 60 scp_ tables (23 PR-A + 15 graph + 22 Academy), found $SCP_TABLES" >&2
+# + scp_review_requirements from Phase 1F.
+if [ "$SCP_TABLES" -ne 61 ]; then
+  echo "FAIL: expected 61 scp_ tables (23 PR-A + 15 graph + 23 Academy), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -492,6 +493,27 @@ if [ "$ACAD_PASSED" -lt 25 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5e. Phase 1F content completeness and the candidate-payload boundary
+# ---------------------------------------------------------------------------
+echo "==> Running Phase 1F content assertions"
+set +e
+CONT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_phase1f_test.sql 2>&1)"
+CONT_RC=$?
+set -e
+echo "$CONT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CONT_PASSED="$(echo "$CONT_OUT" | grep -c "ok  " || true)"
+if [ "$CONT_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 1F content suite exited with code ${CONT_RC}." >&2
+  echo "$CONT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${CONT_PASSED} content assertions passed"
+if [ "$CONT_PASSED" -lt 28 ]; then
+  echo "FAIL: expected at least 28 content assertions, only ${CONT_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -531,5 +553,6 @@ echo "              ${PUB_PASSED} public v3.1 flow assertions,"
 echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ACAD_PASSED} Academy assertions,"
+echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

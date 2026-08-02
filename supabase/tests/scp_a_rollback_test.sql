@@ -133,14 +133,24 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 60,
-    'pre-rollback: 60 scp_ base tables exist (23 PR-A + 15 graph + 22 Academy)');
+        AND table_name LIKE 'scp\_%') = 61,
+    'pre-rollback: 61 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
 END $$;
 
 -- Phase 1 (Academy) comes off first: it sits on top of Phase 0.
+DROP TABLE IF EXISTS public.scp_review_requirements     CASCADE;
+DELETE FROM public.scp_item_option_texts iot USING public.scp_item_options o,
+       public.scp_item_versions iv
+ WHERE iot.item_option_id = o.id AND o.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DELETE FROM public.scp_item_texts t USING public.scp_item_versions iv
+ WHERE t.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DELETE FROM public.scp_item_options o USING public.scp_item_versions iv
+ WHERE o.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DROP FUNCTION IF EXISTS public.scp_guard_learning_counterpart() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_best_worst_keys()      CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
 DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;
