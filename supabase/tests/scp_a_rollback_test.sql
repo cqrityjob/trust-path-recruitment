@@ -129,16 +129,65 @@ END $$;
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
-  RAISE NOTICE 'ROLLBACK TEST -- Phase 0 (Competency Graph) unwinds first';
+  RAISE NOTICE 'ROLLBACK TEST -- Phase 1 (Academy) then Phase 0 (Graph) unwind first';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 38,
-    'pre-rollback: 38 scp_ base tables exist (23 PR-A + 15 Competency Graph)');
+        AND table_name LIKE 'scp\_%') = 60,
+    'pre-rollback: 60 scp_ base tables exist (23 PR-A + 15 graph + 22 Academy)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
 END $$;
+
+-- Phase 1 (Academy) comes off first: it sits on top of Phase 0.
+DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
+DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
+DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;
+DROP TABLE IF EXISTS public.scp_prompt_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_ai_providers            CASCADE;
+DROP TABLE IF EXISTS public.scp_report_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_integrity_flags         CASCADE;
+DROP TABLE IF EXISTS public.scp_item_exposure           CASCADE;
+DROP TABLE IF EXISTS public.scp_candidate_responses     CASCADE;
+DROP TABLE IF EXISTS public.scp_attempts                CASCADE;
+DROP TABLE IF EXISTS public.scp_anchor_responses        CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_levels           CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_dimensions       CASCADE;
+DROP TABLE IF EXISTS public.scp_rubric_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_rubrics                 CASCADE;
+DROP TABLE IF EXISTS public.scp_scenario_versions       CASCADE;
+DROP TABLE IF EXISTS public.scp_scenarios               CASCADE;
+DROP TABLE IF EXISTS public.scp_module_behaviour_map    CASCADE;
+DROP TABLE IF EXISTS public.scp_module_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_modules                 CASCADE;
+DROP TABLE IF EXISTS public.scp_program_versions        CASCADE;
+DROP TABLE IF EXISTS public.scp_programs                CASCADE;
+-- The Academy's own assessment definition, before Phase 0 removes its family.
+DELETE FROM public.scp_form_items;
+DELETE FROM public.scp_forms f USING public.scp_assessment_versions av,
+       public.scp_assessment_definitions d
+ WHERE f.assessment_version_id = av.id AND av.definition_id = d.id
+   AND d.purpose = 'development_programme';
+DELETE FROM public.scp_assessment_versions av USING public.scp_assessment_definitions d
+ WHERE av.definition_id = d.id AND d.purpose = 'development_programme';
+DELETE FROM public.scp_assessment_definitions WHERE purpose = 'development_programme';
+DELETE FROM public.scp_item_versions WHERE mode IS NOT NULL;
+DELETE FROM public.scp_items WHERE slug LIKE 'sg-b-%' OR slug LIKE 'sg-learn-%';
+DROP FUNCTION IF EXISTS public.scp_guard_item_behaviour_agrees()  CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_item_mode_disjoint()     CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_form_single_mode()       CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_programme_states_limits() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_rubric_complete()        CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_attempt_mode_matches_form() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_response_matches_format() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_single_enabled_provider() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_scoring_run_append_only() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_scoring_run_consistent()  CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_review_immutable_once_done() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_report_states_limits()   CASCADE;
+ALTER TABLE public.scp_item_versions DROP COLUMN IF EXISTS primary_behaviour_id;
+ALTER TABLE public.scp_item_versions DROP COLUMN IF EXISTS mode;
 
 DROP VIEW  IF EXISTS public.scp_rm_competency_profile;
 DROP FUNCTION IF EXISTS public.scp_compute_maturity(uuid, uuid, text, timestamptz);

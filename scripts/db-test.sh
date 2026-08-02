@@ -215,8 +215,9 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # processing_purposes, purpose_versions), the spine (roles, role_versions,
 # observable_behaviours, behaviour_versions, and the two maps), the evidence
 # ledger, the maturity thresholds and the read-model contract.
-if [ "$SCP_TABLES" -ne 38 ]; then
-  echo "FAIL: expected 38 scp_ tables (23 PR-A + 15 Competency Graph), found $SCP_TABLES" >&2
+# 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
+if [ "$SCP_TABLES" -ne 60 ]; then
+  echo "FAIL: expected 60 scp_ tables (23 PR-A + 15 graph + 22 Academy), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -465,6 +466,32 @@ if [ "$GRAPH_PASSED" -lt 45 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5d. Security Competence Academy (Phase 1)
+#
+# Proves the programme domain closes the development loop, Learning and
+# Assessment content are disjoint, rubrics cannot publish incomplete, no
+# external AI provider is enabled, and employers have no direct path to
+# identities, attempts or responses.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Competence Academy assertions"
+set +e
+ACAD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_academy_phase1_test.sql 2>&1)"
+ACAD_RC=$?
+set -e
+echo "$ACAD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ACAD_PASSED="$(echo "$ACAD_OUT" | grep -c "ok  " || true)"
+if [ "$ACAD_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Academy suite exited with code ${ACAD_RC}." >&2
+  echo "$ACAD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${ACAD_PASSED} Academy assertions passed"
+if [ "$ACAD_PASSED" -lt 25 ]; then
+  echo "FAIL: expected at least 25 Academy assertions, only ${ACAD_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -503,5 +530,6 @@ echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
 echo "              ${PUB_PASSED} public v3.1 flow assertions,"
 echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
+echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

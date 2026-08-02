@@ -185,11 +185,15 @@ SELECT pg_temp.ok(
 INSERT INTO public.scp_role_competency_map (role_version_id, competency_version_id, criticality)
 SELECT role_version_id, competency_version_id, 'core' FROM g;
 
+-- Scoped to this fixture's own behaviour. Counting every mapping on the
+-- competency would make the assertion depend on how much real content the
+-- Academy has seeded, which is not what this is testing.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_role_competency_map rc
      JOIN public.scp_behaviour_competency_map bc
        ON bc.competency_version_id = rc.competency_version_id
-    WHERE rc.role_version_id = (SELECT role_version_id FROM g)) = 1,
+    WHERE rc.role_version_id = (SELECT role_version_id FROM g)
+      AND bc.behaviour_version_id = (SELECT behaviour_version_id FROM g)) = 1,
   'G3.3 role → competency → behaviour is traversable end to end');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP G4 — evidence: append-only, contextual, source-gated'; END $$;
