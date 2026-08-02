@@ -53,7 +53,12 @@ export function AssessmentProgressBar({
         <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
           {stageLabel}
         </p>
-        <p className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground">{label}</p>
+        <p
+          className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground"
+          aria-live="polite"
+        >
+          {label}
+        </p>
       </div>
       <div
         className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--surface-subtle)]"
@@ -68,10 +73,6 @@ export function AssessmentProgressBar({
           style={{ width: `${pct}%` }}
         />
       </div>
-      {/* The number itself, announced politely, for screen readers. */}
-      <span className="sr-only" aria-live="polite">
-        {label}
-      </span>
     </div>
   );
 }
