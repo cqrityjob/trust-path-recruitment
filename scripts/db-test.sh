@@ -209,12 +209,14 @@ echo "    ok  migration replay matches the documented baseline"
 echo "==> Verifying the Security Competency schema landed"
 SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
   "select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE' and table_name like 'scp\\_%';")"
-# 23 from PR-A (A1 + A2), plus the 9 Competency Graph tables added by Phase 0
-# (20260802090000): scp_roles, scp_role_versions, scp_observable_behaviours,
-# scp_behaviour_versions, scp_behaviour_competency_map, scp_role_competency_map,
-# scp_competency_evidence, scp_maturity_thresholds, scp_contract_versions.
-if [ "$SCP_TABLES" -ne 32 ]; then
-  echo "FAIL: expected 32 scp_ tables (23 PR-A + 9 Competency Graph), found $SCP_TABLES" >&2
+# 23 from PR-A (A1 + A2), plus the 15 Competency Graph tables added by Phase 0
+# (20260802090000): the identity pair (scp_subjects, scp_subject_identities),
+# the interpretation registries (jurisdictions, evidence_source_types,
+# processing_purposes, purpose_versions), the spine (roles, role_versions,
+# observable_behaviours, behaviour_versions, and the two maps), the evidence
+# ledger, the maturity thresholds and the read-model contract.
+if [ "$SCP_TABLES" -ne 38 ]; then
+  echo "FAIL: expected 38 scp_ tables (23 PR-A + 15 Competency Graph), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -457,8 +459,8 @@ if [ "$GRAPH_RC" -ne 0 ]; then
   exit 1
 fi
 echo "    ok  ${GRAPH_PASSED} Competency Graph assertions passed"
-if [ "$GRAPH_PASSED" -lt 28 ]; then
-  echo "FAIL: expected at least 28 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
+if [ "$GRAPH_PASSED" -lt 45 ]; then
+  echo "FAIL: expected at least 45 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
   exit 1
 fi
 

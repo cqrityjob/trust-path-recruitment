@@ -1,8 +1,8 @@
--- Security Competence Platform — Phase 0: the Competency Graph foundations.
+-- Security Competence Platform — Phase 0: the Security Competency Graph.
 --
--- ADDITIVE ONLY. Creates new tables, types, functions and views, and widens three
--- vocabularies. No existing row is modified, no table is dropped, no policy is
--- weakened, and no previously applied migration is edited.
+-- ADDITIVE ONLY. Creates new tables, functions and views, and widens three
+-- vocabularies as supersets. No existing row is modified, no table is dropped,
+-- no policy is weakened, and no previously applied migration is edited.
 --
 -- ── WHY THIS EXISTS ────────────────────────────────────────────────────
 --
@@ -18,24 +18,29 @@
 -- internal service and all five reserved AI agents — is a projection of the
 -- evidence ledger created here.
 --
--- The ledger, the maturity vocabulary and the read-model contract are all in
--- this first migration deliberately: they are the three things whose shape
--- cannot be changed cheaply once evidence exists.
+-- The ledger's SHAPE is frozen by the first real evidence write, which is why it
+-- is specified in full now rather than grown later.
 --
--- ── WHAT THIS DOES NOT DO ──────────────────────────────────────────────
+-- ── WHAT THIS DELIBERATELY IS NOT ──────────────────────────────────────
 --
--- No item content. No assessment is published or made employer-visible. The
--- legacy `security-guard-foundation` stays retired and invisible. Nothing is
--- retired: see docs/assessment/competency-graph/phase0-dependency-analysis.md,
--- which found scp_bundles/scp_role_weight_profiles to be an inert closed cluster
--- that costs nothing to leave in place.
+-- No item content. No assessment published or made employer-visible. The legacy
+-- `security-guard-foundation` stays retired and invisible. Nothing is retired
+-- (see docs/assessment/competency-graph/phase0-dependency-analysis.md). No
+-- Security Passport, credential, identity-verification or sharing workflow —
+-- only the disclosure CLASSIFICATION that such a workflow would later read.
+--
+-- ── FALSE OBJECTIVITY ──────────────────────────────────────────────────
+--
+-- Nothing here asserts that a person IS competent. Evidence carries its source,
+-- method, provenance, confidence, jurisdiction, context, validity period and
+-- supersession history precisely so a maturity level reads as
+-- "consistent evidence has been demonstrated in the assessed scenarios and
+-- context" and never as "this person is objectively competent". The level
+-- vocabulary is named after the EVIDENCE, not after the person, for that reason.
 
 -- =========================================================================
 -- SECTION 1 — Vocabulary widening
 -- =========================================================================
---
--- The Academy needs a third product type. Widened by REPLACING the CHECK with a
--- superset, so no existing row can become invalid.
 
 ALTER TABLE public.scp_assessment_families
   DROP CONSTRAINT IF EXISTS scp_assessment_families_product_type_check;
@@ -51,8 +56,7 @@ ALTER TABLE public.scp_assessment_definitions
   ADD CONSTRAINT scp_assessment_definitions_purpose_check
   CHECK (purpose IN ('core', 'profession_module', 'development_programme'));
 
--- The three review gates and the leaked-item state the Academy requires.
--- 'in_review' and 'approved' are RETAINED so existing rows stay valid.
+-- 'in_review' and 'approved' are RETAINED so no existing row becomes invalid.
 ALTER TABLE public.scp_assessment_versions
   DROP CONSTRAINT IF EXISTS scp_assessment_versions_content_status_check;
 ALTER TABLE public.scp_assessment_versions
@@ -65,11 +69,12 @@ ALTER TABLE public.scp_assessment_versions
 -- 1b. The family-product separation guard, widened WITHOUT weakening it
 -- -------------------------------------------------------------------------
 --
--- This is the sharpest edge in Phase 0. The guard's first rule -- a Security
--- Competency definition may NEVER attach to the career-guidance family -- is the
--- structural separation between the candidate Career Discovery product and the
--- employer competence product. It is reproduced here byte-for-byte and must stay
--- first, so a mistake in the new branch can never reach it.
+-- The sharpest edge in Phase 0. Rule one -- a Security Competency definition may
+-- NEVER attach to the career-guidance family -- is the structural separation
+-- between the candidate Career Platform and the employer Competence Platform.
+-- It is reproduced byte-for-byte and still runs FIRST, so a mistake in the new
+-- branch cannot reach it. Career-orientation answers can therefore never become
+-- employer-visible competence evidence by way of a mis-attached definition.
 
 CREATE OR REPLACE FUNCTION public.scp_guard_family_product_separation()
 RETURNS trigger
@@ -83,7 +88,6 @@ BEGIN
   SELECT product_type INTO _product_type
     FROM public.scp_assessment_families WHERE id = NEW.family_id;
 
-  -- UNCHANGED. Career Guidance separation, enforced before anything else.
   IF _product_type = 'career_guidance' THEN
     RAISE EXCEPTION
       'SCP_CAREER_GUIDANCE_SEPARATION: a Security Competency assessment definition may never be attached to the career-guidance family.'
@@ -102,7 +106,6 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- NEW: the Academy pairing, held to the same standard as the other two.
   IF NEW.purpose = 'development_programme' AND _product_type <> 'development_programme' THEN
     RAISE EXCEPTION
       'SCP_FAMILY_PURPOSE_MISMATCH: purpose "development_programme" requires a development_programme family.'
@@ -113,7 +116,6 @@ BEGIN
 END;
 $$;
 
--- The Academy family itself. Content arrives in Phase 1; this is identity only.
 INSERT INTO public.scp_assessment_families
   (slug, name_sv, name_en, product_type, description_sv, description_en)
 VALUES (
@@ -126,11 +128,137 @@ VALUES (
 ON CONFLICT (slug) DO NOTHING;
 
 -- =========================================================================
--- SECTION 2 — The graph spine
+-- SECTION 2 — Identity separation (privacy foundation)
 -- =========================================================================
 --
--- Role → Competency → Observable Behaviour. Every node is versioned, because a
--- definition that changes must never silently reinterpret historical evidence.
+-- Evidence must never reference an identity directly. A pseudonymous subject
+-- sits between the person and the ledger, and the identity mapping lives in its
+-- own, more restricted table.
+--
+-- This is what makes erasure possible WITHOUT rewriting an append-only ledger:
+--
+--   * CORRECTION            -> supersede the evidence row (Section 4).
+--   * ERASURE / UNLINKING   -> delete the scp_subject_identities row. The
+--                              evidence survives as pseudonymous data attached
+--                              to a subject key that no longer resolves to a
+--                              person. The ledger is untouched.
+--   * FULL ANONYMISATION    -> unlink, then rely on the fact that no evidence
+--                              row carries a name, an email, a personal identity
+--                              number or free text.
+--
+-- Being append-only is therefore NOT a claim that personal data can never be
+-- erased. It is a claim that the JUDGEMENT is never rewritten; the LINK to a
+-- person is separately revocable.
+
+CREATE TABLE IF NOT EXISTS public.scp_subjects (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE public.scp_subjects IS
+  'Pseudonymous subject of competence evidence. Deliberately carries NO '
+  'attributes at all -- not a name, not an email, not a reference to auth.users. '
+  'The identity mapping lives in scp_subject_identities so it can be revoked '
+  'without touching the evidence ledger.';
+
+CREATE TABLE IF NOT EXISTS public.scp_subject_identities (
+  subject_id uuid PRIMARY KEY REFERENCES public.scp_subjects(id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  linked_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id)
+);
+COMMENT ON TABLE public.scp_subject_identities IS
+  'The ONLY place a pseudonymous subject resolves to a real account. Deleting a '
+  'row here unlinks a person from their evidence permanently and is the '
+  'supported erasure path; ON DELETE CASCADE from auth.users means account '
+  'deletion unlinks rather than destroying evidence. Restricted to the subject '
+  'themselves and platform admins -- never readable by an employer.';
+
+-- =========================================================================
+-- SECTION 3 — Interpretation context registries
+-- =========================================================================
+--
+-- Evidence is only interpretable in the context it was collected in. Each of
+-- these is UNRECOVERABLE if not recorded at write time, which is the test for
+-- belonging in Phase 0 rather than being added later.
+
+-- Jurisdiction. Sweden only for the MVP; the column exists so evidence
+-- collected under Swedish rules is never silently treated as interchangeable
+-- with evidence collected elsewhere.
+CREATE TABLE IF NOT EXISTS public.scp_jurisdictions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  name_sv text NOT NULL,
+  name_en text NOT NULL,
+  is_active boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.scp_jurisdictions (code, name_sv, name_en, is_active)
+VALUES ('SE', 'Sverige', 'Sweden', true)
+ON CONFLICT (code) DO NOTHING;
+
+-- Evidence source types as a REGISTRY, not an enum. Adding a future source is
+-- then a row, not a migration that rewrites a CHECK on a live ledger.
+CREATE TABLE IF NOT EXISTS public.scp_evidence_source_types (
+  code text PRIMARY KEY,
+  name_sv text NOT NULL,
+  name_en text NOT NULL,
+  -- Reserved sources exist as rows so consumers can be written against the full
+  -- vocabulary, but no writer may produce them until this is flipped.
+  has_active_writer boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.scp_evidence_source_types (code, name_sv, name_en, has_active_writer)
+VALUES
+  ('assessment_response', 'Bedömningssvar',        'Assessment response',   true),
+  ('training_completion', 'Genomförd utbildning',  'Training completion',   false),
+  ('manager_observation', 'Chefsobservation',      'Manager observation',   false),
+  ('certification',       'Certifiering',          'Certification',         false),
+  ('verified_credential', 'Verifierat intyg',      'Verified credential',   false),
+  ('practical_exercise',  'Praktisk övning',       'Practical exercise',    false),
+  ('incident_review',     'Händelsegenomgång',     'Incident review',       false)
+ON CONFLICT (code) DO NOTHING;
+
+-- Processing purpose. GDPR purpose limitation is unrecoverable after the fact:
+-- you cannot later determine what a person was told their data was for.
+CREATE TABLE IF NOT EXISTS public.scp_processing_purposes (
+  code text PRIMARY KEY,
+  name_sv text NOT NULL,
+  name_en text NOT NULL,
+  is_active boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.scp_processing_purposes (code, name_sv, name_en, is_active)
+VALUES
+  ('competence_development', 'Kompetensutveckling',  'Competence development', true),
+  ('reassessment',           'Omvärdering',          'Reassessment',           false),
+  ('training_follow_up',     'Utbildningsuppföljning','Training follow-up',    false),
+  ('selection_support',      'Urvalsstöd',           'Selection support',      false),
+  ('compliance_support',     'Regelefterlevnad',     'Compliance support',     false)
+ON CONFLICT (code) DO NOTHING;
+
+-- The privacy notice and lawful basis live HERE, once per purpose version,
+-- rather than being copied onto every evidence row. Clear relationships over
+-- duplicated fields.
+CREATE TABLE IF NOT EXISTS public.scp_purpose_versions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  purpose_code text NOT NULL REFERENCES public.scp_processing_purposes(code) ON DELETE RESTRICT,
+  version_number integer NOT NULL,
+  privacy_notice_version text NOT NULL,
+  lawful_basis_reference text NOT NULL,
+  jurisdiction_id uuid NOT NULL REFERENCES public.scp_jurisdictions(id) ON DELETE RESTRICT,
+  published_at timestamptz,
+  retired_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (purpose_code, version_number, jurisdiction_id)
+);
+COMMENT ON TABLE public.scp_purpose_versions IS
+  'What the participant was actually told, versioned. Evidence pins a row here, '
+  'so the privacy notice and lawful basis in force at collection time stay '
+  'reconstructable forever without duplicating them onto every row.';
+
+-- =========================================================================
+-- SECTION 4 — The graph spine
+-- =========================================================================
 
 CREATE TABLE IF NOT EXISTS public.scp_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -139,13 +267,15 @@ CREATE TABLE IF NOT EXISTS public.scp_roles (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE public.scp_roles IS
-  'Stable identity for a security role. Carries NO text -- all wording lives in '
-  'scp_role_versions so a role can be redefined without breaking evidence.';
+  'Stable identity for a security role. Role-NEUTRAL by design: the graph must '
+  'serve the whole security industry, not only security guards. Carries no text; '
+  'wording lives in scp_role_versions.';
 
 CREATE TABLE IF NOT EXISTS public.scp_role_versions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   role_id uuid NOT NULL REFERENCES public.scp_roles(id) ON DELETE RESTRICT,
   version_number integer NOT NULL,
+  jurisdiction_id uuid REFERENCES public.scp_jurisdictions(id) ON DELETE RESTRICT,
   content_status text NOT NULL DEFAULT 'draft'
     CHECK (content_status IN (
       'draft', 'expert_review', 'legal_review', 'cognitive_review',
@@ -161,8 +291,6 @@ CREATE TABLE IF NOT EXISTS public.scp_role_versions (
   UNIQUE (role_id, version_number)
 );
 
--- Observable behaviours: THE JOIN POINT of the whole graph. An assessment item
--- maps to exactly one of these, and each belongs to one or more competencies.
 CREATE TABLE IF NOT EXISTS public.scp_observable_behaviours (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE,
@@ -171,7 +299,8 @@ CREATE TABLE IF NOT EXISTS public.scp_observable_behaviours (
 COMMENT ON TABLE public.scp_observable_behaviours IS
   'The join point of the Competency Graph. Every assessment item maps to exactly '
   'one behaviour; every behaviour maps to one or more competencies. Evidence is '
-  'recorded against a behaviour version, never against an item or an assessment.';
+  'recorded against a behaviour VERSION, never against an item or an assessment, '
+  'so services never depend on assessment content.';
 
 CREATE TABLE IF NOT EXISTS public.scp_behaviour_versions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -183,11 +312,9 @@ CREATE TABLE IF NOT EXISTS public.scp_behaviour_versions (
       'published', 'suspended', 'retired')),
   statement_sv text NOT NULL,
   statement_en text NOT NULL,
-  -- What a competent person visibly does. Never a trait, never an inference.
+  -- What a competent person visibly DOES. Never a trait, never an inference.
   positive_indicators_sv text[] NOT NULL DEFAULT '{}',
   contraindications_sv text[] NOT NULL DEFAULT '{}',
-  -- A behaviour whose absence or opposite is a safety concern. Evidence against
-  -- one of these can cap a maturity level regardless of everything else.
   is_safety_critical boolean NOT NULL DEFAULT false,
   published_at timestamptz,
   retired_at timestamptz,
@@ -196,20 +323,13 @@ CREATE TABLE IF NOT EXISTS public.scp_behaviour_versions (
   UNIQUE (behaviour_id, version_number)
 );
 
--- -------------------------------------------------------------------------
--- 2b. Mapping tables — versioned on both ends
--- -------------------------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS public.scp_behaviour_competency_map (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   behaviour_version_id uuid NOT NULL
     REFERENCES public.scp_behaviour_versions(id) ON DELETE RESTRICT,
   competency_version_id uuid NOT NULL
     REFERENCES public.scp_competency_versions(id) ON DELETE RESTRICT,
-  -- How much this behaviour informs this competency. Content mapping only --
-  -- it never turns one response into several independent full scores.
-  weight numeric(4,3) NOT NULL DEFAULT 1.000
-    CHECK (weight > 0 AND weight <= 1),
+  weight numeric(4,3) NOT NULL DEFAULT 1.000 CHECK (weight > 0 AND weight <= 1),
   is_primary boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (behaviour_version_id, competency_version_id)
@@ -232,9 +352,6 @@ CREATE INDEX IF NOT EXISTS scp_behaviour_competency_map_comp_idx
 CREATE INDEX IF NOT EXISTS scp_role_competency_map_role_idx
   ON public.scp_role_competency_map (role_version_id);
 
--- Every behaviour version must reach at least one competency before it can be
--- published. A behaviour that maps to nothing would silently collect evidence
--- that no competency ever reads.
 CREATE OR REPLACE FUNCTION public.scp_guard_behaviour_has_competency()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -256,90 +373,165 @@ CREATE TRIGGER scp_behaviour_versions_require_competency
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_behaviour_has_competency();
 
 -- =========================================================================
--- SECTION 3 — The evidence ledger
+-- SECTION 5 — The evidence ledger
 -- =========================================================================
 --
--- The heart of the platform. Evidence is recorded against a BEHAVIOUR VERSION
--- with its source named, so it accumulates across a career instead of being
--- trapped inside one assessment result.
+-- Append-only. A judgement is never rewritten; a correction supersedes.
 --
--- Append-only. Nothing is ever updated or deleted: a correction supersedes.
+-- Every column here is either (a) part of the grain, or (b) UNRECOVERABLE if
+-- not written at collection time. Fields that can be derived from a pinned
+-- relationship, or that belong on an assignment, attempt or report, are
+-- deliberately absent -- see docs/assessment/competency-graph/
+-- phase0-hardening-review.md for the field-by-field classification.
 
 CREATE TABLE IF NOT EXISTS public.scp_competency_evidence (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  subject_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- WHO (pseudonymous). RESTRICT, not CASCADE: deleting a person must unlink
+  -- (Section 2), never destroy evidence.
+  subject_id uuid NOT NULL REFERENCES public.scp_subjects(id) ON DELETE RESTRICT,
+
+  -- WHAT was observed.
   behaviour_version_id uuid NOT NULL
     REFERENCES public.scp_behaviour_versions(id) ON DELETE RESTRICT,
 
-  -- MVP writes only 'assessment_response'. The rest are live values with no
-  -- writer yet: adding manager observation later is a server function, not a
-  -- migration. That is the whole point of a source-agnostic ledger.
-  source_type text NOT NULL CHECK (source_type IN (
-    'assessment_response', 'training_completion', 'manager_observation',
-    'certification', 'incident_review')),
+  -- HOW it was obtained.
+  source_type text NOT NULL
+    REFERENCES public.scp_evidence_source_types(code) ON DELETE RESTRICT,
   source_ref uuid,
+  -- Hash of the exact source payload as scored. Makes a historical judgement
+  -- auditable even if the source record is later re-shaped.
+  source_snapshot_hash text,
 
-  -- What was demonstrated, and how sure we are.
+  -- WHO/WHAT judged it. Explicit provenance over inferred provenance.
+  provenance_type text NOT NULL CHECK (provenance_type IN (
+    'deterministic', 'ai_scoring_run', 'human_review')),
+  provenance_ref uuid,
+  scoring_model_version text,
+  created_by_service text,
+  -- The human or system actor accountable for the judgement. A pseudonymous
+  -- account reference, never a name.
+  assessor_actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+
+  -- WHO commissioned it. Also the cross-organisation boundary.
+  issuer_organization_id uuid REFERENCES public.employers(id) ON DELETE RESTRICT,
+
+  -- UNDER WHAT RULES, and WHAT THE PERSON WAS TOLD.
+  jurisdiction_id uuid REFERENCES public.scp_jurisdictions(id) ON DELETE RESTRICT,
+  purpose_version_id uuid REFERENCES public.scp_purpose_versions(id) ON DELETE RESTRICT,
+
+  -- IN WHAT CONTEXT. Typed, because breadth across contexts is a maturity gate:
+  -- this pair is the grain of the sufficiency calculation.
+  context_type text CHECK (context_type IN (
+    'assessment_form', 'scenario', 'module', 'practical_exercise',
+    'site', 'incident')),
+  context_ref uuid,
+  role_version_id uuid REFERENCES public.scp_role_versions(id) ON DELETE RESTRICT,
+
+  -- THE JUDGEMENT ITSELF.
   contribution numeric(4,3) NOT NULL CHECK (contribution >= 0 AND contribution <= 1),
   confidence   numeric(4,3) NOT NULL CHECK (confidence   >= 0 AND confidence   <= 1),
 
-  -- Who or what produced this judgement. Ranked in scp_compute_maturity():
-  -- human_review outranks ai_scoring_run outranks deterministic.
-  provenance text NOT NULL CHECK (provenance IN (
-    'deterministic', 'ai_scoring_run', 'human_review')),
-  provenance_ref uuid,
-
-  -- The context the behaviour was demonstrated in (scenario slug, module slug,
-  -- site, incident type). Breadth across contexts is a maturity gate, so this
-  -- is what stops one strong answer reaching a high level.
-  context_key text,
-
-  -- A response that is itself a safety concern. Caps maturity outright and is
-  -- always surfaced separately from any level.
+  -- SAFETY. A safety-critical observation is never cancelled by later good
+  -- performance: only an explicit supersession clears it.
   is_safety_critical boolean NOT NULL DEFAULT false,
+  safety_severity text CHECK (safety_severity IN ('low','medium','high','critical')),
+  requires_human_review boolean NOT NULL DEFAULT false,
+  review_status text NOT NULL DEFAULT 'not_required'
+    CHECK (review_status IN ('not_required','pending','in_review','upheld','overturned')),
 
+  -- SHAREABILITY. Recorded, not acted upon. Conservative default: evidence is
+  -- internal to the issuing employer unless deliberately classified otherwise.
+  -- A future Security Passport would read a PROJECTION filtered on this, never
+  -- this table. No sharing workflow exists here.
+  disclosure_class text NOT NULL DEFAULT 'internal_employer'
+    CHECK (disclosure_class IN (
+      'internal_employer', 'participant_visible', 'shareable_projection_eligible')),
+
+  -- WHEN, and FOR HOW LONG.
   observed_at timestamptz NOT NULL DEFAULT now(),
-  -- Competence currency. Past this, the row stops counting toward sufficiency
-  -- but is NEVER deleted -- the level decays while the history stands.
   valid_until timestamptz,
 
-  -- Retire-forward. A correction, a suspended item or an erasure request writes
-  -- a supersession; it never rewrites or removes the original.
+  -- CORRECTION. Retire-forward; the original is never rewritten or removed.
   superseded_by uuid REFERENCES public.scp_competency_evidence(id) ON DELETE RESTRICT,
   superseded_reason text,
+  superseded_at timestamptz,
+  superseded_by_actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
 
   created_at timestamptz NOT NULL DEFAULT now(),
 
-  CONSTRAINT scp_evidence_supersession_has_reason CHECK (
-    (superseded_by IS NULL AND superseded_reason IS NULL)
-    OR (superseded_by IS NOT NULL AND superseded_reason IS NOT NULL)),
-  CONSTRAINT scp_evidence_not_self_superseding CHECK (superseded_by IS DISTINCT FROM id)
+  CONSTRAINT scp_evidence_supersession_complete CHECK (
+    (superseded_by IS NULL AND superseded_reason IS NULL AND superseded_at IS NULL)
+    OR (superseded_by IS NOT NULL AND superseded_reason IS NOT NULL
+        AND superseded_at IS NOT NULL)),
+  CONSTRAINT scp_evidence_not_self_superseding CHECK (superseded_by IS DISTINCT FROM id),
+  CONSTRAINT scp_evidence_context_pair CHECK (
+    (context_type IS NULL AND context_ref IS NULL)
+    OR (context_type IS NOT NULL)),
+  -- A safety-critical observation must state how severe and must be reviewable.
+  CONSTRAINT scp_evidence_safety_is_specified CHECK (
+    NOT is_safety_critical OR safety_severity IS NOT NULL)
 );
 
 COMMENT ON TABLE public.scp_competency_evidence IS
-  'The permanent, append-only record of demonstrated competence. Evidence is '
-  'recorded against a behaviour version with its source named, so it accumulates '
-  'across a career rather than living inside one assessment result. Competency '
-  'levels are PROJECTIONS of this ledger, never stored truths. Nothing here is '
-  'ever updated or deleted -- corrections supersede.';
+  'The permanent, append-only record of DEMONSTRATED BEHAVIOUR -- not of a '
+  'person''s character, honesty, motivation or future performance. Evidence is '
+  'recorded against a behaviour version, from a named source, under a named '
+  'jurisdiction and processing purpose, so it accumulates across a career and '
+  'stays interpretable. Contains NO name, email, personal identity number or '
+  'free text: the subject is pseudonymous and resolves only through '
+  'scp_subject_identities. Maturity levels are PROJECTIONS of this ledger, '
+  'never stored truths. Corrections supersede; identity erasure unlinks.';
+
+COMMENT ON COLUMN public.scp_competency_evidence.disclosure_class IS
+  'Classification only -- no sharing workflow exists. Recorded at write time '
+  'because retrofitting it would mean guessing the intended disclosure of '
+  'historical evidence. A future Security Passport reads a controlled '
+  'projection filtered on this; it never reads this table, and never reaches '
+  'items, answer keys, rubrics, prompts or reviewer comments.';
 
 CREATE INDEX IF NOT EXISTS scp_evidence_subject_idx
   ON public.scp_competency_evidence (subject_id);
 CREATE INDEX IF NOT EXISTS scp_evidence_behaviour_idx
   ON public.scp_competency_evidence (behaviour_version_id);
+CREATE INDEX IF NOT EXISTS scp_evidence_issuer_idx
+  ON public.scp_competency_evidence (issuer_organization_id);
 CREATE INDEX IF NOT EXISTS scp_evidence_live_idx
   ON public.scp_competency_evidence (subject_id, behaviour_version_id)
   WHERE superseded_by IS NULL;
+CREATE INDEX IF NOT EXISTS scp_evidence_review_queue_idx
+  ON public.scp_competency_evidence (review_status)
+  WHERE requires_human_review AND review_status IN ('pending','in_review');
 
--- Append-only, enforced. UPDATE is permitted for exactly one transition:
--- marking a row superseded. Everything else, and every DELETE, is refused.
+-- A reserved source type has no writer until it is deliberately enabled.
+CREATE OR REPLACE FUNCTION public.scp_guard_evidence_source_has_writer()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE _ok boolean;
+BEGIN
+  SELECT has_active_writer INTO _ok
+    FROM public.scp_evidence_source_types WHERE code = NEW.source_type;
+  IF NOT coalesce(_ok, false) THEN
+    RAISE EXCEPTION
+      'SCP_EVIDENCE_SOURCE_NOT_ENABLED: source type "%" is reserved and has no '
+      'active writer; enable it deliberately before producing evidence.',
+      NEW.source_type USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+CREATE TRIGGER scp_evidence_source_must_have_writer
+  BEFORE INSERT ON public.scp_competency_evidence
+  FOR EACH ROW EXECUTE FUNCTION public.scp_guard_evidence_source_has_writer();
+
+-- Append-only. UPDATE is permitted for supersession, review outcome and
+-- validity only. Everything else, and every DELETE, is refused.
 CREATE OR REPLACE FUNCTION public.scp_guard_evidence_append_only()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION
-      'SCP_EVIDENCE_APPEND_ONLY: evidence is never deleted; supersede it instead.'
+      'SCP_EVIDENCE_APPEND_ONLY: evidence is never deleted; supersede it, or '
+      'unlink the subject identity if erasure is required.'
       USING ERRCODE = 'check_violation';
   END IF;
 
@@ -349,22 +541,33 @@ BEGIN
       OLD.id USING ERRCODE = 'check_violation';
   END IF;
 
-  IF NEW.subject_id           IS DISTINCT FROM OLD.subject_id
-     OR NEW.behaviour_version_id IS DISTINCT FROM OLD.behaviour_version_id
-     OR NEW.source_type       IS DISTINCT FROM OLD.source_type
-     OR NEW.source_ref        IS DISTINCT FROM OLD.source_ref
-     OR NEW.contribution      IS DISTINCT FROM OLD.contribution
-     OR NEW.confidence        IS DISTINCT FROM OLD.confidence
-     OR NEW.provenance        IS DISTINCT FROM OLD.provenance
-     OR NEW.provenance_ref    IS DISTINCT FROM OLD.provenance_ref
-     OR NEW.context_key       IS DISTINCT FROM OLD.context_key
-     OR NEW.is_safety_critical IS DISTINCT FROM OLD.is_safety_critical
-     OR NEW.observed_at       IS DISTINCT FROM OLD.observed_at
-     OR NEW.created_at        IS DISTINCT FROM OLD.created_at
+  IF NEW.subject_id             IS DISTINCT FROM OLD.subject_id
+     OR NEW.behaviour_version_id   IS DISTINCT FROM OLD.behaviour_version_id
+     OR NEW.source_type           IS DISTINCT FROM OLD.source_type
+     OR NEW.source_ref            IS DISTINCT FROM OLD.source_ref
+     OR NEW.source_snapshot_hash  IS DISTINCT FROM OLD.source_snapshot_hash
+     OR NEW.provenance_type       IS DISTINCT FROM OLD.provenance_type
+     OR NEW.provenance_ref        IS DISTINCT FROM OLD.provenance_ref
+     OR NEW.scoring_model_version IS DISTINCT FROM OLD.scoring_model_version
+     OR NEW.created_by_service    IS DISTINCT FROM OLD.created_by_service
+     OR NEW.assessor_actor_id     IS DISTINCT FROM OLD.assessor_actor_id
+     OR NEW.issuer_organization_id IS DISTINCT FROM OLD.issuer_organization_id
+     OR NEW.jurisdiction_id       IS DISTINCT FROM OLD.jurisdiction_id
+     OR NEW.purpose_version_id    IS DISTINCT FROM OLD.purpose_version_id
+     OR NEW.context_type          IS DISTINCT FROM OLD.context_type
+     OR NEW.context_ref           IS DISTINCT FROM OLD.context_ref
+     OR NEW.role_version_id       IS DISTINCT FROM OLD.role_version_id
+     OR NEW.contribution          IS DISTINCT FROM OLD.contribution
+     OR NEW.confidence            IS DISTINCT FROM OLD.confidence
+     OR NEW.is_safety_critical    IS DISTINCT FROM OLD.is_safety_critical
+     OR NEW.safety_severity       IS DISTINCT FROM OLD.safety_severity
+     OR NEW.disclosure_class      IS DISTINCT FROM OLD.disclosure_class
+     OR NEW.observed_at           IS DISTINCT FROM OLD.observed_at
+     OR NEW.created_at            IS DISTINCT FROM OLD.created_at
   THEN
     RAISE EXCEPTION
-      'SCP_EVIDENCE_IMMUTABLE: only superseded_by, superseded_reason and valid_until '
-      'may change on an evidence row.'
+      'SCP_EVIDENCE_IMMUTABLE: only superseded_by/_reason/_at/_by_actor_id, '
+      'review_status, requires_human_review and valid_until may change.'
       USING ERRCODE = 'check_violation';
   END IF;
 
@@ -376,21 +579,22 @@ CREATE TRIGGER scp_evidence_append_only
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_evidence_append_only();
 
 -- =========================================================================
--- SECTION 4 — Maturity levels, not percentages
+-- SECTION 6 — Evidence maturity, never percentages
 -- =========================================================================
 --
--- Competence is expressed as a level backed by evidence. A percentage implies a
--- precision this evidence cannot carry and invites the ranking the product
--- forbids, so no numeric score is ever exposed.
+-- The vocabulary is named after the EVIDENCE, not the person. "consistent
+-- evidence" is a statement about what has been demonstrated in assessed
+-- scenarios; "competent" would be a claim about the person in all situations,
+-- which this data cannot support. There is deliberately no `expert` level: it
+-- would require a separate validated definition and multiple independent
+-- evidence sources.
 
 CREATE TABLE IF NOT EXISTS public.scp_maturity_thresholds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   threshold_version text NOT NULL,
   level text NOT NULL CHECK (level IN (
-    'emerging', 'developing', 'established', 'embedded')),
-  -- Gate 1: demonstration quality.
+    'limited_evidence', 'developing_evidence', 'consistent_evidence', 'strong_evidence')),
   min_mean_contribution numeric(4,3) NOT NULL CHECK (min_mean_contribution BETWEEN 0 AND 1),
-  -- Gate 2: evidence sufficiency.
   min_observations   integer NOT NULL CHECK (min_observations   >= 1),
   min_contexts       integer NOT NULL CHECK (min_contexts       >= 1),
   min_source_types   integer NOT NULL CHECK (min_source_types   >= 1),
@@ -401,25 +605,21 @@ CREATE TABLE IF NOT EXISTS public.scp_maturity_thresholds (
 );
 
 COMMENT ON TABLE public.scp_maturity_thresholds IS
-  'Versioned calibration for maturity levels. Deliberately NOT in the evidence '
-  'ledger: thresholds are tuning decisions that must be recalibratable after '
-  'pilot data without rewriting a single evidence row.';
+  'Versioned calibration for evidence maturity. Deliberately NOT in the ledger: '
+  'thresholds are tuning decisions that must be recalibratable after pilot data '
+  'without rewriting a single evidence row.';
 
 -- v1 calibration. Authored, not measured -- replaced after pilot.
 INSERT INTO public.scp_maturity_thresholds
   (threshold_version, level, min_mean_contribution,
    min_observations, min_contexts, min_source_types, max_age_days, is_active)
 VALUES
-  ('v1', 'emerging',    0.400, 1, 1, 1, NULL, true),
-  ('v1', 'developing',  0.550, 2, 1, 1, 730,  true),
-  ('v1', 'established', 0.700, 3, 2, 1, 730,  true),
-  ('v1', 'embedded',    0.800, 5, 3, 2, 365,  true)
+  ('v1', 'limited_evidence',    0.400, 1, 1, 1, NULL, true),
+  ('v1', 'developing_evidence', 0.550, 2, 1, 1, 730,  true),
+  ('v1', 'consistent_evidence', 0.700, 3, 2, 1, 730,  true),
+  ('v1', 'strong_evidence',     0.800, 5, 3, 2, 365,  true)
 ON CONFLICT (threshold_version, level) DO NOTHING;
 
--- The computation. Two independent gates; the LOWER one caps the level.
---
--- This is the single place maturity is decided, so the rule cannot drift between
--- reports, dashboards and future agents.
 CREATE OR REPLACE FUNCTION public.scp_compute_maturity(
   _subject_id uuid,
   _competency_version_id uuid,
@@ -434,16 +634,12 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   _obs int; _ctx int; _srcs int; _mean numeric; _safety boolean;
-  _level text := 'insufficient_evidence';
+  _level text := 'no_evidence';
   _t record;
 BEGIN
-  -- Live evidence only: not superseded, and still current. Expired evidence
-  -- stops counting toward sufficiency but is never deleted.
   WITH live AS (
     SELECT e.*,
-           -- Provenance ranks. A human review outranks an AI run, which
-           -- outranks a deterministic score, for the same response.
-           CASE e.provenance
+           CASE e.provenance_type
              WHEN 'human_review'   THEN 3
              WHEN 'ai_scoring_run' THEN 2
              ELSE 1
@@ -456,27 +652,27 @@ BEGIN
        AND e.superseded_by IS NULL
        AND (e.valid_until IS NULL OR e.valid_until > _at)
   ),
-  -- One row per source: the highest-ranked provenance wins, so an AI score and
-  -- the human review that corrected it are never counted twice.
+  -- Highest-ranked provenance wins per source, so an AI score and the human
+  -- review that corrected it are never counted twice.
   best AS (
     SELECT DISTINCT ON (source_type, source_ref, behaviour_version_id) *
       FROM live
      ORDER BY source_type, source_ref, behaviour_version_id, rank DESC, observed_at DESC
   )
   SELECT count(*),
-         count(DISTINCT coalesce(context_key, behaviour_version_id::text)),
+         count(DISTINCT coalesce(
+           context_type || ':' || coalesce(context_ref::text, ''),
+           behaviour_version_id::text)),
          count(DISTINCT source_type),
-         coalesce(
-           sum(contribution * confidence) / nullif(sum(confidence), 0), 0),
+         coalesce(sum(contribution * confidence) / nullif(sum(confidence), 0), 0),
          coalesce(bool_or(is_safety_critical), false)
     INTO _obs, _ctx, _srcs, _mean, _safety
     FROM best;
 
   IF _obs = 0 THEN
-    RETURN 'insufficient_evidence';
+    RETURN 'no_evidence';
   END IF;
 
-  -- Highest level whose BOTH gates are satisfied.
   FOR _t IN
     SELECT * FROM public.scp_maturity_thresholds
      WHERE threshold_version = _threshold_version AND is_active
@@ -491,29 +687,25 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- A safety-critical observation caps the level regardless of everything else.
-  -- It is also reported separately, so a high level can never conceal one.
-  IF _safety AND _level IN ('established', 'embedded') THEN
-    _level := 'developing';
+  -- A safety-critical observation caps the level regardless of everything else,
+  -- and is reported separately so a level can never conceal one.
+  IF _safety AND _level IN ('consistent_evidence', 'strong_evidence') THEN
+    _level := 'developing_evidence';
   END IF;
 
   RETURN _level;
 END; $$;
 
 COMMENT ON FUNCTION public.scp_compute_maturity(uuid, uuid, text, timestamptz) IS
-  'The single source of truth for competency maturity. Two independent gates -- '
+  'The single source of truth for evidence maturity. Two independent gates -- '
   'demonstration quality and evidence sufficiency -- and the LOWER one caps the '
-  'level, so one strong answer can never reach "established". Returns a level, '
-  'NEVER a percentage.';
+  'level, so one strong answer can never reach "consistent_evidence". Returns a '
+  'level describing the EVIDENCE, never a percentage and never a claim about '
+  'the person.';
 
 -- =========================================================================
--- SECTION 5 — The read-model contract (v1)
+-- SECTION 7 — The read-model contract (v1)
 -- =========================================================================
---
--- The Competency Graph is a published, versioned API contract, not an internal
--- schema other code happens to read. Internal services and future AI agents bind
--- to scp_rm_* views, never to base tables, so a table refactor is invisible to
--- them.
 
 CREATE TABLE IF NOT EXISTS public.scp_contract_versions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -530,12 +722,10 @@ CREATE TABLE IF NOT EXISTS public.scp_contract_versions (
 
 COMMENT ON TABLE public.scp_contract_versions IS
   'The published API contract of the Competency Graph. Additive by default: new '
-  'fields may be added; existing fields may never change meaning or type. A '
-  'breaking change requires a new contract version with a stated deprecation '
-  'window for the previous one.';
+  'fields may be added; existing fields may never change meaning or type. This '
+  'is what stops future services -- including any Security Passport -- from '
+  'depending directly on assessment items, keys, rubrics or prompts.';
 
--- The core read model. Everything else -- reports, dashboards, growth, all five
--- future agents -- projects from this one.
 CREATE OR REPLACE VIEW public.scp_rm_competency_profile
 WITH (security_invoker = true) AS
 SELECT
@@ -545,10 +735,12 @@ SELECT
   cv.name_sv,
   cv.name_en,
   public.scp_compute_maturity(e.subject_id, m.competency_version_id) AS maturity_level,
-  count(*) FILTER (WHERE e.superseded_by IS NULL)            AS live_evidence_count,
+  count(*) FILTER (WHERE e.superseded_by IS NULL)                      AS live_evidence_count,
   count(DISTINCT e.source_type) FILTER (WHERE e.superseded_by IS NULL) AS source_type_count,
   bool_or(e.is_safety_critical) FILTER (WHERE e.superseded_by IS NULL) AS has_safety_flag,
-  max(e.observed_at)                                          AS last_observed_at
+  bool_or(e.requires_human_review AND e.review_status IN ('pending','in_review'))
+    FILTER (WHERE e.superseded_by IS NULL)                             AS has_open_review,
+  max(e.observed_at)                                                   AS last_observed_at
 FROM public.scp_competency_evidence e
 JOIN public.scp_behaviour_competency_map m
   ON m.behaviour_version_id = e.behaviour_version_id
@@ -557,9 +749,8 @@ JOIN public.scp_competency_versions cv
 GROUP BY e.subject_id, m.competency_version_id, cv.competency_id, cv.name_sv, cv.name_en;
 
 COMMENT ON VIEW public.scp_rm_competency_profile IS
-  'Contract v1. A subject''s competency profile as MATURITY LEVELS with the '
-  'evidence behind them -- never a score or a percentage. security_invoker so '
-  'the caller''s own RLS on scp_competency_evidence still applies.';
+  'Contract v1. Maturity LEVELS with the evidence behind them -- never a score, '
+  'percentage or rank. security_invoker so the caller''s own RLS still applies.';
 
 GRANT SELECT ON public.scp_rm_competency_profile TO authenticated;
 
@@ -567,9 +758,7 @@ INSERT INTO public.scp_contract_versions
   (contract_version, read_model, status, intended_consumer, scope_note)
 VALUES
   ('v1', 'scp_rm_competency_profile', 'available', 'internal services',
-   'Maturity level per subject per competency, with evidence counts and safety flag. The core projection everything else derives from.'),
-  -- Reserved: named now so consumers can be written against a known contract,
-  -- created in Phase 1 when the tables they project exist.
+   'Maturity level per subject per competency, with evidence counts, safety flag and open-review flag.'),
   ('v1', 'scp_rm_response_scoring',  'reserved', 'Assessment AI',
    'One response and its rubric. No other subject data.'),
   ('v1', 'scp_rm_learner_profile',   'reserved', 'Learning Coach AI',
@@ -583,12 +772,15 @@ VALUES
 ON CONFLICT (contract_version, read_model) DO NOTHING;
 
 -- =========================================================================
--- SECTION 6 — RLS
+-- SECTION 8 — RLS
 -- =========================================================================
---
--- Graph DEFINITIONS are readable -- a manager should be able to see what a
--- competency means. Graph EVIDENCE is not: a subject sees only their own.
 
+ALTER TABLE public.scp_subjects                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_subject_identities        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_jurisdictions             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_evidence_source_types     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_processing_purposes       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_purpose_versions          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scp_roles                     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scp_role_versions             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scp_observable_behaviours     ENABLE ROW LEVEL SECURITY;
@@ -599,13 +791,17 @@ ALTER TABLE public.scp_maturity_thresholds       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scp_contract_versions         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scp_competency_evidence       ENABLE ROW LEVEL SECURITY;
 
+-- Definitions and registries are readable: a manager must be able to see what a
+-- competency means, and a participant what purpose their data serves.
 DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'scp_roles', 'scp_role_versions', 'scp_observable_behaviours',
-    'scp_behaviour_versions', 'scp_behaviour_competency_map',
-    'scp_role_competency_map', 'scp_maturity_thresholds', 'scp_contract_versions'
+    'scp_jurisdictions', 'scp_evidence_source_types', 'scp_processing_purposes',
+    'scp_purpose_versions', 'scp_roles', 'scp_role_versions',
+    'scp_observable_behaviours', 'scp_behaviour_versions',
+    'scp_behaviour_competency_map', 'scp_role_competency_map',
+    'scp_maturity_thresholds', 'scp_contract_versions'
   ] LOOP
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR SELECT TO authenticated USING (true)',
@@ -620,25 +816,54 @@ BEGIN
   END LOOP;
 END $$;
 
--- Evidence: a subject reads their own; only authors write. No employer policy
--- here -- employers reach competence through the read model, never raw evidence.
+-- The identity mapping is the most restricted table in the schema. A subject may
+-- see their own link; an employer may NEVER resolve a subject to a person here.
+CREATE POLICY scp_subject_identities_self ON public.scp_subject_identities
+  FOR SELECT TO authenticated
+  USING (user_id = auth.uid() OR public.is_platform_admin(auth.uid()));
+CREATE POLICY scp_subject_identities_admin_write ON public.scp_subject_identities
+  FOR ALL TO authenticated
+  USING (public.is_platform_admin(auth.uid()))
+  WITH CHECK (public.is_platform_admin(auth.uid()));
+
+CREATE POLICY scp_subjects_self ON public.scp_subjects
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.scp_subject_identities i
+             WHERE i.subject_id = scp_subjects.id AND i.user_id = auth.uid())
+    OR public.scp_can_author(auth.uid()));
+CREATE POLICY scp_subjects_author_write ON public.scp_subjects
+  FOR ALL TO authenticated
+  USING (public.scp_can_author(auth.uid()))
+  WITH CHECK (public.scp_can_author(auth.uid()));
+
+-- Evidence: the subject reads their own; only authors write. Employers reach
+-- competence through the read model, never through raw evidence.
 CREATE POLICY scp_evidence_own_select ON public.scp_competency_evidence
   FOR SELECT TO authenticated
-  USING (subject_id = auth.uid() OR public.scp_can_author(auth.uid()));
-
+  USING (
+    EXISTS (SELECT 1 FROM public.scp_subject_identities i
+             WHERE i.subject_id = scp_competency_evidence.subject_id
+               AND i.user_id = auth.uid())
+    OR public.scp_can_author(auth.uid()));
 CREATE POLICY scp_evidence_author_write ON public.scp_competency_evidence
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
   WITH CHECK (public.scp_can_author(auth.uid()));
 
+GRANT SELECT ON public.scp_subjects            TO authenticated;
+GRANT SELECT ON public.scp_subject_identities  TO authenticated;
 GRANT SELECT ON public.scp_competency_evidence TO authenticated;
+GRANT ALL    ON public.scp_subjects            TO service_role;
+GRANT ALL    ON public.scp_subject_identities  TO service_role;
 GRANT ALL    ON public.scp_competency_evidence TO service_role;
 
--- anon holds nothing on any graph table.
 DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
+    'scp_subjects', 'scp_subject_identities', 'scp_jurisdictions',
+    'scp_evidence_source_types', 'scp_processing_purposes', 'scp_purpose_versions',
     'scp_roles', 'scp_role_versions', 'scp_observable_behaviours',
     'scp_behaviour_versions', 'scp_behaviour_competency_map',
     'scp_role_competency_map', 'scp_maturity_thresholds',
@@ -650,76 +875,93 @@ BEGIN
 END $$;
 
 -- =========================================================================
--- SECTION 7 — Prove it
+-- SECTION 9 — Prove it
 -- =========================================================================
---
--- A migration that silently half-applied would be worse than one that failed.
 
 DO $$
-DECLARE _n int; _fam int;
+DECLARE _n int;
 BEGIN
-  -- 7a. The Career Guidance separation still rejects, and the Academy pairing
-  --     is now accepted. Both are checked, because widening a guard is exactly
-  --     where a separation quietly reopens.
-  SELECT count(*) INTO _fam FROM public.scp_assessment_families
-   WHERE product_type = 'career_guidance';
-  IF _fam = 0 THEN
+  -- 9a. The Career Guidance separation still exists, and the Academy family
+  --     was created. Widening a guard is where a separation quietly reopens.
+  IF NOT EXISTS (SELECT 1 FROM public.scp_assessment_families
+                  WHERE product_type = 'career_guidance') THEN
     RAISE EXCEPTION 'SCP_P0_NO_CAREER_GUIDANCE_FAMILY: cannot verify the separation guard';
   END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.scp_assessment_families
-     WHERE slug = 'security-competence-academy'
-       AND product_type = 'development_programme')
-  THEN
-    RAISE EXCEPTION 'SCP_P0_ACADEMY_FAMILY_MISSING: the Academy family was not created';
+  IF NOT EXISTS (SELECT 1 FROM public.scp_assessment_families
+                  WHERE slug = 'security-competence-academy'
+                    AND product_type = 'development_programme') THEN
+    RAISE EXCEPTION 'SCP_P0_ACADEMY_FAMILY_MISSING';
   END IF;
 
-  -- 7b. No existing row changed status. The vocabulary widened; the data did not.
+  -- 9b. No existing row fell outside the widened vocabulary.
   SELECT count(*) INTO _n FROM public.scp_assessment_versions
-   WHERE content_status NOT IN (
-     'draft', 'expert_review', 'legal_review', 'cognitive_review',
-     'in_review', 'approved', 'published', 'suspended', 'retired');
+   WHERE content_status NOT IN ('draft','expert_review','legal_review',
+     'cognitive_review','in_review','approved','published','suspended','retired');
   IF _n > 0 THEN
-    RAISE EXCEPTION 'SCP_P0_STATUS_ROWS_INVALID: % rows fall outside the widened vocabulary', _n;
+    RAISE EXCEPTION 'SCP_P0_STATUS_ROWS_INVALID: % rows outside the vocabulary', _n;
   END IF;
 
-  -- 7c. The legacy assessment stays retired and invisible.
+  -- 9c. The legacy assessment stays retired and invisible.
   IF EXISTS (SELECT 1 FROM public.assessments
-              WHERE id = 'security-guard-foundation' AND employer_visible)
-  THEN
-    RAISE EXCEPTION 'SCP_P0_LEGACY_RESURFACED: security-guard-foundation must stay employer-invisible';
+              WHERE id = 'security-guard-foundation' AND employer_visible) THEN
+    RAISE EXCEPTION 'SCP_P0_LEGACY_RESURFACED';
   END IF;
 
-  -- 7d. The graph spine and ledger exist.
+  -- 9d. All 15 graph tables exist.
   SELECT count(*) INTO _n FROM information_schema.tables
    WHERE table_schema = 'public' AND table_name IN (
-     'scp_roles', 'scp_role_versions', 'scp_observable_behaviours',
-     'scp_behaviour_versions', 'scp_behaviour_competency_map',
-     'scp_role_competency_map', 'scp_competency_evidence',
-     'scp_maturity_thresholds', 'scp_contract_versions');
-  IF _n <> 9 THEN
-    RAISE EXCEPTION 'SCP_P0_GRAPH_INCOMPLETE: expected 9 graph tables, found %', _n;
+     'scp_subjects','scp_subject_identities','scp_jurisdictions',
+     'scp_evidence_source_types','scp_processing_purposes','scp_purpose_versions',
+     'scp_roles','scp_role_versions','scp_observable_behaviours',
+     'scp_behaviour_versions','scp_behaviour_competency_map',
+     'scp_role_competency_map','scp_competency_evidence',
+     'scp_maturity_thresholds','scp_contract_versions');
+  IF _n <> 15 THEN
+    RAISE EXCEPTION 'SCP_P0_GRAPH_INCOMPLETE: expected 15 graph tables, found %', _n;
   END IF;
 
-  -- 7e. The maturity calibration is complete and the contract is registered.
+  -- 9e. The ledger carries no identifying column. Data minimisation, asserted.
+  SELECT count(*) INTO _n FROM information_schema.columns
+   WHERE table_schema = 'public' AND table_name = 'scp_competency_evidence'
+     AND (column_name ILIKE '%name%' OR column_name ILIKE '%email%'
+       OR column_name ILIKE '%personnummer%' OR column_name ILIKE '%national_id%'
+       OR column_name ILIKE '%comment%' OR column_name ILIKE '%note%');
+  IF _n > 0 THEN
+    RAISE EXCEPTION 'SCP_P0_LEDGER_HOLDS_IDENTITY: % identifying columns found', _n;
+  END IF;
+
+  -- 9f. Exactly one evidence source has an active writer.
+  SELECT count(*) INTO _n FROM public.scp_evidence_source_types WHERE has_active_writer;
+  IF _n <> 1 THEN
+    RAISE EXCEPTION 'SCP_P0_SOURCE_WRITERS: expected exactly 1 active writer, found %', _n;
+  END IF;
+
+  -- 9g. Exactly one processing purpose is active.
+  SELECT count(*) INTO _n FROM public.scp_processing_purposes WHERE is_active;
+  IF _n <> 1 THEN
+    RAISE EXCEPTION 'SCP_P0_PURPOSES: expected exactly 1 active purpose, found %', _n;
+  END IF;
+
+  -- 9h. Calibration and contract are complete, and no `expert` level exists.
   SELECT count(*) INTO _n FROM public.scp_maturity_thresholds
    WHERE threshold_version = 'v1' AND is_active;
   IF _n <> 4 THEN
-    RAISE EXCEPTION 'SCP_P0_THRESHOLDS_INCOMPLETE: expected 4 active v1 levels, found %', _n;
+    RAISE EXCEPTION 'SCP_P0_THRESHOLDS_INCOMPLETE: expected 4, found %', _n;
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.scp_maturity_thresholds WHERE level = 'expert') THEN
+    RAISE EXCEPTION 'SCP_P0_EXPERT_LEVEL_PRESENT: expert is out of scope for the MVP';
   END IF;
 
   SELECT count(*) INTO _n FROM public.scp_contract_versions WHERE contract_version = 'v1';
   IF _n <> 6 THEN
-    RAISE EXCEPTION 'SCP_P0_CONTRACT_INCOMPLETE: expected 6 v1 read models, found %', _n;
+    RAISE EXCEPTION 'SCP_P0_CONTRACT_INCOMPLETE: expected 6, found %', _n;
   END IF;
 
-  -- 7f. An empty ledger must read as insufficient evidence, not as zero.
+  -- 9i. An empty ledger reads as no_evidence, not as zero.
   IF public.scp_compute_maturity(
        '00000000-0000-0000-0000-000000000000'::uuid,
-       '00000000-0000-0000-0000-000000000000'::uuid) <> 'insufficient_evidence'
-  THEN
-    RAISE EXCEPTION 'SCP_P0_MATURITY_DEFAULT_WRONG: no evidence must yield insufficient_evidence';
+       '00000000-0000-0000-0000-000000000000'::uuid) <> 'no_evidence' THEN
+    RAISE EXCEPTION 'SCP_P0_MATURITY_DEFAULT_WRONG';
   END IF;
 END $$;
 
@@ -728,12 +970,13 @@ VALUES (
   'assessment_version',
   'scp-phase0-competency-graph',
   'created',
-  'Phase 0: Competency Graph foundations. Role/competency/behaviour spine, append-only evidence ledger, maturity levels (never percentages) and read-model contract v1. Additive only; nothing retired, no content published.',
+  'Phase 0 (hardened): Security Competency Graph foundations. Pseudonymous subject separation, role/competency/behaviour spine, append-only evidence ledger with issuer, assessor, jurisdiction, processing purpose, context and disclosure classification, evidence maturity levels (never percentages) and read-model contract v1. Additive only; nothing retired, no content published.',
   jsonb_build_object(
     'migration', '20260802090000_scp_phase0_competency_graph',
-    'graph_tables', 9,
+    'graph_tables', 15,
     'contract_version', 'v1',
     'threshold_version', 'v1',
-    'evidence_sources_reserved', jsonb_build_array(
-      'training_completion', 'manager_observation', 'certification', 'incident_review'),
+    'active_evidence_sources', jsonb_build_array('assessment_response'),
+    'active_purposes', jsonb_build_array('competence_development'),
+    'jurisdictions', jsonb_build_array('SE'),
     'retired', 'nothing'));

@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 32,
-    'pre-rollback: 32 scp_ base tables exist (23 PR-A + 9 Competency Graph)');
+        AND table_name LIKE 'scp\_%') = 38,
+    'pre-rollback: 38 scp_ base tables exist (23 PR-A + 15 Competency Graph)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -144,6 +144,7 @@ DROP VIEW  IF EXISTS public.scp_rm_competency_profile;
 DROP FUNCTION IF EXISTS public.scp_compute_maturity(uuid, uuid, text, timestamptz);
 DROP FUNCTION IF EXISTS public.scp_guard_evidence_append_only() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_behaviour_has_competency() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_has_writer() CASCADE;
 DROP TABLE IF EXISTS public.scp_competency_evidence       CASCADE;
 DROP TABLE IF EXISTS public.scp_role_competency_map       CASCADE;
 DROP TABLE IF EXISTS public.scp_behaviour_competency_map  CASCADE;
@@ -153,6 +154,12 @@ DROP TABLE IF EXISTS public.scp_role_versions             CASCADE;
 DROP TABLE IF EXISTS public.scp_roles                     CASCADE;
 DROP TABLE IF EXISTS public.scp_maturity_thresholds       CASCADE;
 DROP TABLE IF EXISTS public.scp_contract_versions         CASCADE;
+DROP TABLE IF EXISTS public.scp_purpose_versions          CASCADE;
+DROP TABLE IF EXISTS public.scp_processing_purposes       CASCADE;
+DROP TABLE IF EXISTS public.scp_evidence_source_types     CASCADE;
+DROP TABLE IF EXISTS public.scp_jurisdictions             CASCADE;
+DROP TABLE IF EXISTS public.scp_subject_identities        CASCADE;
+DROP TABLE IF EXISTS public.scp_subjects                  CASCADE;
 DELETE FROM public.scp_assessment_families WHERE slug = 'security-competence-academy';
 
 DO $$
