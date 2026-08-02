@@ -31,8 +31,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import {
+  AssessmentPanel,
+  AssessmentShell,
+} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentIntro } from "@/components/career-discovery/v31/shell/AssessmentIntro";
+import {
+  AssessmentCard,
+  AssessmentNavigation,
+  AssessmentProgressBar,
+  LikertScale,
+  SelectableAnswer,
+} from "@/components/career-discovery/v31/shell/QuestionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { CORE_ITEM_BY_ID } from "@/lib/career-discovery/v31/core-items";
 import { OPTION_SET_BY_QUESTION } from "@/lib/career-discovery/v31/option-matrix";
@@ -218,58 +230,57 @@ export function PublicAssessmentFlow() {
 
   if (phase === "checking") {
     return (
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        {t("cd.public.loading")}
-      </p>
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Loader2
+              className="h-4 w-4 animate-spin text-accent motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            {t("cd.public.loading")}
+          </p>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   if (phase === "unavailable") {
     return (
-      <div role="status" className="rounded-lg border border-border bg-background p-6">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          {t("cd.public.unavailableTitle")}
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.unavailableBody")}
-        </p>
-        <Link
-          to="/career-center"
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
-        >
-          {t("cd.public.exploreInstead")}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <h1
+            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {t("cd.public.unavailableTitle")}
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cd.public.unavailableBody")}
+          </p>
+          <Link
+            to="/career-center"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("cd.public.exploreInstead")}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   if (phase === "intro") {
     return (
-      <div className="max-w-prose">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {t("cd.public.introTitle")}
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.introBody")}
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.introNoAccount")}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
+      <AssessmentShell wide>
+        <AssessmentIntro
+          onStart={() => {
             setBuffer(startBuffer(lang === "en" ? "en" : "sv", new Date().toISOString()));
             setIndex(0);
             setPhase("questions");
           }}
-          className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-        >
-          {t("cd.public.start")}
-        </button>
-      </div>
+        />
+      </AssessmentShell>
     );
   }
 
@@ -288,175 +299,165 @@ export function PublicAssessmentFlow() {
       : t("cd.public.stageCareerDna");
 
     return (
-      <div className="max-w-prose">
-        {/* Progress: text, not colour or bar alone. */}
-        <p className="text-xs uppercase tracking-widest text-muted-foreground" aria-live="polite">
-          {stageLabel} · {t("cd.public.progress")} {answeredCount} / {MVP_QUESTION_COUNT}
-        </p>
+      <AssessmentShell showExit>
+        <AssessmentCard>
+          {/* Progress is stated as text as well as drawn — see AssessmentProgressBar. */}
+          <AssessmentProgressBar
+            stageLabel={stageLabel}
+            current={Math.min(index + 1, MVP_QUESTION_COUNT)}
+            total={MVP_QUESTION_COUNT}
+            answered={answeredCount}
+          />
 
-        <fieldset className="mt-4 border-0 p-0">
-          <legend className="text-lg font-medium leading-snug text-foreground">
-            {personal ? personal.prompt[locale] : coreItem!.stem[locale]}
-          </legend>
+          <div className="px-5 py-7 sm:px-8 sm:py-9">
+            <fieldset className="border-0 p-0">
+              <legend
+                className="text-[1.25rem] font-semibold leading-snug tracking-tight text-foreground sm:text-[1.4375rem]"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {personal ? personal.prompt[locale] : coreItem!.stem[locale]}
+              </legend>
 
-          {personal ? (
-            <div className="mt-6 space-y-3">
-              {personal.options.map((o) => (
-                <label
-                  key={o.value}
-                  className="flex min-h-[44px] w-full cursor-pointer items-start gap-3 rounded-md border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground transition-colors hover:bg-muted has-[:checked]:border-accent has-[:checked]:bg-muted"
-                >
-                  <input
-                    type="radio"
+              {personal ? (
+                <div className="mt-7 space-y-2.5">
+                  {personal.options.map((o) => (
+                    <SelectableAnswer
+                      key={o.value}
+                      name={itemId}
+                      value={o.value}
+                      checked={current?.format === "personal" && current.value === o.value}
+                      onSelect={() =>
+                        advance(
+                          recordAnswer(buffer, {
+                            itemId,
+                            format: "personal",
+                            value: o.value,
+                          }),
+                        )
+                      }
+                    >
+                      {o.label[locale]}
+                    </SelectableAnswer>
+                  ))}
+                </div>
+              ) : coreItem!.format === "scale" ? (
+                <div className="mt-7">
+                  <LikertScale
                     name={itemId}
-                    value={o.value}
-                    checked={current?.format === "personal" && current.value === o.value}
-                    onChange={() =>
-                      advance(
-                        recordAnswer(buffer, {
-                          itemId,
-                          format: "personal",
-                          value: o.value,
-                        }),
-                      )
-                    }
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--accent)]"
-                  />
-                  <span>{o.label[locale]}</span>
-                </label>
-              ))}
-            </div>
-          ) : coreItem!.format === "scale" ? (
-            <div className="mt-6 space-y-2">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
-                <label
-                  key={v}
-                  className="flex min-h-[44px] w-full cursor-pointer items-center gap-3 rounded-md border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted has-[:checked]:border-accent has-[:checked]:bg-muted"
-                >
-                  <input
-                    type="radio"
-                    name={itemId}
-                    value={v}
-                    checked={current?.format === "scale" && current.value === v}
-                    onChange={() =>
+                    value={current?.format === "scale" ? current.value : undefined}
+                    onSelect={(v) =>
                       advance(recordAnswer(buffer, { itemId, format: "scale", value: v }))
                     }
-                    className="h-4 w-4 accent-[var(--accent)]"
+                    lowLabel={t("cd.public.scaleLow")}
+                    highLabel={t("cd.public.scaleHigh")}
                   />
-                  <span>{v}</span>
-                  {v === 1 && (
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {t("cd.public.scaleLow")}
-                    </span>
-                  )}
-                  {v === 10 && (
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {t("cd.public.scaleHigh")}
-                    </span>
-                  )}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-6 space-y-3">
-              {options.map((o) => (
-                <label
-                  key={o.id}
-                  className="flex min-h-[44px] w-full cursor-pointer items-start gap-3 rounded-md border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground transition-colors hover:bg-muted has-[:checked]:border-accent has-[:checked]:bg-muted"
-                >
-                  <input
-                    type="radio"
-                    name={itemId}
-                    value={o.id}
-                    checked={current?.format === "single_choice" && current.optionId === o.id}
-                    onChange={() =>
-                      advance(
-                        recordAnswer(buffer, {
-                          itemId,
-                          format: "single_choice",
-                          optionId: o.id,
-                        }),
-                      )
-                    }
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[var(--accent)]"
-                  />
-                  <span>{o.text[locale]}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </fieldset>
+                </div>
+              ) : (
+                <div className="mt-7 space-y-2.5">
+                  {options.map((o) => (
+                    <SelectableAnswer
+                      key={o.id}
+                      name={itemId}
+                      value={o.id}
+                      checked={current?.format === "single_choice" && current.optionId === o.id}
+                      onSelect={() =>
+                        advance(
+                          recordAnswer(buffer, {
+                            itemId,
+                            format: "single_choice",
+                            optionId: o.id,
+                          }),
+                        )
+                      }
+                    >
+                      {o.text[locale]}
+                    </SelectableAnswer>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+          </div>
 
-        <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-          <button
-            type="button"
-            disabled={index === 0}
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border px-4 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("cd.public.back")}
-          </button>
-          {isComplete(buffer) && (
-            <button
-              type="button"
-              onClick={() => setPhase("save")}
-              className="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-xs font-medium text-accent-foreground"
-            >
-              {t("cd.public.toResult")}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          )}
-        </div>
-      </div>
+          <AssessmentNavigation
+            onBack={() => setIndex((i) => Math.max(0, i - 1))}
+            backDisabled={index === 0}
+            forward={
+              isComplete(buffer)
+                ? { label: t("cd.public.toResult"), onClick: () => setPhase("save") }
+                : undefined
+            }
+          />
+        </AssessmentCard>
+      </AssessmentShell>
     );
   }
 
   if (phase === "persisting") {
     return (
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        {t("cd.public.saving")}
-      </p>
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Loader2
+              className="h-4 w-4 animate-spin text-accent motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            {t("cd.public.saving")}
+          </p>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   if (phase === "failed") {
     return (
-      <div role="alert" className="rounded-lg border border-border bg-background p-6">
-        <h2 className="text-base font-semibold text-foreground">{t("cd.public.failedTitle")}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.failedBody")}
-        </p>
-        <button
-          type="button"
-          onClick={() => setPhase("save")}
-          className="mt-4 inline-flex h-10 items-center rounded-md border border-border px-4 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          {t("cd.public.retry")}
-        </button>
-      </div>
+      <AssessmentShell showExit>
+        <AssessmentPanel role="alert">
+          <h1
+            className="text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {t("cd.public.failedTitle")}
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cd.public.failedBody")}
+          </p>
+          <button
+            type="button"
+            onClick={() => setPhase("save")}
+            className="mt-5 inline-flex h-11 items-center rounded-[10px] border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {t("cd.public.retry")}
+          </button>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   // phase === "save"
   return (
-    <div className="max-w-prose">
-      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
-        <Check className="h-5 w-5 text-accent" aria-hidden="true" />
-        {t("cd.public.doneTitle")}
-      </h2>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        {t("cd.public.doneBody")}
-      </p>
-      <button
-        type="button"
-        onClick={() => void onSaveAndSignIn()}
-        className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-      >
-        {signedIn ? t("cd.public.saveNow") : t("cd.public.signInToSave")}
-      </button>
-      <p className="mt-3 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
-    </div>
+    <AssessmentShell>
+      <AssessmentPanel className="text-center sm:p-10">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[color:var(--secondary)]">
+          <Check className="h-6 w-6 text-accent" strokeWidth={2.5} aria-hidden="true" />
+        </span>
+        <h1
+          className="mt-5 text-2xl font-semibold tracking-tight text-foreground"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {t("cd.public.doneTitle")}
+        </h1>
+        <p className="mx-auto mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
+          {t("cd.public.doneBody")}
+        </p>
+        <button
+          type="button"
+          onClick={() => void onSaveAndSignIn()}
+          className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto motion-reduce:transition-none"
+        >
+          {signedIn ? t("cd.public.saveNow") : t("cd.public.signInToSave")}
+        </button>
+        <p className="mt-4 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
+      </AssessmentPanel>
+    </AssessmentShell>
   );
 }

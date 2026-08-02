@@ -695,6 +695,20 @@ export const dictionaries = {
     "cd.public.failedBody":
       "Något gick fel när rapporten skulle sparas. Dina svar finns kvar — försök igen.",
     "cd.public.retry": "Försök igen",
+    "cd.public.shellEyebrow": "Din karriär inom säkerhet",
+    "cd.public.exit": "Avsluta testet",
+    "cd.public.of": "av",
+    "cd.public.introEyebrow": "Karriärvägledning",
+    "cd.public.introFactsTitle": "Innan du börjar",
+    "cd.public.factQuestions": "26 frågor",
+    "cd.public.factStages":
+      "2 om din situation · 20 som bygger ditt Security Career DNA · 4 om din inriktning",
+    "cd.public.factNoJudgement": "Inga rätta eller felaktiga svar",
+    "cd.public.factNoJudgementBody":
+      "Det är ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cd.public.factNoAccountShort": "Inget konto krävs för att börja",
+    "cd.public.factNoAccountBody":
+      "Dina svar sparas i den här fliken. Du loggar in först när du vill spara resultatet.",
     "careerDiscovery.dashboard.v31Title": "Din nya rapport är klar",
     "careerDiscovery.dashboard.v31Body":
       "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Rapporten innehåller ditt karriärmönster, din berättelse och de karriärområden som passar dig bäst.",
@@ -2646,6 +2660,20 @@ export const dictionaries = {
     "cd.public.failedBody":
       "Something went wrong while saving. Your answers are still here — please try again.",
     "cd.public.retry": "Try again",
+    "cd.public.shellEyebrow": "Security Career Discovery",
+    "cd.public.exit": "Exit assessment",
+    "cd.public.of": "of",
+    "cd.public.introEyebrow": "Career guidance",
+    "cd.public.introFactsTitle": "Before you begin",
+    "cd.public.factQuestions": "26 questions",
+    "cd.public.factStages":
+      "2 about where you are · 20 that build your Security Career DNA · 4 about your direction",
+    "cd.public.factNoJudgement": "No right or wrong answers",
+    "cd.public.factNoJudgementBody":
+      "This is not a judgement of your competence or employability.",
+    "cd.public.factNoAccountShort": "No account needed to begin",
+    "cd.public.factNoAccountBody":
+      "Your answers stay in this tab. You only sign in when you want to save the result.",
     "careerDiscovery.dashboard.v31Title": "Your new report is ready",
     "careerDiscovery.dashboard.v31Body":
       "You completed the updated version of Security Career Discovery. Your report covers your career pattern, your story and the career areas that fit you best.",
