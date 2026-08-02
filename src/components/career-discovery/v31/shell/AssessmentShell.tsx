@@ -69,7 +69,7 @@ export function AssessmentShell({
 
       <footer className="border-t border-border bg-background/60 px-5 py-5 sm:px-8">
         <p className="mx-auto max-w-[1040px] text-[11px] leading-relaxed text-muted-foreground">
-          {t("cd.public.shellDisclaimer")}
+          {t("careerDiscovery.dashboard.internalTestNote")}
         </p>
       </footer>
     </div>
