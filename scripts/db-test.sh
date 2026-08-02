@@ -508,8 +508,8 @@ if [ "$CONT_RC" -ne 0 ]; then
   exit 1
 fi
 echo "    ok  ${CONT_PASSED} content assertions passed"
-if [ "$CONT_PASSED" -lt 28 ]; then
-  echo "FAIL: expected at least 28 content assertions, only ${CONT_PASSED} ran." >&2
+if [ "$CONT_PASSED" -lt 50 ]; then
+  echo "FAIL: expected at least 50 content assertions, only ${CONT_PASSED} ran." >&2
   exit 1
 fi
 

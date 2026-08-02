@@ -311,6 +311,127 @@ SELECT pg_temp.ok(
      FROM public.scp_prompt_versions),
   'F5.9 the prompt instructs the scorer never to follow candidate instructions');
 
+DO $$ BEGIN RAISE NOTICE 'GROUP F6 — Phase 1G corrections'; END $$;
+
+-- =========================================================================
+-- Group F6 — the Phase 1G corrections
+-- =========================================================================
+
+-- THE 1F defect: a candidate label must never be its internal rationale.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_option_texts t
+     JOIN public.scp_item_options o ON o.id = t.item_option_id
+    WHERE btrim(t.label) IN (btrim(coalesce(o.scoring_rationale_sv,'~')),
+                             btrim(coalesce(o.scoring_rationale_en,'~')))) = 0,
+  'F6.1 no candidate option label reuses its internal scoring rationale');
+
+-- Candidate-facing labels must not leak the error taxonomy or scoring language.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_option_texts t
+    WHERE t.label ILIKE '%rätt:%' OR t.label ILIKE '%correct:%'
+       OR t.label ILIKE '%sämst%' OR t.label ILIKE '%worst:%'
+       OR t.label ILIKE '%bäst:%' OR t.label ILIKE '%best:%'
+       OR t.label ILIKE '%utanför mandat%' OR t.label ILIKE '%outside mandate%') = 0,
+  'F6.2 no candidate label reveals scoring, preference or error type');
+
+-- Every item classified by primary construct, with its legal framing written out.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug LIKE 'sg-b-%'
+      AND (primary_construct IS NULL OR tests_what IS NULL
+        OR legal_assumption_sv IS NULL OR overgeneralisation_guard_sv IS NULL)) = 0,
+  'F6.3 every item states its construct, legal assumption and overgeneralisation guard');
+
+-- An item testing legal knowledge may not be labelled situational judgement.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions
+    WHERE tests_what = 'legal_knowledge'
+      AND primary_construct = 'situational_judgement') = 0,
+  'F6.4 no legal-knowledge item masquerades as situational judgement');
+
+-- sg-b-02 no longer rests on a coercive ID power.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug = 'sg-b-02' AND o.is_preferred
+      AND o.scoring_rationale_sv ILIKE '%tillträdesvillkor%') = 1,
+  'F6.5 sg-b-02 preferred response rests on the access condition, not a legal power');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug = 'sg-b-02' AND iv.depends_on_employer_instruction) = 1,
+  'F6.6 sg-b-02 is marked as depending on employer instruction');
+
+-- Every legally flagged item carries explicit legal-review metadata.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_review_requirements rr
+     JOIN public.scp_item_versions iv ON iv.id = rr.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE rr.review_type = 'swedish_legal'
+      AND i.slug IN ('sg-b-02','sg-b-04','sg-b-05','sg-b-06','sg-b-15','sg-b-18')) = 6,
+  'F6.7 all six legally sensitive items carry a Swedish legal review requirement');
+
+-- Every assessment item has a counterpart DECISION, and every required
+-- counterpart exists as a separate learning-mode version.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug LIKE 'sg-b-%' AND learning_counterpart_decision IS NULL) = 0,
+  'F6.8 every assessment item has a Learning Mode counterpart decision');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions a
+     JOIN public.scp_items ai ON ai.id = a.item_id
+    WHERE ai.slug LIKE 'sg-b-%'
+      AND a.learning_counterpart_decision = 'separate_learning_counterpart_required'
+      AND (a.learning_counterpart_id IS NULL OR a.learning_counterpart_id = a.id)) = 0,
+  'F6.9 every required counterpart exists and is a different item version');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions l
+     JOIN public.scp_items li ON li.id = l.item_id
+    WHERE li.slug LIKE 'sg-l-%' AND l.mode <> 'learning') = 0,
+  'F6.10 no Learning Mode item reuses an Assessment Mode item version');
+
+-- A counterpart must be a different situation, not a reworded copy.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_texts lt
+     JOIN public.scp_item_versions l ON l.id = lt.item_version_id
+     JOIN public.scp_items li ON li.id = l.item_id
+     JOIN public.scp_items ai ON ai.slug = 'sg-b-' || substr(li.slug, 6)
+     JOIN public.scp_item_versions a ON a.item_id = ai.id AND a.version_number = 1
+     JOIN public.scp_item_texts at ON at.item_version_id = a.id AND at.language = lt.language
+    WHERE li.slug LIKE 'sg-l-%' AND btrim(lt.scenario) = btrim(at.scenario)) = 0,
+  'F6.11 no counterpart copies its protected original''s scenario');
+
+-- All four anchor types on every constructed-response rubric.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_rubric_versions rv
+     JOIN public.scp_rubrics r ON r.id = rv.rubric_id
+    WHERE r.slug LIKE 'sg-cr-%'
+      AND (SELECT count(DISTINCT a.anchor_type) FROM public.scp_anchor_responses a
+            JOIN public.scp_rubric_dimensions d ON d.id = a.rubric_dimension_id
+           WHERE d.rubric_version_id = rv.id) = 4) = 3,
+  'F6.12 every rubric has positive, borderline, contraindication and safety-critical anchors');
+
+-- English stays a translation until a bilingual SME says otherwise.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_texts
+    WHERE adaptation_status <> 'adaptation_pending') = 0,
+  'F6.13 all English content remains adaptation_pending');
+
+-- Learning content is draft too, and nothing became assignable.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug LIKE 'sg-l-%' AND iv.content_status <> 'draft') = 0,
+  'F6.14 every Learning Mode draft is draft');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_form_items fi
+     JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    WHERE iv.mode = 'learning') = 0,
+  'F6.15 no Learning Mode item has been placed on the assessment form');
+
 DO $$ BEGIN RAISE NOTICE 'scp_content_phase1f_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;

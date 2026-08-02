@@ -151,6 +151,7 @@ DELETE FROM public.scp_item_options o USING public.scp_item_versions iv
  WHERE o.item_version_id = iv.id AND iv.mode IS NOT NULL;
 DROP FUNCTION IF EXISTS public.scp_guard_learning_counterpart() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_best_worst_keys()      CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_construct_honesty()    CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
 DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;
