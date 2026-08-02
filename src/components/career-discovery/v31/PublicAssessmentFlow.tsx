@@ -31,8 +31,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import {
+  AssessmentPanel,
+  AssessmentShell,
+} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentIntro } from "@/components/career-discovery/v31/shell/AssessmentIntro";
+import {
+  AssessmentCard,
+  AssessmentNavigation,
+  AssessmentProgressBar,
+  LikertScale,
+  SelectableAnswer,
+} from "@/components/career-discovery/v31/shell/QuestionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { CORE_ITEM_BY_ID } from "@/lib/career-discovery/v31/core-items";
 import { OPTION_SET_BY_QUESTION } from "@/lib/career-discovery/v31/option-matrix";
@@ -218,58 +230,57 @@ export function PublicAssessmentFlow() {
 
   if (phase === "checking") {
     return (
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        {t("cd.public.loading")}
-      </p>
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <Loader2
+              className="h-4 w-4 animate-spin text-accent motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            {t("cd.public.loading")}
+          </p>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   if (phase === "unavailable") {
     return (
-      <div role="status" className="rounded-lg border border-border bg-background p-6">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          {t("cd.public.unavailableTitle")}
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.unavailableBody")}
-        </p>
-        <Link
-          to="/career-center"
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
-        >
-          {t("cd.public.exploreInstead")}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </div>
+      <AssessmentShell>
+        <AssessmentPanel role="status">
+          <h1
+            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {t("cd.public.unavailableTitle")}
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cd.public.unavailableBody")}
+          </p>
+          <Link
+            to="/career-center"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("cd.public.exploreInstead")}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </AssessmentPanel>
+      </AssessmentShell>
     );
   }
 
   if (phase === "intro") {
     return (
-      <div className="max-w-prose">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {t("cd.public.introTitle")}
-        </h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.introBody")}
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {t("cd.public.introNoAccount")}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
+      <AssessmentShell wide>
+        <AssessmentIntro
+          onStart={() => {
             setBuffer(startBuffer(lang === "en" ? "en" : "sv", new Date().toISOString()));
             setIndex(0);
             setPhase("questions");
           }}
-          className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-        >
-          {t("cd.public.start")}
-        </button>
-      </div>
+        />
+      </AssessmentShell>
     );
   }
 
