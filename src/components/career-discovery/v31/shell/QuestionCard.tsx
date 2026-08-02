@@ -115,9 +115,9 @@ export function SelectableAnswer({
           "peer-checked:border-accent",
         )}
       >
-        <span className="h-2.5 w-2.5 scale-0 rounded-full bg-accent transition-transform duration-150 peer-checked:scale-100 motion-reduce:transition-none" />
+        <span className="h-2.5 w-2.5 scale-0 rounded-full bg-accent transition-transform duration-150 group-has-[:checked]:scale-100 motion-reduce:transition-none" />
       </span>
-      <span className="min-w-0 font-medium peer-checked:text-foreground">{children}</span>
+      <span className="min-w-0 font-medium">{children}</span>
     </label>
   );
 }
