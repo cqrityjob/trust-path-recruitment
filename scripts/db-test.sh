@@ -487,8 +487,8 @@ if [ "$ACAD_RC" -ne 0 ]; then
   exit 1
 fi
 echo "    ok  ${ACAD_PASSED} Academy assertions passed"
-if [ "$ACAD_PASSED" -lt 25 ]; then
-  echo "FAIL: expected at least 25 Academy assertions, only ${ACAD_PASSED} ran." >&2
+if [ "$ACAD_PASSED" -lt 39 ]; then
+  echo "FAIL: expected at least 39 Academy assertions, only ${ACAD_PASSED} ran." >&2
   exit 1
 fi
 

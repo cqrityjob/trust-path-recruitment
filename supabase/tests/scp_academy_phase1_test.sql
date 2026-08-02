@@ -299,6 +299,120 @@ SELECT pg_temp.ok(
       AND table_name LIKE 'scp\_%') = 0,
   'A8.7 anon holds no grant on any scp_ table');
 
+DO $$ BEGIN RAISE NOTICE 'GROUP A9 — Phase 1H foundation corrections'; END $$;
+
+-- A9.7 and A9.8 need an employer and an assigner. A fresh replay has neither, so
+-- the fixture creates them rather than letting the assertions silently skip.
+INSERT INTO auth.users (id, email)
+VALUES ('a9a9a9a9-0000-0000-0000-000000000001', 'phase1h@test.invalid')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('a9a9a9a9-0000-0000-0000-000000000002', 'Phase 1H Fixture', 'phase-1h-fixture', 'active')
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================================
+-- Group A9 — the two Critical audit findings
+-- =========================================================================
+
+-- C1: evidence can never be written without a stable source reference.
+SELECT pg_temp.ok(
+  (SELECT is_nullable FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'scp_competency_evidence'
+      AND column_name = 'source_ref') = 'NO',
+  'A9.1 source_ref is NOT NULL, so no source can silently collapse observations');
+
+-- Proven behaviourally, not just structurally.
+DO $$
+DECLARE _s uuid; _b uuid; _j uuid;
+BEGIN
+  INSERT INTO public.scp_subjects DEFAULT VALUES RETURNING id INTO _s;
+  SELECT bv.id INTO _b FROM public.scp_behaviour_versions bv
+    JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id LIMIT 1;
+  SELECT id INTO _j FROM public.scp_jurisdictions WHERE code = 'SE';
+
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.scp_competency_evidence
+              (subject_id, behaviour_version_id, source_type, contribution, confidence,
+               provenance_type, jurisdiction_id)
+            VALUES (%L, %L, ''assessment_response'', 0.9, 1.0, ''deterministic'', %L)',
+           _s, _b, _j),
+    'source_ref',
+    'A9.2 evidence without a source reference is refused');
+END $$;
+
+-- The append-only guarantee is untouched by the change.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_trigger
+    WHERE tgrelid = 'public.scp_competency_evidence'::regclass
+      AND tgname = 'scp_evidence_append_only') = 1,
+  'A9.3 append-only enforcement is unchanged');
+
+-- C2: one assignment model, two lineages.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'assessment_assignments'
+      AND column_name = 'scp_assessment_version_id') = 1,
+  'A9.4 the assignment model carries a Security Competence Platform lineage');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_constraint
+    WHERE conrelid = 'public.assessment_assignments'::regclass
+      AND conname = 'assessment_assignments_single_lineage') = 1,
+  'A9.5 exactly one lineage is enforced by constraint');
+
+-- Backwards compatibility: every historical row still satisfies the rule.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.assessment_assignments
+    WHERE NOT (
+      (assessment_id IS NOT NULL AND assessment_version_id IS NOT NULL
+         AND profile_id IS NOT NULL AND scp_assessment_version_id IS NULL)
+      OR (assessment_id IS NULL AND assessment_version_id IS NULL
+         AND scp_assessment_version_id IS NOT NULL))) = 0,
+  'A9.6 every existing assignment remains valid under the widened model');
+
+-- Neither lineage is refused. Tested this way rather than with a MIXED lineage
+-- because the published-content trigger is BEFORE INSERT and fires ahead of the
+-- CHECK, so a mixed row would fail on the trigger and never prove the
+-- constraint. This case reaches the constraint unambiguously.
+DO $$
+BEGIN
+  PERFORM pg_temp.must_fail(
+    'INSERT INTO public.assessment_assignments
+       (employer_id, use_case, recipient_email, assigned_by, invitation_token_hash,
+        expires_at)
+     VALUES (''a9a9a9a9-0000-0000-0000-000000000002'', ''workforce'',
+             ''neither@test.invalid'', ''a9a9a9a9-0000-0000-0000-000000000001'',
+             ''hash-neither-lineage'', now() + interval ''7 days'')',
+    'assessment_assignments_single_lineage',
+    'A9.7 an assignment with neither lineage is refused');
+END $$;
+
+-- THE point of C2: an Academy assignment never touches the retired catalogue,
+-- and cannot be created at all until content is published.
+DO $$
+DECLARE _e uuid; _sv uuid;
+BEGIN
+  _e := 'a9a9a9a9-0000-0000-0000-000000000002';
+  SELECT id INTO _sv FROM public.scp_assessment_versions LIMIT 1;
+  IF _e IS NULL OR _sv IS NULL THEN RETURN; END IF;
+
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.assessment_assignments
+              (employer_id, scp_assessment_version_id, use_case, recipient_email,
+               assigned_by, invitation_token_hash, expires_at)
+            SELECT %L, %L, ''workforce'', ''academy@test.invalid'',
+                   ''a9a9a9a9-0000-0000-0000-000000000001'', ''hash-academy-draft'',
+                   now() + interval ''7 days''', _e, _sv),
+    'SCP_ASSIGNMENT_NOT_PUBLISHED',
+    'A9.8 an Academy assignment is refused while its content is draft');
+END $$;
+
+-- The immutability guard is NULL-correct and covers the new column.
+SELECT pg_temp.ok(
+  (SELECT prosrc FROM pg_proc WHERE proname = 'assessment_assignments_immutable_guard')
+    ILIKE '%scp_assessment_version_id IS DISTINCT FROM%',
+  'A9.9 the immutability guard covers the new lineage, NULL-correctly');
+
 DO $$ BEGIN RAISE NOTICE 'scp_academy_phase1_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;

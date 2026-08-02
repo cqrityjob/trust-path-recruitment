@@ -152,6 +152,10 @@ DELETE FROM public.scp_item_options o USING public.scp_item_versions iv
 DROP FUNCTION IF EXISTS public.scp_guard_learning_counterpart() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_best_worst_keys()      CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_construct_honesty()    CASCADE;
+DROP TRIGGER IF EXISTS scp_assignments_target_published_trg ON public.assessment_assignments;
+DROP FUNCTION IF EXISTS public.scp_guard_assignment_targets_published() CASCADE;
+ALTER TABLE public.assessment_assignments DROP CONSTRAINT IF EXISTS assessment_assignments_single_lineage;
+ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_assessment_version_id;
 DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
 DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;

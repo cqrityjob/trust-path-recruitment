@@ -210,9 +210,10 @@ SELECT subject_id, 'c0000000-0000-0000-0000-000000000001' FROM g;
 -- A reserved source type has no writer and must be refused.
 SELECT pg_temp.must_fail(
   format('INSERT INTO public.scp_competency_evidence
-            (subject_id, behaviour_version_id, source_type, contribution, confidence,
-             provenance_type, jurisdiction_id, purpose_version_id)
-          SELECT %L, behaviour_version_id, ''manager_observation'', 0.9, 1.0, ''human_review'',
+            (subject_id, behaviour_version_id, source_type, source_ref, contribution,
+             confidence, provenance_type, jurisdiction_id, purpose_version_id)
+          SELECT %L, behaviour_version_id, ''manager_observation'', gen_random_uuid(), 0.9,
+                 1.0, ''human_review'',
                  (SELECT id FROM public.scp_jurisdictions WHERE code = ''SE''), purpose_version_id
             FROM g', (SELECT subject_id FROM g)),
   'SCP_EVIDENCE_SOURCE_NOT_ENABLED',
@@ -221,10 +222,10 @@ SELECT pg_temp.must_fail(
 -- A safety-critical observation must state its severity.
 SELECT pg_temp.must_fail(
   format('INSERT INTO public.scp_competency_evidence
-            (subject_id, behaviour_version_id, source_type, contribution, confidence,
-             provenance_type, is_safety_critical)
-          SELECT %L, behaviour_version_id, ''assessment_response'', 0.9, 1.0,
-                 ''deterministic'', true FROM g', (SELECT subject_id FROM g)),
+            (subject_id, behaviour_version_id, source_type, source_ref, contribution,
+             confidence, provenance_type, is_safety_critical)
+          SELECT %L, behaviour_version_id, ''assessment_response'', gen_random_uuid(), 0.9,
+                 1.0, ''deterministic'', true FROM g', (SELECT subject_id FROM g)),
   'scp_evidence_safety_is_specified',
   'G4.2 a safety-critical observation must state a severity');
 
