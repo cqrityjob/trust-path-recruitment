@@ -506,6 +506,288 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok((SELECT n FROM raw) = 0,
   'J6.8 the employer cannot read raw candidate responses, released or not');
 
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J7 — employer operations'; END $$;
+
+-- =========================================================================
+-- Group J7 — library, assignment, participants, reassessment, progress
+-- =========================================================================
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE lib AS
+SELECT * FROM public.scp_employer_library('c3000000-1111-0000-0000-000000000001');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT count(*) FROM lib WHERE assignable) >= 1,
+  'J7.1 the library offers at least one assignable programme');
+SELECT pg_temp.ok(
+  (SELECT bool_and(is_test_fixture) FROM lib WHERE assignable),
+  'J7.2 every ASSIGNABLE programme is a fixture — no real content is assignable');
+SELECT pg_temp.ok((SELECT count(*) FROM lib WHERE NOT assignable) >= 1,
+  'J7.3 in-development programmes are listed, honestly marked unassignable');
+
+-- A different organisation's owner gets an empty library for this employer id.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE lib_x AS
+SELECT count(*) AS n FROM public.scp_employer_library('c3000000-1111-0000-0000-000000000001');
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT n FROM lib_x) = 0,
+  'J7.4 a non-member gets nothing from another organisation''s library');
+
+-- The real Security Guard programme cannot be assigned, by RPC, ever.
+DO $$
+DECLARE _real uuid;
+BEGIN
+  SELECT av.id INTO _real
+    FROM public.scp_assessment_versions av
+    JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+   WHERE NOT d.is_test_fixture LIMIT 1;
+  IF _real IS NULL THEN
+    PERFORM pg_temp.ok(true, 'J7.5 (no real programme exists to attempt)');
+    RETURN;
+  END IF;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000001', true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
+           'c3000000-1111-0000-0000-000000000001', _real, 'participant@journey.invalid'),
+    'SCP_PROGRAMME_NOT_ASSIGNABLE',
+    'J7.5 the real Security Guard programme cannot be assigned');
+  RESET ROLE;
+END $$;
+
+-- A plain member cannot assign at all.
+DO $$
+DECLARE _av uuid;
+BEGIN
+  -- Resolve everything BEFORE the role switch: a temp table is unreadable once
+  -- SET LOCAL ROLE has taken effect.
+  SELECT a.assessment_version_id INTO _av
+    FROM public.scp_attempts a WHERE a.id = (SELECT attempt_id FROM jfx);
+
+  INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+  VALUES ('c3000000-1111-0000-0000-000000000001',
+          'c3000000-0000-0000-0000-000000000004','member','active');
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000004', true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
+           'c3000000-1111-0000-0000-000000000001', _av, 'x@journey.invalid'),
+    'SCP_NOT_AUTHORISED_TO_ASSIGN',
+    'J7.6 a plain member cannot assign a programme');
+  RESET ROLE;
+END $$;
+
+-- Participants: counts, never content.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE parts AS
+SELECT * FROM public.scp_employer_participants('c3000000-1111-0000-0000-000000000001');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT count(*) FROM parts) >= 1,
+  'J7.7 the employer sees its own participants');
+SELECT pg_temp.ok((SELECT bool_and(answered = 4 AND total_items = 4) FROM parts),
+  'J7.8 progress is reported as counts answered of total');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.routines r
+     JOIN LATERAL unnest(string_to_array(pg_get_function_result(
+       (SELECT oid FROM pg_proc WHERE proname='scp_employer_participants' LIMIT 1)), ',')) col ON true
+    WHERE col ILIKE '%response%' OR col ILIKE '%email%' OR col ILIKE '%name_of_person%') = 0,
+  'J7.9 the participants projection returns no response text and no contact field');
+
+-- Reassessment: allowed after a released result, and it creates a fresh attempt.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE reass AS
+SELECT * FROM public.scp_schedule_reassessment(
+  'c3000000-1111-0000-0000-000000000001', :'sid'::uuid, NULL);
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT count(*) FROM reass) = 1,
+  'J7.10 a reassessment can be scheduled once a result has been released');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_attempts
+    WHERE subject_id = :'sid'::uuid AND mode = 'assessment') = 2,
+  'J7.11 the reassessment is a NEW attempt — the first one is untouched');
+
+-- And is refused for somebody with no prior released result.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+SELECT pg_temp.must_fail(
+  format('SELECT * FROM public.scp_schedule_reassessment(%L::uuid, %L::uuid)',
+         'c3000000-1111-0000-0000-000000000001', :'xid'),
+  'SCP_NO_PRIOR_RESULT',
+  'J7.12 a reassessment needs an earlier released result to measure against');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Progress reads snapshots.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE prog AS
+SELECT * FROM public.scp_subject_progress(:'sid'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT count(*) FROM prog) >= 1,
+  'J7.13 the participant can read their own progress');
+SELECT pg_temp.ok(
+  (SELECT bool_and(maturity_level IN ('no_evidence','limited_evidence',
+     'developing_evidence','consistent_evidence','strong_evidence')) FROM prog),
+  'J7.14 progress is expressed only in maturity levels');
+
+-- A genuinely unrelated person cannot read somebody else's progress.
+--
+-- Note the deliberate choice of principal. User ...004 was made a MEMBER of
+-- the commissioning organisation in J7.6, so they can legitimately see progress
+-- for a released result — that is the rule working, not a leak. Testing
+-- isolation therefore needs somebody with no relationship at all, and an
+-- earlier draft of this assertion quietly tested the wrong thing.
+INSERT INTO auth.users (id, email)
+VALUES ('c3000000-0000-0000-0000-000000000009','outsider@journey.invalid');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000009';
+CREATE TEMP TABLE prog_x AS
+SELECT count(*) AS n FROM public.scp_subject_progress(:'sid'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT n FROM prog_x) = 0,
+  'J7.15 an unrelated person cannot read another participant''s progress');
+
+-- And a member of the commissioning organisation CAN, once released. Asserted
+-- explicitly so the rule is pinned in both directions.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000004';
+CREATE TEMP TABLE prog_m AS
+SELECT count(*) AS n FROM public.scp_subject_progress(:'sid'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT n FROM prog_m) >= 1,
+  'J7.15b a member of the commissioning organisation can read released progress');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J8 — Learning Mode'; END $$;
+
+-- =========================================================================
+-- Group J8 — Learning Mode
+-- =========================================================================
+
+CREATE TEMP TABLE lform AS
+SELECT f.id FROM public.scp_forms f WHERE f.slug = 'fixture-learning-form';
+SELECT id AS lfid FROM lform \gset
+
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT iv.mode) FROM public.scp_form_items fi
+     JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    WHERE fi.form_id = :'lfid'::uuid) = 1,
+  'J8.1 the learning form serves exactly one mode');
+
+-- A learning attempt cannot be started on an ASSESSMENT form.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(
+  format('SELECT public.scp_start_learning_attempt(%L::uuid)', :'fid'),
+  'SCP_NOT_A_LEARNING_FORM',
+  'J8.2 Learning Mode refuses to run on the live assessment form');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE lat AS
+SELECT public.scp_start_learning_attempt(:'lfid'::uuid) AS id;
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT id AS latid FROM lat \gset
+
+SELECT pg_temp.ok(
+  (SELECT mode FROM public.scp_attempts WHERE id = :'latid'::uuid) = 'learning',
+  'J8.3 a learning attempt is created in learning mode');
+
+-- Resolve the item id as the OWNER and inline it. A participant cannot read
+-- scp_form_items — that is the delivery function's whole purpose — so a
+-- subquery over it inside a role-switched block silently yields NULL and the
+-- assertion would pass for the wrong reason.
+SELECT fi.item_version_id AS l_iv
+  FROM public.scp_form_items fi
+  JOIN public.scp_forms f ON f.id = fi.form_id
+ WHERE f.slug = 'fixture-learning-form'
+ ORDER BY fi.display_order LIMIT 1 \gset
+
+-- Feedback before answering returns NOTHING. This is the assertion that keeps
+-- the preferred answer out of an unattempted question.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE fb_before AS
+SELECT count(*) AS n FROM public.scp_get_learning_feedback(
+  :'latid'::uuid, :'l_iv'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT n FROM fb_before) = 0,
+  'J8.4 NO feedback is available before the learner has answered');
+
+-- Answer, then feedback appears.
+DO $$
+DECLARE _lat uuid; _lf uuid; _iv uuid; _opt uuid;
+BEGIN
+  -- Again: read the temp tables first, switch role second.
+  SELECT id INTO _lat FROM lat;
+  SELECT id INTO _lf FROM lform;
+  SELECT fi.item_version_id INTO _iv FROM public.scp_form_items fi
+   WHERE fi.form_id = _lf ORDER BY fi.display_order LIMIT 1;
+  SELECT id INTO _opt FROM public.scp_item_options
+   WHERE item_version_id = _iv ORDER BY display_order LIMIT 1;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000003', true);
+  PERFORM public.scp_save_response(_lat, _iv, _opt);
+  RESET ROLE;
+END $$;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE fb_after AS
+SELECT * FROM public.scp_get_learning_feedback(:'latid'::uuid, :'l_iv'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT count(*) FROM fb_after) = 3,
+  'J8.5 after answering, feedback covers EVERY option, not only the chosen one');
+SELECT pg_temp.ok((SELECT count(*) FROM fb_after WHERE is_preferred) = 1,
+  'J8.6 exactly one option is marked preferred');
+SELECT pg_temp.ok((SELECT count(*) FROM fb_after WHERE chosen) = 1,
+  'J8.7 the learner''s own choice is marked');
+SELECT pg_temp.ok((SELECT bool_and(feedback IS NOT NULL) FROM fb_after),
+  'J8.8 every option explains itself — weaker ones say why they are weaker');
+
+-- Completion writes WEAK evidence.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE lcomp AS
+SELECT public.scp_complete_learning_module(:'latid'::uuid) AS n;
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT n FROM lcomp) >= 1,
+  'J8.9 completing a module writes training_completion evidence');
+SELECT pg_temp.ok(
+  (SELECT bool_and(contribution <= 0.250 AND confidence <= 0.500)
+     FROM public.scp_competency_evidence
+    WHERE subject_id = :'sid'::uuid AND source_type = 'training_completion'),
+  'J8.10 training evidence is deliberately WEAK — nobody trains their way to a level');
+
+-- And a learner cannot complete somebody else's run.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000004';
+SELECT pg_temp.must_fail(
+  format('SELECT public.scp_complete_learning_module(%L::uuid)', :'latid'),
+  'SCP_LEARNING_ATTEMPT_NOT_YOURS',
+  'J8.11 a learning run cannot be completed by anybody but its owner');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The participant's own work list.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE mywork AS SELECT * FROM public.scp_my_academy_assignments();
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT count(*) FROM mywork WHERE mode = 'assessment') = 2,
+  'J8.12 the participant sees both their original assessment and the reassessment');
+SELECT pg_temp.ok((SELECT count(*) FROM mywork WHERE mode = 'learning') = 1,
+  'J8.13 and their learning run');
+SELECT pg_temp.ok((SELECT bool_and(purpose_sv IS NOT NULL) FROM mywork WHERE mode='assessment'),
+  'J8.14 every assignment names its processing purpose');
+
 DO $$ BEGIN RAISE NOTICE 'scp_phase2_journey_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;
