@@ -113,16 +113,36 @@ complete. Asserted in-migration and in the suite.
 - Every attempt and evidence row pins exact content and scoring versions.
 - Cross-organisation isolation asserted from the hostile direction.
 
-## Migration order
+## Migration order — authoritative manifest
 
-Filename order. All six, 2h last:
+**TEN migrations, not six.** The original plan predated local staging, which
+found four further faults. Derived from the branch itself
+(`git diff --diff-filter=A main..HEAD -- supabase/migrations`), applied in
+filename order. All additive; **none modified**, so there is no checksum hazard.
 
-1. `20260807090000_scp_phase2_read_models_and_identity_rpc`
-2. `20260808090000_scp_phase2b_fixture_and_delivery`
-3. `20260808100000_scp_phase2c_test_fixture_programme`
-4. `20260809090000_scp_phase2e_employer_learning_progress`
-5. `20260809100000_scp_phase2f_learning_fixture`
-6. `20260810090000_scp_phase2h_staging_corrections`
+| # | Migration | Why |
+|---|---|---|
+| 1 | `20260807090000` …read_models_and_identity_rpc | read models + scoped identity RPC |
+| 2 | `20260808090000` …phase2b_fixture_and_delivery | delivery, scoring, review, release |
+| 3 | `20260808100000` …phase2c_test_fixture_programme | published delivery fixture |
+| 4 | `20260809090000` …phase2e_employer_learning_progress | employer ops, Learning Mode, progress |
+| 5 | `20260809100000` …phase2f_learning_fixture | Learning Mode fixture |
+| 6 | `20260810090000` …phase2h_staging_corrections | learning-feedback hazard + programme matching |
+| 7 | `20260811090000` …phase2i_seed_processing_purpose_version | **without it nothing can be assigned at all** |
+| 8 | `20260811100000` …phase2j_assign_token_without_pgcrypto | pgcrypto unreachable under pinned search_path |
+| 9 | `20260812090000` …phase2k_partial_bestworst_while_open | best/worst was unanswerable |
+| 10 | `20260812100000` …phase2l_submit_requires_every_item | partial run skipped human review |
+
+Reviewer-route and Learning-Mode UI fixes are **code-only** and need no migration.
+
+## ⚠️ Coordinated release required
+
+**The frontend and the database must be released together.** Merging this
+branch without applying all ten migrations first breaks the Assessment Center
+in production: the UI calls RPCs that would not exist, and even with the schema
+present, migration 7 is what makes assignment possible at all.
+
+Order: apply migrations → verify → merge → let Lovable rebuild.
 
 ---
 
@@ -206,12 +226,63 @@ keys, 1809 per language) — **all pass**.
 The journey suite runs every assertion as a **real principal** under RLS, and
 tests the hostile direction throughout.
 
+## Local staging setup and verification
+
+Verified against a **full local Supabase stack** (Colima + Docker + Supabase
+CLI, Postgres 17), never a cloud project. Migrations replayed into an empty
+database: **85 applied, 18 documented legacy failures, 0 unexpected.** Three
+synthetic accounts (employer owner, participant, reviewer) plus a second
+organisation for isolation testing.
+
+**Browser journey: 34/34 pass.** Assign → deliver → resume → all four formats →
+submit → human review → release → identity resolution → reports → Learning Mode
+→ reassessment → progress.
+
+**Security: 18/18 pass.** Cross-org participants/identity/progress/snapshots all
+return zero rows; employers cannot read identities, raw responses, option
+scores, rubric levels or prompts; participants cannot read another's attempt or
+the item bank. Prohibited operations fail with named errors:
+`SCP_ALREADY_RELEASED`, `SCP_NOT_A_REVIEWER`, `SCP_PROGRAMME_NOT_ASSIGNABLE`,
+`SCP_RECIPIENT_HAS_NO_ACCOUNT`, `SCP_ATTEMPT_ALREADY_SUBMITTED`. Evidence
+deletion refused by the append-only guard.
+
+**Swedish and English:** both complete, zero raw keys, 181 academy keys at
+parity. **Mobile 375px:** no horizontal overflow. **Keyboard:** focus ring
+confirmed rendering.
+
+## Defects found and fixed during verification
+
+Seven, of which **three made the product non-functional** and none were caught
+by 85 passing SQL assertions:
+
+1. **No clean database could assign anything** — the purpose vocabulary was
+   seeded but never a purpose *version*.
+2. **`gen_random_bytes` unreachable** — pgcrypto is not on the function's
+   pinned `search_path`.
+3. **Best/worst unanswerable** — the guard demanded both choices per save; a
+   person makes them one at a time.
+4. **A partial run submitted, scored and skipped human review** — the missing
+   answer *removed* the review requirement instead of blocking the result.
+5. **Reviewers had no way in** — the queue was gated on employer membership,
+   and reviewers are deliberately not members.
+6. Learning Mode infinite render loop.
+7. `Boolean([])` lockout in Learning Mode.
+
+All seven share one cause: **fixtures did in one step what a person does in
+several.** Group J10 now asserts seeded state and builds nothing; J11 answers
+incrementally.
+
 ## Known limitations
 
-- **Staging verification has not run.** No staging Supabase project exists —
-  `supabase/config.toml` links exactly one project, which is the one serving the
-  live app, and no service-role key or `DATABASE_URL` is available. Browser
-  end-to-end verification of the data journey is therefore still outstanding.
+- **Cloud migrations have NOT been applied.** No privileged access to the
+  Supabase project exists in this environment — no service-role key, no
+  database password, no access token, CLI not logged in. The migration ledger
+  cannot be read and no recoverable backup can be created or verified.
+- Safety-critical flag display is asserted in SQL but was not exercised
+  visually — the fixture contains no safety-critical item.
+- Phase 1G's 60 learning-feedback strings were removed from assessment options
+  and preserved in `scp_content_events`; reinstating them on the Learning
+  counterparts is a content decision.
 - Phase 1G's 60 misplaced learning-feedback strings were removed from assessment
   options and preserved in `scp_content_events`. They have **not** been
   reinstated on the Learning counterparts — that is a content decision.
