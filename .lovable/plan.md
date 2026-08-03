@@ -1,70 +1,70 @@
-## UI/UX Polish Sprint — Scope & Approach
+# Saved assessment report — regression investigation and secure fix
 
-A pure presentation pass. No new features, no routing, no DB, no API, no auth changes. All work happens in components, styles, and static copy for empty/loading/badge states.
+## What I verified before writing this plan
 
-### Strategy
+Read-only checks against the live backend:
 
-Rather than touch every route (100+ files), invest in the **shared primitives** that render everywhere. Improving these lifts the entire product at once and keeps the diff reviewable and safe.
+- The public v3.1 assessment writes its report to `cd_report_snapshots`, not to `assessment_run_reports`. The security change described as "write-locked to trusted backend paths" touched `assessment_run_reports` only.
+- Effective permissions for signed-in users are intact across the whole v3.1 path: read on the definition version, insert on sessions and evidence, read on report snapshots, execute on the atomic completion routine.
+- `assessment_run_reports`: signed-in users can read their own rows and direct client insert/update/delete is blocked. That is the intended posture, and no application code inserts into that table directly — the only writer is the trusted server path using the service-role routine.
+- Every completed session in the database has exactly one matching report row, including the most recent one (2 Aug). There are no "completed with no report" rows.
+- The v3.1 definition version is `active`, so the assessment is admissible.
+- The completion flow in the UI already matches the required secure architecture: server-side computation, user id from the verified session, answers kept until the write is confirmed, no navigation on failure, retry allowed, technical error logged without answer content.
 
-### Workstreams
+So the symptom is **not explained** by the `assessment_run_reports` lock, and no stored data currently shows a failed save. The root cause is therefore **unconfirmed**, and confirming it is step 1 rather than something this plan asserts.
 
-**1. Design tokens & base styles** (`src/styles.css`)
-- Refine shadow scale (softer, layered — LinkedIn/Stripe feel).
-- Tighten border radii and surface tokens.
-- Add subtle motion tokens (transition durations, easings).
-- Verify contrast on `muted-foreground`, `border`, `accent` in light + dark.
+## Step 1 — Reproduce and capture the real error (no code changes)
 
-**2. Core primitives** (`src/components/ui/*` — shadcn wrappers)
-- `button.tsx`: hover elevation, focus ring, active/disabled/loading states.
-- `card.tsx`: softer shadow, subtle border, consistent padding scale.
-- `input.tsx`, `textarea.tsx`, `select.tsx`, `label.tsx`: heights, focus ring, helper/error text spacing.
-- `badge.tsx`: semantic variants (pending / approved / rejected / draft / published / archived / pilot / completed / in-progress) — tone-based (soft bg + strong text), not saturated.
-- `table.tsx`: header weight, row hover, zebra option, responsive wrapper.
-- `skeleton.tsx`: consistent shimmer for use in loading states.
+Run an authenticated end-to-end completion in the preview environment and capture:
 
-**3. Site chrome**
-- `SiteHeader`, `SiteFooter`, `Container`, `Section`: spacing rhythm, alignment, mobile touch targets.
-- `AdminShellChrome`, `EmployerAppShell` sidebars: spacing, active state, hover, icon alignment, section grouping.
+- browser console output from the completion handler (it already logs the server error code and message),
+- the server function log for that completion call,
+- backend auth/postgres logs for the same minute,
+- whether a session row, evidence rows and a report row were created for that attempt,
+- if the row exists, whether the report page and the report history query return it.
 
-**4. Dashboards (visual only)**
-- `_authenticated.my-career.tsx` (Candidate) — hierarchy, card polish, timestamps where data already exists.
-- `_authenticated.employer.$employerSlug.index.tsx` (Employer) — already recently redesigned; align to new tokens, polish stat cards + quick actions.
-- `_authenticated.admin.index.tsx` (Admin) — same treatment.
+Outcome is a one-line classification:
 
-**5. Reusable state components**
-- `EmptyState` component (create in `src/components/ui/empty-state.tsx`): icon + title + description + optional CTA. Adopt in the top empty screens (admin lists, employer lists, my-career).
-- Skeleton patterns for the main list/detail pages (reuse existing `Skeleton`).
+- **A. Write fails** — a specific database refusal (permission, policy, trigger guard, constraint) surfaces from the completion call.
+- **B. Write succeeds, read fails** — the row exists but a page or history query does not return it.
+- **C. Neither** — saving works and the perceived loss is a session/navigation issue (returning from sign-in without the buffered attempt, or landing on a page that queries the other report family).
 
-**6. Status badges**
-- Small `StatusBadge` helper mapping our existing enum labels (from `enum-labels.ts`) to badge tones. Adopt in admin + employer tables — no data changes.
+## Step 2 — Smallest secure fix, chosen by the classification
 
-**7. Timestamps**
-- Small `RelativeTime` component that renders "Updated 2 min ago" from existing `updated_at`/`completed_at`/`created_at` fields already fetched. No new queries.
+- **A:** fix the exact refusing object. If the security migration removed a grant the trusted server flow legitimately needs, restore that single grant for the signed-in role or the service role only — never a broad policy, never client write access to the protected report table. If a trigger guard or constraint refuses, fix the payload the server sends rather than relaxing the guard.
+- **B:** fix the retrieval query or its ownership filter, leaving owner-scoped access rules unchanged.
+- **C:** fix the presentation/navigation defect: never present the result as saved before persistence succeeds, and resume the buffered attempt correctly after sign-in.
 
-**8. Mobile & a11y sweep**
-- Header rows: grid + `min-w-0` + `shrink-0` pattern where clipping exists.
-- `aria-label` on icon-only buttons.
-- Focus-visible rings via tokens.
+Non-negotiable in all branches: the protected report table keeps its no-direct-client-write posture, the user id keeps coming from the verified session, scores and report content stay server-computed, and completion stays idempotent per attempt.
 
-### Out of scope
+## Step 3 — Regression tests
 
-- New pages, new data, new endpoints.
-- Route restructuring.
-- Copy rewrites beyond empty-state guidance and badge labels.
-- Full per-route audit of every page (would be weeks). Improvements flow through shared primitives; a few high-traffic pages get direct polish.
+Database-level (SQL suite, alongside the existing career-discovery tests):
 
-### Verification
+- a completed attempt produces exactly one report row, owned by the attempting user and linked to that attempt,
+- re-running completion for the same attempt returns the same report and creates no duplicate,
+- one user cannot read or write another user's report,
+- a direct client-role insert or update on the protected report table is refused,
+- the trusted completion routine succeeds for the attempt's owner.
 
-- `tsgo --noEmit` clean.
-- Manual visual pass on `/`, `/jobs`, `/my-career`, `/employer/$slug`, `/admin`.
-- Existing regression scripts (`cie:check`, `kg:check`, `question-library`) — unchanged, should still PASS since no logic touched.
+Application-level:
 
-### Deliverable
+- end-to-end: complete the public assessment signed in, land on the report, reload, sign out and back in, confirm it is still there and still a single row,
+- failure path: with persistence forced to fail, the UI shows a translated error, keeps the answers, offers retry, and does not navigate,
+- existing scoring and persona regression tests run unchanged.
 
-Final report at `docs/ui-polish-sprint-report.md` covering: what changed, why each change improves trust, screens affected.
+## Step 4 — Deliverable report
 
----
+- confirmed root cause and the exact policy, migration, function or call responsible,
+- whether the report failed to save or only failed to load,
+- fix applied, affected files and database objects, migration name if any,
+- database evidence (row counts before/after, ownership, single-row proof),
+- end-to-end evidence,
+- explicit confirmation that direct client writes to the protected report table are still refused,
+- rollback plan: any new migration is a single reversible statement with its inverse recorded in the report; frontend changes revert independently of the database.
 
-**Estimated diff:** ~15–25 files, mostly `src/components/ui/*`, `src/styles.css`, shells, and 3 dashboards. No migrations, no server functions, no routes.
+## Technical notes
 
-Approve and I'll execute in a single pass.
+- Two report families are in play: `cd_report_snapshots` (Security Career Discovery v3.1, written by the atomic completion routine) and `assessment_run_reports` (Career Intelligence saved report, written only by the service-role routine). The fix must keep them distinct.
+- Files likely in scope depending on branch: the public v3.1 flow component, the v3.1 persistence server functions, the stored-report/history server functions and their routes.
+- No change to scoring, question content, or the domain model.
