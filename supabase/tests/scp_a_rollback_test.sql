@@ -154,6 +154,18 @@ DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, t
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
+-- Phase 2e: the remaining Assessment Center operations.
+DROP FUNCTION IF EXISTS public.scp_employer_library(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_assign(uuid, uuid, text, timestamptz, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_participants(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_review_pressure(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_development_recommendations(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_start_learning_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_get_learning_feedback(uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_learning_module(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_schedule_reassessment(uuid, uuid, timestamptz) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_subject_progress(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_academy_assignments() CASCADE;
 -- Phase 2c: the published test fixture.
 --
 -- Publication makes content immutable BY DESIGN, so a teardown cannot simply
@@ -179,6 +191,19 @@ ALTER TABLE public.scp_item_versions       ENABLE TRIGGER USER;
 ALTER TABLE public.scp_assessment_versions ENABLE TRIGGER USER;
 
 DELETE FROM public.scp_report_versions WHERE report_key LIKE 'fixture-%';
+
+-- Phase 2f: the Learning Mode fixture, its programme and its module.
+ALTER TABLE public.scp_program_versions DISABLE TRIGGER USER;
+ALTER TABLE public.scp_module_versions  DISABLE TRIGGER USER;
+UPDATE public.scp_module_versions  SET content_status = 'draft'
+ WHERE program_version_id IN (
+   SELECT pv.id FROM public.scp_program_versions pv
+     JOIN public.scp_programs p ON p.id = pv.program_id
+    WHERE p.slug LIKE 'fixture-%');
+UPDATE public.scp_program_versions SET content_status = 'draft'
+ WHERE program_id IN (SELECT id FROM public.scp_programs WHERE slug LIKE 'fixture-%');
+ALTER TABLE public.scp_program_versions ENABLE TRIGGER USER;
+ALTER TABLE public.scp_module_versions  ENABLE TRIGGER USER;
 
 ALTER TABLE public.scp_assessment_definitions DROP COLUMN IF EXISTS is_test_fixture;
 

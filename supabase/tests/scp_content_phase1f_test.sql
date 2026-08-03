@@ -437,11 +437,31 @@ SELECT pg_temp.ok(
      JOIN public.scp_items i ON i.id = iv.item_id
     WHERE i.slug LIKE 'sg-l-%' AND iv.content_status <> 'draft') = 0,
   'F6.14 every Learning Mode draft is draft');
+-- Rewritten in Phase 2f. As originally written this asserted that no learning
+-- item was on ANY form, which was true only because no learning form existed
+-- yet -- it would have passed forever without testing anything once one did.
+--
+-- The property actually worth holding is DISJOINTNESS: no form may serve both
+-- modes, so a learning item can never reach a live assessment run. That is
+-- stronger, and it keeps testing something now that Learning Mode is real.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM (
+     SELECT fi.form_id
+       FROM public.scp_form_items fi
+       JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+      GROUP BY fi.form_id
+     HAVING count(DISTINCT iv.mode) > 1) mixed) = 0,
+  'F6.15 no form mixes Learning and Assessment items');
+
+-- And the live assessment forms specifically contain no learning item.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_form_items fi
      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
-    WHERE iv.mode = 'learning') = 0,
-  'F6.15 no Learning Mode item has been placed on the assessment form');
+    WHERE iv.mode = 'learning'
+      AND EXISTS (SELECT 1 FROM public.scp_form_items fi2
+                    JOIN public.scp_item_versions iv2 ON iv2.id = fi2.item_version_id
+                   WHERE fi2.form_id = fi.form_id AND iv2.mode = 'assessment')) = 0,
+  'F6.15b no Learning Mode item sits on a form that serves assessment items');
 
 DO $$ BEGIN RAISE NOTICE 'scp_content_phase1f_test: ALL ASSERTIONS PASSED'; END $$;
 
