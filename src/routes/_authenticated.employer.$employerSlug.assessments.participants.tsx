@@ -1,0 +1,272 @@
+// Participants — status, progress, release, identity and reassessment.
+//
+// ── EVERY ROW IS PSEUDONYMOUS UNTIL ASKED OTHERWISE ───────────────────
+//
+// The list is built from subject ids. Nobody's name or address appears until an
+// owner or admin explicitly asks for one specific participant, one at a time,
+// and the server agrees — which it only does once a result has been released.
+//
+// That is why there is a "Show who this is" control rather than an email
+// column. An email column would have to resolve every row on load, which is
+// exactly the bulk disclosure the architecture refuses.
+
+import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { CalendarClock, Eye, FileText, Send } from "lucide-react";
+import { useT } from "@/i18n/context";
+import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
+import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
+import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
+import {
+  listAcademyParticipants,
+  releaseAcademyReport,
+  resolveParticipantIdentity,
+  scheduleAcademyReassessment,
+  type ParticipantRow,
+} from "@/lib/security-competency/academy-employer.functions";
+
+export const Route = createFileRoute(
+  "/_authenticated/employer/$employerSlug/assessments/participants",
+)({
+  ssr: false,
+  component: ParticipantsRoute,
+  errorComponent: EmployerErrorState,
+});
+
+function ParticipantsRoute() {
+  const { employerSlug } = Route.useParams();
+  return (
+    <AcademyPage employerSlug={employerSlug}>
+      {(ws) => (
+        <Participants
+          employerId={ws.employerId}
+          employerSlug={ws.employerSlug}
+          canManage={ws.role !== "member"}
+        />
+      )}
+    </AcademyPage>
+  );
+}
+
+function Participants({
+  employerId,
+  employerSlug,
+  canManage,
+}: {
+  employerId: string;
+  employerSlug: string;
+  canManage: boolean;
+}) {
+  const { t } = useT();
+  const list = useServerFn(listAcademyParticipants);
+  const query = useQuery({
+    queryKey: ["academy", "participants", employerId],
+    queryFn: () => list({ data: { employerId } }),
+  });
+
+  return (
+    <>
+      <AcademyHeading
+        title={t("academy.participants.title")}
+        lede={t("academy.participants.lede")}
+      />
+
+      {query.isLoading && <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>}
+
+      {query.data && query.data.length === 0 && (
+        <NoEvidenceState
+          title={t("academy.participants.emptyTitle")}
+          body={t("academy.participants.emptyBody")}
+        />
+      )}
+
+      <div className="space-y-3">
+        {(query.data ?? []).map((p) => (
+          <ParticipantCard
+            key={p.attemptId}
+            row={p}
+            employerId={employerId}
+            employerSlug={employerSlug}
+            canManage={canManage}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function ParticipantCard({
+  row,
+  employerId,
+  employerSlug,
+  canManage,
+}: {
+  row: ParticipantRow;
+  employerId: string;
+  employerSlug: string;
+  canManage: boolean;
+}) {
+  const { t, lang } = useT();
+  const qc = useQueryClient();
+  const resolve = useServerFn(resolveParticipantIdentity);
+  const release = useServerFn(releaseAcademyReport);
+  const reassess = useServerFn(scheduleAcademyReassessment);
+  const [identity, setIdentity] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const programme = (lang === "en" ? row.programmeNameEn : row.programmeNameSv) ?? "—";
+
+  const identityM = useMutation({
+    mutationFn: () => resolve({ data: { employerId, subjectId: row.subjectId } }),
+    onSuccess: (r) => setIdentity(r?.email ?? t("academy.participants.identityRefused")),
+  });
+
+  const releaseM = useMutation({
+    mutationFn: () => release({ data: { attemptId: row.attemptId } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["academy", "participants"] }),
+    onError: (e: unknown) => {
+      const code = (e as { code?: string }).code ?? "";
+      setNotice(
+        code === "SCP_RELEASE_BEFORE_SCORED"
+          ? t("academy.participants.releaseBlocked")
+          : t("academy.participants.releaseFailed"),
+      );
+    },
+  });
+
+  const reassessM = useMutation({
+    mutationFn: () => reassess({ data: { employerId, subjectId: row.subjectId, deadline: null } }),
+    onSuccess: () => {
+      setNotice(t("academy.participants.reassessmentScheduled"));
+      void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+    },
+    onError: () => setNotice(t("academy.participants.reassessmentFailed")),
+  });
+
+  return (
+    <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-foreground">{programme}</h2>
+          {/* The pseudonymous reference is shown deliberately: it is what the
+              employer actually holds, and naming it makes the model visible
+              rather than pretending a person is missing. */}
+          <p className="mt-1 font-mono text-xs text-muted-foreground">
+            {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
+          </p>
+        </div>
+        <StatusPill status={row.attemptStatus} />
+      </div>
+
+      <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-4">
+        <Fact label={t("academy.participants.progress")}>
+          <span className="tabular-nums">
+            {row.answered}/{row.totalItems}
+          </span>
+        </Fact>
+        <Fact label={t("academy.participants.awaitingReview")}>
+          <span className="tabular-nums">{row.reviewsOutstanding}</span>
+        </Fact>
+        <Fact label={t("academy.participants.deadline")}>
+          {row.deadline ? new Date(row.deadline).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE") : "—"}
+        </Fact>
+        <Fact label={t("academy.participants.released")}>
+          {row.releasedAt
+            ? new Date(row.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")
+            : "—"}
+        </Fact>
+      </div>
+
+      {identity && (
+        <p className="mt-4 rounded-[10px] bg-[color:var(--surface-subtle)] px-3 py-2 text-[13px] text-foreground">
+          {identity}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="mt-4 text-[13px] leading-relaxed text-foreground">
+          {notice}
+        </p>
+      )}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {row.releasedAt && (
+          <Link
+            to="/employer/$employerSlug/assessments/results/$attemptId"
+            params={{ employerSlug, attemptId: row.attemptId }}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.openReport")}
+          </Link>
+        )}
+
+        {canManage && row.identityResolvable && !identity && (
+          <button
+            type="button"
+            onClick={() => identityM.mutate()}
+            disabled={identityM.isPending}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Eye className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.showIdentity")}
+          </button>
+        )}
+
+        {canManage && !row.releasedAt && (
+          <button
+            type="button"
+            onClick={() => releaseM.mutate()}
+            disabled={releaseM.isPending || row.attemptStatus !== "scored"}
+            title={row.attemptStatus !== "scored" ? t("academy.participants.releaseBlocked") : undefined}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.release")}
+          </button>
+        )}
+
+        {canManage && row.releasedAt && (
+          <button
+            type="button"
+            onClick={() => reassessM.mutate()}
+            disabled={reassessM.isPending}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <CalendarClock className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.reassess")}
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-medium text-foreground">{children}</p>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const { t } = useT();
+  const key =
+    status === "in_progress"
+      ? "academy.attempt.inProgress"
+      : status === "submitted"
+        ? "academy.attempt.submitted"
+        : status === "scored"
+          ? "academy.attempt.scored"
+          : status === "released"
+            ? "academy.attempt.released"
+            : "academy.attempt.other";
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+      {t(key)}
+    </span>
+  );
+}
