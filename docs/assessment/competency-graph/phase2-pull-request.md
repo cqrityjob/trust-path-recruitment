@@ -1,9 +1,28 @@
 # Phase 2 — Functional Assessment Center (Security Competence Academy)
 
-Draft. **Do not merge.** Opened for staging verification, which has not yet run —
-see *Known limitations*.
+**Ready for review.** 16 commits, unsquashed, from `42dff14`.
 
-10 commits, unsquashed, from `42dff14`.
+> ## ⚠️ Backup status
+>
+> **Supabase managed backup is unavailable on the current free plan. The release
+> uses additive, clean-replay-tested and rollback-tested migrations. This does
+> not provide the same protection as a full database backup.**
+>
+> Mitigation is that every one of the ten migrations is additive: there is no
+> `DROP TABLE`, no `DROP COLUMN`, no `TRUNCATE` and no `DELETE` at migration
+> time. The single statement that changes pre-existing rows touches only
+> `content_status = 'draft'` content, and writes the old values into
+> `scp_content_events` before changing them.
+>
+> Rollback plan: [`phase2-release-recovery-package.md`](./phase2-release-recovery-package.md).
+> It is a rollback plan, **not** a backup — read its first section before use.
+
+## ⚠️ Merging this PR does not make the Assessment Center work
+
+The database migrations are **not yet applied**. Until they are, the new routes
+will not function, and the Assessment Center must not be described as
+operational. The Overview panel degrades to zeros rather than crashing, and the
+legacy catalogue below it is untouched.
 
 ---
 
