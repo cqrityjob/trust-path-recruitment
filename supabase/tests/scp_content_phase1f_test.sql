@@ -96,13 +96,27 @@ SELECT pg_temp.ok(
         OR o.scoring_rationale_en IS NULL OR o.score_value IS NULL)) = 0,
   'F2.2 every option has a score and a rationale in both languages');
 
+-- Rewritten in Phase 2h. As written, this asserted that every option of every
+-- sg-b-* ASSESSMENT item carried Learning Mode feedback -- which is to say, it
+-- required the defect. Phase 1G satisfied it by authoring 60 explanations of
+-- the preferred response onto live assessment content.
+--
+-- The invariant that was actually wanted is that Learning Mode content is
+-- complete in both languages. Assessment content carrying none is now enforced
+-- by scp_guard_no_learning_feedback_on_assessment and asserted in J9.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_item_options o
      JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
-     JOIN public.scp_items i ON i.id = iv.item_id
-    WHERE i.slug LIKE 'sg-b-%'
+    WHERE iv.mode = 'learning'
       AND (o.learning_feedback_sv IS NULL OR o.learning_feedback_en IS NULL)) = 0,
-  'F2.3 every option carries Learning Mode feedback in both languages');
+  'F2.3 every LEARNING option carries feedback in both languages');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+    WHERE iv.mode = 'assessment'
+      AND (o.learning_feedback_sv IS NOT NULL OR o.learning_feedback_en IS NOT NULL)) = 0,
+  'F2.3b and no ASSESSMENT option carries any');
 
 -- Every distractor names the professional error it represents — no arbitrary
 -- scoring.

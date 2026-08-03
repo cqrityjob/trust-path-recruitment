@@ -166,6 +166,9 @@ DROP FUNCTION IF EXISTS public.scp_complete_learning_module(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_schedule_reassessment(uuid, uuid, timestamptz) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_subject_progress(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_my_academy_assignments() CASCADE;
+-- Phase 2h corrections.
+DROP FUNCTION IF EXISTS public.scp_guard_no_learning_feedback_on_assessment() CASCADE;
+ALTER TABLE public.scp_assessment_versions DROP COLUMN IF EXISTS program_version_id;
 -- Phase 2c: the published test fixture.
 --
 -- Publication makes content immutable BY DESIGN, so a teardown cannot simply

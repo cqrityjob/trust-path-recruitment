@@ -788,6 +788,147 @@ SELECT pg_temp.ok((SELECT count(*) FROM mywork WHERE mode = 'learning') = 1,
 SELECT pg_temp.ok((SELECT bool_and(purpose_sv IS NOT NULL) FROM mywork WHERE mode='assessment'),
   'J8.14 every assignment names its processing purpose');
 
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J9 — Phase 2h corrections'; END $$;
+
+-- =========================================================================
+-- Group J9 — the two staging corrections
+-- =========================================================================
+
+-- ── 1. Learning feedback cannot exist on Assessment Mode content ────────
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+    WHERE iv.mode = 'assessment'
+      AND (o.learning_feedback_sv IS NOT NULL OR o.learning_feedback_en IS NOT NULL)) = 0,
+  'J9.1 NO assessment-mode option carries learning feedback');
+
+-- The guard, not the cleanup, is the fix — so it is the guard that is tested.
+-- Without this the assertion above would pass on a database where the next
+-- author is free to reintroduce exactly what Phase 1G did.
+DO $$
+DECLARE _iv uuid;
+BEGIN
+  SELECT fi.item_version_id INTO _iv
+    FROM public.scp_form_items fi
+    JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+   WHERE iv.mode = 'assessment' LIMIT 1;
+
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.scp_item_options SET learning_feedback_sv = %L WHERE item_version_id = %L::uuid',
+           'the preferred answer is A', _iv),
+    'SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM',
+    'J9.2 learning feedback CANNOT be added to an assessment option');
+END $$;
+
+-- And the same on INSERT, not only UPDATE.
+DO $$
+DECLARE _iv uuid;
+BEGIN
+  SELECT fi.item_version_id INTO _iv
+    FROM public.scp_form_items fi
+    JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+   WHERE iv.mode = 'assessment' AND iv.content_status <> 'published' LIMIT 1;
+  IF _iv IS NULL THEN
+    SELECT id INTO _iv FROM public.scp_item_versions
+     WHERE mode = 'assessment' AND content_status <> 'published' LIMIT 1;
+  END IF;
+
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.scp_item_options (item_version_id, option_key, display_order, score_value, scoring_rationale_sv, learning_feedback_sv) VALUES (%L::uuid, %L, 99, 1, %L, %L)',
+           _iv, 'zz', 'r', 'this explains the right answer'),
+    'SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM',
+    'J9.3 and cannot be inserted with one either');
+END $$;
+
+-- The feature itself survived: learning items still carry their feedback.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+    WHERE iv.mode = 'learning' AND o.learning_feedback_sv IS NOT NULL) >= 3,
+  'J9.4 learning items keep their feedback — the misplaced copies went, not the feature');
+
+-- The removed text was preserved, so it can be reinstated where it belongs.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_content_events
+    WHERE metadata->>'migration' = '20260810090000_scp_phase2h_staging_corrections'
+      AND metadata->>'removed_learning_feedback_sv' IS NOT NULL) = 60,
+  'J9.5 all 60 removed strings are preserved verbatim in the content event log');
+
+-- Nothing published was touched by the correction.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_content_events
+    WHERE metadata->>'migration' = '20260810090000_scp_phase2h_staging_corrections'
+      AND metadata->>'item_content_status' IS NOT NULL
+      AND metadata->>'item_content_status' <> 'draft') = 0,
+  'J9.6 every corrected row was draft — no published content was rewritten');
+
+-- ── 2. The programme lookup matches the right version ───────────────────
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_program_versions) >= 2,
+  'J9.7 more than one programme version exists, so a wrong match is possible');
+
+-- A THIRD programme version, created last and carrying unmistakable text. If
+-- the library ever reverts to "first/oldest" or "any", this text appears
+-- somewhere it does not belong and the assertions below fail.
+DO $$
+DECLARE _p uuid; _pv uuid;
+BEGIN
+  INSERT INTO public.scp_programs (slug) VALUES ('decoy-programme-j9')
+  RETURNING id INTO _p;
+  INSERT INTO public.scp_program_versions
+    (program_id, version_number, content_status, validation_status,
+     name_sv, name_en, purpose_sv, purpose_en,
+     does_not_measure_sv, does_not_measure_en)
+  VALUES
+    (_p, 1, 'published', 'design', 'Decoy', 'Decoy',
+     'DECOY-PURPOSE-SV', 'DECOY-PURPOSE-EN',
+     ARRAY['DECOY-LIMIT-SV'], ARRAY['DECOY-LIMIT-EN'])
+  RETURNING id INTO _pv;
+END $$;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE lib2 AS
+SELECT * FROM public.scp_employer_library('c3000000-1111-0000-0000-000000000001');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM lib2
+    WHERE programme_purpose_sv = 'DECOY-PURPOSE-SV'
+       OR 'DECOY-LIMIT-SV' = ANY(coalesce(does_not_measure_sv, '{}'))) = 0,
+  'J9.8 an unrelated programme version never supplies purpose or limitations');
+
+-- Each row's text belongs to its OWN linked programme version, or is absent.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM lib2 l
+     JOIN public.scp_assessment_versions av ON av.id = l.assessment_version_id
+     LEFT JOIN public.scp_program_versions pv ON pv.id = av.program_version_id
+    WHERE l.programme_purpose_sv IS DISTINCT FROM pv.purpose_sv) = 0,
+  'J9.9 every library row shows its OWN programme version''s purpose, or none');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM lib2 l
+     JOIN public.scp_assessment_versions av ON av.id = l.assessment_version_id
+    WHERE av.program_version_id IS NULL
+      AND (l.programme_purpose_sv IS NOT NULL
+        OR coalesce(array_length(l.does_not_measure_sv, 1), 0) > 0)) = 0,
+  'J9.10 an UNLINKED assessment version borrows nobody else''s limitations');
+
+-- The specific defect: the fixture must not display the real Security Guard
+-- programme's boundary statements.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM lib2 l
+    WHERE l.is_test_fixture
+      AND EXISTS (
+        SELECT 1 FROM public.scp_program_versions pv
+          JOIN public.scp_programs p ON p.id = pv.program_id
+         WHERE p.slug NOT LIKE 'fixture-%' AND p.slug <> 'decoy-programme-j9'
+           AND pv.purpose_sv = l.programme_purpose_sv)) = 0,
+  'J9.11 a fixture never shows the REAL programme''s purpose — the original defect');
+
 DO $$ BEGIN RAISE NOTICE 'scp_phase2_journey_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;
