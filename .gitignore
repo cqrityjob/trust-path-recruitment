@@ -44,3 +44,7 @@ dist-ssr
 # Local override variants remain ignored.
 .env.local
 .env.*.local
+
+# Supabase CLI local-stack artefacts
+supabase/.branches/
+supabase/.temp/

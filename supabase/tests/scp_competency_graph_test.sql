@@ -155,7 +155,7 @@ WITH r AS (
   INSERT INTO public.scp_purpose_versions
     (purpose_code, version_number, privacy_notice_version, lawful_basis_reference,
      jurisdiction_id, published_at)
-  SELECT 'competence_development', 1, 'pn-v1', 'GDPR Art.6(1)(f) legitimate interest — competence development',
+  SELECT 'competence_development', 801, 'pn-v1', 'GDPR Art.6(1)(f) legitimate interest — competence development',
          (SELECT id FROM public.scp_jurisdictions WHERE code = 'SE'), now()
   RETURNING id
 )
@@ -466,12 +466,20 @@ DO $$ BEGIN RAISE NOTICE 'GROUP G7 — the read-model contract'; END $$;
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_contract_versions
-    WHERE contract_version = 'v1' AND status = 'available') = 1,
-  'G7.1 exactly one read model is available in contract v1');
+    WHERE contract_version = 'v1' AND status = 'available') = 3,
+  'G7.1 three read models are available in contract v1');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_contract_versions
     WHERE contract_version = 'v1' AND status = 'reserved') = 5,
   'G7.2 five agent read models are reserved and unimplemented');
+
+-- A contract row must never claim "available" for a view that does not exist.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_contract_versions cv
+    WHERE cv.status = 'available'
+      AND NOT EXISTS (SELECT 1 FROM information_schema.views v
+                       WHERE v.table_schema='public' AND v.table_name = cv.read_model)) = 0,
+  'G7.2b every available read model has a real view behind it');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.columns

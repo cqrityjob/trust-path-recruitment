@@ -96,13 +96,27 @@ SELECT pg_temp.ok(
         OR o.scoring_rationale_en IS NULL OR o.score_value IS NULL)) = 0,
   'F2.2 every option has a score and a rationale in both languages');
 
+-- Rewritten in Phase 2h. As written, this asserted that every option of every
+-- sg-b-* ASSESSMENT item carried Learning Mode feedback -- which is to say, it
+-- required the defect. Phase 1G satisfied it by authoring 60 explanations of
+-- the preferred response onto live assessment content.
+--
+-- The invariant that was actually wanted is that Learning Mode content is
+-- complete in both languages. Assessment content carrying none is now enforced
+-- by scp_guard_no_learning_feedback_on_assessment and asserted in J9.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_item_options o
      JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
-     JOIN public.scp_items i ON i.id = iv.item_id
-    WHERE i.slug LIKE 'sg-b-%'
+    WHERE iv.mode = 'learning'
       AND (o.learning_feedback_sv IS NULL OR o.learning_feedback_en IS NULL)) = 0,
-  'F2.3 every option carries Learning Mode feedback in both languages');
+  'F2.3 every LEARNING option carries feedback in both languages');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+    WHERE iv.mode = 'assessment'
+      AND (o.learning_feedback_sv IS NOT NULL OR o.learning_feedback_en IS NOT NULL)) = 0,
+  'F2.3b and no ASSESSMENT option carries any');
 
 -- Every distractor names the professional error it represents — no arbitrary
 -- scoring.
@@ -415,10 +429,21 @@ SELECT pg_temp.ok(
   'F6.12 every rubric has positive, borderline, contraindication and safety-critical anchors');
 
 -- English stays a translation until a bilingual SME says otherwise.
+--
+-- Scoped to REAL content. A published test fixture legitimately carries
+-- approved English, because Swedish/English parity is exactly one of the
+-- properties the fixture exists to prove -- and the fixture flag is what keeps
+-- that exemption from silently covering content awaiting review.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_item_texts
-    WHERE adaptation_status <> 'adaptation_pending') = 0,
-  'F6.13 all English content remains adaptation_pending');
+  (SELECT count(*) FROM public.scp_item_texts it
+     JOIN public.scp_item_versions iv ON iv.id = it.item_version_id
+     JOIN public.scp_form_items fi ON fi.item_version_id = iv.id
+     JOIN public.scp_forms f ON f.id = fi.form_id
+     JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE it.adaptation_status <> 'adaptation_pending'
+      AND NOT d.is_test_fixture) = 0,
+  'F6.13 all English content in REAL programmes remains adaptation_pending');
 
 -- Learning content is draft too, and nothing became assignable.
 SELECT pg_temp.ok(
@@ -426,11 +451,31 @@ SELECT pg_temp.ok(
      JOIN public.scp_items i ON i.id = iv.item_id
     WHERE i.slug LIKE 'sg-l-%' AND iv.content_status <> 'draft') = 0,
   'F6.14 every Learning Mode draft is draft');
+-- Rewritten in Phase 2f. As originally written this asserted that no learning
+-- item was on ANY form, which was true only because no learning form existed
+-- yet -- it would have passed forever without testing anything once one did.
+--
+-- The property actually worth holding is DISJOINTNESS: no form may serve both
+-- modes, so a learning item can never reach a live assessment run. That is
+-- stronger, and it keeps testing something now that Learning Mode is real.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM (
+     SELECT fi.form_id
+       FROM public.scp_form_items fi
+       JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+      GROUP BY fi.form_id
+     HAVING count(DISTINCT iv.mode) > 1) mixed) = 0,
+  'F6.15 no form mixes Learning and Assessment items');
+
+-- And the live assessment forms specifically contain no learning item.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_form_items fi
      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
-    WHERE iv.mode = 'learning') = 0,
-  'F6.15 no Learning Mode item has been placed on the assessment form');
+    WHERE iv.mode = 'learning'
+      AND EXISTS (SELECT 1 FROM public.scp_form_items fi2
+                    JOIN public.scp_item_versions iv2 ON iv2.id = fi2.item_version_id
+                   WHERE fi2.form_id = fi.form_id AND iv2.mode = 'assessment')) = 0,
+  'F6.15b no Learning Mode item sits on a form that serves assessment items');
 
 DO $$ BEGIN RAISE NOTICE 'scp_content_phase1f_test: ALL ASSERTIONS PASSED'; END $$;
 

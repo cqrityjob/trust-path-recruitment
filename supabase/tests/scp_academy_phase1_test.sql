@@ -232,9 +232,15 @@ SELECT pg_temp.ok(
      JOIN public.scp_items i ON i.id = iv.item_id
     WHERE i.slug LIKE 'sg-b-%' AND iv.content_status <> 'draft') = 0,
   'A7.1 every baseline item is draft');
+-- Scoped to the REAL programme. Phase 2f publishes a fixture development
+-- track so Learning Mode and development recommendations have something to
+-- run against; the Security Guard programme itself stays draft, which is what
+-- this assertion is actually about.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_program_versions WHERE content_status <> 'draft') = 0,
-  'A7.2 the programme is draft');
+  (SELECT count(*) FROM public.scp_program_versions pv
+     JOIN public.scp_programs p ON p.id = pv.program_id
+    WHERE p.slug NOT LIKE 'fixture-%' AND pv.content_status <> 'draft') = 0,
+  'A7.2 the REAL programme is draft');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.assessments WHERE employer_visible) = 0,
   'A7.3 nothing is employer-visible');

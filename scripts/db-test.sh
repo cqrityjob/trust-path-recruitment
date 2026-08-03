@@ -217,8 +217,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
-if [ "$SCP_TABLES" -ne 61 ]; then
-  echo "FAIL: expected 61 scp_ tables (23 PR-A + 15 graph + 23 Academy), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 62 ]; then
+  echo "FAIL: expected 62 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 Phase 2 report snapshot), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -514,6 +514,48 @@ if [ "$CONT_PASSED" -lt 50 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5f. Phase 2 read models and the scoped identity RPC
+# ---------------------------------------------------------------------------
+echo "==> Running Phase 2 identity and read-model assertions"
+set +e
+P2_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_phase2_identity_and_read_models_test.sql 2>&1)"
+P2_RC=$?
+set -e
+echo "$P2_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+P2_PASSED="$(echo "$P2_OUT" | grep -c "ok  " || true)"
+if [ "$P2_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 2 suite exited with code ${P2_RC}." >&2
+  echo "$P2_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${P2_PASSED} Phase 2 assertions passed"
+if [ "$P2_PASSED" -lt 18 ]; then
+  echo "FAIL: expected at least 18 Phase 2 assertions, only ${P2_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5b. The complete Assessment Center journey, end to end.
+# ---------------------------------------------------------------------------
+echo "==> Running the Phase 2 end-to-end journey"
+set +e
+J_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_phase2_journey_test.sql 2>&1)"
+J_RC=$?
+set -e
+echo "$J_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+J_PASSED="$(echo "$J_OUT" | grep -c "ok  " || true)"
+if [ "$J_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 2 journey suite exited with code ${J_RC}." >&2
+  echo "$J_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${J_PASSED} journey assertions passed"
+if [ "$J_PASSED" -lt 96 ]; then
+  echo "FAIL: expected at least 96 journey assertions, only ${J_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -554,5 +596,7 @@ echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
+echo "              ${P2_PASSED} Phase 2 identity assertions,
+              ${J_PASSED} Phase 2 journey assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

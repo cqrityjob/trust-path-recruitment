@@ -133,14 +133,84 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 61,
-    'pre-rollback: 61 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy)');
+        AND table_name LIKE 'scp\_%') = 62,
+    'pre-rollback: 62 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 1 Phase 2)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
 END $$;
 
--- Phase 1 (Academy) comes off first: it sits on top of Phase 0.
+-- Phase 2 comes off first of all: its read models depend on Phase 1 columns.
+DROP VIEW IF EXISTS public.scp_rm_employer_assignments CASCADE;
+DROP VIEW IF EXISTS public.scp_rm_review_queue CASCADE;
+DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASCADE;
+-- Phase 2b: delivery, scoring, review and release. Snapshots go with them --
+-- they are a Phase 2 artefact, and the evidence they project from survives in
+-- the ledger, which is the whole reason snapshots are safe to drop.
+DROP TABLE    IF EXISTS public.scp_report_snapshots CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
+-- Phase 2e: the remaining Assessment Center operations.
+DROP FUNCTION IF EXISTS public.scp_employer_library(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_assign(uuid, uuid, text, timestamptz, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_participants(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_review_pressure(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_development_recommendations(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_start_learning_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_get_learning_feedback(uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_learning_module(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_schedule_reassessment(uuid, uuid, timestamptz) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_subject_progress(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_academy_assignments() CASCADE;
+-- Phase 2h corrections.
+DROP FUNCTION IF EXISTS public.scp_guard_no_learning_feedback_on_assessment() CASCADE;
+ALTER TABLE public.scp_assessment_versions DROP COLUMN IF EXISTS program_version_id;
+-- Phase 2c: the published test fixture.
+--
+-- Publication makes content immutable BY DESIGN, so a teardown cannot simply
+-- delete it -- it has to unpublish first. That friction is the guard working,
+-- not an obstacle to route around, and it is exactly what a real retirement
+-- would encounter. The triggers come off explicitly and go straight back on.
+ALTER TABLE public.scp_item_versions       DISABLE TRIGGER USER;
+ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER USER;
+
+UPDATE public.scp_item_versions SET content_status = 'draft'
+ WHERE id IN (
+   SELECT fi.item_version_id FROM public.scp_form_items fi
+     JOIN public.scp_forms f  ON f.id = fi.form_id
+     JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE d.is_test_fixture);
+
+UPDATE public.scp_assessment_versions SET content_status = 'draft'
+ WHERE definition_id IN (
+   SELECT id FROM public.scp_assessment_definitions WHERE is_test_fixture);
+
+ALTER TABLE public.scp_item_versions       ENABLE TRIGGER USER;
+ALTER TABLE public.scp_assessment_versions ENABLE TRIGGER USER;
+
+DELETE FROM public.scp_report_versions WHERE report_key LIKE 'fixture-%';
+
+-- Phase 2f: the Learning Mode fixture, its programme and its module.
+ALTER TABLE public.scp_program_versions DISABLE TRIGGER USER;
+ALTER TABLE public.scp_module_versions  DISABLE TRIGGER USER;
+UPDATE public.scp_module_versions  SET content_status = 'draft'
+ WHERE program_version_id IN (
+   SELECT pv.id FROM public.scp_program_versions pv
+     JOIN public.scp_programs p ON p.id = pv.program_id
+    WHERE p.slug LIKE 'fixture-%');
+UPDATE public.scp_program_versions SET content_status = 'draft'
+ WHERE program_id IN (SELECT id FROM public.scp_programs WHERE slug LIKE 'fixture-%');
+ALTER TABLE public.scp_program_versions ENABLE TRIGGER USER;
+ALTER TABLE public.scp_module_versions  ENABLE TRIGGER USER;
+
+ALTER TABLE public.scp_assessment_definitions DROP COLUMN IF EXISTS is_test_fixture;
+
+-- Phase 1 (Academy) comes off next: it sits on top of Phase 0.
 DROP TABLE IF EXISTS public.scp_review_requirements     CASCADE;
 DELETE FROM public.scp_item_option_texts iot USING public.scp_item_options o,
        public.scp_item_versions iv

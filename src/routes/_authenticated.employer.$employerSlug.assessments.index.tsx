@@ -22,6 +22,8 @@ import {
 } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
+import { AcademyTabs } from "@/components/academy/AcademyWorkspace";
+import { AcademyOverview } from "@/components/academy/AcademyOverview";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import {
@@ -144,6 +146,12 @@ function AssessmentCatalog({
       activeSection="assessments"
       hasMultipleWorkspaces={hasMultipleWorkspaces}
     >
+      {/* Assessment Center sub-navigation and the Academy overview. Added in
+          Phase 2: the legacy catalogue below is unchanged, so historical
+          assessments and their reports still open exactly as before. */}
+      <AcademyTabs employerSlug={employerSlug} />
+      <AcademyOverview employerId={employerId} employerSlug={employerSlug} />
+
       <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
         {t("employer.assessments.heading")}
       </h1>
