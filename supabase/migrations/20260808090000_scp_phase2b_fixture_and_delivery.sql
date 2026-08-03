@@ -34,6 +34,34 @@ COMMENT ON COLUMN public.scp_assessment_definitions.is_test_fixture IS
   'asserts that every published Academy version belongs to a fixture.';
 
 -- =========================================================================
+-- SECTION 1b — The ninth review trigger
+-- =========================================================================
+--
+-- Phase 1C modelled eight review triggers, all of which assume a provider RAN.
+-- With the null provider enabled -- the database-enforced default -- nothing
+-- runs at all, and the honest reason a constructed response reaches a human is
+-- simply that no provider was available to score it.
+--
+-- Calling that "confidence below threshold" would be a small lie in the audit
+-- trail: there is no confidence, because there was no run. So the vocabulary
+-- gains the value that describes what actually happened.
+
+ALTER TABLE public.scp_human_reviews
+  DROP CONSTRAINT IF EXISTS scp_human_reviews_trigger_reason_check;
+ALTER TABLE public.scp_human_reviews
+  ADD CONSTRAINT scp_human_reviews_trigger_reason_check
+  CHECK (trigger_reason IN (
+    'safety_critical_detected',
+    'confidence_below_threshold',
+    'repeated_runs_disagree',
+    'legally_sensitive_action',
+    'recruitment_use',
+    'participant_requested',
+    'schema_invalid_output',
+    'administrator_mandated',
+    'no_provider_available'));
+
+-- =========================================================================
 -- SECTION 2 — Report snapshots
 -- =========================================================================
 --
@@ -346,7 +374,7 @@ BEGIN
       -- so the only honest destination is a person.
       INSERT INTO public.scp_human_reviews (response_id, trigger_reason, review_status)
       VALUES (_r.response_id,
-              CASE WHEN _r.is_safety_critical THEN 'safety_critical'
+              CASE WHEN _r.is_safety_critical THEN 'safety_critical_detected'
                    ELSE 'no_provider_available' END,
               'pending');
       _rv := _rv + 1;

@@ -415,10 +415,21 @@ SELECT pg_temp.ok(
   'F6.12 every rubric has positive, borderline, contraindication and safety-critical anchors');
 
 -- English stays a translation until a bilingual SME says otherwise.
+--
+-- Scoped to REAL content. A published test fixture legitimately carries
+-- approved English, because Swedish/English parity is exactly one of the
+-- properties the fixture exists to prove -- and the fixture flag is what keeps
+-- that exemption from silently covering content awaiting review.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_item_texts
-    WHERE adaptation_status <> 'adaptation_pending') = 0,
-  'F6.13 all English content remains adaptation_pending');
+  (SELECT count(*) FROM public.scp_item_texts it
+     JOIN public.scp_item_versions iv ON iv.id = it.item_version_id
+     JOIN public.scp_form_items fi ON fi.item_version_id = iv.id
+     JOIN public.scp_forms f ON f.id = fi.form_id
+     JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE it.adaptation_status <> 'adaptation_pending'
+      AND NOT d.is_test_fixture) = 0,
+  'F6.13 all English content in REAL programmes remains adaptation_pending');
 
 -- Learning content is draft too, and nothing became assignable.
 SELECT pg_temp.ok(

@@ -154,6 +154,32 @@ DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, t
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
+-- Phase 2c: the published test fixture.
+--
+-- Publication makes content immutable BY DESIGN, so a teardown cannot simply
+-- delete it -- it has to unpublish first. That friction is the guard working,
+-- not an obstacle to route around, and it is exactly what a real retirement
+-- would encounter. The triggers come off explicitly and go straight back on.
+ALTER TABLE public.scp_item_versions       DISABLE TRIGGER USER;
+ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER USER;
+
+UPDATE public.scp_item_versions SET content_status = 'draft'
+ WHERE id IN (
+   SELECT fi.item_version_id FROM public.scp_form_items fi
+     JOIN public.scp_forms f  ON f.id = fi.form_id
+     JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE d.is_test_fixture);
+
+UPDATE public.scp_assessment_versions SET content_status = 'draft'
+ WHERE definition_id IN (
+   SELECT id FROM public.scp_assessment_definitions WHERE is_test_fixture);
+
+ALTER TABLE public.scp_item_versions       ENABLE TRIGGER USER;
+ALTER TABLE public.scp_assessment_versions ENABLE TRIGGER USER;
+
+DELETE FROM public.scp_report_versions WHERE report_key LIKE 'fixture-%';
+
 ALTER TABLE public.scp_assessment_definitions DROP COLUMN IF EXISTS is_test_fixture;
 
 -- Phase 1 (Academy) comes off next: it sits on top of Phase 0.

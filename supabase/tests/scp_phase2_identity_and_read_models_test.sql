@@ -214,9 +214,21 @@ DO $$ BEGIN RAISE NOTICE 'GROUP P2C — the Phase 2 boundary'; END $$;
 -- Group P2C — nothing shipped
 -- =========================================================================
 
+-- The boundary the owner set: a test fixture may be published so the journey
+-- can be proven, the REAL Security Guard programme may not. is_test_fixture
+-- makes that a database fact rather than a naming convention, so this
+-- assertion cannot be satisfied by calling something a fixture in prose.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_assessment_versions WHERE content_status = 'published') = 0,
-  'P2C.1 no Academy content is published');
+  (SELECT count(*) FROM public.scp_assessment_versions av
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE av.content_status = 'published' AND NOT d.is_test_fixture) = 0,
+  'P2C.1 no REAL Academy content is published — only the test fixture');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_assessment_versions av
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE av.content_status = 'published' AND d.is_test_fixture) >= 1,
+  'P2C.1b the test fixture IS published, so the journey has something to run on');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.assessments WHERE employer_visible) = 0,
   'P2C.2 nothing is employer-visible');

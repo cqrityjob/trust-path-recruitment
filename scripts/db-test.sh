@@ -529,8 +529,29 @@ if [ "$P2_RC" -ne 0 ]; then
   exit 1
 fi
 echo "    ok  ${P2_PASSED} Phase 2 assertions passed"
-if [ "$P2_PASSED" -lt 17 ]; then
-  echo "FAIL: expected at least 17 Phase 2 assertions, only ${P2_PASSED} ran." >&2
+if [ "$P2_PASSED" -lt 18 ]; then
+  echo "FAIL: expected at least 18 Phase 2 assertions, only ${P2_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5b. The complete Assessment Center journey, end to end.
+# ---------------------------------------------------------------------------
+echo "==> Running the Phase 2 end-to-end journey"
+set +e
+J_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_phase2_journey_test.sql 2>&1)"
+J_RC=$?
+set -e
+echo "$J_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+J_PASSED="$(echo "$J_OUT" | grep -c "ok  " || true)"
+if [ "$J_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 2 journey suite exited with code ${J_RC}." >&2
+  echo "$J_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${J_PASSED} journey assertions passed"
+if [ "$J_PASSED" -lt 38 ]; then
+  echo "FAIL: expected at least 38 journey assertions, only ${J_PASSED} ran." >&2
   exit 1
 fi
 
