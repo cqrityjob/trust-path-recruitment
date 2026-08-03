@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 61,
-    'pre-rollback: 61 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy)');
+        AND table_name LIKE 'scp\_%') = 62,
+    'pre-rollback: 62 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 1 Phase 2)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -144,6 +144,17 @@ END $$;
 DROP VIEW IF EXISTS public.scp_rm_employer_assignments CASCADE;
 DROP VIEW IF EXISTS public.scp_rm_review_queue CASCADE;
 DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASCADE;
+-- Phase 2b: delivery, scoring, review and release. Snapshots go with them --
+-- they are a Phase 2 artefact, and the evidence they project from survives in
+-- the ledger, which is the whole reason snapshots are safe to drop.
+DROP TABLE    IF EXISTS public.scp_report_snapshots CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
+ALTER TABLE public.scp_assessment_definitions DROP COLUMN IF EXISTS is_test_fixture;
 
 -- Phase 1 (Academy) comes off next: it sits on top of Phase 0.
 DROP TABLE IF EXISTS public.scp_review_requirements     CASCADE;
