@@ -65,6 +65,7 @@ import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminAssignmentsRouteImport } from './routes/_authenticated.admin.assignments'
 import { Route as AuthenticatedAdminAssessmentsRouteImport } from './routes/_authenticated.admin.assessments'
 import { Route as AuthenticatedAdminApplicationsRouteImport } from './routes/_authenticated.admin.applications'
+import { Route as AuthenticatedAcademyAttemptIdRouteImport } from './routes/_authenticated.academy.$attemptId'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedEmployerEmployerSlugIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.index'
 import { Route as AuthenticatedAdminWorkforceIndexRouteImport } from './routes/_authenticated.admin.workforce.index'
@@ -407,6 +408,12 @@ const AuthenticatedAdminApplicationsRoute =
     path: '/applications',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAcademyAttemptIdRoute =
+  AuthenticatedAcademyAttemptIdRouteImport.update({
+    id: '/academy/$attemptId',
+    path: '/academy/$attemptId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -687,6 +694,7 @@ export interface FileRoutesByFullPath {
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
@@ -779,6 +787,7 @@ export interface FileRoutesByTo {
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
@@ -869,6 +878,7 @@ export interface FileRoutesById {
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/_authenticated/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/_authenticated/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
   '/_authenticated/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/_authenticated/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
@@ -968,6 +978,7 @@ export interface FileRouteTypes {
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
+    | '/academy/$attemptId'
     | '/admin/applications'
     | '/admin/assessments'
     | '/admin/assignments'
@@ -1060,6 +1071,7 @@ export interface FileRouteTypes {
     | '/career-center'
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
+    | '/academy/$attemptId'
     | '/admin/feedback'
     | '/discovery/history'
     | '/discovery/session'
@@ -1149,6 +1161,7 @@ export interface FileRouteTypes {
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
+    | '/_authenticated/academy/$attemptId'
     | '/_authenticated/admin/applications'
     | '/_authenticated/admin/assessments'
     | '/_authenticated/admin/assignments'
@@ -1633,6 +1646,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/applications'
       preLoaderRoute: typeof AuthenticatedAdminApplicationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/academy/$attemptId': {
+      id: '/_authenticated/academy/$attemptId'
+      path: '/academy/$attemptId'
+      fullPath: '/academy/$attemptId'
+      preLoaderRoute: typeof AuthenticatedAcademyAttemptIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
@@ -2216,6 +2236,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedbackRoute: typeof AuthenticatedFeedbackRoute
   AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
   AuthenticatedMyCareerRoute: typeof AuthenticatedMyCareerRouteWithChildren
+  AuthenticatedAcademyAttemptIdRoute: typeof AuthenticatedAcademyAttemptIdRoute
   AuthenticatedDiscoveryHistoryRoute: typeof AuthenticatedDiscoveryHistoryRoute
   AuthenticatedDiscoverySessionRoute: typeof AuthenticatedDiscoverySessionRoute
   AuthenticatedSecurityCareerAssessmentHistoryRoute: typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
@@ -2230,6 +2251,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedbackRoute: AuthenticatedFeedbackRoute,
   AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
   AuthenticatedMyCareerRoute: AuthenticatedMyCareerRouteWithChildren,
+  AuthenticatedAcademyAttemptIdRoute: AuthenticatedAcademyAttemptIdRoute,
   AuthenticatedDiscoveryHistoryRoute: AuthenticatedDiscoveryHistoryRoute,
   AuthenticatedDiscoverySessionRoute: AuthenticatedDiscoverySessionRoute,
   AuthenticatedSecurityCareerAssessmentHistoryRoute:

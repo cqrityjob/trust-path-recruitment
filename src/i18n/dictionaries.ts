@@ -1962,6 +1962,37 @@ export const dictionaries = {
     "start.families.subtitle": "Så här är säkerhetsbranschen strukturerad hos oss.",
     "start.disclaimer":
       "Vi lagrar ingenting från valen du gör här. Sidan är en guide, inte ett beslut om lämplighet.",
+    // ── Security Competence Academy — participant delivery ──────────────
+    "academy.eyebrow": "Kompetensutveckling",
+    "academy.intro.title": "Bedömning av yrkeskompetens",
+    "academy.intro.body":
+      "Du kommer att få ett antal situationer från arbetsvardagen. Det finns inget tidsstopp, och du kan pausa och återuppta när du vill — dina svar sparas medan du arbetar.",
+    "academy.intro.purpose":
+      "Underlaget används för kompetensutveckling. Det är inte ett prov, det ger inget godkänt eller underkänt, och det rangordnar dig inte mot någon annan.",
+    "academy.start": "Börja",
+    "academy.resume": "Fortsätt där du slutade",
+    "academy.loading": "Hämtar dina frågor …",
+    "academy.stage": "Yrkeskompetens",
+    "academy.next": "Nästa",
+    "academy.submit": "Lämna in",
+    "academy.submitting": "Lämnar in dina svar …",
+    "academy.safetyCritical": "Den här situationen rör säkerhetskritisk bedömning.",
+    "academy.bestLegend": "Bästa handlingen",
+    "academy.worstLegend": "Sämsta handlingen",
+    "academy.writtenAnswer": "Ditt svar",
+    "academy.writtenPlaceholder": "Skriv med egna ord.",
+    "academy.writtenNote": "Fritextsvar läses av en människa, inte av en modell.",
+    "academy.done.title": "Tack — dina svar är inlämnade",
+    "academy.done.body":
+      "Svaren har sparats. Du får din utvecklingsrapport när den har frisläppts.",
+    "academy.done.reviewPending":
+      "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
+    "academy.error.title": "Det gick inte att öppna bedömningen",
+    "academy.error.notFound":
+      "Vi hittar ingen pågående bedömning för dig på den här länken.",
+    "academy.error.notOpen":
+      "Den här bedömningen är redan inlämnad och kan inte ändras.",
+    "academy.error.generic": "Något gick fel. Försök igen om en stund.",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -3916,6 +3947,37 @@ export const dictionaries = {
     "start.families.subtitle": "This is how we structure the security industry.",
     "start.disclaimer":
       "Nothing you choose here is stored. This page is a guide, not a suitability decision.",
+    // ── Security Competence Academy — participant delivery ──────────────
+    "academy.eyebrow": "Competence development",
+    "academy.intro.title": "Professional competence assessment",
+    "academy.intro.body":
+      "You will be given a number of situations from everyday working life. There is no time limit, and you can pause and pick up again whenever you like — your answers are saved as you go.",
+    "academy.intro.purpose":
+      "This is used for competence development. It is not an exam, it produces no pass or fail, and it does not rank you against anybody else.",
+    "academy.start": "Begin",
+    "academy.resume": "Pick up where you left off",
+    "academy.loading": "Loading your questions …",
+    "academy.stage": "Professional competence",
+    "academy.next": "Next",
+    "academy.submit": "Submit",
+    "academy.submitting": "Submitting your answers …",
+    "academy.safetyCritical": "This situation involves safety-critical judgement.",
+    "academy.bestLegend": "Best action",
+    "academy.worstLegend": "Worst action",
+    "academy.writtenAnswer": "Your answer",
+    "academy.writtenPlaceholder": "Write in your own words.",
+    "academy.writtenNote": "Written answers are read by a person, not by a model.",
+    "academy.done.title": "Thank you — your answers are submitted",
+    "academy.done.body":
+      "Your answers have been saved. You will receive your development report once it has been released.",
+    "academy.done.reviewPending":
+      "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
+    "academy.error.title": "This assessment could not be opened",
+    "academy.error.notFound":
+      "We cannot find an assessment of yours at this link.",
+    "academy.error.notOpen":
+      "This assessment has already been submitted and cannot be changed.",
+    "academy.error.generic": "Something went wrong. Please try again shortly.",
   },
 } as const;
 
