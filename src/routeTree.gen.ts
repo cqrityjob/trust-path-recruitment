@@ -36,6 +36,7 @@ import { Route as CareerCenterProfessionRouteImport } from './routes/career-cent
 import { Route as CandidateRegisterRouteImport } from './routes/candidate.register'
 import { Route as CandidateLoginRouteImport } from './routes/candidate.login'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated.reviews'
 import { Route as AuthenticatedMyCareerRouteImport } from './routes/_authenticated.my-career'
 import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
 import { Route as AuthenticatedFeedbackRouteImport } from './routes/_authenticated.feedback'
@@ -250,6 +251,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMyCareerRoute = AuthenticatedMyCareerRouteImport.update({
   id: '/my-career',
@@ -739,6 +745,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof AuthenticatedFeedbackRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
@@ -840,6 +847,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/feedback': typeof AuthenticatedFeedbackRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
+  '/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
@@ -939,6 +947,7 @@ export interface FileRoutesById {
   '/_authenticated/feedback': typeof AuthenticatedFeedbackRoute
   '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/_authenticated/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
   '/candidate/register': typeof CandidateRegisterRoute
@@ -1047,6 +1056,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/journey'
     | '/my-career'
+    | '/reviews'
     | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
@@ -1148,6 +1158,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/feedback'
     | '/journey'
+    | '/reviews'
     | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
@@ -1246,6 +1257,7 @@ export interface FileRouteTypes {
     | '/_authenticated/feedback'
     | '/_authenticated/journey'
     | '/_authenticated/my-career'
+    | '/_authenticated/reviews'
     | '/admin/login'
     | '/candidate/login'
     | '/candidate/register'
@@ -1549,6 +1561,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/reviews': {
+      id: '/_authenticated/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof AuthenticatedReviewsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/my-career': {
       id: '/_authenticated/my-career'
@@ -2413,6 +2432,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedFeedbackRoute: typeof AuthenticatedFeedbackRoute
   AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
   AuthenticatedMyCareerRoute: typeof AuthenticatedMyCareerRouteWithChildren
+  AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedAcademyAttemptIdRoute: typeof AuthenticatedAcademyAttemptIdRoute
   AuthenticatedDiscoveryHistoryRoute: typeof AuthenticatedDiscoveryHistoryRoute
   AuthenticatedDiscoverySessionRoute: typeof AuthenticatedDiscoverySessionRoute
@@ -2431,6 +2451,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedbackRoute: AuthenticatedFeedbackRoute,
   AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
   AuthenticatedMyCareerRoute: AuthenticatedMyCareerRouteWithChildren,
+  AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedAcademyAttemptIdRoute: AuthenticatedAcademyAttemptIdRoute,
   AuthenticatedDiscoveryHistoryRoute: AuthenticatedDiscoveryHistoryRoute,
   AuthenticatedDiscoverySessionRoute: AuthenticatedDiscoverySessionRoute,

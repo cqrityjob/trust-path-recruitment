@@ -550,8 +550,8 @@ if [ "$J_RC" -ne 0 ]; then
   exit 1
 fi
 echo "    ok  ${J_PASSED} journey assertions passed"
-if [ "$J_PASSED" -lt 88 ]; then
-  echo "FAIL: expected at least 88 journey assertions, only ${J_PASSED} ran." >&2
+if [ "$J_PASSED" -lt 95 ]; then
+  echo "FAIL: expected at least 95 journey assertions, only ${J_PASSED} ran." >&2
   exit 1
 fi
 

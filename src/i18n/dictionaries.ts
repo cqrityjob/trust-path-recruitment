@@ -2174,6 +2174,11 @@ export const dictionaries = {
       "Genomförd övning registreras som ett svagt underlag. Den kan aldrig ensam höja en mognadsnivå — det kräver visad förmåga i skarpt läge.",
     "academy.learning.backHome": "Till min kompetensutveckling",
     "academy.learning.unavailable": "Övningen är inte tillgänglig just nu.",
+    "academy.reviews.adminLede":
+      "Fritextsvar som väntar på en mänsklig bedömning. Endast den som har granskningsbehörighet ser något här.",
+    "academy.reviews.adminEmptyTitle": "Inget väntar på granskning",
+    "academy.reviews.adminEmptyBody":
+      "Antingen finns inget att granska just nu, eller så saknar ditt konto granskningsbehörighet.",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -4340,6 +4345,11 @@ export const dictionaries = {
       "A completed practice run is recorded as weak evidence. On its own it can never raise a maturity level: that needs demonstrated performance.",
     "academy.learning.backHome": "To my competence development",
     "academy.learning.unavailable": "This practice is not available right now.",
+    "academy.reviews.adminLede":
+      "Written answers awaiting human judgement. Only an account with the review capability sees anything here.",
+    "academy.reviews.adminEmptyTitle": "Nothing is awaiting review",
+    "academy.reviews.adminEmptyBody":
+      "Either there is nothing to review right now, or your account does not hold the review capability.",
   },
 } as const;
 

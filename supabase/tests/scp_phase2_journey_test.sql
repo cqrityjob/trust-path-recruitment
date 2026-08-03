@@ -248,6 +248,11 @@ BEGIN
       PERFORM public.scp_save_response(_aid, _items[_i], NULL, NULL, NULL,
         'Jag skulle dokumentera vad som avvek, nar det skedde och vad jag gjorde.');
     ELSIF _formats[_i] = 'sjt_best_worst' THEN
+      -- TWO separate saves, because that is what a person does: pick the best,
+      -- then pick the worst. Saving both in one call -- which this test used to
+      -- do -- proved the row shape but never the SEQUENCE, and the product
+      -- shipped with a best/worst item that could not be answered at all.
+      PERFORM public.scp_save_response(_aid, _items[_i], NULL, _bests[_i], NULL, NULL);
       PERFORM public.scp_save_response(_aid, _items[_i], NULL, _bests[_i], _worsts[_i], NULL);
     ELSE
       PERFORM public.scp_save_response(_aid, _items[_i], _picks[_i], NULL, NULL, NULL);
@@ -967,6 +972,98 @@ SELECT pg_temp.ok(
   (SELECT count(DISTINCT audience) FROM public.scp_report_versions
     WHERE content_status = 'published') = 2,
   'J10.4 a published report template exists for BOTH audiences');
+
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J11 — best/worst is answerable one choice at a time'; END $$;
+
+-- =========================================================================
+-- Group J11 — incremental answering
+-- =========================================================================
+--
+-- The completeness invariant is real, but it belongs at SUBMISSION, not on
+-- every save. Enforced on every save it made the item unanswerable: the first
+-- of the two choices was always refused.
+
+CREATE TEMP TABLE bw AS
+SELECT fi.item_version_id AS iv,
+       (SELECT id FROM public.scp_item_options o
+         WHERE o.item_version_id = fi.item_version_id AND o.is_best_key)  AS best,
+       (SELECT id FROM public.scp_item_options o
+         WHERE o.item_version_id = fi.item_version_id AND o.is_worst_key) AS worst
+  FROM public.scp_form_items fi
+  JOIN public.scp_item_versions iv2 ON iv2.id = fi.item_version_id
+ WHERE fi.form_id = (SELECT form_id FROM public.scp_attempts WHERE id = :'aid'::uuid)
+   AND iv2.item_format = 'sjt_best_worst';
+SELECT iv AS bw_iv, best AS bw_best, worst AS bw_worst FROM bw \gset
+
+-- A fresh attempt to answer partially into, so the released one is untouched.
+DO $$
+DECLARE _new uuid; _a public.scp_attempts%ROWTYPE;
+BEGIN
+  SELECT a.* INTO _a FROM public.scp_attempts a WHERE a.id = (SELECT attempt_id FROM jfx);
+  INSERT INTO public.scp_attempts
+    (subject_id, issuer_organization_id, mode, form_id, assessment_version_id,
+     purpose_version_id, jurisdiction_id, scoring_model_version, status)
+  VALUES (_a.subject_id, _a.issuer_organization_id, 'assessment', _a.form_id,
+          _a.assessment_version_id, _a.purpose_version_id, _a.jurisdiction_id,
+          'det-v1', 'in_progress')
+  RETURNING id INTO _new;
+  CREATE TEMP TABLE bw_attempt AS SELECT _new AS id;
+END $$;
+SELECT id AS bw_aid FROM bw_attempt \gset
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE bw_first AS
+SELECT public.scp_save_response(:'bw_aid'::uuid, :'bw_iv'::uuid, NULL, :'bw_best'::uuid, NULL, NULL) AS id;
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT id FROM bw_first) IS NOT NULL,
+  'J11.1 the FIRST of two best/worst choices saves on its own');
+
+SELECT pg_temp.ok(
+  (SELECT worst_option_id IS NULL FROM public.scp_candidate_responses
+    WHERE attempt_id = :'bw_aid'::uuid AND item_version_id = :'bw_iv'::uuid),
+  'J11.2 the half-finished answer is stored as half-finished, not discarded');
+
+-- But it cannot become evidence in that state.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(
+  format('SELECT * FROM public.scp_submit_attempt(%L::uuid)', :'bw_aid'),
+  'SCP_INCOMPLETE_BEST_WORST',
+  'J11.3 submission refuses a half-finished best/worst answer');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Completing it lets submission through.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+CREATE TEMP TABLE bw_done AS
+SELECT public.scp_save_response(:'bw_aid'::uuid, :'bw_iv'::uuid, NULL,
+                                :'bw_best'::uuid, :'bw_worst'::uuid, NULL) AS id;
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT id FROM bw_done) IS NOT NULL,
+  'J11.4 adding the second choice completes the same row');
+
+-- The same option cannot be both.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(
+  format('SELECT public.scp_save_response(%L::uuid, %L::uuid, NULL, %L::uuid, %L::uuid, NULL)',
+         :'bw_aid', :'bw_iv', :'bw_best', :'bw_best'),
+  'SCP_RESPONSE_SHAPE',
+  'J11.5 the best and the worst option cannot be the same');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- And a row naming neither is still refused.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(
+  format('SELECT public.scp_save_response(%L::uuid, %L::uuid, NULL, NULL, NULL, NULL)',
+         :'bw_aid', :'bw_iv'),
+  'SCP_RESPONSE_SHAPE',
+  'J11.6 a best/worst answer naming neither option is still refused');
+RESET ROLE; RESET request.jwt.claim.sub;
 
 DO $$ BEGIN RAISE NOTICE 'scp_phase2_journey_test: ALL ASSERTIONS PASSED'; END $$;
 
