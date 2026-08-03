@@ -62,7 +62,6 @@ function LearningRoute() {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("loading");
   const [feedback, setFeedback] = useState<LearningFeedbackOption[] | null>(null);
-  const [written, setWritten] = useState(0);
 
   const locale = lang === "en" ? "en" : "sv";
 
@@ -170,6 +169,7 @@ function LearningRoute() {
   }
 
   if (!current) return null;
+  const hasFeedback = (feedback?.length ?? 0) > 0;
   const answered = items.filter((i) => i.savedOptionId).length;
   const isLast = index === items.length - 1;
 
@@ -194,7 +194,11 @@ function LearningRoute() {
             {current.prompt}
           </h2>
 
-          <fieldset className="mt-6 space-y-2.5" disabled={Boolean(feedback)}>
+          {/* Boolean([]) is true. Disabling on the ARRAY rather than on its
+              length locked the learner out whenever feedback came back empty:
+              radios frozen, no panel rendered, run stuck with no way forward.
+              The control is locked only once there is feedback to read. */}
+          <fieldset className="mt-6 space-y-2.5" disabled={hasFeedback}>
             <legend className="sr-only">{current.prompt}</legend>
             {current.options.map((o) => (
               <SelectableAnswer
@@ -209,16 +213,14 @@ function LearningRoute() {
             ))}
           </fieldset>
 
-          {feedback && feedback.length > 0 && (
-            <FeedbackPanel options={feedback} onWritten={() => setWritten((n) => n + 1)} />
-          )}
+          {hasFeedback && <FeedbackPanel options={feedback!} />}
         </div>
 
         <AssessmentNavigation
           onBack={() => setIndex((i) => Math.max(0, i - 1))}
           backDisabled={index === 0}
           forward={
-            feedback
+            hasFeedback
               ? isLast
                 ? {
                     label: t("academy.learning.finish"),
@@ -238,15 +240,8 @@ function LearningRoute() {
 
 /** Every option, with the reasoning. The learner's own choice is marked, and
  *  the preferred one is marked, and they are allowed to be the same. */
-function FeedbackPanel({
-  options,
-  onWritten,
-}: {
-  options: LearningFeedbackOption[];
-  onWritten: () => void;
-}) {
+function FeedbackPanel({ options }: { options: LearningFeedbackOption[] }) {
   const { t } = useT();
-  useEffect(onWritten, [onWritten]);
 
   return (
     <section
