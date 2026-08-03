@@ -514,6 +514,27 @@ if [ "$CONT_PASSED" -lt 50 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5f. Phase 2 read models and the scoped identity RPC
+# ---------------------------------------------------------------------------
+echo "==> Running Phase 2 identity and read-model assertions"
+set +e
+P2_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_phase2_identity_and_read_models_test.sql 2>&1)"
+P2_RC=$?
+set -e
+echo "$P2_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+P2_PASSED="$(echo "$P2_OUT" | grep -c "ok  " || true)"
+if [ "$P2_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Phase 2 suite exited with code ${P2_RC}." >&2
+  echo "$P2_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+echo "    ok  ${P2_PASSED} Phase 2 assertions passed"
+if [ "$P2_PASSED" -lt 17 ]; then
+  echo "FAIL: expected at least 17 Phase 2 assertions, only ${P2_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -554,5 +575,6 @@ echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
+echo "              ${P2_PASSED} Phase 2 identity assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="

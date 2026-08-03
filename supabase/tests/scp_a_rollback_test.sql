@@ -140,7 +140,12 @@ BEGIN
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
 END $$;
 
--- Phase 1 (Academy) comes off first: it sits on top of Phase 0.
+-- Phase 2 comes off first of all: its read models depend on Phase 1 columns.
+DROP VIEW IF EXISTS public.scp_rm_employer_assignments CASCADE;
+DROP VIEW IF EXISTS public.scp_rm_review_queue CASCADE;
+DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASCADE;
+
+-- Phase 1 (Academy) comes off next: it sits on top of Phase 0.
 DROP TABLE IF EXISTS public.scp_review_requirements     CASCADE;
 DELETE FROM public.scp_item_option_texts iot USING public.scp_item_options o,
        public.scp_item_versions iv
