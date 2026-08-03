@@ -1027,6 +1027,48 @@ SELECT pg_temp.ok(
   'J11.2 the half-finished answer is stored as half-finished, not discarded');
 
 -- But it cannot become evidence in that state.
+-- Answer every OTHER item, so the completeness gate (Phase 2l) is satisfied
+-- and the best/worst gate is the one actually under test. Without this the
+-- attempt trips SCP_INCOMPLETE_ATTEMPT first and J11.3 proves nothing about
+-- best/worst at all.
+DO $$
+DECLARE
+  _aid uuid; _fid uuid; _bw uuid; _r record; _i int;
+  _items uuid[] := '{}'; _fmts text[] := '{}'; _opts uuid[] := '{}';
+BEGIN
+  -- Gather items and options as the OWNER. A participant cannot read
+  -- scp_form_items or scp_item_options -- that is what the delivery function
+  -- exists for -- so a loop over them after SET ROLE silently yields nothing,
+  -- and the attempt stays unanswered while appearing to have been filled.
+  SELECT id INTO _aid FROM bw_attempt;
+  SELECT form_id INTO _fid FROM public.scp_attempts WHERE id = _aid;
+  SELECT iv INTO _bw FROM bw;
+
+  FOR _r IN SELECT fi.item_version_id AS ivid, iv.item_format AS fmt
+              FROM public.scp_form_items fi
+              JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+             WHERE fi.form_id = _fid AND fi.item_version_id <> _bw
+  LOOP
+    _items := _items || _r.ivid;
+    _fmts  := _fmts  || _r.fmt;
+    _opts  := _opts  || COALESCE((SELECT id FROM public.scp_item_options
+                                   WHERE item_version_id = _r.ivid
+                                   ORDER BY display_order LIMIT 1),
+                                 '00000000-0000-0000-0000-000000000000'::uuid);
+  END LOOP;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000003', true);
+  FOR _i IN 1 .. array_length(_items, 1) LOOP
+    IF _fmts[_i] = 'constructed_response' THEN
+      PERFORM public.scp_save_response(_aid, _items[_i], NULL, NULL, NULL, 'Ett skriftligt svar.');
+    ELSE
+      PERFORM public.scp_save_response(_aid, _items[_i], _opts[_i], NULL, NULL, NULL);
+    END IF;
+  END LOOP;
+  RESET ROLE;
+END $$;
+
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000003';
 SELECT pg_temp.must_fail(
@@ -1034,6 +1076,27 @@ SELECT pg_temp.must_fail(
   'SCP_INCOMPLETE_BEST_WORST',
   'J11.3 submission refuses a half-finished best/worst answer');
 RESET ROLE; RESET request.jwt.claim.sub;
+
+-- And the completeness gate itself, on an attempt that is simply unfinished.
+DO $$
+DECLARE _a public.scp_attempts%ROWTYPE; _new uuid;
+BEGIN
+  SELECT a.* INTO _a FROM public.scp_attempts a WHERE a.id = (SELECT attempt_id FROM jfx);
+  INSERT INTO public.scp_attempts
+    (subject_id, issuer_organization_id, mode, form_id, assessment_version_id,
+     purpose_version_id, jurisdiction_id, scoring_model_version, status)
+  VALUES (_a.subject_id, _a.issuer_organization_id, 'assessment', _a.form_id,
+          _a.assessment_version_id, _a.purpose_version_id, _a.jurisdiction_id,
+          'det-v1', 'in_progress')
+  RETURNING id INTO _new;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000003', true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT * FROM public.scp_submit_attempt(%L::uuid)', _new),
+    'SCP_INCOMPLETE_ATTEMPT',
+    'J11.3b an attempt with unanswered items cannot be submitted at all');
+  RESET ROLE;
+END $$;
 
 -- Completing it lets submission through.
 SET LOCAL ROLE authenticated;
