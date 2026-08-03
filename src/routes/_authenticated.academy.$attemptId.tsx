@@ -88,9 +88,8 @@ function AcademyAttemptRoute() {
   const current = items[index];
   const answered = useMemo(
     () =>
-      items.filter(
-        (i) => i.savedOptionId || (i.savedBestId && i.savedWorstId) || i.savedText,
-      ).length,
+      items.filter((i) => i.savedOptionId || (i.savedBestId && i.savedWorstId) || i.savedText)
+        .length,
     [items],
   );
 

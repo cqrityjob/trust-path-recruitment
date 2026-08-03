@@ -72,11 +72,7 @@ export function MaturityRow({
         <p className="text-sm font-medium text-foreground">{levelText}</p>
       </div>
 
-      <div
-        className="mt-3 flex gap-1"
-        role="img"
-        aria-label={`${name}: ${levelText}`}
-      >
+      <div className="mt-3 flex gap-1" role="img" aria-label={`${name}: ${levelText}`}>
         {ORDER.map((step, i) => (
           <span
             key={step}
@@ -121,9 +117,7 @@ export function SafetyFlagNotice({ count }: { count: number }) {
         {t("academy.safety.title")}
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-        {count === 1
-          ? t("academy.safety.bodyOne")
-          : `${count} ${t("academy.safety.bodyMany")}`}
+        {count === 1 ? t("academy.safety.bodyOne") : `${count} ${t("academy.safety.bodyMany")}`}
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
         {t("academy.safety.followUp")}

@@ -90,15 +90,7 @@ export function AcademyOverview({
   );
 }
 
-function Stat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Users;
-  label: string;
-  value: number;
-}) {
+function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
   return (
     <div className="rounded-[14px] border border-border bg-card p-5">
       <p className="flex items-center gap-2 text-[13px] text-muted-foreground">

@@ -19,14 +19,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-type Ctx = { supabase: any; userId: string };
+import type { Ctx, RpcRow } from "./rpc-types";
 
 /** One item as the participant sees it. Labels only — never a key or a score. */
 export type AcademyItem = {
   itemVersionId: string;
   displayOrder: number;
-  itemFormat: "sjt_best_response" | "sjt_best_worst" | "sjt_rate_effectiveness" | "constructed_response";
+  itemFormat:
+    | "sjt_best_response"
+    | "sjt_best_worst"
+    | "sjt_rate_effectiveness"
+    | "constructed_response";
   scenario: string;
   prompt: string;
   isSafetyCritical: boolean;
@@ -62,7 +65,10 @@ function classify(dbMessage: string, fallback: AcademyDeliveryErrorCode): Academ
   if (dbMessage.includes("SCP_ATTEMPT_NOT_YOURS")) {
     return new AcademyDeliveryError("not_found", dbMessage);
   }
-  if (dbMessage.includes("SCP_ATTEMPT_NOT_OPEN") || dbMessage.includes("SCP_ATTEMPT_ALREADY_SUBMITTED")) {
+  if (
+    dbMessage.includes("SCP_ATTEMPT_NOT_OPEN") ||
+    dbMessage.includes("SCP_ATTEMPT_ALREADY_SUBMITTED")
+  ) {
     return new AcademyDeliveryError("not_open", dbMessage);
   }
   if (dbMessage.includes("SCP_ITEM_NOT_ON_FORM")) {
@@ -94,20 +100,18 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
     if (error) throw classify(error.message ?? "", "load_failed");
 
     return (rows ?? []).map(
-      (r: Record<string, unknown>): AcademyItem => ({
+      (r: RpcRow): AcademyItem => ({
         itemVersionId: String(r.item_version_id),
         displayOrder: Number(r.display_order),
         itemFormat: r.item_format as AcademyItem["itemFormat"],
         scenario: String(r.scenario),
         prompt: String(r.prompt),
         isSafetyCritical: Boolean(r.is_safety_critical),
-        options: (Array.isArray(r.options) ? r.options : []).map(
-          (o: Record<string, unknown>) => ({
-            optionId: String(o.option_id),
-            optionKey: String(o.option_key),
-            label: String(o.label),
-          }),
-        ),
+        options: (Array.isArray(r.options) ? r.options : []).map((o: RpcRow) => ({
+          optionId: String(o.option_id),
+          optionKey: String(o.option_key),
+          label: String(o.label),
+        })),
         savedOptionId: r.saved_option_id ? String(r.saved_option_id) : null,
         savedBestId: r.saved_best_id ? String(r.saved_best_id) : null,
         savedWorstId: r.saved_worst_id ? String(r.saved_worst_id) : null,
@@ -165,7 +169,7 @@ export const submitAcademyAttempt = createServerFn({ method: "POST" })
         _attempt_id: data.attemptId,
       });
       if (error) throw classify(error.message ?? "", "submit_failed");
-      const r = (Array.isArray(rows) ? rows[0] : rows) as Record<string, unknown> | undefined;
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow | undefined;
       return {
         evidenceWritten: Number(r?.evidence_written ?? 0),
         reviewsOpened: Number(r?.reviews_opened ?? 0),

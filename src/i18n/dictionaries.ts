@@ -1988,10 +1988,8 @@ export const dictionaries = {
     "academy.done.reviewPending":
       "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
     "academy.error.title": "Det gick inte att öppna bedömningen",
-    "academy.error.notFound":
-      "Vi hittar ingen pågående bedömning för dig på den här länken.",
-    "academy.error.notOpen":
-      "Den här bedömningen är redan inlämnad och kan inte ändras.",
+    "academy.error.notFound": "Vi hittar ingen pågående bedömning för dig på den här länken.",
+    "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Assessment Center",
@@ -2019,7 +2017,8 @@ export const dictionaries = {
     "academy.library.duration": "Tidsåtgång",
     "academy.library.doesNotMeasure": "Mäter inte",
     "academy.library.assign": "Tilldela",
-    "academy.library.notAssignable": "Kan inte tilldelas ännu — under utveckling och ännu inte validerad.",
+    "academy.library.notAssignable":
+      "Kan inte tilldelas ännu — under utveckling och ännu inte validerad.",
     "academy.library.needsAdmin": "Endast ägare och administratörer kan tilldela.",
     "academy.library.emptyTitle": "Inga program ännu",
     "academy.library.emptyBody": "När ett program har publicerats visas det här.",
@@ -2053,7 +2052,8 @@ export const dictionaries = {
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
     "academy.participants.reassessmentFailed": "Omprövningen kunde inte bokas.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
-    "academy.participants.emptyBody": "Tilldela ett program från testbiblioteket för att komma igång.",
+    "academy.participants.emptyBody":
+      "Tilldela ett program från testbiblioteket för att komma igång.",
     "academy.attempt.inProgress": "Pågår",
     "academy.attempt.submitted": "Inlämnad",
     "academy.attempt.scored": "Bedömd",
@@ -2886,8 +2886,7 @@ export const dictionaries = {
     "cd.public.factStages":
       "2 about where you are · 20 that build your Security Career DNA · 4 about your direction",
     "cd.public.factNoJudgement": "No right or wrong answers",
-    "cd.public.factNoJudgementBody":
-      "This is not a judgement of your competence or employability.",
+    "cd.public.factNoJudgementBody": "This is not a judgement of your competence or employability.",
     "cd.public.factNoAccountShort": "No account needed to begin",
     "cd.public.factNoAccountBody":
       "Your answers stay in this tab. You only sign in when you want to save the result.",
@@ -4159,10 +4158,8 @@ export const dictionaries = {
     "academy.done.reviewPending":
       "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
     "academy.error.title": "This assessment could not be opened",
-    "academy.error.notFound":
-      "We cannot find an assessment of yours at this link.",
-    "academy.error.notOpen":
-      "This assessment has already been submitted and cannot be changed.",
+    "academy.error.notFound": "We cannot find an assessment of yours at this link.",
+    "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Assessment Center",
@@ -4190,7 +4187,8 @@ export const dictionaries = {
     "academy.library.duration": "Time needed",
     "academy.library.doesNotMeasure": "Does not measure",
     "academy.library.assign": "Assign",
-    "academy.library.notAssignable": "Cannot be assigned yet — in development and not yet validated.",
+    "academy.library.notAssignable":
+      "Cannot be assigned yet — in development and not yet validated.",
     "academy.library.needsAdmin": "Only owners and administrators can assign.",
     "academy.library.emptyTitle": "No programmes yet",
     "academy.library.emptyBody": "Published programmes will appear here.",
@@ -4291,7 +4289,8 @@ export const dictionaries = {
     "academy.observation.one": "1 observation",
     "academy.observation.many": "observations",
     "academy.safety.title": "Safety-critical follow-up",
-    "academy.safety.bodyOne": "One answer involves safety-critical judgement and needs following up.",
+    "academy.safety.bodyOne":
+      "One answer involves safety-critical judgement and needs following up.",
     "academy.safety.bodyMany": "answers involve safety-critical judgement and need following up.",
     "academy.safety.followUp":
       "This is shown regardless of the rest of the evidence. A high maturity level never removes a safety-critical finding.",
@@ -4340,7 +4339,8 @@ export const dictionaries = {
     "academy.learning.yourChoice": "Your choice",
     "academy.learning.finish": "Finish practice",
     "academy.learning.doneTitle": "Practice complete",
-    "academy.learning.doneBody": "You can do it again whenever you like — repeat attempts are the point.",
+    "academy.learning.doneBody":
+      "You can do it again whenever you like — repeat attempts are the point.",
     "academy.learning.doneWeight":
       "A completed practice run is recorded as weak evidence. On its own it can never raise a maturity level: that needs demonstrated performance.",
     "academy.learning.backHome": "To my competence development",

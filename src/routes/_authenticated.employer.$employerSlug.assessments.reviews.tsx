@@ -27,9 +27,7 @@ import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { getAcademyReviewPressure } from "@/lib/security-competency/academy-employer.functions";
 import { ReviewQueue } from "@/components/academy/ReviewQueue";
 
-export const Route = createFileRoute(
-  "/_authenticated/employer/$employerSlug/assessments/reviews",
-)({
+export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/reviews")({
   ssr: false,
   component: ReviewsRoute,
   errorComponent: EmployerErrorState,
@@ -52,7 +50,6 @@ function Reviews({ employerId }: { employerId: string }) {
     queryKey: ["academy", "review-pressure", employerId],
     queryFn: () => pressureFn({ data: { employerId } }),
   });
-
 
   return (
     <>
@@ -101,4 +98,3 @@ function Metric({
     </div>
   );
 }
-

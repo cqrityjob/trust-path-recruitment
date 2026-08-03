@@ -57,10 +57,7 @@ function AcademyHome() {
         <h2 className="mb-3 text-sm font-semibold text-foreground">{t("academy.home.assigned")}</h2>
         {work.isLoading && <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>}
         {!work.isLoading && assessments.length === 0 && (
-          <NoEvidenceState
-            title={t("academy.home.noneTitle")}
-            body={t("academy.home.noneBody")}
-          />
+          <NoEvidenceState title={t("academy.home.noneTitle")} body={t("academy.home.noneBody")} />
         )}
         <div className="space-y-3">
           {assessments.map((a) => (

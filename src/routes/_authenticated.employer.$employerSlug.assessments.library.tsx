@@ -27,9 +27,7 @@ import {
   type LibraryEntry,
 } from "@/lib/security-competency/academy-employer.functions";
 
-export const Route = createFileRoute(
-  "/_authenticated/employer/$employerSlug/assessments/library",
-)({
+export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/library")({
   ssr: false,
   component: LibraryRoute,
   errorComponent: EmployerErrorState,

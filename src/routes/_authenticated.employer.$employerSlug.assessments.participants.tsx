@@ -170,7 +170,9 @@ function ParticipantCard({
           <span className="tabular-nums">{row.reviewsOutstanding}</span>
         </Fact>
         <Fact label={t("academy.participants.deadline")}>
-          {row.deadline ? new Date(row.deadline).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE") : "—"}
+          {row.deadline
+            ? new Date(row.deadline).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")
+            : "—"}
         </Fact>
         <Fact label={t("academy.participants.released")}>
           {row.releasedAt
@@ -219,7 +221,9 @@ function ParticipantCard({
             type="button"
             onClick={() => releaseM.mutate()}
             disabled={releaseM.isPending || row.attemptStatus !== "scored"}
-            title={row.attemptStatus !== "scored" ? t("academy.participants.releaseBlocked") : undefined}
+            title={
+              row.attemptStatus !== "scored" ? t("academy.participants.releaseBlocked") : undefined
+            }
             className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Send className="h-4 w-4" aria-hidden="true" />

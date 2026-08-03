@@ -26,6 +26,7 @@ import {
   getAcademyReport,
   getDevelopmentRecommendations,
   getSubjectProgress,
+  type ProgressRow,
 } from "@/lib/security-competency/academy-employer.functions";
 
 export const Route = createFileRoute(
@@ -134,7 +135,7 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
             {t("academy.results.recommendationsLede")}
           </p>
           <ul className="mt-4 space-y-3">
-            {(recs.data ?? []).map((m: any) => (
+            {(recs.data ?? []).map((m) => (
               <li key={m.moduleVersionId} className="rounded-[10px] border border-border p-4">
                 <p className="text-sm font-semibold text-foreground">
                   {lang === "en" ? m.nameEn : m.nameSv}
@@ -170,7 +171,7 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
   );
 }
 
-function ProgressTable({ rows }: { rows: any[] }) {
+function ProgressTable({ rows }: { rows: ProgressRow[] }) {
   const { t, lang } = useT();
   const dates = Array.from(new Set(rows.map((r) => r.releasedAt))).sort();
   const comps = Array.from(new Set(rows.map((r) => r.competencyCode)));

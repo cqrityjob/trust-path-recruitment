@@ -81,7 +81,7 @@ function ParticipantReport() {
 
   const r = report.data;
   const limitations = lang === "en" ? r.limitationsEn : r.limitationsSv;
-  const releaseDates = Array.from(new Set((progress.data ?? []).map((p: any) => p.releasedAt)));
+  const releaseDates = Array.from(new Set((progress.data ?? []).map((p) => p.releasedAt)));
 
   return (
     <AssessmentShell wide>
@@ -133,14 +133,12 @@ function ParticipantReport() {
 
       {(recs.data?.length ?? 0) > 0 && (
         <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold text-foreground">
-            {t("academy.report.suggested")}
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">{t("academy.report.suggested")}</h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
             {t("academy.report.suggestedLede")}
           </p>
           <ul className="mt-4 space-y-3">
-            {(recs.data ?? []).map((m: any) => (
+            {(recs.data ?? []).map((m) => (
               <li key={m.moduleVersionId} className="rounded-[10px] border border-border p-4">
                 <p className="text-sm font-semibold text-foreground">
                   {lang === "en" ? m.nameEn : m.nameSv}
@@ -162,10 +160,11 @@ function ParticipantReport() {
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {(progress.data ?? []).map((p: any, i: number) => (
+            {(progress.data ?? []).map((p, i) => (
               <li key={`${p.attemptId}-${p.competencyCode}-${i}`} className="text-[13px]">
                 <span className="text-muted-foreground">
-                  {new Date(p.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")} ·{" "}
+                  {new Date(p.releasedAt).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")}{" "}
+                  ·{" "}
                 </span>
                 <span className="font-medium text-foreground">
                   {lang === "en" ? p.competencyNameEn : p.competencyNameSv}

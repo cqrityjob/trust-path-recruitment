@@ -17,7 +17,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
-import { completeReview, listReviewQueue } from "@/lib/security-competency/academy-employer.functions";
+import {
+  completeReview,
+  listReviewQueue,
+} from "@/lib/security-competency/academy-employer.functions";
 
 export type ReviewQueueRow = {
   reviewId: string;
@@ -95,9 +98,7 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
         <h2 className="text-sm font-semibold text-foreground">
           {t(TRIGGER_LABEL[review.triggerReason] ?? "academy.reviews.triggerOther")}
         </h2>
-        <p className="font-mono text-xs text-muted-foreground">
-          {review.subjectId.slice(0, 8)}
-        </p>
+        <p className="font-mono text-xs text-muted-foreground">{review.subjectId.slice(0, 8)}</p>
       </div>
 
       {/* Untrusted candidate text. Rendered as text, never as markup. */}

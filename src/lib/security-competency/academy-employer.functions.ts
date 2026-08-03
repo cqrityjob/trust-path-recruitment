@@ -13,8 +13,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-type Ctx = { supabase: any; userId: string };
+import type { Ctx, RpcRow } from "./rpc-types";
 
 export type MaturityLevel =
   | "no_evidence"
@@ -79,6 +78,29 @@ export type ReportSnapshot = {
   limitationsEn: string[];
 };
 
+export type DevelopmentRecommendation = {
+  moduleVersionId: string;
+  nameSv: string;
+  nameEn: string;
+  summarySv: string;
+  summaryEn: string;
+  estimatedMinutes: number | null;
+  addressesSv: string;
+  addressesEn: string;
+  maturityLevel: MaturityLevel;
+};
+
+export type ProgressRow = {
+  releasedAt: string;
+  attemptId: string;
+  competencyCode: string;
+  competencyNameSv: string;
+  competencyNameEn: string;
+  maturityLevel: MaturityLevel;
+  observations: number;
+  safetyFlagCount: number;
+};
+
 export class AcademyEmployerError extends Error {
   constructor(
     readonly code: string,
@@ -107,7 +129,7 @@ export const listAcademyLibrary = createServerFn({ method: "GET" })
       _employer_id: data.employerId,
     });
     if (error) throw fail(error.message, "library_failed");
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       assessmentVersionId: String(r.assessment_version_id),
       slug: String(r.definition_slug),
       nameSv: String(r.name_sv),
@@ -139,21 +161,19 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(
-    async ({ data, context }): Promise<{ assignmentId: string; attemptId: string }> => {
-      const ctx = context as Ctx;
-      const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assign", {
-        _employer_id: data.employerId,
-        _assessment_version_id: data.assessmentVersionId,
-        _recipient_email: data.recipientEmail,
-        _deadline: data.deadline,
-        _language: data.language,
-      });
-      if (error) throw fail(error.message, "assign_failed");
-      const r = (Array.isArray(rows) ? rows[0] : rows) as Record<string, any>;
-      return { assignmentId: String(r.assignment_id), attemptId: String(r.attempt_id) };
-    },
-  );
+  .handler(async ({ data, context }): Promise<{ assignmentId: string; attemptId: string }> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assign", {
+      _employer_id: data.employerId,
+      _assessment_version_id: data.assessmentVersionId,
+      _recipient_email: data.recipientEmail,
+      _deadline: data.deadline,
+      _language: data.language,
+    });
+    if (error) throw fail(error.message, "assign_failed");
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+    return { assignmentId: String(r.assignment_id), attemptId: String(r.attempt_id) };
+  });
 
 export const listAcademyParticipants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -164,7 +184,7 @@ export const listAcademyParticipants = createServerFn({ method: "GET" })
       _employer_id: data.employerId,
     });
     if (error) throw fail(error.message, "participants_failed");
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       subjectId: String(r.subject_id),
       attemptId: String(r.attempt_id),
       assignmentId: r.assignment_id ? String(r.assignment_id) : null,
@@ -195,7 +215,7 @@ export const getAcademyReviewPressure = createServerFn({ method: "GET" })
         _employer_id: data.employerId,
       });
       if (error) throw fail(error.message, "pressure_failed");
-      const r = (Array.isArray(rows) ? rows[0] : rows) as Record<string, any> | undefined;
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow | undefined;
       return {
         awaitingReview: Number(r?.awaiting_review ?? 0),
         attemptsBlocked: Number(r?.attempts_blocked ?? 0),
@@ -222,7 +242,7 @@ export const resolveParticipantIdentity = createServerFn({ method: "POST" })
       _subject_id: data.subjectId,
     });
     if (error) return null;
-    const r = (Array.isArray(rows) ? rows[0] : rows) as Record<string, any> | undefined;
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow | undefined;
     return r?.display_email ? { email: String(r.display_email) } : null;
   });
 
@@ -257,7 +277,7 @@ export const scheduleAcademyReassessment = createServerFn({ method: "POST" })
       _deadline: data.deadline,
     });
     if (error) throw fail(error.message, "reassessment_failed");
-    const r = (Array.isArray(rows) ? rows[0] : rows) as Record<string, any>;
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
     return { attemptId: String(r.attempt_id) };
   });
 
@@ -291,24 +311,30 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error || !row) return null;
 
-    const tmpl = (row as any).scp_report_versions ?? {};
+    // The joined template arrives as a nested object PostgREST types loosely.
+    const tmpl = ((row as RpcRow).scp_report_versions ?? {}) as {
+      limitations_sv?: string[];
+      limitations_en?: string[];
+    };
     return {
       id: String(row.id),
       attemptId: String(row.attempt_id),
       subjectId: String(row.subject_id),
       audience: row.audience,
       releasedAt: String(row.released_at),
-      lines: (Array.isArray(row.payload) ? row.payload : []).map((x: any) => ({
+      lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
         competencyCode: String(x.competency_code),
         competencyNameSv: String(x.competency_name_sv),
         competencyNameEn: String(x.competency_name_en),
         maturityLevel: x.maturity_level as MaturityLevel,
         observations: Number(x.observations ?? 0),
       })),
-      safetyFlags: (Array.isArray(row.safety_flags) ? row.safety_flags : []).map((f: any) => ({
-        severity: f.severity ?? null,
-        observedAt: String(f.observed_at),
-      })),
+      safetyFlags: (Array.isArray(row.safety_flags) ? (row.safety_flags as RpcRow[]) : []).map(
+        (f) => ({
+          severity: (f.severity as string | null) ?? null,
+          observedAt: String(f.observed_at),
+        }),
+      ),
       limitationsSv: tmpl.limitations_sv ?? [],
       limitationsEn: tmpl.limitations_en ?? [],
     };
@@ -317,13 +343,13 @@ export const getAcademyReport = createServerFn({ method: "GET" })
 export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ subjectId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<DevelopmentRecommendation[]> => {
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase.rpc("scp_development_recommendations", {
       _subject_id: data.subjectId,
     });
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       moduleVersionId: String(r.module_version_id),
       nameSv: String(r.module_name_sv),
       nameEn: String(r.module_name_en),
@@ -339,13 +365,13 @@ export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
 export const getSubjectProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ subjectId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<ProgressRow[]> => {
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase.rpc("scp_subject_progress", {
       _subject_id: data.subjectId,
     });
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       releasedAt: String(r.released_at),
       attemptId: String(r.attempt_id),
       competencyCode: String(r.competency_code),
@@ -370,7 +396,7 @@ export const listReviewQueue = createServerFn({ method: "GET" })
       .eq("review_status", "pending")
       .order("opened_at", { ascending: true });
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       reviewId: String(r.review_id),
       triggerReason: String(r.trigger_reason),
       openedAt: String(r.opened_at),

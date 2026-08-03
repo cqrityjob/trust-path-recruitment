@@ -74,7 +74,7 @@ function Programmes({ employerId }: { employerId: string }) {
           </div>
         ) : (
           <ul className="mt-4 space-y-3">
-            {(modules.data ?? []).map((m: any) => (
+            {(modules.data ?? []).map((m) => (
               <li key={m.moduleVersionId} className="rounded-[10px] border border-border p-4">
                 <p className="text-sm font-semibold text-foreground">
                   {lang === "en" ? m.nameEn : m.nameSv}

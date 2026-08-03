@@ -15,8 +15,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-type Ctx = { supabase: any; userId: string };
+import type { Ctx, RpcRow } from "./rpc-types";
 
 export type LearningFeedbackOption = {
   optionId: string;
@@ -42,6 +41,15 @@ export type MyAssignment = {
   purposeEn: string | null;
 };
 
+export type LearningModuleSummary = {
+  moduleVersionId: string;
+  nameSv: string;
+  nameEn: string;
+  summarySv: string;
+  summaryEn: string;
+  estimatedMinutes: number | null;
+};
+
 export class AcademyLearningError extends Error {
   constructor(
     readonly code: string,
@@ -65,7 +73,7 @@ export const listMyAcademyWork = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase.rpc("scp_my_academy_assignments");
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       attemptId: String(r.attempt_id),
       mode: r.mode as "assessment" | "learning",
       programmeNameSv: r.programme_name_sv ?? null,
@@ -84,7 +92,7 @@ export const listMyAcademyWork = createServerFn({ method: "GET" })
 /** The published learning forms available to practise on. */
 export const listLearningModules = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<LearningModuleSummary[]> => {
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase
       .from("scp_module_versions")
@@ -92,7 +100,7 @@ export const listLearningModules = createServerFn({ method: "GET" })
       .eq("content_status", "published")
       .order("display_order", { ascending: true });
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       moduleVersionId: String(r.id),
       nameSv: String(r.name_sv),
       nameEn: String(r.name_en),
@@ -151,7 +159,7 @@ export const getLearningFeedback = createServerFn({ method: "GET" })
     // An empty result is the normal answer when a precondition is unmet — the
     // learner has not answered yet, or this is not a learning item. Not an error.
     if (error) return [];
-    return (rows ?? []).map((r: Record<string, any>) => ({
+    return (rows ?? []).map((r: RpcRow) => ({
       optionId: String(r.option_id),
       label: String(r.label),
       isPreferred: Boolean(r.is_preferred),
