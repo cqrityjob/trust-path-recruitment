@@ -155,7 +155,7 @@ WITH r AS (
   INSERT INTO public.scp_purpose_versions
     (purpose_code, version_number, privacy_notice_version, lawful_basis_reference,
      jurisdiction_id, published_at)
-  SELECT 'competence_development', 1, 'pn-v1', 'GDPR Art.6(1)(f) legitimate interest — competence development',
+  SELECT 'competence_development', 801, 'pn-v1', 'GDPR Art.6(1)(f) legitimate interest — competence development',
          (SELECT id FROM public.scp_jurisdictions WHERE code = 'SE'), now()
   RETURNING id
 )

@@ -929,6 +929,45 @@ SELECT pg_temp.ok(
            AND pv.purpose_sv = l.programme_purpose_sv)) = 0,
   'J9.11 a fixture never shows the REAL programme''s purpose — the original defect');
 
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J10 — the seeded preconditions a real database needs'; END $$;
+
+-- =========================================================================
+-- Group J10 — preconditions, tested WITHOUT a fixture
+-- =========================================================================
+--
+-- These assertions deliberately query the SEEDED state and build nothing.
+-- Every other group creates its own purpose version, which is exactly how the
+-- Assessment Center shipped unable to assign anything on a clean database: the
+-- fixtures supplied the precondition production lacked, and 85 assertions
+-- passed over the gap. Anything a real database must already contain belongs
+-- here, where a fixture cannot paper over it.
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_purpose_versions pv
+     JOIN public.scp_processing_purposes p ON p.code = pv.purpose_code
+    WHERE p.is_active AND pv.published_at IS NOT NULL) >= 1,
+  'J10.1 a clean database already has an active, published processing purpose');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_purpose_versions pv
+     JOIN public.scp_processing_purposes p ON p.code = pv.purpose_code
+    WHERE NOT p.is_active AND pv.published_at IS NOT NULL) = 0,
+  'J10.2 no INACTIVE purpose is published — selection_support stays unusable');
+
+SELECT pg_temp.ok(
+  (SELECT lawful_basis_reference IS NOT NULL AND privacy_notice_version IS NOT NULL
+     FROM public.scp_purpose_versions
+    WHERE purpose_code = 'competence_development' ORDER BY version_number LIMIT 1),
+  'J10.3 the seeded purpose names its lawful basis and privacy notice');
+
+-- A published report template per audience must also already exist, or release
+-- fails the same way assignment did.
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT audience) FROM public.scp_report_versions
+    WHERE content_status = 'published') = 2,
+  'J10.4 a published report template exists for BOTH audiences');
+
 DO $$ BEGIN RAISE NOTICE 'scp_phase2_journey_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;
