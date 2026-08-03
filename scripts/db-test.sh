@@ -596,6 +596,7 @@ echo "              ${PL_PASSED} v3.1 personal layer assertions,"
 echo "              ${GRAPH_PASSED} Competency Graph assertions,"
 echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
-echo "              ${P2_PASSED} Phase 2 identity assertions,"
+echo "              ${P2_PASSED} Phase 2 identity assertions,
+              ${J_PASSED} Phase 2 journey assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions"
 echo "===================================================="
