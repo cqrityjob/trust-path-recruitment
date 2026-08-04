@@ -129,6 +129,26 @@ KNOWN_FAILURES=(
   "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql|||relation \"scp_scoring_version_lineage\" already exists"
   "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql|||relation \"cd_definition_versions\" already exists"
   "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
+  # ---- Lovable Cloud sync re-issue, 2026-08-04 block ----
+  #
+  # Cloud re-issued the Phase 1A/1B/1C/1F migrations under its own generated
+  # filenames while this repository already carried the authored originals.
+  # Because Cloud's timestamps are EARLIER, its copies now run first on a clean
+  # replay and the authored files find their triggers already present.
+  #
+  # 20260804063710 was verified byte-equivalent to 20260804090000: identical
+  # columns, identical scp_review_requirements table, identical two triggers.
+  # Nothing the authored file creates is lost by it failing second.
+  #
+  # 20260804063418 is different in kind: it is a Cloud reconciliation migration
+  # that REFUSES to set NOT NULL on a populated table. On a clean replay the
+  # table has rows by then, so the refusal is the guard working correctly.
+  "20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql|||trigger \"scp_behaviour_versions_require_competency\" for relation \"scp_behaviour_versions\" already exists"
+  "20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql|||trigger \"scp_program_versions_require_limits\" for relation \"scp_program_versions\" already exists"
+  "20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql|||trigger \"scp_rubric_versions_complete\" for relation \"scp_rubric_versions\" already exists"
+  "20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql|||trigger \"scp_ai_providers_single_enabled\" for relation \"scp_ai_providers\" already exists"
+  "20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql|||SCP_RECONCILE_ITEM_VERSIONS: table is not empty, refusing to set NOT NULL"
+  "20260804090000_scp_phase1f_content_schema.sql|||trigger \"scp_item_versions_learning_counterpart\" for relation \"scp_item_versions\" already exists"
   # Cloud re-issued 20260729090000 as 20260729075534, i.e. under an EARLIER
   # timestamp, so on replay Cloud's copy runs first and the authored file
   # then hits "already exists". Section 0 of the authored file (the

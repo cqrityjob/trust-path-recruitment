@@ -724,14 +724,20 @@ SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_report_snapshots',
 -- Structure metadata is deliberately public: no candidate data, no weights.
 SELECT pg_temp.ok((SELECT count(*) FROM public.cd_definition_versions) >= 1,
   'G12.4 anon may read definition metadata (carries no candidate data)');
--- Scoped to v3.0's own definition version. The instrument is versioned, so a
--- count across every version would change every time a new one is added and
--- would assert nothing about v3.0.
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_definition_items di
-     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
-    WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
-  'G12.5 anon may read the item registry (carries no candidate data, no weights)');
+-- G12.5 previously asserted that anon MAY read the item registry. That is no
+-- longer true, and the change was deliberate: migration 20260803114922 (a
+-- Lovable Cloud security sweep) revoked anon's SELECT on cd_definition_items
+-- under the heading "no anonymous access; live versions for signed-in users".
+--
+-- The tightened rule is the stronger one and no application path depends on
+-- the old behaviour -- the public v3.1 flow serves its items from TypeScript
+-- and touches the database only once a visitor signs in. So the assertion is
+-- inverted to match reality rather than the grant being restored to satisfy a
+-- stale test.
+SELECT pg_temp.must_fail(
+  'SELECT count(*) FROM public.cd_definition_items',
+  'permission denied',
+  'G12.5 anon may NOT read the item registry (revoked 20260803114922)');
 RESET ROLE;
 
 -- Anonymous session support is RESERVED, not implemented.
