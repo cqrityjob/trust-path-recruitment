@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 import { ShieldCheck } from "lucide-react";
+import { useT } from "@/i18n/context";
+import { professionFamilies } from "@/lib/career-center";
+
+// The public taxonomy counts every family except the "exploring" entry path,
+// matching the browse grid and the CareerSearch filter.
+const careerAreaCount = professionFamilies.filter((f) => !f.isEntryPath).length;
 
 export function CareerHero({
   eyebrow,
@@ -12,6 +18,8 @@ export function CareerHero({
   lead?: string;
   actions?: ReactNode;
 }) {
+  const { t } = useT();
+
   return (
     <section className="relative overflow-hidden border-b border-border bg-secondary/60">
       {/* Restrained editorial background — subtle radial + faint grid, no photos */}
@@ -62,27 +70,43 @@ export function CareerHero({
           <div className="relative rounded-xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur">
             <div className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-[color:var(--gold)]/50 to-transparent" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              CQrityjob
+              {t("brand.name")}
             </p>
             <p className="mt-3 text-sm leading-relaxed text-foreground/90">
-              Sveriges karriärplattform för säkerhetsbranschen — verifierade yrken, tydliga vägar, mätbar kompetens.
+              {t("cc.hero.stats.lead")}
             </p>
             <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-border/70 pt-5">
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Yrken</dt>
-                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">60+</dd>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("cc.hero.stats.professions.label")}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {t("cc.hero.stats.professions.value")}
+                </dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Familjer</dt>
-                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">14</dd>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("cc.hero.stats.areas.label")}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {careerAreaCount}
+                </dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Språk</dt>
-                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">SV · EN</dd>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("cc.hero.stats.languages.label")}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {t("cc.hero.stats.languages.value")}
+                </dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Modell</dt>
-                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">v1.0</dd>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  {t("cc.hero.stats.model.label")}
+                </dt>
+                <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                  {t("cc.hero.stats.model.value")}
+                </dd>
               </div>
             </dl>
           </div>
