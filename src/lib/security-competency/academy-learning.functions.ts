@@ -72,7 +72,7 @@ export const listMyAcademyWork = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<MyAssignment[]> => {
     const ctx = context as Ctx;
     const { data: rows, error } = await ctx.supabase.rpc("scp_my_academy_assignments");
-    if (error) return [];
+    if (error) throw fail(error.message, "my_work_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       attemptId: String(r.attempt_id),
       mode: r.mode as "assessment" | "learning",
@@ -99,7 +99,7 @@ export const listLearningModules = createServerFn({ method: "GET" })
       .select("id, name_sv, name_en, summary_sv, summary_en, estimated_minutes, display_order")
       .eq("content_status", "published")
       .order("display_order", { ascending: true });
-    if (error) return [];
+    if (error) throw fail(error.message, "modules_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       moduleVersionId: String(r.id),
       nameSv: String(r.name_sv),
