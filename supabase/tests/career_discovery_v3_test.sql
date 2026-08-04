@@ -724,14 +724,14 @@ SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_report_snapshots',
 -- Structure metadata is deliberately public: no candidate data, no weights.
 SELECT pg_temp.ok((SELECT count(*) FROM public.cd_definition_versions) >= 1,
   'G12.4 anon may read definition metadata (carries no candidate data)');
--- Scoped to v3.0's own definition version. The instrument is versioned, so a
--- count across every version would change every time a new one is added and
--- would assert nothing about v3.0.
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_definition_items di
-     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
-    WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
-  'G12.5 anon may read the item registry (carries no candidate data, no weights)');
+-- The item registry is NOT public. Phase 1 hardening (20260728130000) granted
+-- anon SELECT on it, and 20260803114922 deliberately took that back --
+-- "cd_definition_items: no anonymous access" -- with an explicit
+-- REVOKE SELECT ... FROM anon, replacing the anon-readable policy with two
+-- scoped to authenticated. This assertion tracked the old posture and was the
+-- one member of Group 12 contradicting the group's own contract above.
+SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_definition_items',
+  'permission denied', 'G12.5 anon is denied all access to cd_definition_items');
 RESET ROLE;
 
 -- Anonymous session support is RESERVED, not implemented.

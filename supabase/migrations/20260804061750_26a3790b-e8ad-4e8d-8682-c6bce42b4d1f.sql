@@ -34,6 +34,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_ai_providers_single_enabled ON public.scp_ai_providers;
 CREATE TRIGGER scp_ai_providers_single_enabled
   BEFORE INSERT OR UPDATE ON public.scp_ai_providers
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_single_enabled_provider();
@@ -105,6 +106,7 @@ BEGIN
     'instead.' USING ERRCODE = 'check_violation';
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_ai_scoring_runs_append_only ON public.scp_ai_scoring_runs;
 CREATE TRIGGER scp_ai_scoring_runs_append_only
   BEFORE UPDATE OR DELETE ON public.scp_ai_scoring_runs
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_scoring_run_append_only();
@@ -130,6 +132,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_ai_scoring_runs_consistent ON public.scp_ai_scoring_runs;
 CREATE TRIGGER scp_ai_scoring_runs_consistent
   BEFORE INSERT ON public.scp_ai_scoring_runs
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_scoring_run_consistent();
@@ -189,6 +192,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_human_reviews_immutable_once_done ON public.scp_human_reviews;
 CREATE TRIGGER scp_human_reviews_immutable_once_done
   BEFORE UPDATE OR DELETE ON public.scp_human_reviews
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_review_immutable_once_done();
@@ -228,6 +232,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_report_versions_require_limits ON public.scp_report_versions;
 CREATE TRIGGER scp_report_versions_require_limits
   BEFORE INSERT OR UPDATE ON public.scp_report_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_report_states_limits();
@@ -246,6 +251,7 @@ BEGIN
     'scp_ai_providers','scp_prompt_versions','scp_ai_scoring_runs',
     'scp_ai_scoring_dimensions','scp_human_reviews'
   ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_author_only', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR ALL TO authenticated '
       'USING (public.scp_can_author(auth.uid())) '
@@ -257,8 +263,10 @@ BEGIN
   END LOOP;
 END $$;
 
+DROP POLICY IF EXISTS scp_report_versions_read ON public.scp_report_versions;
 CREATE POLICY scp_report_versions_read ON public.scp_report_versions
   FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS scp_report_versions_author_write ON public.scp_report_versions;
 CREATE POLICY scp_report_versions_author_write ON public.scp_report_versions
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
