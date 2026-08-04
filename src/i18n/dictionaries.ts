@@ -1814,6 +1814,17 @@ export const dictionaries = {
     "cc.hero.cta.assessment": "Gör karriärtestet",
     "cc.hero.cta.browse": "Bläddra bland yrken",
 
+    "cc.hero.stats.lead":
+      "Sveriges karriärplattform för säkerhetsbranschen — verifierade yrken, tydliga vägar, mätbar kompetens.",
+    "cc.hero.stats.professions.label": "Yrken",
+    "cc.hero.stats.professions.value": "60+",
+    // Value is derived from the taxonomy (professionFamilies minus the entry path).
+    "cc.hero.stats.areas.label": "Yrkesområden",
+    "cc.hero.stats.languages.label": "Språk",
+    "cc.hero.stats.languages.value": "SV · EN",
+    "cc.hero.stats.model.label": "Modell",
+    "cc.hero.stats.model.value": "v1.0",
+
     "cc.featured.title": "Utvalda yrken",
     "cc.featured.subtitle": "En första uppsättning yrkesguider. Fler tillkommer löpande.",
     "cc.categories.title": "Bläddra efter kategori",
@@ -3995,6 +4006,17 @@ export const dictionaries = {
       "Explore professions, career paths, competences and education across the security industry — all in one place.",
     "cc.hero.cta.assessment": "Take the Career Assessment",
     "cc.hero.cta.browse": "Browse professions",
+
+    "cc.hero.stats.lead":
+      "Sweden's career platform for the security industry — verified professions, clear pathways, measurable competence.",
+    "cc.hero.stats.professions.label": "Professions",
+    "cc.hero.stats.professions.value": "60+",
+    // Value is derived from the taxonomy (professionFamilies minus the entry path).
+    "cc.hero.stats.areas.label": "Career areas",
+    "cc.hero.stats.languages.label": "Languages",
+    "cc.hero.stats.languages.value": "SV · EN",
+    "cc.hero.stats.model.label": "Model",
+    "cc.hero.stats.model.value": "v1.0",
 
     "cc.featured.title": "Featured professions",
     "cc.featured.subtitle": "An initial set of profession guides. More are added continuously.",
