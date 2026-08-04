@@ -4974,7 +4974,9 @@ export type Database = {
           legal_basis_required: boolean
           legal_review_notes: string | null
           legal_review_status: string
+          mode: string | null
           pilot_stats: Json
+          primary_behaviour_id: string | null
           published_at: string | null
           retired_at: string | null
           scenario_type: string | null
@@ -5004,7 +5006,9 @@ export type Database = {
           legal_basis_required?: boolean
           legal_review_notes?: string | null
           legal_review_status?: string
+          mode?: string | null
           pilot_stats?: Json
+          primary_behaviour_id?: string | null
           published_at?: string | null
           retired_at?: string | null
           scenario_type?: string | null
@@ -5034,7 +5038,9 @@ export type Database = {
           legal_basis_required?: boolean
           legal_review_notes?: string | null
           legal_review_status?: string
+          mode?: string | null
           pilot_stats?: Json
+          primary_behaviour_id?: string | null
           published_at?: string | null
           retired_at?: string | null
           scenario_type?: string | null
@@ -5066,6 +5072,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "scp_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_primary_behaviour_id_fkey"
+            columns: ["primary_behaviour_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
             referencedColumns: ["id"]
           },
           {
@@ -5161,6 +5174,129 @@ export type Database = {
         }
         Relationships: []
       }
+      scp_module_behaviour_map: {
+        Row: {
+          behaviour_version_id: string
+          created_at: string
+          id: string
+          module_version_id: string
+        }
+        Insert: {
+          behaviour_version_id: string
+          created_at?: string
+          id?: string
+          module_version_id: string
+        }
+        Update: {
+          behaviour_version_id?: string
+          created_at?: string
+          id?: string
+          module_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_module_behaviour_map_behaviour_version_id_fkey"
+            columns: ["behaviour_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_behaviour_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_module_behaviour_map_module_version_id_fkey"
+            columns: ["module_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_module_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_module_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          display_order: number
+          estimated_minutes: number | null
+          id: string
+          module_id: string
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          published_at: string | null
+          retired_at: string | null
+          summary_en: string
+          summary_sv: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          display_order: number
+          estimated_minutes?: number | null
+          id?: string
+          module_id: string
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          published_at?: string | null
+          retired_at?: string | null
+          summary_en: string
+          summary_sv: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          display_order?: number
+          estimated_minutes?: number | null
+          id?: string
+          module_id?: string
+          name_en?: string
+          name_sv?: string
+          program_version_id?: string
+          published_at?: string | null
+          retired_at?: string | null
+          summary_en?: string
+          summary_sv?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_module_versions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "scp_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_module_versions_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_modules: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       scp_observable_behaviours: {
         Row: {
           created_at: string
@@ -5244,6 +5380,107 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      scp_program_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          id: string
+          jurisdiction_id: string | null
+          name_en: string
+          name_sv: string
+          program_id: string
+          published_at: string | null
+          purpose_en: string
+          purpose_sv: string
+          retired_at: string | null
+          updated_at: string
+          validation_status: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          does_not_measure_en?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          jurisdiction_id?: string | null
+          name_en: string
+          name_sv: string
+          program_id: string
+          published_at?: string | null
+          purpose_en: string
+          purpose_sv: string
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          does_not_measure_en?: string[]
+          does_not_measure_sv?: string[]
+          id?: string
+          jurisdiction_id?: string | null
+          name_en?: string
+          name_sv?: string
+          program_id?: string
+          published_at?: string | null
+          purpose_en?: string
+          purpose_sv?: string
+          retired_at?: string | null
+          updated_at?: string
+          validation_status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_program_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_program_versions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "scp_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_programs: {
+        Row: {
+          created_at: string
+          id: string
+          role_id: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_id?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_id?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_programs_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "scp_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_publication_approvals: {
         Row: {
@@ -5542,6 +5779,88 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scp_scenario_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          id: string
+          jurisdiction_id: string | null
+          mode: string
+          module_version_id: string | null
+          scenario_id: string
+          situation_en: string
+          situation_sv: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          jurisdiction_id?: string | null
+          mode: string
+          module_version_id?: string | null
+          scenario_id: string
+          situation_en: string
+          situation_sv: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          jurisdiction_id?: string | null
+          mode?: string
+          module_version_id?: string | null
+          scenario_id?: string
+          situation_en?: string
+          situation_sv?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_scenario_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_scenario_versions_module_version_id_fkey"
+            columns: ["module_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_module_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_scenario_versions_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scp_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_scenarios: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+        }
+        Relationships: []
       }
       scp_scoring_versions: {
         Row: {
