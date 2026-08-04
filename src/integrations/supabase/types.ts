@@ -5489,6 +5489,7 @@ export type Database = {
           competency_id: string
           content_hash: string | null
           content_status: string
+          context_note: string | null
           created_at: string
           difficulty_target: string | null
           facet_id: string | null
@@ -5498,12 +5499,19 @@ export type Database = {
           item_format: string
           item_id: string
           legal_basis_required: boolean
+          legal_review_expires_at: string | null
           legal_review_notes: string | null
           legal_review_status: string
+          legal_reviewed_at: string | null
+          legal_reviewed_by: string | null
+          legal_source: string | null
+          market: string | null
           mode: string | null
+          observable_behavior: string
           pilot_stats: Json
           primary_behaviour_id: string | null
           published_at: string | null
+          response_process: string
           retired_at: string | null
           scenario_type: string | null
           secondary_competency_id: string | null
@@ -5521,6 +5529,7 @@ export type Database = {
           competency_id: string
           content_hash?: string | null
           content_status?: string
+          context_note?: string | null
           created_at?: string
           difficulty_target?: string | null
           facet_id?: string | null
@@ -5530,12 +5539,19 @@ export type Database = {
           item_format: string
           item_id: string
           legal_basis_required?: boolean
+          legal_review_expires_at?: string | null
           legal_review_notes?: string | null
           legal_review_status?: string
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          legal_source?: string | null
+          market?: string | null
           mode?: string | null
+          observable_behavior: string
           pilot_stats?: Json
           primary_behaviour_id?: string | null
           published_at?: string | null
+          response_process: string
           retired_at?: string | null
           scenario_type?: string | null
           secondary_competency_id?: string | null
@@ -5553,6 +5569,7 @@ export type Database = {
           competency_id?: string
           content_hash?: string | null
           content_status?: string
+          context_note?: string | null
           created_at?: string
           difficulty_target?: string | null
           facet_id?: string | null
@@ -5562,12 +5579,19 @@ export type Database = {
           item_format?: string
           item_id?: string
           legal_basis_required?: boolean
+          legal_review_expires_at?: string | null
           legal_review_notes?: string | null
           legal_review_status?: string
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          legal_source?: string | null
+          market?: string | null
           mode?: string | null
+          observable_behavior?: string
           pilot_stats?: Json
           primary_behaviour_id?: string | null
           published_at?: string | null
+          response_process?: string
           retired_at?: string | null
           scenario_type?: string | null
           secondary_competency_id?: string | null
