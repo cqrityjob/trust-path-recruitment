@@ -20,7 +20,7 @@ import { CheckCircle2, FlaskConical, Hammer } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
-import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
+import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   assignAcademyProgramme,
   listAcademyLibrary,
@@ -54,26 +54,27 @@ function Library({ employerId, canAssign }: { employerId: string; canAssign: boo
     <>
       <AcademyHeading title={t("academy.library.title")} lede={t("academy.library.lede")} />
 
-      {query.isLoading && <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>}
-
-      {query.data && query.data.length === 0 && (
-        <NoEvidenceState
-          title={t("academy.library.emptyTitle")}
-          body={t("academy.library.emptyBody")}
-        />
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {(query.data ?? []).map((e) => (
-          <ProgrammeCard
-            key={e.assessmentVersionId}
-            entry={e}
-            employerId={employerId}
-            canAssign={canAssign}
-            lang={lang}
-          />
-        ))}
-      </div>
+      <AcademyQueryState
+        query={query}
+        surface="assessments/library"
+        isEmpty={(rows) => rows.length === 0}
+        emptyTitle={t("academy.library.emptyTitle")}
+        emptyBody={t("academy.library.emptyBody")}
+      >
+        {(rows) => (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {rows.map((e) => (
+              <ProgrammeCard
+                key={e.assessmentVersionId}
+                entry={e}
+                employerId={employerId}
+                canAssign={canAssign}
+                lang={lang}
+              />
+            ))}
+          </div>
+        )}
+      </AcademyQueryState>
     </>
   );
 }

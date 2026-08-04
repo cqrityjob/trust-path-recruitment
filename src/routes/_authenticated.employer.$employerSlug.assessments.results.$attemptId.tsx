@@ -15,6 +15,7 @@ import { ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
+import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import {
   maturityLabelKey,
   MaturityRow,
@@ -71,6 +72,26 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
 
   if (report.isLoading) {
     return <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>;
+  }
+  // A FAILED request and a report that simply is not released yet are different
+  // situations, and saying "not released" for both would have an employer wait
+  // for something that was never coming. getAcademyReport returns null for a
+  // genuine no-row, so isError is the only signal that something broke.
+  if (report.isError) {
+    const { kind } = logAcademyError("assessments/results", report.error);
+    return (
+      <div
+        role="alert"
+        className="rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-6"
+      >
+        <p className="text-sm font-semibold text-foreground">
+          {t(kind === "backend_unavailable" ? "academy.error.unavailableTitle" : "academy.error.failedTitle")}
+        </p>
+        <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t(kind === "backend_unavailable" ? "academy.error.unavailableBody" : "academy.error.failedBody")}
+        </p>
+      </div>
+    );
   }
   if (!report.data) {
     return (
