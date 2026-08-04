@@ -5343,8 +5343,14 @@ export type Database = {
         Row: {
           created_at: string
           display_order: number
+          distractor_error_type: string | null
           id: string
+          is_best_key: boolean
+          is_preferred: boolean
+          is_worst_key: boolean
           item_version_id: string
+          learning_feedback_en: string | null
+          learning_feedback_sv: string | null
           option_key: string
           reverse_scored: boolean
           score_value: number
@@ -5354,8 +5360,14 @@ export type Database = {
         Insert: {
           created_at?: string
           display_order: number
+          distractor_error_type?: string | null
           id?: string
+          is_best_key?: boolean
+          is_preferred?: boolean
+          is_worst_key?: boolean
           item_version_id: string
+          learning_feedback_en?: string | null
+          learning_feedback_sv?: string | null
           option_key: string
           reverse_scored?: boolean
           score_value: number
@@ -5365,8 +5377,14 @@ export type Database = {
         Update: {
           created_at?: string
           display_order?: number
+          distractor_error_type?: string | null
           id?: string
+          is_best_key?: boolean
+          is_preferred?: boolean
+          is_worst_key?: boolean
           item_version_id?: string
+          learning_feedback_en?: string | null
+          learning_feedback_sv?: string | null
           option_key?: string
           reverse_scored?: boolean
           score_value?: number
@@ -5483,21 +5501,31 @@ export type Database = {
       }
       scp_item_versions: {
         Row: {
+          accessibility_review_status: string
           authored_by_ai: boolean
           bias_review_notes: string | null
           bias_review_status: string
+          cognitive_demand: string | null
+          cognitive_review_status: string
           competency_id: string
           content_hash: string | null
           content_status: string
           context_note: string | null
           created_at: string
+          difficulty: string | null
           difficulty_target: string | null
           facet_id: string | null
           id: string
+          information_available_sv: string | null
+          information_withheld_sv: string | null
           intended_forms: string[]
           intended_professions: string[]
+          is_safety_critical: boolean
           item_format: string
           item_id: string
+          jurisdiction_id: string | null
+          language_review_status: string
+          learning_counterpart_id: string | null
           legal_basis_required: boolean
           legal_review_expires_at: string | null
           legal_review_notes: string | null
@@ -5511,6 +5539,7 @@ export type Database = {
           pilot_stats: Json
           primary_behaviour_id: string | null
           published_at: string | null
+          requires_human_review: boolean
           response_process: string
           retired_at: string | null
           scenario_type: string | null
@@ -5521,23 +5550,34 @@ export type Database = {
           updated_at: string
           validation_status: string
           version_number: number
+          work_context_sv: string | null
         }
         Insert: {
+          accessibility_review_status?: string
           authored_by_ai?: boolean
           bias_review_notes?: string | null
           bias_review_status?: string
+          cognitive_demand?: string | null
+          cognitive_review_status?: string
           competency_id: string
           content_hash?: string | null
           content_status?: string
           context_note?: string | null
           created_at?: string
+          difficulty?: string | null
           difficulty_target?: string | null
           facet_id?: string | null
           id?: string
+          information_available_sv?: string | null
+          information_withheld_sv?: string | null
           intended_forms?: string[]
           intended_professions?: string[]
+          is_safety_critical?: boolean
           item_format: string
           item_id: string
+          jurisdiction_id?: string | null
+          language_review_status?: string
+          learning_counterpart_id?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
           legal_review_notes?: string | null
@@ -5551,6 +5591,7 @@ export type Database = {
           pilot_stats?: Json
           primary_behaviour_id?: string | null
           published_at?: string | null
+          requires_human_review?: boolean
           response_process: string
           retired_at?: string | null
           scenario_type?: string | null
@@ -5561,23 +5602,34 @@ export type Database = {
           updated_at?: string
           validation_status?: string
           version_number: number
+          work_context_sv?: string | null
         }
         Update: {
+          accessibility_review_status?: string
           authored_by_ai?: boolean
           bias_review_notes?: string | null
           bias_review_status?: string
+          cognitive_demand?: string | null
+          cognitive_review_status?: string
           competency_id?: string
           content_hash?: string | null
           content_status?: string
           context_note?: string | null
           created_at?: string
+          difficulty?: string | null
           difficulty_target?: string | null
           facet_id?: string | null
           id?: string
+          information_available_sv?: string | null
+          information_withheld_sv?: string | null
           intended_forms?: string[]
           intended_professions?: string[]
+          is_safety_critical?: boolean
           item_format?: string
           item_id?: string
+          jurisdiction_id?: string | null
+          language_review_status?: string
+          learning_counterpart_id?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
           legal_review_notes?: string | null
@@ -5591,6 +5643,7 @@ export type Database = {
           pilot_stats?: Json
           primary_behaviour_id?: string | null
           published_at?: string | null
+          requires_human_review?: boolean
           response_process?: string
           retired_at?: string | null
           scenario_type?: string | null
@@ -5601,6 +5654,7 @@ export type Database = {
           updated_at?: string
           validation_status?: string
           version_number?: number
+          work_context_sv?: string | null
         }
         Relationships: [
           {
@@ -5622,6 +5676,20 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "scp_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_jurisdiction_id_fkey"
+            columns: ["jurisdiction_id"]
+            isOneToOne: false
+            referencedRelation: "scp_jurisdictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_learning_counterpart_id_fkey"
+            columns: ["learning_counterpart_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
             referencedColumns: ["id"]
           },
           {
@@ -6187,6 +6255,44 @@ export type Database = {
           version_number?: number
         }
         Relationships: []
+      }
+      scp_review_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          item_version_id: string
+          reason: string
+          required: boolean
+          review_type: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_version_id: string
+          reason: string
+          required?: boolean
+          review_type: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_version_id?: string
+          reason?: string
+          required?: boolean
+          review_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_review_requirements_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_role_competency_map: {
         Row: {
