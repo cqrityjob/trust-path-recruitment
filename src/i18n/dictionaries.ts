@@ -1988,6 +1988,17 @@ export const dictionaries = {
     "academy.done.reviewPending":
       "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
     "academy.error.title": "Det gick inte att öppna bedömningen",
+    "academy.error.unavailableTitle": "Den här delen är inte tillgänglig ännu",
+    "academy.error.unavailableBody":
+      "Assessment Center är på väg att aktiveras och databasen är inte helt uppdaterad än. Det är inget fel på ditt konto och inga uppgifter har gått förlorade. Försök igen om en stund, eller hör av dig till oss om det kvarstår.",
+    "academy.error.deniedTitle": "Du har inte behörighet till den här vyn",
+    "academy.error.deniedBody":
+      "Ditt konto saknar behörighet för den här delen av Assessment Center. Kontakta din organisations administratör om du tror att det är fel.",
+    "academy.error.failedTitle": "Informationen kunde inte hämtas",
+    "academy.error.failedBody":
+      "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
+    "academy.error.retry": "Försök igen",
+    "academy.error.retrying": "Försöker …",
     "academy.error.notFound": "Vi hittar ingen pågående bedömning för dig på den här länken.",
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
@@ -4158,6 +4169,17 @@ export const dictionaries = {
     "academy.done.reviewPending":
       "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
     "academy.error.title": "This assessment could not be opened",
+    "academy.error.unavailableTitle": "This area is not available yet",
+    "academy.error.unavailableBody":
+      "The Assessment Center is still being switched on and the database is not fully up to date. There is nothing wrong with your account and no data has been lost. Try again shortly, or contact us if it persists.",
+    "academy.error.deniedTitle": "You do not have access to this view",
+    "academy.error.deniedBody":
+      "Your account does not have permission for this part of the Assessment Center. Contact your organisation's administrator if you believe this is wrong.",
+    "academy.error.failedTitle": "The information could not be loaded",
+    "academy.error.failedBody":
+      "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
+    "academy.error.retry": "Try again",
+    "academy.error.retrying": "Trying …",
     "academy.error.notFound": "We cannot find an assessment of yours at this link.",
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
     "academy.error.generic": "Something went wrong. Please try again shortly.",

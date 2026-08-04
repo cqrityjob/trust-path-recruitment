@@ -18,7 +18,7 @@ import { CalendarClock, Eye, FileText, Send } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
-import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
+import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   listAcademyParticipants,
   releaseAcademyReport,
@@ -73,26 +73,27 @@ function Participants({
         lede={t("academy.participants.lede")}
       />
 
-      {query.isLoading && <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>}
-
-      {query.data && query.data.length === 0 && (
-        <NoEvidenceState
-          title={t("academy.participants.emptyTitle")}
-          body={t("academy.participants.emptyBody")}
-        />
-      )}
-
-      <div className="space-y-3">
-        {(query.data ?? []).map((p) => (
-          <ParticipantCard
-            key={p.attemptId}
-            row={p}
-            employerId={employerId}
-            employerSlug={employerSlug}
-            canManage={canManage}
-          />
-        ))}
-      </div>
+      <AcademyQueryState
+        query={query}
+        surface="assessments/participants"
+        isEmpty={(rows) => rows.length === 0}
+        emptyTitle={t("academy.participants.emptyTitle")}
+        emptyBody={t("academy.participants.emptyBody")}
+      >
+        {(rows) => (
+          <div className="space-y-3">
+            {rows.map((p) => (
+              <ParticipantCard
+                key={p.attemptId}
+                row={p}
+                employerId={employerId}
+                employerSlug={employerSlug}
+                canManage={canManage}
+              />
+            ))}
+          </div>
+        )}
+      </AcademyQueryState>
     </>
   );
 }
