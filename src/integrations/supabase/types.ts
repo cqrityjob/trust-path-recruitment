@@ -3854,6 +3854,152 @@ export type Database = {
           },
         ]
       }
+      scp_ai_providers: {
+        Row: {
+          code: string
+          created_at: string
+          is_enabled: boolean
+          model_identifier: string | null
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_enabled?: boolean
+          model_identifier?: string | null
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_enabled?: boolean
+          model_identifier?: string | null
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      scp_ai_scoring_dimensions: {
+        Row: {
+          confidence: number
+          created_at: string
+          evidence_excerpt: string | null
+          id: string
+          level: number
+          rubric_dimension_id: string
+          scoring_run_id: string
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          evidence_excerpt?: string | null
+          id?: string
+          level: number
+          rubric_dimension_id: string
+          scoring_run_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          evidence_excerpt?: string | null
+          id?: string
+          level?: number
+          rubric_dimension_id?: string
+          scoring_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_ai_scoring_dimensions_rubric_dimension_id_fkey"
+            columns: ["rubric_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rubric_dimensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_ai_scoring_dimensions_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_scoring_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_ai_scoring_runs: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          id: string
+          min_confidence: number | null
+          model_version: string | null
+          output: Json | null
+          prompt_version_id: string | null
+          provider_code: string
+          response_id: string
+          rubric_version_id: string | null
+          run_at: string
+          run_status: string
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          id?: string
+          min_confidence?: number | null
+          model_version?: string | null
+          output?: Json | null
+          prompt_version_id?: string | null
+          provider_code: string
+          response_id: string
+          rubric_version_id?: string | null
+          run_at?: string
+          run_status: string
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          id?: string
+          min_confidence?: number | null
+          model_version?: string | null
+          output?: Json | null
+          prompt_version_id?: string | null
+          provider_code?: string
+          response_id?: string
+          rubric_version_id?: string | null
+          run_at?: string
+          run_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_ai_scoring_runs_prompt_version_id_fkey"
+            columns: ["prompt_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_prompt_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_ai_scoring_runs_provider_code_fkey"
+            columns: ["provider_code"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_providers"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "scp_ai_scoring_runs_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "scp_candidate_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_ai_scoring_runs_rubric_version_id_fkey"
+            columns: ["rubric_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rubric_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_anchor_responses: {
         Row: {
           anchor_type: string
@@ -5027,6 +5173,63 @@ export type Database = {
           },
         ]
       }
+      scp_human_reviews: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          opened_at: string
+          outcome: string | null
+          response_id: string
+          review_status: string
+          reviewer_actor_id: string | null
+          reviewer_rationale: string | null
+          scoring_run_id: string | null
+          trigger_reason: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          outcome?: string | null
+          response_id: string
+          review_status?: string
+          reviewer_actor_id?: string | null
+          reviewer_rationale?: string | null
+          scoring_run_id?: string | null
+          trigger_reason: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          outcome?: string | null
+          response_id?: string
+          review_status?: string
+          reviewer_actor_id?: string | null
+          reviewer_rationale?: string | null
+          scoring_run_id?: string | null
+          trigger_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_human_reviews_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "scp_candidate_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_human_reviews_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_scoring_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_integrity_flags: {
         Row: {
           attempt_id: string
@@ -5805,6 +6008,42 @@ export type Database = {
           },
         ]
       }
+      scp_prompt_versions: {
+        Row: {
+          content_status: string
+          created_at: string
+          id: string
+          input_envelope_strategy: string
+          prompt_key: string
+          published_at: string | null
+          retired_at: string | null
+          system_prompt: string
+          version_number: number
+        }
+        Insert: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          input_envelope_strategy?: string
+          prompt_key: string
+          published_at?: string | null
+          retired_at?: string | null
+          system_prompt: string
+          version_number: number
+        }
+        Update: {
+          content_status?: string
+          created_at?: string
+          id?: string
+          input_envelope_strategy?: string
+          prompt_key?: string
+          published_at?: string | null
+          retired_at?: string | null
+          system_prompt?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       scp_publication_approvals: {
         Row: {
           approved_at: string
@@ -5882,6 +6121,48 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      scp_report_versions: {
+        Row: {
+          audience: string
+          content_status: string
+          created_at: string
+          id: string
+          limitations_en: string[]
+          limitations_sv: string[]
+          published_at: string | null
+          report_key: string
+          retired_at: string | null
+          threshold_version: string
+          version_number: number
+        }
+        Insert: {
+          audience: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          limitations_en?: string[]
+          limitations_sv?: string[]
+          published_at?: string | null
+          report_key: string
+          retired_at?: string | null
+          threshold_version?: string
+          version_number: number
+        }
+        Update: {
+          audience?: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          limitations_en?: string[]
+          limitations_sv?: string[]
+          published_at?: string | null
+          report_key?: string
+          retired_at?: string | null
+          threshold_version?: string
+          version_number?: number
+        }
+        Relationships: []
       }
       scp_role_competency_map: {
         Row: {
