@@ -73,7 +73,7 @@ export function CareerHero({
                 <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">60+</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Familjer</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Yrkesområden</dt>
                 <dd className="mt-1 text-lg font-semibold tracking-tight text-foreground">14</dd>
               </div>
               <div>
