@@ -264,6 +264,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_behaviour_versions_require_competency ON public.scp_behaviour_versions;
 CREATE TRIGGER scp_behaviour_versions_require_competency
   BEFORE INSERT OR UPDATE ON public.scp_behaviour_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_behaviour_has_competency();
@@ -379,6 +380,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_evidence_source_must_have_writer ON public.scp_competency_evidence;
 CREATE TRIGGER scp_evidence_source_must_have_writer
   BEFORE INSERT ON public.scp_competency_evidence
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_evidence_source_has_writer();
@@ -432,6 +434,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_evidence_append_only ON public.scp_competency_evidence;
 CREATE TRIGGER scp_evidence_append_only
   BEFORE UPDATE OR DELETE ON public.scp_competency_evidence
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_evidence_append_only();
@@ -635,9 +638,11 @@ BEGIN
     'scp_behaviour_competency_map', 'scp_role_competency_map',
     'scp_maturity_thresholds', 'scp_contract_versions'
   ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_read', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR SELECT TO authenticated USING (true)',
       t || '_read', t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_author_write', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR ALL TO authenticated '
       'USING (public.scp_can_author(auth.uid())) '
@@ -648,25 +653,30 @@ BEGIN
   END LOOP;
 END $$;
 
+DROP POLICY IF EXISTS scp_subject_identities_self ON public.scp_subject_identities;
 CREATE POLICY scp_subject_identities_self ON public.scp_subject_identities
   FOR SELECT TO authenticated
   USING (user_id = auth.uid() OR public.is_platform_admin(auth.uid()));
+DROP POLICY IF EXISTS scp_subject_identities_admin_write ON public.scp_subject_identities;
 CREATE POLICY scp_subject_identities_admin_write ON public.scp_subject_identities
   FOR ALL TO authenticated
   USING (public.is_platform_admin(auth.uid()))
   WITH CHECK (public.is_platform_admin(auth.uid()));
 
+DROP POLICY IF EXISTS scp_subjects_self ON public.scp_subjects;
 CREATE POLICY scp_subjects_self ON public.scp_subjects
   FOR SELECT TO authenticated
   USING (
     EXISTS (SELECT 1 FROM public.scp_subject_identities i
              WHERE i.subject_id = scp_subjects.id AND i.user_id = auth.uid())
     OR public.scp_can_author(auth.uid()));
+DROP POLICY IF EXISTS scp_subjects_author_write ON public.scp_subjects;
 CREATE POLICY scp_subjects_author_write ON public.scp_subjects
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
   WITH CHECK (public.scp_can_author(auth.uid()));
 
+DROP POLICY IF EXISTS scp_evidence_own_select ON public.scp_competency_evidence;
 CREATE POLICY scp_evidence_own_select ON public.scp_competency_evidence
   FOR SELECT TO authenticated
   USING (
@@ -674,6 +684,7 @@ CREATE POLICY scp_evidence_own_select ON public.scp_competency_evidence
              WHERE i.subject_id = scp_competency_evidence.subject_id
                AND i.user_id = auth.uid())
     OR public.scp_can_author(auth.uid()));
+DROP POLICY IF EXISTS scp_evidence_author_write ON public.scp_competency_evidence;
 CREATE POLICY scp_evidence_author_write ON public.scp_competency_evidence
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))

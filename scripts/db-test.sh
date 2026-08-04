@@ -129,6 +129,13 @@ KNOWN_FAILURES=(
   "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql|||relation \"scp_scoring_version_lineage\" already exists"
   "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql|||relation \"cd_definition_versions\" already exists"
   "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
+  # ---- Lovable Cloud sync re-issue, 2026-08-04 block ----
+  #
+  # These six were allowlisted in 2429463 and are deliberately NOT listed here
+  # any more. The four Cloud re-issues, the authored Phase 1F file and the
+  # 20260804063418 reconciliation were repaired instead, so they now replay
+  # cleanly rather than being expected to fail. Re-adding them would make this
+  # script report "allowlisted as a known failure but PASSED".
   # Cloud re-issued 20260729090000 as 20260729075534, i.e. under an EARLIER
   # timestamp, so on replay Cloud's copy runs first and the authored file
   # then hits "already exists". Section 0 of the authored file (the

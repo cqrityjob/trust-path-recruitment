@@ -15,6 +15,7 @@ import {
   AssessmentShell,
   AssessmentPanel,
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import {
   getLearningFormForModule,
@@ -38,7 +39,6 @@ function AcademyHome() {
     queryFn: () => formFn(),
   });
 
-  const assessments = (work.data ?? []).filter((w) => w.mode === "assessment");
   const learning = (work.data ?? []).filter((w) => w.mode === "learning");
 
   return (
@@ -55,15 +55,26 @@ function AcademyHome() {
 
       <section className="mt-8">
         <h2 className="mb-3 text-sm font-semibold text-foreground">{t("academy.home.assigned")}</h2>
-        {work.isLoading && <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>}
-        {!work.isLoading && assessments.length === 0 && (
-          <NoEvidenceState title={t("academy.home.noneTitle")} body={t("academy.home.noneBody")} />
-        )}
-        <div className="space-y-3">
-          {assessments.map((a) => (
-            <AssignmentCard key={a.attemptId} row={a} lang={lang} />
-          ))}
-        </div>
+        {/* This one previously showed the EMPTY state on failure -- telling a
+            participant "nothing assigned" when the backend was unreachable,
+            which is worse than saying nothing. */}
+        <AcademyQueryState
+          query={work}
+          surface="academy/home"
+          isEmpty={(rows) => rows.filter((w) => w.mode === "assessment").length === 0}
+          emptyTitle={t("academy.home.noneTitle")}
+          emptyBody={t("academy.home.noneBody")}
+        >
+          {(rows) => (
+            <div className="space-y-3">
+              {rows
+                .filter((w) => w.mode === "assessment")
+                .map((a) => (
+                  <AssignmentCard key={a.attemptId} row={a} lang={lang} />
+                ))}
+            </div>
+          )}
+        </AcademyQueryState>
       </section>
 
       <section className="mt-10">

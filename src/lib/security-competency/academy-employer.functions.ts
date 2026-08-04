@@ -348,7 +348,9 @@ export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
     const { data: rows, error } = await ctx.supabase.rpc("scp_development_recommendations", {
       _subject_id: data.subjectId,
     });
-    if (error) return [];
+    // Throw rather than return [] -- an empty array is indistinguishable from
+    // "no recommendations", which is how a missing RPC became a silent blank.
+    if (error) throw fail(error.message, "recommendations_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       moduleVersionId: String(r.module_version_id),
       nameSv: String(r.module_name_sv),
@@ -370,7 +372,7 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
     const { data: rows, error } = await ctx.supabase.rpc("scp_subject_progress", {
       _subject_id: data.subjectId,
     });
-    if (error) return [];
+    if (error) throw fail(error.message, "progress_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       releasedAt: String(r.released_at),
       attemptId: String(r.attempt_id),
@@ -395,7 +397,10 @@ export const listReviewQueue = createServerFn({ method: "GET" })
       .select("review_id, trigger_reason, review_status, opened_at, response_text, subject_id")
       .eq("review_status", "pending")
       .order("opened_at", { ascending: true });
-    if (error) return [];
+    // The reviewer queue is security_invoker: zero rows is the CORRECT answer
+    // for someone without the capability, so an empty result must stay empty.
+    // A genuine failure is different and must surface.
+    if (error) throw fail(error.message, "review_queue_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       reviewId: String(r.review_id),
       triggerReason: String(r.trigger_reason),

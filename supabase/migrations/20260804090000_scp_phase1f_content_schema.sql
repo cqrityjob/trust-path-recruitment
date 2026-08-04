@@ -59,6 +59,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_item_versions_learning_counterpart ON public.scp_item_versions;
 CREATE TRIGGER scp_item_versions_learning_counterpart
   BEFORE INSERT OR UPDATE ON public.scp_item_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_learning_counterpart();
@@ -110,6 +111,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_item_options_best_worst ON public.scp_item_options;
 CREATE TRIGGER scp_item_options_best_worst
   BEFORE INSERT OR UPDATE ON public.scp_item_options
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_best_worst_keys();
@@ -138,6 +140,7 @@ COMMENT ON TABLE public.scp_review_requirements IS
   'clears none of them.';
 
 ALTER TABLE public.scp_review_requirements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS scp_review_requirements_author_only ON public.scp_review_requirements;
 CREATE POLICY scp_review_requirements_author_only ON public.scp_review_requirements
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))

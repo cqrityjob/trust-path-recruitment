@@ -108,6 +108,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_rubric_versions_complete ON public.scp_rubric_versions;
 CREATE TRIGGER scp_rubric_versions_complete
   BEFORE INSERT OR UPDATE ON public.scp_rubric_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_rubric_complete();
@@ -168,6 +169,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_attempts_mode_matches_form ON public.scp_attempts;
 CREATE TRIGGER scp_attempts_mode_matches_form
   BEFORE INSERT OR UPDATE ON public.scp_attempts
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_attempt_mode_matches_form();
@@ -227,6 +229,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_candidate_responses_shape ON public.scp_candidate_responses;
 CREATE TRIGGER scp_candidate_responses_shape
   BEFORE INSERT OR UPDATE ON public.scp_candidate_responses
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_response_matches_format();
@@ -277,6 +280,7 @@ BEGIN
     'scp_rubrics','scp_rubric_versions','scp_rubric_dimensions',
     'scp_rubric_levels','scp_anchor_responses','scp_item_exposure'
   ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_author_only', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR ALL TO authenticated '
       'USING (public.scp_can_author(auth.uid())) '
@@ -288,17 +292,20 @@ BEGIN
   END LOOP;
 END $$;
 
+DROP POLICY IF EXISTS scp_attempts_own_select ON public.scp_attempts;
 CREATE POLICY scp_attempts_own_select ON public.scp_attempts
   FOR SELECT TO authenticated
   USING (
     EXISTS (SELECT 1 FROM public.scp_subject_identities i
              WHERE i.subject_id = scp_attempts.subject_id AND i.user_id = auth.uid())
     OR public.scp_can_author(auth.uid()));
+DROP POLICY IF EXISTS scp_attempts_author_write ON public.scp_attempts;
 CREATE POLICY scp_attempts_author_write ON public.scp_attempts
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
   WITH CHECK (public.scp_can_author(auth.uid()));
 
+DROP POLICY IF EXISTS scp_responses_own_select ON public.scp_candidate_responses;
 CREATE POLICY scp_responses_own_select ON public.scp_candidate_responses
   FOR SELECT TO authenticated
   USING (
@@ -306,11 +313,13 @@ CREATE POLICY scp_responses_own_select ON public.scp_candidate_responses
              JOIN public.scp_subject_identities i ON i.subject_id = a.subject_id
             WHERE a.id = scp_candidate_responses.attempt_id AND i.user_id = auth.uid())
     OR public.scp_can_author(auth.uid()));
+DROP POLICY IF EXISTS scp_responses_author_write ON public.scp_candidate_responses;
 CREATE POLICY scp_responses_author_write ON public.scp_candidate_responses
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
   WITH CHECK (public.scp_can_author(auth.uid()));
 
+DROP POLICY IF EXISTS scp_integrity_flags_author_only ON public.scp_integrity_flags;
 CREATE POLICY scp_integrity_flags_author_only ON public.scp_integrity_flags
   FOR ALL TO authenticated
   USING (public.scp_can_author(auth.uid()))
