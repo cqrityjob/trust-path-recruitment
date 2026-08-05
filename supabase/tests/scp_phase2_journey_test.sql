@@ -96,6 +96,13 @@ WITH u AS (
   INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
   VALUES ('c3000000-1111-0000-0000-000000000001','c3000000-0000-0000-0000-000000000001','owner','active')
   RETURNING id
+), fa AS (
+  -- The journey organisation is the closed-test organisation, so it holds the
+  -- fixture grant. J12 uses the SECOND organisation to prove the default is no
+  -- access at all.
+  INSERT INTO public.scp_fixture_access (employer_id, reason)
+  VALUES ('c3000000-1111-0000-0000-000000000001', 'closed test fixture journey')
+  RETURNING employer_id
 ), cr AS (
   -- The reviewer is an authoring principal, NOT anyone in the employer.
   INSERT INTO public.scp_content_roles (user_id, role)
@@ -1126,6 +1133,83 @@ SELECT pg_temp.must_fail(
          :'bw_aid', :'bw_iv'),
   'SCP_RESPONSE_SHAPE',
   'J11.6 a best/worst answer naming neither option is still refused');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+
+DO $$ BEGIN RAISE NOTICE 'GROUP J12 — fixtures are internal-only'; END $$;
+
+-- =========================================================================
+-- Group J12 — fixture access control (Phase 2m)
+-- =========================================================================
+--
+-- Org A holds the grant (see the fixture). Org B does not, and is what proves
+-- the default. Testing the default on an org that was never granted is the
+-- only honest way round: revoking A's grant mid-run would also invalidate
+-- every earlier group.
+
+-- An ordinary organisation, created here with no grant: what a real customer
+-- looks like on the day the fixture is published.
+INSERT INTO auth.users (id, email)
+VALUES ('c3000000-0000-0000-0000-0000000000b1','owner-b@journey.invalid');
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('c3000000-1111-0000-0000-000000000002','Ordinary AB','ordinary-ab','active');
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('c3000000-1111-0000-0000-000000000002',
+        'c3000000-0000-0000-0000-0000000000b1','owner','active');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_fixture_access
+    WHERE employer_id = 'c3000000-1111-0000-0000-000000000002') = 0,
+  'J12.1 the ordinary organisation holds no fixture grant');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-0000000000b1';
+CREATE TEMP TABLE lib_nofix AS
+SELECT * FROM public.scp_employer_library('c3000000-1111-0000-0000-000000000002');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT count(*) FROM lib_nofix WHERE is_test_fixture) = 0,
+  'J12.2 an organisation without a grant sees NO fixture in the library');
+SELECT pg_temp.ok((SELECT count(*) FROM lib_nofix) >= 1,
+  'J12.3 it still sees the real, in-development programme');
+
+-- And cannot assign one even naming the version id directly. Hiding a row in a
+-- list is a courtesy; refusing the write is the control.
+DO $$
+DECLARE _av uuid;
+BEGIN
+  SELECT av.id INTO _av FROM public.scp_assessment_versions av
+    JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+   WHERE d.slug = 'fixture-delivery-e2e';
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-0000000000b1', true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
+           'c3000000-1111-0000-0000-000000000002', _av, 'participant@journey.invalid'),
+    'SCP_FIXTURE_NOT_AVAILABLE',
+    'J12.4 an organisation without a grant CANNOT assign a fixture by id');
+  RESET ROLE;
+END $$;
+
+-- The granted organisation still sees it.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE lib_fix AS
+SELECT * FROM public.scp_employer_library('c3000000-1111-0000-0000-000000000001');
+RESET ROLE; RESET request.jwt.claim.sub;
+SELECT pg_temp.ok((SELECT count(*) FROM lib_fix WHERE is_test_fixture) >= 1,
+  'J12.5 the granted closed-test organisation still sees the fixture');
+
+-- The grant table itself is not employer-readable at all. Note this is a hard
+-- permission error rather than zero rows: the SELECT privilege was revoked, not
+-- merely filtered by a policy. Stronger, and worth asserting as such --
+-- an employer has no business enumerating who else holds fixture access.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
+SELECT pg_temp.must_fail(
+  'SELECT count(*) FROM public.scp_fixture_access',
+  'permission denied',
+  'J12.6 an employer cannot read the fixture-access list at all');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 DO $$ BEGIN RAISE NOTICE 'scp_phase2_journey_test: ALL ASSERTIONS PASSED'; END $$;
