@@ -4159,6 +4159,7 @@ export type Database = {
           id: string
           language_scope: string[]
           notes: string | null
+          program_version_id: string | null
           published_at: string | null
           published_by: string | null
           retired_at: string | null
@@ -4177,6 +4178,7 @@ export type Database = {
           id?: string
           language_scope?: string[]
           notes?: string | null
+          program_version_id?: string | null
           published_at?: string | null
           published_by?: string | null
           retired_at?: string | null
@@ -4195,6 +4197,7 @@ export type Database = {
           id?: string
           language_scope?: string[]
           notes?: string | null
+          program_version_id?: string | null
           published_at?: string | null
           published_by?: string | null
           retired_at?: string | null
@@ -4209,6 +4212,13 @@ export type Database = {
             columns: ["definition_id"]
             isOneToOne: false
             referencedRelation: "scp_assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_versions_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
             referencedColumns: ["id"]
           },
         ]

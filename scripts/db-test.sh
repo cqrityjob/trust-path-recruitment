@@ -142,6 +142,29 @@ KNOWN_FAILURES=(
   # scp_item_versions guard repair) still commits before that point, which
   # the 6-guarded-tables assertion below independently confirms.
   "20260729090000_career_discovery_v3_internal_test.sql|||relation \"cd_internal_testers\" already exists"
+  # ---- Lovable Cloud sync re-issue, 2026-08-05 block (Phase 1G .. Phase 2l) ----
+  #
+  # Cloud re-issued twelve migrations under generated 20260805 05xxxx filenames.
+  # Those sort BEFORE the authored originals (20260805 09xxxx onward), so on a
+  # clean replay Cloud's copy runs first and the authored file is then a SECOND
+  # application of the same change. Each expected error below is the signature
+  # of that second application, not a defect: the live database was verified
+  # independently (0 real content published, 0 assessment options carrying
+  # learning feedback, external AI disabled).
+  #
+  # 1G's content correction is refused by the Phase 2h guard, which is the guard
+  # working as designed -- re-writing learning feedback onto an assessment-mode
+  # option is exactly what 2h made impossible.
+  "20260805090000_scp_phase1g_content_correction.sql|||SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM"
+  # The remaining three boundary assertions read "no published Academy content".
+  # On replay the fixtures were already published by Cloud's earlier-timestamped
+  # copies of 2c/2f, so the assertion fires on ordering, not on real content.
+  "20260805100000_scp_phase1g_learning_and_anchors.sql|||SCP_P1G_BOUNDARY_BREACHED"
+  "20260806090000_scp_phase1h_foundation_corrections.sql|||SCP_P1H_ACADEMY_PUBLISHED"
+  "20260807090000_scp_phase2_read_models_and_identity_rpc.sql|||SCP_P2_BOUNDARY_BREACHED"
+  # Literal second inserts of the two fixture programmes.
+  "20260808100000_scp_phase2c_test_fixture_programme.sql|||duplicate key value violates unique constraint \"scp_assessment_versions_definition_id_version_number_key\""
+  "20260809100000_scp_phase2f_learning_fixture.sql|||duplicate key value violates unique constraint \"scp_program_versions_program_id_version_number_key\""
 )
 
 # Returns 0 and echoes the expected error when the file is allowlisted.
