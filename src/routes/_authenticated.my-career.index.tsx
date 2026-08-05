@@ -24,6 +24,8 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
+import { MyAcademyWorkCard } from "@/components/academy/MyAcademyWorkCard";
+import { MyReviewQueueCard } from "@/components/academy/MyReviewQueueCard";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
 import {
   DiscoveryCareerSummary,
@@ -286,6 +288,14 @@ function MyCareerPage() {
                 )}
           </p>
         </header>
+
+        {/* Assessment Center work, if any. Renders nothing when the person has
+            no assignment, so a career dashboard never shows a dead entry. */}
+        <MyAcademyWorkCard />
+
+        {/* Renders only for an account holding the content-review capability --
+            the RLS-gated queue is the gate, not a client-side role check. */}
+        <MyReviewQueueCard />
 
         {/* ---------------- Career Journey ---------------- */}
         <div className="mt-8">
