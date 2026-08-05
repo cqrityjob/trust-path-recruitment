@@ -4063,6 +4063,7 @@ export type Database = {
           created_at: string
           family_id: string
           id: string
+          is_test_fixture: boolean
           name_en: string
           name_sv: string
           profession_id: string | null
@@ -4074,6 +4075,7 @@ export type Database = {
           created_at?: string
           family_id: string
           id?: string
+          is_test_fixture?: boolean
           name_en: string
           name_sv: string
           profession_id?: string | null
@@ -4085,6 +4087,7 @@ export type Database = {
           created_at?: string
           family_id?: string
           id?: string
+          is_test_fixture?: boolean
           name_en?: string
           name_sv?: string
           profession_id?: string | null
@@ -6284,6 +6287,87 @@ export type Database = {
           },
         ]
       }
+      scp_report_snapshots: {
+        Row: {
+          attempt_id: string
+          audience: string
+          created_at: string
+          id: string
+          issuer_organization_id: string | null
+          payload: Json
+          released_at: string
+          report_version_id: string
+          safety_flags: Json
+          scoring_model_version: string | null
+          subject_id: string
+          threshold_version: string
+        }
+        Insert: {
+          attempt_id: string
+          audience: string
+          created_at?: string
+          id?: string
+          issuer_organization_id?: string | null
+          payload: Json
+          released_at?: string
+          report_version_id: string
+          safety_flags?: Json
+          scoring_model_version?: string | null
+          subject_id: string
+          threshold_version?: string
+        }
+        Update: {
+          attempt_id?: string
+          audience?: string
+          created_at?: string
+          id?: string
+          issuer_organization_id?: string | null
+          payload?: Json
+          released_at?: string
+          report_version_id?: string
+          safety_flags?: Json
+          scoring_model_version?: string | null
+          subject_id?: string
+          threshold_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_report_snapshots_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_report_version_id_fkey"
+            columns: ["report_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_report_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_report_snapshots_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_report_versions: {
         Row: {
           audience: string
@@ -7496,6 +7580,16 @@ export type Database = {
         }[]
       }
       scp_can_author: { Args: { _user_id: string }; Returns: boolean }
+      scp_complete_human_review: {
+        Args: {
+          _contribution?: number
+          _outcome: string
+          _rationale: string
+          _review_id: string
+          _safety_severity?: string
+        }
+        Returns: string
+      }
       scp_compute_maturity: {
         Args: {
           _at?: string
@@ -7505,9 +7599,32 @@ export type Database = {
         }
         Returns: string
       }
+      scp_get_attempt_items: {
+        Args: { _attempt_id: string; _language?: string }
+        Returns: {
+          display_order: number
+          is_safety_critical: boolean
+          item_format: string
+          item_version_id: string
+          options: Json
+          prompt: string
+          saved_best_id: string
+          saved_option_id: string
+          saved_text: string
+          saved_worst_id: string
+          scenario: string
+        }[]
+      }
       scp_has_content_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean
+      }
+      scp_release_attempt_report: {
+        Args: { _attempt_id: string }
+        Returns: {
+          employer_snapshot: string
+          participant_snapshot: string
+        }[]
       }
       scp_resolve_participant_identity: {
         Args: { _employer_id: string; _subject_id: string }
@@ -7515,6 +7632,25 @@ export type Database = {
           display_email: string
           released: boolean
           subject_id: string
+        }[]
+      }
+      scp_save_response: {
+        Args: {
+          _attempt_id: string
+          _best_option_id?: string
+          _item_version_id: string
+          _response_text?: string
+          _selected_option_id?: string
+          _worst_option_id?: string
+        }
+        Returns: string
+      }
+      scp_submit_attempt: {
+        Args: { _attempt_id: string }
+        Returns: {
+          attempt_status: string
+          evidence_written: number
+          reviews_opened: number
         }[]
       }
       set_application_status: {
