@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 62,
-    'pre-rollback: 62 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 1 Phase 2)');
+        AND table_name LIKE 'scp\_%') = 63,
+    'pre-rollback: 63 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -148,6 +148,7 @@ DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASC
 -- they are a Phase 2 artefact, and the evidence they project from survives in
 -- the ledger, which is the whole reason snapshots are safe to drop.
 DROP TABLE    IF EXISTS public.scp_report_snapshots CASCADE;
+DROP TABLE    IF EXISTS public.scp_fixture_access CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;

@@ -2009,6 +2009,16 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
     "academy.error.retry": "Försök igen",
+    "academy.myWork.title": "Kompetensbedömning",
+    "academy.myWork.lede":
+      "En arbetsgivare har bett dig genomföra en bedömning för kompetensutveckling. Det är inget prov och ger inget godkänt eller underkänt.",
+    "academy.myWork.openCenter": "Öppna min kompetensutveckling",
+    "academy.myWork.outstanding": "att göra",
+    "academy.myWork.released": "frisläppta rapporter",
+    "academy.myReviews.title": "Granskningar väntar på dig",
+    "academy.myReviews.bodyOne": "Ett fritextsvar väntar på din bedömning.",
+    "academy.myReviews.bodyMany": "fritextsvar väntar på din bedömning.",
+    "academy.myReviews.open": "Öppna granskningskön",
     "academy.error.retrying": "Försöker …",
     "academy.error.notFound": "Vi hittar ingen pågående bedömning för dig på den här länken.",
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
@@ -4201,6 +4211,16 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
     "academy.error.retry": "Try again",
+    "academy.myWork.title": "Competence assessment",
+    "academy.myWork.lede":
+      "An employer has asked you to complete an assessment for competence development. It is not an exam and gives no pass or fail.",
+    "academy.myWork.openCenter": "Open my competence development",
+    "academy.myWork.outstanding": "to do",
+    "academy.myWork.released": "released reports",
+    "academy.myReviews.title": "Reviews are waiting for you",
+    "academy.myReviews.bodyOne": "One written answer is waiting for your judgement.",
+    "academy.myReviews.bodyMany": "written answers are waiting for your judgement.",
+    "academy.myReviews.open": "Open the review queue",
     "academy.error.retrying": "Trying …",
     "academy.error.notFound": "We cannot find an assessment of yours at this link.",
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
