@@ -18,9 +18,9 @@ export type Database = {
         Row: {
           answers: Json | null
           application_id: string | null
-          assessment_id: string
+          assessment_id: string | null
           assessment_run_id: string | null
-          assessment_version_id: string
+          assessment_version_id: string | null
           assigned_by: string
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -42,9 +42,10 @@ export type Database = {
           job_id: string | null
           language: string
           opened_at: string | null
-          profile_id: string
+          profile_id: string | null
           recipient_email: string
           recipient_user_id: string | null
+          scp_assessment_version_id: string | null
           started_at: string | null
           status: string
           updated_at: string
@@ -53,9 +54,9 @@ export type Database = {
         Insert: {
           answers?: Json | null
           application_id?: string | null
-          assessment_id: string
+          assessment_id?: string | null
           assessment_run_id?: string | null
-          assessment_version_id: string
+          assessment_version_id?: string | null
           assigned_by: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -77,9 +78,10 @@ export type Database = {
           job_id?: string | null
           language?: string
           opened_at?: string | null
-          profile_id: string
+          profile_id?: string | null
           recipient_email: string
           recipient_user_id?: string | null
+          scp_assessment_version_id?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -88,9 +90,9 @@ export type Database = {
         Update: {
           answers?: Json | null
           application_id?: string | null
-          assessment_id?: string
+          assessment_id?: string | null
           assessment_run_id?: string | null
-          assessment_version_id?: string
+          assessment_version_id?: string | null
           assigned_by?: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -112,9 +114,10 @@ export type Database = {
           job_id?: string | null
           language?: string
           opened_at?: string | null
-          profile_id?: string
+          profile_id?: string | null
           recipient_email?: string
           recipient_user_id?: string | null
+          scp_assessment_version_id?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -168,6 +171,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_scp_assessment_version_id_fkey"
+            columns: ["scp_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -4711,7 +4721,7 @@ export type Database = {
           role_version_id: string | null
           safety_severity: string | null
           scoring_model_version: string | null
-          source_ref: string | null
+          source_ref: string
           source_snapshot_hash: string | null
           source_type: string
           subject_id: string
@@ -4744,7 +4754,7 @@ export type Database = {
           role_version_id?: string | null
           safety_severity?: string | null
           scoring_model_version?: string | null
-          source_ref?: string | null
+          source_ref: string
           source_snapshot_hash?: string | null
           source_type: string
           subject_id: string
@@ -4777,7 +4787,7 @@ export type Database = {
           role_version_id?: string | null
           safety_severity?: string | null
           scoring_model_version?: string | null
-          source_ref?: string | null
+          source_ref?: string
           source_snapshot_hash?: string | null
           source_type?: string
           subject_id?: string
