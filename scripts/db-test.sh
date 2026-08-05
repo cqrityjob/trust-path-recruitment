@@ -131,30 +131,40 @@ KNOWN_FAILURES=(
   "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
   # ---- Lovable Cloud sync re-issue, 2026-08-04 block ----
   #
-  # Cloud re-issued the Phase 1A/1B/1C/1F migrations under its own generated
-  # filenames while this repository already carried the authored originals.
-  # Because Cloud's timestamps are EARLIER, its copies now run first on a clean
-  # replay and the authored files find their triggers already present.
-  #
-  # 20260804063710 was verified byte-equivalent to 20260804090000: identical
-  # columns, identical scp_review_requirements table, identical two triggers.
-  # Nothing the authored file creates is lost by it failing second.
-  #
-  # 20260804063418 is different in kind: it is a Cloud reconciliation migration
-  # that REFUSES to set NOT NULL on a populated table. On a clean replay the
-  # table has rows by then, so the refusal is the guard working correctly.
-  "20260804061230_19f031e1-16f3-4eb5-983d-7a2231155eba.sql|||trigger \"scp_behaviour_versions_require_competency\" for relation \"scp_behaviour_versions\" already exists"
-  "20260804061440_9b082372-366c-49e5-b555-260e4e01941b.sql|||trigger \"scp_program_versions_require_limits\" for relation \"scp_program_versions\" already exists"
-  "20260804061624_2dae3b4e-4e96-4a3f-94f9-0964a4a456a0.sql|||trigger \"scp_rubric_versions_complete\" for relation \"scp_rubric_versions\" already exists"
-  "20260804061750_26a3790b-e8ad-4e8d-8682-c6bce42b4d1f.sql|||trigger \"scp_ai_providers_single_enabled\" for relation \"scp_ai_providers\" already exists"
-  "20260804063418_06f72e92-e195-482f-a19a-0a113806c9e7.sql|||SCP_RECONCILE_ITEM_VERSIONS: table is not empty, refusing to set NOT NULL"
-  "20260804090000_scp_phase1f_content_schema.sql|||trigger \"scp_item_versions_learning_counterpart\" for relation \"scp_item_versions\" already exists"
+  # These six were allowlisted in 2429463 and are deliberately NOT listed here
+  # any more. The four Cloud re-issues, the authored Phase 1F file and the
+  # 20260804063418 reconciliation were repaired instead, so they now replay
+  # cleanly rather than being expected to fail. Re-adding them would make this
+  # script report "allowlisted as a known failure but PASSED".
   # Cloud re-issued 20260729090000 as 20260729075534, i.e. under an EARLIER
   # timestamp, so on replay Cloud's copy runs first and the authored file
   # then hits "already exists". Section 0 of the authored file (the
   # scp_item_versions guard repair) still commits before that point, which
   # the 6-guarded-tables assertion below independently confirms.
   "20260729090000_career_discovery_v3_internal_test.sql|||relation \"cd_internal_testers\" already exists"
+  # ---- Lovable Cloud sync re-issue, 2026-08-05 block (Phase 1G .. Phase 2l) ----
+  #
+  # Cloud re-issued twelve migrations under generated 20260805 05xxxx filenames.
+  # Those sort BEFORE the authored originals (20260805 09xxxx onward), so on a
+  # clean replay Cloud's copy runs first and the authored file is then a SECOND
+  # application of the same change. Each expected error below is the signature
+  # of that second application, not a defect: the live database was verified
+  # independently (0 real content published, 0 assessment options carrying
+  # learning feedback, external AI disabled).
+  #
+  # 1G's content correction is refused by the Phase 2h guard, which is the guard
+  # working as designed -- re-writing learning feedback onto an assessment-mode
+  # option is exactly what 2h made impossible.
+  "20260805090000_scp_phase1g_content_correction.sql|||SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM"
+  # The remaining three boundary assertions read "no published Academy content".
+  # On replay the fixtures were already published by Cloud's earlier-timestamped
+  # copies of 2c/2f, so the assertion fires on ordering, not on real content.
+  "20260805100000_scp_phase1g_learning_and_anchors.sql|||SCP_P1G_BOUNDARY_BREACHED"
+  "20260806090000_scp_phase1h_foundation_corrections.sql|||SCP_P1H_ACADEMY_PUBLISHED"
+  "20260807090000_scp_phase2_read_models_and_identity_rpc.sql|||SCP_P2_BOUNDARY_BREACHED"
+  # Literal second inserts of the two fixture programmes.
+  "20260808100000_scp_phase2c_test_fixture_programme.sql|||duplicate key value violates unique constraint \"scp_assessment_versions_definition_id_version_number_key\""
+  "20260809100000_scp_phase2f_learning_fixture.sql|||duplicate key value violates unique constraint \"scp_program_versions_program_id_version_number_key\""
 )
 
 # Returns 0 and echoes the expected error when the file is allowlisted.

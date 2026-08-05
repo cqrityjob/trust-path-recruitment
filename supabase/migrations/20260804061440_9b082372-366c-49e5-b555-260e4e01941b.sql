@@ -119,6 +119,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_program_versions_require_limits ON public.scp_program_versions;
 CREATE TRIGGER scp_program_versions_require_limits
   BEFORE INSERT OR UPDATE ON public.scp_program_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_programme_states_limits();
@@ -185,6 +186,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_item_versions_behaviour_agrees ON public.scp_item_versions;
 CREATE TRIGGER scp_item_versions_behaviour_agrees
   BEFORE INSERT OR UPDATE ON public.scp_item_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_item_behaviour_agrees();
@@ -201,6 +203,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_item_versions_mode_disjoint ON public.scp_item_versions;
 CREATE TRIGGER scp_item_versions_mode_disjoint
   BEFORE UPDATE ON public.scp_item_versions
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_item_mode_disjoint();
@@ -229,6 +232,7 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+DROP TRIGGER IF EXISTS scp_form_items_single_mode ON public.scp_form_items;
 CREATE TRIGGER scp_form_items_single_mode
   BEFORE INSERT OR UPDATE ON public.scp_form_items
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_form_single_mode();
@@ -248,9 +252,11 @@ BEGIN
     'scp_programs','scp_program_versions','scp_modules','scp_module_versions',
     'scp_module_behaviour_map','scp_scenarios','scp_scenario_versions'
   ] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_read', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR SELECT TO authenticated USING (true)',
       t || '_read', t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', t || '_author_write', t);
     EXECUTE format(
       'CREATE POLICY %I ON public.%I FOR ALL TO authenticated '
       'USING (public.scp_can_author(auth.uid())) '
