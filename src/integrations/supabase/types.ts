@@ -5512,6 +5512,7 @@ export type Database = {
           content_status: string
           context_note: string | null
           created_at: string
+          depends_on_employer_instruction: boolean
           difficulty: string | null
           difficulty_target: string | null
           facet_id: string | null
@@ -5525,7 +5526,9 @@ export type Database = {
           item_id: string
           jurisdiction_id: string | null
           language_review_status: string
+          learning_counterpart_decision: string | null
           learning_counterpart_id: string | null
+          legal_assumption_sv: string | null
           legal_basis_required: boolean
           legal_review_expires_at: string | null
           legal_review_notes: string | null
@@ -5536,8 +5539,10 @@ export type Database = {
           market: string | null
           mode: string | null
           observable_behavior: string
+          overgeneralisation_guard_sv: string | null
           pilot_stats: Json
           primary_behaviour_id: string | null
+          primary_construct: string | null
           published_at: string | null
           requires_human_review: boolean
           response_process: string
@@ -5547,6 +5552,7 @@ export type Database = {
           sme_review_notes: string | null
           sme_review_status: string
           sme_reviewer_count: number
+          tests_what: string | null
           updated_at: string
           validation_status: string
           version_number: number
@@ -5564,6 +5570,7 @@ export type Database = {
           content_status?: string
           context_note?: string | null
           created_at?: string
+          depends_on_employer_instruction?: boolean
           difficulty?: string | null
           difficulty_target?: string | null
           facet_id?: string | null
@@ -5577,7 +5584,9 @@ export type Database = {
           item_id: string
           jurisdiction_id?: string | null
           language_review_status?: string
+          learning_counterpart_decision?: string | null
           learning_counterpart_id?: string | null
+          legal_assumption_sv?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
           legal_review_notes?: string | null
@@ -5588,8 +5597,10 @@ export type Database = {
           market?: string | null
           mode?: string | null
           observable_behavior: string
+          overgeneralisation_guard_sv?: string | null
           pilot_stats?: Json
           primary_behaviour_id?: string | null
+          primary_construct?: string | null
           published_at?: string | null
           requires_human_review?: boolean
           response_process: string
@@ -5599,6 +5610,7 @@ export type Database = {
           sme_review_notes?: string | null
           sme_review_status?: string
           sme_reviewer_count?: number
+          tests_what?: string | null
           updated_at?: string
           validation_status?: string
           version_number: number
@@ -5616,6 +5628,7 @@ export type Database = {
           content_status?: string
           context_note?: string | null
           created_at?: string
+          depends_on_employer_instruction?: boolean
           difficulty?: string | null
           difficulty_target?: string | null
           facet_id?: string | null
@@ -5629,7 +5642,9 @@ export type Database = {
           item_id?: string
           jurisdiction_id?: string | null
           language_review_status?: string
+          learning_counterpart_decision?: string | null
           learning_counterpart_id?: string | null
+          legal_assumption_sv?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
           legal_review_notes?: string | null
@@ -5640,8 +5655,10 @@ export type Database = {
           market?: string | null
           mode?: string | null
           observable_behavior?: string
+          overgeneralisation_guard_sv?: string | null
           pilot_stats?: Json
           primary_behaviour_id?: string | null
+          primary_construct?: string | null
           published_at?: string | null
           requires_human_review?: boolean
           response_process?: string
@@ -5651,6 +5668,7 @@ export type Database = {
           sme_review_notes?: string | null
           sme_review_status?: string
           sme_reviewer_count?: number
+          tests_what?: string | null
           updated_at?: string
           validation_status?: string
           version_number?: number
