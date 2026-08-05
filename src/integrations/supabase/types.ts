@@ -7590,6 +7590,10 @@ export type Database = {
         }
         Returns: string
       }
+      scp_complete_learning_module: {
+        Args: { _attempt_id: string }
+        Returns: number
+      }
       scp_compute_maturity: {
         Args: {
           _at?: string
@@ -7598,6 +7602,81 @@ export type Database = {
           _threshold_version?: string
         }
         Returns: string
+      }
+      scp_development_recommendations: {
+        Args: { _subject_id: string }
+        Returns: {
+          addresses_competency_en: string
+          addresses_competency_sv: string
+          estimated_minutes: number
+          maturity_level: string
+          module_name_en: string
+          module_name_sv: string
+          module_version_id: string
+          summary_en: string
+          summary_sv: string
+        }[]
+      }
+      scp_employer_assign: {
+        Args: {
+          _assessment_version_id: string
+          _deadline?: string
+          _employer_id: string
+          _language?: string
+          _recipient_email: string
+        }
+        Returns: {
+          assignment_id: string
+          attempt_id: string
+          subject_id: string
+        }[]
+      }
+      scp_employer_library: {
+        Args: { _employer_id: string }
+        Returns: {
+          assessment_version_id: string
+          assignable: boolean
+          content_status: string
+          definition_slug: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          is_test_fixture: boolean
+          item_count: number
+          name_en: string
+          name_sv: string
+          programme_purpose_en: string
+          programme_purpose_sv: string
+          target_minutes_max: number
+          target_minutes_min: number
+          validation_status: string
+        }[]
+      }
+      scp_employer_participants: {
+        Args: { _employer_id: string }
+        Returns: {
+          answered: number
+          assignment_id: string
+          attempt_id: string
+          attempt_status: string
+          deadline: string
+          identity_resolvable: boolean
+          programme_name_en: string
+          programme_name_sv: string
+          released_at: string
+          reviews_outstanding: number
+          scored_at: string
+          started_at: string
+          subject_id: string
+          submitted_at: string
+          total_items: number
+        }[]
+      }
+      scp_employer_review_pressure: {
+        Args: { _employer_id: string }
+        Returns: {
+          attempts_blocked: number
+          awaiting_review: number
+        }[]
       }
       scp_get_attempt_items: {
         Args: { _attempt_id: string; _language?: string }
@@ -7615,9 +7694,41 @@ export type Database = {
           scenario: string
         }[]
       }
+      scp_get_learning_feedback: {
+        Args: {
+          _attempt_id: string
+          _item_version_id: string
+          _language?: string
+        }
+        Returns: {
+          chosen: boolean
+          error_type: string
+          feedback: string
+          is_preferred: boolean
+          label: string
+          option_id: string
+        }[]
+      }
       scp_has_content_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean
+      }
+      scp_my_academy_assignments: {
+        Args: never
+        Returns: {
+          answered: number
+          attempt_id: string
+          attempt_status: string
+          deadline: string
+          employer_name: string
+          mode: string
+          programme_name_en: string
+          programme_name_sv: string
+          purpose_en: string
+          purpose_sv: string
+          released_at: string
+          total_items: number
+        }[]
       }
       scp_release_attempt_report: {
         Args: { _attempt_id: string }
@@ -7644,6 +7755,30 @@ export type Database = {
           _worst_option_id?: string
         }
         Returns: string
+      }
+      scp_schedule_reassessment: {
+        Args: { _deadline?: string; _employer_id: string; _subject_id: string }
+        Returns: {
+          assignment_id: string
+          attempt_id: string
+        }[]
+      }
+      scp_start_learning_attempt: {
+        Args: { _form_id: string }
+        Returns: string
+      }
+      scp_subject_progress: {
+        Args: { _subject_id: string }
+        Returns: {
+          attempt_id: string
+          competency_code: string
+          competency_name_en: string
+          competency_name_sv: string
+          maturity_level: string
+          observations: number
+          released_at: string
+          safety_flag_count: number
+        }[]
       }
       scp_submit_attempt: {
         Args: { _attempt_id: string }
