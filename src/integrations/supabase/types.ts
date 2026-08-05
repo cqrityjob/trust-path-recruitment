@@ -3934,6 +3934,13 @@ export type Database = {
             referencedRelation: "scp_ai_scoring_runs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scp_ai_scoring_dimensions_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_review_queue"
+            referencedColumns: ["scoring_run_id"]
+          },
         ]
       }
       scp_ai_scoring_runs: {
@@ -4284,6 +4291,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "assessment_assignments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
           },
           {
             foreignKeyName: "scp_attempts_form_id_fkey"
@@ -4645,6 +4659,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scp_attempts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
           },
           {
             foreignKeyName: "scp_candidate_responses_best_option_id_fkey"
@@ -5238,6 +5259,13 @@ export type Database = {
             referencedRelation: "scp_ai_scoring_runs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scp_human_reviews_scoring_run_id_fkey"
+            columns: ["scoring_run_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_review_queue"
+            referencedColumns: ["scoring_run_id"]
+          },
         ]
       }
       scp_integrity_flags: {
@@ -5273,6 +5301,13 @@ export type Database = {
             referencedRelation: "scp_attempts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scp_integrity_flags_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
         ]
       }
       scp_item_exposure: {
@@ -5304,6 +5339,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scp_attempts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_exposure_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
           },
           {
             foreignKeyName: "scp_item_exposure_item_version_id_fkey"
@@ -7130,6 +7172,83 @@ export type Database = {
           },
         ]
       }
+      scp_rm_employer_assignments: {
+        Row: {
+          assignment_id: string | null
+          attempt_id: string | null
+          attempt_status: string | null
+          created_at: string | null
+          employer_id: string | null
+          expires_at: string | null
+          released_at: string | null
+          scored_at: string | null
+          scp_assessment_version_id: string | null
+          status: string | null
+          subject_id: string | null
+          submitted_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_assignments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_scp_assessment_version_id_fkey"
+            columns: ["scp_assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_rm_review_queue: {
+        Row: {
+          issuer_organization_id: string | null
+          item_version_id: string | null
+          min_confidence: number | null
+          opened_at: string | null
+          response_text: string | null
+          review_id: string | null
+          review_status: string | null
+          run_status: string | null
+          scoring_run_id: string | null
+          subject_id: string | null
+          trigger_reason: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_attempts_issuer_organization_id_fkey"
+            columns: ["issuer_organization_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_item_version_id_fkey"
+            columns: ["item_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_scoring_version_lineage: {
         Row: {
           content_status: string | null
@@ -7389,6 +7508,14 @@ export type Database = {
       scp_has_content_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean
+      }
+      scp_resolve_participant_identity: {
+        Args: { _employer_id: string; _subject_id: string }
+        Returns: {
+          display_email: string
+          released: boolean
+          subject_id: string
+        }[]
       }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
