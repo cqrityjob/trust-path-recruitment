@@ -5122,6 +5122,35 @@ export type Database = {
         }
         Relationships: []
       }
+      scp_fixture_access: {
+        Row: {
+          employer_id: string
+          granted_at: string
+          granted_by: string | null
+          reason: string
+        }
+        Insert: {
+          employer_id: string
+          granted_at?: string
+          granted_by?: string | null
+          reason: string
+        }
+        Update: {
+          employer_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_fixture_access_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: true
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_form_items: {
         Row: {
           block_key: string
