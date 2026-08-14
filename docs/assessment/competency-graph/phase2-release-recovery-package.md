@@ -347,3 +347,71 @@ These must be identical before and after. Phase 2 touches none of them:
 | Security Guard item content | only `learning_feedback_*` on draft rows, preserved in events |
 
 If any count decreases, treat it as data loss and stop.
+
+---
+
+## 10. Verified state of the live project — 2026-08-14
+
+Measured against `zrahptwsnjcdyzfywbeh` with nothing but the public
+`SUPABASE_PUBLISHABLE_KEY` from `.env`. No write was attempted and none is
+possible with that key. The probe is reliable because PostgREST distinguishes
+the two cases cleanly:
+
+| Response | Meaning |
+|---|---|
+| `42501 permission denied for table …` | the object **exists**, and `anon` correctly cannot read it |
+| `PGRST205 Could not find the table … in the schema cache` | the object is **absent** |
+
+### What is there
+
+```
+scp_attempts             42501  exists
+scp_report_snapshots     42501  exists
+scp_rm_review_queue      42501  exists
+cd_definition_items      42501  exists   (Career Discovery, unaffected)
+```
+
+### What is not
+
+```
+scp_employer_library              404 PGRST205   MISSING
+scp_employer_assign               404 PGRST205   MISSING
+scp_employer_participants         404 PGRST205   MISSING
+scp_employer_learning_progress    404 PGRST205   MISSING
+scp_resolve_participant_identity  404 PGRST205   MISSING
+scp_start_learning_attempt        404 PGRST205   MISSING
+scp_get_learning_feedback         404 PGRST205   MISSING
+scp_complete_learning_module      404 PGRST205   MISSING
+scp_fixture_access                404 PGRST205   MISSING
+```
+
+**Every Phase 2 RPC is absent.** The tables landed; the functions did not.
+
+This is the same partial state `scripts/partial-upgrade-check.sh` was written to
+model, and it is the direct cause of the endless `Laddar…`: the Academy surfaces
+call RPCs that do not exist, PostgREST answers `PGRST202`, and react-query's
+default three retries with exponential backoff stretch the failure into a spinner
+that never resolves. `AcademyQueryState` now classifies that as
+`backend_unavailable` and says so instead of spinning — but the underlying
+migrations still have to be applied for the journey to work at all.
+
+Nothing needs to be replayed from the beginning. `partial-upgrade-check.sh`
+proves the remaining migrations apply cleanly on top of exactly this state
+(phase 1: 78 applied / 20 known failures / **0 unexpected**; phase 2: 24 applied
+/ 6 known failures / **0 unexpected**).
+
+### Why this was not applied here
+
+The Supabase CLI on this machine is authenticated, but as
+`mostafa@salvusgroup.se` it can see only one project — `nwmofcfcdbmretkdtngi`
+("Baynet", INACTIVE), an unrelated project that must not receive CQrityjob
+migrations. Both `supabase link --project-ref zrahptwsnjcdyzfywbeh` and
+`supabase projects api-keys --project-ref zrahptwsnjcdyzfywbeh` return:
+
+> 403 — Your account does not have the necessary privileges to access this endpoint.
+
+`.env` carries only the publishable key. There is no service-role key and no
+database password anywhere in the working tree, which is correct — but it means
+the migrations cannot be applied, `scp_fixture_access` cannot be granted to the
+closed-test organisation, and the synthetic accounts cannot be created from
+here.
