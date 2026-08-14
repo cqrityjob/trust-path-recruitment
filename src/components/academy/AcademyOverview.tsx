@@ -75,6 +75,23 @@ export function AcademyOverview({
         >
           {t("academy.overview.openParticipants")}
         </Link>
+        {/* Reviews and Programmes were reachable only by typing the URL. The
+            awaiting-review count above made that worse rather than better: it
+            told an employer work was waiting and gave them nowhere to go. */}
+        <Link
+          to="/employer/$employerSlug/assessments/reviews"
+          params={{ employerSlug }}
+          className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {t("academy.overview.openReviews")}
+        </Link>
+        <Link
+          to="/employer/$employerSlug/assessments/programmes"
+          params={{ employerSlug }}
+          className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {t("academy.overview.openProgrammes")}
+        </Link>
       </div>
 
       {/* The boundary, stated rather than implied by absence. */}
