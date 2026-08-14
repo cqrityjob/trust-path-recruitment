@@ -1288,6 +1288,8 @@ export const dictionaries = {
 
     "employer.applications.heading": "Ansökningar",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
+    "employer.applications.emptyBody": "Ansökningar kommer in via publicerade jobbannonser. När en annons är publicerad hamnar ansökningarna här.",
+    "employer.applications.emptyAction": "Till jobbannonser",
     "employer.applications.anonymousCandidate": "Kandidat",
     "employer.applications.status.submitted": "Inskickad",
     "employer.applications.status.reviewing": "Under granskning",
@@ -3496,6 +3498,8 @@ export const dictionaries = {
 
     "employer.applications.heading": "Applications",
     "employer.applications.empty": "No applications have been received yet.",
+    "employer.applications.emptyBody": "Applications arrive through published job advertisements. Once an advertisement is live, they appear here.",
+    "employer.applications.emptyAction": "Go to job advertisements",
     "employer.applications.anonymousCandidate": "Candidate",
     "employer.applications.status.submitted": "Submitted",
     "employer.applications.status.reviewing": "Reviewing",

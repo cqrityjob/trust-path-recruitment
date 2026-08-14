@@ -391,7 +391,14 @@ function NavList({
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 truncate">{t(item.labelKey)}</span>
+              {/* `truncate` is visual only — the full label is still in the DOM
+                  for screen readers, but a sighted user reading
+                  "Kompetenser och certif…" has no way to finish the sentence.
+                  A native title costs no layout and works in both languages,
+                  where the Swedish labels are the longer ones. */}
+              <span className="min-w-0 truncate" title={t(item.labelKey)}>
+                {t(item.labelKey)}
+              </span>
             </Link>
             {item.children && (
               <ul className="ml-6 mt-0.5 space-y-0.5 border-l border-border pl-3">
@@ -408,7 +415,7 @@ function NavList({
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {t(child.labelKey)}
+                      <span title={t(child.labelKey)}>{t(child.labelKey)}</span>
                     </Link>
                   </li>
                 ))}

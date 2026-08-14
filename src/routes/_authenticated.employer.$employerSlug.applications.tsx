@@ -14,6 +14,7 @@
 // an employer can never be shown (or send) 'withdrawn'.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -206,9 +207,22 @@ function ApplicationsList({
         ) : query.isError ? (
           <p className="text-sm text-destructive">{t("employer.applications.error.load")}</p>
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            {t("employer.applications.empty")}
-          </div>
+          // Applications only ever arrive from a published advertisement, so
+          // the empty state says where they come from and offers the way
+          // there — rather than stating the absence and stopping.
+          <NoEvidenceState
+            title={t("employer.applications.empty")}
+            body={t("employer.applications.emptyBody")}
+            action={
+              <Link
+                to="/employer/$employerSlug/jobs"
+                params={{ employerSlug }}
+                className="inline-flex h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("employer.applications.emptyAction")}
+              </Link>
+            }
+          />
         ) : (
           <ul className="space-y-3">
             {rows.map((r) => {
