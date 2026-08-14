@@ -366,15 +366,27 @@ function WorkforceDirectory({
                     </button>
                     {(() => {
                       const assignment = assignmentByEmployee.get(row.id);
-                      if (!assignment) {
+                      // A cancelled or expired assignment is finished business,
+                      // not an assignment in flight. Treating it as one left the
+                      // employee in a dead end: a chip that did nothing, and no
+                      // way to assign again.
+                      const settled =
+                        assignment &&
+                        (assignment.status === "cancelled" || assignment.status === "expired");
+                      if (!assignment || settled) {
                         return (
+                          // This used to deep-link into the assign flow with
+                          // assessmentId="security-guard-foundation" hardcoded.
+                          // That definition was retired in July 2026 and every
+                          // version of it carries retired_at, so the button
+                          // could not succeed -- a trigger blocks assignment to
+                          // a retired version. It now goes to the library,
+                          // which is where assignable programmes actually live
+                          // and which states honestly when nothing is
+                          // assignable yet.
                           <Link
-                            to="/employer/$employerSlug/assessments/assign"
+                            to="/employer/$employerSlug/assessments/library"
                             params={{ employerSlug }}
-                            search={{
-                              assessmentId: "security-guard-foundation",
-                              employeeId: row.id,
-                            }}
                             className="rounded-md border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/10"
                           >
                             {t("assignment.action.assign")}
@@ -392,8 +404,13 @@ function WorkforceDirectory({
                           </Link>
                         );
                       }
+                      // In flight, so there is nothing to press. Rendered as a
+                      // status chip rather than in the button shape it used to
+                      // wear -- a state that looks like an action invites a
+                      // click that will never do anything. Buttons are actions;
+                      // badges are states.
                       return (
-                        <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent">
+                        <span className="inline-flex items-center self-center rounded-full border border-border px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
                           {t(`assignment.status.${assignment.status}` as TranslationKey)}
                         </span>
                       );
