@@ -461,6 +461,101 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
     return { id: data.jobId, status: "archived" as const };
   });
 
+// ------------------- ARCHIVE / RESTORE (draft clutter) ----------------------
+//
+// closeEmployerJob above handles published -> archived, which is a different
+// act with a different meaning: closing a live advertisement. These two are
+// about the drafts nobody ever finished. They were unremovable, so they simply
+// accumulated -- and Duplicate made that worse every time it was used.
+//
+// Archiving, never deleting. Applications, moderation decisions and audit rows
+// all hang off a job, and a delete would take them with it.
+
+const archiveSchema = z.object({
+  employerId: z.string().uuid(),
+  jobId: z.string().uuid(),
+});
+
+export const archiveEmployerJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => archiveSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await assertActiveMembership(ctx, data.employerId);
+
+    const { data: before, error: bErr } = await ctx.supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId)
+      .maybeSingle();
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
+
+    // pending_review is deliberately absent: it belongs to a moderator until
+    // they are done with it. The database enforces this too — this check only
+    // exists so the message is specific instead of a policy silently matching
+    // zero rows.
+    if (!["draft", "rejected", "published"].includes(before.status as string)) {
+      throw new Error("JOB_NOT_ARCHIVABLE");
+    }
+
+    const { error: uErr } = await ctx.supabase
+      .from("jobs")
+      .update({ status: "archived", updated_at: new Date().toISOString() })
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId);
+    if (uErr) throw sanitizeJobWriteError(uErr, "archiveEmployerJob update", "ARCHIVE_JOB_FAILED");
+
+    await writeAudit({
+      jobId: data.jobId,
+      slugSnapshot: before.slug,
+      actorId: ctx.userId,
+      action: "archived",
+      before,
+      after: { ...before, status: "archived" },
+    });
+    return { id: data.jobId, status: "archived" as const };
+  });
+
+export const restoreEmployerJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => archiveSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await assertActiveMembership(ctx, data.employerId);
+
+    const { data: before, error: bErr } = await ctx.supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId)
+      .maybeSingle();
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
+    if (before.status !== "archived") throw new Error("JOB_NOT_RESTORABLE");
+
+    // Back to draft, never straight back to published. A restored
+    // advertisement re-enters the normal path and is submitted for review
+    // again, so archiving can never become a way around moderation.
+    const { error: uErr } = await ctx.supabase
+      .from("jobs")
+      .update({ status: "draft", updated_at: new Date().toISOString() })
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId);
+    if (uErr) throw sanitizeJobWriteError(uErr, "restoreEmployerJob update", "RESTORE_JOB_FAILED");
+
+    await writeAudit({
+      jobId: data.jobId,
+      slugSnapshot: before.slug,
+      actorId: ctx.userId,
+      action: "restored",
+      before,
+      after: { ...before, status: "draft" },
+    });
+    return { id: data.jobId, status: "draft" as const };
+  });
+
 // -------------------- DUPLICATE (any status -> new draft) --------------------
 
 const duplicateSchema = z.object({

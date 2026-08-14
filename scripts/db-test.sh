@@ -611,6 +611,29 @@ if [ "$ROLLBACK_PASSED" -lt 26 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Verifying job advertisement archiving"
+set +e
+ARCH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/jobs_archive_test.sql 2>&1)"
+ARCH_RC=$?
+set -e
+
+ARCH_PASSED="$(echo "$ARCH_OUT" | grep -c "ok  " || true)"
+
+if [ "$ARCH_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the job archive suite exited with code ${ARCH_RC}." >&2
+  echo "$ARCH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${ARCH_PASSED} job archive assertions passed"
+
+if [ "$ARCH_PASSED" -lt 14 ]; then
+  echo "FAIL: expected at least 14 job archive assertions, only ${ARCH_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
@@ -628,5 +651,6 @@ echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
-echo "              ${ROLLBACK_PASSED} rollback assertions"
+echo "              ${ROLLBACK_PASSED} rollback assertions,"
+echo "              ${ARCH_PASSED} job archive assertions"
 echo "===================================================="

@@ -18,6 +18,8 @@ import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.func
 import {
   listEmployerJobs,
   closeEmployerJob,
+  archiveEmployerJob,
+  restoreEmployerJob,
   duplicateEmployerJob,
   type EmployerJobRow,
 } from "@/lib/job-intelligence/employer-jobs.functions";
@@ -99,6 +101,8 @@ function JobsList({
   const listFn = useServerFn(listEmployerJobs);
   const closeFn = useServerFn(closeEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
+  const archiveFn = useServerFn(archiveEmployerJob);
+  const restoreFn = useServerFn(restoreEmployerJob);
 
   const jobsQuery = useQuery({
     queryKey: ["employer", employerId, "jobs"],
@@ -106,6 +110,11 @@ function JobsList({
   });
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  // Archived is a separate view rather than another row in the same list.
+  // Putting away a draft has to actually make it go away, or the feature has
+  // not solved the clutter it exists for.
+  const [showArchived, setShowArchived] = useState(false);
 
   const closeMutation = useMutation({
     mutationFn: (jobId: string) => closeFn({ data: { employerId, jobId } }),
@@ -125,7 +134,36 @@ function JobsList({
     onError: (e: any) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
-  const rows: EmployerJobRow[] = jobsQuery.data ?? [];
+  const archiveMutation = useMutation({
+    mutationFn: (jobId: string) => archiveFn({ data: { employerId, jobId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+    },
+    onError: (e: any) => setActionError(e?.message ?? "ARCHIVE_JOB_FAILED"),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (jobId: string) => restoreFn({ data: { employerId, jobId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+    },
+    onError: (e: any) => setActionError(e?.message ?? "RESTORE_JOB_FAILED"),
+  });
+
+  const allRows: EmployerJobRow[] = jobsQuery.data ?? [];
+  const archivedCount = allRows.filter((r) => r.status === "archived").length;
+  const needle = search.trim().toLowerCase();
+  const rows = allRows
+    .filter((r) => (showArchived ? r.status === "archived" : r.status !== "archived"))
+    .filter(
+      (r) =>
+        needle === "" ||
+        (r.title_sv ?? "").toLowerCase().includes(needle) ||
+        (r.title_en ?? "").toLowerCase().includes(needle) ||
+        (r.short_id ?? "").toLowerCase().includes(needle),
+    );
 
   return (
     <EmployerAppShell
@@ -155,12 +193,56 @@ function JobsList({
         </div>
       )}
 
-      <div className="mt-8">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <label className="sr-only" htmlFor="job-search">
+          {t("employer.jobs.list.searchLabel")}
+        </label>
+        <input
+          id="job-search"
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("employer.jobs.list.searchLabel")}
+          className="h-10 w-full max-w-xs rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        />
+        <div className="inline-flex overflow-hidden rounded-md border border-border" role="group">
+          <button
+            type="button"
+            aria-pressed={!showArchived}
+            onClick={() => setShowArchived(false)}
+            className={
+              !showArchived
+                ? "bg-foreground px-3 py-2 text-xs font-semibold text-background"
+                : "px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
+            }
+          >
+            {t("employer.jobs.list.filterActive")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={showArchived}
+            onClick={() => setShowArchived(true)}
+            className={
+              showArchived
+                ? "bg-foreground px-3 py-2 text-xs font-semibold text-background"
+                : "px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
+            }
+          >
+            {t("employer.jobs.list.filterArchived")} ({archivedCount})
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-6">
         {jobsQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            {t("employer.jobs.list.empty")}
+            {needle !== ""
+              ? t("employer.jobs.list.emptySearch")
+              : showArchived
+                ? t("employer.jobs.list.emptyArchived")
+                : t("employer.jobs.list.empty")}
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-border">
@@ -178,12 +260,18 @@ function JobsList({
                 {rows.map((r) => {
                   const editable = r.status === "draft" || r.status === "rejected";
                   const closeable = r.status === "published";
+                  // published has its own "close" wording; these are the ones
+                  // that were previously stuck with no action at all.
+                  const archivable = r.status === "draft" || r.status === "rejected";
+                  const restorable = r.status === "archived";
                   return (
                     <tr key={r.id} className="align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium text-foreground">
                           {r.title_sv || r.title_en || (
-                            <span className="text-muted-foreground">(untitled)</span>
+                            <span className="text-muted-foreground">
+                              {t("employer.jobs.list.untitled")}
+                            </span>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">{r.short_id}</div>
@@ -223,6 +311,34 @@ function JobsList({
                           >
                             {t("employer.jobs.list.duplicate")}
                           </button>
+                          {archivable && (
+                            <button
+                              type="button"
+                              disabled={archiveMutation.isPending}
+                              onClick={() => {
+                                if (window.confirm(t("employer.jobs.list.confirmArchive"))) {
+                                  setActionError(null);
+                                  archiveMutation.mutate(r.id);
+                                }
+                              }}
+                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                            >
+                              {t("employer.jobs.list.archive")}
+                            </button>
+                          )}
+                          {restorable && (
+                            <button
+                              type="button"
+                              disabled={restoreMutation.isPending}
+                              onClick={() => {
+                                setActionError(null);
+                                restoreMutation.mutate(r.id);
+                              }}
+                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                            >
+                              {t("employer.jobs.list.restore")}
+                            </button>
+                          )}
                           {closeable && (
                             <button
                               type="button"
