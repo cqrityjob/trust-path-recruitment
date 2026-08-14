@@ -133,7 +133,17 @@ export function SafetyFlagNotice({ count }: { count: number }) {
  * statement about what has been collected, not a deficiency of the person, and
  * the copy says so plainly instead of dressing it up.
  */
-export function NoEvidenceState({ title, body }: { title: string; body: string }) {
+export function NoEvidenceState({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  /** Optional next step. An empty state that names the next action but does
+   *  not offer it makes the reader go and find it themselves. */
+  action?: ReactNode;
+}) {
   return (
     <div className="rounded-[12px] border border-dashed border-border p-6 text-center">
       <Info className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
@@ -141,6 +151,7 @@ export function NoEvidenceState({ title, body }: { title: string; body: string }
       <p className="mx-auto mt-1.5 max-w-[46ch] text-[13px] leading-relaxed text-muted-foreground">
         {body}
       </p>
+      {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
   );
 }

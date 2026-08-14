@@ -40,6 +40,7 @@ export function AcademyOverview({
   const rows = participants.data ?? [];
   const active = rows.filter((r) => r.attemptStatus === "in_progress").length;
   const released = rows.filter((r) => r.releasedAt).length;
+  const awaitingReview = pressure.data?.awaitingReview ?? 0;
 
   return (
     <section className="mb-10">
@@ -53,11 +54,26 @@ export function AcademyOverview({
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
         <Stat icon={Users} label={t("academy.overview.active")} value={active} />
         <Stat icon={ClipboardCheck} label={t("academy.overview.released")} value={released} />
-        <Stat
-          icon={Lock}
-          label={t("academy.overview.awaitingReview")}
-          value={pressure.data?.awaitingReview ?? 0}
-        />
+        {/* The tab strip already navigates to Reviews, so this is not a second
+            way in — it is the difference between reporting a number and
+            letting someone act on it. A non-zero "awaiting review" is work
+            waiting for a person, and the count is where they will look for it.
+            At zero it stays inert: nothing to go and do. */}
+        {awaitingReview > 0 ? (
+          <Link
+            to="/employer/$employerSlug/assessments/reviews"
+            params={{ employerSlug }}
+            className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
+          >
+            <StatBody
+              icon={Lock}
+              label={t("academy.overview.awaitingReview")}
+              value={awaitingReview}
+            />
+          </Link>
+        ) : (
+          <Stat icon={Lock} label={t("academy.overview.awaitingReview")} value={0} />
+        )}
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -75,23 +91,6 @@ export function AcademyOverview({
         >
           {t("academy.overview.openParticipants")}
         </Link>
-        {/* Reviews and Programmes were reachable only by typing the URL. The
-            awaiting-review count above made that worse rather than better: it
-            told an employer work was waiting and gave them nowhere to go. */}
-        <Link
-          to="/employer/$employerSlug/assessments/reviews"
-          params={{ employerSlug }}
-          className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("academy.overview.openReviews")}
-        </Link>
-        <Link
-          to="/employer/$employerSlug/assessments/programmes"
-          params={{ employerSlug }}
-          className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("academy.overview.openProgrammes")}
-        </Link>
       </div>
 
       {/* The boundary, stated rather than implied by absence. */}
@@ -107,14 +106,32 @@ export function AcademyOverview({
   );
 }
 
+const STAT_SHELL = "rounded-[14px] border border-border bg-card p-5";
+
 function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
   return (
-    <div className="rounded-[14px] border border-border bg-card p-5">
+    <div className={STAT_SHELL}>
+      <StatBody icon={Icon} label={label} value={value} />
+    </div>
+  );
+}
+
+function StatBody({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number;
+}) {
+  return (
+    <>
       <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
         {label}
       </p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
-    </div>
+    </>
   );
 }

@@ -2039,8 +2039,6 @@ export const dictionaries = {
     "academy.overview.awaitingReview": "Väntar på granskning",
     "academy.overview.openLibrary": "Öppna testbiblioteket",
     "academy.overview.openParticipants": "Visa deltagare",
-    "academy.overview.openReviews": "Öppna granskningar",
-    "academy.overview.openProgrammes": "Visa utvecklingsprogram",
     "academy.overview.recruitmentTitle": "Rekryteringsbedömning är inte tillgänglig",
     "academy.overview.recruitmentBody":
       "Innehållet här är framtaget för utveckling, inte för urval. Användning i rekrytering kräver en högre valideringsnivå än det här materialet har nått, och är därför avstängd.",
@@ -4243,8 +4241,6 @@ export const dictionaries = {
     "academy.overview.awaitingReview": "Awaiting review",
     "academy.overview.openLibrary": "Open the library",
     "academy.overview.openParticipants": "View participants",
-    "academy.overview.openReviews": "Open reviews",
-    "academy.overview.openProgrammes": "View development programmes",
     "academy.overview.recruitmentTitle": "Recruitment assessment is not available",
     "academy.overview.recruitmentBody":
       "This content is built for development, not for selection. Use in recruitment requires a higher validation level than this material has reached, so it is switched off.",

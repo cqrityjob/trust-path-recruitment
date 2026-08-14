@@ -79,6 +79,17 @@ function Participants({
         isEmpty={(rows) => rows.length === 0}
         emptyTitle={t("academy.participants.emptyTitle")}
         emptyBody={t("academy.participants.emptyBody")}
+        // The empty state already told people to go to the library. Now it
+        // takes them there.
+        emptyAction={
+          <Link
+            to="/employer/$employerSlug/assessments/library"
+            params={{ employerSlug }}
+            className="inline-flex h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("academy.overview.openLibrary")}
+          </Link>
+        }
       >
         {(rows) => (
           <div className="space-y-3">

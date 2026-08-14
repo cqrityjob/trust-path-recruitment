@@ -54,6 +54,7 @@ export function AcademyQueryState<T>({
   isEmpty,
   emptyTitle,
   emptyBody,
+  emptyAction,
   children,
 }: {
   query: QueryLike<T>;
@@ -61,6 +62,7 @@ export function AcademyQueryState<T>({
   isEmpty: (data: T) => boolean;
   emptyTitle: string;
   emptyBody: string;
+  emptyAction?: ReactNode;
   children: (data: T) => ReactNode;
 }) {
   const { t } = useT();
@@ -109,7 +111,7 @@ export function AcademyQueryState<T>({
   }
 
   if (isEmpty(query.data)) {
-    return <NoEvidenceState title={emptyTitle} body={emptyBody} />;
+    return <NoEvidenceState title={emptyTitle} body={emptyBody} action={emptyAction} />;
   }
 
   return <>{children(query.data)}</>;
