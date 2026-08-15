@@ -1,124 +1,118 @@
 # Security Career Discovery v3.1 — Layer 4 & Anonymous-First Implementation State
 
-Last updated: 2026-08-15. Written so work can resume from this document without
-re-deriving context — see the Execution Mandate's §37 instruction to keep a
-concise state doc rather than stop for context length.
+Last updated: 2026-08-15 (second pass — deployed and live-verified). Written
+so work can resume from this document without re-deriving context.
+
+## Deployment state (verified, not assumed)
+
+- **main SHA**: `f96e718` (GitHub `cqrityjob/trust-path-recruitment`, pushed).
+- **Lovable**: `latest_commit_sha` confirmed matching via `get_project`
+  after each push; the project's own git-sync alone did NOT rebuild the
+  served bundle (verified by fetching the live JS chunk and diffing content
+  before/after) — `deploy_project` had to be called explicitly each time.
+  Do this after every future push to this product line, or the live site
+  silently serves stale code despite `latest_commit_sha` looking correct.
+- **Live URL**: https://trust-path-recruitment.lovable.app — public, already
+  published before this session (not newly exposed).
+- **Hosted Supabase** (`zrahptwsnjcdyzfywbeh` / Lovable project
+  `9ec625ef-34a1-4b4b-8cbb-712cae168579`): all three migrations re-applied
+  verbatim from the committed files and confirmed idempotent (zero errors on
+  re-run against the already-migrated database) — the strongest available
+  substitute for a clean-database replay in this environment (the local
+  Supabase CLI is linked to a different, unrelated account).
 
 ## What is live in production today
 
-Unchanged. `approved_for_ranking = false` for every profession, so every real
-candidate still sees `professions.available = false` — exactly as before this
-session, and correctly so until an owner approves a profession. The one
-production behavior change is real and active: **the login wall before the
-result is gone.** An anonymous visitor now sees their full Career DNA result
-immediately on completion.
+`approved_for_ranking = false` for every profession — untouched, correct.
+The behavior change that IS live: **no login wall before the result.**
+Verified directly in the browser against the production URL:
 
-## What is built, wired, and tested — dark until approval
+- Full anonymous journey (26 questions → complete Career DNA result, no
+  account) — confirmed with a real click-through, both desktop and mobile
+  (375px) viewports, both sv and en locales.
+- Career DNA, pattern story, ranked Career Areas, the honest "profession
+  matching not yet available" note, the feedback form, and the non-blocking
+  "sign in and save" banner all render correctly together on one page.
+- "Sign in and save" correctly routes to `/candidate/login` with the
+  redirect back to the assessment intact. (Not completed further — entering
+  credentials or creating an account is outside what this session does.)
+- A real bug was found and fixed via this live testing: the first deploy
+  attempt showed the OLD (login-walled) behavior despite `latest_commit_sha`
+  matching — root cause was Lovable's git sync not auto-triggering a
+  rebuild; `deploy_project` fixed it, confirmed by re-fetching the served JS
+  bundle and by the full result rendering correctly afterward.
 
-- **Layer 4 matching engine** — `src/lib/career-discovery/v31/professions.ts`.
-  Distance-based, asymmetric, coverage-gated (mirrors `career-areas.ts`).
-  Stage (`explore_now`/`possible_next_step`/`longer_term`) driven by C1
-  (`ContextStatus`), never by fit. Sort quality fix mid-session: fit tier
-  bucket first, then actual fit magnitude (kept internal), so "strongest
-  directions" is genuinely best-fit-first, not alphabetical among ties.
-- **First-wave catalogue**: 14 professions × 16 CID bands (224 rows), applied
-  to the hosted DB (`20260814171100_...sql`, `20260814180000_...sql`).
-  `review_state='ai_researched'`, `approved_for_ranking=false` throughout.
-- **Explanation layer** — `profession-explanations.ts`: per-match "why"
-  (authored rationale + stage sentence + aligned dimension names), never a
-  score or percentage.
-- **Live CIG content** — `profession-detail.functions.ts`: requirements
-  (classified formally-required / employer-requirement /
-  recommended-development / optional-differentiating, from
-  `legal_blocker`/`criticality`/`importance` — not invented), education,
-  certifications, pathway edges from `cig_career_transitions`. No auth
-  required (same public-client pattern as `getV31Availability`); query shapes
-  verified directly against the hosted project.
-- **Result UI** — `ProfessionRecommendations.tsx` wired into
-  `V31ReportView.tsx`: three tiers, expandable detail, "current jobs in this
-  direction" linking through `/jobs/profession/$slug` (the real
-  `jobs.profession_slug` FK path, not the separate Career Center slug space
-  — see Known Gaps).
-- **Anonymous, no-login result** — `PublicAssessmentFlow.tsx`: on completion,
-  builds the full `ReportSnapshot` client-side via the same pure
-  `buildValidatedSnapshot` the server calls, renders it immediately, no
-  database write. "Save my Career Journey" is a CTA banner, not a gate;
-  claiming replays the buffered answers through the existing authenticated
-  `persistPublicV31Run` pipeline — one persistence event, no duplicate
-  results, `completedAt` carried through so the preview and the saved report
-  agree.
-- **Career Card** — `career-card.ts` (data shaping from a real
-  `ProfessionMatch`, never a new calculation) + `CareerCard.tsx` (SVG render,
-  Story/Square/LinkedIn from one layout table) + `CareerCardCreator.tsx`
-  (pick-a-real-recommendation, optional first name, indicator toggle, format
-  tabs, preview, Share/Save) + `career-card-export.ts` (canvas rasterisation,
-  Web Share API with file, download fallback, QR to `/security-career-
-  assessment` only, LinkedIn share link). No percentages, ever — indicators
-  are bars driven by the candidate's own [0,1] dimension score.
-- **Feedback + funnel analytics + career goals** —
-  `20260815090000_cd_v31_feedback_analytics_goals.sql` (applied): three
-  additive, RLS-scoped tables. `v31-feedback.functions.ts`:
-  `trackV31FunnelEvent` (anon-insert, admin-read, closed event-name enum, no
-  PII/fingerprinting), `submitV31Feedback` (the 5 light questions from the
-  mandate), `setCareerGoal` (authenticated-owner-only). `FeedbackForm.tsx`
-  wired into the result view. Funnel events wired for
-  `assessment_started/completed`, `result_viewed`, `save_journey_clicked`,
-  `result_claimed`, and the Career Card creator's own events.
-- **Golden personas** — `scripts/career-discovery-v31-golden-personas.ts`,
-  all 9 required personas, against `scripts/fixtures/first-wave-profession-
-  catalog.ts` (generated once from the exact applied-migration values, not a
-  hand-typed second copy). 238 checks, all passing. Report:
-  `docs/career-discovery/v31-golden-persona-report.md`.
+## What is built, wired, and tested — dark until profession approval
+
+Same set as the previous pass (Layer 4 engine, first-wave 14-profession
+catalogue, live CIG-backed requirements/education/pathway rendering, Career
+Card in 3 formats, feedback/analytics/career-goal tables), PLUS this pass:
+
+- **Owner review / preview** — `/admin/career-discovery-preview` (nested
+  under `_authenticated/admin`, so gated by `is_platform_admin` both
+  client-side and, independently, server-side inside
+  `v31-owner-preview.functions.ts`). Runs the exact production
+  `matchProfessions` → `ProfessionRecommendations` → `CareerCardCreator`
+  path against the FULL `cd_professions` table (every review_state, not
+  filtered to `approved_for_ranking = true`) for any of the 9 golden
+  personas — lets an owner see precisely what a future approved result will
+  look like without writing `approved_for_ranking` anywhere. Confirmed the
+  route is correctly gated (an anonymous visit redirects to admin sign-in,
+  no data leaks). Could NOT click through the actual rendered UI as an
+  authenticated admin — no admin credentials exist for this session, and
+  creating an account or entering a password is outside what this session
+  does. The underlying render path is the same component already visually
+  confirmed live for the Career DNA/areas sections, and the whole matching
+  engine is separately proven by 238 script-level golden-persona checks.
+- **Set as career goal** — wired end to end: `cd_career_goals` (schema +
+  RLS from the prior pass) now has a real UI action on each profession
+  card, visible only once `sessionId` is present (i.e. only for a claimed,
+  owned report — `getStoredDiscoveryReport` now selects and returns
+  `session_id`). Not click-tested live for the same credential reason as
+  above; schema, RLS, and the mutation call are typechecked and covered by
+  the full build.
+- **All 9 of 9 funnel events now fire**: `profession_explored` (accordion
+  open), `pathway_opened` (once real pathway data renders),
+  `jobs_clicked` (the jobs link), plus the 6 already wired in the prior
+  pass. Table: `cd_v31_funnel_events`.
 
 ## Regression status
 
-`tsc --noEmit`: clean. `bun run build`: succeeds (confirms the `qrcode`
-dependency and all new modules bundle correctly, including SSR). All checks
-green: `career-discovery-v31:check` (558), `career-discovery-v31-professions:
-check` (38), `career-discovery-report:check` (33), `public-assessment-auth:
-check` (124), `career-discovery-v31-golden-personas:check` (238),
-`career-discovery:check`. One pre-existing false positive fixed along the way
-(a guard-script regex tripped by the word "updated" in an unrelated comment).
+`tsc --noEmit`: clean. `bun run build`: succeeds (twice, after each batch of
+changes this pass). All check suites green: `career-discovery-v31:check`
+(565), `career-discovery-v31-professions:check` (38),
+`career-discovery-report:check` (33), `public-assessment-auth:check` (124),
+`career-discovery-v31-golden-personas:check` (238), `career-discovery:check`.
 
-## Known gaps — not stop conditions, not yet executed
+## Known gaps — real, not stop conditions
 
-1. **Career Center reconciliation (§15)**: `src/lib/career-center/professions/`
-   uses English-style slugs (`security-manager`, `police-officer`) that
-   diverge from `cig_professions.slug` (`sakerhetschef`, `polis`). The NEW
-   v3.1 result surface never depends on this static content — it renders
-   structured CIG data directly — so this divergence does not affect the
-   product just built. Full reconciliation (rename 20 SEO-indexed public
-   pages, or build an alias layer) touches live public URLs and is a content/
-   SEO decision, not something to improvise; flagged for the owner.
-2. **`/journey` full migration (§16)**: left untouched (its own `knowledge-
-   graph` profession identity space, separate from CIG — auto-porting risks
-   silently mismapping a candidate's chosen target). Added a small,
-   non-destructive coexistence note pointing to the new assessment instead.
-3. **"Set as my career goal" UI**: the table and server function
-   (`cd_career_goals`, `setCareerGoal`) exist and are schema-tested; no button
-   wired into the report UI yet. Small remaining task.
-4. **Playwright e2e** for the new anonymous/Career-Card flows: not written.
-   Existing plain-script regression suite (991 checks total) covers the
-   domain logic; the interactive click-through paths are unverified by an
-   automated browser test.
-5. **Browser E2E of the live anonymous flow**: blocked by a sandbox-only SSR
-   networking limitation already documented earlier this session (the
-   browser reaches the hosted DB fine; the dev server process's own outbound
-   call hangs). Verified instead via: production build success, a
-   standalone script exercising the exact buffer→snapshot code path (9/9
-   checks), and direct REST/RPC queries confirming the live data.
-6. **Full a11y device-matrix and sv/en visual verification**: dictionary
-   parity is checked by the existing suite; a real screen-reader pass, mobile
-   Safari/Chrome rendering check, and side-by-side sv/en visual review have
-   not been done.
-7. **Analytics event coverage**: `profession_explored`, `pathway_opened`,
-   `jobs_clicked` are defined in the schema but not yet fired from the UI
-   (only the events listed above are wired).
+1. **Career Center reconciliation**: still not executed (slug divergence
+   between `src/lib/career-center/professions/` and `cig_professions.slug`
+   documented in the prior pass). The v3.1 result surface never depends on
+   it, so this doesn't block the built product; it's a live-URL/content
+   decision for the owner.
+2. **`/journey` full migration**: still not executed; a coexistence note
+   was added in the prior pass. Same reasoning — separate profession
+   identity space, auto-porting risks silent mismapping.
+3. **Owner-preview UI and "set as career goal" click-through**: built,
+   typechecked, and covered by the full production build, but not visually
+   confirmed by an authenticated session in this browser — genuinely
+   blocked on not having (and not creating) admin/candidate credentials.
+4. **Formal accessibility audit** (screen reader, automated a11y scanner):
+   not run. Semantic HTML, aria labels, and keyboard operability were built
+   in throughout, not independently verified.
+5. **Tablet viewport**: checked desktop and mobile (375px) live; tablet
+   was not separately checked.
+6. **Playwright e2e**: not written. In its place, the actual live product
+   was driven directly in a real browser against production this pass —
+   arguably stronger evidence for THIS release than a headless test suite
+   would be, but it isn't a repeatable automated artifact for future
+   regressions.
 
 ## Next session should start here
 
-Priority order if continuing: (1) wire `setCareerGoal` into a "set as my
-goal" button, (2) Playwright coverage for anonymous-result → Career Card →
-share, (3) a11y/responsive pass across the new screens, (4) owner decision on
-Career Center/`/journey` reconciliation, (5) fire the three remaining funnel
-events.
+(1) Get real admin/test-candidate credentials into this environment (or
+have the owner click through `/admin/career-discovery-preview` and the
+claim/goal flow directly) to close gap #3. (2) Formal a11y pass. (3) Owner
+decision on Career Center/`/journey` reconciliation. (4) Playwright coverage
+for the anonymous → card → claim journey.
