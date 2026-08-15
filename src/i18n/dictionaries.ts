@@ -611,6 +611,11 @@ export const dictionaries = {
     "careerDiscovery.report.v31.professionsPending":
       "Yrkesmatchning ingår inte i den här versionen av rapporten. Den läggs till när yrkesprofilerna är kalibrerade och granskade.",
     "careerDiscovery.report.v31.professionsTitle": "Karriärriktningar värda att utforska",
+    "careerDiscovery.report.v31.workingStyleTitle": "Hur du jobbar — en djupare titt",
+    "careerDiscovery.report.v31.createCareerCardCta": "Skapa ditt Career Card",
+    "careerDiscovery.report.v31.createCareerCardCtaBody":
+      "Ett delbart kort med din starkaste riktning och dina Career DNA-drag — klart på under en minut.",
+    "careerDiscovery.report.v31.methodologyToggle": "Visa metodik och versioner",
     "careerDiscovery.report.v31.professionDetailLoading": "Hämtar mer information…",
     "careerDiscovery.report.v31.requirementsTitle": "Vad som krävs",
     "careerDiscovery.report.v31.requirementsEmpty": "Inga specifika krav registrerade ännu.",
@@ -2887,6 +2892,11 @@ export const dictionaries = {
     "careerDiscovery.report.v31.professionsPending":
       "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
     "careerDiscovery.report.v31.professionsTitle": "Career directions worth exploring",
+    "careerDiscovery.report.v31.workingStyleTitle": "How you work — a deeper look",
+    "careerDiscovery.report.v31.createCareerCardCta": "Create your Career Card",
+    "careerDiscovery.report.v31.createCareerCardCtaBody":
+      "A shareable card with your strongest direction and your Career DNA traits — ready in under a minute.",
+    "careerDiscovery.report.v31.methodologyToggle": "Show methodology and versions",
     "careerDiscovery.report.v31.professionDetailLoading": "Loading more detail…",
     "careerDiscovery.report.v31.requirementsTitle": "What it takes",
     "careerDiscovery.report.v31.requirementsEmpty": "No specific requirements recorded yet.",

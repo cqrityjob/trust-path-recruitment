@@ -432,3 +432,51 @@ every `useT()`/`lang` call site under `src/components/career-discovery/v31/`
 and `src/lib/career-discovery`, confirming no remaining locale/toggle
 mismatch in the frozen-report path) rather than pixel-verified. Flagging
 for next session's live check, same as the career-context step.
+
+### Report UX reordered toward the §26 hierarchy (item 7)
+
+`V31ReportView.tsx`'s section order previously led with the full DNA
+narrative (pattern name + all seven "how you work" Q&A answers + supporting
+patterns + ranked career areas — three full sections of prose) BEFORE the
+professions section — directly the "do not begin with long profile prose"
+problem §26 calls out, and it buried the actual career intelligence at the
+bottom. Reordered:
+
+1. **Short DNA hero** — profile name + the one-line "balanced profile" note
+   only. The full narrative moved out entirely.
+2. **Your career directions** — the professions section, immediately after
+   the hero (previously last).
+3. **Create your Career Card** — new standalone CTA (not previously
+   present as a top-level section; the per-card "create for this direction"
+   button inside each profession card still exists unchanged) offering the
+   candidate's single strongest match, placed right after they've seen it —
+   "feels like a reward," not a buried modal trigger.
+7. **Your working style** — the full narrative (all seven Q&A answers,
+   supporting patterns, ranked career areas) that used to open the report,
+   now under its own heading, later.
+9. **Save your career journey** — the authenticated "My career" / "All
+   reports" links, now positioned after value has been delivered rather
+   than immediately after methodology.
+10. **Feedback, then methodology** — order swapped (feedback used to come
+    after the version table; now first) and the version/definition table
+    wrapped in a native `<details>` disclosure (§27 progressive disclosure)
+    instead of always-visible.
+
+**Explicitly not done this pass** (disclosed, not silently dropped):
+Section 4 "Your possible path" (a visual YOU ARE HERE → NEXT → DEVELOP →
+FUTURE pathway driven by the CIG graph) is a genuinely new, bespoke visual
+component — the underlying data already exists (`ProfessionDetailBody`'s
+pathway edges, from/to `cig_career_transitions`) and is shown per-profession
+inside each accordion, but not yet promoted to its own dedicated top-level
+section with the "you are here" framing. Section 5 "What could help you
+move forward" is similarly present today only nested inside each
+profession's detail accordion (already correctly split into formal
+requirements / employer requirements / education / recommended development
+via `RequirementLevel`), not restructured into its own top-level page
+section. Both are real, scoped follow-up work, not abandoned — attempting a
+new bespoke pathway visualization in the time remaining this pass risked
+shipping something half-built rather than something correct.
+
+Live browser verification blocked by the same Docker constraint as the two
+notes above — this redesign is `tsc`-clean, regression-green (50 + 138
+checks) and build-green, but not yet pixel-verified in a browser this pass.

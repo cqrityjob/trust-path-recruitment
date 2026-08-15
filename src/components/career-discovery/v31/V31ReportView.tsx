@@ -134,6 +134,13 @@ export function V31ReportView({
     day: "numeric",
   }).format(new Date(snapshot.completedAt ?? generatedAt));
 
+  // The single best recommendation, for the standalone Career Card CTA
+  // (§26 Section 3) — the same "strongest first" ordering matchProfessions
+  // itself already guarantees, never a separate ranking.
+  const topMatch = snapshot.professions?.available
+    ? (snapshot.professions.strongestDirections[0] ?? snapshot.professions.matches[0] ?? null)
+    : null;
+
   return (
     <div data-report-contract="v3.1">
       {mode === "authenticated" && (
@@ -160,7 +167,11 @@ export function V31ReportView({
         </p>
       )}
 
-      {/* 1 · The pattern — the candidate's result, in their own words. */}
+      {/* 1 · YOUR SECURITY CAREER DNA — short, immediately understandable.
+          Execution Mandate §26: "do not begin with long profile prose." The
+          full "how you work" narrative moves to "Your working style" below,
+          much later — this is the profile NAME and, at most, one short
+          note, nothing else. */}
       <p className="mt-10 text-sm font-medium uppercase tracking-widest text-accent">
         {t("careerDiscovery.report.v31.patternEyebrow")}
       </p>
@@ -176,12 +187,74 @@ export function V31ReportView({
         </p>
       )}
 
-      <div className="mt-10 space-y-8">
+      {/* 2 · YOUR CAREER DIRECTIONS — moved up from the report's tail
+          (§26 Section 2): the useful career intelligence, immediately
+          after the short DNA hero, not after three sections of prose. */}
+      {snapshot.professions?.available === false && (
+        <p
+          role="note"
+          className="mt-10 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
+        >
+          {t("careerDiscovery.report.v31.professionsPending")}
+        </p>
+      )}
+      {snapshot.professions?.available === true && (
+        <>
+          <h2 className="mt-14 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+            {t("careerDiscovery.report.v31.professionsTitle")}
+          </h2>
+          <div className="mt-6">
+            <ProfessionRecommendations
+              strongestDirections={snapshot.professions.strongestDirections}
+              alsoWorthExploring={snapshot.professions.alsoWorthExploring}
+              longerTermPossibilities={snapshot.professions.longerTermPossibilities}
+              careerPivots={snapshot.professions.careerPivots}
+              locale={snapshot.locale === "en" ? "en" : "sv"}
+              onOpenCareerCard={setCareerCardMatch}
+              sessionId={sessionId}
+              goalProfessionId={goalProfessionId}
+              onSetGoal={(match) => void handleSetGoal(match)}
+              settingGoal={settingGoal}
+              onEvent={onCareerCardEvent}
+            />
+          </div>
+
+          {/* 3 · CREATE YOUR CAREER CARD — placed early enough to feel like
+              a reward, right after the candidate has seen their top
+              direction (§26 Section 3), not buried after methodology. */}
+          {topMatch && (
+            <div className="no-print mt-10 rounded-lg border border-accent/30 bg-[color:var(--secondary)] p-6 text-center sm:p-8">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                {t("careerDiscovery.report.v31.createCareerCardCta")}
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                {t("careerDiscovery.report.v31.createCareerCardCtaBody")}
+              </p>
+              <button
+                type="button"
+                onClick={() => setCareerCardMatch(topMatch)}
+                className="mt-5 inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-6 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {t("careerDiscovery.report.v31.createCareerCardCta")}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 7 · YOUR WORKING STYLE — the deeper Career DNA narrative, moved
+          here from the top of the report (§26 Section 7): still complete,
+          just no longer the first thing a candidate has to read before
+          reaching anything actionable. */}
+      <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+        {t("careerDiscovery.report.v31.workingStyleTitle")}
+      </h2>
+      <div className="mt-8 space-y-8">
         {orderedQuestions(leadingAnswers).map((q) => (
           <section key={q}>
-            <h2 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">
               {headings[q] ?? q}
-            </h2>
+            </h3>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
               {leadingAnswers[q]}
             </p>
@@ -189,12 +262,11 @@ export function V31ReportView({
         ))}
       </div>
 
-      {/* 2 · Supporting patterns */}
       {supporting.length > 0 && (
         <>
-          <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+          <h3 className="mt-12 text-lg font-semibold tracking-tight text-foreground">
             {t("careerDiscovery.report.v31.supportingTitle")}
-          </h2>
+          </h3>
           <div className="mt-6 space-y-6">
             {supporting.map((s) => {
               const ans = (s?.answers ?? {}) as Record<string, string>;
@@ -203,7 +275,7 @@ export function V31ReportView({
                   key={s?.patternId ?? s?.name}
                   className="rounded-lg border border-border bg-background p-6"
                 >
-                  <h3 className="text-base font-semibold text-foreground">{s?.name}</h3>
+                  <h4 className="text-base font-semibold text-foreground">{s?.name}</h4>
                   <div className="mt-4 space-y-4">
                     {orderedQuestions(ans)
                       .filter((q) => SUPPORTING_QUESTIONS.has(q))
@@ -225,12 +297,11 @@ export function V31ReportView({
         </>
       )}
 
-      {/* 3 · Career areas, ranked */}
       {areas.length > 0 && (
         <>
-          <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+          <h3 className="mt-12 text-lg font-semibold tracking-tight text-foreground">
             {t("careerDiscovery.report.v31.areasTitle")}
-          </h2>
+          </h3>
           {outputA?.areaEvidenceSufficient === false && (
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {t("careerDiscovery.report.v31.areasThinEvidence")}
@@ -242,7 +313,7 @@ export function V31ReportView({
                 <span className="text-xs font-medium uppercase tracking-widest text-accent">
                   {String(a.rank).padStart(2, "0")}
                 </span>
-                <h3 className="mt-3 text-base font-semibold text-foreground">{a.name}</h3>
+                <h4 className="mt-3 text-base font-semibold text-foreground">{a.name}</h4>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {a.description}
                 </p>
@@ -273,60 +344,10 @@ export function V31ReportView({
         </>
       )}
 
-      {/* 4 · Professions — declared, and honestly empty until calibration. */}
-      {snapshot.professions?.available === false && (
-        <p
-          role="note"
-          className="mt-10 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
-        >
-          {t("careerDiscovery.report.v31.professionsPending")}
-        </p>
-      )}
-      {snapshot.professions?.available === true && (
-        <>
-          <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-            {t("careerDiscovery.report.v31.professionsTitle")}
-          </h2>
-          <div className="mt-6">
-            <ProfessionRecommendations
-              strongestDirections={snapshot.professions.strongestDirections}
-              alsoWorthExploring={snapshot.professions.alsoWorthExploring}
-              longerTermPossibilities={snapshot.professions.longerTermPossibilities}
-              careerPivots={snapshot.professions.careerPivots}
-              locale={snapshot.locale === "en" ? "en" : "sv"}
-              onOpenCareerCard={setCareerCardMatch}
-              sessionId={sessionId}
-              goalProfessionId={goalProfessionId}
-              onSetGoal={(match) => void handleSetGoal(match)}
-              settingGoal={settingGoal}
-              onEvent={onCareerCardEvent}
-            />
-          </div>
-        </>
-      )}
-
-      {/* 5 · Method / provenance */}
-      <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-        {t("careerDiscovery.report.method.title")}
-      </h2>
-      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-4">
-        {[
-          [t("careerDiscovery.report.method.definition"), versions.definition],
-          [t("careerDiscovery.report.method.content"), versions.content],
-          [t("careerDiscovery.report.method.scoring"), versions.scoring],
-          [t("careerDiscovery.report.method.taxonomy"), versions.taxonomy],
-        ].map(([k, v]) => (
-          <div key={String(k)} className="bg-background p-4">
-            <dt className="text-xs uppercase tracking-widest text-muted-foreground">{k}</dt>
-            <dd className="mt-1 font-mono text-xs text-foreground">{v}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="no-print">
-        <FeedbackForm locale={snapshot.locale === "en" ? "en" : "sv"} />
-      </div>
-
+      {/* 9 · SAVE YOUR CAREER JOURNEY — only after value has already been
+          delivered (§26 Section 9). The anonymous-mode equivalent
+          (saveCta) lives in PublicAssessmentFlow.tsx, rendered after this
+          whole view for the same reason. */}
       {mode === "authenticated" && (
         <div className="no-print mt-16 flex flex-wrap gap-3 border-t border-border pt-8">
           <Link
@@ -343,6 +364,38 @@ export function V31ReportView({
           </Link>
         </div>
       )}
+
+      {/* 10 · FEEDBACK / HOW THIS WORKS — feedback first, methodology and
+          version provenance behind progressive disclosure (§26 Section
+          10 / §27), not a wall of version numbers before anyone has said
+          what they thought. */}
+      <div className="no-print mt-16">
+        <FeedbackForm locale={snapshot.locale === "en" ? "en" : "sv"} />
+      </div>
+
+      <details className="no-print mt-8 rounded-lg border border-border">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
+          {t("careerDiscovery.report.v31.methodologyToggle")}
+        </summary>
+        <div className="border-t border-border p-4">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {t("careerDiscovery.report.method.title")}
+          </h2>
+          <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm sm:grid-cols-4">
+            {[
+              [t("careerDiscovery.report.method.definition"), versions.definition],
+              [t("careerDiscovery.report.method.content"), versions.content],
+              [t("careerDiscovery.report.method.scoring"), versions.scoring],
+              [t("careerDiscovery.report.method.taxonomy"), versions.taxonomy],
+            ].map(([k, v]) => (
+              <div key={String(k)} className="bg-background p-4">
+                <dt className="text-xs uppercase tracking-widest text-muted-foreground">{k}</dt>
+                <dd className="mt-1 font-mono text-xs text-foreground">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </details>
 
       {snapshot.professions?.available === true && (
         <CareerCardCreator
