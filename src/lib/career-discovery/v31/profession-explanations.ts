@@ -1,0 +1,88 @@
+// "Why this direction" — turns a ProfessionMatch's structured reason codes
+// into candidate-facing sentences, in both locales.
+//
+// Pure. No I/O, no lookups outside this module and ./dimensions. Two layers:
+//
+//   1. The profession's own inclusionRationale (authored per profession,
+//      already written in the "your answers show..." register the mandate's
+//      §9 example uses) — the STATIC layer, frozen with the profession.
+//   2. A STAGE sentence, derived from ProfessionMatch.stage — dynamic,
+//      because the same profession is "explore now" for one candidate and
+//      "longer-term" for another, and the reason for that gap (career stage,
+//      not fit) needs to be said, not left implicit.
+//
+// Never exposes a weight, a score or a percentage — only dimension NAMES
+// (already resolved strings in the candidate's locale) and qualitative
+// stage/fit language, exactly as StoredArea.alignedWith already does for
+// Career Areas.
+
+import { DIMENSIONS, type DimensionId } from "./dimensions";
+import type { ProfessionMatch, ProfessionStage } from "./professions";
+import type { Locale } from "./version";
+
+const STAGE_SENTENCE: Readonly<Record<ProfessionStage, Record<Locale, string>>> = {
+  explore_now: {
+    sv: "Det här är en riktning du kan börja utforska direkt.",
+    en: "This is a direction you can start exploring right away.",
+  },
+  possible_next_step: {
+    sv: "Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.",
+    en: "This is a possible next step from where you are today — not something to jump straight into, but worth having as a goal.",
+  },
+  longer_term: {
+    sv: "Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.",
+    en: "This is a longer-term direction. It fits your profile, but the path there normally runs through more experience or other roles first.",
+  },
+};
+
+const ALIGNED_INTRO: Readonly<Record<Locale, string>> = {
+  sv: "Det som sticker ut mest i dina svar:",
+  en: "What stands out most in your answers:",
+};
+
+export interface ProfessionExplanation {
+  /** The authored, per-profession "why" text — unchanged from the profile. */
+  readonly rationale: string;
+  /** One sentence explaining the stage label itself. */
+  readonly stageSentence: string;
+  /** Dimension names the candidate aligned most strongly with, resolved to
+   *  display strings — never ids, never scores. */
+  readonly alignedDimensionNames: readonly string[];
+  readonly alignedIntro: string;
+  /** The optional caveat authored with the profession, if any. */
+  readonly limitationNote: string | null;
+}
+
+export function explainMatch(match: ProfessionMatch, locale: Locale): ProfessionExplanation {
+  return {
+    rationale: locale === "sv" ? match.inclusionRationaleSv : match.inclusionRationaleEn,
+    stageSentence: STAGE_SENTENCE[match.stage][locale],
+    alignedDimensionNames: match.alignedDimensions.map(
+      (d: DimensionId) => DIMENSIONS[d].name[locale],
+    ),
+    alignedIntro: ALIGNED_INTRO[locale],
+    limitationNote: (locale === "sv" ? match.limitationNoteSv : match.limitationNoteEn) ?? null,
+  };
+}
+
+export const STAGE_LABEL: Readonly<Record<ProfessionStage, Record<Locale, string>>> = {
+  explore_now: { sv: "Utforska nu", en: "Explore now" },
+  possible_next_step: { sv: "Möjligt nästa steg", en: "Possible next step" },
+  longer_term: { sv: "Långsiktig riktning", en: "Longer-term direction" },
+};
+
+export const FIT_LABEL: Readonly<Record<"strong" | "moderate", Record<Locale, string>>> = {
+  strong: { sv: "Stark matchning", en: "Strong match" },
+  moderate: { sv: "Värd att utforska", en: "Worth exploring" },
+};
+
+export const TIER_HEADING: Readonly<
+  Record<"strongest" | "alsoWorth" | "longerTerm", Record<Locale, string>>
+> = {
+  strongest: {
+    sv: "Dina starkaste riktningar att utforska",
+    en: "Your strongest directions to explore",
+  },
+  alsoWorth: { sv: "Också värt att utforska", en: "Also worth exploring" },
+  longerTerm: { sv: "Långsiktiga möjligheter", en: "Longer-term possibilities" },
+};
