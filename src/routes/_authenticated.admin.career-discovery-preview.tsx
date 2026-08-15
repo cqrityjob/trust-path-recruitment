@@ -16,8 +16,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
+import { DIMENSION_IDS, type DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import { GOLDEN_PERSONAS } from "@/lib/career-discovery/v31/golden-persona-fixtures";
+import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
 import {
   listOwnerPreviewProfessions,
   runOwnerPreviewMatch,
@@ -54,6 +57,10 @@ function CareerDiscoveryPreview() {
   });
 
   const matches = matchQuery.data;
+  const [cardMatch, setCardMatch] = useState<ProfessionMatch | null>(null);
+  const dimensionScores = Object.fromEntries(
+    DIMENSION_IDS.map((id) => [id, persona.dims[id] ?? null]),
+  ) as Record<DimensionId, number | null>;
 
   return (
     <SiteLayout>
@@ -152,6 +159,7 @@ function CareerDiscoveryPreview() {
                 alsoWorthExploring={matches.alsoWorthExploring}
                 longerTermPossibilities={matches.longerTermPossibilities}
                 locale="en"
+                onOpenCareerCard={setCardMatch}
               />
             </div>
           ) : (
@@ -161,6 +169,21 @@ function CareerDiscoveryPreview() {
             </p>
           )}
         </div>
+
+        {matches && matches.matches.length > 0 && (
+          <CareerCardCreator
+            open={cardMatch !== null}
+            onOpenChange={(next) => {
+              if (!next) setCardMatch(null);
+            }}
+            matches={matches.matches}
+            initialProfessionId={cardMatch?.professionId}
+            dimensionScores={dimensionScores}
+            locale="en"
+            definitionVersion="owner-preview"
+            generatedAt={new Date().toISOString()}
+          />
+        )}
       </div>
     </SiteLayout>
   );
