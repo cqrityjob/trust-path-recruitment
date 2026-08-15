@@ -181,6 +181,9 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
         // for the SAME Career DNA — the exact "why did priority change"
         // comparison §14 asks for.
         currentProfessionCigSlug: z.string().nullable().optional(),
+        // Mandate item 6: lets the owner preview see contextCorroborated
+        // flip when Discovery Path tags are supplied.
+        discoveryTags: z.array(z.string()).optional(),
       })
       .parse(d),
   )
@@ -212,5 +215,6 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
       catalog,
       data.contextStatus as ContextStatus,
       data.currentProfessionCigSlug ?? null,
+      data.discoveryTags ?? [],
     );
   });

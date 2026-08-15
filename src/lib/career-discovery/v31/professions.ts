@@ -217,6 +217,52 @@ const FIT_TIER_STRONG = 80;
 
 export type ProfessionFitTier = "strong" | "moderate";
 
+/**
+ * Master Completion Mandate item 6: the four Discovery Path answers already
+ * produce structured "report tags" (see ../adaptive-items.ts and
+ * reportTagsFor in ./personal-layer.ts) that are collected and persisted
+ * today but never read by anything downstream. This is a curated,
+ * deterministic mapping from each career area to the report tags that
+ * corroborate genuine interest in it — used ONLY to set
+ * `ProfessionMatch.contextCorroborated`, which explainMatch (see
+ * profession-explanations.ts) may turn into one additional explanatory
+ * sentence. It never touches fit, coverage, stage or ranking — Career DNA
+ * stays the only input to Profession Affinity, exactly as the mandate
+ * requires ("do NOT let Career Context fabricate affinity... instead
+ * change PRIORITY and PATHWAY interpretation" — here, "interpretation"
+ * means richer explanation, the most conservative reading available that
+ * still cannot contradict or dilute a DNA-driven recommendation).
+ *
+ * Not exhaustive over the full ~80-tag vocabulary — a first-pass curated
+ * set per area, extensible without touching scoring.
+ */
+const CORROBORATING_TAGS_BY_AREA: Readonly<Record<string, readonly string[]>> = {
+  SCA01: ["trusted_operator", "operational_interest", "operational_energy", "immediate_protection"],
+  SCA02: ["trusted_operator", "operational_interest", "immediate_correction", "preventive_interest"],
+  SCA03: ["technology_interest", "technical_development", "practical_development"],
+  SCA04: [
+    "leadership_path",
+    "trusted_coordinator",
+    "people_leadership",
+    "coordination_energy",
+    "team_orientation",
+    "stakeholder_leadership",
+    "formal_leadership",
+  ],
+  SCA05: ["strategic_resilience", "incident_direction", "root_cause"],
+  SCA06: [
+    "investigative_interest",
+    "trusted_analyst",
+    "advanced_analysis",
+    "transferable_analysis",
+    "investigative_energy",
+  ],
+  SCA07: ["governance_path", "transferable_governance", "assurance_structure"],
+  SCA08: ["technology_interest", "technical_development", "systems_leadership"],
+  SCA09: ["technology_interest", "technical_development", "advanced_analysis"],
+  SCA10: ["specialist_path", "specialist_role", "trusted_adviser", "executive_alignment", "strategic_role"],
+};
+
 /** "career_pivot" (Execution Mandate §12-13): a profession the candidate has
  *  genuine Career-DNA affinity with, but which is NOT a natural next step
  *  from where they are today — a different career area, at or below their
@@ -248,6 +294,12 @@ export interface ProfessionMatch {
    *  AreaScore.alignedDimensions plays for Career Areas. */
   readonly alignedDimensions: readonly DimensionId[];
   readonly coverage: number;
+  /** True when the candidate's Discovery Path answers (contextual
+   *  self-report, never scored) corroborate this profession's career area —
+   *  see CORROBORATING_TAGS_BY_AREA. Explanation-only signal (Mandate item
+   *  6): explainMatch may turn this into one extra sentence; it never
+   *  affects fitTier, stage, coverage or which professions clear matching. */
+  readonly contextCorroborated: boolean;
 }
 
 export interface ProfessionMatchResult {
@@ -361,6 +413,7 @@ function scoreProfession(
   entry: ProfessionCatalogEntry,
   dims: DimensionResult,
   baseline: StageRank,
+  discoveryTags: readonly string[],
 ): ScoredMatch | null {
   const weighted = entry.bands.filter(
     (b) => b.weight > 0 && MATCHABLE_DIMENSION_IDS.includes(b.dimensionId),
@@ -437,6 +490,9 @@ function scoreProfession(
         .slice(0, 4)
         .map((a) => a.dimension),
       coverage: round1(coverage * 100) / 100,
+      contextCorroborated: (CORROBORATING_TAGS_BY_AREA[entry.careerAreaId] ?? []).some((tag) =>
+        discoveryTags.includes(tag),
+      ),
     },
     fitScore,
     distance,
@@ -525,6 +581,11 @@ export function matchProfessions(
    *  never affects which professions clear matching, never touched by
    *  scoreProfession. */
   currentProfessionCigSlug?: string | null,
+  /** Report tags from the candidate's 4 Discovery Path answers (Mandate
+   *  item 6, personal-layer.ts's reportTagsFor) — contextual self-report,
+   *  never scored. Read ONLY to set ProfessionMatch.contextCorroborated for
+   *  richer explanation text; never affects fit, coverage or stage. */
+  discoveryTags?: readonly string[],
 ): ProfessionMatchResult {
   if (catalog.length === 0) {
     return {
@@ -538,9 +599,10 @@ export function matchProfessions(
   }
 
   const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+  const tags = discoveryTags ?? [];
 
   const scored = catalog
-    .map((entry) => scoreProfession(entry, dims, baseline))
+    .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
     .sort(
       (a, b) =>
@@ -625,16 +687,24 @@ export function matchProfessionsDiagnostics(
   catalog: readonly ProfessionCatalogEntry[],
   contextStatus: ContextStatus | null,
   currentProfessionCigSlug?: string | null,
+  discoveryTags?: readonly string[],
 ): ProfessionMatchDiagnostics {
-  const result = matchProfessions(dims, catalog, contextStatus, currentProfessionCigSlug);
+  const result = matchProfessions(
+    dims,
+    catalog,
+    contextStatus,
+    currentProfessionCigSlug,
+    discoveryTags,
+  );
 
   if (catalog.length === 0) {
     return { result, diagnostics: [], pivotPrimaryAreaId: null, pivotPrimarySource: "none" };
   }
 
   const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+  const tags = discoveryTags ?? [];
   const scored = catalog
-    .map((entry) => scoreProfession(entry, dims, baseline))
+    .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
     .sort(
       (a, b) =>

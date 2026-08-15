@@ -44,6 +44,17 @@ const ALIGNED_INTRO: Readonly<Record<Locale, string>> = {
   en: "What stands out most in your answers:",
 };
 
+/** Master Completion Mandate item 6: shown only when
+ *  ProfessionMatch.contextCorroborated is true — the candidate's own
+ *  Discovery Path answers (contextual self-report) also point toward this
+ *  direction. Deliberately generic (no per-tag wording) so it stays true
+ *  regardless of which specific tag corroborated it, and deliberately
+ *  modest — "also" corroborating evidence, not a claim of its own. */
+const CONTEXT_CORROBORATION_SENTENCE: Readonly<Record<Locale, string>> = {
+  sv: "Dina svar om vad du hoppas jobba med pekar också mot den här typen av riktning.",
+  en: "What you said you're hoping to work toward also points toward this kind of direction.",
+};
+
 export interface ProfessionExplanation {
   /** The authored, per-profession "why" text — unchanged from the profile. */
   readonly rationale: string;
@@ -55,6 +66,10 @@ export interface ProfessionExplanation {
   readonly alignedIntro: string;
   /** The optional caveat authored with the profession, if any. */
   readonly limitationNote: string | null;
+  /** Set only when the candidate's Discovery Path answers corroborate this
+   *  direction (see contextCorroborated). Explanation-only — never implies
+   *  a different fit or stage. */
+  readonly contextCorroborationSentence: string | null;
 }
 
 export function explainMatch(match: ProfessionMatch, locale: Locale): ProfessionExplanation {
@@ -65,6 +80,9 @@ export function explainMatch(match: ProfessionMatch, locale: Locale): Profession
       (d: DimensionId) => DIMENSIONS[d].name[locale],
     ),
     alignedIntro: ALIGNED_INTRO[locale],
+    contextCorroborationSentence: match.contextCorroborated
+      ? CONTEXT_CORROBORATION_SENTENCE[locale]
+      : null,
     limitationNote: (locale === "sv" ? match.limitationNoteSv : match.limitationNoteEn) ?? null,
   };
 }

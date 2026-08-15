@@ -484,6 +484,36 @@ ok(poorFit.matches.length === 0, "8.1 a candidate who fits nothing gets zero mat
 ok(poorFit.available === false, "8.2 available is false when nothing clears the fit floor");
 
 // =========================================================================
+group("8b · Discovery Path tags corroborate explanation only (Mandate item 6)");
+// =========================================================================
+
+const withoutTags = matchProfessions(HIGH_FLIER, CATALOG, "exploring_security");
+const withoutTagsCoordinator = withoutTags.matches.find((m) => m.professionId === "SP006");
+ok(
+  withoutTagsCoordinator?.contextCorroborated === false,
+  "8b.1 with no discovery tags, contextCorroborated is false",
+);
+
+const withTags = matchProfessions(HIGH_FLIER, CATALOG, "exploring_security", null, [
+  "leadership_path",
+]);
+const withTagsCoordinator = withTags.matches.find((m) => m.professionId === "SP006");
+const withTagsSkyddsvakt = withTags.matches.find((m) => m.professionId === "SP003");
+ok(
+  withTagsCoordinator?.contextCorroborated === true,
+  "8b.2 'leadership_path' corroborates Säkerhetssamordnare (SCA04)",
+);
+ok(
+  withTagsSkyddsvakt?.contextCorroborated === false,
+  "8b.3 'leadership_path' does NOT corroborate Skyddsvakt (SCA01) -- corroboration is area-specific",
+);
+ok(
+  withTagsCoordinator?.fitTier === withoutTagsCoordinator?.fitTier &&
+    withTagsCoordinator?.stage === withoutTagsCoordinator?.stage,
+  "8b.4 discovery tags never change fitTier or stage -- corroboration is explanation-only",
+);
+
+// =========================================================================
 group("9 · No percentages or raw scores ever reach a ProfessionMatch");
 // =========================================================================
 

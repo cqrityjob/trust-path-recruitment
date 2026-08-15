@@ -438,6 +438,13 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         throw new V31PublicError("incomplete_buffer", `discovery-path item ${item.id}`);
       }
     }
+    // Mandate item 6: the same tags written to cd_evidence.answer_tags
+    // below, read here to feed Recommendation Priority's explanation layer
+    // (see professions.ts's contextCorroborated) — contextual self-report,
+    // never scored.
+    const discoveryTags = servedAdaptive.flatMap((item) =>
+      reportTagsFor(item.id, personal.get(item.id) ?? ""),
+    );
     // An answer to an item outside this run's own path is rejected rather
     // than dropped. The database would refuse it too
     // (CD_ADAPTIVE_PATH_MISMATCH); failing here means failing before a session
@@ -484,6 +491,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
           data.careerContext?.currentProfessionStatus === "selected"
             ? (data.careerContext.currentProfessionSlug ?? null)
             : null,
+        discoveryTags,
         professionCalibrationVersion,
       });
     } catch (err) {

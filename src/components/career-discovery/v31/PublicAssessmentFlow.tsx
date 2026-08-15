@@ -72,6 +72,7 @@ import {
   isPersonalItemId,
   MVP_QUESTION_COUNT,
   personalItem,
+  reportTagsFor,
 } from "@/lib/career-discovery/v31/personal-layer";
 import type { Answer } from "@/lib/career-discovery/v31/scoring";
 import {
@@ -363,13 +364,20 @@ export function PublicAssessmentFlow() {
     if (!contextStatus) return null;
 
     const answers: Answer[] = [];
+    const discoveryTags: string[] = [];
     for (const a of buffer.answers) {
       if (a.format === "scale") answers.push({ itemId: a.itemId, format: "scale", value: a.value });
       else if (a.format === "single_choice") {
         answers.push({ itemId: a.itemId, format: "single_choice", optionId: a.optionId });
+      } else if (a.format === "personal" && isAdaptiveItemId(a.itemId)) {
+        // Mandate item 6: Discovery Path tags — contextual self-report,
+        // never scored, feeding only Recommendation Priority's explanation
+        // layer (see professions.ts's contextCorroborated).
+        discoveryTags.push(...reportTagsFor(a.itemId, a.value));
       }
-      // "personal" (context/adaptive) answers are never scored — excluded
-      // exactly as the server's own byItem/personal split excludes them.
+      // Context (C1/C2) "personal" answers carry no report tags — excluded
+      // exactly as the server's own byItem/personal split excludes all
+      // personal answers from scoring.
     }
 
     try {
@@ -379,6 +387,7 @@ export function PublicAssessmentFlow() {
         completedAt: buffer.completedAt ?? new Date().toISOString(),
         contextStatus,
         currentProfessionCigSlug: careerContext.currentProfessionSlug,
+        discoveryTags,
         // No professionCatalog: an anonymous browser session has no
         // business reading cd_professions (RLS grants it to `authenticated`
         // only), and nothing is approved for ranking yet regardless — the

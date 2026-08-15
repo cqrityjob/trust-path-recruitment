@@ -325,10 +325,52 @@ named or exposed as such. Made this explicit and inspectable:
   Profession Affinity / Recommendation Priority table — one row per
   profession, both concepts side by side, never combined into one score.
 
-Not yet done: the table's "context signals" panel shows C1 only, not the
-four Discovery Path tags — full six-signal display is naturally tied to
-task/item 6 (using those signals in Recommendation Priority itself), not
-yet implemented, so there is nothing computed from them to show yet.
 `tsc` clean, `bun run build` succeeds, 46 professions-check + 138
 golden-persona checks green (unaffected — `matchProfessions` itself did not
 change).
+
+### Using the six context signals (item 6)
+
+The four Discovery Path answers already produced structured "report tags"
+(`../adaptive-items.ts`, `reportTagsFor` in `personal-layer.ts`) and were
+already persisted to `cd_evidence.answer_tags` on save — but nothing
+downstream ever read them. Wired them in, conservatively:
+
+- `professions.ts` gains a curated, deterministic
+  `CORROBORATING_TAGS_BY_AREA` map (career area -> report tags that
+  corroborate genuine interest in it, e.g. SCA06/Investigation ->
+  `investigative_interest`, `trusted_analyst`, `advanced_analysis`; SCA04/
+  Leadership & Coordination -> `leadership_path`, `trusted_coordinator`,
+  `people_leadership`; first-pass curated set per area, not exhaustive over
+  the ~80-tag vocabulary, extensible without touching scoring). `ProfessionMatch`
+  gains `contextCorroborated: boolean`, set purely from this lookup — no
+  effect whatsoever on fitScore, coverage, fitTier or stage.
+- `explainMatch` (`profession-explanations.ts`) turns `contextCorroborated`
+  into ONE additional, deliberately generic explanatory sentence ("What you
+  said you're hoping to work toward also points toward this kind of
+  direction") when true — rendered in `ProfessionRecommendations.tsx`
+  directly under the stage sentence.
+- `discoveryTags` threaded end to end: `matchProfessions` /
+  `matchProfessionsDiagnostics` (new optional parameter) ->
+  `BuildSnapshotInput.discoveryTags` -> computed from the candidate's real
+  4 adaptive answers in both `persistPublicV31Run` (server, from the
+  already-parsed `personal` map) and `PublicAssessmentFlow.tsx`'s client
+  snapshot (from the buffer, via the same `reportTagsFor`) — one code path,
+  same tags either way. `/admin/career-discovery-preview`'s
+  `runOwnerPreviewMatch` accepts the same optional field for calibration
+  testing.
+
+Deliberately the most conservative reading of "use in Recommendation
+Priority": explanation enrichment only, never reordering or reclassifying a
+recommendation. Chosen over letting tags shift stage/priority directly
+because the mandate repeatedly emphasizes Career DNA as the dominant,
+non-negotiable evidence and explicitly warns against Career Context
+fabricating or diluting affinity — a tag nudging rank order would risk
+exactly that, for a feature whose highest-confidence, lowest-risk value is
+telling the candidate "here's other evidence pointing the same way," which
+this now does. Regression-proven (professions-check.ts group 8b):
+`leadership_path` corroborates Säkerhetssamordnare (SCA04) but not
+Skyddsvakt (SCA01) for the identical dims, and fitTier/stage are provably
+unchanged by tag presence. 50 professions-check checks green, 138
+golden-persona checks green (unaffected — no golden persona passes discovery
+tags), `tsc` clean, `bun run build` succeeds.

@@ -192,6 +192,11 @@ export interface BuildSnapshotInput {
    *  profession in professionCatalog (see ./professions.ts's
    *  classifyStagesWithPivots) — never fed into dimension scoring. */
   readonly currentProfessionCigSlug?: string | null;
+  /** Report tags from the candidate's 4 Discovery Path answers (Mandate
+   *  item 6, ./personal-layer.ts's reportTagsFor) — contextual self-report,
+   *  never scored. Read only to set ProfessionMatch.contextCorroborated for
+   *  richer "why" explanation text — never fed into dimension scoring. */
+  readonly discoveryTags?: readonly string[];
 }
 
 function storedDimensions(dims: DimensionResult, locale: Locale): StoredDimension[] {
@@ -237,6 +242,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     contextStatus = null,
     professionCalibrationVersion,
     currentProfessionCigSlug = null,
+    discoveryTags = [],
   } = input;
 
   const dims = scoreDimensions(answers);
@@ -247,6 +253,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     professionCatalog,
     contextStatus,
     currentProfessionCigSlug,
+    discoveryTags,
   );
 
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";

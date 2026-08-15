@@ -264,6 +264,11 @@ function ProfessionCard({
       </AccordionTrigger>
       <AccordionContent className="pb-6">
         <p className="mb-4 text-sm leading-relaxed text-foreground">{explanation.stageSentence}</p>
+        {explanation.contextCorroborationSentence && (
+          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+            {explanation.contextCorroborationSentence}
+          </p>
+        )}
         {explanation.alignedDimensionNames.length > 0 && (
           <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
             <span className="font-medium text-foreground">{explanation.alignedIntro}</span>{" "}
