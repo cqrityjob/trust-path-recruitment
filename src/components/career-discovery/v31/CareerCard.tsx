@@ -24,6 +24,44 @@ const INK = "#F4F7FB";
 const MUTED = "#8CA0B8";
 const BAR_TRACK = "#1B2836";
 
+/** Approximate advance width of Sora at weight 700, as a fraction of the
+ *  font size. Only used to decide where to break a long profession title —
+ *  an over-estimate is safe (it breaks earlier), an under-estimate would
+ *  overflow the card, which is why long Germanic Swedish titles like
+ *  "Säkerhetssamordnare" previously ran off the edge. */
+const GLYPH_RATIO = 0.6;
+
+/** Wraps a title onto at most `maxLines` lines that each fit `maxWidth`,
+ *  shrinking the font size when even that is not enough. Pure. */
+function fitTitle(
+  title: string,
+  maxWidth: number,
+  baseSize: number,
+  maxLines = 2,
+): { lines: string[]; size: number } {
+  let size = baseSize;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const perLine = Math.max(6, Math.floor(maxWidth / (size * GLYPH_RATIO)));
+    const lines: string[] = [];
+    let current = "";
+    for (const word of title.split(/\s+/)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (candidate.length <= perLine || current === "") {
+        current = candidate;
+      } else {
+        lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
+    if (lines.length <= maxLines && lines.every((l) => l.length <= perLine)) {
+      return { lines, size };
+    }
+    size = Math.round(size * 0.86);
+  }
+  return { lines: [title], size };
+}
+
 interface Layout {
   padding: number;
   eyebrowY: number;
@@ -96,10 +134,19 @@ export function renderCareerCardSvg(
   const discoverLine =
     data.locale === "sv" ? "Upptäck din karriär inom säkerhet" : "Discover your security career";
 
+  const contentWidth = width - L.padding * 2;
+  const title = fitTitle(data.professionTitle.toUpperCase(), contentWidth, L.titleSize);
+  // Everything below the title slides down by the height of any second line,
+  // so a two-line Swedish title never collides with the framing text.
+  const shift = (title.lines.length - 1) * Math.round(title.size * 1.06);
+
   const indicatorBars = data.indicators
     .map((ind, i) => {
-      const y = L.indicatorsStartY + i * L.indicatorGap;
-      const barWidth = width - L.padding * 2 - 220;
+      const y = L.indicatorsStartY + shift + i * L.indicatorGap;
+      // The QR column is reserved on every format, so a LinkedIn card (only
+      // 627px tall, where the bars and the QR share vertical space) can
+      // never run its bars underneath the code.
+      const barWidth = width - L.padding * 2 - 220 - (L.qrSize + 48);
       const filled = Math.max(6, Math.round(barWidth * ind.value));
       return `
         <text x="${L.padding}" y="${y}" font-family="${FONT}" font-size="26" fill="${MUTED}" letter-spacing="0.5">${escapeSvgText(ind.label)}</text>
@@ -110,7 +157,7 @@ export function renderCareerCardSvg(
     .join("");
 
   const nameLine = data.firstName
-    ? `<text x="${L.padding}" y="${L.nameY - 60}" font-family="${FONT}" font-size="28" fill="${MUTED}">${escapeSvgText(data.firstName)}</text>`
+    ? `<text x="${L.padding}" y="${L.nameY + shift - 60}" font-family="${FONT}" font-size="28" fill="${MUTED}">${escapeSvgText(data.firstName)}</text>`
     : "";
 
   const qr = qrDataUrl
@@ -118,6 +165,13 @@ export function renderCareerCardSvg(
     : "";
 
   const stageBadgeWidth = Math.max(220, data.stageLabel.length * 17 + 64);
+
+  const titleLines = title.lines
+    .map(
+      (line, i) =>
+        `<text x="${L.padding}" y="${L.titleY + i * Math.round(title.size * 1.06)}" font-family="${FONT}" font-size="${title.size}" font-weight="700" fill="${INK}" letter-spacing="-1">${escapeSvgText(line)}</text>`,
+    )
+    .join("");
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
@@ -130,8 +184,13 @@ export function renderCareerCardSvg(
       <stop offset="0%" stop-color="${TRUST_BLUE}" />
       <stop offset="100%" stop-color="${TRUST_BLUE_DIM}" />
     </linearGradient>
+    <radialGradient id="glow" cx="0.12" cy="0.06" r="0.75">
+      <stop offset="0%" stop-color="${TRUST_BLUE}" stop-opacity="0.20" />
+      <stop offset="100%" stop-color="${TRUST_BLUE}" stop-opacity="0" />
+    </radialGradient>
   </defs>
   <rect width="${width}" height="${height}" fill="url(#bg)" />
+  <rect width="${width}" height="${height}" fill="url(#glow)" />
   <rect x="0" y="0" width="${width}" height="6" fill="url(#accentLine)" />
 
   <text x="${L.padding}" y="${L.wordmarkY}" font-family="${FONT}" font-size="30" font-weight="700" fill="${INK}">${wordmark}</text>
@@ -139,12 +198,12 @@ export function renderCareerCardSvg(
 
   <text x="${L.padding}" y="${L.eyebrowY}" font-family="${FONT}" font-size="24" font-weight="600" fill="${TRUST_BLUE}" letter-spacing="2">${eyebrow}</text>
 
-  <text x="${L.padding}" y="${L.titleY}" font-family="${FONT}" font-size="${L.titleSize}" font-weight="700" fill="${INK}">${escapeSvgText(data.professionTitle.toUpperCase())}</text>
+  ${titleLines}
 
-  <text x="${L.padding}" y="${L.framingY}" font-family="${FONT}" font-size="28" fill="${MUTED}">${escapeSvgText(data.framingLine)}</text>
+  <text x="${L.padding}" y="${L.framingY + shift}" font-family="${FONT}" font-size="28" fill="${MUTED}">${escapeSvgText(data.framingLine)}</text>
 
-  <rect x="${L.padding}" y="${L.stageBadgeY - 34}" width="${stageBadgeWidth}" height="52" rx="26" fill="none" stroke="${TRUST_BLUE}" stroke-width="2" />
-  <text x="${L.padding + stageBadgeWidth / 2}" y="${L.stageBadgeY}" font-family="${FONT}" font-size="24" font-weight="600" fill="${TRUST_BLUE}" text-anchor="middle" letter-spacing="1">${escapeSvgText(data.stageLabel.toUpperCase())}</text>
+  <rect x="${L.padding}" y="${L.stageBadgeY + shift - 34}" width="${stageBadgeWidth}" height="52" rx="26" fill="none" stroke="${TRUST_BLUE}" stroke-width="2" />
+  <text x="${L.padding + stageBadgeWidth / 2}" y="${L.stageBadgeY + shift}" font-family="${FONT}" font-size="24" font-weight="600" fill="${TRUST_BLUE}" text-anchor="middle" letter-spacing="1">${escapeSvgText(data.stageLabel.toUpperCase())}</text>
 
   ${nameLine}
   ${indicatorBars}

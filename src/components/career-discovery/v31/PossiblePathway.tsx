@@ -11,7 +11,6 @@
 // renders — the STARTING POINT step is a deliberately generic sentence,
 // never a guessed profession (item 2).
 
-import { ArrowRight } from "lucide-react";
 import { translateFor } from "@/i18n/context";
 import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
 import type { ReportSnapshot } from "@/lib/career-discovery/v31/snapshot";
@@ -30,25 +29,32 @@ interface PathStep {
   readonly body: string;
 }
 
-function Step({ step }: { step: PathStep }) {
+/** One node on the path. The step number is decorative (aria-hidden) —
+ *  order is already conveyed by the list markup and the eyebrow text, so no
+ *  information depends on the dot or the connecting line alone. */
+function Step({ step, index, isLast }: { step: PathStep; index: number; isLast: boolean }) {
   return (
-    <div className="min-w-[180px] flex-1 rounded-lg border border-border bg-background p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
-        {step.eyebrow}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-foreground">{step.body}</p>
-    </div>
-  );
-}
-
-function StepConnector() {
-  return (
-    <div className="flex shrink-0 items-center justify-center px-0 py-1 sm:px-2 sm:py-0">
-      <ArrowRight
-        className="h-4 w-4 rotate-90 text-muted-foreground sm:rotate-0"
+    <li className="relative flex-1 pb-8 pl-12 last:pb-0 sm:pb-0 sm:pl-0 sm:pt-14">
+      {/* Rail: vertical on mobile, horizontal on desktop. */}
+      {!isLast && (
+        <span
+          aria-hidden="true"
+          className="absolute left-[15px] top-8 h-[calc(100%-2rem)] w-px bg-gradient-to-b from-accent/50 to-border sm:left-8 sm:top-[15px] sm:h-px sm:w-[calc(100%-2rem)] sm:bg-gradient-to-r"
+        />
+      )}
+      <span
         aria-hidden="true"
-      />
-    </div>
+        className="absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-accent/40 bg-[color:var(--secondary)] text-xs font-semibold tabular-nums text-accent"
+      >
+        {index + 1}
+      </span>
+      <div className="sm:pr-6">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
+          {step.eyebrow}
+        </p>
+        <p className="mt-1.5 text-sm font-medium leading-relaxed text-foreground">{step.body}</p>
+      </div>
+    </li>
   );
 }
 
@@ -121,13 +127,12 @@ export function PossiblePathway({
       <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
         {t("careerDiscovery.report.v31.yourPath.title")}
       </h2>
-      <div className="mt-6 flex flex-col items-stretch sm:flex-row sm:items-stretch">
-        {steps.map((step, i) => (
-          <div key={step.eyebrow} className="flex flex-col sm:contents">
-            <Step step={step} />
-            {i < steps.length - 1 && <StepConnector />}
-          </div>
-        ))}
+      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card p-6 sm:p-8">
+        <ol className="flex flex-col sm:flex-row">
+          {steps.map((step, i) => (
+            <Step key={step.eyebrow} step={step} index={i} isLast={i === steps.length - 1} />
+          ))}
+        </ol>
       </div>
     </section>
   );

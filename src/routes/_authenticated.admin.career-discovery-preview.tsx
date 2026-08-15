@@ -106,7 +106,10 @@ function CareerDiscoveryPreview() {
           Layer 4 profession-result preview
         </h1>
 
-        <div className="mt-6 flex flex-wrap gap-6">
+        {/* Controls are grouped into one sticky panel so an owner reviewing
+            seven personas never loses the persona/locale switches while
+            scrolling a long diagnostics table. */}
+        <div className="sticky top-0 z-10 mt-6 flex flex-wrap gap-6 rounded-xl border border-border bg-card/95 p-5 backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div>
             <label
               htmlFor="persona-select"
@@ -174,21 +177,54 @@ function CareerDiscoveryPreview() {
           </div>
         </div>
 
-        <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Context signals
-          </h2>
-          <p className="mt-2 text-foreground">
-            <span className="font-medium">C1 (context status):</span> {persona.contextStatus}
-          </p>
-          {diagnostics && (
-            <p className="mt-1 text-foreground">
-              <span className="font-medium">Career-pivot classification grounded by:</span>{" "}
-              {diagnostics.pivotPrimarySource === "current_profession"
-                ? `self-reported current profession (${diagnostics.pivotPrimaryAreaId})`
-                : "none — current profession unknown, career_pivot never computed (item 2: never inferred from Career DNA)"}
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Career DNA (synthetic persona dimension scores)
+            </h2>
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+              {DIMENSION_IDS.map((id) => {
+                const score = persona.dims[id] ?? null;
+                return (
+                  <li key={id} className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 font-mono text-xs text-muted-foreground">
+                      {id}
+                    </span>
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+                      <span
+                        className="block h-full rounded-full bg-accent"
+                        style={{ width: `${Math.round((score ?? 0) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-foreground">
+                      {score === null ? "—" : score.toFixed(2)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Context signals · current role
+            </h2>
+            <p className="mt-3 text-foreground">
+              <span className="font-medium">C1 (context status):</span> {persona.contextStatus}
             </p>
-          )}
+            <p className="mt-1.5 text-foreground">
+              <span className="font-medium">Current profession (self-reported):</span>{" "}
+              {currentProfessionSlug || "unset — no YOU ARE HERE, no pivot classification"}
+            </p>
+            {diagnostics && (
+              <p className="mt-1.5 text-foreground">
+                <span className="font-medium">Career-pivot classification grounded by:</span>{" "}
+                {diagnostics.pivotPrimarySource === "current_profession"
+                  ? `self-reported current profession (${diagnostics.pivotPrimaryAreaId})`
+                  : "none — current profession unknown, career_pivot never computed (item 2: never inferred from Career DNA)"}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -244,11 +280,10 @@ function CareerDiscoveryPreview() {
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             Explicitly separate, per Master Completion Mandate item 3 — never combined into one
             score. <span className="font-medium text-foreground">Affinity</span> is driven only by
-            Career DNA (central-dominant fit). <span className="font-medium text-foreground">
-              Priority
-            </span>{" "}
-            is the context-aware stage/pathway interpretation on top of it. Internal numeric
-            diagnostics — never shown to a candidate.
+            Career DNA (central-dominant fit).{" "}
+            <span className="font-medium text-foreground">Priority</span> is the context-aware
+            stage/pathway interpretation on top of it. Internal numeric diagnostics — never shown to
+            a candidate.
           </p>
           {diagnostics && diagnostics.diagnostics.length > 0 && (
             <div className="mt-4 overflow-x-auto rounded-lg border border-border">
@@ -298,7 +333,9 @@ function CareerDiscoveryPreview() {
                         {d.supportingFitScore ?? "—"}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                        {d.centralCoverage !== null ? `${Math.round(d.centralCoverage * 100)}%` : "—"}
+                        {d.centralCoverage !== null
+                          ? `${Math.round(d.centralCoverage * 100)}%`
+                          : "—"}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
                         {d.contextPriorityBonus > 0 ? `+${d.contextPriorityBonus}` : "—"}

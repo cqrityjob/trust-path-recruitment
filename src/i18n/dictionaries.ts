@@ -634,7 +634,26 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Utbildning och certifieringar",
     "careerDiscovery.report.v31.pathwayTitle": "Möjlig väg",
     "careerDiscovery.report.v31.currentJobsInDirection": "Aktuella jobb inom den här riktningen",
-    "careerDiscovery.report.v31.createCareerCardFor": "Skapa mitt Career Card för den här riktningen",
+    "careerDiscovery.report.v31.currentJobsShort": "Aktuella jobb",
+    "careerDiscovery.report.v31.exploreCareer": "Utforska yrket",
+    "careerDiscovery.report.v31.howDoIGetThere": "Hur kommer jag dit?",
+    "careerDiscovery.report.v31.whyThisAppeared": "Varför den här dök upp",
+    "careerDiscovery.report.v31.closeDetail": "Stäng",
+    "careerDiscovery.report.v31.moveForward.title": "Vad kan hjälpa dig vidare?",
+    "careerDiscovery.report.v31.moveForward.intro":
+      "Samlat från dina starkaste riktningar. Det här är information om yrkena — inte en bedömning av dig.",
+    "careerDiscovery.report.v31.moveForward.formal": "Formella krav",
+    "careerDiscovery.report.v31.moveForward.employer": "Vanliga arbetsgivarkrav",
+    "careerDiscovery.report.v31.moveForward.education": "Utbildning",
+    "careerDiscovery.report.v31.moveForward.experience": "Erfarenhet och utveckling",
+    "careerDiscovery.report.v31.moveForward.certifications": "Certifieringar",
+    "careerDiscovery.report.v31.moveForward.empty":
+      "Inga registrerade krav eller utbildningsvägar för de här riktningarna ännu.",
+    "careerDiscovery.report.v31.moveForward.appliesTo": "Gäller",
+    "careerDiscovery.report.v31.otherDirectionsTitle": "Andra riktningar att utforska",
+    "careerDiscovery.report.v31.strongestLead": "Starkaste riktningarna",
+    "careerDiscovery.report.v31.createCareerCardFor":
+      "Skapa mitt Career Card för den här riktningen",
     "careerDiscovery.report.v31.setAsGoal": "Sätt som karriärmål",
     "careerDiscovery.report.v31.goalSet": "Karriärmål ✓",
     "careerDiscovery.report.v31.card.title": "Skapa mitt Career Card",
@@ -650,15 +669,18 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.saveImage": "Spara bild",
     "careerDiscovery.report.v31.card.share": "Dela",
     "careerDiscovery.report.v31.card.shareOnLinkedIn": "Dela på LinkedIn",
-    "careerDiscovery.report.v31.card.shareText": "Min säkerhetskarriär-DNA — upptäck din på CQrityjob.",
+    "careerDiscovery.report.v31.card.shareText":
+      "Min säkerhetskarriär-DNA — upptäck din på CQrityjob.",
     "careerDiscovery.report.v31.card.shared": "Delat.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Bilden är sparad. Lägg till den i din Instagram- eller TikTok-story.",
     "careerDiscovery.report.v31.feedback.title": "Hjälp oss förbättra testet",
-    "careerDiscovery.report.v31.feedback.relevant": "Hur relevanta kändes karriärrekommendationerna? (1–5)",
+    "careerDiscovery.report.v31.feedback.relevant":
+      "Hur relevanta kändes karriärrekommendationerna? (1–5)",
     "careerDiscovery.report.v31.feedback.understoodWhy": "Förstod du varför de rekommenderades?",
     "careerDiscovery.report.v31.feedback.pathwayRealistic": "Kändes vägen dit realistisk?",
-    "careerDiscovery.report.v31.feedback.requirementsUseful": "Var informationen om krav/utbildning användbar?",
+    "careerDiscovery.report.v31.feedback.requirementsUseful":
+      "Var informationen om krav/utbildning användbar?",
     "careerDiscovery.report.v31.feedback.missingCareer": "Saknade du någon karriärväg? (valfritt)",
     "careerDiscovery.report.v31.feedback.yes": "Ja",
     "careerDiscovery.report.v31.feedback.no": "Nej",
@@ -928,7 +950,8 @@ export const dictionaries = {
     "employer.jobs.list.filterArchived": "Arkiverade",
     "employer.jobs.list.archive": "Arkivera",
     "employer.jobs.list.restore": "Återställ",
-    "employer.jobs.list.confirmArchive": "Arkivera annonsen? Den försvinner från listan men raderas inte, och kan återställas som utkast.",
+    "employer.jobs.list.confirmArchive":
+      "Arkivera annonsen? Den försvinner från listan men raderas inte, och kan återställas som utkast.",
     "employer.jobs.list.untitled": "(utan titel)",
     "employer.jobs.list.emptyArchived": "Inga arkiverade annonser.",
     "employer.jobs.list.emptySearch": "Ingen annons matchar sökningen.",
@@ -1007,7 +1030,8 @@ export const dictionaries = {
       "Endast utkast eller nekade annonser kan skickas till granskning.",
     "employer.jobs.form.error.missingRequiredFields":
       "Ett eller flera obligatoriska fält saknas. Kontrollera formuläret och försök igen.",
-    "employer.jobs.form.error.jobNotArchivable": "Annonsen kan inte arkiveras i sitt nuvarande läge. En annons som väntar på granskning ligger hos CQrityjob tills granskningen är klar.",
+    "employer.jobs.form.error.jobNotArchivable":
+      "Annonsen kan inte arkiveras i sitt nuvarande läge. En annons som väntar på granskning ligger hos CQrityjob tills granskningen är klar.",
     "employer.jobs.form.error.jobNotRestorable": "Bara arkiverade annonser kan återställas.",
     "employer.jobs.form.error.archiveFailed": "Annonsen kunde inte arkiveras. Försök igen.",
     "employer.jobs.form.error.restoreFailed": "Annonsen kunde inte återställas. Försök igen.",
@@ -1365,7 +1389,8 @@ export const dictionaries = {
 
     "employer.applications.heading": "Ansökningar",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
-    "employer.applications.emptyBody": "Ansökningar kommer in via publicerade jobbannonser. När en annons är publicerad hamnar ansökningarna här.",
+    "employer.applications.emptyBody":
+      "Ansökningar kommer in via publicerade jobbannonser. När en annons är publicerad hamnar ansökningarna här.",
     "employer.applications.emptyAction": "Till jobbannonser",
     "employer.applications.anonymousCandidate": "Kandidat",
     "employer.applications.status.submitted": "Inskickad",
@@ -2927,6 +2952,24 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Education and certifications",
     "careerDiscovery.report.v31.pathwayTitle": "Possible path",
     "careerDiscovery.report.v31.currentJobsInDirection": "Current jobs in this career direction",
+    "careerDiscovery.report.v31.currentJobsShort": "Current jobs",
+    "careerDiscovery.report.v31.exploreCareer": "Explore career",
+    "careerDiscovery.report.v31.howDoIGetThere": "How do I get there?",
+    "careerDiscovery.report.v31.whyThisAppeared": "Why this appeared",
+    "careerDiscovery.report.v31.closeDetail": "Close",
+    "careerDiscovery.report.v31.moveForward.title": "What could help you move forward?",
+    "careerDiscovery.report.v31.moveForward.intro":
+      "Collected from your strongest directions. This describes the professions — not a judgement about you.",
+    "careerDiscovery.report.v31.moveForward.formal": "Formal requirements",
+    "careerDiscovery.report.v31.moveForward.employer": "Common employer requirements",
+    "careerDiscovery.report.v31.moveForward.education": "Education and training",
+    "careerDiscovery.report.v31.moveForward.experience": "Experience and development",
+    "careerDiscovery.report.v31.moveForward.certifications": "Certifications",
+    "careerDiscovery.report.v31.moveForward.empty":
+      "No requirements or education pathways recorded for these directions yet.",
+    "careerDiscovery.report.v31.moveForward.appliesTo": "Applies to",
+    "careerDiscovery.report.v31.otherDirectionsTitle": "Other directions to explore",
+    "careerDiscovery.report.v31.strongestLead": "Strongest directions",
     "careerDiscovery.report.v31.createCareerCardFor": "Create my Career Card for this direction",
     "careerDiscovery.report.v31.setAsGoal": "Set as career goal",
     "careerDiscovery.report.v31.goalSet": "Career goal ✓",
@@ -2943,15 +2986,21 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.saveImage": "Save image",
     "careerDiscovery.report.v31.card.share": "Share",
     "careerDiscovery.report.v31.card.shareOnLinkedIn": "Share on LinkedIn",
-    "careerDiscovery.report.v31.card.shareText": "My security career DNA — discover yours at CQrityjob.",
+    "careerDiscovery.report.v31.card.shareText":
+      "My security career DNA — discover yours at CQrityjob.",
     "careerDiscovery.report.v31.card.shared": "Shared.",
-    "careerDiscovery.report.v31.card.savedFallback": "Image saved. Add it to your Instagram or TikTok story.",
+    "careerDiscovery.report.v31.card.savedFallback":
+      "Image saved. Add it to your Instagram or TikTok story.",
     "careerDiscovery.report.v31.feedback.title": "Help us improve the test",
-    "careerDiscovery.report.v31.feedback.relevant": "How relevant did the career recommendations feel? (1–5)",
-    "careerDiscovery.report.v31.feedback.understoodWhy": "Did you understand why they were recommended?",
+    "careerDiscovery.report.v31.feedback.relevant":
+      "How relevant did the career recommendations feel? (1–5)",
+    "careerDiscovery.report.v31.feedback.understoodWhy":
+      "Did you understand why they were recommended?",
     "careerDiscovery.report.v31.feedback.pathwayRealistic": "Did the pathway feel realistic?",
-    "careerDiscovery.report.v31.feedback.requirementsUseful": "Was the requirements/education information useful?",
-    "careerDiscovery.report.v31.feedback.missingCareer": "Was an important career missing? (optional)",
+    "careerDiscovery.report.v31.feedback.requirementsUseful":
+      "Was the requirements/education information useful?",
+    "careerDiscovery.report.v31.feedback.missingCareer":
+      "Was an important career missing? (optional)",
     "careerDiscovery.report.v31.feedback.yes": "Yes",
     "careerDiscovery.report.v31.feedback.no": "No",
     "careerDiscovery.report.v31.feedback.submit": "Send feedback",
@@ -3217,7 +3266,8 @@ export const dictionaries = {
     "employer.jobs.list.filterArchived": "Archived",
     "employer.jobs.list.archive": "Archive",
     "employer.jobs.list.restore": "Restore",
-    "employer.jobs.list.confirmArchive": "Archive this advertisement? It leaves the list but is not deleted, and can be restored as a draft.",
+    "employer.jobs.list.confirmArchive":
+      "Archive this advertisement? It leaves the list but is not deleted, and can be restored as a draft.",
     "employer.jobs.list.untitled": "(untitled)",
     "employer.jobs.list.emptyArchived": "No archived advertisements.",
     "employer.jobs.list.emptySearch": "No advertisement matches that search.",
@@ -3294,10 +3344,13 @@ export const dictionaries = {
       "Only draft or rejected jobs can be submitted for review.",
     "employer.jobs.form.error.missingRequiredFields":
       "One or more required fields are missing. Check the form and try again.",
-    "employer.jobs.form.error.jobNotArchivable": "This advertisement cannot be archived in its current state. One awaiting review stays with CQrityjob until the review is finished.",
+    "employer.jobs.form.error.jobNotArchivable":
+      "This advertisement cannot be archived in its current state. One awaiting review stays with CQrityjob until the review is finished.",
     "employer.jobs.form.error.jobNotRestorable": "Only archived advertisements can be restored.",
-    "employer.jobs.form.error.archiveFailed": "The advertisement could not be archived. Please try again.",
-    "employer.jobs.form.error.restoreFailed": "The advertisement could not be restored. Please try again.",
+    "employer.jobs.form.error.archiveFailed":
+      "The advertisement could not be archived. Please try again.",
+    "employer.jobs.form.error.restoreFailed":
+      "The advertisement could not be restored. Please try again.",
     "employer.jobs.form.error.jobNotCloseable": "Only a published job can be closed.",
     "employer.jobs.form.error.invalidData":
       "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
@@ -3651,7 +3704,8 @@ export const dictionaries = {
 
     "employer.applications.heading": "Applications",
     "employer.applications.empty": "No applications have been received yet.",
-    "employer.applications.emptyBody": "Applications arrive through published job advertisements. Once an advertisement is live, they appear here.",
+    "employer.applications.emptyBody":
+      "Applications arrive through published job advertisements. Once an advertisement is live, they appear here.",
     "employer.applications.emptyAction": "Go to job advertisements",
     "employer.applications.anonymousCandidate": "Candidate",
     "employer.applications.status.submitted": "Submitted",

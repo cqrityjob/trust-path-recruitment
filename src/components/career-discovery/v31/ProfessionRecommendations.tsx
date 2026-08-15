@@ -1,28 +1,41 @@
 // Profession recommendations — the rendering half of Layer 4.
 //
-// Renders snapshot.professions when available: three tiers (Strongest /
-// Also worth exploring / Longer-term), each card carrying a stage badge, the
-// candidate-specific "why" (explainMatch), and an expandable detail section
-// fetched live from CIG (requirements, education, certifications, pathway) —
-// see profession-detail.functions.ts's header for why that split exists.
+// Renders snapshot.professions when available: the candidate's own current
+// role (if self-reported) plus four discovery tiers (Strongest / Also worth
+// exploring / Longer-term / Career pivot), each card carrying a stage badge,
+// the candidate-specific "why" (explainMatch), and an expandable detail
+// panel fetched live from CIG (requirements, education, certifications,
+// pathway) — see profession-detail.functions.ts's header for why that split
+// exists.
+//
+// ── OWNER REVIEW UX PASS (presentation only) ─────────────────────────────
+//
+// The Radix Accordion this used to be wrapped in put every card behind one
+// undifferentiated trigger, which meant the three actions a candidate
+// actually wants ("Explore career", "How do I get there?", "Current jobs")
+// could not be shown until after they had already guessed to click. It is
+// now a card with its own disclosure button set — same content, same data,
+// same order, no nested-interactive markup. Keyboard and screen-reader
+// behaviour is preserved explicitly via aria-expanded/aria-controls.
+//
+// Nothing about matching, ranking, staging or wording changed: this file
+// still only renders what matchProfessions and explainMatch produced.
 //
 // This never runs in production today: snapshot.professions.available is
-// false until an owner approves a profession (see ./professions.ts). It
-// exists now, fully wired and tested against golden persona fixtures, so
-// approval is the only remaining step between "built" and "live" —
-// Execution Mandate §29's "build it completely, keep the flag off" rule.
+// false until an owner approves a profession (see ./professions.ts).
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
-import { translateFor } from "@/i18n/context";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  ArrowRight,
+  Briefcase,
+  ChevronDown,
+  Compass,
+  ExternalLink,
+  Route as RouteIcon,
+} from "lucide-react";
+import { translateFor } from "@/i18n/context";
 import {
   explainMatch,
   FIT_LABEL,
@@ -38,6 +51,11 @@ import {
 } from "@/lib/career-discovery/profession-detail.functions";
 
 type Locale = "sv" | "en";
+
+/** "primary" is the strongest tier: full-width, generous, one per row.
+ *  "compact" is every other tier — visually lighter on purpose, so the
+ *  report never reads as though all professions are equally important. */
+type CardVariant = "primary" | "compact";
 
 function StageBadge({ match, locale }: { match: ProfessionMatch; locale: Locale }) {
   const tone =
@@ -93,11 +111,13 @@ function ProfessionDetailBody({
   locale,
   jobsHref,
   onEvent,
+  requirementsAnchorId,
 }: {
   detail: ProfessionDetail | undefined;
   locale: Locale;
   jobsHref: string;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
+  requirementsAnchorId: string;
 }) {
   // Bound to the `locale` prop, not the live site toggle — see
   // FeedbackForm.tsx / V31ReportView.tsx for why.
@@ -128,7 +148,7 @@ function ProfessionDetailBody({
     <div className="space-y-6">
       {overview && <p className="text-sm leading-relaxed text-muted-foreground">{overview}</p>}
 
-      <div>
+      <div id={requirementsAnchorId} className="scroll-mt-24">
         <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           {t("careerDiscovery.report.v31.requirementsTitle")}
         </h4>
@@ -199,10 +219,14 @@ function ProfessionDetailBody({
   );
 }
 
+const ACTION_CLASS =
+  "inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 function ProfessionCard({
   match,
   locale,
   detail,
+  variant,
   onOpenCareerCard,
   sessionId,
   isGoal,
@@ -214,6 +238,7 @@ function ProfessionCard({
   match: ProfessionMatch;
   locale: Locale;
   detail: ProfessionDetail | undefined;
+  variant: CardVariant;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
   /** Present only once a result is claimed — setting a goal needs a real
    *  owned cd_sessions row (see setCareerGoal). Absent for an anonymous
@@ -241,111 +266,192 @@ function ProfessionCard({
     ? `/jobs/profession/${encodeURIComponent(match.cigProfessionSlug)}`
     : "/jobs";
   const exploredFiredRef = useRef(false);
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const requirementsAnchorId = `${panelId}-requirements`;
+
+  function reveal(intent: "explore" | "requirements") {
+    setOpen(true);
+    if (!exploredFiredRef.current) {
+      exploredFiredRef.current = true;
+      onEvent?.("profession_explored", { professionId: match.professionId });
+    }
+    if (intent === "requirements") {
+      // Runs after the panel has been painted; harmless no-op if the anchor
+      // is not there yet (detail still loading).
+      requestAnimationFrame(() => {
+        document.getElementById(requirementsAnchorId)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  }
 
   return (
-    <AccordionItem
-      value={match.professionId}
-      className="rounded-lg border border-border bg-background px-5 last:border-b"
+    <article
+      className={`relative overflow-hidden rounded-xl border bg-card transition-shadow ${
+        variant === "primary"
+          ? "border-border shadow-[0_1px_2px_rgba(11,31,58,0.04),0_8px_24px_-16px_rgba(11,31,58,0.18)] hover:shadow-[0_1px_2px_rgba(11,31,58,0.05),0_14px_32px_-18px_rgba(11,31,58,0.22)]"
+          : "border-border"
+      }`}
     >
-      <AccordionTrigger
-        className="py-5 hover:no-underline [&>svg]:hidden"
-        onClick={() => {
-          if (!exploredFiredRef.current) {
-            exploredFiredRef.current = true;
-            onEvent?.("profession_explored", { professionId: match.professionId });
-          }
-        }}
-      >
-        <div className="flex w-full flex-wrap items-start justify-between gap-3 text-left">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-foreground">{title}</h3>
-              {isCurrentRole ? (
-                <span className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-                  {t("careerDiscovery.report.v31.developCurrentRole")}
-                </span>
-              ) : (
-                <StageBadge match={match} locale={locale} />
-              )}
-            </div>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-              {explanation.rationale}
-            </p>
-          </div>
-          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
+      {variant === "primary" && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-accent to-accent/30"
+        />
+      )}
+      <div className={variant === "primary" ? "p-5 pl-6 sm:p-6 sm:pl-7" : "p-5"}>
+        <div className="flex flex-wrap items-center gap-2">
+          {isCurrentRole ? (
+            <span className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+              {t("careerDiscovery.report.v31.developCurrentRole")}
+            </span>
+          ) : (
+            <StageBadge match={match} locale={locale} />
+          )}
+          <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
             {FIT_LABEL[match.fitTier][locale]}
-            <ChevronDown
-              className="h-3.5 w-3.5 transition-transform duration-200 [[data-state=open]_&]:rotate-180"
-              aria-hidden="true"
-            />
           </span>
         </div>
-      </AccordionTrigger>
-      <AccordionContent className="pb-6">
-        {!isCurrentRole && (
-          <p className="mb-4 text-sm leading-relaxed text-foreground">
-            {explanation.stageSentence}
-          </p>
-        )}
-        {explanation.contextCorroborationSentence && (
-          <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-            {explanation.contextCorroborationSentence}
-          </p>
-        )}
+
+        <h3
+          className={`mt-3 font-semibold tracking-tight text-foreground ${
+            variant === "primary" ? "text-xl md:text-2xl" : "text-base md:text-lg"
+          }`}
+          style={variant === "primary" ? { fontFamily: "var(--font-display)" } : undefined}
+        >
+          {title}
+        </h3>
+
+        <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {t("careerDiscovery.report.v31.whyThisAppeared")}
+        </p>
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {explanation.rationale}
+        </p>
+
         {explanation.alignedDimensionNames.length > 0 && (
-          <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-            <span className="font-medium text-foreground">{explanation.alignedIntro}</span>{" "}
-            {explanation.alignedDimensionNames.join(" · ")}
-          </p>
+          <ul className="mt-4 flex flex-wrap gap-1.5">
+            {explanation.alignedDimensionNames.map((name) => (
+              <li
+                key={name}
+                className="rounded-full border border-border bg-[color:var(--surface-subtle)] px-2.5 py-1 text-xs text-muted-foreground"
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
         )}
-        {explanation.limitationNote && (
-          <p className="mb-5 rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed text-muted-foreground">
-            {explanation.limitationNote}
-          </p>
-        )}
-        <ProfessionDetailBody
-          detail={detail}
-          locale={locale}
-          jobsHref={jobsHref}
-          onEvent={onEvent}
-        />
-        <div className="mt-6 flex flex-wrap gap-3">
-          {onOpenCareerCard && (
-            <button
-              type="button"
-              onClick={() => onOpenCareerCard(match)}
-              className="inline-flex h-10 items-center rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
-            >
-              {t("careerDiscovery.report.v31.createCareerCardFor")}
-            </button>
-          )}
-          {sessionId && onSetGoal && (
-            <button
-              type="button"
-              onClick={() => onSetGoal(match)}
-              disabled={settingGoal}
-              aria-pressed={Boolean(isGoal)}
-              className={`inline-flex h-10 items-center rounded-[10px] border px-4 text-sm font-medium transition-colors disabled:opacity-60 ${
-                isGoal
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-border bg-card text-foreground hover:bg-[color:var(--surface-subtle)]"
-              }`}
-            >
-              {isGoal
-                ? t("careerDiscovery.report.v31.goalSet")
-                : t("careerDiscovery.report.v31.setAsGoal")}
-            </button>
-          )}
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => (open ? setOpen(false) : reveal("explore"))}
+            aria-expanded={open}
+            aria-controls={panelId}
+            className={ACTION_CLASS}
+          >
+            <Compass className="h-4 w-4 text-accent" aria-hidden="true" />
+            {open
+              ? t("careerDiscovery.report.v31.closeDetail")
+              : t("careerDiscovery.report.v31.exploreCareer")}
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => reveal("requirements")}
+            aria-controls={panelId}
+            className={ACTION_CLASS}
+          >
+            <RouteIcon className="h-4 w-4 text-accent" aria-hidden="true" />
+            {t("careerDiscovery.report.v31.howDoIGetThere")}
+          </button>
+          <a
+            href={jobsHref}
+            onClick={() => onEvent?.("jobs_clicked", { professionSlug: match.cigProfessionSlug })}
+            className={ACTION_CLASS}
+          >
+            <Briefcase className="h-4 w-4 text-accent" aria-hidden="true" />
+            {t("careerDiscovery.report.v31.currentJobsShort")}
+          </a>
         </div>
-      </AccordionContent>
-    </AccordionItem>
+      </div>
+
+      <div
+        id={panelId}
+        role="region"
+        aria-label={title}
+        hidden={!open}
+        className={variant === "primary" ? "px-5 pb-6 pl-6 sm:px-6 sm:pl-7" : "px-5 pb-6"}
+      >
+        <div className="border-t border-border pt-5">
+          {!isCurrentRole && (
+            <p className="mb-4 text-sm leading-relaxed text-foreground">
+              {explanation.stageSentence}
+            </p>
+          )}
+          {explanation.contextCorroborationSentence && (
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+              {explanation.contextCorroborationSentence}
+            </p>
+          )}
+          {explanation.limitationNote && (
+            <p className="mb-5 rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed text-muted-foreground">
+              {explanation.limitationNote}
+            </p>
+          )}
+          <ProfessionDetailBody
+            detail={detail}
+            locale={locale}
+            jobsHref={jobsHref}
+            onEvent={onEvent}
+            requirementsAnchorId={requirementsAnchorId}
+          />
+          <div className="mt-6 flex flex-wrap gap-3">
+            {onOpenCareerCard && (
+              <button
+                type="button"
+                onClick={() => onOpenCareerCard(match)}
+                className="inline-flex h-10 items-center rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
+              >
+                {t("careerDiscovery.report.v31.createCareerCardFor")}
+              </button>
+            )}
+            {sessionId && onSetGoal && (
+              <button
+                type="button"
+                onClick={() => onSetGoal(match)}
+                disabled={settingGoal}
+                aria-pressed={Boolean(isGoal)}
+                className={`inline-flex h-10 items-center rounded-[10px] border px-4 text-sm font-medium transition-colors disabled:opacity-60 ${
+                  isGoal
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border bg-card text-foreground hover:bg-[color:var(--surface-subtle)]"
+                }`}
+              >
+                {isGoal
+                  ? t("careerDiscovery.report.v31.goalSet")
+                  : t("careerDiscovery.report.v31.setAsGoal")}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }
 
 function Tier({
   heading,
+  description,
   matches,
   locale,
+  variant,
   detailsBySlug,
   onOpenCareerCard,
   sessionId,
@@ -356,8 +462,10 @@ function Tier({
   isCurrentRole,
 }: {
   heading: string;
+  description?: string;
   matches: readonly ProfessionMatch[];
   locale: Locale;
+  variant: CardVariant;
   detailsBySlug: Record<string, ProfessionDetail>;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
   sessionId?: string | null;
@@ -369,14 +477,28 @@ function Tier({
 }) {
   if (matches.length === 0) return null;
   return (
-    <div className="mt-8 first:mt-0">
-      <h3 className="text-lg font-semibold tracking-tight text-foreground">{heading}</h3>
-      <Accordion type="multiple" className="mt-4 space-y-3">
+    <div className="mt-10 first:mt-0">
+      <h3
+        className={
+          variant === "primary"
+            ? "text-lg font-semibold tracking-tight text-foreground"
+            : "text-sm font-semibold uppercase tracking-widest text-muted-foreground"
+        }
+      >
+        {heading}
+      </h3>
+      {description && (
+        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      )}
+      <div className={`mt-4 ${variant === "primary" ? "space-y-4" : "grid gap-3 md:grid-cols-2"}`}>
         {matches.map((m) => (
           <ProfessionCard
             key={m.professionId}
             match={m}
             locale={locale}
+            variant={variant}
             detail={m.cigProfessionSlug ? detailsBySlug[m.cigProfessionSlug] : undefined}
             onOpenCareerCard={onOpenCareerCard}
             sessionId={sessionId}
@@ -387,7 +509,7 @@ function Tier({
             isCurrentRole={isCurrentRole}
           />
         ))}
-      </Accordion>
+      </div>
     </div>
   );
 }
@@ -449,6 +571,12 @@ export function ProfessionRecommendations({
   });
   const detailsBySlug = query.data ?? {};
 
+  const secondaryTiers = [
+    { heading: TIER_HEADING.alsoWorth[locale], matches: alsoWorthExploring },
+    { heading: TIER_HEADING.longerTerm[locale], matches: longerTermPossibilities },
+    { heading: TIER_HEADING.careerPivot[locale], matches: careerPivots ?? [] },
+  ].filter((tier) => tier.matches.length > 0);
+
   return (
     <div>
       {currentProfessionMatch && (
@@ -456,6 +584,7 @@ export function ProfessionRecommendations({
           heading={t("careerDiscovery.report.v31.developCurrentRole")}
           matches={[currentProfessionMatch]}
           locale={locale}
+          variant="primary"
           detailsBySlug={detailsBySlug}
           onOpenCareerCard={onOpenCareerCard}
           sessionId={sessionId}
@@ -470,6 +599,7 @@ export function ProfessionRecommendations({
         heading={TIER_HEADING.strongest[locale]}
         matches={strongestDirections}
         locale={locale}
+        variant="primary"
         detailsBySlug={detailsBySlug}
         onOpenCareerCard={onOpenCareerCard}
         sessionId={sessionId}
@@ -478,42 +608,34 @@ export function ProfessionRecommendations({
         settingGoal={settingGoal}
         onEvent={onEvent}
       />
-      <Tier
-        heading={TIER_HEADING.alsoWorth[locale]}
-        matches={alsoWorthExploring}
-        locale={locale}
-        detailsBySlug={detailsBySlug}
-        onOpenCareerCard={onOpenCareerCard}
-        sessionId={sessionId}
-        goalProfessionId={goalProfessionId}
-        onSetGoal={onSetGoal}
-        settingGoal={settingGoal}
-        onEvent={onEvent}
-      />
-      <Tier
-        heading={TIER_HEADING.longerTerm[locale]}
-        matches={longerTermPossibilities}
-        locale={locale}
-        detailsBySlug={detailsBySlug}
-        onOpenCareerCard={onOpenCareerCard}
-        sessionId={sessionId}
-        goalProfessionId={goalProfessionId}
-        onSetGoal={onSetGoal}
-        settingGoal={settingGoal}
-        onEvent={onEvent}
-      />
-      <Tier
-        heading={TIER_HEADING.careerPivot[locale]}
-        matches={careerPivots ?? []}
-        locale={locale}
-        detailsBySlug={detailsBySlug}
-        onOpenCareerCard={onOpenCareerCard}
-        sessionId={sessionId}
-        goalProfessionId={goalProfessionId}
-        onSetGoal={onSetGoal}
-        settingGoal={settingGoal}
-        onEvent={onEvent}
-      />
+
+      {/* 8 · OTHER DIRECTIONS TO EXPLORE — deliberately lighter than the
+          strongest tier, and clearly separated into secondary exploration,
+          longer-term directions and career pivots. Same buckets, same
+          order, same content as before: only the visual weight differs. */}
+      {secondaryTiers.length > 0 && (
+        <div className="mt-14 border-t border-border pt-10">
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">
+            {t("careerDiscovery.report.v31.otherDirectionsTitle")}
+          </h3>
+          {secondaryTiers.map((tier) => (
+            <Tier
+              key={tier.heading}
+              heading={tier.heading}
+              matches={tier.matches}
+              locale={locale}
+              variant="compact"
+              detailsBySlug={detailsBySlug}
+              onOpenCareerCard={onOpenCareerCard}
+              sessionId={sessionId}
+              goalProfessionId={goalProfessionId}
+              onSetGoal={onSetGoal}
+              settingGoal={settingGoal}
+              onEvent={onEvent}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
