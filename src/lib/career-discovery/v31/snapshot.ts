@@ -30,6 +30,7 @@ import {
 import { scoreDimensions, type Answer, type Confidence, type DimensionResult } from "./scoring";
 import {
   buildPatternStory,
+  narrativeStageFor,
   STORY_HEADINGS,
   STORY_TEMPLATE_VERSION,
   type PatternStory,
@@ -306,7 +307,19 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";
   const leadingDef = patterns.leading ? PATTERNS[patterns.leading] : null;
 
-  const leadingStory = buildPatternStory(presented, locale);
+  // Real-world defect fix: CP00 ("Bred profil") previously told every
+  // candidate the same "try something and retake the test" framing
+  // regardless of context — including a candidate who had just reported
+  // being a Säkerhetschef with 8+ years' experience. Presentation-only:
+  // never touches dims/patterns/areas/professionResult above, computed
+  // purely from the same self-reported facts (C1 + experience) already in
+  // hand — see story.ts's narrativeStageFor for why this mirrors, but does
+  // not reuse, professions.ts's resolveStageBaseline.
+  const leadingStory = buildPatternStory(
+    presented,
+    locale,
+    narrativeStageFor(contextStatus, experienceBand),
+  );
 
   return {
     versions: {

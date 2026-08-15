@@ -857,6 +857,127 @@ ok(
 );
 
 // =========================================================================
+group("12b · Career Area \"why\" evidence leads with the area's own defining traits (real-world defect fix)");
+// =========================================================================
+
+// Real defect, found live: SCA01 (Guarding & Operational Protection)
+// targets CID04 (Technical) at only 4/10 -- a low, incidental target. A
+// candidate who cleared CID04 by a wide margin (high actual score against
+// a low bar) could see "Technical orientation" cited as the #1 reason for
+// a guarding-area rank, while CID01 (Operational, the area's actual
+// defining trait at 8/10) barely showed up, because the old sort ordered
+// purely by the candidate's own margin. Built directly as a DimensionResult
+// fixture (not scored answers) for precise control over which dimension
+// has the wider margin.
+function makeDimsFixture(scores: Partial<Record<DimensionId, number>>) {
+  return {
+    scoringVersion: "fixture",
+    dimensions: Object.fromEntries(
+      DIMENSION_IDS.map((id) => {
+        const value = id in scores ? scores[id]! : 0.5;
+        return [
+          id,
+          {
+            dimension: id,
+            score: value,
+            evidenceWeight: 1.5,
+            dominance: 0.3,
+            coverage: 1,
+            confidence: "high" as const,
+            sources: ["fixture"],
+            tertiaryOnly: false,
+          },
+        ];
+      }),
+    ),
+    answeredItems: [],
+    complete: true,
+  } as ReturnType<typeof scoreDimensions>;
+}
+
+// CID01 target 8 (0.8) -- cleared by a SMALL margin (0.82). CID04 target 4
+// (0.4) -- cleared by a LARGE margin (0.95). Everything else at the SCA01
+// target exactly (no margin, not "aligned").
+const sca01Fixture = makeDimsFixture({
+  CID01: 0.82,
+  CID04: 0.95,
+  CID06: 0.8,
+  CID16: 0.8,
+});
+const sca01Result = rankCareerAreas(sca01Fixture).ranked.find((a) => a.areaId === "SCA01")!;
+ok(
+  sca01Result.alignedDimensions[0] === "CID01" ||
+    sca01Result.alignedDimensions[0] === "CID06" ||
+    sca01Result.alignedDimensions[0] === "CID16",
+  `12b.1 SCA01's top "why" evidence is one of its own highest-target (defining) dimensions, not CID04 (got ${sca01Result.alignedDimensions[0]}) -- the area's own weighting leads, margin only breaks ties`,
+);
+const cid04Idx = sca01Result.alignedDimensions.indexOf("CID04" as DimensionId);
+const cid01Idx = sca01Result.alignedDimensions.indexOf("CID01" as DimensionId);
+ok(
+  // Either CID04 doesn't even make the top-4 cut (crowded out by
+  // higher-target dimensions — the strongest possible confirmation) or, if
+  // it does appear, it ranks strictly behind CID01.
+  cid04Idx === -1 || (cid01Idx !== -1 && cid04Idx > cid01Idx),
+  `12b.2 CID04 (low target, wide margin) never outranks CID01 (high target) in the same area's evidence, even though CID04's margin is wider (aligned: ${sca01Result.alignedDimensions.join(", ")})`,
+);
+
+// =========================================================================
+group("12c · \"Bred profil\" (CP00) narrative respects career context (real-world defect fix)");
+// =========================================================================
+
+// Real defect, found live: CP00 told every candidate, verbatim, to "retake
+// the assessment once you've tried something" -- including a candidate who
+// had just reported being a Säkerhetschef with 8+ years' experience.
+// Breadth is a genuinely valid Career DNA result at every stage; what it
+// MEANS should differ.
+// (Declared locally rather than reusing the later `LOCALES` const, which
+// this group runs before in file order.)
+const CP00_TEST_LOCALES: Locale[] = ["sv", "en"];
+for (const loc of CP00_TEST_LOCALES) {
+  const exploring = buildPatternStory("CP00", loc, "exploring");
+  const senior = buildPatternStory("CP00", loc, "senior");
+  const developing = buildPatternStory("CP00", loc, "developing");
+  const noStage = buildPatternStory("CP00", loc);
+
+  ok(
+    exploring.answers.whereItLeads === noStage.answers.whereItLeads,
+    `12c.1 (${loc}) omitting narrativeStage behaves exactly like "exploring" -- backward compatible`,
+  );
+  ok(
+    senior.answers.whereItLeads !== exploring.answers.whereItLeads &&
+      senior.answers.growthEdge !== exploring.answers.growthEdge &&
+      senior.answers.whyTheseCareers !== exploring.answers.whyTheseCareers,
+    `12c.2 (${loc}) the senior variant genuinely differs from the exploring/default variant`,
+  );
+  ok(
+    developing.answers.whereItLeads !== exploring.answers.whereItLeads &&
+      developing.answers.whereItLeads !== senior.answers.whereItLeads,
+    `12c.3 (${loc}) the developing variant is its own distinct text, not a copy of either neighbour`,
+  );
+  const retakeLanguage = loc === "sv" ? "gör om testet" : "retake the assessment";
+  ok(
+    !senior.answers.whereItLeads.toLowerCase().includes(retakeLanguage) &&
+      !senior.answers.growthEdge.toLowerCase().includes(retakeLanguage),
+    `12c.4 (${loc}) the senior variant never tells an experienced candidate to "retake the assessment"`,
+  );
+  ok(
+    exploring.answers.howYouWork === senior.answers.howYouWork &&
+      exploring.answers.givesEnergy === senior.answers.givesEnergy &&
+      exploring.answers.takesEnergy === senior.answers.takesEnergy &&
+      exploring.answers.superpower === senior.answers.superpower,
+    `12c.5 (${loc}) the four working-style answers (how you work / gives energy / takes energy / superpower) stay pattern-only, unaffected by career stage`,
+  );
+}
+
+// Non-CP00 patterns must be completely unaffected by narrativeStage -- it
+// is a CP00-only narrative concern, never a general story mechanism.
+ok(
+  buildPatternStory("CP01", "sv", "senior").answers.whereItLeads ===
+    buildPatternStory("CP01", "sv").answers.whereItLeads,
+  "12c.6 a non-CP00 pattern (CP01) renders identically regardless of narrativeStage",
+);
+
+// =========================================================================
 group("13 · Output B content rules");
 // =========================================================================
 

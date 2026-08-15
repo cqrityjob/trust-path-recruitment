@@ -998,3 +998,79 @@ pre-`3580666` build (same content hashes across all 3 attempts, no
 pattern as `0472b77` and `42beae7` before it — the fix is real, tested, and
 committed at the source; only the live-bundle publish is unconfirmed as of
 this writing. Needs another retry pass or a manual Publish.
+
+**Resolved**: owner manually published `3580666`/`20a4e69`. Re-verified
+byte-level: fresh content hashes across the `security-career-assessment`,
+admin-preview, and `V31ReportView` chunks, all containing
+`currentProfessionTitleSv`/`currentProfessionTitleEn`/`experienceBand`/
+`youAreHereEyebrow`/`currentProfession`. `approved_for_ranking` re-confirmed
+`false` for all 14 professions via a live query against the hosted DB.
+
+## Product-quality pass (owner mandate: "make the product genuinely work, not a checklist patch")
+
+Three further real, concrete defects found and fixed, all presentation/
+interpretation-only — none touch Career DNA, `scoreDimensions`, or
+`scoreProfession`:
+
+1. **Career Area "why" evidence** (`career-areas.ts`): `alignedDimensions`
+   previously sorted by the candidate's own margin (actual − target) alone.
+   Since the locked data carries no per-dimension centrality flag for
+   Career Areas (unlike professions.ts), this let an area's TOP-cited
+   evidence be whichever dimension the candidate happened to clear by the
+   widest margin — often a low-target, incidental trait, not what the area
+   is actually about. Real example: SCA01 (Guarding & Operational
+   Protection) targets CID04 (Technical) at only 4/10; a candidate who
+   cleared it by a wide margin could see "Technical orientation" cited as
+   the top reason for a guarding-area rank, while CID01 (Operational, the
+   area's real defining trait at 8/10) barely showed. Fixed by sorting on
+   the area's own target value first, margin only as a tiebreak among
+   equally-weighted dimensions — the "why" now always leads with what that
+   area itself weights most heavily. New regression: 12b (2 checks).
+
+2. **"Bred profil" (CP00) narrative** (`story.ts`): told every candidate
+   the identical text regardless of context, including literally "retake
+   the assessment once you've tried something" — sent to a candidate who
+   had just reported being a Säkerhetschef with 8+ years' experience.
+   Added `narrativeStageFor(contextStatus, experienceBand)` (presentation-
+   only, mirrors but does not reuse `professions.ts`'s
+   `resolveStageBaseline`) and three deterministic CP00 variants —
+   exploring/developing/senior — for exactly the three fields that carry
+   "what should I do about this" framing (`growthEdge`, `whyTheseCareers`,
+   `whereItLeads`); the four working-style fields
+   (`howYouWork`/`givesEnergy`/`takesEnergy`/`superpower`) stay pattern-
+   only, since career stage doesn't change how someone works. Still zero
+   AI, zero per-candidate generation — same reproducibility discipline as
+   every other string in this file. New regression: 12c (13 checks,
+   including an explicit assertion the senior variant never contains
+   "retake the assessment"/"gör om testet").
+
+3. **Feedback questions** (`FeedbackForm.tsx`): all 5 closed questions
+   presupposed profession recommendations were shown ("how relevant did
+   the career recommendations feel", "did the pathway feel realistic",
+   etc.) — meaningless for every real candidate today, since
+   `approved_for_ranking=false` gates that content entirely. `FeedbackForm`
+   now takes a `professionsAvailable` prop: when gated, asks about Career
+   DNA accuracy and Career Area clarity instead (the content that IS
+   always shown); `pathwayRealistic`/`requirementsUseful` are hidden
+   entirely rather than asked meaninglessly. Wired from
+   `V31ReportView.tsx` via `snapshot.professions.available`. Deliberate,
+   disclosed trade-off: reused the existing `relevant`/`understoodWhy` DB
+   columns for both variants rather than adding new ones (no schema
+   migration this pass) — an analyst cross-referencing raw feedback rows
+   needs to know which variant produced a given row; this is a real,
+   bounded limitation, not silently ignored.
+
+**Working-tree note**: mid-session, Lovable's own concurrent editor work
+(unrelated homepage/marketing copy, "Website Terminology & Copy Standard
+v1.0") landed directly into this session's working tree via the same
+external-sync mechanism documented earlier in this file, mixed in with
+`dictionaries.ts` and briefly broke `tsc` (a stray key present in one
+locale, not the other — not this session's error). Isolated by restoring
+`dictionaries.ts` to the last clean commit and reapplying only the two
+intended feedback-key additions by hand; verified `git diff --stat` showed
+only the intended ~22 lines before committing. The marketing-copy content
+itself was neither reviewed nor committed by this session — it remains
+Lovable's own in-progress work, untouched.
+
+Full regression: 590 + 74 + 138 + 124 + 33 + 12 + 18 = **989 checks**,
+`tsc` clean, `bun run build` clean.

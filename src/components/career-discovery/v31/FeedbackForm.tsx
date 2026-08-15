@@ -43,7 +43,20 @@ function YesNoUnsure({
   );
 }
 
-export function FeedbackForm({ locale }: { locale: "sv" | "en" }) {
+export function FeedbackForm({
+  locale,
+  professionsAvailable,
+}: {
+  locale: "sv" | "en";
+  /** Real-world defect fix: the report's questions must reflect what the
+   *  candidate actually saw. `approved_for_ranking` gates profession
+   *  recommendations/pathway/requirements for every real candidate today —
+   *  asking "did the pathway feel realistic?" when no pathway was ever
+   *  shown produces meaningless feedback. `false`/omitted asks about
+   *  Career DNA and Career Areas instead — the content that IS always
+   *  shown — never about content that wasn't rendered. */
+  professionsAvailable?: boolean;
+}) {
   // Bound to the `locale` prop, not the live site toggle — this form is
   // rendered inside a frozen report and must stay in the report's own
   // language regardless of the viewer's current site-language (see
@@ -95,7 +108,11 @@ export function FeedbackForm({ locale }: { locale: "sv" | "en" }) {
 
       <fieldset className="mt-5 border-0 p-0">
         <legend className="text-sm text-foreground">
-          {t("careerDiscovery.report.v31.feedback.relevant")}
+          {t(
+            professionsAvailable
+              ? "careerDiscovery.report.v31.feedback.relevant"
+              : "careerDiscovery.report.v31.feedback.relevantGated",
+          )}
         </legend>
         <div className="mt-2 flex gap-2" role="radiogroup">
           {[1, 2, 3, 4, 5].map((n) => (
@@ -120,7 +137,11 @@ export function FeedbackForm({ locale }: { locale: "sv" | "en" }) {
 
       <fieldset className="mt-5 border-0 p-0">
         <legend className="text-sm text-foreground">
-          {t("careerDiscovery.report.v31.feedback.understoodWhy")}
+          {t(
+            professionsAvailable
+              ? "careerDiscovery.report.v31.feedback.understoodWhy"
+              : "careerDiscovery.report.v31.feedback.understoodWhyGated",
+          )}
         </legend>
         <YesNoUnsure
           value={understoodWhy}
@@ -130,33 +151,44 @@ export function FeedbackForm({ locale }: { locale: "sv" | "en" }) {
         />
       </fieldset>
 
-      <fieldset className="mt-5 border-0 p-0">
-        <legend className="text-sm text-foreground">
-          {t("careerDiscovery.report.v31.feedback.pathwayRealistic")}
-        </legend>
-        <YesNoUnsure
-          value={pathwayRealistic}
-          onChange={setPathwayRealistic}
-          yesLabel={t("careerDiscovery.report.v31.feedback.yes")}
-          noLabel={t("careerDiscovery.report.v31.feedback.no")}
-        />
-      </fieldset>
+      {/* Real-world defect fix: pathway/requirements are never shown until
+          a profession is approved -- asking about them when gated would
+          collect feedback about content the candidate never saw. */}
+      {professionsAvailable && (
+        <>
+          <fieldset className="mt-5 border-0 p-0">
+            <legend className="text-sm text-foreground">
+              {t("careerDiscovery.report.v31.feedback.pathwayRealistic")}
+            </legend>
+            <YesNoUnsure
+              value={pathwayRealistic}
+              onChange={setPathwayRealistic}
+              yesLabel={t("careerDiscovery.report.v31.feedback.yes")}
+              noLabel={t("careerDiscovery.report.v31.feedback.no")}
+            />
+          </fieldset>
 
-      <fieldset className="mt-5 border-0 p-0">
-        <legend className="text-sm text-foreground">
-          {t("careerDiscovery.report.v31.feedback.requirementsUseful")}
-        </legend>
-        <YesNoUnsure
-          value={requirementsUseful}
-          onChange={setRequirementsUseful}
-          yesLabel={t("careerDiscovery.report.v31.feedback.yes")}
-          noLabel={t("careerDiscovery.report.v31.feedback.no")}
-        />
-      </fieldset>
+          <fieldset className="mt-5 border-0 p-0">
+            <legend className="text-sm text-foreground">
+              {t("careerDiscovery.report.v31.feedback.requirementsUseful")}
+            </legend>
+            <YesNoUnsure
+              value={requirementsUseful}
+              onChange={setRequirementsUseful}
+              yesLabel={t("careerDiscovery.report.v31.feedback.yes")}
+              noLabel={t("careerDiscovery.report.v31.feedback.no")}
+            />
+          </fieldset>
+        </>
+      )}
 
       <div className="mt-5">
         <label htmlFor="feedback-missing-career" className="text-sm text-foreground">
-          {t("careerDiscovery.report.v31.feedback.missingCareer")}
+          {t(
+            professionsAvailable
+              ? "careerDiscovery.report.v31.feedback.missingCareer"
+              : "careerDiscovery.report.v31.feedback.missingCareerGated",
+          )}
         </label>
         <textarea
           id="feedback-missing-career"

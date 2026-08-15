@@ -31,6 +31,8 @@
 // one word of a report already issued, so completion renders the story once
 // and stores it. Nothing below is read when a historical report is opened.
 
+import type { ExperienceBand } from "../career-context";
+import type { ContextStatus } from "../types";
 import type { ResolvedPatternId } from "./patterns";
 import type { Locale } from "./version";
 
@@ -75,6 +77,73 @@ export interface PatternStory {
 }
 
 type LocalisedStory = Readonly<Record<Locale, { name: string; share: string } & StoryAnswers>>;
+
+/** How far along a security career the candidate already is, for CP00
+ *  narrative framing ONLY — never for Career DNA, Profession Affinity,
+ *  stage/pathway classification or anything scored. A coarse, deterministic
+ *  read of the same self-reported facts professions.ts's resolveStageBaseline
+ *  uses for pathway interpretation, applied here to which "no single
+ *  dominant pattern" narrative actually fits the candidate. */
+export type NarrativeCareerStage = "exploring" | "developing" | "senior";
+
+/** Real-world defect fix: "Bred profil" previously told every candidate the
+ *  same thing regardless of context — including, verbatim, "retake the
+ *  assessment once you've tried something" to a candidate who had just
+ *  reported being a Säkerhetschef with 8+ years' experience. Breadth is a
+ *  genuine, valid Career DNA result at every career stage, but what it
+ *  MEANS differs: for someone just starting out it usually is unresolved
+ *  exploration; for someone with real tenure it far more often reflects
+ *  cross-functional range they already have. These three fields are the
+ *  ones that carry "what should I do about this" framing — the other four
+ *  (howYouWork/givesEnergy/takesEnergy/superpower) describe HOW the
+ *  candidate works, which does not change with career stage, and stay
+ *  pattern-only. Deterministic, keyed only by narrativeStage — no AI, no
+ *  per-candidate generation, the same reproducibility discipline as every
+ *  other string in this file. The base STORIES.CP00 entries below serve as
+ *  the "exploring" default directly (no separate table needed for it). */
+const CP00_STAGE_VARIANTS: Readonly<
+  Record<
+    Exclude<NarrativeCareerStage, "exploring">,
+    Readonly<Record<Locale, Pick<StoryAnswers, "growthEdge" | "whyTheseCareers" | "whereItLeads">>>
+  >
+> = {
+  developing: {
+    sv: {
+      growthEdge:
+        "Att välja en riktning att fördjupa dig i just nu. Din bredd är redan en tillgång — nästa steg handlar ofta om att omsätta den i en tydligare specialisering, utan att det behöver vara permanent.",
+      whyTheseCareers:
+        "Dina svar pekar mot flera riktningar snarare än en enda. Med den erfarenhet du redan har inom säkerhet betyder det att du har goda förutsättningar att utvecklas i flera olika riktningar från där du är idag.",
+      whereItLeads:
+        "Med din bakgrund handlar nästa steg sällan om att börja om, utan om att bygga vidare på det du redan kan. Titta på de riktningar som känns mest naturliga utifrån din nuvarande roll, och låt din erfarenhet väga in i valet.",
+    },
+    en: {
+      growthEdge:
+        "Choosing a direction to build depth in from here. Your range is already an asset — the next step is usually turning it into a clearer specialisation, without that needing to be permanent.",
+      whyTheseCareers:
+        "Your answers point toward several directions rather than one. Combined with the security experience you already have, that means you're well placed to develop in more than one direction from where you are today.",
+      whereItLeads:
+        "With your background, the next step is rarely about starting over — it's about building on what you already know. Look at the directions that feel most natural from your current role, and let your experience weigh into the choice.",
+    },
+  },
+  senior: {
+    sv: {
+      growthEdge:
+        "Att välja var du vill fördjupa dig strategiskt härnäst. Bredd på din nivå brukar betyda förmåga att röra dig över flera säkerhetsdiscipliner snarare än en oförmåga att välja — frågan är inte om du kan gå djupare, utan var det gör mest nytta.",
+      whyTheseCareers:
+        "Dina svar pekar mot flera riktningar snarare än en enda — vilket på din erfarenhetsnivå ofta återspeglar en genuint tvärfunktionell kompetens och förmåga att verka över flera delar av säkerhetsarbetet, snarare än en profil som ännu inte hittat sin form.",
+      whereItLeads:
+        "På den här nivån handlar bredd sällan om att prova sig fram. Det handlar om att medvetet välja var du vill lägga din tid näst — strategiskt ansvar över ett bredare område, eller djupare specialisering inom ett du redan känner väl.",
+    },
+    en: {
+      growthEdge:
+        "Choosing where to deepen your focus strategically next. Breadth at your level usually reflects an ability to operate across several security disciplines rather than an inability to choose — the question isn't whether you can go deeper, it's where that would matter most.",
+      whyTheseCareers:
+        "Your answers point toward several directions rather than one — which, at your level of experience, more often reflects genuine cross-functional capability and the ability to operate across several parts of security work, rather than a profile that hasn't yet found its shape.",
+      whereItLeads:
+        "At this stage, breadth rarely means trying things out. It means deliberately choosing where to put your time next — broader strategic responsibility, or deeper specialisation in an area you already know well.",
+    },
+  },
+};
 
 /** Section headings, as the candidate sees them. */
 export const STORY_HEADINGS: Readonly<Record<Locale, Record<StoryQuestion, string>>> = {
@@ -536,8 +605,19 @@ const STORIES: Readonly<Record<ResolvedPatternId, LocalisedStory>> = {
  * numbers, no generation. The result is frozen into the snapshot by the
  * completion orchestration and never recomputed.
  */
-export function buildPatternStory(patternId: ResolvedPatternId, locale: Locale): PatternStory {
+export function buildPatternStory(
+  patternId: ResolvedPatternId,
+  locale: Locale,
+  /** CP00 only (see CP00_STAGE_VARIANTS's header) — every other pattern
+   *  ignores this and renders identically with or without it, so existing
+   *  callers that don't pass it keep working unchanged. */
+  narrativeStage?: NarrativeCareerStage,
+): PatternStory {
   const s = STORIES[patternId][locale];
+  const variant =
+    patternId === "CP00" && narrativeStage && narrativeStage !== "exploring"
+      ? CP00_STAGE_VARIANTS[narrativeStage][locale]
+      : null;
   return {
     patternId,
     name: s.name,
@@ -547,11 +627,34 @@ export function buildPatternStory(patternId: ResolvedPatternId, locale: Locale):
       givesEnergy: s.givesEnergy,
       takesEnergy: s.takesEnergy,
       superpower: s.superpower,
-      growthEdge: s.growthEdge,
-      whyTheseCareers: s.whyTheseCareers,
-      whereItLeads: s.whereItLeads,
+      growthEdge: variant?.growthEdge ?? s.growthEdge,
+      whyTheseCareers: variant?.whyTheseCareers ?? s.whyTheseCareers,
+      whereItLeads: variant?.whereItLeads ?? s.whereItLeads,
     },
   };
+}
+
+/** Deterministic, presentation-only career-stage read — mirrors
+ *  professions.ts's resolveStageBaseline's priority (known current
+ *  profession's own catalogued level, refined by experience, falling back
+ *  to C1) but simplified for narrative framing: no profession catalog is
+ *  available at story-build time, so this reads only the self-reported
+ *  facts already in hand (C1 + experience band). Never reads Career DNA,
+ *  never infers a profession, never used for scoring/matching/stage-
+ *  classification — CP00 narrative framing only. */
+export function narrativeStageFor(
+  contextStatus: ContextStatus | null,
+  experienceBand: ExperienceBand | null,
+): NarrativeCareerStage {
+  if (experienceBand === "8_plus_y" || contextStatus === "security_leader") return "senior";
+  if (
+    experienceBand === "4_7y" ||
+    contextStatus === "developing_current_role" ||
+    contextStatus === "changing_career_area"
+  ) {
+    return "developing";
+  }
+  return "exploring";
 }
 
 /** Every pattern that has a story. Used by the guard script to prove there

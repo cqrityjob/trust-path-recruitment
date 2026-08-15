@@ -449,7 +449,10 @@ export function V31ReportView({
           10 / §27), not a wall of version numbers before anyone has said
           what they thought. */}
       <div className="no-print mt-16">
-        <FeedbackForm locale={snapshot.locale === "en" ? "en" : "sv"} />
+        <FeedbackForm
+          locale={snapshot.locale === "en" ? "en" : "sv"}
+          professionsAvailable={snapshot.professions?.available === true}
+        />
       </div>
 
       <details className="no-print mt-8 rounded-lg border border-border">

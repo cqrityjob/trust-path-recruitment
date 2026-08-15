@@ -407,8 +407,30 @@ export function rankCareerAreas(dims: DimensionResult): AreaResult {
       areaId,
       score: round1(Math.max(0, 100 * (1 - penalty / observed.length))),
       rank: 0,
+      // Real-world defect fix: previously sorted by the candidate's own
+      // margin (actual - target) alone, which surfaced whichever cleared
+      // dimension the candidate happened to exceed by the widest margin --
+      // often a LOW-target, incidental trait for this area, not what the
+      // area itself is actually about. Concretely: SCA01 (Guarding &
+      // Operational Protection) targets CID04 (Technical) at only 4/10, so
+      // a candidate who cleared it by a wide margin could see "Technical
+      // orientation" cited as their top reason for a guarding-area rank,
+      // while CID01 (Operational, the area's actual defining trait at
+      // 8/10) barely showed up. Sorting by the area's OWN target first
+      // means the "why" evidence always leads with what that area itself
+      // weights most heavily -- margin only breaks ties among
+      // equally-weighted dimensions. The locked data carries no explicit
+      // per-dimension centrality flag (see file header: "all 160 rows carry
+      // Importance = Core"), but the target value itself already encodes
+      // how defining a trait is to an area -- this uses that signal
+      // honestly rather than ignoring it.
       alignedDimensions: aligned
-        .sort((a, b) => b.margin - a.margin || a.dimension.localeCompare(b.dimension))
+        .sort(
+          (a, b) =>
+            area.targets[b.dimension] - area.targets[a.dimension] ||
+            b.margin - a.margin ||
+            a.dimension.localeCompare(b.dimension),
+        )
         .slice(0, 4)
         .map((a) => a.dimension),
       coverage: round1(coverage * 100) / 100,

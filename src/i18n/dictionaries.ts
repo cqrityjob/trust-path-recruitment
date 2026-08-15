@@ -684,6 +684,17 @@ export const dictionaries = {
     "careerDiscovery.report.v31.feedback.requirementsUseful":
       "Var informationen om krav/utbildning användbar?",
     "careerDiscovery.report.v31.feedback.missingCareer": "Saknade du någon karriärväg? (valfritt)",
+    // Gated variant (Real-world defect fix): yrkesrekommendationer visas
+    // inte förrän en yrkesprofil är godkänd, så frågorna ovan om
+    // rekommendationer/väg/krav skulle fråga om innehåll ingen kandidat
+    // faktiskt sett. Dessa frågar i stället om det som verkligen visades:
+    // Career DNA och karriärområden.
+    "careerDiscovery.report.v31.feedback.relevantGated":
+      "Hur träffande kändes din Security Career DNA-beskrivning? (1–5)",
+    "careerDiscovery.report.v31.feedback.understoodWhyGated":
+      "Var det tydligt hur karriärområdena kopplade till dina svar?",
+    "careerDiscovery.report.v31.feedback.missingCareerGated":
+      "Var det något du saknade eller inte förstod? (valfritt)",
     "careerDiscovery.report.v31.feedback.yes": "Ja",
     "careerDiscovery.report.v31.feedback.no": "Nej",
     "careerDiscovery.report.v31.feedback.submit": "Skicka feedback",
@@ -3005,6 +3016,17 @@ export const dictionaries = {
       "Was the requirements/education information useful?",
     "careerDiscovery.report.v31.feedback.missingCareer":
       "Was an important career missing? (optional)",
+    // Gated variant (real-world defect fix): profession recommendations
+    // aren't shown until a profession profile is approved, so the
+    // questions above about recommendations/pathway/requirements would ask
+    // about content no candidate actually saw. These ask about what was
+    // really shown instead: Career DNA and Career Areas.
+    "careerDiscovery.report.v31.feedback.relevantGated":
+      "How accurately did your Security Career DNA description feel? (1–5)",
+    "careerDiscovery.report.v31.feedback.understoodWhyGated":
+      "Was it clear how the Career Areas connected to your answers?",
+    "careerDiscovery.report.v31.feedback.missingCareerGated":
+      "Was anything missing or unclear? (optional)",
     "careerDiscovery.report.v31.feedback.yes": "Yes",
     "careerDiscovery.report.v31.feedback.no": "No",
     "careerDiscovery.report.v31.feedback.submit": "Send feedback",
