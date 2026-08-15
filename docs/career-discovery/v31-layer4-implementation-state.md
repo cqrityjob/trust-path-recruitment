@@ -740,3 +740,81 @@ rather than the old (now-wrong) assertion that it stayed in `matches` as
 **Not done this pass**: no equivalent "YOU ARE HERE" treatment in the
 Career Card (item 11) or the profession-detail mini view (item 10) — both
 remain open, tracked separately below.
+
+## "Your Possible Path" — item 9's visual pathway section built (2026-08-15)
+
+New component `PossiblePathway.tsx`, purely presentational — reuses
+`ReportSnapshot.professions.matches`/`.longerTermPossibilities`/
+`.currentProfessionMatch` and `ReportSnapshot.currentProfession` (item 8),
+no new engine logic. Renders between the Career Card CTA and Working Style
+sections (§9's ordering), as a horizontal step row (stacks vertically on
+mobile) connected by arrows:
+
+- Current profession known: YOU ARE HERE (frozen title) → POSSIBLE NEXT
+  STEP (matches with `stage === "possible_next_step"`) → DEVELOP (the
+  currentProfessionMatch block, same as item 8) → LONGER TERM
+  (`longerTermPossibilities`). Each optional step is only rendered when its
+  bucket is non-empty.
+- Current profession unknown: STARTING POINT (a fixed, generic sentence —
+  never a guessed profession, item 2) → EXPLORE NOW (`explore_now`
+  matches) → DEVELOP (`longerTermPossibilities`, reused for the "grow
+  toward" framing since there's no current-role bucket to develop).
+- Renders nothing when fewer than 2 steps would result (e.g. a frozen
+  older snapshot with only one bucket populated) — no one-box "path".
+
+Added to `career-discovery-v31-locale-guard-check.ts`'s covered-components
+list (10 → 12 checks) since it's a fourth component that resolves microcopy
+from a `locale` prop via `translateFor` — the exact class of bug item 16
+guards against. New i18n keys: `careerDiscovery.report.v31.yourPath.*`
+(title/next/develop/future/startingPoint/startingPointBody/explore), sv +
+en — deliberately namespaced away from the pre-existing
+`pathwayTitle`/`pathwayTitle` key already used for the CIG pathway
+sub-section inside each profession's own detail accordion, a different
+concept with a similar name.
+
+`tsc --noEmit`, all 4 regression scripts (59 + 138 + 12 + 16 = 225 checks),
+and `bun run build` all pass clean.
+
+**Not done this pass**: "What Could Help" (§9 Section 5) as its OWN
+top-level, aggregated section — today the requirements/education/
+certification data is still only shown per-profession inside each
+accordion's detail body (`ProfessionDetailBody`), not rolled up into a
+single dedicated section as the mandate's report structure calls for. This
+is a real, disclosed gap, not silently treated as done.
+
+## Deployment discipline — third recurrence this session, unresolved after two retries (SHA c5c28c8)
+
+The stale-bundle failure mode (documented above for SHA c6c6e743, which
+resolved after one retry) recurred a third time for this push,
+commit `c5c28c8`. This time it did NOT resolve after the same fix:
+
+- Push confirmed at `c5c28c8` on `origin/main`.
+- `deploy_project` → `get_project` showed `latest_commit_sha: "c5c28c8..."`,
+  `status: "ready"`, and — new this time — the `latest_screenshot_url` also
+  referenced the new commit prefix (`c5c28c80`), suggesting Lovable's
+  internal preview/screenshot pipeline picked up the new commit even though
+  the PUBLIC bundle did not.
+- Live code-level check (cache-busted, `no-store`): the admin diagnostics
+  chunk and `ProfessionRecommendations` chunk were byte-for-byte identical
+  (same hash, same length) to the pre-`c5c28c8` build — none of this push's
+  new markers (`isCurrentProfession`, `currentProfessionMatch`) present.
+- Called `deploy_project` a second time: returned the SAME `deployment_id`
+  as the first retry (`e94042b4...`), suggesting Lovable deduplicated the
+  request against an already-completed/in-flight deployment rather than
+  queuing genuinely new work. Bundle re-checked: still stale.
+- The `preview_url` (`id-preview--....lovable.app`), which might show a
+  fresher build, redirects to a Lovable login page — this session does not
+  create accounts or sign in, so that surface could not be independently
+  checked.
+
+**Status: unresolved as of this writing.** The candidate-facing product is
+not broken — it is simply serving the pre-`c5c28c8` build (which itself
+already reflects `c6c6e743`'s content, verified earlier), so nothing is
+regressed for a real visitor; the "YOU ARE HERE"/"Your Possible Path"
+additions are just not live yet. The owner explicitly instructed
+(2026-08-15) to keep building and keep retrying `deploy_project`
+periodically rather than pausing feature work for this — see this file's
+git history for the exact exchange. Flagging here so a future session (or
+the owner directly, via the Lovable editor's own Publish button) knows this
+specific commit's live status is unconfirmed, independent of what
+`get_project` metadata claims.

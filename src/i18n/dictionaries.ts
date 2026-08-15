@@ -614,6 +614,14 @@ export const dictionaries = {
     "careerDiscovery.report.v31.youAreHereBody":
       "Det här är din nuvarande roll, så som du själv angav den. Riktningarna nedan utgår från var du är idag.",
     "careerDiscovery.report.v31.developCurrentRole": "Utveckla i din nuvarande roll",
+    "careerDiscovery.report.v31.yourPath.title": "Din möjliga väg",
+    "careerDiscovery.report.v31.yourPath.next": "Möjligt nästa steg",
+    "careerDiscovery.report.v31.yourPath.develop": "Utveckla",
+    "careerDiscovery.report.v31.yourPath.future": "På lång sikt",
+    "careerDiscovery.report.v31.yourPath.startingPoint": "Startpunkt",
+    "careerDiscovery.report.v31.yourPath.startingPointBody":
+      "Din utgångspunkt utifrån dina svar — inte en specifik roll, eftersom vi inte känner till din nuvarande yrkessituation.",
+    "careerDiscovery.report.v31.yourPath.explore": "Utforska nu",
     "careerDiscovery.report.v31.professionsTitle": "Karriärriktningar värda att utforska",
     "careerDiscovery.report.v31.workingStyleTitle": "Hur du jobbar — en djupare titt",
     "careerDiscovery.report.v31.createCareerCardCta": "Skapa ditt Career Card",
@@ -2899,6 +2907,14 @@ export const dictionaries = {
     "careerDiscovery.report.v31.youAreHereBody":
       "This is your current role, as you reported it. The directions below start from where you are today.",
     "careerDiscovery.report.v31.developCurrentRole": "Develop in your current role",
+    "careerDiscovery.report.v31.yourPath.title": "Your possible path",
+    "careerDiscovery.report.v31.yourPath.next": "Possible next step",
+    "careerDiscovery.report.v31.yourPath.develop": "Develop",
+    "careerDiscovery.report.v31.yourPath.future": "Longer term",
+    "careerDiscovery.report.v31.yourPath.startingPoint": "Starting point",
+    "careerDiscovery.report.v31.yourPath.startingPointBody":
+      "Your starting point based on your answers — not a specific role, since we don't know your current professional situation.",
+    "careerDiscovery.report.v31.yourPath.explore": "Explore now",
     "careerDiscovery.report.v31.professionsTitle": "Career directions worth exploring",
     "careerDiscovery.report.v31.workingStyleTitle": "How you work — a deeper look",
     "careerDiscovery.report.v31.createCareerCardCta": "Create your Career Card",

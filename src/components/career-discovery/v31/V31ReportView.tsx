@@ -24,6 +24,7 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
 import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
+import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
 import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
@@ -263,6 +264,14 @@ export function V31ReportView({
               </button>
             </div>
           )}
+
+          {/* 4 · YOUR POSSIBLE PATH — Master Completion Mandate item 9: a
+              visual pathway distinct from the accordion list above.
+              PossiblePathway renders nothing on its own when there isn't
+              enough to draw a meaningful path (e.g. a frozen older
+              snapshot without currentProfession, and only one bucket
+              populated). */}
+          <PossiblePathway snapshot={snapshot} locale={snapshot.locale === "en" ? "en" : "sv"} />
         </>
       )}
 

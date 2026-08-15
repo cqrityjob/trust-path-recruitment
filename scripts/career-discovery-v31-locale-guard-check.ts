@@ -83,6 +83,7 @@ const contentComponents: readonly { file: string; label: string }[] = [
   { file: "../src/components/career-discovery/v31/ProfessionRecommendations.tsx", label: "ProfessionRecommendations" },
   { file: "../src/components/career-discovery/v31/FeedbackForm.tsx", label: "FeedbackForm" },
   { file: "../src/components/career-discovery/v31/CareerCardCreator.tsx", label: "CareerCardCreator" },
+  { file: "../src/components/career-discovery/v31/PossiblePathway.tsx", label: "PossiblePathway" },
 ];
 
 for (const { file, label } of contentComponents) {
