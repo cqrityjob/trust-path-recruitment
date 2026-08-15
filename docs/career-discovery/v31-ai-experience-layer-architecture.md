@@ -137,6 +137,44 @@ request time, not pre-computed and persisted.
 
 ## 7. Status
 
-Architecture only. No `ai-explanation.functions.ts`, no prompt templates,
-no UI badge, no database columns exist yet. This document is the contract
-the next implementation phase should build against.
+**Updated 2026-08-15 — minimal real implementation built** (Master
+Completion Mandate items 13-15: "the architecture document alone is not
+sufficient... implement the smallest useful AI Experience Layer that
+proves the model"). `src/lib/career-discovery/v31/ai-explanation.ts` now
+contains:
+
+- `AiExplanationContext` / `buildAiExplanationContext` — the read-model
+  from §2 above, implemented for real, assembled purely from data already
+  computed by the deterministic engine (verified by regression test:
+  serializing the context contains no raw dimension-score numbers, only
+  qualitative `"high" | "moderate"` bands).
+- `AiCallFn` — the exact seam a real provider plugs into later. No provider
+  is wired in: this codebase has no existing AI/LLM integration to reuse,
+  and adding one is a cost/vendor decision for the owner to make
+  explicitly, not something to add unilaterally while proving an
+  architecture (see §6's own anti-over-engineering list).
+- `generateEnrichedExplanation(context, aiCall?)` — when `aiCall` is
+  omitted (true in production today, always, since no provider exists) or
+  throws or returns empty text, a deterministic template fallback runs
+  directly. This is NOT a degraded experience; it is the only experience
+  that exists until a provider is wired in, and it is fully exercised by
+  the regression suite below, not merely written and left untested.
+- `AiExplanationProvenance` — `source: "ai" | "deterministic_fallback"`,
+  `promptTemplateVersion`, `generatedAt`, with `provider`/`model` present
+  only when `source === "ai"` (always absent today).
+
+`scripts/career-discovery-v31-ai-explanation-check.ts`: 16/16 checks green,
+proving (1) context assembly leaks no raw data, (2) the fallback alone
+produces valid, locale-correct text with zero AI involvement, (3) a
+supplied AI call's output is used verbatim with correct provenance when it
+succeeds, (4) a throwing or empty AI response degrades silently to the
+fallback rather than breaking the report.
+
+**Deliberately not done**: no UI wiring (no "AI-written summary" badge in
+`ProfessionRecommendations`) and no real provider call. Both would be
+premature — the only observable output today would be the same fallback
+text `explainMatch` already produces, reworded, at the cost of new UI
+surface and a stale "this feature exists" claim ahead of an actual
+provider decision. The service boundary being real and tested is the
+"minimum useful" implementation the mandate asked for; UI and a real
+provider are the natural next increment once one is chosen and authorized.
