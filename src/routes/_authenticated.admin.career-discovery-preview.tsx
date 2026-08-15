@@ -280,11 +280,10 @@ function CareerDiscoveryPreview() {
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             Explicitly separate, per Master Completion Mandate item 3 — never combined into one
             score. <span className="font-medium text-foreground">Affinity</span> is driven only by
-            Career DNA (central-dominant fit). <span className="font-medium text-foreground">
-              Priority
-            </span>{" "}
-            is the context-aware stage/pathway interpretation on top of it. Internal numeric
-            diagnostics — never shown to a candidate.
+            Career DNA (central-dominant fit).{" "}
+            <span className="font-medium text-foreground">Priority</span> is the context-aware
+            stage/pathway interpretation on top of it. Internal numeric diagnostics — never shown to
+            a candidate.
           </p>
           {diagnostics && diagnostics.diagnostics.length > 0 && (
             <div className="mt-4 overflow-x-auto rounded-lg border border-border">
@@ -334,7 +333,9 @@ function CareerDiscoveryPreview() {
                         {d.supportingFitScore ?? "—"}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                        {d.centralCoverage !== null ? `${Math.round(d.centralCoverage * 100)}%` : "—"}
+                        {d.centralCoverage !== null
+                          ? `${Math.round(d.centralCoverage * 100)}%`
+                          : "—"}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
                         {d.contextPriorityBonus > 0 ? `+${d.contextPriorityBonus}` : "—"}

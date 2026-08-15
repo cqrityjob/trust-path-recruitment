@@ -162,11 +162,7 @@ export function MoveForwardSection({
       )}
 
       {present.length > 0 && (
-        <Accordion
-          type="multiple"
-          defaultValue={present.slice(0, 1)}
-          className="mt-6 space-y-3"
-        >
+        <Accordion type="multiple" defaultValue={present.slice(0, 1)} className="mt-6 space-y-3">
           {present.map((category) => (
             <AccordionItem
               key={category}

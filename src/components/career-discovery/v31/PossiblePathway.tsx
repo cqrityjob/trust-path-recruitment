@@ -130,12 +130,7 @@ export function PossiblePathway({
       <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card p-6 sm:p-8">
         <ol className="flex flex-col sm:flex-row">
           {steps.map((step, i) => (
-            <Step
-              key={step.eyebrow}
-              step={step}
-              index={i}
-              isLast={i === steps.length - 1}
-            />
+            <Step key={step.eyebrow} step={step} index={i} isLast={i === steps.length - 1} />
           ))}
         </ol>
       </div>

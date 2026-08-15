@@ -492,11 +492,7 @@ function Tier({
           {description}
         </p>
       )}
-      <div
-        className={`mt-4 ${
-          variant === "primary" ? "space-y-4" : "grid gap-3 md:grid-cols-2"
-        }`}
-      >
+      <div className={`mt-4 ${variant === "primary" ? "space-y-4" : "grid gap-3 md:grid-cols-2"}`}>
         {matches.map((m) => (
           <ProfessionCard
             key={m.professionId}
