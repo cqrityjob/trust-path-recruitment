@@ -987,3 +987,14 @@ Not independently browser-verified: local dev cannot reach Supabase
 credentials exist for this session — same disclosed limitation as every
 other admin-route change this session. `tsc`, the full regression suite,
 and `bun run build` are clean.
+
+**Deployment status (`3580666`)**: pushed and confirmed via `git ls-remote`.
+`deploy_project` called 3 times; `get_project` metadata reports
+`latest_commit_sha: "3580666..."` and `status: "ready"` each time, but a
+cache-busted, `no-store` byte-level check shows the live
+`security-career-assessment-*.js` and admin-preview chunks are STILL the
+pre-`3580666` build (same content hashes across all 3 attempts, no
+`currentProfessionTitleSv`/`moveForward`/possible-path markers). Same
+pattern as `0472b77` and `42beae7` before it — the fix is real, tested, and
+committed at the source; only the live-bundle publish is unconfirmed as of
+this writing. Needs another retry pass or a manual Publish.
