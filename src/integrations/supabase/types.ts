@@ -564,6 +564,41 @@ export type Database = {
           },
         ]
       }
+      cd_career_goals: {
+        Row: {
+          chosen_profession_id: string
+          id: string
+          note: string | null
+          session_id: string
+          set_at: string
+          user_id: string
+        }
+        Insert: {
+          chosen_profession_id: string
+          id?: string
+          note?: string | null
+          session_id: string
+          set_at?: string
+          user_id: string
+        }
+        Update: {
+          chosen_profession_id?: string
+          id?: string
+          note?: string | null
+          session_id?: string
+          set_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_career_goals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cd_definition_items: {
         Row: {
           adaptive_path: string | null
@@ -854,9 +889,15 @@ export type Database = {
           approved_for_ranking: boolean
           career_area_id: string
           career_stage: string
+          cig_profession_slug: string | null
           created_at: string
           derived_from_area: boolean
           entry_role: boolean
+          inclusion_rationale_en: string | null
+          inclusion_rationale_sv: string | null
+          limitation_note_en: string | null
+          limitation_note_sv: string | null
+          next_review_date: string | null
           profession_id: string
           regulated: boolean
           review_state: string
@@ -869,9 +910,15 @@ export type Database = {
           approved_for_ranking?: boolean
           career_area_id: string
           career_stage: string
+          cig_profession_slug?: string | null
           created_at?: string
           derived_from_area?: boolean
           entry_role?: boolean
+          inclusion_rationale_en?: string | null
+          inclusion_rationale_sv?: string | null
+          limitation_note_en?: string | null
+          limitation_note_sv?: string | null
+          next_review_date?: string | null
           profession_id: string
           regulated?: boolean
           review_state?: string
@@ -884,9 +931,15 @@ export type Database = {
           approved_for_ranking?: boolean
           career_area_id?: string
           career_stage?: string
+          cig_profession_slug?: string | null
           created_at?: string
           derived_from_area?: boolean
           entry_role?: boolean
+          inclusion_rationale_en?: string | null
+          inclusion_rationale_sv?: string | null
+          limitation_note_en?: string | null
+          limitation_note_sv?: string | null
+          next_review_date?: string | null
           profession_id?: string
           regulated?: boolean
           review_state?: string
@@ -973,7 +1026,10 @@ export type Database = {
           consent: Json
           context_status: string | null
           created_at: string
+          current_experience_band: string | null
           current_item: string | null
+          current_profession_slug: string | null
+          current_profession_status: string | null
           current_section: string | null
           definition_version_id: string
           discovery_goal: string | null
@@ -993,7 +1049,10 @@ export type Database = {
           consent?: Json
           context_status?: string | null
           created_at?: string
+          current_experience_band?: string | null
           current_item?: string | null
+          current_profession_slug?: string | null
+          current_profession_status?: string | null
           current_section?: string | null
           definition_version_id: string
           discovery_goal?: string | null
@@ -1013,7 +1072,10 @@ export type Database = {
           consent?: Json
           context_status?: string | null
           created_at?: string
+          current_experience_band?: string | null
           current_item?: string | null
+          current_profession_slug?: string | null
+          current_profession_status?: string | null
           current_section?: string | null
           definition_version_id?: string
           discovery_goal?: string | null
@@ -1082,6 +1144,94 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cd_v31_stored_reports"
             referencedColumns: ["snapshot_id"]
+          },
+        ]
+      }
+      cd_test_feedback: {
+        Row: {
+          explored_profession_id: string | null
+          free_text: string | null
+          id: string
+          locale: string
+          missing_career_note: string | null
+          pathway_realistic: boolean | null
+          relevant: number | null
+          requirements_useful: boolean | null
+          session_id: string | null
+          submitted_at: string
+          understood_why: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          explored_profession_id?: string | null
+          free_text?: string | null
+          id?: string
+          locale: string
+          missing_career_note?: string | null
+          pathway_realistic?: boolean | null
+          relevant?: number | null
+          requirements_useful?: boolean | null
+          session_id?: string | null
+          submitted_at?: string
+          understood_why?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          explored_profession_id?: string | null
+          free_text?: string | null
+          id?: string
+          locale?: string
+          missing_career_note?: string | null
+          pathway_realistic?: boolean | null
+          relevant?: number | null
+          requirements_useful?: boolean | null
+          session_id?: string | null
+          submitted_at?: string
+          understood_why?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_test_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cd_v31_funnel_events: {
+        Row: {
+          detail: Json
+          event_name: string
+          id: string
+          occurred_at: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          detail?: Json
+          event_name: string
+          id?: string
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          detail?: Json
+          event_name?: string
+          id?: string
+          occurred_at?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_v31_funnel_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cd_sessions"
+            referencedColumns: ["id"]
           },
         ]
       }
