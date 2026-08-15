@@ -480,3 +480,38 @@ shipping something half-built rather than something correct.
 Live browser verification blocked by the same Docker constraint as the two
 notes above — this redesign is `tsc`-clean, regression-green (50 + 138
 checks) and build-green, but not yet pixel-verified in a browser this pass.
+
+### Career Card data-integrity audit (items 8-10) — no violations found
+
+Read `career-card.ts`, `CareerCard.tsx`, `CareerCardCreator.tsx` and
+`career-card-export.ts` end to end against the mandate's explicit
+prohibited-fields list. Result: already compliant, no changes needed.
+
+- **Source**: `buildCareerCardData` takes a `ProfessionMatch` that must
+  already exist in the frozen snapshot's `professions.matches` — never a
+  new calculation, never an arbitrary profession. The picker in
+  `CareerCardCreator` only ever offers `matches` from the snapshot.
+- **No raw answers, email, account id, employer, private report
+  identifiers**: none of these fields exist anywhere in `CareerCardData` or
+  the SVG renderer. `firstName` is explicit-opt-in only (never defaulted
+  from an account name), truncated to 40 chars, no surname field exists at
+  all.
+- **No fit/qualification percentage, no overall rating**: `fitTier` is
+  carried in the data shape but the SVG renderer (`CareerCard.tsx`) never
+  actually prints it — only the qualitative `stageLabel` ("POSSIBLE NEXT
+  STEP" etc.) is rendered. Dimension indicators are bar widths from `[0,1]`
+  normalized scores, never printed as numbers or percentages.
+- **Sharing**: `generateDiscoverQrDataUrl` points the QR at
+  `${origin}/security-career-assessment` (the public assessment) always —
+  never a private report URL. `shareCardImage` uses the real Web Share API
+  and returns `"unsupported"` for a caller to handle gracefully rather than
+  silently failing or falsely claiming a direct-publish capability.
+  `onEvent` payloads for `share_initiated`/`image_saved` carry only
+  `{format, reason}` — no PII.
+- **Formats**: `CARD_DIMENSIONS` = Story 1080×1920 (9:16), Square
+  1080×1080 (1:1), LinkedIn 1200×627 (standard landscape link-preview
+  ratio) — matches the spec exactly.
+
+No code change was needed here; this section exists to record that the
+audit happened and found the architecture already correct, per the
+mandate's own instruction to verify rather than assume.
