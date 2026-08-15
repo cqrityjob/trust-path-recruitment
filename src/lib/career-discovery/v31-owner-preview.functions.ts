@@ -18,11 +18,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { DIMENSION_IDS, type DimensionId } from "./v31/dimensions";
 import {
-  matchProfessions,
+  matchProfessionsDiagnostics,
   type ProfessionCatalogEntry,
   type ProfessionCareerStage,
   type ProfessionDimensionBand,
-  type ProfessionMatchResult,
+  type ProfessionMatchDiagnostics,
 } from "./v31/professions";
 import type { ContextStatus } from "./types";
 
@@ -151,10 +151,17 @@ async function fetchFullCatalog(ctx: Ctx): Promise<ProfessionCatalogEntry[]> {
 }
 
 /**
- * Runs the exact production matchProfessions against the FULL catalogue
+ * Runs the exact production matching logic against the FULL catalogue
  * (every review state, not just approved_for_ranking) for a set of
- * dimension scores the admin supplies. Never touches approved_for_ranking.
- * Admin-only, read-only.
+ * dimension scores the admin supplies — PLUS the raw internal diagnostics
+ * (§14 / Master Completion Mandate item 3): Profession Affinity and
+ * Recommendation Priority shown separately, never combined, so an owner can
+ * see WHY a recommendation landed where it did. Never touches
+ * approved_for_ranking. Admin-only, read-only. See
+ * matchProfessionsDiagnostics's own header for why this is a deliberately
+ * separate function from the production matchProfessions path — the
+ * candidate-facing "no percentages, ever" rule is enforced by that path
+ * simply not existing here, not by a runtime check.
  */
 export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -169,10 +176,15 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
           "security_leader",
         ]),
         dimensionScores: z.record(z.enum(DIMENSION_IDS), z.number().min(0).max(1)),
+        // Master Completion Mandate item 2/3: lets the owner preview how a
+        // self-reported current profession changes Recommendation Priority
+        // for the SAME Career DNA — the exact "why did priority change"
+        // comparison §14 asks for.
+        currentProfessionCigSlug: z.string().nullable().optional(),
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<ProfessionMatchResult> => {
+  .handler(async ({ data, context }): Promise<ProfessionMatchDiagnostics> => {
     const ctx = context as Ctx;
     await assertAdmin(ctx);
     const catalog = await fetchFullCatalog(ctx);
@@ -195,9 +207,10 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
 
-    return matchProfessions(
+    return matchProfessionsDiagnostics(
       { scoringVersion: "owner-preview", dimensions, answeredItems: [], complete: true },
       catalog,
       data.contextStatus as ContextStatus,
+      data.currentProfessionCigSlug ?? null,
     );
   });

@@ -299,6 +299,9 @@ interface ScoredMatch {
   readonly match: ProfessionMatch;
   readonly fitScore: number;
   readonly distance: number;
+  readonly centralFitScore: number | null;
+  readonly supportingFitScore: number | null;
+  readonly centralCoverage: number | null;
 }
 
 interface BandFit {
@@ -437,6 +440,9 @@ function scoreProfession(
     },
     fitScore,
     distance,
+    centralFitScore: central.fitScore,
+    supportingFitScore: supporting.fitScore,
+    centralCoverage: central.totalWeight > 0 ? central.observedWeight / central.totalWeight : null,
   };
 }
 
@@ -562,4 +568,111 @@ export function matchProfessions(
     longerTermPossibilities: longerTerm,
     careerPivots,
   };
+}
+
+// -------------------------------------------------------------------------
+// Diagnostics — ADMIN-ONLY (§14 / Master Completion Mandate item 3, "explicit
+// separation"). Internal numeric diagnostics are acceptable in an owner
+// review tool that will never be candidate-facing; ProfessionMatch itself
+// still carries no fitScore, no percentage, ever (see the file header).
+// This is a deliberately separate function, not a parameter that could leak
+// onto the public path — matchProfessions above is completely unchanged by
+// its existence.
+// -------------------------------------------------------------------------
+
+/** Named per the mandate's own two questions:
+ *  Profession Affinity = "which professions resemble this candidate's
+ *  Career DNA?" — fitScore/centralFitScore/supportingFitScore/
+ *  centralCoverage, driven ONLY by scoreProfession, never by context.
+ *  Recommendation Priority = "which of those affinities are most useful to
+ *  show this candidate now?" — stageBeforePivotCheck/finalStage, driven by
+ *  career-stage baseline, real current profession (when reported) and the
+ *  DNA-inferred fallback. Both live on one row here so an owner can compare
+ *  them side by side; they are never combined into a single score. */
+export interface ProfessionAffinityDiagnostic {
+  readonly professionId: string;
+  readonly titleEn: string;
+  // --- Profession Affinity (Career DNA only) ---
+  readonly fitScore: number;
+  readonly fitTier: ProfessionFitTier;
+  readonly centralFitScore: number | null;
+  readonly supportingFitScore: number | null;
+  readonly centralCoverage: number | null;
+  readonly overallCoverage: number;
+  // --- Recommendation Priority (context-aware interpretation) ---
+  readonly stageDistance: number;
+  readonly stageBeforePivotCheck: Exclude<ProfessionStage, "career_pivot">;
+  readonly finalStage: ProfessionStage;
+  readonly priorityChangedByPivot: boolean;
+}
+
+export interface ProfessionMatchDiagnostics {
+  readonly result: ProfessionMatchResult;
+  readonly diagnostics: readonly ProfessionAffinityDiagnostic[];
+  /** What grounded the career-pivot "primary direction" for this run — see
+   *  classifyStagesWithPivots. Answers "why did priority change" at the run
+   *  level, before reading individual rows. */
+  readonly pivotPrimaryAreaId: string | null;
+  readonly pivotPrimarySource: "current_profession" | "dna_inferred" | "none";
+}
+
+/**
+ * Same matching as matchProfessions, plus the raw internal numbers behind
+ * it — for the admin owner-preview tool ONLY (see the section header).
+ */
+export function matchProfessionsDiagnostics(
+  dims: DimensionResult,
+  catalog: readonly ProfessionCatalogEntry[],
+  contextStatus: ContextStatus | null,
+  currentProfessionCigSlug?: string | null,
+): ProfessionMatchDiagnostics {
+  const result = matchProfessions(dims, catalog, contextStatus, currentProfessionCigSlug);
+
+  if (catalog.length === 0) {
+    return { result, diagnostics: [], pivotPrimaryAreaId: null, pivotPrimarySource: "none" };
+  }
+
+  const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+  const scored = catalog
+    .map((entry) => scoreProfession(entry, dims, baseline))
+    .filter((m): m is ScoredMatch => m !== null)
+    .sort(
+      (a, b) =>
+        sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
+    );
+
+  const currentProfessionAreaId = currentProfessionCigSlug
+    ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
+    : null;
+  const dnaInferredAreaId = scored.find((m) => m.distance >= 0)?.match.careerAreaId ?? null;
+  const pivotPrimaryAreaId = currentProfessionAreaId ?? dnaInferredAreaId;
+  const pivotPrimarySource: ProfessionMatchDiagnostics["pivotPrimarySource"] =
+    currentProfessionAreaId !== null
+      ? "current_profession"
+      : dnaInferredAreaId !== null
+        ? "dna_inferred"
+        : "none";
+
+  const finalStageById = new Map(result.matches.map((m) => [m.professionId, m.stage] as const));
+
+  const diagnostics: ProfessionAffinityDiagnostic[] = scored.map((m) => {
+    const stageBeforePivotCheck = stageFor(m.distance);
+    const finalStage = finalStageById.get(m.match.professionId) ?? stageBeforePivotCheck;
+    return {
+      professionId: m.match.professionId,
+      titleEn: m.match.titleEn,
+      fitScore: m.fitScore,
+      fitTier: m.match.fitTier,
+      centralFitScore: m.centralFitScore,
+      supportingFitScore: m.supportingFitScore,
+      centralCoverage: m.centralCoverage,
+      overallCoverage: m.match.coverage,
+      stageDistance: m.distance,
+      stageBeforePivotCheck,
+      finalStage,
+      priorityChangedByPivot: finalStage !== stageBeforePivotCheck,
+    };
+  });
+
+  return { result, diagnostics, pivotPrimaryAreaId, pivotPrimarySource };
 }

@@ -299,3 +299,36 @@ mandate's own worked examples); layering in transition-graph edges as a
 further refinement is a reasonable next increment, deliberately not done
 now to avoid the mandate's own "reduced not increased complexity" /
 over-engineering warning without a concrete worked example that needs it.
+
+### Profession Affinity vs Recommendation Priority — explicit separation (item 3/§14)
+
+The two concepts were already computed separately internally (central-
+dominant fit = Affinity; stage/pivot classification = Priority) but never
+named or exposed as such. Made this explicit and inspectable:
+
+- `professions.ts` gains `matchProfessionsDiagnostics` — a SEPARATE exported
+  function from the production `matchProfessions` (which is completely
+  unchanged), returning the same `ProfessionMatchResult` plus a parallel
+  `ProfessionAffinityDiagnostic[]` array: `fitScore` /`centralFitScore` /
+  `supportingFitScore` / `centralCoverage` (Profession Affinity — Career DNA
+  only) alongside `stageBeforePivotCheck` / `finalStage` /
+  `priorityChangedByPivot` (Recommendation Priority — context-aware). This
+  keeps the "no percentages, ever" rule airtight on the candidate-facing
+  path by construction (that function never sees these numbers), while
+  giving the ADMIN tool real diagnostics — internal numeric diagnostics are
+  explicitly acceptable there per the mandate.
+- `/admin/career-discovery-preview` now shows: a current-career-context
+  selector (self-report profession, feeds `runOwnerPreviewMatch`'s new
+  `currentProfessionCigSlug` input so an owner can compare the SAME Career
+  DNA with vs. without a reported current role), a "context signals" panel
+  (C1 + which source grounded the pivot primary direction), and a full
+  Profession Affinity / Recommendation Priority table — one row per
+  profession, both concepts side by side, never combined into one score.
+
+Not yet done: the table's "context signals" panel shows C1 only, not the
+four Discovery Path tags — full six-signal display is naturally tied to
+task/item 6 (using those signals in Recommendation Priority itself), not
+yet implemented, so there is nothing computed from them to show yet.
+`tsc` clean, `bun run build` succeeds, 46 professions-check + 138
+golden-persona checks green (unaffected — `matchProfessions` itself did not
+change).
