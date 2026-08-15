@@ -261,17 +261,24 @@ export function V31ReportView({
               a reward, right after the candidate has seen their top
               direction (§26 Section 3), not buried after methodology. */}
           {topMatch && (
-            <div className="no-print mt-10 rounded-lg border border-accent/30 bg-[color:var(--secondary)] p-6 text-center sm:p-8">
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+            <div className="no-print relative mt-12 overflow-hidden rounded-2xl border border-accent/30 bg-[color:var(--secondary)] p-7 text-center sm:p-10">
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent"
+              />
+              <h2
+                className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
                 {t("careerDiscovery.report.v31.createCareerCardCta")}
               </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
                 {t("careerDiscovery.report.v31.createCareerCardCtaBody")}
               </p>
               <button
                 type="button"
                 onClick={() => setCareerCardMatch(topMatch)}
-                className="mt-5 inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-6 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="mt-6 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold uppercase tracking-wide text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {t("careerDiscovery.report.v31.createCareerCardCta")}
               </button>
@@ -309,13 +316,13 @@ export function V31ReportView({
       <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
         {t("careerDiscovery.report.v31.workingStyleTitle")}
       </h2>
-      <div className="mt-8 space-y-8">
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
         {orderedQuestions(leadingAnswers).map((q) => (
-          <section key={q}>
-            <h3 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">
+          <section key={q} className="rounded-xl border border-border bg-card p-5 sm:p-6">
+            <h3 className="text-base font-semibold tracking-tight text-foreground md:text-lg">
               {headings[q] ?? q}
             </h3>
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               {leadingAnswers[q]}
             </p>
           </section>
