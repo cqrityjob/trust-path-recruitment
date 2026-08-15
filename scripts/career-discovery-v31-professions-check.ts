@@ -26,6 +26,7 @@
 import { DIMENSION_IDS, type DimensionId } from "../src/lib/career-discovery/v31/dimensions";
 import {
   matchProfessions,
+  matchProfessionsDiagnostics,
   PROFESSION_MIN_COVERAGE,
   type ProfessionCatalogEntry,
 } from "../src/lib/career-discovery/v31/professions";
@@ -380,7 +381,16 @@ const COORDINATOR_DIRECTION = makeDims(0.5, {
   CID16: 0.7,
 });
 
-const coordinatorDirection = matchProfessions(COORDINATOR_DIRECTION, CATALOG, "developing_current_role");
+// Item 2: career_pivot only ever computes when current profession is a
+// REAL, self-reported fact — never inferred from Career DNA. This persona's
+// current role is explicitly reported as Säkerhetssamordnare (their own
+// CIG slug), exactly what the mandate's worked example describes.
+const coordinatorDirection = matchProfessions(
+  COORDINATOR_DIRECTION,
+  CATALOG,
+  "developing_current_role",
+  "sakerhetssamordnare",
+);
 const cdCoordinator = coordinatorDirection.matches.find((m) => m.professionId === "SP006");
 const cdSkyddsvakt = coordinatorDirection.matches.find((m) => m.professionId === "SP003");
 
@@ -407,28 +417,35 @@ ok(
 );
 
 // =========================================================================
-group("6c · Real current profession overrides the DNA-inferred pivot guess (Mandate item 5)");
+group("6c · Unknown current profession never triggers career_pivot (Mandate item 2)");
 // =========================================================================
 
 // Same HIGH_FLIER dims and developing_current_role baseline as group 6 —
-// without a self-reported current profession, the pivot classifier infers
-// "primary direction" from the candidate's own best-fitting distance>=0
-// match, which lands on Säkerhetssamordnare/Säkerhetschef's area (SCA04).
-// Under that guess, BOTH Skyddsvakt (SCA01) and Polis (SCA02) would read as
-// career pivots — a real risk of a wrong guess for a flat/broad profile.
+// WITHOUT a self-reported current profession. The mandate is explicit:
+// Career DNA tells us how a candidate prefers to work, never what job they
+// currently hold, so inferring a "primary direction" from their
+// best-fitting match (the previous version of this engine) was itself the
+// violation. Unknown must stay unknown: every match here keeps its plain
+// stage-distance classification, and career_pivot must never appear.
 const noCurrentProfession = matchProfessions(HIGH_FLIER, CATALOG, "developing_current_role");
-const noCurrentProfessionSkyddsvakt = noCurrentProfession.matches.find(
-  (m) => m.professionId === "SP003",
+ok(
+  noCurrentProfession.careerPivots.length === 0,
+  "6c.1 with no reported current profession, career_pivot never appears for anyone -- not inferred from Career DNA",
 );
 ok(
-  noCurrentProfessionSkyddsvakt?.stage === "career_pivot",
-  "6c.1 without a reported current profession, Skyddsvakt reads as career_pivot from the DNA-inferred guess alone",
+  noCurrentProfession.matches.find((m) => m.professionId === "SP003")?.stage === "explore_now",
+  "6c.2 Skyddsvakt keeps its plain stage-distance classification (explore_now, distance -1 -> 0 collapses to explore_now) rather than being guessed into a pivot",
+);
+ok(
+  noCurrentProfession.matches.find((m) => m.professionId === "SP005")?.stage === "explore_now",
+  "6c.3 Polis likewise keeps its plain stage-distance classification, not a guessed pivot",
 );
 
 // The SAME dims, but the candidate has self-reported their real current
-// profession as Skyddsvakt itself. The real fact should now ground the
-// "primary direction" at SCA01, not SCA04 — Skyddsvakt is where they
-// actually are, not a pivot away from it.
+// profession as Skyddsvakt itself. Now pivot classification runs for real:
+// Skyddsvakt (where they actually are) stays explore_now, while Polis (a
+// genuinely different area, not directly CIG-reachable from Skyddsvakt in
+// this fixture) becomes career_pivot.
 const withCurrentProfession = matchProfessions(
   HIGH_FLIER,
   CATALOG,
@@ -447,15 +464,41 @@ const withCurrentProfessionCoordinator = withCurrentProfession.matches.find(
 
 ok(
   withCurrentProfessionSkyddsvakt?.stage === "explore_now",
-  "6c.2 with current profession = Skyddsvakt (SCA01), Skyddsvakt itself is 'explore now', not a pivot away from where the candidate actually is",
+  "6c.4 with current profession = Skyddsvakt (SCA01), Skyddsvakt itself is 'explore now', not a pivot away from where the candidate actually is",
 );
 ok(
   withCurrentProfessionPolis?.stage === "career_pivot",
-  "6c.3 Polis (SCA02, entry, behind baseline) is still a pivot -- a genuinely different area from the candidate's real current profession",
+  "6c.5 Polis (SCA02, entry, behind baseline, no CIG edge from Skyddsvakt in this fixture) is a pivot -- a genuinely different, undocumented direction from the candidate's real current profession",
 );
 ok(
   withCurrentProfessionCoordinator?.stage === "explore_now",
-  "6c.4 Säkerhetssamordnare (SCA04, distance 0) is unaffected by which primary-direction source is used -- distance >= 0 never triggers pivot classification regardless",
+  "6c.6 Säkerhetssamordnare (SCA04, distance 0) is unaffected -- distance >= 0 never triggers pivot classification regardless",
+);
+
+// =========================================================================
+group("6d · CIG-documented transitions are never pivots, even across areas (Mandate item 7)");
+// =========================================================================
+
+// Same current profession (Skyddsvakt) and dims, but this time a real CIG
+// transition edge is supplied from Skyddsvakt to Polis. A documented next
+// step must stay a next step, even though Polis sits in a different career
+// area -- area comparison is the fallback, not the primary signal.
+const withCigEdge = matchProfessions(
+  HIGH_FLIER,
+  CATALOG,
+  "developing_current_role",
+  "skyddsvakt",
+  [],
+  new Set(["polis"]),
+);
+const withCigEdgePolis = withCigEdge.matches.find((m) => m.professionId === "SP005");
+ok(
+  withCigEdgePolis?.stage === "explore_now",
+  "6d.1 Polis is NOT a pivot when a real CIG transition edge documents it as reachable from the candidate's current profession, even across career areas",
+);
+ok(
+  !withCigEdge.careerPivots.some((m) => m.professionId === "SP005"),
+  "6d.2 Polis does not appear in careerPivots when CIG-documented",
 );
 
 // =========================================================================
@@ -484,7 +527,7 @@ ok(poorFit.matches.length === 0, "8.1 a candidate who fits nothing gets zero mat
 ok(poorFit.available === false, "8.2 available is false when nothing clears the fit floor");
 
 // =========================================================================
-group("8b · Discovery Path tags corroborate explanation only (Mandate item 6)");
+group("8b · Discovery Path tags refine Recommendation Priority, never Affinity (Mandate item 1)");
 // =========================================================================
 
 const withoutTags = matchProfessions(HIGH_FLIER, CATALOG, "exploring_security");
@@ -510,7 +553,39 @@ ok(
 ok(
   withTagsCoordinator?.fitTier === withoutTagsCoordinator?.fitTier &&
     withTagsCoordinator?.stage === withoutTagsCoordinator?.stage,
-  "8b.4 discovery tags never change fitTier or stage -- corroboration is explanation-only",
+  "8b.4 discovery tags never change fitTier or stage -- Profession Affinity and stage-distance classification are untouched",
+);
+
+// Item 1's actual correction: context MUST genuinely move Recommendation
+// Priority, not just add an explanation sentence. Verify the raw numbers
+// via the diagnostics function: priorityScore must differ from fitScore by
+// exactly CONTEXT_PRIORITY_BONUS when corroborated, and Affinity itself
+// (fitScore) must be byte-identical whether or not the tag was supplied --
+// proving context refines priority on top of an unchanged Affinity, never
+// inside it.
+const diagWithoutTags = matchProfessionsDiagnostics(HIGH_FLIER, CATALOG, "exploring_security");
+const diagWithTags = matchProfessionsDiagnostics(HIGH_FLIER, CATALOG, "exploring_security", null, [
+  "leadership_path",
+]);
+const affinityWithoutTags = diagWithoutTags.diagnostics.find((d) => d.professionId === "SP006");
+const affinityWithTags = diagWithTags.diagnostics.find((d) => d.professionId === "SP006");
+
+ok(
+  affinityWithoutTags !== undefined &&
+    affinityWithTags !== undefined &&
+    affinityWithoutTags.fitScore === affinityWithTags.fitScore,
+  "8b.5 Profession Affinity (fitScore) is byte-identical with or without the corroborating tag",
+);
+ok(
+  affinityWithTags?.contextPriorityBonus === 6 && affinityWithoutTags?.contextPriorityBonus === 0,
+  "8b.6 contextPriorityBonus is 0 without the tag and the documented bonus with it",
+);
+ok(
+  affinityWithTags !== undefined &&
+    affinityWithoutTags !== undefined &&
+    affinityWithTags.priorityScore === affinityWithTags.fitScore + affinityWithTags.contextPriorityBonus &&
+    affinityWithTags.priorityScore > affinityWithoutTags.priorityScore,
+  "8b.7 priorityScore = fitScore + contextPriorityBonus, and is strictly higher with the corroborating tag -- Recommendation Priority genuinely moved",
 );
 
 // =========================================================================

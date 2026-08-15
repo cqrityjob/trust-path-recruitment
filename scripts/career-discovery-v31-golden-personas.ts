@@ -29,7 +29,7 @@ import {
 import { explainMatch } from "../src/lib/career-discovery/v31/profession-explanations";
 import { matchProfessions, type ProfessionMatch } from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
-import type { ContextStatus } from "../src/lib/career-discovery/types";
+import { GOLDEN_PERSONAS } from "../src/lib/career-discovery/v31/golden-persona-fixtures";
 import { FIRST_WAVE_CATALOG } from "./fixtures/first-wave-profession-catalog";
 
 let failures = 0;
@@ -70,84 +70,12 @@ function makeDims(scores: Partial<Record<DimensionId, number | null>>): Dimensio
   return { scoringVersion: "fixture", dimensions, answeredItems: [], complete: true };
 }
 
-interface Persona {
-  readonly name: string;
-  readonly contextStatus: ContextStatus;
-  readonly dims: Partial<Record<DimensionId, number | null>>;
-}
-
-const PERSONAS: readonly Persona[] = [
-  {
-    name: "Student / no experience",
-    contextStatus: "exploring_security",
-    dims: {
-      CID01: 0.6, CID02: 0.4, CID03: 0.5, CID04: 0.4, CID05: 0.3, CID06: 0.6, CID07: 0.6,
-      CID08: 0.7, CID09: 0.6, CID10: 0.4, CID11: 0.55, CID12: 0.55, CID13: 0.6, CID14: 0.75, CID16: 0.65,
-    },
-  },
-  {
-    name: "New to security",
-    contextStatus: "exploring_security",
-    dims: {
-      CID01: 0.75, CID02: 0.35, CID03: 0.45, CID04: 0.4, CID05: 0.3, CID06: 0.65, CID07: 0.5,
-      CID08: 0.5, CID09: 0.55, CID10: 0.4, CID11: 0.6, CID12: 0.55, CID13: 0.55, CID14: 0.6, CID16: 0.6,
-    },
-  },
-  {
-    name: "Väktare",
-    contextStatus: "working_in_security",
-    dims: {
-      CID01: 0.85, CID02: 0.4, CID03: 0.5, CID04: 0.4, CID05: 0.3, CID06: 0.85, CID07: 0.6,
-      CID08: 0.6, CID09: 0.6, CID10: 0.4, CID11: 0.8, CID12: 0.65, CID13: 0.6, CID14: 0.55, CID16: 0.85,
-    },
-  },
-  {
-    name: "Experienced Säkerhetssamordnare",
-    contextStatus: "developing_current_role",
-    dims: {
-      CID01: 0.4, CID02: 0.8, CID03: 0.6, CID04: 0.45, CID05: 0.65, CID06: 0.7, CID07: 0.85,
-      CID08: 0.55, CID09: 0.6, CID10: 0.4, CID11: 0.85, CID12: 0.7, CID13: 0.8, CID14: 0.7, CID16: 0.65,
-    },
-  },
-  {
-    name: "Career changer (already working in security)",
-    contextStatus: "changing_career_area",
-    dims: {
-      CID01: 0.5, CID02: 0.55, CID03: 0.55, CID04: 0.4, CID05: 0.5, CID06: 0.6, CID07: 0.65,
-      CID08: 0.65, CID09: 0.55, CID10: 0.45, CID11: 0.7, CID12: 0.6, CID13: 0.65, CID14: 0.65, CID16: 0.6,
-    },
-  },
-  {
-    name: "Technical profile",
-    contextStatus: "working_in_security",
-    dims: {
-      CID01: 0.3, CID02: 0.4, CID03: 0.8, CID04: 0.85, CID05: 0.5, CID06: 0.6, CID07: 0.5,
-      CID08: 0.3, CID09: 0.25, CID10: 0.6, CID11: 0.6, CID12: 0.55, CID13: 0.5, CID14: 0.75, CID16: 0.55,
-    },
-  },
-  {
-    name: "Investigation / analysis profile",
-    contextStatus: "working_in_security",
-    dims: {
-      CID01: 0.35, CID02: 0.4, CID03: 0.75, CID04: 0.5, CID05: 0.5, CID06: 0.6, CID07: 0.6,
-      CID08: 0.35, CID09: 0.35, CID10: 0.85, CID11: 0.8, CID12: 0.6, CID13: 0.5, CID14: 0.65, CID16: 0.55,
-    },
-  },
-  {
-    name: "Broad profile",
-    contextStatus: "working_in_security",
-    dims: {
-      CID01: 0.68, CID02: 0.66, CID03: 0.7, CID04: 0.65, CID05: 0.64, CID06: 0.7, CID07: 0.68,
-      CID08: 0.66, CID09: 0.65, CID10: 0.67, CID11: 0.7, CID12: 0.66, CID13: 0.68, CID14: 0.67, CID16: 0.68,
-    },
-  },
-  {
-    name: "Sparse / ambiguous profile",
-    contextStatus: "exploring_security",
-    dims: { CID01: 0.5, CID06: 0.5 }, // only 2 of 16 observed — well under the coverage floor
-  },
-];
-
+// The 9 personas are NOT re-authored here. Execution Mandate note (this
+// session): the script and the admin owner-preview route
+// (_authenticated.admin.career-discovery-preview.tsx) used to each keep
+// their own hand-authored persona list, which could silently drift into
+// describing different personas under the same name. Both now import the
+// single shared GOLDEN_PERSONAS array — see its own file header.
 const report: string[] = [];
 report.push("# Golden Persona Report — Security Career Discovery v3.1 Layer 4\n");
 report.push(
@@ -176,12 +104,17 @@ function describeMatch(m: ProfessionMatch, dims: DimensionResult): string {
   ].join("\n");
 }
 
-for (const persona of PERSONAS) {
-  group(persona.name);
+for (const persona of GOLDEN_PERSONAS) {
+  group(persona.name.en);
   const dims = makeDims(persona.dims);
-  const result = matchProfessions(dims, FIRST_WAVE_CATALOG, persona.contextStatus);
+  const result = matchProfessions(
+    dims,
+    FIRST_WAVE_CATALOG,
+    persona.contextStatus,
+    persona.currentProfessionCigSlug ?? null,
+  );
 
-  report.push(`## ${persona.name}\n`);
+  report.push(`## ${persona.name.en}\n`);
   report.push(`Context: \`${persona.contextStatus}\`\n`);
 
   if (!result.available) {
@@ -195,26 +128,57 @@ for (const persona of PERSONAS) {
 
   // No hard-coded "must include profession X" assertions beyond what the
   // persona's design intends to prove — see each group's checks below.
-  if (persona.name === "Student / no experience" || persona.name === "New to security") {
+  if (persona.name.en === "Student / no experience" || persona.name.en === "New to security") {
     const seniorAsExploreNow = result.matches.some((m) => m.stage === "explore_now" && FIRST_WAVE_CATALOG.find((c) => c.professionId === m.professionId)?.careerStage === "senior");
-    ok(!seniorAsExploreNow, `${persona.name}: no senior-stage profession is ever "explore now" for a novice baseline`);
+    ok(!seniorAsExploreNow, `${persona.name.en}: no senior-stage profession is ever "explore now" for a novice baseline`);
   }
 
-  if (persona.name === "Väktare") {
+  if (persona.name.en === "Väktare") {
     const skyddsvakt = result.matches.find((m) => m.professionId === "SP003");
     const coordinator = result.matches.find((m) => m.professionId === "SP006");
     const headOfSecurity = result.matches.find((m) => m.professionId === "SP007");
     ok(skyddsvakt?.stage === "explore_now", "Väktare: Skyddsvakt is explore_now");
     ok(coordinator === undefined || coordinator.stage === "possible_next_step", "Väktare: Säkerhetssamordnare, if matched, is possible_next_step");
     ok(headOfSecurity === undefined || headOfSecurity.stage === "longer_term", "Väktare: Säkerhetschef, if matched, is longer_term");
+    // Item 23: "you are here" (Väktare, SCA01) -> meaningful next directions,
+    // never career_pivot for a same-area move like Skyddsvakt (adjacent
+    // operational specialisation, not a change of direction) — this now
+    // uses the persona's real self-reported current profession, not a guess.
+    ok(
+      persona.currentProfessionCigSlug === "vaktare",
+      "Väktare: persona fixture reports a real current profession (item 2 requires this for pivot classification to run at all)",
+    );
+    ok(
+      skyddsvakt?.stage !== "career_pivot",
+      "Väktare: Skyddsvakt (same career area, SCA01) is never a career_pivot -- an adjacent, same-track move",
+    );
   }
 
-  if (persona.name === "Experienced Säkerhetssamordnare") {
+  if (persona.name.en === "Experienced Säkerhetssamordnare") {
     const headOfSecurity = result.matches.find((m) => m.professionId === "SP007");
+    const skyddsvakt = result.matches.find((m) => m.professionId === "SP003");
     ok(headOfSecurity?.stage === "possible_next_step", "Experienced Coordinator: Säkerhetschef is possible_next_step, not longer_term");
+    // Item 22: strategic/leadership progression (Säkerhetschef, SCA04)
+    // dominates as a next step; genuine frontline affinity (Skyddsvakt,
+    // SCA01 -- a different career area from the candidate's real current
+    // profession, Säkerhetssamordnare) is honestly shown as career_pivot,
+    // not hidden and not presented as the primary recommendation.
+    ok(
+      persona.currentProfessionCigSlug === "sakerhetssamordnare",
+      "Experienced Coordinator: persona fixture reports a real current profession",
+    );
+    ok(
+      skyddsvakt?.stage === "career_pivot",
+      "Experienced Coordinator: Skyddsvakt (different career area from the real current profession) is shown honestly as career_pivot, not as a leading recommendation",
+    );
+    ok(
+      !result.strongestDirections.some((m) => m.professionId === "SP003") &&
+        !result.alsoWorthExploring.some((m) => m.professionId === "SP003"),
+      "Experienced Coordinator: Skyddsvakt does not also leak into strongestDirections or alsoWorthExploring",
+    );
   }
 
-  if (persona.name === "Career changer (already working in security)") {
+  if (persona.name.en === "Career changer (already working in security)") {
     const developingTierExploreNow = result.matches.some(
       (m) =>
         m.stage === "explore_now" &&
@@ -223,7 +187,7 @@ for (const persona of PERSONAS) {
     ok(developingTierExploreNow, "Career changer: a developing-stage profession is explore_now — not reset to an entry baseline");
   }
 
-  if (persona.name === "Technical profile") {
+  if (persona.name.en === "Technical profile") {
     const top = result.strongestDirections.map((m) => m.professionId);
     ok(
       top.some((id) => ["SP008", "SP009", "SP014"].includes(id)),
@@ -235,7 +199,7 @@ for (const persona of PERSONAS) {
     );
   }
 
-  if (persona.name === "Investigation / analysis profile") {
+  if (persona.name.en === "Investigation / analysis profile") {
     // SP010/SP013 are "developing"-stage — for a working_in_security
     // (entry) baseline that is correctly "possible next step", not
     // "explore now", so this checks the top recommendations overall rather
@@ -247,7 +211,7 @@ for (const persona of PERSONAS) {
     );
   }
 
-  if (persona.name === "Broad profile") {
+  if (persona.name.en === "Broad profile") {
     ok(
       result.strongestDirections.length >= 2 && result.strongestDirections.length <= 3,
       `Broad profile: strongest directions is a genuine short list (${result.strongestDirections.length}), not "everything fits"`,
@@ -256,17 +220,17 @@ for (const persona of PERSONAS) {
     ok(distinctStages.size >= 2, "Broad profile: recommendations differentiate across career stages, not one undifferentiated blob");
   }
 
-  if (persona.name === "Sparse / ambiguous profile") {
+  if (persona.name.en === "Sparse / ambiguous profile") {
     ok(result.available === false, "Sparse profile: honestly unavailable rather than fabricating matches from thin evidence");
     ok(result.matches.length === 0, "Sparse profile: zero matches, not a padded low-confidence list");
   }
 
   // Universal invariants, every persona.
   for (const m of result.matches) {
-    ok(!("fitScore" in m), `${persona.name}/${m.professionId}: no raw fitScore on the match`);
+    ok(!("fitScore" in m), `${persona.name.en}/${m.professionId}: no raw fitScore on the match`);
     ok(
       FIRST_WAVE_CATALOG.some((c) => c.professionId === m.professionId),
-      `${persona.name}/${m.professionId}: every recommended profession is a real, catalogued one — never fabricated`,
+      `${persona.name.en}/${m.professionId}: every recommended profession is a real, catalogued one — never fabricated`,
     );
   }
 }

@@ -354,6 +354,27 @@ interface ScoredMatch {
   readonly centralFitScore: number | null;
   readonly supportingFitScore: number | null;
   readonly centralCoverage: number | null;
+  /** Recommendation Priority (Mandate items 1/4/5) — starts equal to
+   *  fitScore (pure Profession Affinity) and gets the bounded context/CIG
+   *  bonuses added by withPriorityScore below, once cigReachableSlugs is
+   *  known. Never used inside scoreProfession itself — Affinity is computed
+   *  with zero knowledge of context, by construction. */
+  readonly priorityScore: number;
+}
+
+/** Attaches the bounded Recommendation Priority bonus on top of a already-
+ *  computed Profession Affinity (scoreProfession's fitScore) — see the
+ *  CONTEXT_PRIORITY_BONUS / CIG_PATHWAY_PRIORITY_BONUS doc comment below
+ *  for why the ceiling is deliberately small. Pure post-processing: cannot
+ *  change which professions cleared the fit gate, only how the survivors
+ *  are ordered against each other. */
+function withPriorityScore(m: ScoredMatch, cigReachableSlugs: ReadonlySet<string>): ScoredMatch {
+  const contextBonus = m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS : 0;
+  const cigBonus =
+    m.match.cigProfessionSlug !== null && cigReachableSlugs.has(m.match.cigProfessionSlug)
+      ? CIG_PATHWAY_PRIORITY_BONUS
+      : 0;
+  return { ...m, priorityScore: m.fitScore + contextBonus + cigBonus };
 }
 
 interface BandFit {
@@ -499,17 +520,41 @@ function scoreProfession(
     centralFitScore: central.fitScore,
     supportingFitScore: supporting.fitScore,
     centralCoverage: central.totalWeight > 0 ? central.observedWeight / central.totalWeight : null,
+    // Pure Profession Affinity, no context bonus yet — withPriorityScore
+    // adds that afterward, once cigReachableSlugs is known. Affinity itself
+    // is computed with zero knowledge of context, by construction.
+    priorityScore: fitScore,
   };
 }
 
-/** Sorts by fit tier first, then the actual fit magnitude within it — so
- *  when several professions all clear "strong", the candidate's genuinely
- *  best-fitting one leads rather than an alphabetical tie-break. fitScore is
- *  read here and nowhere past this function. */
+/**
+ * Recommendation Priority (Master Completion Mandate items 1/4/5): a
+ * bounded, deterministic reordering signal layered ON TOP of Profession
+ * Affinity (fitScore) — never a replacement for it, and never able to
+ * rescue a profession that did not clear the fit gate in scoreProfession
+ * (this function only ever runs on matches that already survived it).
+ *
+ * The combined ceiling (CONTEXT_PRIORITY_BONUS + CIG_PATHWAY_PRIORITY_BONUS
+ * = 12) is kept well under the 18-point gap between PROFESSION_MIN_FIT (62)
+ * and FIT_TIER_STRONG (80) specifically so context/pathway evidence can
+ * only ever reorder professions that are already close in Affinity — it
+ * cannot let a barely-qualifying profession leapfrog a clearly stronger
+ * one two fit tiers away. This is the deterministic, documented
+ * reinterpretation of the historical "60% DNA / 25% context / 15% stage"
+ * hypothesis: not a blind weighted sum, but Affinity remaining dominant by
+ * construction, with context/pathway only nudging order among near-peers.
+ */
+const CONTEXT_PRIORITY_BONUS = 6;
+const CIG_PATHWAY_PRIORITY_BONUS = 6;
+
+/** Sorts by fit tier first, then Recommendation Priority (Affinity +
+ *  the bounded context/pathway bonus above) — so when several professions
+ *  all clear "strong", the one with the strongest COMBINED case leads,
+ *  never one whose only edge is a generic tie-break. */
 function sortScore(m: ScoredMatch): number {
   return (
     (m.match.fitTier === "strong" ? 1 : 0) * 100000 +
-    m.fitScore * 10 +
+    m.priorityScore * 10 +
     m.match.alignedDimensions.length
   );
 }
@@ -519,45 +564,48 @@ const STRONGEST_DIRECTIONS_MAX = 3;
 /**
  * Reclassifies "explore_now" matches that are actually a change of
  * direction, not a next step, as "career_pivot" (§12-13, refined further by
- * Master Completion Mandate item 5).
+ * Master Completion Mandate items 2, 5 and 7).
  *
- * "primary direction" = the career area a pivot is measured against.
- * Resolved two ways, in priority order:
+ * Requires a REAL, self-reported current profession (career-context.ts).
+ * Item 2 is explicit: Career DNA tells us how a candidate prefers to work,
+ * never what job they currently hold — inferring a "primary direction"
+ * from their best-fitting match (the previous version of this function)
+ * was exactly that violation, removed here. When current profession is
+ * unknown, NOTHING in this function runs — every match keeps its plain
+ * stage-distance classification (explore_now / possible_next_step /
+ * longer_term) and career_pivot simply never appears. Unknown stays
+ * unknown; no concrete "you are here" is fabricated.
  *
- *   1. The candidate's REAL current profession's career area, when they
- *      self-reported one that matches a profession in this catalogue (see
- *      career-context.ts) — a verified fact, not an inference. This is the
- *      mandate item 5 upgrade: "Väktare -> Security Coordinator" and
- *      "Experienced Coordinator -> Protective Security Guard" are now
- *      judged against where the candidate actually IS, not a guess.
- *   2. Falling back to the career area of the candidate's own best-fitting
- *      match that is at or ahead of their baseline stage (distance >= 0) —
- *      the direction their own explore-now/next-step tier is already
- *      pointing to — for a candidate who skipped the career-context step,
- *      is not yet working in security, or whose current profession is not
- *      one of the professions in this catalogue.
+ * When current profession IS known, a match strictly behind the candidate's
+ * baseline stage (distance < 0) is a pivot UNLESS either:
  *
- * A match strictly BEHIND the baseline (distance < 0, e.g. an entry-tier
- * profession for a developing-baseline candidate) is a pivot only when it
- * ALSO sits in a different career area than that primary direction — a
- * lesser role in the candidate's own track is still a normal, ordinary
- * "explore now" option (nothing dishonest about showing it), it is only
- * dishonest to present a genuinely different family as if it were the next
- * step. `scored` must already be sorted by fit (sortScore desc) so `.find`
- * picks the candidate's actual best same-or-ahead match, not an arbitrary
- * one — this is why classification happens here, after sorting, rather than
- * inside scoreProfession where no cross-profession ordering exists yet.
+ *   1. It is directly reachable from the current profession via a real CIG
+ *      transition edge (`cigReachableSlugs` — item 7: "actual profession
+ *      relationships are more useful" than area comparison) — a documented
+ *      next step stays a next step even across career areas; or
+ *   2. It sits in the SAME career area as the current profession — a
+ *      lesser role in the candidate's own track, kept as a fallback signal
+ *      when no CIG edge data exists for this specific pair.
+ *
+ * `scored` must already be sorted by Recommendation Priority so tie-break
+ * ordering elsewhere in this module stays consistent.
  */
 function classifyStagesWithPivots(
   scored: readonly ScoredMatch[],
   currentProfessionAreaId: string | null,
+  cigReachableSlugs: ReadonlySet<string>,
 ): readonly ProfessionMatch[] {
-  const primaryAreaId =
-    currentProfessionAreaId ?? scored.find((m) => m.distance >= 0)?.match.careerAreaId ?? null;
+  if (currentProfessionAreaId === null) {
+    // Item 2: current profession unknown -> no pivot computation at all.
+    return scored.map((m) => m.match);
+  }
 
   return scored.map(({ match, distance }) => {
-    const isPivot = distance < 0 && primaryAreaId !== null && match.careerAreaId !== primaryAreaId;
-    return isPivot ? { ...match, stage: "career_pivot" as const } : match;
+    if (distance >= 0) return match;
+    const isDocumentedNextStep =
+      (match.cigProfessionSlug !== null && cigReachableSlugs.has(match.cigProfessionSlug)) ||
+      match.careerAreaId === currentProfessionAreaId;
+    return isDocumentedNextStep ? match : { ...match, stage: "career_pivot" as const };
   });
 }
 
@@ -575,17 +623,27 @@ export function matchProfessions(
   catalog: readonly ProfessionCatalogEntry[],
   contextStatus: ContextStatus | null,
   /** The candidate's self-reported current profession (career-context.ts),
-   *  as a CIG slug — contextual self-report, read ONLY to ground the
-   *  career-pivot "primary direction" in fact when it matches a profession
-   *  in this catalogue (see classifyStagesWithPivots). Never affects fit,
-   *  never affects which professions clear matching, never touched by
+   *  as a CIG slug — contextual self-report. Read ONLY to (a) ground the
+   *  career-pivot decision in fact (classifyStagesWithPivots — never
+   *  inferred, see item 2) and (b) resolve cigReachableSlugs. Never affects
+   *  fit, never affects which professions clear matching, never touched by
    *  scoreProfession. */
   currentProfessionCigSlug?: string | null,
   /** Report tags from the candidate's 4 Discovery Path answers (Mandate
    *  item 6, personal-layer.ts's reportTagsFor) — contextual self-report,
-   *  never scored. Read ONLY to set ProfessionMatch.contextCorroborated for
-   *  richer explanation text; never affects fit, coverage or stage. */
+   *  never scored. Read to set ProfessionMatch.contextCorroborated
+   *  (explanation) AND the bounded Recommendation Priority bonus
+   *  (withPriorityScore) — never affects fit, coverage or which
+   *  professions clear matching. */
   discoveryTags?: readonly string[],
+  /** CIG profession slugs directly reachable from the candidate's current
+   *  profession via a real `cig_career_transitions` edge (Mandate item 7)
+   *  — fetched by the orchestration layer, this module never queries CIG
+   *  itself. Empty/absent when current profession is unknown or has no
+   *  documented transitions. Used only for career-pivot classification and
+   *  the bounded CIG_PATHWAY_PRIORITY_BONUS — never fabricated, never
+   *  invented to make a test pass (see classifyStagesWithPivots's header). */
+  cigReachableSlugs?: ReadonlySet<string>,
 ): ProfessionMatchResult {
   if (catalog.length === 0) {
     return {
@@ -600,10 +658,12 @@ export function matchProfessions(
 
   const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
   const tags = discoveryTags ?? [];
+  const reachable = cigReachableSlugs ?? new Set<string>();
 
   const scored = catalog
     .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
+    .map((m) => withPriorityScore(m, reachable))
     .sort(
       (a, b) =>
         sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
@@ -612,7 +672,7 @@ export function matchProfessions(
   const currentProfessionAreaId = currentProfessionCigSlug
     ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
     : null;
-  const matches = classifyStagesWithPivots(scored, currentProfessionAreaId);
+  const matches = classifyStagesWithPivots(scored, currentProfessionAreaId, reachable);
 
   const exploreNow = matches.filter((m) => m.stage === "explore_now");
   const possibleNext = matches.filter((m) => m.stage === "possible_next_step");
@@ -647,10 +707,10 @@ export function matchProfessions(
  *  Career DNA?" — fitScore/centralFitScore/supportingFitScore/
  *  centralCoverage, driven ONLY by scoreProfession, never by context.
  *  Recommendation Priority = "which of those affinities are most useful to
- *  show this candidate now?" — stageBeforePivotCheck/finalStage, driven by
- *  career-stage baseline, real current profession (when reported) and the
- *  DNA-inferred fallback. Both live on one row here so an owner can compare
- *  them side by side; they are never combined into a single score. */
+ *  show this candidate now?" — priorityScore (fitScore + the bounded
+ *  contextPriorityBonus/cigPathwayBonus) and stageBeforePivotCheck/
+ *  finalStage. Both live on one row here so an owner can compare them side
+ *  by side; they are never combined into a single candidate-facing score. */
 export interface ProfessionAffinityDiagnostic {
   readonly professionId: string;
   readonly titleEn: string;
@@ -662,6 +722,9 @@ export interface ProfessionAffinityDiagnostic {
   readonly centralCoverage: number | null;
   readonly overallCoverage: number;
   // --- Recommendation Priority (context-aware interpretation) ---
+  readonly contextPriorityBonus: number;
+  readonly cigPathwayBonus: number;
+  readonly priorityScore: number;
   readonly stageDistance: number;
   readonly stageBeforePivotCheck: Exclude<ProfessionStage, "career_pivot">;
   readonly finalStage: ProfessionStage;
@@ -671,11 +734,13 @@ export interface ProfessionAffinityDiagnostic {
 export interface ProfessionMatchDiagnostics {
   readonly result: ProfessionMatchResult;
   readonly diagnostics: readonly ProfessionAffinityDiagnostic[];
-  /** What grounded the career-pivot "primary direction" for this run — see
-   *  classifyStagesWithPivots. Answers "why did priority change" at the run
-   *  level, before reading individual rows. */
+  /** What grounded the career-pivot decision for this run (item 2: no
+   *  DNA-inferred fallback exists any more — either a real current
+   *  profession was reported, or pivot classification does not run at
+   *  all). Answers "why did priority change" at the run level, before
+   *  reading individual rows. */
   readonly pivotPrimaryAreaId: string | null;
-  readonly pivotPrimarySource: "current_profession" | "dna_inferred" | "none";
+  readonly pivotPrimarySource: "current_profession" | "none";
 }
 
 /**
@@ -688,6 +753,7 @@ export function matchProfessionsDiagnostics(
   contextStatus: ContextStatus | null,
   currentProfessionCigSlug?: string | null,
   discoveryTags?: readonly string[],
+  cigReachableSlugs?: ReadonlySet<string>,
 ): ProfessionMatchDiagnostics {
   const result = matchProfessions(
     dims,
@@ -695,6 +761,7 @@ export function matchProfessionsDiagnostics(
     contextStatus,
     currentProfessionCigSlug,
     discoveryTags,
+    cigReachableSlugs,
   );
 
   if (catalog.length === 0) {
@@ -703,9 +770,11 @@ export function matchProfessionsDiagnostics(
 
   const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
   const tags = discoveryTags ?? [];
+  const reachable = cigReachableSlugs ?? new Set<string>();
   const scored = catalog
     .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
+    .map((m) => withPriorityScore(m, reachable))
     .sort(
       (a, b) =>
         sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
@@ -714,14 +783,9 @@ export function matchProfessionsDiagnostics(
   const currentProfessionAreaId = currentProfessionCigSlug
     ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
     : null;
-  const dnaInferredAreaId = scored.find((m) => m.distance >= 0)?.match.careerAreaId ?? null;
-  const pivotPrimaryAreaId = currentProfessionAreaId ?? dnaInferredAreaId;
+  const pivotPrimaryAreaId = currentProfessionAreaId;
   const pivotPrimarySource: ProfessionMatchDiagnostics["pivotPrimarySource"] =
-    currentProfessionAreaId !== null
-      ? "current_profession"
-      : dnaInferredAreaId !== null
-        ? "dna_inferred"
-        : "none";
+    currentProfessionAreaId !== null ? "current_profession" : "none";
 
   const finalStageById = new Map(result.matches.map((m) => [m.professionId, m.stage] as const));
 
@@ -737,6 +801,12 @@ export function matchProfessionsDiagnostics(
       supportingFitScore: m.supportingFitScore,
       centralCoverage: m.centralCoverage,
       overallCoverage: m.match.coverage,
+      contextPriorityBonus: m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS : 0,
+      cigPathwayBonus:
+        m.match.cigProfessionSlug !== null && reachable.has(m.match.cigProfessionSlug)
+          ? CIG_PATHWAY_PRIORITY_BONUS
+          : 0,
+      priorityScore: m.priorityScore,
       stageDistance: m.distance,
       stageBeforePivotCheck,
       finalStage,

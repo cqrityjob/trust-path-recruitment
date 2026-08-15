@@ -12,6 +12,13 @@ export interface GoldenPersona {
   readonly name: { readonly sv: string; readonly en: string };
   readonly contextStatus: ContextStatus;
   readonly dims: Partial<Record<DimensionId, number>>;
+  /** Self-reported current profession (career-context.ts), as a CIG slug —
+   *  set ONLY for personas whose identity genuinely includes "already
+   *  working as X" (Väktare, Experienced Coordinator). Absent for personas
+   *  who are new to security or whose current role isn't part of their
+   *  defined identity — Master Completion Mandate item 2 is explicit that
+   *  this must never be inferred, so most personas correctly have none. */
+  readonly currentProfessionCigSlug?: string;
 }
 
 export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
@@ -63,6 +70,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
     id: "vaktare",
     name: { sv: "Väktare", en: "Väktare" },
     contextStatus: "working_in_security",
+    currentProfessionCigSlug: "vaktare",
     dims: {
       CID01: 0.85,
       CID02: 0.4,
@@ -85,6 +93,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
     id: "experienced-coordinator",
     name: { sv: "Erfaren säkerhetssamordnare", en: "Experienced Säkerhetssamordnare" },
     contextStatus: "developing_current_role",
+    currentProfessionCigSlug: "sakerhetssamordnare",
     dims: {
       CID01: 0.4,
       CID02: 0.8,

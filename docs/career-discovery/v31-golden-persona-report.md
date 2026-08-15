@@ -187,13 +187,33 @@ Context: `changing_career_area`
     Det här är en riktning du kan börja utforska direkt.
     aligned: Samarbete, Riskmedvetenhet, Lugn under press, Serviceorientering
     card indicators: Samarbete (65% bar), Riskmedveten (60% bar), Lugn under press (60% bar), Service (65% bar)
+  - **Polis** (SP005) — stage: explore_now, fit: strong
+    why: Ditt mönster av serviceorientering, konflikthantering, självständigt beslutsfattande och lugn under press liknar den bredd som polisyrket kräver i det dagliga arbetet.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Lugn under press, Självständiga beslut, Serviceorientering, Teknisk orientering
+    card indicators: Lugn under press (60% bar), Beslutsam (60% bar), Service (65% bar), Teknisk (40% bar)
+
+### Also worth exploring
+  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
+    why: Din höga riskmedvetenhet tillsammans med struktur och självständigt beslutsfattande passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Självständiga beslut, Lugn under press, Strategisk orientering, Ledarskapsorientering
+    card indicators: Beslutsam (60% bar), Lugn under press (60% bar), Strategisk (50% bar), Ledarskap (55% bar)
+  - **Väktare** (SP001) — stage: explore_now, fit: strong
+    why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med riskmedvetenhet och strukturerad dokumentation -- kärnan i en väktarroll.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Riskmedvetenhet, Struktur och dokumentation, Lugn under press, Strategisk orientering
+    card indicators: Riskmedveten (60% bar), Struktur (70% bar), Lugn under press (60% bar), Strategisk (50% bar)
   - **Personskyddsvakt** (SP004) — stage: explore_now, fit: strong
     why: Din kombination av konflikthantering, självständiga beslut under press och lugn i pressade lägen matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Analytisk orientering
     card indicators: Riskmedveten (60% bar), Strategisk (50% bar), Ledarskap (55% bar), Analytisk (55% bar)
-
-### Also worth exploring
+  - **Ordningsvakt** (SP002) — stage: explore_now, fit: strong
+    why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Självständiga beslut, Serviceorientering, Teknisk orientering, Strategisk orientering
+    card indicators: Beslutsam (60% bar), Service (65% bar), Teknisk (40% bar), Strategisk (50% bar)
   - **AML-specialist** (SP013) — stage: explore_now, fit: strong
     why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
     Det här är en riktning du kan börja utforska direkt.
@@ -214,26 +234,7 @@ Context: `changing_career_area`
   (none)
 
 ### Career pivot — real affinity, different direction
-  - **Polis** (SP005) — stage: career_pivot, fit: strong
-    why: Ditt mönster av serviceorientering, konflikthantering, självständigt beslutsfattande och lugn under press liknar den bredd som polisyrket kräver i det dagliga arbetet.
-    Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.
-    aligned: Lugn under press, Självständiga beslut, Serviceorientering, Teknisk orientering
-    card indicators: Lugn under press (60% bar), Beslutsam (60% bar), Service (65% bar), Teknisk (40% bar)
-  - **Skyddsvakt** (SP003) — stage: career_pivot, fit: strong
-    why: Din höga riskmedvetenhet tillsammans med struktur och självständigt beslutsfattande passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
-    Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.
-    aligned: Självständiga beslut, Lugn under press, Strategisk orientering, Ledarskapsorientering
-    card indicators: Beslutsam (60% bar), Lugn under press (60% bar), Strategisk (50% bar), Ledarskap (55% bar)
-  - **Väktare** (SP001) — stage: career_pivot, fit: strong
-    why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med riskmedvetenhet och strukturerad dokumentation -- kärnan i en väktarroll.
-    Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.
-    aligned: Riskmedvetenhet, Struktur och dokumentation, Lugn under press, Strategisk orientering
-    card indicators: Riskmedveten (60% bar), Struktur (70% bar), Lugn under press (60% bar), Strategisk (50% bar)
-  - **Ordningsvakt** (SP002) — stage: career_pivot, fit: strong
-    why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
-    Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.
-    aligned: Självständiga beslut, Serviceorientering, Teknisk orientering, Strategisk orientering
-    card indicators: Beslutsam (60% bar), Service (65% bar), Teknisk (40% bar), Strategisk (50% bar)
+  (none)
 
 ## Technical profile
 

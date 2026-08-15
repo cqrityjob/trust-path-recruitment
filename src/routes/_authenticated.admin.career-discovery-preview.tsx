@@ -183,12 +183,10 @@ function CareerDiscoveryPreview() {
           </p>
           {diagnostics && (
             <p className="mt-1 text-foreground">
-              <span className="font-medium">Career-pivot &quot;primary direction&quot; grounded by:</span>{" "}
+              <span className="font-medium">Career-pivot classification grounded by:</span>{" "}
               {diagnostics.pivotPrimarySource === "current_profession"
                 ? `self-reported current profession (${diagnostics.pivotPrimaryAreaId})`
-                : diagnostics.pivotPrimarySource === "dna_inferred"
-                  ? `DNA-inferred best match (${diagnostics.pivotPrimaryAreaId})`
-                  : "none (no distance >= 0 match and no current profession)"}
+                : "none — current profession unknown, career_pivot never computed (item 2: never inferred from Career DNA)"}
             </p>
           )}
         </div>
