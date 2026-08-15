@@ -24,6 +24,7 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
 import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
+import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
 import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
 import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
@@ -173,20 +174,26 @@ export function V31ReportView({
           full "how you work" narrative moves to "Your working style" below,
           much later — this is the profile NAME and, at most, one short
           note, nothing else. */}
-      <p className="mt-10 text-sm font-medium uppercase tracking-widest text-accent">
-        {t("careerDiscovery.report.v31.patternEyebrow")}
-      </p>
-      <h1
-        className="mt-3 text-4xl font-semibold tracking-tight text-foreground md:text-5xl"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        {leading?.name ?? t("careerDiscovery.report.v31.patternFallback")}
-      </h1>
-      {outputA?.balanced && (
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          {t("careerDiscovery.report.v31.balancedNote")}
+      <div className="relative mt-8 overflow-hidden rounded-2xl border border-border bg-[color:var(--secondary)] p-7 sm:p-10">
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent via-accent/60 to-transparent"
+        />
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+          {t("careerDiscovery.report.v31.patternEyebrow")}
         </p>
-      )}
+        <h1
+          className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {leading?.name ?? t("careerDiscovery.report.v31.patternFallback")}
+        </h1>
+        {outputA?.balanced && (
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {t("careerDiscovery.report.v31.balancedNote")}
+          </p>
+        )}
+      </div>
 
       {/* YOU ARE HERE — Master Completion Mandate item 8. Frozen at report-
           build time (ReportSnapshot.currentProfession), independent of
@@ -196,18 +203,24 @@ export function V31ReportView({
           right after the DNA hero and before the Career Directions
           section, so the directions below visibly read as "from here". */}
       {snapshot.currentProfession && (
-        <div className="mt-10 rounded-lg border border-border bg-muted/20 p-5">
-          <p className="text-xs font-medium uppercase tracking-widest text-accent">
-            {t("careerDiscovery.report.v31.youAreHereEyebrow")}
-          </p>
-          <p className="mt-2 text-lg font-semibold tracking-tight text-foreground">
-            {snapshot.locale === "sv"
-              ? snapshot.currentProfession.titleSv
-              : snapshot.currentProfession.titleEn}
-          </p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            {t("careerDiscovery.report.v31.youAreHereBody")}
-          </p>
+        <div className="mt-8 flex gap-4 rounded-xl border border-accent/25 bg-card p-5 sm:p-6">
+          <span
+            aria-hidden="true"
+            className="mt-1 h-3 w-3 shrink-0 rounded-full bg-accent ring-4 ring-accent/15"
+          />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+              {t("careerDiscovery.report.v31.youAreHereEyebrow")}
+            </p>
+            <p className="mt-2 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {snapshot.locale === "sv"
+                ? snapshot.currentProfession.titleSv
+                : snapshot.currentProfession.titleEn}
+            </p>
+            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              {t("careerDiscovery.report.v31.youAreHereBody")}
+            </p>
+          </div>
         </div>
       )}
 
@@ -272,6 +285,20 @@ export function V31ReportView({
               snapshot without currentProfession, and only one bucket
               populated). */}
           <PossiblePathway snapshot={snapshot} locale={snapshot.locale === "en" ? "en" : "sv"} />
+
+          {/* 5 · WHAT COULD HELP YOU MOVE FORWARD? — promoted to a
+              top-level section (Owner Review UX pass §1.5). Same live CIG
+              rows the cards above expose per-profession, grouped into the
+              five candidate-facing categories, each behind progressive
+              disclosure; categories with no data never render. */}
+          <MoveForwardSection
+            matches={
+              snapshot.professions.strongestDirections.length > 0
+                ? snapshot.professions.strongestDirections
+                : snapshot.professions.matches
+            }
+            locale={snapshot.locale === "en" ? "en" : "sv"}
+          />
         </>
       )}
 
