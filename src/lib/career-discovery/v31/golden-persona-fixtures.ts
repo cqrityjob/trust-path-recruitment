@@ -185,22 +185,39 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
     id: "broad-profile",
     name: { sv: "Bred profil", en: "Broad profile" },
     contextStatus: "working_in_security",
+    // "Broad" means several genuine directions remain plausible, NOT that
+    // every profession is strong (Master Completion Mandate item 24). The
+    // previous version of this fixture was near-perfectly flat (0.64-0.70
+    // across all 16 dimensions), which trivially cleared every profession's
+    // central-fit floor and produced 14 of 14 matches — indistinguishable
+    // from "everything fits" in practice, even though the engine itself was
+    // working correctly. Redesigned with three genuine relative peaks
+    // (operational, analytical/technical, coordination — the same three
+    // directions item 24's own example names) at 0.8, and a clearly lower
+    // baseline (0.45, below most professions' central band floors) on
+    // everything else — so a real subset of professions should now
+    // genuinely miss on their own defining dimensions, not just average out
+    // close either way.
     dims: {
-      CID01: 0.68,
-      CID02: 0.66,
-      CID03: 0.7,
-      CID04: 0.65,
-      CID05: 0.64,
-      CID06: 0.7,
-      CID07: 0.68,
-      CID08: 0.66,
-      CID09: 0.65,
-      CID10: 0.67,
-      CID11: 0.7,
-      CID12: 0.66,
-      CID13: 0.68,
-      CID14: 0.67,
-      CID16: 0.68,
+      // Operational cluster
+      CID01: 0.8,
+      CID06: 0.8,
+      CID12: 0.8,
+      CID16: 0.8,
+      // Analytical / technical cluster
+      CID03: 0.8,
+      CID04: 0.8,
+      CID10: 0.8,
+      CID11: 0.8,
+      // Coordination cluster
+      CID02: 0.8,
+      CID05: 0.8,
+      CID07: 0.8,
+      CID13: 0.8,
+      // Baseline — clearly lower, not just "a bit lower"
+      CID08: 0.45,
+      CID09: 0.45,
+      CID14: 0.45,
     },
   },
   {

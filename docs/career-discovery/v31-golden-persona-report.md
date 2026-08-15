@@ -346,76 +346,71 @@ Context: `working_in_security`
     why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med riskmedvetenhet och strukturerad dokumentation -- kärnan i en väktarroll.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Operativ orientering, Riskmedvetenhet, Struktur och dokumentation, Lugn under press
-    card indicators: Operativ (68% bar), Riskmedveten (70% bar), Struktur (70% bar), Lugn under press (68% bar)
-  - **Ordningsvakt** (SP002) — stage: explore_now, fit: strong
-    why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Konflikthantering, Lugn under press, Operativ orientering, Självständiga beslut
-    card indicators: Konflikthantering (65% bar), Lugn under press (68% bar), Operativ (68% bar), Beslutsam (66% bar)
+    card indicators: Operativ (80% bar), Riskmedveten (80% bar), Struktur (80% bar), Lugn under press (80% bar)
   - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
     why: Din höga riskmedvetenhet tillsammans med struktur och självständigt beslutsfattande passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Riskmedvetenhet, Operativ orientering, Självständiga beslut, Lugn under press
-    card indicators: Riskmedveten (70% bar), Operativ (68% bar), Beslutsam (66% bar), Lugn under press (68% bar)
-
-### Also worth exploring
-  - **Polis** (SP005) — stage: explore_now, fit: strong
-    why: Ditt mönster av serviceorientering, konflikthantering, självständigt beslutsfattande och lugn under press liknar den bredd som polisyrket kräver i det dagliga arbetet.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Lugn under press, Konflikthantering, Självständiga beslut, Serviceorientering
-    card indicators: Lugn under press (68% bar), Konflikthantering (65% bar), Beslutsam (66% bar), Service (66% bar)
+    card indicators: Riskmedveten (80% bar), Operativ (80% bar), Beslutsam (80% bar), Lugn under press (80% bar)
   - **Säkerhetstekniker** (SP014) — stage: explore_now, fit: strong
     why: Ditt tekniska intresse i kombination med strukturerat arbetssätt och en viss operativ läggning matchar arbetet med att installera, driftsätta och underhålla säkerhetssystem.
     Det här är en riktning du kan börja utforska direkt.
-    aligned: Teknisk orientering, Struktur och dokumentation, Operativ orientering, Konflikthantering
-    card indicators: Teknisk (65% bar), Struktur (70% bar), Operativ (68% bar), Konflikthantering (65% bar)
+    aligned: Teknisk orientering, Struktur och dokumentation, Operativ orientering, Ledarskapsorientering
+    card indicators: Teknisk (80% bar), Struktur (80% bar), Operativ (80% bar), Ledarskap (80% bar)
+
+### Also worth exploring
   - **SOC-analytiker** (SP008) — stage: explore_now, fit: strong
     why: Ditt analytiska och tekniska intresse, tillsammans med utredande läggning, matchar arbetet i ett Security Operations Center: att upptäcka, granska och agera på avvikelser i realtid.
     Det här är en riktning du kan börja utforska direkt.
-    aligned: Analytisk orientering, Teknisk orientering, Struktur och dokumentation, Utredande orientering
-    card indicators: Analytisk (70% bar), Teknisk (65% bar), Struktur (70% bar), Utredande (67% bar)
+    aligned: Analytisk orientering, Teknisk orientering, Utredande orientering, Struktur och dokumentation
+    card indicators: Analytisk (80% bar), Teknisk (80% bar), Utredande (80% bar), Struktur (80% bar)
+  - **Polis** (SP005) — stage: explore_now, fit: strong
+    why: Ditt mönster av serviceorientering, konflikthantering, självständigt beslutsfattande och lugn under press liknar den bredd som polisyrket kräver i det dagliga arbetet.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Lugn under press, Självständiga beslut, Teknisk orientering, Strategisk orientering
+    card indicators: Lugn under press (80% bar), Beslutsam (80% bar), Teknisk (80% bar), Strategisk (80% bar)
   - **Säkerhetssamordnare** (SP006) — stage: possible_next_step, fit: strong
     why: Du visar en kombination av ledarskapsintresse, tydlig kommunikation och strukturerat arbetssätt -- drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Kommunikation, Struktur och dokumentation, Ledarskapsorientering, Samarbete
-    card indicators: Kommunikation (68% bar), Struktur (70% bar), Ledarskap (66% bar), Samarbete (68% bar)
-  - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
-    why: Din tekniska och analytiska profil, i kombination med lärandeorientering, passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Teknisk orientering, Analytisk orientering, Lärande och utveckling, Strategisk orientering
-    card indicators: Teknisk (65% bar), Analytisk (70% bar), Lärande (67% bar), Strategisk (64% bar)
-  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
-    why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Utredande orientering, Struktur och dokumentation, Analytisk orientering, Kommunikation
-    card indicators: Utredande (67% bar), Struktur (70% bar), Analytisk (70% bar), Kommunikation (68% bar)
-  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
-    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Samarbete, Riskmedvetenhet, Lugn under press, Strategisk orientering
-    card indicators: Samarbete (68% bar), Riskmedveten (70% bar), Lugn under press (68% bar), Strategisk (64% bar)
+    card indicators: Kommunikation (80% bar), Struktur (80% bar), Ledarskap (80% bar), Samarbete (80% bar)
   - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
     why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Analytisk orientering, Utredande orientering, Struktur och dokumentation, Operativ orientering
-    card indicators: Analytisk (70% bar), Utredande (67% bar), Struktur (70% bar), Operativ (68% bar)
+    card indicators: Analytisk (80% bar), Utredande (80% bar), Struktur (80% bar), Operativ (80% bar)
+  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
+    why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Utredande orientering, Struktur och dokumentation, Analytisk orientering, Kommunikation
+    card indicators: Utredande (80% bar), Struktur (80% bar), Analytisk (80% bar), Kommunikation (80% bar)
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Samarbete, Riskmedvetenhet, Strategisk orientering, Lugn under press
+    card indicators: Samarbete (80% bar), Riskmedveten (80% bar), Strategisk (80% bar), Lugn under press (80% bar)
   - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
     why: Din kombination av konflikthantering, självständiga beslut under press och lugn i pressade lägen matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Självständiga beslut, Riskmedvetenhet, Konflikthantering, Operativ orientering
-    card indicators: Beslutsam (66% bar), Riskmedveten (70% bar), Konflikthantering (65% bar), Operativ (68% bar)
+    aligned: Lugn under press, Självständiga beslut, Riskmedvetenhet, Operativ orientering
+    card indicators: Lugn under press (80% bar), Beslutsam (80% bar), Riskmedveten (80% bar), Operativ (80% bar)
+  - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
+    why: Din tekniska och analytiska profil, i kombination med lärandeorientering, passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Teknisk orientering, Analytisk orientering, Strategisk orientering, Operativ orientering
+    card indicators: Teknisk (80% bar), Analytisk (80% bar), Strategisk (80% bar), Operativ (80% bar)
 
 ### Longer-term possibilities
   - **Säkerhetschef** (SP007) — stage: longer_term, fit: strong
     why: Din profil visar starka signaler för ledarskap, strategiskt tänkande och kommunikation -- egenskaper som väger tungt när säkerhetsarbete ska styras på organisationsnivå.
     Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
     aligned: Ledarskapsorientering, Strategisk orientering, Kommunikation, Samarbete
-    card indicators: Ledarskap (66% bar), Strategisk (64% bar), Kommunikation (68% bar), Samarbete (68% bar)
+    card indicators: Ledarskap (80% bar), Strategisk (80% bar), Kommunikation (80% bar), Samarbete (80% bar)
   - **Riskchef** (SP011) — stage: longer_term, fit: strong
     why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
     Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
-    aligned: Riskmedvetenhet, Analytisk orientering, Strategisk orientering, Kommunikation
-    card indicators: Riskmedveten (70% bar), Analytisk (70% bar), Strategisk (64% bar), Kommunikation (68% bar)
+    aligned: Riskmedvetenhet, Strategisk orientering, Analytisk orientering, Kommunikation
+    card indicators: Riskmedveten (80% bar), Strategisk (80% bar), Analytisk (80% bar), Kommunikation (80% bar)
 
 ### Career pivot — real affinity, different direction
   (none)

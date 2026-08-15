@@ -218,6 +218,15 @@ for (const persona of GOLDEN_PERSONAS) {
     );
     const distinctStages = new Set(result.matches.map((m) => m.stage));
     ok(distinctStages.size >= 2, "Broad profile: recommendations differentiate across career stages, not one undifferentiated blob");
+    // Item 24, explicit: "Broad must mean several directions remain
+    // plausible. Not: almost every profession is strong." At least one
+    // profession in the catalogue must genuinely fail to match -- otherwise
+    // this persona is indistinguishable from "everything fits", which the
+    // mandate calls out by name as the wrong outcome.
+    ok(
+      result.matches.length < FIRST_WAVE_CATALOG.length,
+      `Broad profile: at least one profession genuinely does not clear matching (${result.matches.length} of ${FIRST_WAVE_CATALOG.length} matched) -- real differentiation, not universal fit`,
+    );
   }
 
   if (persona.name.en === "Sparse / ambiguous profile") {

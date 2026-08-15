@@ -368,6 +368,56 @@ golden persona reported a current profession at all.
 57 professions-check checks green (up from 50), 143 golden-persona checks
 green (up from 138), `tsc` clean, `bun run build` succeeds.
 
+### Calibration re-review against items 6/20-25 — one real finding, fixed
+
+Re-checked the golden-persona report against the mandate's specific named
+failure modes: frontline profiles too permissive (Technical/Investigation
+personas — confirmed zero frontline guard professions in either, already
+fixed this session), technical profiles insufficiently technical
+(SOC-analytiker leads Technical alone, correct), investigation profiles
+insufficiently investigative (Säkerhetsutredare correctly surfaces,
+correctly stage-gated below "explore now" for an entry baseline — a stage
+reason, not a fit-ranking problem), senior profiles not discriminating
+leadership/strategy (Säkerhetschef/Riskchef both correctly distinct from
+Säkerhetssamordnare/Krisberedskapssamordnare's signatures, unchanged this
+pass).
+
+**One genuine remaining issue found**: the "Broad profile" persona matched
+**14 of 14** professions — literally "everything fits," exactly what item
+24 names as the wrong outcome ("Broad must mean several directions remain
+plausible. Not: almost every profession is strong."). Root cause: the
+fixture itself, not a profession band — its 16 dimension scores were
+near-perfectly flat (0.64-0.70 across the board), which trivially cleared
+every profession's central-fit floor regardless of that profession's
+actual defining traits. Redesigned the fixture with three genuine relative
+peaks at 0.8 (operational: CID01/06/12/16; analytical-technical: CID03/04/
+10/11; coordination: CID02/05/07/13 — the same three directions item 24's
+own example names) against a clearly lower baseline (0.45) on the rest
+(CID08/09/14) — a "broad" candidate whose strengths genuinely span three
+axes, not one who scores adequately at everything. Result: 13 of 14 match
+(Ordningsvakt now genuinely misses its own central conflict-handling
+dimension), and the "strongest directions" tier draws from two different
+clusters (Väktare/Skyddsvakt operational, Säkerhetstekniker technical) —
+real, if modest, differentiation rather than uniform-flat overmatching.
+Added a permanent regression assertion (professions-check group /
+golden-personas): "Broad profile: at least one profession genuinely does
+not clear matching" — locks this in going forward.
+
+**Scope note, disclosed honestly**: this was a targeted review against the
+specific failure modes named, not a full fresh "defining / supporting /
+common security / contextual priority / career level / CIG pathway /
+limitations" documentation pass for all 14 professions from scratch. The
+prior session already reviewed and documented reasoning for the 12
+professions left unchanged (see the calibration section above); this pass
+did not find new evidence to revise that reasoning, beyond the Broad-profile
+fixture fix above. A full from-scratch re-documentation of all 14 against
+the mandate's exact 7-field taxonomy remains open if the owner wants it as
+a standalone deliverable — flagged as a real, bounded follow-up rather than
+silently claimed complete.
+
+142 golden-persona checks green, 57 professions-check checks green, `tsc`
+clean, `bun run build` succeeds.
+
 ### Profession Affinity vs Recommendation Priority — explicit separation (item 3/§14)
 
 The two concepts were already computed separately internally (central-
