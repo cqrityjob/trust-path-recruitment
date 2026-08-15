@@ -113,7 +113,11 @@ const SKYDDSVAKT: ProfessionCatalogEntry = {
   limitationNoteSv: null,
   limitationNoteEn: null,
   bands: [
-    band("CID01", "supporting", 0.6, 1.0, 0.25),
+    // CID01 central / CID11 supporting per the Master Completion Mandate
+    // calibration pass (see v31-layer4-implementation-state.md): Skyddsvakt
+    // is hands-on field-presence work and needs an operational-orientation
+    // signal to stay distinct from a purely analytical profile.
+    band("CID01", "central", 0.55, 0.9, 0.7),
     band("CID02", "supporting", 0.2, 0.6, 0.25),
     band("CID03", "supporting", 0.3, 0.7, 0.25),
     band("CID04", "supporting", 0.2, 0.6, 0.25),
@@ -123,7 +127,7 @@ const SKYDDSVAKT: ProfessionCatalogEntry = {
     band("CID08", "supporting", 0.5, 0.9, 0.25),
     band("CID09", "supporting", 0.5, 0.9, 0.25),
     band("CID10", "supporting", 0.2, 0.6, 0.25),
-    band("CID11", "central", 0.6, 0.9, 0.8),
+    band("CID11", "supporting", 0.5, 0.9, 0.25),
     band("CID12", "central", 0.6, 0.9, 0.7),
     band("CID13", "supporting", 0.5, 0.9, 0.25),
     band("CID14", "supporting", 0.4, 0.8, 0.25),

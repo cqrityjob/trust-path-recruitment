@@ -116,3 +116,126 @@ have the owner click through `/admin/career-discovery-preview` and the
 claim/goal flow directly) to close gap #3. (2) Formal a11y pass. (3) Owner
 decision on Career Center/`/journey` reconciliation. (4) Playwright coverage
 for the anonymous → card → claim journey.
+
+## 2026-08-15, third pass — Master Completion Mandate
+
+### SP-ID reconciliation — resolved, no migration
+
+The owner's §20 concern (that the historical LOCKED profession catalogue
+reused SP002/SP010/SP011/SP012 for professions different from this project's
+first-wave rows) was investigated against the **full** git history (all
+commits, not just the current tree) by a dedicated background agent. Finding:
+`cd_professions` was empty before this project's own migration
+(`20260814180000_cd_layer4_first_wave_professions.sql`); the `-- SP001..SP037`
+comment in the original schema migration was only ever a format-placeholder
+regex description, never a populated, conflicting catalogue. The referenced
+`CQrityjob_Career_Intelligence_Matrix_LOCKED_v0_2.xlsx` workbook is real and
+referenced in code comments, but only for Career Areas (SCA) and Dimensions
+(CID) — never for professions — and the file itself was never checked into
+this repository.
+
+**Owner decision (accepted 2026-08-15): no persisted SP-ID collision exists.
+No reconciliation migration will be built.** The old LOCKED workbook's SP
+identifiers, if they exist at all outside this repo, are treated as
+workbook/research identifiers only. For the production platform, **the CIG
+profession slug (`cig_professions.slug`, carried on every `cd_professions`
+row as `cig_profession_slug`) remains the single canonical cross-product
+profession identity** — `cd_professions.profession_id` (`SP00N`) is a
+first-wave-catalogue-local key, never assumed stable or meaningful outside
+this table. If new evidence of a real, persisted collision surfaces, revisit
+then; do not pre-build a migration for a defect that does not reproduce.
+
+### Central-dominant fit hardened + CAREER PIVOT shipped
+
+See commit `f361231`. Summary: added `CENTRAL_DIMENSION_MAX_MISS` (a hard
+per-dimension floor alongside the existing weighted-average central-fit
+gate — a candidate who badly misses one central dimension can no longer have
+that miss diluted away by comfortably meeting the others); added the fourth
+`career_pivot` stage classification (real affinity, different direction from
+the candidate's own baseline+area, not a natural next step); softened two
+overclaiming profession descriptions (SP006, SP010). Golden-persona matches
+per persona dropped from 10-14 to 6-9; Technical/Investigation personas no
+longer match any frontline guard profession via badly-missed central
+dimensions.
+
+### Residual finding → profession calibration root cause identified
+
+After the hardening above, one nuance remained: for the Investigation
+persona, Skyddsvakt (SP003) still narrowly outranked SOC-analytiker (SP008)
+in raw central fit. Root cause, confirmed by reviewing all 14 professions'
+authored `central` dimension sets side by side: **CID11 (Structure &
+Documentation) is central in 7 of 14 professions** — too generic a trait to
+discriminate between a protective guard and an analyst, since both
+professions plausibly score decently on "structure and documentation." More
+specifically, **SP003 Skyddsvakt and SP004 Personskyddsvakt had no CID01
+(Operational Orientation) signal in their central set at all**, despite both
+being fundamentally hands-on, field-presence roles — the one dimension that
+should most obviously separate a protective guard from a desk-based analyst
+was simply missing from the calibration. This is a profession-content
+authoring gap, not a scoring-formula defect; see the calibration section
+below for the fix.
+
+### Calibration fix applied — all 14 professions reviewed
+
+**Changed** (band data regenerated via the scratchpad codegen script into
+`scripts/fixtures/first-wave-profession-catalog.ts`; hand-authored fixtures
+in `scripts/career-discovery-v31-professions-check.ts` updated in lockstep;
+a new additive migration applies the same UPDATE to hosted Supabase):
+
+- **SP003 Skyddsvakt**: added CID01 (Operational Orientation, band 0.55-0.9,
+  weight 0.7) as central; demoted CID11 (Structure & Documentation) from
+  central to supporting. Rationale: protective guarding is field-presence
+  work: an operational-orientation floor is the one signal that should most
+  obviously separate it from a desk-based analytical profile, and it had
+  none. CID11 was central in 7 of 14 professions — too generic to
+  discriminate this profession specifically.
+- **SP004 Personskyddsvakt**: added CID01 (band 0.6-0.9, weight 0.6) as a
+  fifth central dimension (pure addition, no demotion — its existing four
+  central dims: conflict handling, decisiveness, composure, risk, were
+  already close-protection-specific, none of them generic). Close protection
+  is, if anything, more operationally intensive than static guarding.
+
+**Reviewed, left unchanged** (all central sets already genuinely
+distinguish the profession from its neighbors — no evidence of overmatching
+in the golden-persona regression, no unjustified generic dimension leading
+the set):
+
+- **SP001 Väktare**: CID01 already dominant (weight 0.9) — this is
+  intentionally the broadest, most generalist frontline profession in the
+  catalogue, so a slightly wider central set (risk + structure + composure
+  alongside operational) is appropriate, not a defect.
+- **SP002 Ordningsvakt**: CID09 (Conflict Management, weight 0.95) dominant
+  plus CID01 already central — correctly distinct from Väktare (which lacks
+  CID09 as central) via its conflict-handling signature.
+- **SP005 Polis**: deliberately broad central set (service, conflict,
+  decisiveness, composure) reflecting policing's genuine breadth; no CID01.
+  Already correctly excluded from Technical/Investigation personas via its
+  existing central dims — no observed overmatching, left as-is.
+- **SP006 Säkerhetssamordnare / SP007 Säkerhetschef**: leadership +
+  communication + collaboration (Coordinator) vs. leadership + strategic +
+  communication (Head of Security) — already distinct signatures between
+  the two seniority tiers in the same family.
+- **SP008 SOC-analytiker / SP009 Cybersäkerhetsanalytiker / SP010
+  Säkerhetsutredare / SP013 AML-specialist**: each already led by its own
+  distinguishing central dimension (technical+investigative for SOC,
+  technical+learning for Cyber, investigative-dominant for Investigator,
+  analytical+investigative for AML) with no operational dimension needed —
+  correctly excluded from operational personas already.
+- **SP011 Riskchef / SP012 Krisberedskapssamordnare**: risk+strategic+
+  analytical vs. risk+strategic+collaboration — distinct enough, both
+  senior/developing risk-family roles with different central emphasis.
+- **SP014 Säkerhetstekniker**: CID04 (Technical) dominant with CID01 already
+  present as a minor central signal (weight 0.4) — correctly reflects that
+  installation/maintenance work is technical-first but still hands-on.
+
+**Verified**: golden-persona regression re-run after the SP003/SP004 change
+— Technical and Investigation personas now show **zero** frontline guard
+professions anywhere in their results (previously Skyddsvakt led or
+co-led both). Säkerhetsutredare (the actual investigator) now surfaces
+correctly under "Also worth exploring" for the Investigation persona
+(developing-tier, correctly stage-gated below "explore now" for a
+working_in_security/entry baseline — not omitted, just honestly staged).
+Väktare/Ordningsvakt/Skyddsvakt/Polis still correctly lead the Väktare
+persona's own results, unaffected. 138 golden-persona checks green (down
+from 144 — fewer, more honest matches per persona is the expected effect,
+not a regression), 42 professions-check checks green, `tsc` clean.

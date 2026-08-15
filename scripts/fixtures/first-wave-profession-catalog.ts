@@ -86,7 +86,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
     limitationNoteSv: "Godkännande sker via länsstyrelsen efter registerkontroll; en process, inte en direktanställning.",
     limitationNoteEn: "Approval runs through the county administrative board after a background check; a process, not a direct hire.",
     bands: [
-      { dimensionId: "CID01", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID01", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.7 },
       { dimensionId: "CID02", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID03", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
@@ -96,7 +96,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.8 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID12", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
@@ -119,7 +119,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
     limitationNoteSv: "Vanligtvis en tilläggsutbildning efter minst två års väktarerfarenhet, inte en förstajobbsroll.",
     limitationNoteEn: "Typically an add-on qualification after at least two years as a security officer, not a first job.",
     bands: [
-      { dimensionId: "CID01", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID01", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.6 },
       { dimensionId: "CID02", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID03", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
