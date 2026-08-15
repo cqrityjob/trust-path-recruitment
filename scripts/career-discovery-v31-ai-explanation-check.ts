@@ -100,13 +100,25 @@ group("3 · A supplied AI call is used when it succeeds");
 // =========================================================================
 
 const mockAiText = "A mocked, provider-generated explanation.";
-const successResult = await generateEnrichedExplanation(ctxSv, async () => mockAiText);
+// The timestamp is injected at the boundary — the module itself never reads
+// the clock, so the same context+timestamp always yields the same result.
+const STAMP = "2026-08-15T00:00:00.000Z";
+const successResult = await generateEnrichedExplanation(ctxSv, async () => mockAiText, STAMP);
 ok(successResult.text === mockAiText, "3.1 the AI call's text is used verbatim when it succeeds");
 ok(successResult.provenance.source === "ai", "3.2 provenance.source is 'ai' when the call succeeds");
 ok(
-  typeof successResult.provenance.generatedAt === "string" && successResult.provenance.generatedAt.length > 0,
-  "3.3 a generation timestamp is recorded",
+  successResult.provenance.generatedAt === STAMP,
+  "3.3 the caller-injected generation timestamp is recorded verbatim",
 );
+ok(
+  (await generateEnrichedExplanation(ctxSv, async () => mockAiText)).provenance.generatedAt === null,
+  "3.4 omitting the timestamp yields null provenance rather than a clock read",
+);
+ok(
+  JSON.stringify(await generateEnrichedExplanation(ctxSv, undefined, STAMP)) ===
+    JSON.stringify(await generateEnrichedExplanation(ctxSv, undefined, STAMP)),
+  "3.5 two runs with identical input are byte-identical (no clock, no randomness)",
+)
 
 // =========================================================================
 group("4 · An AI failure degrades silently to the deterministic path");
