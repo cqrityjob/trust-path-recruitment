@@ -49,6 +49,21 @@ function JourneyIndex() {
             </p>
           </header>
 
+          {/* Coexistence note, not a migration: this page's targets reference
+              the older knowledge-graph profession set, not CIG — the two
+              don't share an identity space, so nothing here is auto-ported.
+              See Execution Mandate §16/§21 and the session's final report
+              for why a full reconciliation is a deliberate follow-up, not
+              silently done here. Nothing on this page is deleted or moved. */}
+          <p className="rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
+            Security Career Discovery has a newer version with profession-level recommendations, requirements and a
+            shareable Career Card.{" "}
+            <Link to="/security-career-assessment" className="underline">
+              Try the current assessment
+            </Link>
+            . Your saved results below are unaffected.
+          </p>
+
           <section className="space-y-3">
             <h2 className="text-xl font-semibold">Saved assessment results</h2>
             {runs.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
