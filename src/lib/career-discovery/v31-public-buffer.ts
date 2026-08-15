@@ -79,6 +79,13 @@ export interface PublicBuffer {
   readonly locale: Locale;
   readonly answers: readonly BufferedAnswer[];
   readonly startedAt: string;
+  /** Set once, by markComplete, the moment the 26th answer is recorded.
+   *  Absent on an in-progress buffer. Frozen rather than recomputed on every
+   *  render so the client-computed result (see PublicAssessmentFlow) reports
+   *  the same completion time across a reload, and so the same timestamp is
+   *  later handed to buildValidatedSnapshot again at claim time — the
+   *  anonymous view and the claimed report describe the same event. */
+  readonly completedAt?: string;
 }
 
 function isBrowser(): boolean {
@@ -227,6 +234,16 @@ export function isComplete(buffer: PublicBuffer | null): boolean {
   if (!status) return false;
   const answered = new Set(buffer.answers.map((a) => a.itemId));
   return sessionItemIds(status).every((id) => answered.has(id));
+}
+
+/** Freezes completedAt the first time the buffer is complete. Idempotent: a
+ *  buffer that already has one keeps it, so re-entering the result view
+ *  never shifts the completion time forward. */
+export function markComplete(buffer: PublicBuffer, completedAt: string): PublicBuffer {
+  if (buffer.completedAt) return buffer;
+  const next: PublicBuffer = { ...buffer, completedAt };
+  writeBuffer(next);
+  return next;
 }
 
 /** True when every scored Career DNA item has an answer. Separate from

@@ -17,9 +17,15 @@
 // by the orchestration layer, because a domain engine that reads the clock
 // cannot be tested for determinism and cannot be replayed.
 
+import type { ContextStatus } from "../types";
 import { CAREER_AREAS, rankCareerAreas, type AreaResult, type CareerAreaId } from "./career-areas";
 import { DIMENSIONS, type DimensionId } from "./dimensions";
 import { PATTERNS, resolvePatterns, type PatternId, type ResolvedPatternId } from "./patterns";
+import {
+  matchProfessions,
+  type ProfessionCatalogEntry,
+  type ProfessionMatch,
+} from "./professions";
 import { scoreDimensions, type Answer, type Confidence, type DimensionResult } from "./scoring";
 import {
   buildPatternStory,
@@ -125,13 +131,27 @@ export interface OutputB {
   readonly shareSummary: string;
 }
 
-/** Layer 4, declared and empty. A consumer checks `available` rather than
- *  finding an absent key and guessing. */
-export interface ProfessionOutput {
+/** Layer 4. A consumer checks `available` rather than finding an absent key
+ *  and guessing — `available: false` while no profession is approved for
+ *  ranking (the case for every real candidate today), `available: true` once
+ *  the orchestration layer supplies an approved catalogue and at least one
+ *  profession clears matching. See ./professions.ts for how `matches` and
+ *  the three presentation buckets are computed. */
+export interface ProfessionOutputUnavailable {
   readonly available: false;
   readonly reason: "no_approved_professions";
   readonly matches: readonly never[];
 }
+
+export interface ProfessionOutputAvailable {
+  readonly available: true;
+  readonly matches: readonly ProfessionMatch[];
+  readonly strongestDirections: readonly ProfessionMatch[];
+  readonly alsoWorthExploring: readonly ProfessionMatch[];
+  readonly longerTermPossibilities: readonly ProfessionMatch[];
+}
+
+export type ProfessionOutput = ProfessionOutputUnavailable | ProfessionOutputAvailable;
 
 export interface ReportSnapshot {
   readonly versions: SnapshotVersions;
@@ -147,10 +167,18 @@ export interface BuildSnapshotInput {
   readonly answers: readonly Answer[];
   readonly locale: Locale;
   readonly completedAt: string;
-  /** Professions approved for ranking at completion time. Empty until Layer 4
-   *  calibration lands; the parameter exists now so adding it later is not a
-   *  signature change. */
-  readonly approvedProfessions?: readonly string[];
+  /** Professions approved for ranking at completion time — the orchestration
+   *  layer's responsibility to filter to `approved_for_ranking = true` rows
+   *  before calling here (see ./professions.ts's header). Empty for every
+   *  real candidate today, since nothing is yet approved. */
+  readonly professionCatalog?: readonly ProfessionCatalogEntry[];
+  /** C1, already collected and already unscored (see ../context-items.ts).
+   *  Read only to place professions into "explore now" / "possible next
+   *  step" / "longer-term" — never fed into dimension scoring. */
+  readonly contextStatus?: ContextStatus | null;
+  /** Stamped onto the snapshot when professionCatalog is non-empty. A real
+   *  calibration_version string from the DB, not invented here. */
+  readonly professionCalibrationVersion?: string;
 }
 
 function storedDimensions(dims: DimensionResult, locale: Locale): StoredDimension[] {
@@ -188,11 +216,19 @@ function storedAreas(areas: AreaResult, locale: Locale): StoredArea[] {
  * Pure: same answers, locale and timestamp produce a byte-identical result.
  */
 export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
-  const { answers, locale, completedAt, approvedProfessions = [] } = input;
+  const {
+    answers,
+    locale,
+    completedAt,
+    professionCatalog = [],
+    contextStatus = null,
+    professionCalibrationVersion,
+  } = input;
 
   const dims = scoreDimensions(answers);
   const patterns = resolvePatterns(dims);
   const areas = rankCareerAreas(dims);
+  const professionResult = matchProfessions(dims, professionCatalog, contextStatus);
 
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";
   const leadingDef = patterns.leading ? PATTERNS[patterns.leading] : null;
@@ -211,7 +247,8 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
       reportSchemaVersion: REPORT_SCHEMA_VERSION,
       // Stays null while no profession is approved for ranking. A version
       // string here would imply a calibration was applied when none was.
-      professionCalibrationVersion: approvedProfessions.length > 0 ? "cal-v1" : null,
+      professionCalibrationVersion:
+        professionCatalog.length > 0 ? (professionCalibrationVersion ?? "cal-v1") : null,
     },
     locale,
     completedAt,
@@ -251,11 +288,15 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
       shareSummary: leadingStory.shareSummary,
     },
 
-    professions: {
-      available: false,
-      reason: "no_approved_professions",
-      matches: [],
-    },
+    professions: professionResult.available
+      ? {
+          available: true,
+          matches: professionResult.matches,
+          strongestDirections: professionResult.strongestDirections,
+          alsoWorthExploring: professionResult.alsoWorthExploring,
+          longerTermPossibilities: professionResult.longerTermPossibilities,
+        }
+      : { available: false, reason: "no_approved_professions", matches: [] },
   };
 }
 
@@ -380,11 +421,19 @@ export function validateSnapshot(snapshot: ReportSnapshot): ValidationFailure[] 
     }
   }
 
-  // Layer 4 must be empty while nothing is approved for ranking.
-  if (snapshot.professions.matches.length > 0) {
+  // Layer 4 must never show matches without a stamped calibration version —
+  // that would mean a candidate is being told "these professions fit you"
+  // from data the orchestration layer never actually vetted as approved for
+  // ranking. This is the only thing distinguishing a legitimate match (real
+  // approved catalogue in, calibration version stamped) from the bug this
+  // check exists to catch.
+  if (
+    snapshot.professions.matches.length > 0 &&
+    snapshot.versions.professionCalibrationVersion === null
+  ) {
     failures.push({
       code: "CD_UNAPPROVED_PROFESSION_RANKING",
-      detail: "profession matches present while no profession is approved for ranking",
+      detail: "profession matches present with no calibration version recorded",
     });
   }
   if (

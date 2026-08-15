@@ -17,9 +17,15 @@
 // Optional chaining guards a field that a future snapshot revision might not
 // carry, so one absent key can never blank the page. It never invents a value.
 
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
+import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
+import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
+import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
+import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
 import type { ReportSnapshot } from "@/lib/career-discovery/v31/snapshot";
 import type { StoredReportVersions } from "@/lib/career-discovery/stored-report.functions";
 
@@ -59,13 +65,29 @@ export function V31ReportView({
   generatedAt,
   versions,
   isInternalTest = false,
+  /** "authenticated" (default): a stored report reached by its owner, with
+   *  links into their saved history. "anonymous": a result computed
+   *  client-side, straight after completion, before any account exists —
+   *  see PublicAssessmentFlow. There is nowhere those links could go yet, so
+   *  they are hidden rather than pointed at a page that would 401. */
+  mode = "authenticated",
+  onCareerCardEvent,
 }: {
   snapshot: ReportSnapshot;
   generatedAt: string;
   versions: StoredReportVersions;
   isInternalTest?: boolean;
+  mode?: "authenticated" | "anonymous";
+  /** Privacy-safe funnel events (Execution Mandate §34) — forwarded from
+   *  CareerCardCreator; the host decides how/whether to record them. */
+  onCareerCardEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
   const { t, lang } = useT();
+  const [careerCardMatch, setCareerCardMatch] = useState<ProfessionMatch | null>(null);
+
+  const dimensionScores: Readonly<Record<DimensionId, number | null>> = Object.fromEntries(
+    snapshot.outputA.dimensions.map((d) => [d.id, d.score]),
+  ) as Record<DimensionId, number | null>;
 
   const outputA = snapshot.outputA;
   const outputB = snapshot.outputB;
@@ -83,13 +105,15 @@ export function V31ReportView({
 
   return (
     <div data-report-contract="v3.1">
-      <Link
-        to="/security-career-assessment/history"
-        className="no-print inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        {t("careerDiscovery.report.backToHistory")}
-      </Link>
+      {mode === "authenticated" && (
+        <Link
+          to="/security-career-assessment/history"
+          className="no-print inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          {t("careerDiscovery.report.backToHistory")}
+        </Link>
+      )}
 
       <p className="mt-8 text-xs font-medium uppercase tracking-widest text-muted-foreground">
         {t("careerDiscovery.report.header.product")} · {date}
@@ -227,6 +251,22 @@ export function V31ReportView({
           {t("careerDiscovery.report.v31.professionsPending")}
         </p>
       )}
+      {snapshot.professions?.available === true && (
+        <>
+          <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+            {t("careerDiscovery.report.v31.professionsTitle")}
+          </h2>
+          <div className="mt-6">
+            <ProfessionRecommendations
+              strongestDirections={snapshot.professions.strongestDirections}
+              alsoWorthExploring={snapshot.professions.alsoWorthExploring}
+              longerTermPossibilities={snapshot.professions.longerTermPossibilities}
+              locale={lang === "en" ? "en" : "sv"}
+              onOpenCareerCard={setCareerCardMatch}
+            />
+          </div>
+        </>
+      )}
 
       {/* 5 · Method / provenance */}
       <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
@@ -246,20 +286,42 @@ export function V31ReportView({
         ))}
       </dl>
 
-      <div className="no-print mt-16 flex flex-wrap gap-3 border-t border-border pt-8">
-        <Link
-          to="/my-career"
-          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          {t("careerDiscovery.report.actions.myCareer")}
-        </Link>
-        <Link
-          to="/security-career-assessment/history"
-          className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          {t("careerDiscovery.report.actions.allReports")}
-        </Link>
+      <div className="no-print">
+        <FeedbackForm locale={lang === "en" ? "en" : "sv"} />
       </div>
+
+      {mode === "authenticated" && (
+        <div className="no-print mt-16 flex flex-wrap gap-3 border-t border-border pt-8">
+          <Link
+            to="/my-career"
+            className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {t("careerDiscovery.report.actions.myCareer")}
+          </Link>
+          <Link
+            to="/security-career-assessment/history"
+            className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {t("careerDiscovery.report.actions.allReports")}
+          </Link>
+        </div>
+      )}
+
+      {snapshot.professions?.available === true && (
+        <CareerCardCreator
+          open={careerCardMatch !== null}
+          onOpenChange={(next) => {
+            if (!next) setCareerCardMatch(null);
+          }}
+          matches={snapshot.professions.matches}
+          initialProfessionId={careerCardMatch?.professionId}
+          dimensionScores={dimensionScores}
+          locale={lang === "en" ? "en" : "sv"}
+          definitionVersion={snapshot.versions.definitionVersion}
+          generatedAt={snapshot.completedAt ?? generatedAt}
+          onEvent={onCareerCardEvent}
+        />
+      )}
     </div>
   );
 }

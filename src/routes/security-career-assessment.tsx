@@ -17,9 +17,16 @@
 // migration, which stop new legacy runs at the database layer rather than
 // by hiding links.
 //
-// Access is still gated: while lifecycle_status is `internal_test`, only
-// platform admins and allowlisted internal testers can create a session.
-// Everyone else sees the approved unavailable state.
+// Access is gated independently of lifecycle_status (which is `active` —
+// the content is ready): only platform admins and allowlisted internal
+// testers (cd_internal_testers, granted via cd_grant_internal_tester()) may
+// save and view a real report, enforced server-side in
+// src/lib/career-discovery/v31-public.functions.ts. Everyone else sees the
+// same "not open yet" state. This keeps the assessment usable by a named
+// test group ahead of the Career Intelligence recommendation layer's
+// completion, without weakening or re-gating the lifecycle machinery
+// itself — corrected 2026-08-14, see that file's header for the full
+// account of why this was previously unenforced despite this comment.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicAssessmentFlow } from "@/components/career-discovery/v31/PublicAssessmentFlow";

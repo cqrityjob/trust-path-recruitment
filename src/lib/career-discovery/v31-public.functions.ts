@@ -11,19 +11,34 @@
 // So there is no anonymous grant, no anonymous RLS policy, and no anonymous
 // report ownership. A report cannot exist before its owner does.
 //
-// ── AVAILABILITY IS READ, NEVER ASSUMED ────────────────────────────────
+// ── LIFECYCLE vs. ACCESS: TWO SEPARATE GATES ────────────────────────────
 //
-// v3.1 sits at lifecycle_status = 'internal_test' with review gates
-// outstanding, and the database refuses a candidate session against it. That
-// refusal is the review-gate control working, not a bug to route around.
+// CORRECTED 2026-08-14. Earlier comments in this file claimed v3.1 sits at
+// lifecycle_status = 'internal_test'. That was true when this file was
+// written; it stopped being true on 2026-07-31, when
+// 20260731100000_career_discovery_v31_launch.sql promoted v3.1 to 'active'.
+// The comments were never revised, and the mismatch was found by a current-
+// state audit: `getV31Availability` correctly reads the live row, so with
+// lifecycle_status='active' it returns available=true unauthenticated, for
+// anyone — the Career Intelligence recommendation layer built on top of this
+// assessment is still mid-build, so that is broader than intended.
 //
-// `getV31Availability` reads the real lifecycle state so the public route can
-// say so plainly BEFORE a visitor spends fifteen minutes answering questions.
-// Letting someone complete an assessment that cannot be saved would be the
-// worst possible version of this feature.
-//
-// Nothing here promotes, bypasses or weakens the lifecycle. Activation is a
-// separate, owner-run step — see docs/assessment/career-discovery/v31-activation.sql.
+// 'lifecycle_status' answers "is the CONTENT ready" (it is). It was never
+// meant to also answer "who may use it right now" — that is a second,
+// independent question, and until now nothing enforced it for v3.1's public
+// route. This file now enforces it explicitly, additively, using
+// infrastructure the schema already had for exactly this purpose
+// (cd_internal_testers / cd_is_internal_tester(), built for v3.0's own
+// internal-test phase, never wired into v3.1's UI): a signed-in user may only
+// PERSIST a real run — and therefore only ever see a real report — if they
+// are a platform admin or an internal tester. `cd_internal_testers` starts
+// empty; the owner grants named test-group members access with the existing
+// `cd_grant_internal_tester(_user_id, _note)` RPC. Anonymous visitors can
+// still answer all 26 questions (nothing is written, nothing is shown) —
+// only the save step, immediately after sign-in, is gated. This is the
+// smallest additive change that makes "usable by the selected test group,
+// not a broad public launch" actually true, without touching
+// lifecycle_status or any review-gate machinery.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -41,9 +56,105 @@ import {
   reportTagsFor,
   type ContextStatus,
 } from "./v31/personal-layer";
+import type { DimensionId } from "./v31/dimensions";
+import type {
+  ProfessionCareerStage,
+  ProfessionCatalogEntry,
+  ProfessionDimensionBand,
+} from "./v31/professions";
 import { buildValidatedSnapshot, SnapshotValidationError } from "./v31/snapshot";
 import type { Answer } from "./v31/scoring";
 import { DEFINITION_VERSION, PATTERN_DEFINITION_VERSION, type Locale } from "./v31/version";
+
+interface ProfessionRow {
+  readonly profession_id: string;
+  readonly career_area_id: string;
+  readonly title_sv: string;
+  readonly title_en: string;
+  readonly career_stage: string;
+  readonly entry_role: boolean;
+  readonly regulated: boolean;
+  readonly transition_difficulty: number | null;
+  readonly inclusion_rationale_sv: string | null;
+  readonly inclusion_rationale_en: string | null;
+  readonly limitation_note_sv: string | null;
+  readonly limitation_note_en: string | null;
+  readonly cig_profession_slug: string | null;
+}
+
+interface ProfessionProfileRow {
+  readonly profession_id: string;
+  readonly calibration_version: string;
+  readonly dimension_id: string;
+  readonly band_low: number;
+  readonly band_high: number;
+  readonly weight: number;
+}
+
+/**
+ * Layer 4 catalogue for one report build. Reads ONLY `approved_for_ranking =
+ * true` professions — the database's own `cd_guard_profession_ranking_approval`
+ * trigger already guarantees every such row cleared review and has a
+ * complete 16-dimension calibration, so this function does not re-check
+ * either; it only shapes rows into what ./v31/professions.ts's pure matcher
+ * expects. Today this returns an empty catalogue for every candidate, since
+ * nothing has been approved yet — that is correct, not a bug, until an owner
+ * actually approves a profession through the review lifecycle.
+ */
+async function fetchApprovedProfessionCatalog(
+  supabase: Ctx["supabase"],
+): Promise<{ readonly catalog: ProfessionCatalogEntry[]; readonly calibrationVersion?: string }> {
+  const { data: professions } = await supabase
+    .from("cd_professions")
+    .select(
+      "profession_id, career_area_id, title_sv, title_en, career_stage, entry_role, regulated, transition_difficulty, inclusion_rationale_sv, inclusion_rationale_en, limitation_note_sv, limitation_note_en, cig_profession_slug",
+    )
+    .eq("approved_for_ranking", true);
+
+  const rows = (professions ?? []) as ProfessionRow[];
+  if (rows.length === 0) return { catalog: [] };
+
+  const { data: profiles } = await supabase
+    .from("cd_profession_profiles")
+    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight")
+    .in(
+      "profession_id",
+      rows.map((p) => p.profession_id),
+    );
+
+  const bandsByProfession = new Map<string, ProfessionDimensionBand[]>();
+  let calibrationVersion: string | undefined;
+  for (const row of (profiles ?? []) as ProfessionProfileRow[]) {
+    calibrationVersion = row.calibration_version;
+    const list = bandsByProfession.get(row.profession_id) ?? [];
+    list.push({
+      dimensionId: row.dimension_id as DimensionId,
+      bandLow: Number(row.band_low),
+      bandHigh: Number(row.band_high),
+      weight: Number(row.weight),
+    });
+    bandsByProfession.set(row.profession_id, list);
+  }
+
+  const catalog: ProfessionCatalogEntry[] = rows.map((p) => ({
+    professionId: p.profession_id,
+    careerAreaId: p.career_area_id,
+    titleSv: p.title_sv,
+    titleEn: p.title_en,
+    careerStage: p.career_stage as ProfessionCareerStage,
+    entryRole: p.entry_role,
+    regulated: p.regulated,
+    transitionDifficulty: p.transition_difficulty,
+    inclusionRationaleSv: p.inclusion_rationale_sv ?? "",
+    inclusionRationaleEn: p.inclusion_rationale_en ?? "",
+    limitationNoteSv: p.limitation_note_sv,
+    limitationNoteEn: p.limitation_note_en,
+    bands: bandsByProfession.get(p.profession_id) ?? [],
+    cigProfessionSlug: p.cig_profession_slug,
+  }));
+
+  return { catalog, calibrationVersion };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ctx = { supabase: any; userId: string };
@@ -108,6 +219,26 @@ export const getV31Availability = createServerFn({ method: "GET" }).handler(
     };
   },
 );
+
+/**
+ * May THIS signed-in user actually save and view a v3.1 report right now?
+ *
+ * Separate from `getV31Availability` (content readiness) — this is the
+ * access gate for the pre-test-group-launch phase, see the file header.
+ * Authenticated only: an anonymous visitor's eligibility is irrelevant until
+ * they sign in, and checking it earlier would mean asserting a user's
+ * identity from an unauthenticated call.
+ */
+export const getV31TesterStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ readonly allowed: boolean }> => {
+    const ctx = context as Ctx;
+    const [tester, admin] = await Promise.all([
+      ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
+      ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
+    ]);
+    return { allowed: Boolean(tester.data) || Boolean(admin.data) };
+  });
 
 const bufferedAnswerSchema = z.union([
   z.object({
@@ -212,11 +343,32 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       .object({
         locale: z.enum(["sv", "en"]),
         answers: z.array(bufferedAnswerSchema).min(1),
+        // The moment the candidate's anonymous buffer first became complete
+        // (see markComplete in v31-public-buffer.ts), so the report they
+        // already saw before signing in and the one now being stored agree
+        // on when the run finished. Self-reported and only ever used for
+        // display — nothing scores or gates on it — so a client lying about
+        // it costs nothing; still bounded to a real ISO instant not in the
+        // future, so a broken client cannot write a nonsensical date.
+        completedAt: z.string().datetime().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<PersistResult> => {
     const ctx = context as Ctx;
+
+    // 0. Access gate — see the file header. Checked before any parsing or
+    //    writing so a non-tester never creates a partial session, and never
+    //    learns anything about their answers beyond what the client already
+    //    computed (nothing; the client is a pure input buffer, see
+    //    PublicAssessmentFlow.tsx).
+    const [tester, admin] = await Promise.all([
+      ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
+      ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
+    ]);
+    if (!tester.data && !admin.data) {
+      throw new V31PublicError("not_available", "test_group_only");
+    }
 
     // 1. Split the run into its scored and unscored halves, and validate each
     //    against its own bank. Checked before any write, so an incomplete
@@ -301,11 +453,22 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
 
     // 3. Build and validate the report BEFORE writing anything. A run that
     //    cannot produce a valid report must not leave a session behind.
-    const completedAt = new Date().toISOString();
+    const now = new Date().toISOString();
+    const completedAt =
+      data.completedAt && Date.parse(data.completedAt) <= Date.parse(now) ? data.completedAt : now;
     const answers = [...byItem.values()];
+    const { catalog: professionCatalog, calibrationVersion: professionCalibrationVersion } =
+      await fetchApprovedProfessionCatalog(ctx.supabase);
     let snapshot;
     try {
-      snapshot = buildValidatedSnapshot({ answers, locale: data.locale as Locale, completedAt });
+      snapshot = buildValidatedSnapshot({
+        answers,
+        locale: data.locale as Locale,
+        completedAt,
+        professionCatalog,
+        contextStatus,
+        professionCalibrationVersion,
+      });
     } catch (err) {
       if (err instanceof SnapshotValidationError) {
         throw new V31PublicError("invalid_answers", err.failures.map((f) => f.code).join(","));

@@ -63,10 +63,21 @@ export const VERSION_TUPLE = {
 
 export type VersionTuple = typeof VERSION_TUPLE;
 
-/** Version lifecycle. Only `active` may be administered to real candidates. */
+/** Version lifecycle. Only `pilot` or `active` may be administered to real
+ *  candidates (both content-ready; the difference is scale of rollout, not
+ *  readiness). This constant is never the enforcement point — the database
+ *  row (`cd_definition_versions.lifecycle_status`) is, and it can change
+ *  independently of this file. Kept in sync manually; if it drifts, nothing
+ *  breaks (nothing in the codebase reads this constant as of 2026-08-14 —
+ *  confirmed by repo-wide search), but a stale value here is exactly the
+ *  kind of thing that misleads the next reader, so update it whenever the
+ *  owner promotes v3.1's real lifecycle_status. */
 export type LifecycleStatus = "design" | "internal_test" | "pilot" | "active" | "retired";
 
-/** Current status of v3.1. Internal testers only; the database carries the
- *  same rule as a trigger, so this constant is a fast client-side check and
- *  never the enforcement point. */
-export const LIFECYCLE_STATUS: LifecycleStatus = "internal_test";
+/** Current status of v3.1, as of 2026-08-14: `active` (promoted by
+ *  20260731100000_career_discovery_v31_launch.sql on 2026-07-31). Content is
+ *  live-ready. WHO may use it is a separate question, gated by
+ *  cd_is_internal_tester()/is_platform_admin() in v31-public.functions.ts —
+ *  see that file's header for why lifecycle readiness and access control
+ *  were split into two independent gates. */
+export const LIFECYCLE_STATUS: LifecycleStatus = "active";
