@@ -40,6 +40,13 @@ export const Route = createFileRoute("/_authenticated/admin/career-discovery-pre
 function CareerDiscoveryPreview() {
   const [personaId, setPersonaId] = useState(GOLDEN_PERSONAS[0].id);
   const persona = GOLDEN_PERSONAS.find((p) => p.id === personaId) ?? GOLDEN_PERSONAS[0];
+  // Independent of the site-wide language toggle, deliberately — an owner
+  // reviewing calibration needs to check Swedish and English candidate-
+  // facing copy side by side (Execution Mandate §37/§42), not whatever the
+  // admin's own browsing language happens to be. A hardcoded "en" here in
+  // an earlier pass was itself the exact defect §37 flags: candidate-facing
+  // content silently staying English regardless of the requested locale.
+  const [previewLocale, setPreviewLocale] = useState<"sv" | "en">("sv");
 
   const listCatalog = useServerFn(listOwnerPreviewProfessions);
   const catalogQuery = useQuery({
@@ -82,25 +89,50 @@ function CareerDiscoveryPreview() {
           Layer 4 profession-result preview
         </h1>
 
-        <div className="mt-6">
-          <label
-            htmlFor="persona-select"
-            className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
-          >
-            Golden persona
-          </label>
-          <select
-            id="persona-select"
-            value={personaId}
-            onChange={(e) => setPersonaId(e.target.value)}
-            className="mt-2 block h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
-          >
-            {GOLDEN_PERSONAS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name.en} ({p.contextStatus})
-              </option>
-            ))}
-          </select>
+        <div className="mt-6 flex flex-wrap gap-6">
+          <div>
+            <label
+              htmlFor="persona-select"
+              className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
+            >
+              Golden persona
+            </label>
+            <select
+              id="persona-select"
+              value={personaId}
+              onChange={(e) => setPersonaId(e.target.value)}
+              className="mt-2 block h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+            >
+              {GOLDEN_PERSONAS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name.en} ({p.contextStatus})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Candidate-facing locale
+            </span>
+            <div className="mt-2 flex gap-2">
+              {(["sv", "en"] as const).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setPreviewLocale(l)}
+                  aria-pressed={previewLocale === l}
+                  className={`h-10 rounded-md border px-4 text-sm font-medium transition-colors ${
+                    previewLocale === l
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border bg-background text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {l === "sv" ? "Svenska" : "English"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
@@ -132,11 +164,12 @@ function CareerDiscoveryPreview() {
             </h2>
             {matchQuery.isLoading && <p className="mt-3 text-sm text-muted-foreground">Loading…</p>}
             {matches && (
-              <dl className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm">
+              <dl className="mt-3 grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-border bg-border text-sm">
                 {[
                   ["Strongest", matches.strongestDirections.length],
                   ["Also worth", matches.alsoWorthExploring.length],
                   ["Longer-term", matches.longerTermPossibilities.length],
+                  ["Career pivot", matches.careerPivots.length],
                 ].map(([k, v]) => (
                   <div key={String(k)} className="bg-background p-3">
                     <dt className="text-xs text-muted-foreground">{k}</dt>
@@ -158,7 +191,8 @@ function CareerDiscoveryPreview() {
                 strongestDirections={matches.strongestDirections}
                 alsoWorthExploring={matches.alsoWorthExploring}
                 longerTermPossibilities={matches.longerTermPossibilities}
-                locale="en"
+                careerPivots={matches.careerPivots}
+                locale={previewLocale}
                 onOpenCareerCard={setCardMatch}
               />
             </div>
@@ -179,7 +213,7 @@ function CareerDiscoveryPreview() {
             matches={matches.matches}
             initialProfessionId={cardMatch?.professionId}
             dimensionScores={dimensionScores}
-            locale="en"
+            locale={previewLocale}
             definitionVersion="owner-preview"
             generatedAt={new Date().toISOString()}
           />

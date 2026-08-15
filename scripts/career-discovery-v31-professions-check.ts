@@ -52,8 +52,14 @@ function group(name: string): void {
 // trimmed to the four professions the worked examples actually exercise.
 // =========================================================================
 
-function band(dimensionId: DimensionId, bandLow: number, bandHigh: number, weight: number) {
-  return { dimensionId, bandLow, bandHigh, weight };
+function band(
+  dimensionId: DimensionId,
+  centrality: "central" | "supporting" | "neutral",
+  bandLow: number,
+  bandHigh: number,
+  weight: number,
+) {
+  return { dimensionId, centrality, bandLow, bandHigh, weight };
 }
 
 // SP005 Polis (Police Officer) — entry, entry_role.
@@ -72,22 +78,22 @@ const POLIS: ProfessionCatalogEntry = {
   limitationNoteSv: null,
   limitationNoteEn: null,
   bands: [
-    band("CID01", 0.7, 1.0, 0.25),
-    band("CID02", 0.3, 0.7, 0.25),
-    band("CID03", 0.4, 0.8, 0.25),
-    band("CID04", 0.1, 0.5, 0.25),
-    band("CID05", 0.2, 0.6, 0.25),
-    band("CID06", 0.7, 1.0, 0.25),
-    band("CID07", 0.6, 1.0, 0.25),
-    band("CID08", 0.55, 0.9, 0.6),
-    band("CID09", 0.6, 0.9, 0.8),
-    band("CID10", 0.3, 0.7, 0.25),
-    band("CID11", 0.5, 0.9, 0.25),
-    band("CID12", 0.6, 0.9, 0.7),
-    band("CID13", 0.6, 1.0, 0.25),
-    band("CID14", 0.5, 0.9, 0.25),
-    band("CID15", 0.2, 0.8, 0),
-    band("CID16", 0.6, 0.95, 0.85),
+    band("CID01", "supporting", 0.7, 1.0, 0.25),
+    band("CID02", "supporting", 0.3, 0.7, 0.25),
+    band("CID03", "supporting", 0.4, 0.8, 0.25),
+    band("CID04", "supporting", 0.1, 0.5, 0.25),
+    band("CID05", "supporting", 0.2, 0.6, 0.25),
+    band("CID06", "supporting", 0.7, 1.0, 0.25),
+    band("CID07", "supporting", 0.6, 1.0, 0.25),
+    band("CID08", "central", 0.55, 0.9, 0.6),
+    band("CID09", "central", 0.6, 0.9, 0.8),
+    band("CID10", "supporting", 0.3, 0.7, 0.25),
+    band("CID11", "supporting", 0.5, 0.9, 0.25),
+    band("CID12", "central", 0.6, 0.9, 0.7),
+    band("CID13", "supporting", 0.6, 1.0, 0.25),
+    band("CID14", "supporting", 0.5, 0.9, 0.25),
+    band("CID15", "neutral", 0.2, 0.8, 0),
+    band("CID16", "central", 0.6, 0.95, 0.85),
   ],
 };
 
@@ -107,22 +113,22 @@ const SKYDDSVAKT: ProfessionCatalogEntry = {
   limitationNoteSv: null,
   limitationNoteEn: null,
   bands: [
-    band("CID01", 0.6, 1.0, 0.25),
-    band("CID02", 0.2, 0.6, 0.25),
-    band("CID03", 0.3, 0.7, 0.25),
-    band("CID04", 0.2, 0.6, 0.25),
-    band("CID05", 0.1, 0.5, 0.25),
-    band("CID06", 0.65, 0.95, 0.9),
-    band("CID07", 0.5, 0.9, 0.25),
-    band("CID08", 0.5, 0.9, 0.25),
-    band("CID09", 0.5, 0.9, 0.25),
-    band("CID10", 0.2, 0.6, 0.25),
-    band("CID11", 0.6, 0.9, 0.8),
-    band("CID12", 0.6, 0.9, 0.7),
-    band("CID13", 0.5, 0.9, 0.25),
-    band("CID14", 0.4, 0.8, 0.25),
-    band("CID15", 0.2, 0.8, 0),
-    band("CID16", 0.55, 0.9, 0.6),
+    band("CID01", "supporting", 0.6, 1.0, 0.25),
+    band("CID02", "supporting", 0.2, 0.6, 0.25),
+    band("CID03", "supporting", 0.3, 0.7, 0.25),
+    band("CID04", "supporting", 0.2, 0.6, 0.25),
+    band("CID05", "supporting", 0.1, 0.5, 0.25),
+    band("CID06", "central", 0.65, 0.95, 0.9),
+    band("CID07", "supporting", 0.5, 0.9, 0.25),
+    band("CID08", "supporting", 0.5, 0.9, 0.25),
+    band("CID09", "supporting", 0.5, 0.9, 0.25),
+    band("CID10", "supporting", 0.2, 0.6, 0.25),
+    band("CID11", "central", 0.6, 0.9, 0.8),
+    band("CID12", "central", 0.6, 0.9, 0.7),
+    band("CID13", "supporting", 0.5, 0.9, 0.25),
+    band("CID14", "supporting", 0.4, 0.8, 0.25),
+    band("CID15", "neutral", 0.2, 0.8, 0),
+    band("CID16", "central", 0.55, 0.9, 0.6),
   ],
 };
 
@@ -142,22 +148,22 @@ const SECURITY_COORDINATOR: ProfessionCatalogEntry = {
   limitationNoteSv: null,
   limitationNoteEn: null,
   bands: [
-    band("CID01", 0.3, 0.7, 0.25),
-    band("CID02", 0.55, 0.9, 0.7),
-    band("CID03", 0.6, 1.0, 0.25),
-    band("CID04", 0.4, 0.8, 0.25),
-    band("CID05", 0.7, 1.0, 0.25),
-    band("CID06", 0.7, 1.0, 0.25),
-    band("CID07", 0.6, 0.9, 0.85),
-    band("CID08", 0.4, 0.8, 0.25),
-    band("CID09", 0.5, 0.9, 0.25),
-    band("CID10", 0.3, 0.7, 0.25),
-    band("CID11", 0.6, 0.9, 0.8),
-    band("CID12", 0.6, 1.0, 0.25),
-    band("CID13", 0.6, 0.9, 0.7),
-    band("CID14", 0.6, 1.0, 0.25),
-    band("CID15", 0.2, 0.8, 0),
-    band("CID16", 0.6, 1.0, 0.25),
+    band("CID01", "supporting", 0.3, 0.7, 0.25),
+    band("CID02", "central", 0.55, 0.9, 0.7),
+    band("CID03", "supporting", 0.6, 1.0, 0.25),
+    band("CID04", "supporting", 0.4, 0.8, 0.25),
+    band("CID05", "supporting", 0.7, 1.0, 0.25),
+    band("CID06", "supporting", 0.7, 1.0, 0.25),
+    band("CID07", "central", 0.6, 0.9, 0.85),
+    band("CID08", "supporting", 0.4, 0.8, 0.25),
+    band("CID09", "supporting", 0.5, 0.9, 0.25),
+    band("CID10", "supporting", 0.3, 0.7, 0.25),
+    band("CID11", "central", 0.6, 0.9, 0.8),
+    band("CID12", "supporting", 0.6, 1.0, 0.25),
+    band("CID13", "central", 0.6, 0.9, 0.7),
+    band("CID14", "supporting", 0.6, 1.0, 0.25),
+    band("CID15", "neutral", 0.2, 0.8, 0),
+    band("CID16", "supporting", 0.6, 1.0, 0.25),
   ],
 };
 
@@ -180,22 +186,22 @@ const HEAD_OF_SECURITY: ProfessionCatalogEntry = {
   limitationNoteSv: "test",
   limitationNoteEn: "test",
   bands: [
-    band("CID01", 0.3, 0.7, 0.25),
-    band("CID02", 0.65, 0.95, 0.95),
-    band("CID03", 0.6, 1.0, 0.25),
-    band("CID04", 0.4, 0.8, 0.25),
-    band("CID05", 0.6, 0.95, 0.9),
-    band("CID06", 0.7, 1.0, 0.25),
-    band("CID07", 0.6, 0.9, 0.7),
-    band("CID08", 0.4, 0.8, 0.25),
-    band("CID09", 0.5, 0.9, 0.25),
-    band("CID10", 0.3, 0.7, 0.25),
-    band("CID11", 0.7, 1.0, 0.25),
-    band("CID12", 0.6, 1.0, 0.25),
-    band("CID13", 0.6, 0.9, 0.6),
-    band("CID14", 0.6, 1.0, 0.25),
-    band("CID15", 0.2, 0.8, 0),
-    band("CID16", 0.6, 1.0, 0.25),
+    band("CID01", "supporting", 0.3, 0.7, 0.25),
+    band("CID02", "central", 0.65, 0.95, 0.95),
+    band("CID03", "supporting", 0.6, 1.0, 0.25),
+    band("CID04", "supporting", 0.4, 0.8, 0.25),
+    band("CID05", "central", 0.6, 0.95, 0.9),
+    band("CID06", "supporting", 0.7, 1.0, 0.25),
+    band("CID07", "central", 0.6, 0.9, 0.7),
+    band("CID08", "supporting", 0.4, 0.8, 0.25),
+    band("CID09", "supporting", 0.5, 0.9, 0.25),
+    band("CID10", "supporting", 0.3, 0.7, 0.25),
+    band("CID11", "supporting", 0.7, 1.0, 0.25),
+    band("CID12", "supporting", 0.6, 1.0, 0.25),
+    band("CID13", "central", 0.6, 0.9, 0.6),
+    band("CID14", "supporting", 0.6, 1.0, 0.25),
+    band("CID15", "neutral", 0.2, 0.8, 0),
+    band("CID16", "supporting", 0.6, 1.0, 0.25),
   ],
 };
 
@@ -336,15 +342,64 @@ group("6 · Developing-in-current-role — worked example");
 
 const developing = matchProfessions(HIGH_FLIER, CATALOG, "developing_current_role");
 const developingHeadOfSecurity = developing.matches.find((m) => m.professionId === "SP007");
-const developingSkyddsvakt = developing.matches.find((m) => m.professionId === "SP003");
 
 ok(
   developingHeadOfSecurity?.stage === "possible_next_step",
   "6.1 Head of Security is 'possible next step' (one stage up) for developing_current_role, not 'longer term'",
 );
+
+// HIGH_FLIER scores uniformly on every dimension, so it has no real
+// "direction" for the career-pivot classifier to compare against — using it
+// to assert a specific stage for an entry-tier, different-area profession
+// would just be asserting an arbitrary sortScore tie-break, not a real
+// property. The dedicated COORDINATOR_DIRECTION persona below (real affinity
+// with Säkerhetssamordnare's own central dimensions, nothing else boosted)
+// exercises the actual invariant instead — see group 6b.
+
+// =========================================================================
+group("6b · Career pivot (Execution Mandate §12-13) — worked example");
+// =========================================================================
+
+// A candidate whose evidence points at Säkerhetssamordnare's OWN central
+// dimensions (CID02, CID07, CID11, CID13) and nothing else in particular —
+// the "experienced Security Coordinator" persona from the mandate's worked
+// example. They also happen to clear Skyddsvakt's central bands (CID06,
+// CID11, CID12, CID16) because CID11 overlaps and the rest sit just above
+// band floor — real affinity, not engineered to fail it.
+const COORDINATOR_DIRECTION = makeDims(0.5, {
+  CID02: 0.8,
+  CID07: 0.85,
+  CID11: 0.85,
+  CID13: 0.8,
+  CID06: 0.8,
+  CID12: 0.75,
+  CID16: 0.7,
+});
+
+const coordinatorDirection = matchProfessions(COORDINATOR_DIRECTION, CATALOG, "developing_current_role");
+const cdCoordinator = coordinatorDirection.matches.find((m) => m.professionId === "SP006");
+const cdSkyddsvakt = coordinatorDirection.matches.find((m) => m.professionId === "SP003");
+
 ok(
-  developingSkyddsvakt?.stage === "explore_now",
-  "6.2 an entry-stage profession stays 'explore now' even for a more advanced baseline",
+  cdCoordinator?.stage === "explore_now",
+  "6b.1 Säkerhetssamordnare (the candidate's own direction, SCA04, distance 0) stays 'explore now'",
+);
+ok(
+  cdSkyddsvakt !== undefined,
+  "6b.2 Skyddsvakt still clears matching (real central-dimension affinity, not excluded)",
+);
+ok(
+  cdSkyddsvakt?.stage === "career_pivot",
+  "6b.3 Skyddsvakt (SCA01, entry, behind the candidate's SCA04 direction) is 'career pivot', not 'explore now' — real affinity shown honestly as an alternative direction, not the next step",
+);
+ok(
+  coordinatorDirection.careerPivots.some((m) => m.professionId === "SP003"),
+  "6b.4 Skyddsvakt appears in the careerPivots bucket",
+);
+ok(
+  !coordinatorDirection.strongestDirections.some((m) => m.professionId === "SP003") &&
+    !coordinatorDirection.alsoWorthExploring.some((m) => m.professionId === "SP003"),
+  "6b.5 Skyddsvakt does not also leak into strongestDirections or alsoWorthExploring",
 );
 
 // =========================================================================

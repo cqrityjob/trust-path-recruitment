@@ -45,7 +45,9 @@ function StageBadge({ match, locale }: { match: ProfessionMatch; locale: Locale 
       ? "border-accent/40 bg-accent/10 text-accent"
       : match.stage === "possible_next_step"
         ? "border-border bg-muted/60 text-foreground"
-        : "border-border bg-muted/30 text-muted-foreground";
+        : match.stage === "career_pivot"
+          ? "border-dashed border-border bg-muted/20 text-muted-foreground"
+          : "border-border bg-muted/30 text-muted-foreground";
   return (
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
@@ -363,6 +365,7 @@ export function ProfessionRecommendations({
   strongestDirections,
   alsoWorthExploring,
   longerTermPossibilities,
+  careerPivots,
   locale,
   onOpenCareerCard,
   sessionId,
@@ -374,6 +377,10 @@ export function ProfessionRecommendations({
   strongestDirections: readonly ProfessionMatch[];
   alsoWorthExploring: readonly ProfessionMatch[];
   longerTermPossibilities: readonly ProfessionMatch[];
+  /** stage === "career_pivot" (§12-13) — real affinity, different direction.
+   *  Optional only so existing callers (e.g. a frozen older snapshot without
+   *  this bucket) don't break; render nothing when absent. */
+  careerPivots?: readonly ProfessionMatch[];
   locale: Locale;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
   /** Present only for a claimed (authenticated, owned) result. */
@@ -383,7 +390,12 @@ export function ProfessionRecommendations({
   settingGoal?: boolean;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
-  const allSlugs = [...strongestDirections, ...alsoWorthExploring, ...longerTermPossibilities]
+  const allSlugs = [
+    ...strongestDirections,
+    ...alsoWorthExploring,
+    ...longerTermPossibilities,
+    ...(careerPivots ?? []),
+  ]
     .map((m) => m.cigProfessionSlug)
     .filter((s): s is string => Boolean(s));
   const uniqueSlugs = [...new Set(allSlugs)];
@@ -426,6 +438,18 @@ export function ProfessionRecommendations({
       <Tier
         heading={TIER_HEADING.longerTerm[locale]}
         matches={longerTermPossibilities}
+        locale={locale}
+        detailsBySlug={detailsBySlug}
+        onOpenCareerCard={onOpenCareerCard}
+        sessionId={sessionId}
+        goalProfessionId={goalProfessionId}
+        onSetGoal={onSetGoal}
+        settingGoal={settingGoal}
+        onEvent={onEvent}
+      />
+      <Tier
+        heading={TIER_HEADING.careerPivot[locale]}
+        matches={careerPivots ?? []}
         locale={locale}
         detailsBySlug={detailsBySlug}
         onOpenCareerCard={onOpenCareerCard}

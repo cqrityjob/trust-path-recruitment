@@ -149,6 +149,12 @@ export interface ProfessionOutputAvailable {
   readonly strongestDirections: readonly ProfessionMatch[];
   readonly alsoWorthExploring: readonly ProfessionMatch[];
   readonly longerTermPossibilities: readonly ProfessionMatch[];
+  /** stage === "career_pivot" (§12-13) — real affinity, different direction
+   *  from where the candidate is heading. Optional so a snapshot frozen
+   *  before this bucket existed still satisfies this type unchanged — the
+   *  frozen-snapshot reproducibility rule (§36) means an old snapshot must
+   *  never be forced to retroactively invent data it never computed. */
+  readonly careerPivots?: readonly ProfessionMatch[];
 }
 
 export type ProfessionOutput = ProfessionOutputUnavailable | ProfessionOutputAvailable;
@@ -295,6 +301,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
           strongestDirections: professionResult.strongestDirections,
           alsoWorthExploring: professionResult.alsoWorthExploring,
           longerTermPossibilities: professionResult.longerTermPossibilities,
+          careerPivots: professionResult.careerPivots,
         }
       : { available: false, reason: "no_approved_professions", matches: [] },
   };

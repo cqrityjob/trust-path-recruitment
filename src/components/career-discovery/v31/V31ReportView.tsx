@@ -284,6 +284,7 @@ export function V31ReportView({
               strongestDirections={snapshot.professions.strongestDirections}
               alsoWorthExploring={snapshot.professions.alsoWorthExploring}
               longerTermPossibilities={snapshot.professions.longerTermPossibilities}
+              careerPivots={snapshot.professions.careerPivots}
               locale={lang === "en" ? "en" : "sv"}
               onOpenCareerCard={setCareerCardMatch}
               sessionId={sessionId}

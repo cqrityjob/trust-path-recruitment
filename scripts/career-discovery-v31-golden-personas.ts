@@ -190,6 +190,7 @@ for (const persona of PERSONAS) {
     report.push(`### Strongest directions to explore\n${result.strongestDirections.map((m) => describeMatch(m, dims)).join("\n")}\n`);
     report.push(`### Also worth exploring\n${result.alsoWorthExploring.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
     report.push(`### Longer-term possibilities\n${result.longerTermPossibilities.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
+    report.push(`### Career pivot — real affinity, different direction\n${result.careerPivots.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
   }
 
   // No hard-coded "must include profession X" assertions beyond what the

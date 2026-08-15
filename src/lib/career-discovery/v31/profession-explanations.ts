@@ -33,6 +33,10 @@ const STAGE_SENTENCE: Readonly<Record<ProfessionStage, Record<Locale, string>>> 
     sv: "Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.",
     en: "This is a longer-term direction. It fits your profile, but the path there normally runs through more experience or other roles first.",
   },
+  career_pivot: {
+    sv: "Det här visar en verklig koppling till din profil, men det är inte nästa steg utifrån var du är idag -- snarare en annan riktning värd att ha i åtanke om du någon gång vill byta spår.",
+    en: "This shows a genuine affinity with your profile, but it isn't the natural next step from where you are today -- more an alternative direction, worth knowing about if you ever want to change track.",
+  },
 };
 
 const ALIGNED_INTRO: Readonly<Record<Locale, string>> = {
@@ -69,6 +73,7 @@ export const STAGE_LABEL: Readonly<Record<ProfessionStage, Record<Locale, string
   explore_now: { sv: "Utforska nu", en: "Explore now" },
   possible_next_step: { sv: "Möjligt nästa steg", en: "Possible next step" },
   longer_term: { sv: "Långsiktig riktning", en: "Longer-term direction" },
+  career_pivot: { sv: "Alternativ riktning", en: "Alternative direction" },
 };
 
 export const FIT_LABEL: Readonly<Record<"strong" | "moderate", Record<Locale, string>>> = {
@@ -77,7 +82,7 @@ export const FIT_LABEL: Readonly<Record<"strong" | "moderate", Record<Locale, st
 };
 
 export const TIER_HEADING: Readonly<
-  Record<"strongest" | "alsoWorth" | "longerTerm", Record<Locale, string>>
+  Record<"strongest" | "alsoWorth" | "longerTerm" | "careerPivot", Record<Locale, string>>
 > = {
   strongest: {
     sv: "Dina starkaste riktningar att utforska",
@@ -85,4 +90,5 @@ export const TIER_HEADING: Readonly<
   },
   alsoWorth: { sv: "Också värt att utforska", en: "Also worth exploring" },
   longerTerm: { sv: "Långsiktiga möjligheter", en: "Longer-term possibilities" },
+  careerPivot: { sv: "Alternativa riktningar", en: "Alternative directions" },
 };

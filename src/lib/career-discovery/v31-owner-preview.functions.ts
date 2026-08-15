@@ -67,6 +67,7 @@ interface ProfessionProfileRow {
   readonly band_low: number;
   readonly band_high: number;
   readonly weight: number;
+  readonly centrality: string;
 }
 
 export interface OwnerPreviewProfession {
@@ -111,7 +112,7 @@ async function fetchFullCatalog(ctx: Ctx): Promise<ProfessionCatalogEntry[]> {
 
   const { data: profiles, error: profErr } = await ctx.supabase
     .from("cd_profession_profiles")
-    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight")
+    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality")
     .in(
       "profession_id",
       rows.map((p) => p.profession_id),
@@ -123,6 +124,7 @@ async function fetchFullCatalog(ctx: Ctx): Promise<ProfessionCatalogEntry[]> {
     const list = bandsByProfession.get(row.profession_id) ?? [];
     list.push({
       dimensionId: row.dimension_id as DimensionId,
+      centrality: row.centrality as "central" | "supporting" | "neutral",
       bandLow: Number(row.band_low),
       bandHigh: Number(row.band_high),
       weight: Number(row.weight),

@@ -89,6 +89,7 @@ interface ProfessionProfileRow {
   readonly band_low: number;
   readonly band_high: number;
   readonly weight: number;
+  readonly centrality: string;
 }
 
 /**
@@ -116,7 +117,7 @@ async function fetchApprovedProfessionCatalog(
 
   const { data: profiles } = await supabase
     .from("cd_profession_profiles")
-    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight")
+    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality")
     .in(
       "profession_id",
       rows.map((p) => p.profession_id),
@@ -129,6 +130,7 @@ async function fetchApprovedProfessionCatalog(
     const list = bandsByProfession.get(row.profession_id) ?? [];
     list.push({
       dimensionId: row.dimension_id as DimensionId,
+      centrality: row.centrality as "central" | "supporting" | "neutral",
       bandLow: Number(row.band_low),
       bandHigh: Number(row.band_high),
       weight: Number(row.weight),
