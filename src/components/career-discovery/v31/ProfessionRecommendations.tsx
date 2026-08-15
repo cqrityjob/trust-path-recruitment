@@ -16,7 +16,7 @@ import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { translateFor } from "@/i18n/context";
 import {
   Accordion,
   AccordionContent,
@@ -99,7 +99,9 @@ function ProfessionDetailBody({
   jobsHref: string;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
-  const { t } = useT();
+  // Bound to the `locale` prop, not the live site toggle — see
+  // FeedbackForm.tsx / V31ReportView.tsx for why.
+  const t = translateFor(locale);
   const pathwayFiredRef = useRef(false);
 
   if (!detail) {
@@ -221,7 +223,9 @@ function ProfessionCard({
   settingGoal?: boolean;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
-  const { t } = useT();
+  // Bound to the `locale` prop, not the live site toggle — see
+  // FeedbackForm.tsx / V31ReportView.tsx for why.
+  const t = translateFor(locale);
   const explanation = explainMatch(match, locale);
   const title = locale === "sv" ? match.titleSv : match.titleEn;
   const jobsHref = match.cigProfessionSlug

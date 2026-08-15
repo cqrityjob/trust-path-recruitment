@@ -89,7 +89,15 @@ export function V31ReportView({
   onCareerCardEvent?: (name: string, detail?: Record<string, unknown>) => void;
   sessionId?: string | null;
 }) {
-  const { t, lang } = useT();
+  // Deliberately NOT `lang` from useT(): everything in this component is
+  // either frozen report content (must render in the locale the candidate
+  // actually took the assessment in, snapshot.locale) or the small set of
+  // live chrome the file header calls out (back links, method labels) via
+  // `t`, which is fine to follow the live site toggle. Using the live
+  // `lang` for report content (professions, feedback form, Career Card) was
+  // the real defect behind "Swedish assessment showed English content" —
+  // see v31-layer4-implementation-state.md.
+  const { t } = useT();
   const [careerCardMatch, setCareerCardMatch] = useState<ProfessionMatch | null>(null);
   const [goalProfessionId, setGoalProfessionId] = useState<string | null>(null);
   const [settingGoal, setSettingGoal] = useState(false);
@@ -120,7 +128,7 @@ export function V31ReportView({
   const supporting = outputB?.supporting ?? [];
   const areas = outputA?.areas ?? [];
 
-  const date = new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
+  const date = new Intl.DateTimeFormat(snapshot.locale === "sv" ? "sv-SE" : "en-GB", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -285,7 +293,7 @@ export function V31ReportView({
               alsoWorthExploring={snapshot.professions.alsoWorthExploring}
               longerTermPossibilities={snapshot.professions.longerTermPossibilities}
               careerPivots={snapshot.professions.careerPivots}
-              locale={lang === "en" ? "en" : "sv"}
+              locale={snapshot.locale === "en" ? "en" : "sv"}
               onOpenCareerCard={setCareerCardMatch}
               sessionId={sessionId}
               goalProfessionId={goalProfessionId}
@@ -316,7 +324,7 @@ export function V31ReportView({
       </dl>
 
       <div className="no-print">
-        <FeedbackForm locale={lang === "en" ? "en" : "sv"} />
+        <FeedbackForm locale={snapshot.locale === "en" ? "en" : "sv"} />
       </div>
 
       {mode === "authenticated" && (
@@ -345,7 +353,7 @@ export function V31ReportView({
           matches={snapshot.professions.matches}
           initialProfessionId={careerCardMatch?.professionId}
           dimensionScores={dimensionScores}
-          locale={lang === "en" ? "en" : "sv"}
+          locale={snapshot.locale === "en" ? "en" : "sv"}
           definitionVersion={snapshot.versions.definitionVersion}
           generatedAt={snapshot.completedAt ?? generatedAt}
           onEvent={onCareerCardEvent}

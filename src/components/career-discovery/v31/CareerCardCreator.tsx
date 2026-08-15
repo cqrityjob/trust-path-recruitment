@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Download, Loader2, Share2 } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { translateFor } from "@/i18n/context";
 import {
   Dialog,
   DialogContent,
@@ -63,7 +63,9 @@ export function CareerCardCreator({
    *  how/whether to record them; this component never tracks on its own. */
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
-  const { t } = useT();
+  // Bound to the `locale` prop, not the live site toggle — see
+  // FeedbackForm.tsx / V31ReportView.tsx for why.
+  const t = translateFor(locale);
   const [professionId, setProfessionId] = useState(
     initialProfessionId ?? matches[0]?.professionId ?? "",
   );

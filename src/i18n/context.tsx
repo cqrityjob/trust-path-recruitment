@@ -60,3 +60,15 @@ export function useT() {
   if (!ctx) throw new Error("useT must be used within I18nProvider");
   return ctx;
 }
+
+/** A translator bound to a SPECIFIC locale, independent of the live
+ *  site-wide toggle `useT()` reads. For frozen report content (a v3.1
+ *  snapshot's own `locale`, a Career Card's `locale` prop, ...): that
+ *  content must render in the locale it was generated in, not whatever the
+ *  viewer's current site-language happens to be — see
+ *  V31ReportView.tsx's header. Same fallback chain as `t()` itself
+ *  (`dictionaries[locale][key] ?? dictionaries.sv[key] ?? key`), just not
+ *  wired to context. */
+export function translateFor(locale: Lang): (key: TranslationKey) => string {
+  return (key: TranslationKey) => dictionaries[locale][key] ?? dictionaries.sv[key] ?? key;
+}

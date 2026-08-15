@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { translateFor } from "@/i18n/context";
 import { submitV31Feedback } from "@/lib/career-discovery/v31-feedback.functions";
 
 function YesNoUnsure({
@@ -44,7 +44,11 @@ function YesNoUnsure({
 }
 
 export function FeedbackForm({ locale }: { locale: "sv" | "en" }) {
-  const { t } = useT();
+  // Bound to the `locale` prop, not the live site toggle — this form is
+  // rendered inside a frozen report and must stay in the report's own
+  // language regardless of the viewer's current site-language (see
+  // V31ReportView.tsx's header and translateFor's own doc).
+  const t = translateFor(locale);
   const submit = useServerFn(submitV31Feedback);
   const [relevant, setRelevant] = useState<number | null>(null);
   const [understoodWhy, setUnderstoodWhy] = useState<boolean | null>(null);

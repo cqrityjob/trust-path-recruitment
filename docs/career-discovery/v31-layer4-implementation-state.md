@@ -374,3 +374,61 @@ Skyddsvakt (SCA01) for the identical dims, and fitTier/stage are provably
 unchanged by tag presence. 50 professions-check checks green, 138
 golden-persona checks green (unaffected — no golden persona passes discovery
 tags), `tsc` clean, `bun run build` succeeds.
+
+### The real Swedish-locale defect, found and fixed (item 11)
+
+The earlier pass's fix (hardcoded `locale="en"` in the admin owner-preview
+route) was real but almost certainly NOT what the owner saw — profession
+content isn't live for real candidates (`approved_for_ranking=false`
+everywhere), so a real Swedish candidate could only have hit that route by
+coincidence. Live browser verification against the deployed product wasn't
+possible this pass either (see the "known limitation" note above — same
+Docker/`.env.local` constraint), so instead did a full source-level audit of
+every locale-sensitive call site in the report-rendering path, and found the
+real defect:
+
+**`V31ReportView.tsx`** — the component whose own header explicitly states
+"Only the surrounding chrome ... is translated live, because that is app
+furniture and not report content" — was itself violating that rule. Three
+call sites passed the LIVE site-wide language toggle (`lang` from
+`useT()`) into `ProfessionRecommendations`, `FeedbackForm` and
+`CareerCardCreator` as their `locale` prop, instead of the frozen
+snapshot's own `snapshot.locale`. Concretely: a candidate who takes the
+assessment in Swedish gets a snapshot with `locale: "sv"` — its DNA
+narrative, pattern story and area names (pre-resolved into Swedish at
+snapshot-build time) always render correctly regardless of the toggle — but
+if their site-wide toggle is (or later becomes) English, the profession
+recommendations, feedback form and Career Card would render in English
+anyway, because they read the toggle, not the snapshot. That is an exact
+match for "parts of final recommendation/report appeared in English."
+
+Fixed: all three call sites now pass `snapshot.locale`; the date-format
+locale (`Intl.DateTimeFormat`) was the same bug in miniature and got the
+same fix; the now-unused `lang` was removed from the component's `useT()`
+destructure (with a comment explaining why, so it cannot silently come back).
+
+That fix alone was incomplete on its own, though: `ProfessionRecommendations`,
+`FeedbackForm` and `CareerCardCreator` each ALSO called `useT()` internally
+for their own UI microcopy (button labels, section headings inside the
+Career Card panel, etc.) — meaning even with the correct `locale` PROP now
+flowing in for content, their own chrome text would still silently follow
+the live toggle. Added `translateFor(locale)` to `src/i18n/context.tsx` — a
+translator bound to an explicit locale rather than the live context,
+same fallback chain as `t()` itself — and switched all three components
+(plus their nested `ProfessionDetailBody`/`ProfessionCard`) from
+`useT()`'s `t` to `translateFor(locale)`. Verified this is correctly
+SCOPED, not over-applied: `PublicAssessmentFlow.tsx` (the live
+question-answering flow, including the new `CareerContextStep`) still
+legitimately uses the live toggle — that content is not frozen yet, and
+`buffer.locale` is captured FROM the live toggle at the moment the run
+starts, so they agree by construction there.
+
+`tsc` clean, `bun run build` succeeds, 50 professions-check + 138
+golden-persona checks green (unaffected — none of this touches scoring or
+matching). Live browser re-verification against a fresh Swedish anonymous
+run remains blocked by the same Docker/`.env.local` constraint as the
+career-context step; this fix is code-level verified (full grep audit of
+every `useT()`/`lang` call site under `src/components/career-discovery/v31/`
+and `src/lib/career-discovery`, confirming no remaining locale/toggle
+mismatch in the frozen-report path) rather than pixel-verified. Flagging
+for next session's live check, same as the career-context step.
