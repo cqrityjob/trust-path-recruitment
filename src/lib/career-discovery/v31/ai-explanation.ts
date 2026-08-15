@@ -136,7 +136,12 @@ export interface AiExplanationProvenance {
   readonly provider?: string;
   readonly model?: string;
   readonly promptTemplateVersion?: string;
-  readonly generatedAt: string;
+  /** Provenance only — NEVER read from the clock inside this module. The
+   *  caller at the boundary (server function, route, script) injects the
+   *  timestamp it already has, so the same context always produces the same
+   *  result. `null` means the caller chose not to stamp this explanation,
+   *  which is a legitimate state and not an error. */
+  readonly generatedAt: string | null;
 }
 
 export interface AiExplanationResult {
@@ -200,9 +205,11 @@ function deterministicFallback(context: AiExplanationContext): string {
 export async function generateEnrichedExplanation(
   context: AiExplanationContext,
   aiCall?: AiCallFn,
+  /** Injected at the boundary (see AiExplanationProvenance.generatedAt).
+   *  Optional so existing two-argument callers keep working; omitting it
+   *  yields provenance without a timestamp rather than a clock read. */
+  generatedAt: string | null = null,
 ): Promise<AiExplanationResult> {
-  const generatedAt = new Date().toISOString();
-
   if (aiCall) {
     try {
       const text = await aiCall(context);
