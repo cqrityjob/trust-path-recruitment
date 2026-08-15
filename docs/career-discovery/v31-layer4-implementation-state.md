@@ -1074,3 +1074,24 @@ Lovable's own in-progress work, untouched.
 
 Full regression: 590 + 74 + 138 + 124 + 33 + 12 + 18 = **989 checks**,
 `tsc` clean, `bun run build` clean.
+
+**Deployment status (`30af5af`)**: pushed and confirmed via `git ls-remote`.
+`deploy_project` called 4 times; `get_project` metadata reports
+`latest_commit_sha: "30af5af..."`, `status: "ready"`, and `updated_at`
+genuinely advancing each call — but a cache-busted, `no-store` byte-level
+check of the live `V31ReportView-*.js` chunk shows the SAME content hash
+(`Ccc2ecNM`) across all 4 attempts, containing `areasClarifier` (live since
+the earlier `0472b77` deploy — correctly identified this time, not
+mistaken for new) but NOT `relevantGated`/`understoodWhyGated` (this
+commit's FeedbackForm fix) and NOT the CP00 senior-narrative text.
+Cross-checked against a fresh local `bun run build`, which — from the
+identical source — produces a DIFFERENT chunk (`cTqwsR9V`) containing
+BOTH markers together, confirming the live chunk is genuinely stale, not a
+false alarm from misidentifying which commit added which marker (that
+mistake happened mid-investigation this pass and was corrected via
+`git log -S`). Net effect: the Career Area evidence fix (`0472b77`) and
+the anonymous-YOU-ARE-HERE fix (`3580666`/`20a4e69`) are confirmed live;
+the Bred Profil narrative and gated-feedback fixes from this pass
+(`30af5af`) are NOT yet confirmed live. Needs another retry pass or a
+manual Publish before this specific commit's changes are independently
+verifiable in production.
