@@ -256,10 +256,13 @@ function CareerDiscoveryPreview() {
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 font-medium">Profession</th>
-                    <th className="px-3 py-2 font-medium">Fit score</th>
+                    <th className="px-3 py-2 font-medium">Fit score (Affinity)</th>
                     <th className="px-3 py-2 font-medium">Central fit</th>
                     <th className="px-3 py-2 font-medium">Supporting fit</th>
                     <th className="px-3 py-2 font-medium">Central coverage</th>
+                    <th className="px-3 py-2 font-medium">Context bonus</th>
+                    <th className="px-3 py-2 font-medium">CIG pathway bonus</th>
+                    <th className="px-3 py-2 font-medium">Priority score</th>
                     <th className="px-3 py-2 font-medium">Stage (pre-pivot)</th>
                     <th className="px-3 py-2 font-medium">Final stage</th>
                     <th className="px-3 py-2 font-medium">Priority changed?</th>
@@ -282,6 +285,15 @@ function CareerDiscoveryPreview() {
                       </td>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
                         {d.centralCoverage !== null ? `${Math.round(d.centralCoverage * 100)}%` : "—"}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                        {d.contextPriorityBonus > 0 ? `+${d.contextPriorityBonus}` : "—"}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                        {d.cigPathwayBonus > 0 ? `+${d.cigPathwayBonus}` : "—"}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums font-medium text-foreground">
+                        {d.priorityScore}
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{d.stageBeforePivotCheck}</td>
                       <td className="px-3 py-2 font-medium text-foreground">{d.finalStage}</td>

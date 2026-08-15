@@ -30,3 +30,45 @@ export const listCigProfessionsForPicker = createServerFn({ method: "GET" }).han
     }));
   },
 );
+
+/**
+ * Profession slugs directly reachable from `currentCigSlug` via a real,
+ * published `cig_career_transitions` edge (Master Completion Mandate item
+ * 7). An internal helper, not a client-callable server function — called
+ * server-side by persistPublicV31Run and runOwnerPreviewMatch, both of
+ * which already hold a Supabase client. Reads ONLY `content_status =
+ * 'published'` edges — never fabricates a transition to make a persona or
+ * test look better; an owner-reviewed, real graph or nothing.
+ *
+ * `supabase` is typed loosely (matches the existing Ctx.supabase pattern in
+ * v31-public.functions.ts / v31-owner-preview.functions.ts) because the
+ * generated Database type does not yet know this branch's cig_* tables.
+ */
+export async function fetchCigReachableSlugs(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  currentCigSlug: string | null,
+): Promise<ReadonlySet<string>> {
+  if (!currentCigSlug) return new Set();
+
+  const { data: current } = await supabase
+    .from("cig_professions")
+    .select("id")
+    .eq("slug", currentCigSlug)
+    .maybeSingle();
+  if (!current?.id) return new Set();
+
+  const { data: transitions } = await supabase
+    .from("cig_career_transitions")
+    .select("to_profession_id, content_status, cig_professions!cig_career_transitions_to_profession_id_fkey(slug)")
+    .eq("from_profession_id", current.id)
+    .eq("content_status", "published");
+
+  const reachable = new Set<string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of (transitions ?? []) as any[]) {
+    const slug = row.cig_professions?.slug;
+    if (typeof slug === "string") reachable.add(slug);
+  }
+  return reachable;
+}

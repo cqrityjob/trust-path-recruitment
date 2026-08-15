@@ -16,6 +16,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { fetchCigReachableSlugs } from "./career-context.functions";
 import { DIMENSION_IDS, type DimensionId } from "./v31/dimensions";
 import {
   matchProfessionsDiagnostics,
@@ -210,11 +211,19 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as any;
 
+    // Item 7: real, published CIG transition edges — same helper the
+    // production path uses, never a synthetic/test-only graph.
+    const cigReachableSlugs = await fetchCigReachableSlugs(
+      ctx.supabase,
+      data.currentProfessionCigSlug ?? null,
+    );
+
     return matchProfessionsDiagnostics(
       { scoringVersion: "owner-preview", dimensions, answeredItems: [], complete: true },
       catalog,
       data.contextStatus as ContextStatus,
       data.currentProfessionCigSlug ?? null,
       data.discoveryTags ?? [],
+      cigReachableSlugs,
     );
   });

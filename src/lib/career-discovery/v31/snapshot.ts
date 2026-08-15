@@ -197,6 +197,12 @@ export interface BuildSnapshotInput {
    *  never scored. Read only to set ProfessionMatch.contextCorroborated for
    *  richer "why" explanation text — never fed into dimension scoring. */
   readonly discoveryTags?: readonly string[];
+  /** CIG profession slugs directly reachable from currentProfessionCigSlug
+   *  via a real, published `cig_career_transitions` edge (Mandate item 7) —
+   *  fetched by the orchestration layer (career-context.functions.ts's
+   *  fetchCigReachableSlugs), never computed here. Empty when current
+   *  profession is unknown or has no documented transitions. */
+  readonly cigReachableSlugs?: ReadonlySet<string>;
 }
 
 function storedDimensions(dims: DimensionResult, locale: Locale): StoredDimension[] {
@@ -243,6 +249,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     professionCalibrationVersion,
     currentProfessionCigSlug = null,
     discoveryTags = [],
+    cigReachableSlugs,
   } = input;
 
   const dims = scoreDimensions(answers);
@@ -254,6 +261,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     contextStatus,
     currentProfessionCigSlug,
     discoveryTags,
+    cigReachableSlugs,
   );
 
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";

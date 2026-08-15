@@ -63,6 +63,7 @@ import type {
   ProfessionDimensionBand,
 } from "./v31/professions";
 import { buildValidatedSnapshot, SnapshotValidationError } from "./v31/snapshot";
+import { fetchCigReachableSlugs } from "./career-context.functions";
 import type { Answer } from "./v31/scoring";
 import { DEFINITION_VERSION, PATTERN_DEFINITION_VERSION, type Locale } from "./v31/version";
 
@@ -479,6 +480,14 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     const answers = [...byItem.values()];
     const { catalog: professionCatalog, calibrationVersion: professionCalibrationVersion } =
       await fetchApprovedProfessionCatalog(ctx.supabase);
+    const currentProfessionCigSlug =
+      data.careerContext?.currentProfessionStatus === "selected"
+        ? (data.careerContext.currentProfessionSlug ?? null)
+        : null;
+    // Item 7: real, published CIG transition edges from the candidate's
+    // current profession — never fabricated, empty when current profession
+    // is unknown or has no documented transitions.
+    const cigReachableSlugs = await fetchCigReachableSlugs(ctx.supabase, currentProfessionCigSlug);
     let snapshot;
     try {
       snapshot = buildValidatedSnapshot({
@@ -487,11 +496,9 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         completedAt,
         professionCatalog,
         contextStatus,
-        currentProfessionCigSlug:
-          data.careerContext?.currentProfessionStatus === "selected"
-            ? (data.careerContext.currentProfessionSlug ?? null)
-            : null,
+        currentProfessionCigSlug,
         discoveryTags,
+        cigReachableSlugs,
         professionCalibrationVersion,
       });
     } catch (err) {

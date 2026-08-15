@@ -291,14 +291,82 @@ or have the owner click through `/security-career-assessment` as a
 "working_in_security" persona and confirm the new step renders and behaves
 as designed.
 
-Not yet done from item 5's fuller ask: using CIG transition-graph edges
-(`cig_career_transitions`) and the experience-band value itself to further
-refine pivot/stage classification. The current-profession-area grounding
-above is the single highest-value, best-evidenced piece (directly fixes the
-mandate's own worked examples); layering in transition-graph edges as a
-further refinement is a reasonable next increment, deliberately not done
-now to avoid the mandate's own "reduced not increased complexity" /
-over-engineering warning without a concrete worked example that needs it.
+Superseded by the follow-up mandate's items 1, 2 and 7 — see the next
+section. The DNA-inferred fallback described above was removed entirely
+(item 2 is explicit that current profession must never be inferred from
+Career DNA), and real CIG transition-graph edges are now wired in (item 7).
+
+### Owner correction pass: real Recommendation Priority, no DNA-inference, real CIG edges (items 1/2/7)
+
+The owner reviewed the deployed checkpoint (`4757d6e`) and flagged three
+conceptual gaps directly:
+
+**Item 2 (critical) — current profession must never be inferred.**
+`classifyStagesWithPivots`'s DNA-inferred fallback (guessing a "primary
+direction" from the candidate's own best-fitting match when no real current
+profession was reported) was removed entirely. Career DNA answers how a
+candidate prefers to work, never what job they hold today — that fallback
+was exactly the violation. Now: pivot classification runs ONLY when a real,
+self-reported current profession exists; otherwise every match keeps its
+plain stage-distance classification and `career_pivot` never appears.
+Regression-proven (professions-check.ts group 6c): with no current
+profession, `careerPivots.length === 0` for the same dims that previously
+produced a guessed pivot.
+
+**Item 7 — CIG transition edges, not just career-area comparison.**
+`classifyStagesWithPivots` now checks a `cigReachableSlugs` set (profession
+slugs directly reachable from the current profession via a real, published
+`cig_career_transitions` edge) BEFORE falling back to area comparison — "a
+documented next step stays a next step even across career areas." Wired
+end to end: `fetchCigReachableSlugs` (new, `career-context.functions.ts`)
+queries real transition data (verified against hosted Supabase: e.g.
+Väktare → Skyddsvakt/Ordningsvakt/Personskyddsvakt/Larmoperatör/
+Butikskontrollant, Säkerhetssamordnare → Säkerhetschef, all
+`content_status = 'published'`) — called from `persistPublicV31Run`
+(production) and `runOwnerPreviewMatch` (admin diagnostics), threaded
+through `BuildSnapshotInput.cigReachableSlugs` → `matchProfessions`. Never
+fabricates an edge to make a test pass — only real, owner-reviewed graph
+data. **Not yet live-verified**: the Supabase-js embedded-join query syntax
+mirrors the exact pattern already used in `profession-detail.functions.ts`
+for the same table, but this environment cannot run the local dev server
+against a live backend (Docker unavailable, `.env.local` deliberately
+local-stack-only) — flagged for next session's live check, same as prior
+unverified items.
+
+**Item 1 (critical) — context must genuinely move Recommendation Priority.**
+Previously Discovery Path tags only enriched explanation text
+(`contextCorroborated`); the owner correctly called this incomplete. Added
+a real, bounded second computation: `priorityScore = fitScore +
+contextPriorityBonus (max 6) + cigPathwayBonus (max 6)`, now used for sort
+ordering wherever matches are ranked. The 12-point combined ceiling is kept
+well under the 18-point gap between `PROFESSION_MIN_FIT` (62) and
+`FIT_TIER_STRONG` (80) specifically so context/pathway evidence can only
+reorder professions already close in Affinity — never let a
+barely-qualifying profession leapfrog a clearly stronger one two fit tiers
+away. This is the deterministic reinterpretation of the historical
+"60% DNA / 25% context / 15% stage" hypothesis the owner asked for: not a
+blind weighted sum, Affinity dominant by construction, context/pathway only
+nudging order among near-peers. `matchProfessionsDiagnostics` exposes
+`contextPriorityBonus`/`cigPathwayBonus`/`priorityScore` separately from
+`fitScore` — Affinity and Priority stay two inspectable computations, never
+combined into one candidate-facing number. Regression-proven
+(professions-check.ts group 8b.5-8b.7): `fitScore` is byte-identical with
+or without a corroborating tag; `priorityScore` is strictly higher with it.
+
+**Bug found and fixed while updating these tests**: the golden-persona CLI
+script (`scripts/career-discovery-v31-golden-personas.ts`) and the admin
+owner-preview route each kept their OWN hand-authored persona list under
+the same names — `golden-persona-fixtures.ts`'s header already claimed they
+were shared, but the script never actually imported it. Fixed: both now
+import the single `GOLDEN_PERSONAS` array, eliminating a real silent-drift
+risk. Also gave the Väktare and Experienced Coordinator personas real
+`currentProfessionCigSlug` values (`vaktare`, `sakerhetssamordnare`) so the
+golden-persona report actually demonstrates `career_pivot` end to end for
+the mandate's own worked examples — previously it could not, since no
+golden persona reported a current profession at all.
+
+57 professions-check checks green (up from 50), 143 golden-persona checks
+green (up from 138), `tsc` clean, `bun run build` succeeds.
 
 ### Profession Affinity vs Recommendation Priority — explicit separation (item 3/§14)
 
