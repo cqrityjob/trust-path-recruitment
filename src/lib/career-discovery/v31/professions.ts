@@ -456,12 +456,26 @@ const STRONGEST_DIRECTIONS_MAX = 3;
 
 /**
  * Reclassifies "explore_now" matches that are actually a change of
- * direction, not a next step, as "career_pivot" (§12-13).
+ * direction, not a next step, as "career_pivot" (§12-13, refined further by
+ * Master Completion Mandate item 5).
  *
- * "primary direction" = the career area of the candidate's own best-fitting
- * match that is at or ahead of their baseline stage (distance >= 0) — the
- * direction their own explore-now/next-step tier is already pointing to. A
- * match strictly BEHIND the baseline (distance < 0, e.g. an entry-tier
+ * "primary direction" = the career area a pivot is measured against.
+ * Resolved two ways, in priority order:
+ *
+ *   1. The candidate's REAL current profession's career area, when they
+ *      self-reported one that matches a profession in this catalogue (see
+ *      career-context.ts) — a verified fact, not an inference. This is the
+ *      mandate item 5 upgrade: "Väktare -> Security Coordinator" and
+ *      "Experienced Coordinator -> Protective Security Guard" are now
+ *      judged against where the candidate actually IS, not a guess.
+ *   2. Falling back to the career area of the candidate's own best-fitting
+ *      match that is at or ahead of their baseline stage (distance >= 0) —
+ *      the direction their own explore-now/next-step tier is already
+ *      pointing to — for a candidate who skipped the career-context step,
+ *      is not yet working in security, or whose current profession is not
+ *      one of the professions in this catalogue.
+ *
+ * A match strictly BEHIND the baseline (distance < 0, e.g. an entry-tier
  * profession for a developing-baseline candidate) is a pivot only when it
  * ALSO sits in a different career area than that primary direction — a
  * lesser role in the candidate's own track is still a normal, ordinary
@@ -472,8 +486,12 @@ const STRONGEST_DIRECTIONS_MAX = 3;
  * one — this is why classification happens here, after sorting, rather than
  * inside scoreProfession where no cross-profession ordering exists yet.
  */
-function classifyStagesWithPivots(scored: readonly ScoredMatch[]): readonly ProfessionMatch[] {
-  const primaryAreaId = scored.find((m) => m.distance >= 0)?.match.careerAreaId ?? null;
+function classifyStagesWithPivots(
+  scored: readonly ScoredMatch[],
+  currentProfessionAreaId: string | null,
+): readonly ProfessionMatch[] {
+  const primaryAreaId =
+    currentProfessionAreaId ?? scored.find((m) => m.distance >= 0)?.match.careerAreaId ?? null;
 
   return scored.map(({ match, distance }) => {
     const isPivot = distance < 0 && primaryAreaId !== null && match.careerAreaId !== primaryAreaId;
@@ -494,6 +512,13 @@ export function matchProfessions(
   dims: DimensionResult,
   catalog: readonly ProfessionCatalogEntry[],
   contextStatus: ContextStatus | null,
+  /** The candidate's self-reported current profession (career-context.ts),
+   *  as a CIG slug — contextual self-report, read ONLY to ground the
+   *  career-pivot "primary direction" in fact when it matches a profession
+   *  in this catalogue (see classifyStagesWithPivots). Never affects fit,
+   *  never affects which professions clear matching, never touched by
+   *  scoreProfession. */
+  currentProfessionCigSlug?: string | null,
 ): ProfessionMatchResult {
   if (catalog.length === 0) {
     return {
@@ -516,7 +541,10 @@ export function matchProfessions(
         sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
     );
 
-  const matches = classifyStagesWithPivots(scored);
+  const currentProfessionAreaId = currentProfessionCigSlug
+    ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
+    : null;
+  const matches = classifyStagesWithPivots(scored, currentProfessionAreaId);
 
   const exploreNow = matches.filter((m) => m.stage === "explore_now");
   const possibleNext = matches.filter((m) => m.stage === "possible_next_step");

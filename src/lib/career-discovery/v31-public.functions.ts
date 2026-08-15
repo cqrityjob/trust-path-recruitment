@@ -353,6 +353,17 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         // it costs nothing; still bounded to a real ISO instant not in the
         // future, so a broken client cannot write a nonsensical date.
         completedAt: z.string().datetime().optional(),
+        // Master Completion Mandate item 2: optional, contextual self-report
+        // — never scored, never read by anything in v31/scoring.ts. Absent
+        // when the step was never shown (candidate not yet working in
+        // security) or the run predates this field.
+        careerContext: z
+          .object({
+            currentProfessionStatus: z.enum(["selected", "not_listed", "prefer_not_to_say"]),
+            currentProfessionSlug: z.string().nullable(),
+            experienceBand: z.enum(["under_1y", "1_3y", "4_7y", "8_plus_y"]).nullable(),
+          })
+          .optional(),
       })
       .parse(d),
   )
@@ -469,6 +480,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         completedAt,
         professionCatalog,
         contextStatus,
+        currentProfessionCigSlug:
+          data.careerContext?.currentProfessionStatus === "selected"
+            ? (data.careerContext.currentProfessionSlug ?? null)
+            : null,
         professionCalibrationVersion,
       });
     } catch (err) {
@@ -493,6 +508,12 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         locale: data.locale,
         status: "in_progress",
         context_status: contextStatus,
+        current_profession_status: data.careerContext?.currentProfessionStatus ?? null,
+        current_profession_slug:
+          data.careerContext?.currentProfessionStatus === "selected"
+            ? (data.careerContext.currentProfessionSlug ?? null)
+            : null,
+        current_experience_band: data.careerContext?.experienceBand ?? null,
       })
       .select("id")
       .single();

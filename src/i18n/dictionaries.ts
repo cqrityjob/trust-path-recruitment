@@ -746,6 +746,16 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "Inget konto krävs för att börja",
     "cd.public.factNoAccountBody":
       "Dina svar sparas i den här fliken. Du loggar in först när du vill spara resultatet.",
+    "cd.careerContext.title": "En sak till, innan din rapport",
+    "cd.careerContext.body":
+      "Det här hjälper oss visa vad som är mest relevant just nu -- det ändrar aldrig din Security Career DNA.",
+    "cd.careerContext.roleLabel": "Vilken roll har du idag?",
+    "cd.careerContext.roleSearchPlaceholder": "Sök yrke...",
+    "cd.careerContext.roleNotListed": "Mitt yrke finns inte listat",
+    "cd.careerContext.roleSkip": "Jag vill inte ange det",
+    "cd.careerContext.experienceLabel": "Hur länge har du arbetat i den rollen?",
+    "cd.careerContext.continue": "Fortsätt till din rapport",
+    "cd.careerContext.changeRole": "Byt yrke",
     "careerDiscovery.dashboard.v31Title": "Din nya rapport är klar",
     "careerDiscovery.dashboard.v31Body":
       "Du har genomfört den uppdaterade versionen av Din karriär inom säkerhet. Rapporten innehåller ditt karriärmönster, din berättelse och de karriärområden som passar dig bäst.",
@@ -3010,6 +3020,16 @@ export const dictionaries = {
     "cd.public.factNoAccountShort": "No account needed to begin",
     "cd.public.factNoAccountBody":
       "Your answers stay in this tab. You only sign in when you want to save the result.",
+    "cd.careerContext.title": "One more thing, before your report",
+    "cd.careerContext.body":
+      "This helps us show what's most relevant right now -- it never changes your Security Career DNA.",
+    "cd.careerContext.roleLabel": "What's your role today?",
+    "cd.careerContext.roleSearchPlaceholder": "Search for a profession...",
+    "cd.careerContext.roleNotListed": "My role isn't listed",
+    "cd.careerContext.roleSkip": "I'd rather not say",
+    "cd.careerContext.experienceLabel": "How long have you been in that role?",
+    "cd.careerContext.continue": "Continue to your report",
+    "cd.careerContext.changeRole": "Change role",
     "careerDiscovery.dashboard.v31Title": "Your new report is ready",
     "careerDiscovery.dashboard.v31Body":
       "You completed the updated version of Security Career Discovery. Your report covers your career pattern, your story and the career areas that fit you best.",

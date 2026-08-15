@@ -407,6 +407,58 @@ ok(
 );
 
 // =========================================================================
+group("6c · Real current profession overrides the DNA-inferred pivot guess (Mandate item 5)");
+// =========================================================================
+
+// Same HIGH_FLIER dims and developing_current_role baseline as group 6 —
+// without a self-reported current profession, the pivot classifier infers
+// "primary direction" from the candidate's own best-fitting distance>=0
+// match, which lands on Säkerhetssamordnare/Säkerhetschef's area (SCA04).
+// Under that guess, BOTH Skyddsvakt (SCA01) and Polis (SCA02) would read as
+// career pivots — a real risk of a wrong guess for a flat/broad profile.
+const noCurrentProfession = matchProfessions(HIGH_FLIER, CATALOG, "developing_current_role");
+const noCurrentProfessionSkyddsvakt = noCurrentProfession.matches.find(
+  (m) => m.professionId === "SP003",
+);
+ok(
+  noCurrentProfessionSkyddsvakt?.stage === "career_pivot",
+  "6c.1 without a reported current profession, Skyddsvakt reads as career_pivot from the DNA-inferred guess alone",
+);
+
+// The SAME dims, but the candidate has self-reported their real current
+// profession as Skyddsvakt itself. The real fact should now ground the
+// "primary direction" at SCA01, not SCA04 — Skyddsvakt is where they
+// actually are, not a pivot away from it.
+const withCurrentProfession = matchProfessions(
+  HIGH_FLIER,
+  CATALOG,
+  "developing_current_role",
+  "skyddsvakt",
+);
+const withCurrentProfessionSkyddsvakt = withCurrentProfession.matches.find(
+  (m) => m.professionId === "SP003",
+);
+const withCurrentProfessionPolis = withCurrentProfession.matches.find(
+  (m) => m.professionId === "SP005",
+);
+const withCurrentProfessionCoordinator = withCurrentProfession.matches.find(
+  (m) => m.professionId === "SP006",
+);
+
+ok(
+  withCurrentProfessionSkyddsvakt?.stage === "explore_now",
+  "6c.2 with current profession = Skyddsvakt (SCA01), Skyddsvakt itself is 'explore now', not a pivot away from where the candidate actually is",
+);
+ok(
+  withCurrentProfessionPolis?.stage === "career_pivot",
+  "6c.3 Polis (SCA02, entry, behind baseline) is still a pivot -- a genuinely different area from the candidate's real current profession",
+);
+ok(
+  withCurrentProfessionCoordinator?.stage === "explore_now",
+  "6c.4 Säkerhetssamordnare (SCA04, distance 0) is unaffected by which primary-direction source is used -- distance >= 0 never triggers pivot classification regardless",
+);
+
+// =========================================================================
 group("7 · Career changer is not reset to an entry baseline");
 // =========================================================================
 

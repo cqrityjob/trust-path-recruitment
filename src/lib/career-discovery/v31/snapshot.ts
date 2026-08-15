@@ -185,6 +185,13 @@ export interface BuildSnapshotInput {
   /** Stamped onto the snapshot when professionCatalog is non-empty. A real
    *  calibration_version string from the DB, not invented here. */
   readonly professionCalibrationVersion?: string;
+  /** The candidate's self-reported current profession, as a CIG slug
+   *  (../career-context.ts, Master Completion Mandate item 2) — contextual
+   *  self-report, collected AFTER the 26 scored questions. Read only to
+   *  ground career-pivot classification in fact when it matches a
+   *  profession in professionCatalog (see ./professions.ts's
+   *  classifyStagesWithPivots) — never fed into dimension scoring. */
+  readonly currentProfessionCigSlug?: string | null;
 }
 
 function storedDimensions(dims: DimensionResult, locale: Locale): StoredDimension[] {
@@ -229,12 +236,18 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     professionCatalog = [],
     contextStatus = null,
     professionCalibrationVersion,
+    currentProfessionCigSlug = null,
   } = input;
 
   const dims = scoreDimensions(answers);
   const patterns = resolvePatterns(dims);
   const areas = rankCareerAreas(dims);
-  const professionResult = matchProfessions(dims, professionCatalog, contextStatus);
+  const professionResult = matchProfessions(
+    dims,
+    professionCatalog,
+    contextStatus,
+    currentProfessionCigSlug,
+  );
 
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";
   const leadingDef = patterns.leading ? PATTERNS[patterns.leading] : null;

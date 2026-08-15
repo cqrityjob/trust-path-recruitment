@@ -53,8 +53,18 @@ import {
   LikertScale,
   SelectableAnswer,
 } from "@/components/career-discovery/v31/shell/QuestionCard";
+import { CareerContextStep } from "@/components/career-discovery/v31/CareerContextStep";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  clearCareerContext,
+  EMPTY_CAREER_CONTEXT,
+  isCareerContextComplete,
+  readCareerContext,
+  shouldCollectCareerContext,
+  writeCareerContext,
+  type CareerContext,
+} from "@/lib/career-discovery/career-context";
 import { CORE_ITEM_BY_ID } from "@/lib/career-discovery/v31/core-items";
 import { OPTION_SET_BY_QUESTION } from "@/lib/career-discovery/v31/option-matrix";
 import {
@@ -103,6 +113,13 @@ type Phase =
   | "unavailable"
   | "intro"
   | "questions"
+  // Master Completion Mandate item 2: a short, optional, non-scored step
+  // between the 26th question and the report, shown only when C1 means the
+  // candidate already works in security in some capacity — see
+  // shouldCollectCareerContext. Its own phase, not folded into "questions",
+  // because it is not one of the frozen 26 and must never be counted as one
+  // (see AssessmentProgressBar's `total`, which stays MVP_QUESTION_COUNT).
+  | "career-context"
   | "result"
   | "persisting"
   | "failed";
@@ -151,8 +168,21 @@ export function PublicAssessmentFlow() {
   const [buffer, setBuffer] = useState<PublicBuffer | null>(null);
   const [index, setIndex] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
+  const [careerContext, setCareerContext] = useState<CareerContext>(EMPTY_CAREER_CONTEXT);
   /** In-flight guard for persistence. See onSaveAndSignIn. */
   const persistingRef = useRef(false);
+
+  // The terminal phase for a just-completed 26-question buffer: the career
+  // context step when C1 makes it relevant and it isn't already answered,
+  // the report otherwise. Shared by the resume path and the live-advance
+  // path below so they can never disagree.
+  const phaseAfterQuestions = useCallback(
+    (status: ReturnType<typeof contextStatusOf>, ctx: CareerContext): Phase =>
+      shouldCollectCareerContext(status) && !isCareerContextComplete(ctx)
+        ? "career-context"
+        : "result",
+    [],
+  );
 
   // Availability and auth state, resolved together before anything renders.
   useEffect(() => {
@@ -179,6 +209,8 @@ export function PublicAssessmentFlow() {
         }
         // Resume an in-flight run if this tab has one.
         const existing = readBuffer();
+        const resumedCareerContext = readCareerContext();
+        setCareerContext(resumedCareerContext);
         if (existing) {
           // A buffer completed before this build shipped markComplete has no
           // frozen completedAt yet — stamp it now, once, same as a fresh
@@ -192,7 +224,11 @@ export function PublicAssessmentFlow() {
           const answered = new Set(resumed.answers.map((a) => a.itemId));
           const next = ids.findIndex((id) => !answered.has(id));
           setIndex(next === -1 ? Math.max(0, ids.length - 1) : next);
-          setPhase(isComplete(resumed) ? "result" : "questions");
+          setPhase(
+            isComplete(resumed)
+              ? phaseAfterQuestions(contextStatusOf(resumed), resumedCareerContext)
+              : "questions",
+          );
           return;
         }
         setPhase("intro");
@@ -232,7 +268,7 @@ export function PublicAssessmentFlow() {
         // — so the result view and, later, the saved report agree on when
         // the run finished (see PublicBuffer.completedAt).
         setBuffer(markComplete(next, new Date().toISOString()));
-        setPhase("result");
+        setPhase(phaseAfterQuestions(contextStatusOf(next), careerContext));
         track("assessment_completed");
         return;
       }
@@ -244,7 +280,7 @@ export function PublicAssessmentFlow() {
       const nextIndex = ids.findIndex((id) => !answered.has(id));
       setIndex(nextIndex === -1 ? Math.min(index + 1, ids.length - 1) : nextIndex);
     },
-    [index, track],
+    [index, track, careerContext, phaseAfterQuestions],
   );
 
   async function onSaveAndSignIn() {
@@ -272,11 +308,20 @@ export function PublicAssessmentFlow() {
     setPhase("persisting");
     try {
       const result = await persist({
-        data: { locale: buffer.locale, answers: buffer.answers, completedAt: buffer.completedAt },
+        data: {
+          locale: buffer.locale,
+          answers: buffer.answers,
+          completedAt: buffer.completedAt,
+          // Contextual self-report, never scored — see career-context.ts.
+          // Absent (undefined) when the step was never relevant/shown for
+          // this candidate, distinct from an answered "prefer not to say".
+          careerContext: careerContext.currentProfessionStatus ? careerContext : undefined,
+        },
       });
       // ONLY now. Clearing before a confirmed write would destroy the
       // candidate's answers with nothing stored in exchange.
       clearBuffer();
+      clearCareerContext();
       track("result_claimed");
       navigate({
         to: "/security-career-assessment/report/$snapshotId",
@@ -333,6 +378,7 @@ export function PublicAssessmentFlow() {
         locale: buffer.locale,
         completedAt: buffer.completedAt ?? new Date().toISOString(),
         contextStatus,
+        currentProfessionCigSlug: careerContext.currentProfessionSlug,
         // No professionCatalog: an anonymous browser session has no
         // business reading cd_professions (RLS grants it to `authenticated`
         // only), and nothing is approved for ranking yet regardless — the
@@ -347,7 +393,7 @@ export function PublicAssessmentFlow() {
       console.error("[v31] client-side result computation failed", err.failures);
       return null;
     }
-  }, [buffer]);
+  }, [buffer, careerContext]);
 
   useEffect(() => {
     if (phase === "result" && clientSnapshot) track("result_viewed");
@@ -510,11 +556,37 @@ export function PublicAssessmentFlow() {
             backDisabled={index === 0}
             forward={
               isComplete(buffer)
-                ? { label: t("cd.public.toResult"), onClick: () => setPhase("result") }
+                ? {
+                    label: t("cd.public.toResult"),
+                    onClick: () =>
+                      setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext)),
+                  }
                 : undefined
             }
           />
         </AssessmentCard>
+      </AssessmentShell>
+    );
+  }
+
+  if (phase === "career-context") {
+    return (
+      <AssessmentShell showExit>
+        <CareerContextStep
+          value={careerContext}
+          onChange={(next) => {
+            setCareerContext(next);
+            writeCareerContext(next);
+          }}
+          onContinue={() => {
+            track("career_context_completed", {
+              currentProfessionStatus: careerContext.currentProfessionStatus ?? "",
+              experienceBand: careerContext.experienceBand ?? "",
+            });
+            setPhase("result");
+          }}
+          locale={lang === "en" ? "en" : "sv"}
+        />
       </AssessmentShell>
     );
   }

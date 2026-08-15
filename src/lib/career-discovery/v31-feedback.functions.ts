@@ -22,6 +22,7 @@ const publicClient = supabase as any;
 export const FUNNEL_EVENT_NAMES = [
   "assessment_started",
   "assessment_completed",
+  "career_context_completed",
   "result_viewed",
   "profession_explored",
   "pathway_opened",

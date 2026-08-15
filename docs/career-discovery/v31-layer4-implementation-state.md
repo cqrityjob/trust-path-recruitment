@@ -239,3 +239,63 @@ Väktare/Ordningsvakt/Skyddsvakt/Polis still correctly lead the Väktare
 persona's own results, unaffected. 138 golden-persona checks green (down
 from 144 — fewer, more honest matches per persona is the expected effect,
 not a regression), 42 professions-check checks green, `tsc` clean.
+
+### Current career context (Mandate item 2) + Career Pivot refinement (item 5)
+
+Built the minimal, optional, post-assessment step: `src/lib/career-discovery/
+career-context.ts` (types + its own sessionStorage key, deliberately
+separate from `v31-public-buffer.ts` — never merged into the 26-question
+buffer, never read by `v31/scoring.ts`), `career-context.functions.ts`
+(`listCigProfessionsForPicker`, public/anon-readable, same pattern as
+`getProfessionDetails`), and `CareerContextStep.tsx` (searchable profession
+picker + experience-band chips + "not listed" / "prefer not to say").
+Shown as a new `"career-context"` phase in `PublicAssessmentFlow.tsx`,
+inserted between the 26th question and the report, ONLY when
+`shouldCollectCareerContext(contextStatus)` is true (i.e. C1 means the
+candidate already works in security in some capacity — never shown to
+`exploring_security`). Three new nullable `cd_sessions` columns
+(`current_profession_slug`, `current_profession_status`,
+`current_experience_band`) via
+`20260815140000_cd_career_context_fields.sql`, applied to hosted Supabase.
+`persistPublicV31Run` writes them; the anonymous client-side snapshot and
+the server-persisted one both read the same `CareerContext` shape.
+
+This is immediately consumed by `matchProfessions`'s new optional
+`currentProfessionCigSlug` parameter (`professions.ts`): when the candidate's
+self-reported current profession matches a profession in the catalogue,
+`classifyStagesWithPivots` grounds the career-pivot "primary direction" in
+that VERIFIED fact instead of guessing it from the candidate's best-fitting
+distance>=0 match. Regression-proven (professions-check.ts group 6c): same
+HIGH_FLIER dims, same developing-baseline context — without a reported
+current profession, Skyddsvakt reads as `career_pivot` from the DNA-inferred
+guess; with current profession self-reported as Skyddsvakt itself, Skyddsvakt
+correctly becomes `explore_now` (it's where the candidate actually is, not a
+pivot away from it), while Polis (a genuinely different area) still reads as
+`career_pivot`. 46 professions-check checks green, 138 golden-persona checks
+green (unaffected — none of the golden personas pass a current-profession
+slug), `tsc` clean.
+
+**Known limitation, disclosed rather than worked around**: this session's
+`.env.local` deliberately points the local dev server only at a local
+Supabase stack ("the live project reference is deliberately absent" — its
+own header comment), and the local stack needs Docker, which is not running
+in this environment (`supabase status` fails: `dial unix
+/var/run/docker.sock: ... no such file or directory`). Live browser
+verification of the new career-context step's actual rendered UI was
+therefore not possible this pass — verification is code-level only (`tsc`,
+the regression suites above, and manual trace of the phase-routing logic
+against the already-shipped, browser-verified 26-question flow's identical
+pattern). Did not override the `.env.local` boundary to point at the live
+project for this. Flagging for next session: either get Docker running here,
+or have the owner click through `/security-career-assessment` as a
+"working_in_security" persona and confirm the new step renders and behaves
+as designed.
+
+Not yet done from item 5's fuller ask: using CIG transition-graph edges
+(`cig_career_transitions`) and the experience-band value itself to further
+refine pivot/stage classification. The current-profession-area grounding
+above is the single highest-value, best-evidenced piece (directly fixes the
+mandate's own worked examples); layering in transition-graph edges as a
+further refinement is a reasonable next increment, deliberately not done
+now to avoid the mandate's own "reduced not increased complexity" /
+over-engineering warning without a concrete worked example that needs it.
