@@ -838,3 +838,81 @@ Lovable support with this exact repro: push, deploy, compare local
 `.output/public/assets/<Component>-*.js` content against the live URL's
 same-named chunk) or requires the owner to trigger a manual Publish from
 the editor UI.
+
+## Owner Security Manager scenario — engine fix shipped, deploy lag recurred a 4th time (SHA 0472b77)
+
+Real, live-reported defect: a senior Säkerhetschef (Head of Security) with
+8+ years experience answered C1 with the generic, honestly-true
+"working_in_security" and, only later, named their actual current
+profession + experience. `CANDIDATE_STAGE_BASELINE["working_in_security"] =
+0` (entry rank) was still deciding career-stage even after the concrete
+profession/experience were known — every entry-level guarding profession
+computed distance 0 ("explore now", most prominent) while their own senior
+role computed distance +2 ("longer-term"). Root cause confirmed by reading
+`professions.ts`'s baseline derivation directly: it read `contextStatus`
+only, never `currentProfessionCigSlug` or `experienceBand`, despite both
+being collected and persisted.
+
+**Fix**: new `resolveStageBaseline()` in `professions.ts` — prefers the
+known current profession's own catalogued `careerStage`, refined upward
+(never downward) by self-reported experience, falling back to C1 alone
+only when no concrete profession is known (byte-for-byte unchanged for
+that case — item 2's "unknown stays unknown" preserved for both profession
+identity and stage inference). Threaded through `matchProfessions` /
+`matchProfessionsDiagnostics` / `snapshot.ts` / `v31-public.functions.ts` /
+`v31-owner-preview.functions.ts`, plus an experience-band selector added to
+the admin owner-preview tool so this is directly testable there.
+
+Also fixed, same pass: "Career areas that fit you" (Career-DNA-only
+ranking, always live regardless of `approved_for_ranking`) had no
+disclaimer distinguishing it from a job recommendation — a ranked
+"01/02/03" card grid could read as "the platform wants me to be a guard"
+to a scrolling reader who missed the small YOU ARE HERE note above it.
+Added an always-shown clarifier sentence under the heading, both locales.
+
+**Real rendered before/after** (full 14-profession catalog, realistic
+mixed Säkerhetschef DNA profile — leadership/strategic signals genuinely
+strong, plus genuine secondary operational signal, so real DNA evidence
+exists on both sides and neither is fabricated nor hidden):
+
+BEFORE: strongest directions = Security Officer (Väktare), Protective
+Security Guard, Police Officer — three frontline guarding roles at the
+top. Head of Security (their own real role) buried in "longer-term
+possibilities". Zero career pivots (nothing was behind the wrongly-inflated
+"entry" baseline once C1's own coarse mapping put everyone at rank 0).
+
+AFTER: YOU ARE HERE = Head of Security, correctly excluded from discovery.
+Strongest directions = Security Coordinator, Risk Manager — plausible
+senior-tier progression. All five frontline/guarding professions (Väktare,
+Protective Security Guard, Police Officer, Public Order Guard, Close
+Protection Officer) reclassified to career pivots — visible, not hidden,
+but no longer presented as the primary next direction. Profession Affinity
+(`fitScore`) confirmed byte-identical between BEFORE and AFTER for every
+profession — Career DNA and Affinity are provably untouched by this fix.
+
+**Tests**: 15 new regression checks (`professions-check.ts` group 12,
+scenarios A–E from the acceptance mandate: known senior profession + 8+
+years under two different C1 answers; entry-level profession + 1-3 years
+proving no false promotion; a developing-level profession + 8+ years
+proving experience *can* refine baseline upward when combined with a known
+profession; unknown current profession proving experience alone, with no
+profession, changes nothing). Two pre-existing assertions in group 6c were
+corrected — they had encoded the old, buggy C1-only baseline as expected
+behavior; the fix makes their scenario (an entry-level Skyddsvakt) resolve
+correctly too, which was itself further, incidental proof the bug was real
+and had been affecting entry-level candidates in the opposite direction
+(wrongly inflating their baseline via C1's `developing_current_role`
+answer). Full suite: 971/971 (was 956), `tsc` clean, `bun run build`
+clean.
+
+**Deployment status**: pushed to `origin/main` at `0472b77`, confirmed via
+`git ls-remote`. `deploy_project` called 3 times; `get_project` metadata
+reports `latest_commit_sha: "0472b77..."` and `status: "ready"` after each
+call, but a cache-busted, `no-store` byte-level check of the live
+`V31ReportView-*.js` chunk shows it is STILL the pre-`0472b77` build (no
+`areasClarifier` marker, same content hash as the previous deploy) as of
+this writing. This is the same one/two-build-lag pattern documented above
+for `42beae7`, recurring a fourth time. The engine fix itself is real,
+tested, and correct at the source; only the live-bundle publish is
+unconfirmed. Needs either another retry pass or a manual Publish from the
+Lovable editor.
