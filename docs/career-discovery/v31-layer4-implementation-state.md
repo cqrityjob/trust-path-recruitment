@@ -818,3 +818,23 @@ git history for the exact exchange. Flagging here so a future session (or
 the owner directly, via the Lovable editor's own Publish button) knows this
 specific commit's live status is unconfirmed, independent of what
 `get_project` metadata claims.
+
+**Refined finding after the next push (`42beae7`, item 9)**: the pattern is
+not simple staleness, it is a consistent **one-build lag**. After pushing
+`42beae7` and calling `deploy_project`, `get_project` reported
+`latest_commit_sha: "42beae7..."`, and the live bundle's hashes DID change
+(new `V31ReportView-*.js`, new admin chunk) — genuinely rebuilt, not the
+old byte-identical case from before. But comparing the live
+`V31ReportView-*.js` against the local build output of the SAME commit
+(`grep -rl yourPath .output/public/assets/`) showed the live version
+carries `c5c28c8`'s content (`youAreHereEyebrow` present — item 8) but NOT
+`42beae7`'s (`yourPath` — item 9 — absent). I.e. each `deploy_project` call
+appears to publish the PREVIOUS successful build's artifacts, one push
+behind the commit its own metadata reports. A same-commit re-deploy (no new
+push) did not close the gap on this attempt either. Documented precisely
+so a future session doesn't waste time re-diagnosing from scratch — the
+fix is either a Lovable-side publish-pipeline issue (worth reporting to
+Lovable support with this exact repro: push, deploy, compare local
+`.output/public/assets/<Component>-*.js` content against the live URL's
+same-named chunk) or requires the owner to trigger a manual Publish from
+the editor UI.
