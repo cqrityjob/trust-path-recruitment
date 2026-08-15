@@ -56,6 +56,7 @@ export type StoredReportResult =
   | {
       readonly status: "v3.1";
       readonly snapshotId: string;
+      readonly sessionId: string | null;
       readonly generatedAt: string;
       readonly versions: StoredReportVersions;
       readonly snapshot: ReportSnapshot;
@@ -78,7 +79,7 @@ export const getStoredDiscoveryReport = createServerFn({ method: "GET" })
     const { data: row } = await ctx.supabase
       .from("cd_report_snapshots")
       .select(
-        "id, generated_at, definition_version, content_version, scoring_version, taxonomy_version, dna_scores",
+        "id, session_id, generated_at, definition_version, content_version, scoring_version, taxonomy_version, dna_scores",
       )
       .eq("id", data.snapshotId)
       .maybeSingle();
@@ -113,6 +114,7 @@ export const getStoredDiscoveryReport = createServerFn({ method: "GET" })
       return {
         status: "v3.1",
         snapshotId,
+        sessionId: (row.session_id as string | null) ?? null,
         generatedAt,
         versions,
         // Verbatim stored payload. classifyStoredReport has already confirmed

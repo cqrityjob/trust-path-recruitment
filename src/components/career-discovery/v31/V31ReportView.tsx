@@ -19,6 +19,7 @@
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
@@ -28,6 +29,7 @@ import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
 import type { ReportSnapshot } from "@/lib/career-discovery/v31/snapshot";
 import type { StoredReportVersions } from "@/lib/career-discovery/stored-report.functions";
+import { setCareerGoal } from "@/lib/career-discovery/v31-feedback.functions";
 
 /** Presentation order of the seven story questions. Declared here rather than
  *  imported so a change to the live story module can never re-order a report
@@ -72,6 +74,10 @@ export function V31ReportView({
    *  they are hidden rather than pointed at a page that would 401. */
   mode = "authenticated",
   onCareerCardEvent,
+  /** Present only for a claimed, owned report (see cd_career_goals) —
+   *  "Set as career goal" is hidden without it rather than shown and
+   *  failing against RLS. */
+  sessionId,
 }: {
   snapshot: ReportSnapshot;
   generatedAt: string;
@@ -81,9 +87,26 @@ export function V31ReportView({
   /** Privacy-safe funnel events (Execution Mandate §34) — forwarded from
    *  CareerCardCreator; the host decides how/whether to record them. */
   onCareerCardEvent?: (name: string, detail?: Record<string, unknown>) => void;
+  sessionId?: string | null;
 }) {
   const { t, lang } = useT();
   const [careerCardMatch, setCareerCardMatch] = useState<ProfessionMatch | null>(null);
+  const [goalProfessionId, setGoalProfessionId] = useState<string | null>(null);
+  const [settingGoal, setSettingGoal] = useState(false);
+  const setGoal = useServerFn(setCareerGoal);
+
+  async function handleSetGoal(match: ProfessionMatch) {
+    if (!sessionId || settingGoal) return;
+    setSettingGoal(true);
+    try {
+      await setGoal({ data: { sessionId, professionId: match.professionId } });
+      setGoalProfessionId(match.professionId);
+    } catch (err) {
+      console.error("[v31] set career goal failed", err);
+    } finally {
+      setSettingGoal(false);
+    }
+  }
 
   const dimensionScores: Readonly<Record<DimensionId, number | null>> = Object.fromEntries(
     snapshot.outputA.dimensions.map((d) => [d.id, d.score]),
@@ -263,6 +286,11 @@ export function V31ReportView({
               longerTermPossibilities={snapshot.professions.longerTermPossibilities}
               locale={lang === "en" ? "en" : "sv"}
               onOpenCareerCard={setCareerCardMatch}
+              sessionId={sessionId}
+              goalProfessionId={goalProfessionId}
+              onSetGoal={(match) => void handleSetGoal(match)}
+              settingGoal={settingGoal}
+              onEvent={onCareerCardEvent}
             />
           </div>
         </>

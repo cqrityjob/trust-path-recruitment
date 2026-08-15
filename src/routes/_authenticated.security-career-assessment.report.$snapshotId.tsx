@@ -95,6 +95,7 @@ function DiscoveryReportRoute() {
           snapshot={data.snapshot}
           generatedAt={data.generatedAt}
           versions={data.versions}
+          sessionId={data.sessionId}
         />
       </AssessmentLayout>
     );

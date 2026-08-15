@@ -64,6 +64,7 @@ import { Route as AuthenticatedAdminResultsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as AuthenticatedAdminFeedbackRouteImport } from './routes/_authenticated.admin.feedback'
 import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authenticated.admin.employers'
+import { Route as AuthenticatedAdminCareerDiscoveryPreviewRouteImport } from './routes/_authenticated.admin.career-discovery-preview'
 import { Route as AuthenticatedAdminAssignmentsRouteImport } from './routes/_authenticated.admin.assignments'
 import { Route as AuthenticatedAdminAssessmentsRouteImport } from './routes/_authenticated.admin.assessments'
 import { Route as AuthenticatedAdminApplicationsRouteImport } from './routes/_authenticated.admin.applications'
@@ -408,6 +409,12 @@ const AuthenticatedAdminEmployersRoute =
   AuthenticatedAdminEmployersRouteImport.update({
     id: '/employers',
     path: '/employers',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminCareerDiscoveryPreviewRoute =
+  AuthenticatedAdminCareerDiscoveryPreviewRouteImport.update({
+    id: '/career-discovery-preview',
+    path: '/career-discovery-preview',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminAssignmentsRoute =
@@ -763,6 +770,7 @@ export interface FileRoutesByFullPath {
   '/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
+  '/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
@@ -862,6 +870,7 @@ export interface FileRoutesByTo {
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
+  '/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
@@ -965,6 +974,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
   '/_authenticated/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/_authenticated/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
+  '/_authenticated/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/_authenticated/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
@@ -1074,6 +1084,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/assessments'
     | '/admin/assignments'
+    | '/admin/career-discovery-preview'
     | '/admin/employers'
     | '/admin/feedback'
     | '/admin/jobs'
@@ -1173,6 +1184,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
     | '/academy/$attemptId'
+    | '/admin/career-discovery-preview'
     | '/admin/feedback'
     | '/discovery/history'
     | '/discovery/session'
@@ -1275,6 +1287,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/applications'
     | '/_authenticated/admin/assessments'
     | '/_authenticated/admin/assignments'
+    | '/_authenticated/admin/career-discovery-preview'
     | '/_authenticated/admin/employers'
     | '/_authenticated/admin/feedback'
     | '/_authenticated/admin/jobs'
@@ -1756,6 +1769,13 @@ declare module '@tanstack/react-router' {
       path: '/employers'
       fullPath: '/admin/employers'
       preLoaderRoute: typeof AuthenticatedAdminEmployersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/career-discovery-preview': {
+      id: '/_authenticated/admin/career-discovery-preview'
+      path: '/career-discovery-preview'
+      fullPath: '/admin/career-discovery-preview'
+      preLoaderRoute: typeof AuthenticatedAdminCareerDiscoveryPreviewRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/assignments': {
@@ -2261,6 +2281,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminApplicationsRoute: typeof AuthenticatedAdminApplicationsRouteWithChildren
   AuthenticatedAdminAssessmentsRoute: typeof AuthenticatedAdminAssessmentsRouteWithChildren
   AuthenticatedAdminAssignmentsRoute: typeof AuthenticatedAdminAssignmentsRouteWithChildren
+  AuthenticatedAdminCareerDiscoveryPreviewRoute: typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   AuthenticatedAdminEmployersRoute: typeof AuthenticatedAdminEmployersRouteWithChildren
   AuthenticatedAdminFeedbackRoute: typeof AuthenticatedAdminFeedbackRoute
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
@@ -2278,6 +2299,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
     AuthenticatedAdminAssessmentsRouteWithChildren,
   AuthenticatedAdminAssignmentsRoute:
     AuthenticatedAdminAssignmentsRouteWithChildren,
+  AuthenticatedAdminCareerDiscoveryPreviewRoute:
+    AuthenticatedAdminCareerDiscoveryPreviewRoute,
   AuthenticatedAdminEmployersRoute:
     AuthenticatedAdminEmployersRouteWithChildren,
   AuthenticatedAdminFeedbackRoute: AuthenticatedAdminFeedbackRoute,

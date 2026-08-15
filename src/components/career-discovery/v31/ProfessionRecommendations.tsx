@@ -12,7 +12,7 @@
 // approval is the only remaining step between "built" and "live" —
 // Execution Mandate §29's "build it completely, keep the flag off" rule.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
@@ -90,12 +90,15 @@ function ProfessionDetailBody({
   detail,
   locale,
   jobsHref,
+  onEvent,
 }: {
   detail: ProfessionDetail | undefined;
   locale: Locale;
   jobsHref: string;
+  onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
   const { t } = useT();
+  const pathwayFiredRef = useRef(false);
 
   if (!detail) {
     return (
@@ -111,6 +114,11 @@ function ProfessionDetailBody({
       : (detail.overviewEn ?? detail.summaryEn);
   const pathwayFrom = detail.pathway.filter((p) => p.direction === "from");
   const pathwayTo = detail.pathway.filter((p) => p.direction === "to");
+
+  if ((pathwayFrom.length > 0 || pathwayTo.length > 0) && !pathwayFiredRef.current) {
+    pathwayFiredRef.current = true;
+    onEvent?.("pathway_opened", { professionSlug: detail.slug });
+  }
 
   return (
     <div className="space-y-6">
@@ -177,6 +185,7 @@ function ProfessionDetailBody({
 
       <a
         href={jobsHref}
+        onClick={() => onEvent?.("jobs_clicked", { professionSlug: detail.slug })}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
       >
         {t("careerDiscovery.report.v31.currentJobsInDirection")}
@@ -191,11 +200,24 @@ function ProfessionCard({
   locale,
   detail,
   onOpenCareerCard,
+  sessionId,
+  isGoal,
+  onSetGoal,
+  settingGoal,
+  onEvent,
 }: {
   match: ProfessionMatch;
   locale: Locale;
   detail: ProfessionDetail | undefined;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
+  /** Present only once a result is claimed — setting a goal needs a real
+   *  owned cd_sessions row (see setCareerGoal). Absent for an anonymous
+   *  preview, so the action is hidden rather than shown and failing. */
+  sessionId?: string | null;
+  isGoal?: boolean;
+  onSetGoal?: (match: ProfessionMatch) => void;
+  settingGoal?: boolean;
+  onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
   const { t } = useT();
   const explanation = explainMatch(match, locale);
@@ -203,13 +225,22 @@ function ProfessionCard({
   const jobsHref = match.cigProfessionSlug
     ? `/jobs/profession/${encodeURIComponent(match.cigProfessionSlug)}`
     : "/jobs";
+  const exploredFiredRef = useRef(false);
 
   return (
     <AccordionItem
       value={match.professionId}
       className="rounded-lg border border-border bg-background px-5 last:border-b"
     >
-      <AccordionTrigger className="py-5 hover:no-underline [&>svg]:hidden">
+      <AccordionTrigger
+        className="py-5 hover:no-underline [&>svg]:hidden"
+        onClick={() => {
+          if (!exploredFiredRef.current) {
+            exploredFiredRef.current = true;
+            onEvent?.("profession_explored", { professionId: match.professionId });
+          }
+        }}
+      >
         <div className="flex w-full flex-wrap items-start justify-between gap-3 text-left">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -242,16 +273,40 @@ function ProfessionCard({
             {explanation.limitationNote}
           </p>
         )}
-        <ProfessionDetailBody detail={detail} locale={locale} jobsHref={jobsHref} />
-        {onOpenCareerCard && (
-          <button
-            type="button"
-            onClick={() => onOpenCareerCard(match)}
-            className="mt-6 inline-flex h-10 items-center rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
-          >
-            {t("careerDiscovery.report.v31.createCareerCardFor")}
-          </button>
-        )}
+        <ProfessionDetailBody
+          detail={detail}
+          locale={locale}
+          jobsHref={jobsHref}
+          onEvent={onEvent}
+        />
+        <div className="mt-6 flex flex-wrap gap-3">
+          {onOpenCareerCard && (
+            <button
+              type="button"
+              onClick={() => onOpenCareerCard(match)}
+              className="inline-flex h-10 items-center rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
+            >
+              {t("careerDiscovery.report.v31.createCareerCardFor")}
+            </button>
+          )}
+          {sessionId && onSetGoal && (
+            <button
+              type="button"
+              onClick={() => onSetGoal(match)}
+              disabled={settingGoal}
+              aria-pressed={Boolean(isGoal)}
+              className={`inline-flex h-10 items-center rounded-[10px] border px-4 text-sm font-medium transition-colors disabled:opacity-60 ${
+                isGoal
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border bg-card text-foreground hover:bg-[color:var(--surface-subtle)]"
+              }`}
+            >
+              {isGoal
+                ? t("careerDiscovery.report.v31.goalSet")
+                : t("careerDiscovery.report.v31.setAsGoal")}
+            </button>
+          )}
+        </div>
       </AccordionContent>
     </AccordionItem>
   );
@@ -263,12 +318,22 @@ function Tier({
   locale,
   detailsBySlug,
   onOpenCareerCard,
+  sessionId,
+  goalProfessionId,
+  onSetGoal,
+  settingGoal,
+  onEvent,
 }: {
   heading: string;
   matches: readonly ProfessionMatch[];
   locale: Locale;
   detailsBySlug: Record<string, ProfessionDetail>;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
+  sessionId?: string | null;
+  goalProfessionId?: string | null;
+  onSetGoal?: (match: ProfessionMatch) => void;
+  settingGoal?: boolean;
+  onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
   if (matches.length === 0) return null;
   return (
@@ -282,6 +347,11 @@ function Tier({
             locale={locale}
             detail={m.cigProfessionSlug ? detailsBySlug[m.cigProfessionSlug] : undefined}
             onOpenCareerCard={onOpenCareerCard}
+            sessionId={sessionId}
+            isGoal={goalProfessionId === m.professionId}
+            onSetGoal={onSetGoal}
+            settingGoal={settingGoal}
+            onEvent={onEvent}
           />
         ))}
       </Accordion>
@@ -295,12 +365,23 @@ export function ProfessionRecommendations({
   longerTermPossibilities,
   locale,
   onOpenCareerCard,
+  sessionId,
+  goalProfessionId,
+  onSetGoal,
+  settingGoal,
+  onEvent,
 }: {
   strongestDirections: readonly ProfessionMatch[];
   alsoWorthExploring: readonly ProfessionMatch[];
   longerTermPossibilities: readonly ProfessionMatch[];
   locale: Locale;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
+  /** Present only for a claimed (authenticated, owned) result. */
+  sessionId?: string | null;
+  goalProfessionId?: string | null;
+  onSetGoal?: (match: ProfessionMatch) => void;
+  settingGoal?: boolean;
+  onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
   const allSlugs = [...strongestDirections, ...alsoWorthExploring, ...longerTermPossibilities]
     .map((m) => m.cigProfessionSlug)
@@ -324,6 +405,11 @@ export function ProfessionRecommendations({
         locale={locale}
         detailsBySlug={detailsBySlug}
         onOpenCareerCard={onOpenCareerCard}
+        sessionId={sessionId}
+        goalProfessionId={goalProfessionId}
+        onSetGoal={onSetGoal}
+        settingGoal={settingGoal}
+        onEvent={onEvent}
       />
       <Tier
         heading={TIER_HEADING.alsoWorth[locale]}
@@ -331,6 +417,11 @@ export function ProfessionRecommendations({
         locale={locale}
         detailsBySlug={detailsBySlug}
         onOpenCareerCard={onOpenCareerCard}
+        sessionId={sessionId}
+        goalProfessionId={goalProfessionId}
+        onSetGoal={onSetGoal}
+        settingGoal={settingGoal}
+        onEvent={onEvent}
       />
       <Tier
         heading={TIER_HEADING.longerTerm[locale]}
@@ -338,6 +429,11 @@ export function ProfessionRecommendations({
         locale={locale}
         detailsBySlug={detailsBySlug}
         onOpenCareerCard={onOpenCareerCard}
+        sessionId={sessionId}
+        goalProfessionId={goalProfessionId}
+        onSetGoal={onSetGoal}
+        settingGoal={settingGoal}
+        onEvent={onEvent}
       />
     </div>
   );
