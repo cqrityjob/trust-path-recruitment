@@ -387,6 +387,24 @@ export function PublicAssessmentFlow() {
         completedAt: buffer.completedAt ?? new Date().toISOString(),
         contextStatus,
         currentProfessionCigSlug: careerContext.currentProfessionSlug,
+        // Real-world defect fix: without this, ReportSnapshot.currentProfession
+        // is always null for the anonymous client-computed report (it
+        // requires BOTH a slug and a resolved title — see v31/snapshot.ts),
+        // so "YOU ARE HERE" could never render here no matter what the
+        // candidate picked. The title is captured client-side at selection
+        // time in CareerContextStep (already had it from the picker's own
+        // fetched list) — no extra query needed here.
+        currentProfessionTitle:
+          careerContext.currentProfessionTitleSv && careerContext.currentProfessionTitleEn
+            ? {
+                sv: careerContext.currentProfessionTitleSv,
+                en: careerContext.currentProfessionTitleEn,
+              }
+            : null,
+        // Same real-world fix, item 4: experience band now has real effect
+        // on stage/pathway interpretation (professions.ts's
+        // resolveStageBaseline) once a profession catalog is present.
+        experienceBand: careerContext.experienceBand,
         discoveryTags,
         // No professionCatalog: an anonymous browser session has no
         // business reading cd_professions (RLS grants it to `authenticated`

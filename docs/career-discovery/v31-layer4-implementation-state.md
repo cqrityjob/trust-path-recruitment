@@ -916,3 +916,74 @@ for `42beae7`, recurring a fourth time. The engine fix itself is real,
 tested, and correct at the source; only the live-bundle publish is
 unconfirmed. Needs either another retry pass or a manual Publish from the
 Lovable editor.
+
+**Resolved**: the deploy lag for `0472b77` was cleared by the owner's
+manual Publish. Independently re-verified byte-level (cache-busted,
+`no-store`, ignoring metadata): the live `V31ReportView`, admin
+career-discovery-preview, and security-career-assessment chunks all show
+fresh content hashes and contain `areasClarifier`, `experience-band-select`,
+`under_1y`/`8_plus_y`, `"Experience (self-reported)"`, and
+`currentProfessionMatch` — none of which existed in the pre-fix build.
+Hosted DB re-confirmed `approved_for_ranking = false` for all 14
+professions via direct query.
+
+## Second real-world gap — YOU ARE HERE never rendered for anonymous candidates (root cause + fix)
+
+Owner re-tested the fixed stage-baseline logic live and found the report
+still never showed "YOU ARE HERE — Säkerhetschef" at all, for anyone,
+despite `snapshot.currentProfession` supposedly being independent of
+`approved_for_ranking`.
+
+**Root cause, found by tracing the exact path** (Career Context step →
+client state → snapshot build → anonymous snapshot → V31ReportView):
+`ReportSnapshot.currentProfession` requires BOTH a slug and a resolved
+title (`snapshot.ts`: `currentProfessionCigSlug !== null &&
+currentProfessionTitle !== null`). The AUTHENTICATED server path
+(`persistPublicV31Run`) correctly resolves the title via
+`fetchCigProfessionTitle`. But the real product default — the anonymous,
+**client-computed** report (`PublicAssessmentFlow.tsx`'s `clientSnapshot`
+memo, the "no login wall" result every real candidate sees first) calls
+`buildValidatedSnapshot` with `currentProfessionCigSlug` only — it never
+passed a title, and never passed `experienceBand` either. `CareerContextStep.tsx`
+had the title in hand at selection time (from `listCigProfessionsForPicker`'s
+already-fetched list) and simply never captured it into `CareerContext`.
+Net effect: `snapshot.currentProfession` was `null` for literally every
+anonymous candidate who ever used the product, regardless of what they
+picked — item 8 and item 9's "YOU ARE HERE" work was correct but
+structurally unreachable from the real, default candidate path.
+
+**Fix**: `CareerContext` (career-context.ts) gained
+`currentProfessionTitleSv`/`currentProfessionTitleEn`, captured in
+`CareerContextStep.tsx` at the moment of selection (no new query — the data
+was already in the picker's fetched list) and cleared alongside the slug on
+every "change role" / "not listed" / "prefer not to say" path.
+`PublicAssessmentFlow.tsx`'s `clientSnapshot` now passes both
+`currentProfessionTitle` and `experienceBand` into `buildValidatedSnapshot`.
+
+**Regression**: new group 14b in `career-discovery-v31-check.ts` (5 checks)
+proves `currentProfession` populates correctly with NO `professionCatalog`
+present (the real anonymous condition) — independent of
+`approved_for_ranking` — and that a slug with no resolved title never
+fabricates a YOU ARE HERE (mirrors item 2's discipline: half-known is not
+known). Full suite now 976/976 (was 971).
+
+**Owner-review mode** (mandate item 2): the existing
+`/admin/career-discovery-preview` route already ran the real matching
+engine, real Affinity/Priority diagnostics, and real `ProfessionRecommendations`
+against the full unapproved catalog. Extended, not redesigned: it now also
+renders the real `PossiblePathway` and `MoveForwardSection` components
+(the exact same ones a candidate sees) plus an explicit "YOU ARE HERE"
+banner, using the same current-profession/experience-band selections
+already wired into the diagnostics table. `PossiblePathway`'s prop type
+was narrowed from the full `ReportSnapshot` to
+`Pick<ReportSnapshot, "professions" | "currentProfession">` (the only two
+fields it reads) specifically so the admin tool — which has no
+patterns/story/areas, only real matching-engine output — could reuse the
+real component rather than a second, diverging copy. `MoveForwardSection`
+needed no change; it already took `matches` directly.
+
+Not independently browser-verified: local dev cannot reach Supabase
+(Docker unavailable, established constraint all session) and no admin
+credentials exist for this session — same disclosed limitation as every
+other admin-route change this session. `tsc`, the full regression suite,
+and `bun run build` are clean.

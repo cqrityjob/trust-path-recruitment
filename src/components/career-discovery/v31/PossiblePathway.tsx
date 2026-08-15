@@ -62,7 +62,11 @@ export function PossiblePathway({
   snapshot,
   locale,
 }: {
-  snapshot: ReportSnapshot;
+  /** Narrowed to only the two fields this component actually reads, so the
+   *  admin owner-preview tool (which has no full ReportSnapshot -- no
+   *  patterns/story/areas, only the real matching-engine output) can reuse
+   *  this exact production component without constructing a fake one. */
+  snapshot: Pick<ReportSnapshot, "professions" | "currentProfession">;
   locale: Locale;
 }) {
   if (snapshot.professions.available !== true) return null;

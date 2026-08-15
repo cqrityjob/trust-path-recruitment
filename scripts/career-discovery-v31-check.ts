@@ -1122,6 +1122,82 @@ ok(
 );
 
 // =========================================================================
+group("14b · Anonymous current-profession snapshot — Owner Security Manager scenario (real-world defect fix)");
+// =========================================================================
+
+// Real defect, found live: the anonymous, client-computed report (no
+// professionCatalog, no account) never resolved a title for the candidate's
+// self-reported current profession -- ReportSnapshot.currentProfession
+// requires BOTH a slug and a resolved title (see v31/snapshot.ts), so "YOU
+// ARE HERE" could never render for an anonymous candidate no matter which
+// profession they picked. Root cause: CareerContextStep never captured the
+// title text it already had in hand from the picker's own fetched list.
+// Proves the underlying contract buildValidatedSnapshot/PublicAssessmentFlow
+// rely on: supplying currentProfessionCigSlug + currentProfessionTitle +
+// experienceBand -- exactly what the fixed client path now does -- produces
+// a frozen snapshot with currentProfession correctly populated, with NO
+// professionCatalog present (the real anonymous-path condition).
+const anonymousCurrentProfessionSnap = buildValidatedSnapshot({
+  answers: archetype("CP08"), // CP08: Strategic Security Leader pattern -- the persona this scenario represents
+  locale: "sv",
+  completedAt: SNAP_AT,
+  currentProfessionCigSlug: "sakerhetschef",
+  currentProfessionTitle: { sv: "Säkerhetschef", en: "Head of Security" },
+  experienceBand: "8_plus_y",
+  // No professionCatalog -- exactly the anonymous client-computed path's
+  // real condition (RLS grants cd_professions to `authenticated` only).
+});
+ok(
+  anonymousCurrentProfessionSnap.currentProfession !== null &&
+    anonymousCurrentProfessionSnap.currentProfession.cigSlug === "sakerhetschef" &&
+    anonymousCurrentProfessionSnap.currentProfession.titleSv === "Säkerhetschef" &&
+    anonymousCurrentProfessionSnap.currentProfession.titleEn === "Head of Security",
+  "14b.1 currentProfession is populated (slug + both locale titles) with NO professionCatalog present -- YOU ARE HERE does not depend on approved_for_ranking",
+);
+ok(
+  anonymousCurrentProfessionSnap.professions.available === false,
+  "14b.2 professions.available stays false (nothing approved) -- currentProfession and profession-catalog availability are genuinely independent",
+);
+eq(
+  validateSnapshot(anonymousCurrentProfessionSnap).length,
+  0,
+  "14b.3 a snapshot with currentProfession but no approved catalog is still fully valid",
+);
+
+// A slug alone, with no resolved title, must NOT populate currentProfession
+// -- half-known data is not "known" (mirrors item 2's "unknown stays
+// unknown" discipline applied to this new field).
+const slugOnlySnap = buildValidatedSnapshot({
+  answers: archetype("CP08"),
+  locale: "sv",
+  completedAt: SNAP_AT,
+  currentProfessionCigSlug: "sakerhetschef",
+  // currentProfessionTitle intentionally omitted.
+});
+eq(
+  slugOnlySnap.currentProfession,
+  null,
+  "14b.4 a slug with no resolved title never fabricates a YOU ARE HERE -- both are required together",
+);
+
+// Determinism: identical inputs, including the new fields, produce a
+// byte-identical snapshot.
+eq(
+  hash(
+    buildValidatedSnapshot({
+      answers: archetype("CP08"),
+      locale: "sv",
+      completedAt: SNAP_AT,
+      currentProfessionCigSlug: "sakerhetschef",
+      currentProfessionTitle: { sv: "Säkerhetschef", en: "Head of Security" },
+      experienceBand: "8_plus_y",
+    }),
+  ),
+  hash(anonymousCurrentProfessionSnap),
+  "14b.5 the same inputs, including current profession + experience, produce a byte-identical snapshot",
+);
+
+// =========================================================================
 console.log("");
 if (failures > 0) {
   console.error(`FAILED: ${failures} of ${checks} checks failed.`);

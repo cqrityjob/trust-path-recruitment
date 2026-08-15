@@ -17,6 +17,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
+import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
+import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
 import { listCigProfessionsForPicker } from "@/lib/career-discovery/career-context.functions";
 import { DIMENSION_IDS, type DimensionId } from "@/lib/career-discovery/v31/dimensions";
@@ -89,6 +91,9 @@ function CareerDiscoveryPreview() {
 
   const diagnostics = matchQuery.data;
   const matches = diagnostics?.result;
+  const selectedCurrentProfession = currentProfessionSlug
+    ? cigProfessionsQuery.data?.find((p) => p.slug === currentProfessionSlug)
+    : undefined;
   const [cardMatch, setCardMatch] = useState<ProfessionMatch | null>(null);
   const dimensionScores = Object.fromEntries(
     DIMENSION_IDS.map((id) => [id, persona.dims[id] ?? null]),
@@ -402,8 +407,32 @@ function CareerDiscoveryPreview() {
 
         <div className="mt-10">
           <h2 className="text-lg font-semibold tracking-tight text-foreground">
-            Rendered result — real production component
+            Rendered result — real production components (the exact same ones a candidate sees)
           </h2>
+
+          {/* YOU ARE HERE — same copy/placement as V31ReportView.tsx, so an
+              owner reviewing here sees exactly what a candidate would.
+              Frozen-report locale rule applies here too: bound to
+              previewLocale, not the admin's own browsing language. */}
+          {selectedCurrentProfession && (
+            <div className="mt-4 flex gap-4 rounded-xl border border-accent/25 bg-card p-5 sm:p-6">
+              <span
+                aria-hidden="true"
+                className="mt-1 h-3 w-3 shrink-0 rounded-full bg-accent ring-4 ring-accent/15"
+              />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+                  {previewLocale === "sv" ? "DU ÄR HÄR" : "YOU ARE HERE"}
+                </p>
+                <p className="mt-2 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                  {previewLocale === "sv"
+                    ? selectedCurrentProfession.titleSv
+                    : selectedCurrentProfession.titleEn}
+                </p>
+              </div>
+            </div>
+          )}
+
           {matches && matches.available ? (
             <div className="mt-4">
               <ProfessionRecommendations
@@ -414,6 +443,25 @@ function CareerDiscoveryPreview() {
                 currentProfessionMatch={matches.currentProfessionMatch}
                 locale={previewLocale}
                 onOpenCareerCard={setCardMatch}
+              />
+              <PossiblePathway
+                snapshot={{
+                  professions: { ...matches, available: true },
+                  currentProfession: selectedCurrentProfession
+                    ? {
+                        cigSlug: selectedCurrentProfession.slug,
+                        titleSv: selectedCurrentProfession.titleSv,
+                        titleEn: selectedCurrentProfession.titleEn,
+                      }
+                    : null,
+                }}
+                locale={previewLocale}
+              />
+              <MoveForwardSection
+                matches={
+                  matches.strongestDirections.length > 0 ? matches.strongestDirections : matches.matches
+                }
+                locale={previewLocale}
               />
             </div>
           ) : (

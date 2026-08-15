@@ -47,12 +47,26 @@ export interface CareerContext {
    *  slug — the canonical cross-product profession identity (see the
    *  SP-ID-reconciliation note in v31-layer4-implementation-state.md). */
   readonly currentProfessionSlug: string | null;
+  /** The picker's own display title for currentProfessionSlug, captured at
+   *  SELECTION time (CareerContextStep already has it in hand from
+   *  listCigProfessionsForPicker — no extra query needed). Real-world defect
+   *  fix: the anonymous, client-computed report (PublicAssessmentFlow.tsx)
+   *  never re-resolves a title from the database the way the authenticated
+   *  server path does (fetchCigProfessionTitle) — without this, "YOU ARE
+   *  HERE" could never render for an anonymous candidate no matter which
+   *  profession they picked, since ReportSnapshot.currentProfession requires
+   *  BOTH a slug and a resolved title (see v31/snapshot.ts). Set only when
+   *  currentProfessionStatus === "selected"; null otherwise. */
+  readonly currentProfessionTitleSv: string | null;
+  readonly currentProfessionTitleEn: string | null;
   readonly experienceBand: ExperienceBand | null;
 }
 
 export const EMPTY_CAREER_CONTEXT: CareerContext = {
   currentProfessionStatus: null,
   currentProfessionSlug: null,
+  currentProfessionTitleSv: null,
+  currentProfessionTitleEn: null,
   experienceBand: null,
 };
 
@@ -105,11 +119,17 @@ export function readCareerContext(): CareerContext {
     const status = isCurrentProfessionStatus(parsed.currentProfessionStatus)
       ? parsed.currentProfessionStatus
       : null;
+    const hasSlug = status === "selected" && typeof parsed.currentProfessionSlug === "string";
     return {
       currentProfessionStatus: status,
-      currentProfessionSlug:
-        status === "selected" && typeof parsed.currentProfessionSlug === "string"
-          ? parsed.currentProfessionSlug
+      currentProfessionSlug: hasSlug ? (parsed.currentProfessionSlug as string) : null,
+      currentProfessionTitleSv:
+        hasSlug && typeof parsed.currentProfessionTitleSv === "string"
+          ? parsed.currentProfessionTitleSv
+          : null,
+      currentProfessionTitleEn:
+        hasSlug && typeof parsed.currentProfessionTitleEn === "string"
+          ? parsed.currentProfessionTitleEn
           : null,
       experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
     };

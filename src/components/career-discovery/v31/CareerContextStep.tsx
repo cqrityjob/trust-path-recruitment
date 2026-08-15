@@ -92,7 +92,13 @@ export function CareerContextStep({
             <button
               type="button"
               onClick={() =>
-                onChange({ ...value, currentProfessionStatus: null, currentProfessionSlug: null })
+                onChange({
+                  ...value,
+                  currentProfessionStatus: null,
+                  currentProfessionSlug: null,
+                  currentProfessionTitleSv: null,
+                  currentProfessionTitleEn: null,
+                })
               }
               className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
             >
@@ -110,7 +116,13 @@ export function CareerContextStep({
             <button
               type="button"
               onClick={() =>
-                onChange({ ...value, currentProfessionStatus: null, currentProfessionSlug: null })
+                onChange({
+                  ...value,
+                  currentProfessionStatus: null,
+                  currentProfessionSlug: null,
+                  currentProfessionTitleSv: null,
+                  currentProfessionTitleEn: null,
+                })
               }
               className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
             >
@@ -145,6 +157,14 @@ export function CareerContextStep({
                           ...value,
                           currentProfessionStatus: "selected",
                           currentProfessionSlug: p.slug,
+                          // Real-world defect fix: captured here, at
+                          // selection time, from the picker's own already-
+                          // fetched list -- no extra query needed. Without
+                          // this, the anonymous client-computed report can
+                          // never resolve a title, so "YOU ARE HERE" can
+                          // never render for it (see career-context.ts).
+                          currentProfessionTitleSv: p.titleSv,
+                          currentProfessionTitleEn: p.titleEn,
                         })
                       }
                       className="flex w-full items-center rounded-[10px] border border-transparent px-3.5 py-2.5 text-left text-sm text-foreground transition-colors hover:border-border hover:bg-muted/50"
@@ -164,6 +184,8 @@ export function CareerContextStep({
                     ...value,
                     currentProfessionStatus: "not_listed",
                     currentProfessionSlug: null,
+                    currentProfessionTitleSv: null,
+                    currentProfessionTitleEn: null,
                   })
                 }
                 className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -177,6 +199,8 @@ export function CareerContextStep({
                     ...value,
                     currentProfessionStatus: "prefer_not_to_say",
                     currentProfessionSlug: null,
+                    currentProfessionTitleSv: null,
+                    currentProfessionTitleEn: null,
                   })
                 }
                 className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
