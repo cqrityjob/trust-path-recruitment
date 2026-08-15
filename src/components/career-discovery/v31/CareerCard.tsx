@@ -143,7 +143,10 @@ export function renderCareerCardSvg(
   const indicatorBars = data.indicators
     .map((ind, i) => {
       const y = L.indicatorsStartY + shift + i * L.indicatorGap;
-      const barWidth = width - L.padding * 2 - 220;
+      // The QR column is reserved on every format, so a LinkedIn card (only
+      // 627px tall, where the bars and the QR share vertical space) can
+      // never run its bars underneath the code.
+      const barWidth = width - L.padding * 2 - 220 - (L.qrSize + 48);
       const filled = Math.max(6, Math.round(barWidth * ind.value));
       return `
         <text x="${L.padding}" y="${y}" font-family="${FONT}" font-size="26" fill="${MUTED}" letter-spacing="0.5">${escapeSvgText(ind.label)}</text>
