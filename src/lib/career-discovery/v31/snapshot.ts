@@ -17,6 +17,7 @@
 // by the orchestration layer, because a domain engine that reads the clock
 // cannot be tested for determinism and cannot be replayed.
 
+import type { ExperienceBand } from "../career-context";
 import type { ContextStatus } from "../types";
 import { CAREER_AREAS, rankCareerAreas, type AreaResult, type CareerAreaId } from "./career-areas";
 import { DIMENSIONS, type DimensionId } from "./dimensions";
@@ -229,6 +230,15 @@ export interface BuildSnapshotInput {
    *  fetchCigReachableSlugs), never computed here. Empty when current
    *  profession is unknown or has no documented transitions. */
   readonly cigReachableSlugs?: ReadonlySet<string>;
+  /** Self-reported experience band (../career-context.ts) — contextual
+   *  self-report, collected in the same post-assessment step as
+   *  currentProfessionCigSlug, never fed into dimension scoring. Read only
+   *  by professions.ts's resolveStageBaseline to refine which career-stage
+   *  a KNOWN current profession anchors at (Owner Security Manager scenario
+   *  fix) — on its own, without a known current profession, it can still
+   *  set a coarser baseline than C1 alone, but never claims competence and
+   *  never overrides Career DNA. */
+  readonly experienceBand?: ExperienceBand | null;
 }
 
 function storedDimensions(dims: DimensionResult, locale: Locale): StoredDimension[] {
@@ -277,6 +287,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     currentProfessionTitle = null,
     discoveryTags = [],
     cigReachableSlugs,
+    experienceBand = null,
   } = input;
 
   const dims = scoreDimensions(answers);
@@ -289,6 +300,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     currentProfessionCigSlug,
     discoveryTags,
     cigReachableSlugs,
+    experienceBand,
   );
 
   const presented: ResolvedPatternId = patterns.leading ?? "CP00";

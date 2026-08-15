@@ -506,6 +506,12 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         discoveryTags,
         cigReachableSlugs,
         professionCalibrationVersion,
+        // Owner Security Manager scenario fix: the coarse C1 baseline alone
+        // was still deciding career-stage even after a concrete current
+        // profession + experience were known. Threaded through so
+        // resolveStageBaseline (professions.ts) can prefer the known
+        // profession's own career level, refined by real experience.
+        experienceBand: data.careerContext?.experienceBand ?? null,
       });
     } catch (err) {
       if (err instanceof SnapshotValidationError) {

@@ -73,6 +73,7 @@
 // ("strong" | "moderate") is, exactly as area scores are internal and only
 // their band reaches the candidate (PMR006).
 
+import type { ExperienceBand } from "../career-context";
 import type { ContextStatus } from "../types";
 import { MATCHABLE_DIMENSION_IDS, type DimensionId } from "./dimensions";
 import type { DimensionResult } from "./scoring";
@@ -137,7 +138,9 @@ const PROFESSION_STAGE_RANK: Readonly<Record<ProfessionCareerStage, StageRank>> 
   senior: 2,
 };
 
-/** The candidate's inferred starting point, from C1 alone.
+/** The candidate's inferred starting point, from C1 alone — the FALLBACK
+ *  used only when no concrete current profession is known (see
+ *  resolveStageBaseline below, which this backs).
  *
  *  Not a claim about years of experience or seniority — a coarse, honest
  *  read of what C1 already tells us. `changing_career_area`'s own label is
@@ -156,6 +159,72 @@ export const CANDIDATE_STAGE_BASELINE: Readonly<Record<ContextStatus, StageRank>
 /** Used when C1 was not answered (should not happen — it is a required
  *  context item — but a domain engine does not trust that from outside). */
 const DEFAULT_STAGE_BASELINE: StageRank = 0;
+
+/** A self-reported experience band's OWN stage-rank floor — used only as
+ *  one input to resolveStageBaseline below, never on its own to infer
+ *  seniority from nothing. */
+const EXPERIENCE_STAGE_RANK: Readonly<Record<ExperienceBand, StageRank>> = {
+  under_1y: 0,
+  "1_3y": 0,
+  "4_7y": 1,
+  "8_plus_y": 2,
+};
+
+/**
+ * Real-world defect fix (Owner Security Manager scenario, found live): C1
+ * alone is a coarse five-way bucket answered BEFORE the candidate names a
+ * concrete current profession. A real Säkerhetschef (Head of Security) who
+ * answered C1 with the generic, honestly-true "I already work in security"
+ * (working_in_security, baseline rank 0 -- entry) and only LATER, in the
+ * separate post-assessment Career Context step, named their actual current
+ * profession and 8+ years of experience was still being scored against an
+ * entry baseline. Every entry-level profession then computed distance 0
+ * ("explore now" -- the most prominent tier) while their OWN senior role
+ * computed distance +2 ("longer-term"). C1 was never wrong, it was just
+ * being trusted as the ONLY signal even after a more concrete one existed.
+ *
+ * Fix: prefer the best available FACTUAL signal, most concrete first.
+ *   1. The candidate's own current profession's real, catalogued career
+ *      level (cd_professions.career_stage) -- the single most concrete fact
+ *      available, when it resolves to a profession actually in the catalog.
+ *   2. Self-reported experience band, which can only ever push the baseline
+ *      UP from what (1) establishes (a person 8+ years into a "developing"-
+ *      level role is at least as advanced as that role's own rank -- never
+ *      down: a self-reported band is never used to demote someone below
+ *      their own profession's documented level).
+ *   3. When no concrete current profession is known at all, C1 alone --
+ *      exactly the previous behaviour, byte-for-byte unchanged for the
+ *      "current profession unknown" case (item 2: unknown must stay
+ *      unknown, nothing here infers a profession or a stage from Career
+ *      DNA). Experience is deliberately NOT used standalone here: without a
+ *      real catalogued profession behind it, a self-reported band alone is
+ *      a weaker signal than C1's own honest coarse read -- it only ever
+ *      refines a baseline that already rests on a known profession.
+ *
+ * Still not a claim about competence and never reads Career DNA -- every
+ * input here is either a real catalogued fact (career_stage) or a direct
+ * self-report (experience band, C1), exactly as before.
+ */
+function resolveStageBaseline(
+  contextStatus: ContextStatus | null,
+  currentProfessionEntry: ProfessionCatalogEntry | undefined,
+  experienceBand: ExperienceBand | null | undefined,
+): StageRank {
+  // Experience only refines a baseline that already rests on a known,
+  // catalogued current profession (mandate: "MAY refine... when combined
+  // with known current profession") — deliberately NOT used standalone.
+  // Without a real profession behind it, a self-reported band alone is a
+  // weaker, less grounded signal than C1's own coarse-but-honest read, and
+  // item 2's "unknown stays unknown" applies to stage inference too, not
+  // just profession identity.
+  if (currentProfessionEntry) {
+    const profRank = PROFESSION_STAGE_RANK[currentProfessionEntry.careerStage];
+    const expRank = experienceBand ? EXPERIENCE_STAGE_RANK[experienceBand] : null;
+    return expRank !== null ? (Math.max(profRank, expRank) as StageRank) : profRank;
+  }
+
+  return contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+}
 
 // -------------------------------------------------------------------------
 // Fit
@@ -656,6 +725,12 @@ export function matchProfessions(
    *  the bounded CIG_PATHWAY_PRIORITY_BONUS — never fabricated, never
    *  invented to make a test pass (see classifyStagesWithPivots's header). */
   cigReachableSlugs?: ReadonlySet<string>,
+  /** Self-reported experience band (career-context.ts) — contextual
+   *  self-report, never scored, never fabricated. Read ONLY by
+   *  resolveStageBaseline to refine WHICH stage a known current profession
+   *  anchors at; absent/unknown falls back to the pre-existing C1-only
+   *  baseline exactly as before (Owner Security Manager scenario fix). */
+  experienceBand?: ExperienceBand | null,
 ): ProfessionMatchResult {
   if (catalog.length === 0) {
     return {
@@ -669,7 +744,10 @@ export function matchProfessions(
     };
   }
 
-  const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+  const currentProfessionEntry = currentProfessionCigSlug
+    ? catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)
+    : undefined;
+  const baseline = resolveStageBaseline(contextStatus, currentProfessionEntry, experienceBand);
   const tags = discoveryTags ?? [];
   const reachable = cigReachableSlugs ?? new Set<string>();
 
@@ -682,9 +760,7 @@ export function matchProfessions(
         sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
     );
 
-  const currentProfessionAreaId = currentProfessionCigSlug
-    ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
-    : null;
+  const currentProfessionAreaId = currentProfessionEntry?.careerAreaId ?? null;
   const classified = classifyStagesWithPivots(scored, currentProfessionAreaId, reachable);
 
   // Item 8: the candidate's own current profession is never a "discovery" —
@@ -790,6 +866,8 @@ export function matchProfessionsDiagnostics(
   currentProfessionCigSlug?: string | null,
   discoveryTags?: readonly string[],
   cigReachableSlugs?: ReadonlySet<string>,
+  /** See matchProfessions's own doc comment for this parameter. */
+  experienceBand?: ExperienceBand | null,
 ): ProfessionMatchDiagnostics {
   const result = matchProfessions(
     dims,
@@ -798,13 +876,17 @@ export function matchProfessionsDiagnostics(
     currentProfessionCigSlug,
     discoveryTags,
     cigReachableSlugs,
+    experienceBand,
   );
 
   if (catalog.length === 0) {
     return { result, diagnostics: [], pivotPrimaryAreaId: null, pivotPrimarySource: "none" };
   }
 
-  const baseline = contextStatus ? CANDIDATE_STAGE_BASELINE[contextStatus] : DEFAULT_STAGE_BASELINE;
+  const currentProfessionEntry = currentProfessionCigSlug
+    ? catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)
+    : undefined;
+  const baseline = resolveStageBaseline(contextStatus, currentProfessionEntry, experienceBand);
   const tags = discoveryTags ?? [];
   const reachable = cigReachableSlugs ?? new Set<string>();
   const scored = catalog
@@ -816,9 +898,7 @@ export function matchProfessionsDiagnostics(
         sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
     );
 
-  const currentProfessionAreaId = currentProfessionCigSlug
-    ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
-    : null;
+  const currentProfessionAreaId = currentProfessionEntry?.careerAreaId ?? null;
   const pivotPrimaryAreaId = currentProfessionAreaId;
   const pivotPrimarySource: ProfessionMatchDiagnostics["pivotPrimarySource"] =
     currentProfessionAreaId !== null ? "current_profession" : "none";

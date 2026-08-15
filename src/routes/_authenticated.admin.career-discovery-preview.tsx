@@ -53,6 +53,13 @@ function CareerDiscoveryPreview() {
   // profession is supplied vs. left unset (DNA-inferred fallback) — the
   // "why priority changed" comparison in one control.
   const [currentProfessionSlug, setCurrentProfessionSlug] = useState<string>("");
+  // Owner Security Manager scenario fix: lets the owner preview
+  // resolveStageBaseline's real effect (professions.ts) — a known senior
+  // current profession + real experience must anchor career-stage on that
+  // fact, not stay pinned to C1's coarse baseline.
+  const [experienceBand, setExperienceBand] = useState<
+    "" | "under_1y" | "1_3y" | "4_7y" | "8_plus_y"
+  >("");
 
   const listCatalog = useServerFn(listOwnerPreviewProfessions);
   const catalogQuery = useQuery({
@@ -68,13 +75,14 @@ function CareerDiscoveryPreview() {
 
   const runMatch = useServerFn(runOwnerPreviewMatch);
   const matchQuery = useQuery({
-    queryKey: ["owner-preview", "match", personaId, currentProfessionSlug],
+    queryKey: ["owner-preview", "match", personaId, currentProfessionSlug, experienceBand],
     queryFn: () =>
       runMatch({
         data: {
           contextStatus: persona.contextStatus,
           dimensionScores: persona.dims,
           currentProfessionCigSlug: currentProfessionSlug || null,
+          experienceBand: experienceBand || null,
         },
       }),
   });
@@ -167,12 +175,35 @@ function CareerDiscoveryPreview() {
               onChange={(e) => setCurrentProfessionSlug(e.target.value)}
               className="mt-2 block h-10 min-w-[220px] rounded-md border border-border bg-background px-3 text-sm text-foreground"
             >
-              <option value="">(unset — DNA-inferred fallback)</option>
+              <option value="">(unset — no YOU ARE HERE, no pivot classification)</option>
               {cigProfessionsQuery.data?.map((p) => (
                 <option key={p.slug} value={p.slug}>
                   {p.titleEn}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="experience-band-select"
+              className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
+            >
+              Experience (self-reported)
+            </label>
+            <select
+              id="experience-band-select"
+              value={experienceBand}
+              onChange={(e) =>
+                setExperienceBand(e.target.value as typeof experienceBand)
+              }
+              className="mt-2 block h-10 min-w-[160px] rounded-md border border-border bg-background px-3 text-sm text-foreground"
+            >
+              <option value="">(unset)</option>
+              <option value="under_1y">Under 1 year</option>
+              <option value="1_3y">1-3 years</option>
+              <option value="4_7y">4-7 years</option>
+              <option value="8_plus_y">8+ years</option>
             </select>
           </div>
         </div>
@@ -215,6 +246,10 @@ function CareerDiscoveryPreview() {
             <p className="mt-1.5 text-foreground">
               <span className="font-medium">Current profession (self-reported):</span>{" "}
               {currentProfessionSlug || "unset — no YOU ARE HERE, no pivot classification"}
+            </p>
+            <p className="mt-1.5 text-foreground">
+              <span className="font-medium">Experience (self-reported):</span>{" "}
+              {experienceBand || "unset"}
             </p>
             {diagnostics && (
               <p className="mt-1.5 text-foreground">
@@ -376,6 +411,7 @@ function CareerDiscoveryPreview() {
                 alsoWorthExploring={matches.alsoWorthExploring}
                 longerTermPossibilities={matches.longerTermPossibilities}
                 careerPivots={matches.careerPivots}
+                currentProfessionMatch={matches.currentProfessionMatch}
                 locale={previewLocale}
                 onOpenCareerCard={setCardMatch}
               />

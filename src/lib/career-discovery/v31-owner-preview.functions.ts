@@ -185,6 +185,11 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
         // Mandate item 6: lets the owner preview see contextCorroborated
         // flip when Discovery Path tags are supplied.
         discoveryTags: z.array(z.string()).optional(),
+        // Owner Security Manager scenario fix: lets the owner preview
+        // resolveStageBaseline's real effect — a known senior current
+        // profession + real experience must not stay pinned to C1's coarse
+        // baseline. See professions.ts's resolveStageBaseline.
+        experienceBand: z.enum(["under_1y", "1_3y", "4_7y", "8_plus_y"]).nullable().optional(),
       })
       .parse(d),
   )
@@ -225,5 +230,6 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
       data.currentProfessionCigSlug ?? null,
       data.discoveryTags ?? [],
       cigReachableSlugs,
+      data.experienceBand ?? null,
     );
   });

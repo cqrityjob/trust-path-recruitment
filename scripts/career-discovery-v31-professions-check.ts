@@ -484,13 +484,23 @@ ok(
     withCurrentProfession.currentProfessionMatch.stage === "explore_now",
   "6c.4b Skyddsvakt is instead exposed as currentProfessionMatch, stage 'explore now' (not a pivot away from where the candidate actually is)",
 );
+// Owner Security Manager scenario fix: baseline now derives from Skyddsvakt's
+// OWN catalogued career level (entry, rank 0) rather than C1's coarser
+// "developing_current_role" answer (which would have wrongly inflated the
+// baseline to rank 1 for someone who is concretely, self-reportedly at
+// entry level). Polis (also entry, rank 0) is therefore a same-level lateral
+// direction -- distance 0, "explore now" -- not a pivot; the OLD C1-only
+// baseline wrongly placed it one rank behind. Säkerhetssamordnare
+// (developing, rank 1) is now a genuine step UP -- distance +1, "possible
+// next step" -- not already-current; the OLD baseline wrongly treated it as
+// already at the candidate's level.
 ok(
-  withCurrentProfessionPolis?.stage === "career_pivot",
-  "6c.5 Polis (SCA02, entry, behind baseline, no CIG edge from Skyddsvakt in this fixture) is a pivot -- a genuinely different, undocumented direction from the candidate's real current profession",
+  withCurrentProfessionPolis?.stage === "explore_now",
+  "6c.5 Polis (SCA02, entry, SAME rank as the candidate's real entry-level current profession) is explore_now, not a pivot -- entry-level baseline now derives from the known current profession, not C1's coarser guess",
 );
 ok(
-  withCurrentProfessionCoordinator?.stage === "explore_now",
-  "6c.6 Säkerhetssamordnare (SCA04, distance 0) is unaffected -- distance >= 0 never triggers pivot classification regardless",
+  withCurrentProfessionCoordinator?.stage === "possible_next_step",
+  "6c.6 Säkerhetssamordnare (SCA04, developing, one rank above the candidate's real entry-level current profession) is a genuine possible_next_step, not already-current",
 );
 
 // =========================================================================
@@ -667,6 +677,193 @@ ok(
 );
 
 // =========================================================================
+// =========================================================================
+group("12 · Owner Security Manager scenario — stage baseline derives from known current profession + experience, not C1 alone");
+// =========================================================================
+
+// Real defect, found live: a real Säkerhetschef (Head of Security) who
+// answered C1 with the generic, honestly-true "I already work in security"
+// (working_in_security) and only later, in the separate post-assessment
+// step, named their actual current profession (sakerhetschef) and 8+ years
+// of experience was STILL being scored against C1's entry baseline --
+// working_in_security maps to rank 0. Every entry-level profession then
+// computed distance 0 ("explore now", the most prominent tier) while their
+// OWN senior role computed distance +2 ("longer-term"). Fixed by
+// resolveStageBaseline: prefer the known current profession's own
+// catalogued career_stage, refined upward (never downward) by self-reported
+// experience, falling back to C1 only when no concrete profession is known.
+//
+// A realistic MIXED profile: genuine leadership/strategic affinity (Head of
+// Security's own central dimensions) PLUS genuine operational affinity
+// (Skyddsvakt's central dimensions) -- exactly the "real DNA evidence must
+// not be hidden, only reinterpreted" case §5 requires.
+const SECURITY_MANAGER_DIRECTION = makeDims(0.5, {
+  CID02: 0.85, // leadership orientation -- central for Head of Security
+  CID05: 0.8, // strategic orientation -- central for Head of Security
+  CID07: 0.85, // communication -- central for both Head of Security and Coordinator
+  CID13: 0.8, // collaboration -- central for both Head of Security and Coordinator
+  CID01: 0.75, // operational orientation -- central for Skyddsvakt
+  CID06: 0.8, // risk awareness -- central for Skyddsvakt
+  CID12: 0.7, // independent decision-making -- central for Skyddsvakt
+  CID16: 0.75, // composure under pressure -- central for Skyddsvakt
+});
+
+// --- A: working_in_security + Security Manager (sakerhetschef) + 8+ years ---
+const scenarioA = matchProfessionsDiagnostics(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "working_in_security",
+  "sakerhetschef",
+  [],
+  new Set(),
+  "8_plus_y",
+);
+const scenarioA_noContext = matchProfessionsDiagnostics(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "working_in_security",
+);
+// Proof: Profession Affinity (fitScore) is IDENTICAL whether or not current
+// profession/experience is supplied -- context/current-role/experience can
+// only ever change stage/priority interpretation, never Career DNA or
+// Affinity itself.
+const affinityWithContext = new Map(scenarioA.diagnostics.map((d) => [d.professionId, d.fitScore]));
+const affinityWithoutContext = new Map(
+  scenarioA_noContext.diagnostics.map((d) => [d.professionId, d.fitScore]),
+);
+ok(
+  [...affinityWithContext.entries()].every(([id, score]) => affinityWithoutContext.get(id) === score),
+  "A.1 Profession Affinity (fitScore) is byte-identical with vs without current profession + experience -- Career DNA and Affinity are untouched",
+);
+const aSkyddsvakt = scenarioA.result.matches.find((m) => m.professionId === "SP003");
+const aCoordinator = scenarioA.result.matches.find((m) => m.professionId === "SP006");
+ok(
+  scenarioA.result.currentProfessionMatch?.professionId === "SP007",
+  "A.2 Säkerhetschef (the candidate's own current profession) is exposed as currentProfessionMatch",
+);
+ok(
+  !scenarioA.result.matches.some((m) => m.professionId === "SP007"),
+  "A.3 Säkerhetschef never appears in `matches` -- never presented as a new discovery (item 8)",
+);
+ok(
+  aSkyddsvakt?.stage === "career_pivot",
+  "A.4 Skyddsvakt (entry, different area, genuine operational DNA affinity) is a career_pivot -- real affinity shown honestly, but NOT the natural primary next direction from a senior Security Manager",
+);
+ok(
+  aCoordinator?.stage === "explore_now",
+  "A.5 Säkerhetssamordnare (developing, same area SCA04, one rank below the resolved senior baseline) is explore_now -- a same-track role already within reach, not hidden",
+);
+
+// --- B: security_leader + Security Manager (sakerhetschef) + 8+ years ---
+// C1 alone already maps security_leader -> senior (rank 2), so this proves
+// the fix does not change already-correct behaviour when C1 happens to
+// agree with the known profession -- same result as A.
+const scenarioB = matchProfessionsDiagnostics(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "security_leader",
+  "sakerhetschef",
+  [],
+  new Set(),
+  "8_plus_y",
+);
+const bSkyddsvakt = scenarioB.result.matches.find((m) => m.professionId === "SP003");
+ok(
+  bSkyddsvakt?.stage === "career_pivot" &&
+    scenarioB.result.currentProfessionMatch?.professionId === "SP007",
+  "B.1 security_leader + Säkerhetschef + 8+ years yields the same, already-correct result as A (Skyddsvakt career_pivot, Säkerhetschef excluded from matches)",
+);
+
+// --- C: working_in_security + entry-level current profession + 1-3 years ---
+// Väktare itself is not in this trimmed fixture catalogue (see the file
+// header) -- Skyddsvakt (also SCA01, entry, real regulated frontline guard
+// role) stands in as an honest entry-level current profession.
+const scenarioC = matchProfessions(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "working_in_security",
+  "skyddsvakt",
+  [],
+  new Set(),
+  "1_3y",
+);
+const cCoordinator = scenarioC.matches.find((m) => m.professionId === "SP006");
+const cHeadOfSecurity = scenarioC.matches.find((m) => m.professionId === "SP007");
+ok(
+  scenarioC.currentProfessionMatch?.professionId === "SP003",
+  "C.1 Skyddsvakt (the candidate's own current profession) is exposed as currentProfessionMatch, not a new discovery",
+);
+ok(
+  cCoordinator?.stage === "possible_next_step",
+  "C.2 an entry-level current profession + 1-3 years still resolves an entry baseline (unchanged from before the fix) -- Säkerhetssamordnare is a genuine possible_next_step, not falsely promoted to explore_now",
+);
+ok(
+  cHeadOfSecurity?.stage === "longer_term",
+  "C.3 Säkerhetschef stays longer_term for a genuinely entry-level candidate -- experience alone (1-3 years) never inflates an entry profession's own rank",
+);
+
+// --- D: developing_current_role + Security Coordinator + 8+ years ---
+// The candidate's OWN profession (Säkerhetssamordnare) is "developing"
+// (rank 1), but 8+ years of real tenure refines the baseline UP to senior
+// (rank 2) -- exactly §4's "experience MAY refine stage when combined with
+// a known current profession."
+const scenarioD = matchProfessions(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "developing_current_role",
+  "sakerhetssamordnare",
+  [],
+  new Set(),
+  "8_plus_y",
+);
+const dHeadOfSecurity = scenarioD.matches.find((m) => m.professionId === "SP007");
+const dSkyddsvakt = scenarioD.matches.find((m) => m.professionId === "SP003");
+ok(
+  scenarioD.currentProfessionMatch?.professionId === "SP006",
+  "D.1 Säkerhetssamordnare (the candidate's own current profession) is exposed as currentProfessionMatch",
+);
+ok(
+  dHeadOfSecurity?.stage === "explore_now",
+  "D.2 8+ years in a developing-level role refines the baseline to senior, so Säkerhetschef (same area SCA04) is explore_now, not merely possible_next_step -- experience has real, material effect on pathway interpretation",
+);
+ok(
+  dSkyddsvakt?.stage === "career_pivot",
+  "D.3 Skyddsvakt (different area, genuine operational affinity) is still honestly a career_pivot, not hidden and not promoted to a primary direction",
+);
+
+// --- E: current profession unknown ---
+// Item 2, reconfirmed under this exact fix: with no current profession
+// reported, baseline falls back to C1 alone, byte-identical to behaviour
+// before this fix existed -- experience is deliberately never used
+// standalone (§4: only "when combined with known current profession").
+const scenarioE_withExperience = matchProfessions(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "working_in_security",
+  null,
+  [],
+  new Set(),
+  "8_plus_y",
+);
+const scenarioE_withoutExperience = matchProfessions(
+  SECURITY_MANAGER_DIRECTION,
+  CATALOG,
+  "working_in_security",
+);
+ok(
+  scenarioE_withExperience.currentProfessionMatch === null,
+  "E.1 current profession unknown -> currentProfessionMatch stays null, no fabricated YOU ARE HERE",
+);
+ok(
+  scenarioE_withExperience.careerPivots.length === 0,
+  "E.2 current profession unknown -> career_pivot never computed at all, even with experience supplied (item 2: unknown stays unknown)",
+);
+ok(
+  JSON.stringify(scenarioE_withExperience.matches) ===
+    JSON.stringify(scenarioE_withoutExperience.matches),
+  "E.3 experience band alone, with no known current profession, changes NOTHING -- byte-identical result with vs without it (§4: refines only when combined with a known profession)",
+);
+
 console.log("");
 if (failures > 0) {
   console.error(`FAILED: ${failures} of ${checks} checks failed.`);

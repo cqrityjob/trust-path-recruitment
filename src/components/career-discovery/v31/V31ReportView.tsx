@@ -369,6 +369,18 @@ export function V31ReportView({
           <h3 className="mt-12 text-lg font-semibold tracking-tight text-foreground">
             {t("careerDiscovery.report.v31.areasTitle")}
           </h3>
+          {/* Owner Security Manager scenario fix (§6): a ranked "01/02/03"
+              card grid can otherwise read as a job recommendation on its
+              own, especially to a senior candidate scrolling past the
+              smaller YOU ARE HERE note above. This is Career-DNA affinity
+              only — it never reflects current role, experience or career
+              stage, and is not the same thing as the profession
+              recommendations in "Your Career Directions" above. Always
+              shown, not just when evidence is thin, since the
+              misinterpretation risk exists regardless of evidence quality. */}
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {t("careerDiscovery.report.v31.areasClarifier")}
+          </p>
           {outputA?.areaEvidenceSufficient === false && (
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               {t("careerDiscovery.report.v31.areasThinEvidence")}

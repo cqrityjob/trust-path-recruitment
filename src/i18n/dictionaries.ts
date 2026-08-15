@@ -605,6 +605,8 @@ export const dictionaries = {
       "Dina svar visar flera lika starka arbetssätt snarare än ett tydligt dominerande. Det är ett resultat i sig.",
     "careerDiscovery.report.v31.supportingTitle": "Det här finns också i din profil",
     "careerDiscovery.report.v31.areasTitle": "Karriärområden som passar dig",
+    "careerDiscovery.report.v31.areasClarifier":
+      "Det här visar vilken typ av säkerhetsarbete dina svar stämmer bäst med — inte ett specifikt jobb och inte ett förslag att byta din nuvarande roll.",
     "careerDiscovery.report.v31.areasThinEvidence":
       "Underlaget för områdesrankningen är tunt. Läs den som en riktning, inte ett facit.",
     "careerDiscovery.report.v31.alignedWith": "Bygger på",
@@ -2923,6 +2925,8 @@ export const dictionaries = {
       "Your answers show several equally strong ways of working rather than one clearly dominant one. That is a result in itself.",
     "careerDiscovery.report.v31.supportingTitle": "Also present in your profile",
     "careerDiscovery.report.v31.areasTitle": "Career areas that fit you",
+    "careerDiscovery.report.v31.areasClarifier":
+      "This shows the type of security work your answers connect with most — not a specific job, and not a suggestion to change your current role.",
     "careerDiscovery.report.v31.areasThinEvidence":
       "The evidence behind this area ranking is thin. Read it as a direction, not a verdict.",
     "careerDiscovery.report.v31.alignedWith": "Based on",
