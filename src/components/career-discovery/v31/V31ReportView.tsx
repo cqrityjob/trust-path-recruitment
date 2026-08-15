@@ -187,6 +187,29 @@ export function V31ReportView({
         </p>
       )}
 
+      {/* YOU ARE HERE — Master Completion Mandate item 8. Frozen at report-
+          build time (ReportSnapshot.currentProfession), independent of
+          whether the profession itself also cleared matching, so it is
+          never a fabricated "we inferred your job from your DNA" claim
+          (item 2) — only ever the candidate's own self-report. Placed
+          right after the DNA hero and before the Career Directions
+          section, so the directions below visibly read as "from here". */}
+      {snapshot.currentProfession && (
+        <div className="mt-10 rounded-lg border border-border bg-muted/20 p-5">
+          <p className="text-xs font-medium uppercase tracking-widest text-accent">
+            {t("careerDiscovery.report.v31.youAreHereEyebrow")}
+          </p>
+          <p className="mt-2 text-lg font-semibold tracking-tight text-foreground">
+            {snapshot.locale === "sv"
+              ? snapshot.currentProfession.titleSv
+              : snapshot.currentProfession.titleEn}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            {t("careerDiscovery.report.v31.youAreHereBody")}
+          </p>
+        </div>
+      )}
+
       {/* 2 · YOUR CAREER DIRECTIONS — moved up from the report's tail
           (§26 Section 2): the useful career intelligence, immediately
           after the short DNA hero, not after three sections of prose. */}
@@ -209,6 +232,7 @@ export function V31ReportView({
               alsoWorthExploring={snapshot.professions.alsoWorthExploring}
               longerTermPossibilities={snapshot.professions.longerTermPossibilities}
               careerPivots={snapshot.professions.careerPivots}
+              currentProfessionMatch={snapshot.professions.currentProfessionMatch}
               locale={snapshot.locale === "en" ? "en" : "sv"}
               onOpenCareerCard={setCareerCardMatch}
               sessionId={sessionId}

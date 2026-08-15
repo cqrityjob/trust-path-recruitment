@@ -633,3 +633,110 @@ prohibited-fields list. Result: already compliant, no changes needed.
 No code change was needed here; this section exists to record that the
 audit happened and found the architecture already correct, per the
 mandate's own instruction to verify rather than assume.
+
+## Deployment discipline — the stale-bundle failure mode recurred, confirmed and fixed (SHA c6c6e743, 2026-08-15)
+
+The exact failure mode already documented above (line ~39: "the first
+deploy attempt showed the OLD behavior despite `latest_commit_sha`
+matching") **recurred** for this phase's final push, `c6c6e743`. Recorded
+in full because it proves why item 29's "never rely only on metadata" rule
+must be re-run on every push, not trusted as fixed after the first time it
+was caught:
+
+- `git push` → `origin/main` confirmed at `c6c6e743` (via `git ls-remote`).
+- `deploy_project` returned `status:"pending"`, then `get_project` reported
+  `status:"ready"`, `latest_commit_sha:"c6c6e743..."` — by metadata alone,
+  fully deployed.
+- Live code-level check (cache-busted, `cache:"no-store"` fetch of the
+  admin diagnostics route chunk, bypassing the CDN's
+  `cache-control: public, max-age=31536000, immutable` on hashed assets):
+  the served bundle **still contained the pre-`d7d60f9` three-way
+  `pivotPrimarySource` ternary, including the literal string
+  `"dna_inferred"`** that item 2 requires removed, and none of
+  `contextPriorityBonus`/`cigPathwayBonus`/`priorityScore` were present
+  anywhere in the chunk. The production site was serving a build from
+  before this phase's changes despite every metadata field saying
+  otherwise.
+- Root cause (same as before): Lovable's git-sync detecting a new commit
+  does not reliably trigger a fresh production publish; `deploy_project`
+  must be called again, explicitly, per push.
+- Fix verified, not assumed: called `deploy_project` a second time: the
+  `index-*.js` entry hash changed (`index-DTnEtsqr.js` →
+  `index-C5ahluMP.js`) and the admin-route chunk hash changed
+  (`..-BvCoghxp.js` → `..-Bf2fMtfD.js`). Re-fetched with the same
+  cache-busted `no-store` method: `dna_inferred` gone, the new two-way
+  ternary's fallback text present, and `contextPriorityBonus`,
+  `cigPathwayBonus`, `priorityScore`, `currentProfessionCigSlug` all
+  present in the served bytes.
+
+**Standing rule going forward, not just for this pass**: after any push to
+this product line, call `deploy_project`, then independently verify with a
+cache-busted `fetch(..., {cache:"no-store"})` of a JS chunk expected to
+contain this push's changes — checking `get_project`'s `latest_commit_sha`
+or `status` alone has now been proven insufficient twice in this project's
+history.
+
+## "YOU ARE HERE" — item 8 built (2026-08-15)
+
+Previously the candidate's own self-reported current profession was never
+surfaced explicitly, and — worse — if their Career DNA also happened to
+clear matching against their own current job, `matchProfessions` would
+include it in `matches` like any other recommendation, sortable into
+`strongestDirections` alongside genuinely new directions. That is exactly
+the "presented as a new discovery just because raw affinity is high"
+failure mode item 8 calls out by name.
+
+**Engine (`professions.ts`)**: `ProfessionMatchResult` gained a
+`currentProfessionMatch: ProfessionMatch | null` field. `matchProfessions`
+now pulls the entry whose `cigProfessionSlug` equals the candidate's
+self-reported `currentProfessionCigSlug` OUT of `matches` (and therefore out
+of every bucket built from it) before returning, regardless of how strong
+its Affinity/Priority score is. `available` was widened to
+`matches.length > 0 || currentProfessionMatch !== null` so a candidate whose
+ONLY clearing profession is their own current role still gets a real
+report, not the "pending" placeholder. `matchProfessionsDiagnostics` (the
+owner-only tool) keeps the row for that profession in its full diagnostics
+output — nothing is hidden from the owner — but now flags it with a new
+`isCurrentProfession: boolean` field so "why isn't X in the candidate-facing
+list" is legible without re-deriving it.
+
+**Snapshot (`snapshot.ts`)**: `ReportSnapshot` gained a `currentProfession:
+{ cigSlug, titleSv, titleEn } | null` field, resolved once at build time and
+frozen — independent of whether that profession also clears matching, so a
+candidate whose Career DNA doesn't particularly resemble their own current
+job still gets an honest "YOU ARE HERE: <title>", never a blank. The title
+is resolved server-side by a new `fetchCigProfessionTitle` helper
+(`career-context.functions.ts`, sibling to the existing
+`fetchCigReachableSlugs`) and threaded through
+`persistPublicV31Run`/`buildValidatedSnapshot` exactly like the item-7 CIG
+edges were. `ProfessionOutputAvailable` also carries the
+`currentProfessionMatch` bucket through to the frozen snapshot.
+
+**UI**: `V31ReportView.tsx` renders a "YOU ARE HERE: <title>" panel right
+after the DNA hero, before the Career Directions section, whenever
+`snapshot.currentProfession` is present — using only the frozen title, never
+re-inferring or re-looking-up anything. `ProfessionRecommendations.tsx`
+renders `currentProfessionMatch` (when present) as its own leading block,
+labelled "Develop in your current role" instead of a stage badge like
+"Explore now" — the mandate's explicit request that developing where you
+already are read as distinct from a new career direction. New i18n keys:
+`careerDiscovery.report.v31.youAreHereEyebrow` / `youAreHereBody` /
+`developCurrentRole`, sv + en.
+
+**Admin (`_authenticated.admin.career-discovery-preview.tsx`)**: the
+diagnostics table now highlights the current-profession row and labels it
+"YOU ARE HERE — excluded from matches (item 8)" so an owner previewing a
+persona can see exactly which row was pulled out and why, rather than
+wondering why a profession they'd expect to see is missing from the list.
+
+**Tests**: `career-discovery-v31-professions-check.ts` groups 6b/6c were
+updated (57 → 59 checks) — the candidate's own current profession
+(Säkerhetssamordnare in 6b, Skyddsvakt in 6c) is now asserted absent from
+`matches` and present on `currentProfessionMatch` with its pre-pivot stage,
+rather than the old (now-wrong) assertion that it stayed in `matches` as
+`explore_now`. `tsc --noEmit`, all 4 regression scripts (59 + 138 + 10 + 16
+= 223 checks), and `bun run build` all pass clean after this change.
+
+**Not done this pass**: no equivalent "YOU ARE HERE" treatment in the
+Career Card (item 11) or the profession-detail mini view (item 10) — both
+remain open, tracked separately below.

@@ -90,11 +90,6 @@ Context: `exploring_security`
 Context: `working_in_security`
 
 ### Strongest directions to explore
-  - **Väktare** (SP001) — stage: explore_now, fit: strong
-    why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med riskmedvetenhet och strukturerad dokumentation -- kärnan i en väktarroll.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Operativ orientering, Riskmedvetenhet, Lugn under press, Struktur och dokumentation
-    card indicators: Operativ (85% bar), Riskmedveten (85% bar), Lugn under press (85% bar), Struktur (80% bar)
   - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
     why: Din höga riskmedvetenhet tillsammans med struktur och självständigt beslutsfattande passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
     Det här är en riktning du kan börja utforska direkt.
@@ -105,13 +100,13 @@ Context: `working_in_security`
     Det här är en riktning du kan börja utforska direkt.
     aligned: Lugn under press, Konflikthantering, Självständiga beslut, Serviceorientering
     card indicators: Lugn under press (85% bar), Konflikthantering (60% bar), Beslutsam (65% bar), Service (60% bar)
-
-### Also worth exploring
   - **Ordningsvakt** (SP002) — stage: explore_now, fit: strong
     why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
     Det här är en riktning du kan börja utforska direkt.
     aligned: Lugn under press, Operativ orientering, Självständiga beslut, Teknisk orientering
     card indicators: Lugn under press (85% bar), Operativ (85% bar), Beslutsam (65% bar), Teknisk (40% bar)
+
+### Also worth exploring
   - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
     why: Din kombination av konflikthantering, självständiga beslut under press och lugn i pressade lägen matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
@@ -134,11 +129,6 @@ Context: `working_in_security`
 Context: `developing_current_role`
 
 ### Strongest directions to explore
-  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: strong
-    why: Du visar en kombination av ledarskapsintresse, tydlig kommunikation och strukturerat arbetssätt -- drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
-    Det här är en riktning du kan börja utforska direkt.
-    aligned: Kommunikation, Struktur och dokumentation, Ledarskapsorientering, Samarbete
-    card indicators: Kommunikation (85% bar), Struktur (85% bar), Ledarskap (80% bar), Samarbete (80% bar)
   - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: strong
     why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en riktning du kan börja utforska direkt.

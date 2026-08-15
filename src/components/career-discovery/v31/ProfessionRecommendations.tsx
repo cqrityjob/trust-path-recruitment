@@ -209,6 +209,7 @@ function ProfessionCard({
   onSetGoal,
   settingGoal,
   onEvent,
+  isCurrentRole,
 }: {
   match: ProfessionMatch;
   locale: Locale;
@@ -222,6 +223,14 @@ function ProfessionCard({
   onSetGoal?: (match: ProfessionMatch) => void;
   settingGoal?: boolean;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
+  /** True only for the single card rendered from
+   *  ProfessionMatchResult.currentProfessionMatch (Mandate item 8) — swaps
+   *  the normal stage badge ("Explore now" etc, which reads oddly for a
+   *  candidate's OWN current job) for a "Develop in your current role"
+   *  label, and skips the stage sentence, which describes the gap between
+   *  the candidate and a NEW direction — not applicable to where they
+   *  already are. */
+  isCurrentRole?: boolean;
 }) {
   // Bound to the `locale` prop, not the live site toggle — see
   // FeedbackForm.tsx / V31ReportView.tsx for why.
@@ -251,7 +260,13 @@ function ProfessionCard({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-foreground">{title}</h3>
-              <StageBadge match={match} locale={locale} />
+              {isCurrentRole ? (
+                <span className="inline-flex items-center rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
+                  {t("careerDiscovery.report.v31.developCurrentRole")}
+                </span>
+              ) : (
+                <StageBadge match={match} locale={locale} />
+              )}
             </div>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
               {explanation.rationale}
@@ -267,7 +282,11 @@ function ProfessionCard({
         </div>
       </AccordionTrigger>
       <AccordionContent className="pb-6">
-        <p className="mb-4 text-sm leading-relaxed text-foreground">{explanation.stageSentence}</p>
+        {!isCurrentRole && (
+          <p className="mb-4 text-sm leading-relaxed text-foreground">
+            {explanation.stageSentence}
+          </p>
+        )}
         {explanation.contextCorroborationSentence && (
           <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
             {explanation.contextCorroborationSentence}
@@ -334,6 +353,7 @@ function Tier({
   onSetGoal,
   settingGoal,
   onEvent,
+  isCurrentRole,
 }: {
   heading: string;
   matches: readonly ProfessionMatch[];
@@ -345,6 +365,7 @@ function Tier({
   onSetGoal?: (match: ProfessionMatch) => void;
   settingGoal?: boolean;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
+  isCurrentRole?: boolean;
 }) {
   if (matches.length === 0) return null;
   return (
@@ -363,6 +384,7 @@ function Tier({
             onSetGoal={onSetGoal}
             settingGoal={settingGoal}
             onEvent={onEvent}
+            isCurrentRole={isCurrentRole}
           />
         ))}
       </Accordion>
@@ -375,6 +397,7 @@ export function ProfessionRecommendations({
   alsoWorthExploring,
   longerTermPossibilities,
   careerPivots,
+  currentProfessionMatch,
   locale,
   onOpenCareerCard,
   sessionId,
@@ -390,6 +413,12 @@ export function ProfessionRecommendations({
    *  Optional only so existing callers (e.g. a frozen older snapshot without
    *  this bucket) don't break; render nothing when absent. */
   careerPivots?: readonly ProfessionMatch[];
+  /** The candidate's own current profession's match entry (Mandate item 8),
+   *  already excluded from every bucket above by professions.ts — rendered
+   *  here as its own "Develop in your current role" block, never mixed into
+   *  the discovery tiers. Optional/null for the same frozen-snapshot
+   *  backward-compatibility reason as careerPivots. */
+  currentProfessionMatch?: ProfessionMatch | null;
   locale: Locale;
   onOpenCareerCard?: (match: ProfessionMatch) => void;
   /** Present only for a claimed (authenticated, owned) result. */
@@ -399,7 +428,9 @@ export function ProfessionRecommendations({
   settingGoal?: boolean;
   onEvent?: (name: string, detail?: Record<string, unknown>) => void;
 }) {
+  const t = translateFor(locale);
   const allSlugs = [
+    ...(currentProfessionMatch ? [currentProfessionMatch] : []),
     ...strongestDirections,
     ...alsoWorthExploring,
     ...longerTermPossibilities,
@@ -420,6 +451,21 @@ export function ProfessionRecommendations({
 
   return (
     <div>
+      {currentProfessionMatch && (
+        <Tier
+          heading={t("careerDiscovery.report.v31.developCurrentRole")}
+          matches={[currentProfessionMatch]}
+          locale={locale}
+          detailsBySlug={detailsBySlug}
+          onOpenCareerCard={onOpenCareerCard}
+          sessionId={sessionId}
+          goalProfessionId={goalProfessionId}
+          onSetGoal={onSetGoal}
+          settingGoal={settingGoal}
+          onEvent={onEvent}
+          isCurrentRole
+        />
+      )}
       <Tier
         heading={TIER_HEADING.strongest[locale]}
         matches={strongestDirections}

@@ -318,6 +318,18 @@ export interface ProfessionMatchResult {
    *  separate from alsoWorthExploring so a renderer never has to guess
    *  whether a card in that bucket is "next" or "sideways" (§12-13). */
   readonly careerPivots: readonly ProfessionMatch[];
+  /** The candidate's self-reported current profession's OWN match entry,
+   *  when it also clears matching against their Career DNA (Master
+   *  Completion Mandate item 8) — pulled OUT of `matches` and every bucket
+   *  above, never presented as a new discovery just because raw affinity
+   *  happens to be high. A renderer shows this as "YOU ARE HERE" /
+   *  "DEVELOP IN YOUR CURRENT ROLE", never alongside "explore now" cards.
+   *  Null when current profession is unknown, or known but did not itself
+   *  clear scoreProfession's fit gate against this candidate's DNA (the
+   *  title still reaches the report separately, via ReportSnapshot.
+   *  currentProfession — this field only carries the match/explanation
+   *  data, never invents one). */
+  readonly currentProfessionMatch: ProfessionMatch | null;
 }
 
 function round1(n: number): number {
@@ -653,6 +665,7 @@ export function matchProfessions(
       alsoWorthExploring: [],
       longerTermPossibilities: [],
       careerPivots: [],
+      currentProfessionMatch: null,
     };
   }
 
@@ -672,7 +685,19 @@ export function matchProfessions(
   const currentProfessionAreaId = currentProfessionCigSlug
     ? (catalog.find((c) => c.cigProfessionSlug === currentProfessionCigSlug)?.careerAreaId ?? null)
     : null;
-  const matches = classifyStagesWithPivots(scored, currentProfessionAreaId, reachable);
+  const classified = classifyStagesWithPivots(scored, currentProfessionAreaId, reachable);
+
+  // Item 8: the candidate's own current profession is never a "discovery" —
+  // pull it out of the recommendation pool entirely before building buckets,
+  // regardless of how high its raw affinity happens to be.
+  const currentProfessionMatch =
+    currentProfessionCigSlug !== null && currentProfessionCigSlug !== undefined
+      ? (classified.find((m) => m.cigProfessionSlug === currentProfessionCigSlug) ?? null)
+      : null;
+  const matches =
+    currentProfessionMatch !== null
+      ? classified.filter((m) => m.professionId !== currentProfessionMatch.professionId)
+      : classified;
 
   const exploreNow = matches.filter((m) => m.stage === "explore_now");
   const possibleNext = matches.filter((m) => m.stage === "possible_next_step");
@@ -683,12 +708,17 @@ export function matchProfessions(
   const alsoWorthExploring = [...exploreNow.slice(STRONGEST_DIRECTIONS_MAX), ...possibleNext];
 
   return {
-    available: matches.length > 0,
+    // A candidate whose ONLY clearing profession is their own current role
+    // still gets a real report (§8: "YOU ARE HERE"), not the "pending"
+    // placeholder -- `matches` being empty in that case just means there is
+    // nothing new to recommend today, which the renderer shows honestly.
+    available: matches.length > 0 || currentProfessionMatch !== null,
     matches,
     strongestDirections,
     alsoWorthExploring,
     longerTermPossibilities: longerTerm,
     careerPivots,
+    currentProfessionMatch,
   };
 }
 
@@ -729,6 +759,12 @@ export interface ProfessionAffinityDiagnostic {
   readonly stageBeforePivotCheck: Exclude<ProfessionStage, "career_pivot">;
   readonly finalStage: ProfessionStage;
   readonly priorityChangedByPivot: boolean;
+  /** True when this row IS the candidate's self-reported current profession
+   *  (item 8) — the owner tool still shows its full Affinity/Priority
+   *  numbers here for review, but the public `matches`/bucket output has
+   *  already excluded it (see ProfessionMatchResult.currentProfessionMatch)
+   *  so it never renders as a new discovery. */
+  readonly isCurrentProfession: boolean;
 }
 
 export interface ProfessionMatchDiagnostics {
@@ -811,6 +847,8 @@ export function matchProfessionsDiagnostics(
       stageBeforePivotCheck,
       finalStage,
       priorityChangedByPivot: finalStage !== stageBeforePivotCheck,
+      isCurrentProfession:
+        currentProfessionCigSlug != null && m.match.cigProfessionSlug === currentProfessionCigSlug,
     };
   });
 

@@ -155,6 +155,12 @@ export interface ProfessionOutputAvailable {
    *  frozen-snapshot reproducibility rule (§36) means an old snapshot must
    *  never be forced to retroactively invent data it never computed. */
   readonly careerPivots?: readonly ProfessionMatch[];
+  /** The candidate's own current profession's match entry, when it also
+   *  clears matching (Master Completion Mandate item 8) — see
+   *  professions.ts's ProfessionMatchResult.currentProfessionMatch for the
+   *  full contract. Optional for the same frozen-snapshot backward-
+   *  compatibility reason as careerPivots above. */
+  readonly currentProfessionMatch?: ProfessionMatch | null;
 }
 
 export type ProfessionOutput = ProfessionOutputUnavailable | ProfessionOutputAvailable;
@@ -167,6 +173,20 @@ export interface ReportSnapshot {
   readonly outputA: OutputA;
   readonly outputB: OutputB;
   readonly professions: ProfessionOutput;
+  /** The candidate's self-reported current profession (career-context.ts),
+   *  frozen at report-build time so "YOU ARE HERE: <title>" (Master
+   *  Completion Mandate item 8) never depends on a live re-lookup of a
+   *  two-year-old report. Independent of whether the profession also
+   *  clears matching — a candidate whose Career DNA does not particularly
+   *  resemble their own current job still gets an honest "YOU ARE HERE".
+   *  Absent/null when current profession is unknown or was declined (item
+   *  2: never inferred). Optional so a snapshot frozen before this field
+   *  existed still satisfies this type unchanged. */
+  readonly currentProfession?: {
+    readonly cigSlug: string;
+    readonly titleSv: string;
+    readonly titleEn: string;
+  } | null;
 }
 
 export interface BuildSnapshotInput {
@@ -192,6 +212,12 @@ export interface BuildSnapshotInput {
    *  profession in professionCatalog (see ./professions.ts's
    *  classifyStagesWithPivots) — never fed into dimension scoring. */
   readonly currentProfessionCigSlug?: string | null;
+  /** The display title for currentProfessionCigSlug, already resolved by
+   *  the orchestration layer (career-context.functions.ts's
+   *  fetchCigProfessionTitle) and frozen onto ReportSnapshot.currentProfession
+   *  (Mandate item 8) — this module never queries CIG itself. Ignored when
+   *  currentProfessionCigSlug is null. */
+  readonly currentProfessionTitle?: { readonly sv: string; readonly en: string } | null;
   /** Report tags from the candidate's 4 Discovery Path answers (Mandate
    *  item 6, ./personal-layer.ts's reportTagsFor) — contextual self-report,
    *  never scored. Read only to set ProfessionMatch.contextCorroborated for
@@ -248,6 +274,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     contextStatus = null,
     professionCalibrationVersion,
     currentProfessionCigSlug = null,
+    currentProfessionTitle = null,
     discoveryTags = [],
     cigReachableSlugs,
   } = input;
@@ -330,8 +357,18 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
           alsoWorthExploring: professionResult.alsoWorthExploring,
           longerTermPossibilities: professionResult.longerTermPossibilities,
           careerPivots: professionResult.careerPivots,
+          currentProfessionMatch: professionResult.currentProfessionMatch,
         }
       : { available: false, reason: "no_approved_professions", matches: [] },
+
+    currentProfession:
+      currentProfessionCigSlug !== null && currentProfessionTitle !== null
+        ? {
+            cigSlug: currentProfessionCigSlug,
+            titleSv: currentProfessionTitle.sv,
+            titleEn: currentProfessionTitle.en,
+          }
+        : null,
   };
 }
 

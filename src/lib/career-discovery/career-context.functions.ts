@@ -72,3 +72,29 @@ export async function fetchCigReachableSlugs(
   }
   return reachable;
 }
+
+/**
+ * Resolves the display title for a self-reported current profession
+ * (Master Completion Mandate item 8 — "YOU ARE HERE"), so the orchestration
+ * layer can freeze it onto ReportSnapshot.currentProfession at build time.
+ * Not a client-callable server function, same internal-helper pattern as
+ * fetchCigReachableSlugs above. Returns null rather than a fabricated title
+ * when the slug does not resolve — the frozen snapshot then correctly omits
+ * "YOU ARE HERE" rather than showing a blank or invented name.
+ */
+export async function fetchCigProfessionTitle(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  currentCigSlug: string | null,
+): Promise<{ sv: string; en: string } | null> {
+  if (!currentCigSlug) return null;
+
+  const { data } = await supabase
+    .from("cig_professions")
+    .select("title_sv, title_en")
+    .eq("slug", currentCigSlug)
+    .maybeSingle();
+
+  if (!data?.title_sv || !data?.title_en) return null;
+  return { sv: data.title_sv, en: data.title_en };
+}

@@ -270,9 +270,23 @@ function CareerDiscoveryPreview() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {diagnostics.diagnostics.map((d) => (
-                    <tr key={d.professionId} className={d.priorityChangedByPivot ? "bg-accent/5" : ""}>
+                    <tr
+                      key={d.professionId}
+                      className={
+                        d.isCurrentProfession
+                          ? "bg-amber-50"
+                          : d.priorityChangedByPivot
+                            ? "bg-accent/5"
+                            : ""
+                      }
+                    >
                       <td className="px-3 py-2 font-medium text-foreground">
                         {d.professionId} — {d.titleEn}
+                        {d.isCurrentProfession && (
+                          <span className="ml-2 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+                            YOU ARE HERE — excluded from matches (item 8)
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 tabular-nums text-foreground">
                         {d.fitScore} ({d.fitTier})

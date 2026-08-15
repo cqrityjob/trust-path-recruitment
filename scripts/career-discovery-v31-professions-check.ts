@@ -394,9 +394,18 @@ const coordinatorDirection = matchProfessions(
 const cdCoordinator = coordinatorDirection.matches.find((m) => m.professionId === "SP006");
 const cdSkyddsvakt = coordinatorDirection.matches.find((m) => m.professionId === "SP003");
 
+// Item 8: the candidate's OWN current profession (Säkerhetssamordnare) is
+// never presented as a new discovery -- pulled out of `matches` entirely
+// and surfaced separately as currentProfessionMatch, still 'explore_now'
+// internally (distance 0 never triggers pivot classification).
 ok(
-  cdCoordinator?.stage === "explore_now",
-  "6b.1 Säkerhetssamordnare (the candidate's own direction, SCA04, distance 0) stays 'explore now'",
+  cdCoordinator === undefined,
+  "6b.1a Säkerhetssamordnare (the candidate's own current profession) is excluded from `matches` -- never a 'discovery'",
+);
+ok(
+  coordinatorDirection.currentProfessionMatch?.professionId === "SP006" &&
+    coordinatorDirection.currentProfessionMatch.stage === "explore_now",
+  "6b.1b Säkerhetssamordnare is instead exposed as currentProfessionMatch, stage 'explore_now'",
 );
 ok(
   cdSkyddsvakt !== undefined,
@@ -462,9 +471,18 @@ const withCurrentProfessionCoordinator = withCurrentProfession.matches.find(
   (m) => m.professionId === "SP006",
 );
 
+// Item 8: Skyddsvakt is the candidate's own current profession here, so it
+// must be excluded from `matches` entirely rather than merely landing in
+// stage 'explore_now' -- presenting your own current job as a "next step"
+// discovery would violate item 8 even though the pivot math is correct.
 ok(
-  withCurrentProfessionSkyddsvakt?.stage === "explore_now",
-  "6c.4 with current profession = Skyddsvakt (SCA01), Skyddsvakt itself is 'explore now', not a pivot away from where the candidate actually is",
+  withCurrentProfessionSkyddsvakt === undefined,
+  "6c.4a with current profession = Skyddsvakt (SCA01), Skyddsvakt itself is excluded from `matches` -- never a 'discovery' of the job the candidate already has",
+);
+ok(
+  withCurrentProfession.currentProfessionMatch?.professionId === "SP003" &&
+    withCurrentProfession.currentProfessionMatch.stage === "explore_now",
+  "6c.4b Skyddsvakt is instead exposed as currentProfessionMatch, stage 'explore now' (not a pivot away from where the candidate actually is)",
 );
 ok(
   withCurrentProfessionPolis?.stage === "career_pivot",
