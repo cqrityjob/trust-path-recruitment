@@ -39,13 +39,13 @@ const CATEGORY_ORDER: readonly CategoryId[] = [
   "certifications",
 ];
 
-const CATEGORY_KEY: Readonly<Record<CategoryId, string>> = {
+const CATEGORY_KEY = {
   formal: "careerDiscovery.report.v31.moveForward.formal",
   employer: "careerDiscovery.report.v31.moveForward.employer",
   education: "careerDiscovery.report.v31.moveForward.education",
   experience: "careerDiscovery.report.v31.moveForward.experience",
   certifications: "careerDiscovery.report.v31.moveForward.certifications",
-};
+} as const satisfies Record<CategoryId, string>;
 
 interface Entry {
   readonly title: string;
