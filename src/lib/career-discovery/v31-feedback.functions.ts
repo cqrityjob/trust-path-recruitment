@@ -34,6 +34,10 @@ export const FUNNEL_EVENT_NAMES = [
   "save_journey_clicked",
   "result_claimed",
   "feedback_submitted",
+  // Final Candidate Result Delivery & Save Flow Fix: the anonymous result's
+  // own download action (window.print()), tracked the same privacy-safe way
+  // as every other funnel event here — event name only, no report content.
+  "result_downloaded",
 ] as const;
 
 export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];

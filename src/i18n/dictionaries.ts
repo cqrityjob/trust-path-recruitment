@@ -761,7 +761,7 @@ export const dictionaries = {
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Din karriär inom säkerhet",
     "cd.public.introBody":
-      "Tjugosex frågor om hur du föredrar att arbeta: två om din situation, tjugo som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
+      "28 frågor om hur du föredrar att arbeta: två om din situation, 22 som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
     "cd.public.introNoAccount":
       "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
     "cd.public.start": "Börja testet",
@@ -775,10 +775,16 @@ export const dictionaries = {
     "cd.public.toResult": "Till resultatet",
     "cd.public.doneTitle": "Alla frågor är besvarade",
     "cd.public.doneBody":
-      "Logga in eller skapa ett konto för att spara rapporten och kunna öppna den igen. Dina svar ligger kvar medan du gör det.",
-    "cd.public.signInToSave": "Logga in och spara rapporten",
-    "cd.public.saveNow": "Spara rapporten",
+      "Logga in eller skapa ett konto för att lägga till det här resultatet i din karriärresa och kunna öppna det igen senare. Dina svar ligger kvar medan du gör det.",
+    "cd.public.signInToSave": "Spara din karriärresa",
+    "cd.public.saveNow": "Spara i din karriärresa",
     "cd.public.answersKept": "Dina svar finns kvar i den här fliken tills rapporten är sparad.",
+    "cd.public.downloadResult": "Ladda ner resultat",
+    "cd.public.shareResult": "Dela resultat",
+    "cd.public.shareTitle": "Min Security Career DNA",
+    "cd.public.shareText": "Jag gjorde precis CQrityjobs karriärtest inom säkerhet och fick reda på min Security Career DNA. Testa själv:",
+    "cd.public.shareShared": "Delat",
+    "cd.public.shareCopied": "Kopierat till urklipp",
     "cd.public.saving": "Sparar din rapport…",
     "cd.public.failedTitle": "Rapporten kunde inte sparas",
     "cd.public.failedBody":
@@ -789,7 +795,7 @@ export const dictionaries = {
     "cd.public.of": "av",
     "cd.public.introEyebrow": "Karriärvägledning",
     "cd.public.introFactsTitle": "Innan du börjar",
-    "cd.public.factQuestions": "26 frågor",
+    "cd.public.factQuestions": "28 frågor",
     "cd.public.factStages":
       "2 om din situation · 20 som bygger ditt Security Career DNA · 4 om din inriktning",
     "cd.public.factNoJudgement": "Inga rätta eller felaktiga svar",
@@ -3093,7 +3099,7 @@ export const dictionaries = {
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Security Career Discovery",
     "cd.public.introBody":
-      "Twenty-six questions about how you prefer to work: two about where you are now, twenty that build your Security Career DNA, and four that follow from where you are. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
+      "28 questions about how you prefer to work: two about where you are now, 22 that build your Security Career DNA, and four that follow from where you are. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
     "cd.public.introNoAccount":
       "You don't need an account to start. Your answers stay in this tab, and you only sign in when you want to save the result.",
     "cd.public.start": "Start the assessment",
@@ -3107,10 +3113,17 @@ export const dictionaries = {
     "cd.public.toResult": "To the result",
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":
-      "Sign in or create an account to save your report and reopen it later. Your answers stay put while you do.",
-    "cd.public.signInToSave": "Sign in and save the report",
-    "cd.public.saveNow": "Save the report",
+      "Sign in or create an account to add this result to your Career Journey and reopen it later. Your answers stay put while you do.",
+    "cd.public.signInToSave": "Save your Career Journey",
+    "cd.public.saveNow": "Save to your Career Journey",
     "cd.public.answersKept": "Your answers stay in this tab until the report is saved.",
+    "cd.public.downloadResult": "Download result",
+    "cd.public.shareResult": "Share result",
+    "cd.public.shareTitle": "My Security Career DNA",
+    "cd.public.shareText":
+      "I just took CQrityjob's security career assessment and found out my Security Career DNA. Try it yourself:",
+    "cd.public.shareShared": "Shared",
+    "cd.public.shareCopied": "Copied to clipboard",
     "cd.public.saving": "Saving your report…",
     "cd.public.failedTitle": "The report could not be saved",
     "cd.public.failedBody":
@@ -3121,7 +3134,7 @@ export const dictionaries = {
     "cd.public.of": "of",
     "cd.public.introEyebrow": "Career guidance",
     "cd.public.introFactsTitle": "Before you begin",
-    "cd.public.factQuestions": "26 questions",
+    "cd.public.factQuestions": "28 questions",
     "cd.public.factStages":
       "2 about where you are · 20 that build your Security Career DNA · 4 about your direction",
     "cd.public.factNoJudgement": "No right or wrong answers",

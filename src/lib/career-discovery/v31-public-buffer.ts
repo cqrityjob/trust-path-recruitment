@@ -46,10 +46,12 @@ import { CONTENT_VERSION, DEFINITION_VERSION, type Locale } from "./v31/version"
  *  buffer from an older build is discarded rather than misread.
  *
  *  v1 → v2: the buffer gained the personal layer (2 context + 4 adaptive
- *  answers alongside the 20 Career DNA answers). A v1 buffer holds a
- *  20-question run and is discarded rather than replayed as a 26-question
- *  one, because completing it would silently produce a session with no
- *  context_status and therefore no Discovery Path. */
+ *  answers alongside the Career DNA answers, then 20 of them, now 22 with
+ *  CQ21/CQ22 — see v31/personal-layer.ts's MVP_QUESTION_COUNT). A v1 buffer
+ *  holds a Career-DNA-only run with no personal layer at all and is
+ *  discarded rather than replayed as a full run, because completing it
+ *  would silently produce a session with no context_status and therefore
+ *  no Discovery Path. */
 const BUFFER_VERSION = 2;
 
 const KEY = "cqj:discovery:v31:public-buffer:v1";
@@ -79,7 +81,7 @@ export interface PublicBuffer {
   readonly locale: Locale;
   readonly answers: readonly BufferedAnswer[];
   readonly startedAt: string;
-  /** Set once, by markComplete, the moment the 26th answer is recorded.
+  /** Set once, by markComplete, the moment the final answer is recorded.
    *  Absent on an in-progress buffer. Frozen rather than recomputed on every
    *  render so the client-computed result (see PublicAssessmentFlow) reports
    *  the same completion time across a reload, and so the same timestamp is
@@ -208,12 +210,12 @@ export function contextStatusOf(buffer: PublicBuffer | null): ContextStatus | nu
   return isContextStatus(a.value) ? a.value : null;
 }
 
-/** The full 26-question sequence for this run, in the frozen MVP order:
- *  2 Context → 20 Career DNA → 4 Discovery Path.
+/** The full 28-question sequence for this run, in the frozen MVP order:
+ *  2 Context → 22 Career DNA → 4 Discovery Path.
  *
  *  Ids rather than items, because the three stages are different shapes and
  *  the caller resolves each against its own bank. Before C1 is answered the
- *  tail is not yet knowable, so this returns the 22 ids that are — which is
+ *  tail is not yet knowable, so this returns the 24 ids that are — which is
  *  exactly what the flow can render at that point. */
 export function sessionItemIds(status: ContextStatus | null): readonly string[] {
   return [
@@ -223,10 +225,10 @@ export function sessionItemIds(status: ContextStatus | null): readonly string[] 
   ];
 }
 
-/** True when all 26 questions have an answer.
+/** True when every question in the run has an answer.
  *
  *  Deliberately includes the personal layer: a run missing C1 has no
- *  Discovery Path, and one missing an adaptive answer is a 25-question run.
+ *  Discovery Path, and one missing an adaptive answer is one question short.
  *  Either would be persisted as complete if this only counted core items. */
 export function isComplete(buffer: PublicBuffer | null): boolean {
   if (!buffer) return false;

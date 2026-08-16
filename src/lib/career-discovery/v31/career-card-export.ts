@@ -91,3 +91,45 @@ export function downloadBlob(blob: Blob, filename: string): void {
 export function linkedInShareUrl(pageUrl: string): string {
   return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(pageUrl)}`;
 }
+
+/**
+ * Text-only share for the anonymous result, available before any profession
+ * has cleared matching (unlike shareCardImage, which needs a rasterised
+ * card) — Final Candidate Result Delivery & Save Flow Fix, section 3.
+ *
+ * Never the private report URL: `url` is always the public assessment
+ * landing page (DISCOVER_URL_PATH), the same page a QR code on the Career
+ * Card points at. There is no per-candidate report URL to share, by design
+ * — see the Career Card's own privacy note.
+ */
+export async function shareResultText(
+  title: string,
+  text: string,
+  url: string,
+): Promise<ShareOutcome> {
+  if (typeof navigator === "undefined" || !navigator.share) return "unsupported";
+  try {
+    await navigator.share({ title, text, url });
+    return "shared";
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return "cancelled";
+    throw err;
+  }
+}
+
+/**
+ * Fallback for shareResultText when the Web Share API is unavailable
+ * (desktop browsers, mostly) — copies the same text+url to the clipboard so
+ * the candidate can paste it wherever they like. Never throws: a clipboard
+ * failure (permissions, insecure context) degrades to "nothing happened",
+ * which the caller surfaces as a calm retry state, not a crash.
+ */
+export async function copyResultTextToClipboard(text: string, url: string): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.clipboard) return false;
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`);
+    return true;
+  } catch {
+    return false;
+  }
+}

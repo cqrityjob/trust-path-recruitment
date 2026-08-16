@@ -1,4 +1,4 @@
-// The 16-dimension scoring engine.
+// The 17-dimension scoring engine.
 //
 // A pure function. No I/O, no state, no clock, no randomness. Given the same
 // answers it returns the same result forever, which is what makes a stored

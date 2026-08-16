@@ -861,6 +861,40 @@ ok(
   "11.9 v3.1 is registered as internal_test and never as active",
 );
 
+// ── cd_option_loadings.scoring_version must always have a row set matching
+// cd_definition_versions.scoring_version ────────────────────────────────
+//
+// Production incident (Final Candidate Result Delivery & Save Flow Fix):
+// cd_definition_versions has no separate option_matrix_version column —
+// cd_v31_validate_session_evidence's CD_OPTION_NOT_IN_MATRIX check compares
+// cd_option_loadings.scoring_version directly against
+// cd_definition_versions.scoring_version. Bumping SCORING_VERSION (this
+// migration) without a matching cd_option_loadings re-tag broke every save
+// with an option-format answer. This check asserts the invariant offline,
+// before it can reach production again: SOME migration must seed exactly
+// FLAT_LOADINGS.length rows tagged with the CURRENT SCORING_VERSION.
+const scoringVersionSyncMigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260816160000_cd_v31_option_matrix_v3_scoring_version_sync.sql",
+);
+const scoringVersionSyncMigration = readFileSync(scoringVersionSyncMigrationPath, "utf8");
+ok(
+  scoringVersionSyncMigration.includes(`'${SCORING_VERSION}'`),
+  "11.11 a migration seeds cd_option_loadings under the current SCORING_VERSION",
+);
+const syncedCount = [
+  ...scoringVersionSyncMigration.matchAll(
+    new RegExp(
+      `count\\(\\*\\) INTO _count FROM public\\.cd_option_loadings WHERE scoring_version = '${SCORING_VERSION}'`,
+      "g",
+    ),
+  ),
+].length;
+ok(
+  syncedCount === 1,
+  "11.12 the sync migration self-verifies exactly FLAT_LOADINGS.length rows under the current SCORING_VERSION",
+);
+
 // =========================================================================
 group("12 · Career Areas");
 // =========================================================================

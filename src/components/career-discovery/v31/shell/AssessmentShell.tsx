@@ -3,7 +3,7 @@
 // Presentation only. It frames the v3.1 public assessment in a distraction-free
 // surface that still reads as CQrityjob: the same brand mark, the same navy,
 // the same language control as the public site — but without the full site
-// navigation, which competes with finishing twenty-six questions.
+// navigation, which competes with finishing the whole run.
 
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";

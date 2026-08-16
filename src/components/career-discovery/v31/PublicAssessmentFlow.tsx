@@ -5,11 +5,16 @@
 // sessionStorage (v31-public-buffer.ts); persistence goes through the normal
 // authenticated v3.1 pipeline.
 //
-// ── THE FROZEN MVP: 26 QUESTIONS ───────────────────────────────────────
+// ── THE FROZEN MVP: 28 QUESTIONS ───────────────────────────────────────
 //
 //     Stage 1 ·  2 Career Context questions   → decides the Discovery Path
-//     Stage 2 · 20 Career DNA questions       → the only scored items
+//     Stage 2 · 22 Career DNA questions       → the only scored items
 //     Stage 3 ·  4 Discovery Path questions   → contextual, never scored
+//
+// 20 -> 22 with CQ21/CQ22 (Final Autonomous Matching Engine Completion
+// Mandate — CID17 Regulatory & Compliance Orientation). See
+// v31/personal-layer.ts's MVP_QUESTION_COUNT, asserted rather than
+// hardcoded, so a future drift is caught at import time rather than here.
 //
 // The Career DNA questions come from v31/core-items and v31/option-matrix. The
 // context and Discovery Path questions come from the owner-locked banks in
@@ -19,7 +24,7 @@
 //
 // No scoring happens client-side: the server builds the report from the
 // replayed answers exactly as it does for a signed-in run, and it builds it
-// from the 20 Career DNA answers alone.
+// from the 22 Career DNA answers alone.
 //
 // ── AVAILABILITY IS CHECKED FIRST, NOT LAST ────────────────────────────
 //
@@ -32,14 +37,14 @@
 // they exist as a user, so they proceed to the questions same as always;
 // the real enforcement is server-side at persistPublicV31Run regardless,
 // so nothing is actually exposed by letting them start. Letting someone
-// answer twenty-six questions and only then discover their result cannot
+// answer every question and only then discover their result cannot
 // be saved would still be the worst version of this feature, which is why
 // a signed-in non-tester is stopped here instead of at the save button.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowRight, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Download, Loader2, Share2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import {
   AssessmentPanel,
@@ -56,6 +61,11 @@ import {
 import { CareerContextStep } from "@/components/career-discovery/v31/CareerContextStep";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  copyResultTextToClipboard,
+  shareResultText,
+} from "@/lib/career-discovery/v31/career-card-export";
+import { DISCOVER_URL_PATH } from "@/lib/career-discovery/v31/career-card";
 import {
   clearCareerContext,
   EMPTY_CAREER_CONTEXT,
@@ -172,8 +182,11 @@ export function PublicAssessmentFlow() {
   const [careerContext, setCareerContext] = useState<CareerContext>(EMPTY_CAREER_CONTEXT);
   /** In-flight guard for persistence. See onSaveAndSignIn. */
   const persistingRef = useRef(false);
+  /** Transient feedback for the share button — see onShareResult. Cleared on
+   *  the next interaction rather than a timer, so it never disappears mid-read. */
+  const [shareFeedback, setShareFeedback] = useState<"copied" | "shared" | null>(null);
 
-  // The terminal phase for a just-completed 26-question buffer: the career
+  // The terminal phase for a just-completed buffer: the career
   // context step when C1 makes it relevant and it isn't already answered,
   // the report otherwise. Shared by the resume path and the live-advance
   // path below so they can never disagree.
@@ -240,7 +253,7 @@ export function PublicAssessmentFlow() {
     };
   }, [checkAvailability, checkTesterStatus]);
 
-  // The run's own question order: 2 context → 20 Career DNA → 4 Discovery
+  // The run's own question order: 2 context → 22 Career DNA → 4 Discovery
   // Path. Twenty-two ids until C1 is answered, because the Discovery Path —
   // and therefore its four questions — is not decided before then.
   const itemIds = useMemo(() => sessionItemIds(contextStatusOf(buffer)), [buffer]);
@@ -342,6 +355,37 @@ export function PublicAssessmentFlow() {
     }
   }
 
+  /** DOWNLOAD — Final Candidate Result Delivery & Save Flow Fix, section 2.
+   *  The simplest robust architecture available: the browser's own
+   *  print-to-PDF, over the existing print stylesheet (see styles.css's
+   *  `@media print` block and the `.no-print` classes already applied
+   *  throughout V31ReportView/AssessmentShell) rather than a new PDF
+   *  renderer. Needs no server round-trip, so it works identically before
+   *  and after an account exists. */
+  function onDownloadResult() {
+    track("result_downloaded");
+    window.print();
+  }
+
+  /** SHARE — section 3. Text-only and privacy-safe: never the private
+   *  report, always the public assessment landing page (the same URL a
+   *  Career Card's QR code points at). Web Share API first, clipboard copy
+   *  as the fallback everywhere it's unavailable (most desktop browsers). */
+  async function onShareResult() {
+    track("share_initiated");
+    const shareUrl = `${window.location.origin}${DISCOVER_URL_PATH}`;
+    const shareText = t("cd.public.shareText");
+    const outcome = await shareResultText(t("cd.public.shareTitle"), shareText, shareUrl);
+    if (outcome === "shared") {
+      setShareFeedback("shared");
+      return;
+    }
+    if (outcome === "cancelled") return;
+    // "unsupported" — no Web Share API on this browser/context.
+    const copied = await copyResultTextToClipboard(shareText, shareUrl);
+    if (copied) setShareFeedback("copied");
+  }
+
   // A signed-in visitor returning with a complete buffer persists immediately
   // rather than sitting on the client-computed preview — they already have
   // somewhere for the canonical, saved report to live.
@@ -414,7 +458,7 @@ export function PublicAssessmentFlow() {
     } catch (err) {
       if (!(err instanceof SnapshotValidationError)) throw err;
       // Should not happen: the flow already guarantees a well-formed,
-      // complete 26-answer buffer before this runs. If it ever does, fail
+      // complete buffer before this runs. If it ever does, fail
       // toward "let the candidate sign in and let the server try" rather
       // than showing a broken page.
       console.error("[v31] client-side result computation failed", err.failures);
@@ -663,6 +707,39 @@ export function PublicAssessmentFlow() {
   // clientSnapshot above: this is the actual fix for "no login wall before
   // the result". Signed-in visitors pass through here for a moment before
   // the effect above hands off to the real, saved report.
+  // DOWNLOAD / SHARE — section 5's intended order (complete -> see result ->
+  // download/share -> optionally save). Rendered for every candidate,
+  // signed in or not: keeping a copy or sharing it never required an
+  // account and still doesn't. Hidden on print via .no-print so the
+  // download itself never includes the button that triggered it.
+  const resultActions = (
+    <AssessmentPanel className="no-print mt-10 sm:p-10">
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onDownloadResult}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-border px-5 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {t("cd.public.downloadResult")}
+        </button>
+        <button
+          type="button"
+          onClick={() => void onShareResult()}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-border px-5 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+          {t("cd.public.shareResult")}
+        </button>
+        {shareFeedback && (
+          <span role="status" className="text-xs text-muted-foreground">
+            {shareFeedback === "shared" ? t("cd.public.shareShared") : t("cd.public.shareCopied")}
+          </span>
+        )}
+      </div>
+    </AssessmentPanel>
+  );
+
   const saveCta = (
     <AssessmentPanel className="no-print mt-10 text-center sm:p-10">
       <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[color:var(--secondary)]">
@@ -728,6 +805,7 @@ export function PublicAssessmentFlow() {
             track(name as FunnelEventName);
         }}
       />
+      {resultActions}
       {!signedIn && saveCta}
     </AssessmentShell>
   );
