@@ -7354,6 +7354,30 @@ export type Database = {
         }
         Relationships: []
       }
+      cd_profession_profiles_current: {
+        Row: {
+          band_high: number | null
+          band_low: number | null
+          calibration_version: string | null
+          centrality: string | null
+          confidence: string | null
+          created_at: string | null
+          dimension_id: string | null
+          evidence_basis: string | null
+          profession_id: string | null
+          source_reference: string | null
+          weight: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cd_profession_profiles_profession_id_fkey"
+            columns: ["profession_id"]
+            isOneToOne: false
+            referencedRelation: "cd_professions"
+            referencedColumns: ["profession_id"]
+          },
+        ]
+      }
       cd_v31_stored_reports: {
         Row: {
           career_areas: Json | null
