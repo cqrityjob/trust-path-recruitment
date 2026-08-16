@@ -392,6 +392,27 @@ export function rankCareerAreas(dims: DimensionResult): AreaResult {
     let penalty = 0;
     const aligned: { dimension: DimensionId; margin: number }[] = [];
 
+    // Autonomous Final Quality Pass: tried weighting both the penalty and
+    // its normaliser by each dimension's target (mirroring
+    // professions.ts's central-dominant fit) so a shortfall on a defining
+    // trait would cost more than the same shortfall on an incidental one.
+    // Reverted after hand-verifying it against a real persona: because
+    // penalty scales with target^2 (miss * target) while the normaliser
+    // only scales linearly (target), areas whose targets are uniformly high
+    // across most of the 15 dimensions (SCA04 Security Leadership, SCA05
+    // Risk & Crisis) became structurally harder to rank #1 than areas with
+    // a mixed high/low target profile (SCA01, SCA02) -- for ANY candidate,
+    // including ones genuinely suited to the demanding area. Concretely,
+    // the "Experienced Säkerhetssamordnare" persona (a real security
+    // coordinator) ranked SCA01 Guarding above their own SCA04 Security
+    // Leadership & Coordination area under the weighted formula. That is a
+    // worse defect than the one being fixed. Kept only the "why" evidence
+    // fix below (sorting displayed evidence by the area's own target),
+    // which uses the same target-as-importance signal without touching the
+    // ranking arithmetic -- unlike professions.ts, this locked spreadsheet
+    // has no explicit central/supporting split to calibrate against, so
+    // inventing one in the scoring formula itself is not safe without much
+    // more validation than this pass had time for.
     for (const d of observed) {
       const target = area.targets[d] / 10;
       const actual = dims.dimensions[d].score!;
