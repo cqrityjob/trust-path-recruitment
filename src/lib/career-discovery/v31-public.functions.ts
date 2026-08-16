@@ -116,9 +116,18 @@ async function fetchApprovedProfessionCatalog(
   const rows = (professions ?? []) as ProfessionRow[];
   if (rows.length === 0) return { catalog: [] };
 
+  // cd_profession_profiles_current, not the raw table — see that view's
+  // migration comment: cd_profession_profiles keeps every historical
+  // calibration_version batch for audit purposes, and reading it unfiltered
+  // combines two coexisting batches' bands into one profession's scoring
+  // input (found during the Release Completion mandate's real-data
+  // verification). The view exposes exactly one row per (profession_id,
+  // dimension_id): the most recently authored.
   const { data: profiles } = await supabase
-    .from("cd_profession_profiles")
-    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality")
+    .from("cd_profession_profiles_current")
+    .select(
+      "profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality",
+    )
     .in(
       "profession_id",
       rows.map((p) => p.profession_id),

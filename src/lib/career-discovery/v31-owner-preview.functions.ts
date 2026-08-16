@@ -10,8 +10,11 @@
 // look like before approving anything.
 //
 // Every export here is gated by requireSupabaseAuth AND is_platform_admin —
-// checked server-side, not trusted from the client — and none of it writes
-// approved_for_ranking, review_state, or anything else. Read-only.
+// checked server-side, not trusted from the client. Every export is
+// read-only EXCEPT approveOwnerPreviewProfessions (Release Completion
+// mandate §13), which is the one deliberate, explicit write path this file
+// has — it exists to be called from a real owner click in the admin UI,
+// never automatically and never from anywhere else in this codebase.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -25,13 +28,17 @@ import {
   type ProfessionDimensionBand,
   type ProfessionMatchDiagnostics,
 } from "./v31/professions";
+import type { DimensionResult } from "./v31/scoring";
+import type { ReportSnapshot } from "./v31/snapshot";
+import { DEFINITION_VERSION } from "./v31/version";
 import type { ContextStatus } from "./types";
+import type { StoredReportVersions } from "./stored-report.functions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ctx = { supabase: any; userId: string };
 
 class OwnerPreviewError extends Error {
-  constructor(readonly code: "not_admin" | "query_failed") {
+  constructor(readonly code: "not_admin" | "query_failed" | "not_found" | "not_v31") {
     super(code);
     this.name = "OwnerPreviewError";
   }
@@ -111,9 +118,18 @@ async function fetchFullCatalog(ctx: Ctx): Promise<ProfessionCatalogEntry[]> {
   const rows = (professions ?? []) as ProfessionRow[];
   if (rows.length === 0) return [];
 
+  // cd_profession_profiles_current, not the raw table: cd_profession_profiles
+  // keeps every historical calibration_version batch for audit purposes, and
+  // reading it unfiltered would combine two coexisting batches' bands into
+  // one profession's scoring input (found during the Release Completion
+  // mandate's real-data verification — see the view's own migration
+  // comment). The view exposes exactly one row per (profession_id,
+  // dimension_id): the most recently authored.
   const { data: profiles, error: profErr } = await ctx.supabase
-    .from("cd_profession_profiles")
-    .select("profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality")
+    .from("cd_profession_profiles_current")
+    .select(
+      "profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality",
+    )
     .in(
       "profession_id",
       rows.map((p) => p.profession_id),
@@ -232,4 +248,207 @@ export const runOwnerPreviewMatch = createServerFn({ method: "POST" })
       cigReachableSlugs,
       data.experienceBand ?? null,
     );
+  });
+
+export interface OwnerPreviewFromReportResult {
+  /** The candidate's own frozen report, with `professions` REPLACED by a
+   *  fresh run against the full, unfiltered catalogue — everything else
+   *  (Career DNA, patterns, career areas, currentProfession) is the exact
+   *  frozen content the candidate actually saw. Feed this straight into
+   *  V31ReportView (mode="authenticated") to render the real production
+   *  UI — ProfessionRecommendations, PossiblePathway, MoveForwardSection,
+   *  CareerCardCreator — exactly as an approved candidate would see it. */
+  readonly snapshot: ReportSnapshot;
+  readonly diagnostics: ProfessionMatchDiagnostics["diagnostics"];
+  readonly generatedAt: string;
+  readonly sourceSnapshotId: string;
+  readonly sourceSessionId: string | null;
+  readonly versions: StoredReportVersions;
+}
+
+/**
+ * Final Career Discovery Release Completion mandate, section 5: lets the
+ * owner review the REAL final candidate experience for a REAL completed
+ * assessment — not a synthetic persona — against the FULL profession
+ * catalogue, while approved_for_ranking stays false for everyone else.
+ *
+ * Deliberately scoped to the caller's OWN saved reports: the read goes
+ * through the ordinary RLS-scoped client (same access pattern as
+ * getStoredDiscoveryReport), so this adds no admin-bypass policy and no
+ * broader access to other candidates' private answers. The owner's own
+ * real completed assessment (e.g. the Sakerhetschef 8+ years acceptance
+ * case) is reachable this way; reviewing another real candidate's data
+ * would be a separate, explicit privacy decision this function does not
+ * make on its own.
+ *
+ * Read-only. Never writes approved_for_ranking, review_state, or the
+ * source report itself.
+ */
+export const runOwnerPreviewMatchFromReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ snapshotId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<OwnerPreviewFromReportResult> => {
+    const ctx = context as Ctx;
+    await assertAdmin(ctx);
+
+    // RLS-scoped: another user's snapshot id simply returns no row, exactly
+    // like getStoredDiscoveryReport (stored-report.functions.ts) — this
+    // function reuses that same ownership boundary, not a wider one.
+    const { data: row, error } = await ctx.supabase
+      .from("cd_report_snapshots")
+      .select(
+        "id, session_id, generated_at, definition_version, content_version, scoring_version, taxonomy_version, dna_scores",
+      )
+      .eq("id", data.snapshotId)
+      .maybeSingle();
+    if (error) throw new OwnerPreviewError("query_failed");
+    if (!row) throw new OwnerPreviewError("not_found");
+
+    const stored = (row.dna_scores as { report?: unknown } | null)?.report ?? null;
+    if (row.definition_version !== DEFINITION_VERSION || !stored) {
+      throw new OwnerPreviewError("not_v31");
+    }
+    const snapshot = stored as ReportSnapshot;
+
+    // ReportSnapshot does not carry contextStatus/experienceBand/the raw
+    // current-profession slug — only the resolved currentProfession title
+    // (see snapshot.ts's ReportSnapshot doc comment). Those three live on
+    // the session row instead, read here the same RLS-scoped way.
+    const { data: sessionRow, error: sessionError } = await ctx.supabase
+      .from("cd_sessions")
+      .select("context_status, current_profession_slug, current_experience_band")
+      .eq("id", row.session_id)
+      .maybeSingle();
+    if (sessionError) throw new OwnerPreviewError("query_failed");
+    const contextStatus = (sessionRow?.context_status as ContextStatus | null) ?? null;
+    const currentProfessionCigSlug =
+      (sessionRow?.current_profession_slug as string | null) ??
+      snapshot.currentProfession?.cigSlug ??
+      null;
+    const experienceBand =
+      (sessionRow?.current_experience_band as "under_1y" | "1_3y" | "4_7y" | "8_plus_y" | null) ??
+      null;
+
+    const catalog = await fetchFullCatalog(ctx);
+    const cigReachableSlugs = await fetchCigReachableSlugs(ctx.supabase, currentProfessionCigSlug);
+
+    // Unlike runOwnerPreviewMatch (which only ever has a golden persona's
+    // bare scores to work with, hence its flat evidenceWeight/dominance
+    // placeholders), a real ReportSnapshot's StoredDimension already carries
+    // the ACTUAL evidenceWeight/dominance/coverage/sources/tertiaryOnly the
+    // candidate's run produced (snapshot.ts's storedDimensions is a
+    // byte-for-byte superset of DimensionScore). Substituting flat
+    // placeholders here would silently discard real evidence strength and
+    // dominance — verified live to flatten fit scores toward a uniform ~99.5
+    // "strong" across every profession, i.e. exactly the overmatching defect
+    // this scoring version was calibrated to avoid. Carry the real values
+    // through instead.
+    const dimensions = Object.fromEntries(
+      DIMENSION_IDS.map((id) => {
+        const stored = snapshot.outputA.dimensions.find((d) => d.id === id);
+        return [
+          id,
+          {
+            dimension: id,
+            score: stored?.score ?? null,
+            evidenceWeight: stored?.evidenceWeight ?? 0,
+            dominance: stored?.dominance ?? null,
+            coverage: stored?.coverage ?? 0,
+            confidence: stored?.confidence ?? "none",
+            sources: stored?.sources ?? [],
+            tertiaryOnly: stored?.tertiaryOnly ?? false,
+          },
+        ];
+      }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) as any as DimensionResult["dimensions"];
+
+    const diagnostics = matchProfessionsDiagnostics(
+      { scoringVersion: "owner-preview", dimensions, answeredItems: [], complete: true },
+      catalog,
+      contextStatus,
+      currentProfessionCigSlug,
+      // Discovery Path tags are not frozen onto ReportSnapshot today, so a
+      // real preview cannot recover them — contextCorroborated stays false
+      // for every match here, which only ever narrows Recommendation
+      // Priority's bounded bonus, never Profession Affinity. Documented,
+      // not silently guessed at.
+      [],
+      cigReachableSlugs,
+      experienceBand,
+    );
+
+    const previewSnapshot: ReportSnapshot = {
+      ...snapshot,
+      professions: diagnostics.result.available
+        ? {
+            available: true,
+            matches: diagnostics.result.matches,
+            strongestDirections: diagnostics.result.strongestDirections,
+            alsoWorthExploring: diagnostics.result.alsoWorthExploring,
+            longerTermPossibilities: diagnostics.result.longerTermPossibilities,
+            careerPivots: diagnostics.result.careerPivots,
+            currentProfessionMatch: diagnostics.result.currentProfessionMatch,
+          }
+        : { available: false, reason: "no_approved_professions", matches: [] },
+    };
+
+    return {
+      snapshot: previewSnapshot,
+      diagnostics: diagnostics.diagnostics,
+      generatedAt: row.generated_at as string,
+      sourceSnapshotId: row.id as string,
+      sourceSessionId: (row.session_id as string | null) ?? null,
+      versions: {
+        definition: (row.definition_version as string) ?? "—",
+        content: (row.content_version as string) ?? "—",
+        scoring: (row.scoring_version as string) ?? "—",
+        taxonomy: (row.taxonomy_version as string) ?? "—",
+      },
+    };
+  });
+
+export interface ApproveProfessionsResult {
+  readonly updated: readonly string[];
+}
+
+/**
+ * Release Completion mandate §13: "Do NOT automatically set
+ * approved_for_ranking=true. Provide the owner with a clear review state
+ * for all 14 professions. The owner should be able to decide APPROVE ALL
+ * or APPROVE SELECTED PROFESSIONS only after reviewing the final rendered
+ * results. Any activation must require explicit owner instruction."
+ *
+ * This is that instruction's execution path — and only that. It writes
+ * review_state='approved_for_ranking' + approved_for_ranking=true for the
+ * given profession ids, nothing else. The existing
+ * cd_professions_ranking_approval_trg trigger (cd_guard_profession_ranking_
+ * approval) still independently re-checks derived_from_area and full
+ * 17-dimension calibration server-side before allowing the flip — this
+ * function adds no bypass of that guard, it only supplies the two columns
+ * the guard reads.
+ *
+ * Building this function is part of the mandate ("Build an owner
+ * approval-workflow UI... with working Approve All / Approve Selected
+ * actions"). Calling it is not — per the mandate's own closing instruction,
+ * nothing in this codebase invokes it until the owner explicitly does so
+ * from the admin UI.
+ */
+export const approveOwnerPreviewProfessions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ professionIds: z.array(z.string()).min(1) }).parse(d))
+  .handler(async ({ data, context }): Promise<ApproveProfessionsResult> => {
+    const ctx = context as Ctx;
+    await assertAdmin(ctx);
+
+    const { data: rows, error } = await ctx.supabase
+      .from("cd_professions")
+      .update({ review_state: "approved_for_ranking", approved_for_ranking: true })
+      .in("profession_id", data.professionIds)
+      .select("profession_id");
+    if (error) throw new OwnerPreviewError("query_failed");
+
+    return {
+      updated: ((rows ?? []) as Array<{ profession_id: string }>).map((r) => r.profession_id),
+    };
   });
