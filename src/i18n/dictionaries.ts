@@ -800,7 +800,7 @@ export const dictionaries = {
     "cd.public.introFactsTitle": "Innan du börjar",
     "cd.public.factQuestions": "28 frågor",
     "cd.public.factStages":
-      "2 om din situation · 20 som bygger ditt Security Career DNA · 4 om din inriktning",
+      "2 om din situation · 22 som bygger ditt Security Career DNA · 4 om din inriktning",
     "cd.public.factNoJudgement": "Inga rätta eller felaktiga svar",
     "cd.public.factNoJudgementBody":
       "Det är ingen bedömning av din kompetens eller anställningsbarhet.",
@@ -3141,7 +3141,7 @@ export const dictionaries = {
     "cd.public.introFactsTitle": "Before you begin",
     "cd.public.factQuestions": "28 questions",
     "cd.public.factStages":
-      "2 about where you are · 20 that build your Security Career DNA · 4 about your direction",
+      "2 about where you are · 22 that build your Security Career DNA · 4 about your direction",
     "cd.public.factNoJudgement": "No right or wrong answers",
     "cd.public.factNoJudgementBody": "This is not a judgement of your competence or employability.",
     "cd.public.factNoAccountShort": "No account needed to begin",
