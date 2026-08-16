@@ -186,38 +186,56 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
     name: { sv: "Bred profil", en: "Broad profile" },
     contextStatus: "working_in_security",
     // "Broad" means several genuine directions remain plausible, NOT that
-    // every profession is strong (Master Completion Mandate item 24). The
-    // previous version of this fixture was near-perfectly flat (0.64-0.70
-    // across all 16 dimensions), which trivially cleared every profession's
-    // central-fit floor and produced 14 of 14 matches — indistinguishable
-    // from "everything fits" in practice, even though the engine itself was
-    // working correctly. Redesigned with three genuine relative peaks
-    // (operational, analytical/technical, coordination — the same three
-    // directions item 24's own example names) at 0.8, and a clearly lower
-    // baseline (0.45, below most professions' central band floors) on
-    // everything else — so a real subset of professions should now
-    // genuinely miss on their own defining dimensions, not just average out
-    // close either way.
+    // every profession is strong (Autonomous Quality Pass, golden persona
+    // audit). Two earlier versions of this fixture both collapsed into
+    // "everything fits": v1 was near-perfectly flat (0.64-0.70 everywhere,
+    // 14/14 matched); v2 elevated three full clusters to 0.8 (12 of 16
+    // scored dimensions), which was still "flat-high" wearing a disguise,
+    // producing 13/14 matches (missing only Ordningsvakt). Root cause found
+    // by reading scoreProfession's actual arithmetic (professions.ts): the
+    // central-fit penalty is a WEIGHTED AVERAGE across all central bands, so
+    // exceeding 3 of 4 central bands makes a single narrow miss on the 4th
+    // nearly invisible -- it can never mathematically fail
+    // PROFESSION_MIN_CENTRAL_FIT alone. The only real disqualifier is the
+    // hard CENTRAL_DIMENSION_MAX_MISS gate (0.18), so a fixture needs every
+    // dimension it wants a profession to genuinely fail on to miss by
+    // clearly more than that, not just "somewhat lower".
+    //
+    // Redesigned a third time: ONE genuine primary strength (operational +
+    // risk, a real, coherent frontline profile) at 0.78; structure &
+    // documentation kept at a solid 0.62, since it is a near-universal
+    // secondary requirement across the catalogue (suppressing it also wrongly
+    // disqualifies Väktare itself); a modest, deliberately non-dominant
+    // coordination lean at 0.55 (present, but on its own not enough to clear
+    // Head of Security, which also needs genuine strategic evidence); and
+    // true specialty dimensions -- analytical, technical, strategic,
+    // service, conflict, investigative, learning -- clearly suppressed at
+    // 0.35, comfortably past the 0.18 max-miss gate against every specialty
+    // profession's band floor. A real "broad, capable, no dominant
+    // specialty" candidate should read as operationally strong with decent
+    // general structure and a plausible coordination stretch goal, not as
+    // equally excellent at investigation, cybersecurity, and risk strategy
+    // too.
     dims: {
-      // Operational cluster
-      CID01: 0.8,
-      CID06: 0.8,
-      CID12: 0.8,
-      CID16: 0.8,
-      // Analytical / technical cluster
-      CID03: 0.8,
-      CID04: 0.8,
-      CID10: 0.8,
-      CID11: 0.8,
-      // Coordination cluster
-      CID02: 0.8,
-      CID05: 0.8,
-      CID07: 0.8,
-      CID13: 0.8,
-      // Baseline — clearly lower, not just "a bit lower"
-      CID08: 0.45,
-      CID09: 0.45,
-      CID14: 0.45,
+      // Primary strength: operational + risk (coherent frontline profile)
+      CID01: 0.78,
+      CID06: 0.78,
+      CID12: 0.78,
+      CID16: 0.78,
+      // Near-universal secondary competence: structure & documentation
+      CID11: 0.62,
+      // Modest, deliberately non-dominant coordination lean
+      CID02: 0.55,
+      CID07: 0.55,
+      CID13: 0.55,
+      // True specialty dimensions -- clearly suppressed, not just "lower"
+      CID03: 0.35,
+      CID04: 0.35,
+      CID05: 0.35,
+      CID08: 0.35,
+      CID09: 0.35,
+      CID10: 0.35,
+      CID14: 0.35,
     },
   },
   {

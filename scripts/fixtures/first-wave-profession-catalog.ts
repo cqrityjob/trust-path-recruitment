@@ -152,7 +152,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
     limitationNoteSv: "Kräver antagning till polisutbildningen (grundutbildning + aspirantutbildning) och uppfyllda behörighetskrav.",
     limitationNoteEn: "Requires admission to police training (basic training plus a supervised probationary period) and meeting eligibility requirements.",
     bands: [
-      { dimensionId: "CID01", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID01", centrality: "central", bandLow: 0.55, bandHigh: 0.95, weight: 0.5 },
       { dimensionId: "CID02", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID03", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.1, bandHigh: 0.5, weight: 0.25 },
