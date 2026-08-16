@@ -756,8 +756,8 @@ export const dictionaries = {
       "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
-    "cd.public.loading": "Förbereder testet…",
-    "cd.public.unavailableTitle": "Testet är inte öppet ännu",
+    "cd.public.loading": "Förbereder vägledningen…",
+    "cd.public.unavailableTitle": "Vägledningen är inte öppen ännu",
     "cd.public.unavailableBody":
       "Den uppdaterade versionen av Din karriär inom säkerhet genomgår just nu granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
@@ -766,7 +766,7 @@ export const dictionaries = {
       "28 frågor om hur du föredrar att arbeta: två om din situation, 22 som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
     "cd.public.introNoAccount":
       "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
-    "cd.public.start": "Börja testet",
+    "cd.public.start": "Börja vägledningen",
     "cd.public.progress": "Fråga",
     "cd.public.stageContext": "Din situation",
     "cd.public.stageCareerDna": "Security Career DNA",
@@ -785,7 +785,7 @@ export const dictionaries = {
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
     "cd.public.shareText":
-      "Jag gjorde precis CQrityjobs karriärtest inom säkerhet och fick reda på min Security Career DNA. Testa själv:",
+      "Jag gjorde precis CQrityjobs karriärvägledning inom säkerhet och fick reda på min Security Career DNA. Utforska själv:",
     "cd.public.shareShared": "Delat",
     "cd.public.shareCopied": "Kopierat till urklipp",
     "cd.public.saving": "Sparar din rapport…",
@@ -794,7 +794,7 @@ export const dictionaries = {
       "Något gick fel när rapporten skulle sparas. Dina svar finns kvar — försök igen.",
     "cd.public.retry": "Försök igen",
     "cd.public.shellEyebrow": "Din karriär inom säkerhet",
-    "cd.public.exit": "Avsluta testet",
+    "cd.public.exit": "Avsluta vägledningen",
     "cd.public.of": "av",
     "cd.public.introEyebrow": "Karriärvägledning",
     "cd.public.introFactsTitle": "Innan du börjar",
