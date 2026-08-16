@@ -97,8 +97,20 @@ function layoutFor(format: CareerCardFormat): Layout {
       wordmarkY: 56,
     };
   }
-  // story and square share the same vertical rhythm, scaled by height.
-  const centerBias = format === "story" ? 0.32 : 0.24;
+  // story and square share the same vertical rhythm. nameY and
+  // indicatorsStartY used to be computed from an independent
+  // height-scaled "centerBias" (0.32 for story, 0.24 for square) rather
+  // than from stageBadgeY. For square specifically that put
+  // indicatorsStartY (349) almost on top of the stage badge (rect
+  // spanning y 337-389) -- a real, confirmed visual defect (the "UTFORSKA
+  // NU" button overlapping the first Career DNA indicator bar), found by
+  // rendering an actual card, not by reading the numbers. For story the
+  // same mismatch went the other way: indicatorsStartY (704) landed far
+  // below the badge (rect bottom ~507), leaving a large, unbalanced empty
+  // gap before the indicator bars. Anchoring both to stageBadgeY with a
+  // fixed, safe offset removes the coupling to height entirely, so this
+  // can't drift out of sync again as formats change.
+  const badgeBottomGap = 220 + 52 + 24; // stageBadgeY offset + badge height + margin
   return {
     padding: 80,
     eyebrowY: Math.round(height * 0.14),
@@ -106,8 +118,8 @@ function layoutFor(format: CareerCardFormat): Layout {
     titleSize: format === "story" ? 84 : 76,
     framingY: Math.round(height * 0.14) + 150,
     stageBadgeY: Math.round(height * 0.14) + 220,
-    nameY: Math.round(height * centerBias) + 40,
-    indicatorsStartY: Math.round(height * centerBias) + 90,
+    nameY: Math.round(height * 0.14) + badgeBottomGap + 60,
+    indicatorsStartY: Math.round(height * 0.14) + badgeBottomGap + 70,
     indicatorGap: 84,
     qrSize: 168,
     qrY: height - 80 - 168,
@@ -163,6 +175,18 @@ export function renderCareerCardSvg(
   const qr = qrDataUrl
     ? `<image x="${width - L.padding - L.qrSize}" y="${L.qrY}" width="${L.qrSize}" height="${L.qrSize}" href="${qrDataUrl}" />`
     : "";
+  // LinkedIn's QR sits beside the indicator rows, not below them (unlike
+  // story/square, where it's a bottom-right corner element with clear
+  // space above and below). A "scan to explore" caption placed near the
+  // QR in that landscape layout collides with the indicator bar text --
+  // confirmed by actually rendering the card, not assumed. The QR code is
+  // self-explanatory on its own, and a LinkedIn post already carries the
+  // author's own caption, so this format skips the discover-line entirely
+  // rather than fighting for space that isn't there.
+  const discoverCaption =
+    format === "linkedin"
+      ? ""
+      : `<text x="${width - L.padding - L.qrSize / 2}" y="${L.qrY - 20}" font-family="${FONT}" font-size="18" fill="${MUTED}" text-anchor="middle">${escapeSvgText(discoverLine)}</text>`;
 
   const stageBadgeWidth = Math.max(220, data.stageLabel.length * 17 + 64);
 
@@ -209,7 +233,7 @@ export function renderCareerCardSvg(
   ${indicatorBars}
 
   ${qr}
-  <text x="${width - L.padding - L.qrSize / 2}" y="${L.qrY + L.qrSize + 34}" font-family="${FONT}" font-size="18" fill="${MUTED}" text-anchor="middle">${escapeSvgText(discoverLine)}</text>
+  ${discoverCaption}
 
   <line x1="${L.padding}" y1="${L.footerY - 30}" x2="${width - L.padding}" y2="${L.footerY - 30}" stroke="${BAR_TRACK}" stroke-width="1" />
   <text x="${L.padding}" y="${L.footerY}" font-family="${FONT}" font-size="18" fill="${MUTED}">cqrityjob.com${escapeSvgText(DISCOVER_URL_PATH)}</text>

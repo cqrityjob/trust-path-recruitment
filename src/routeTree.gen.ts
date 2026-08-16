@@ -30,6 +30,7 @@ import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EmployerRegisterRouteImport } from './routes/employer.register'
 import { Route as EmployerLoginRouteImport } from './routes/employer.login'
+import { Route as DevCareerDiscoveryPreviewRouteImport } from './routes/dev.career-discovery-preview'
 import { Route as DevCareerAssessmentCalibrationRouteImport } from './routes/dev.career-assessment-calibration'
 import { Route as CareerCenterStartRouteImport } from './routes/career-center.start'
 import { Route as CareerCenterProfessionRouteImport } from './routes/career-center.$profession'
@@ -222,6 +223,12 @@ const EmployerLoginRoute = EmployerLoginRouteImport.update({
   path: '/employer/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevCareerDiscoveryPreviewRoute =
+  DevCareerDiscoveryPreviewRouteImport.update({
+    id: '/dev/career-discovery-preview',
+    path: '/dev/career-discovery-preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DevCareerAssessmentCalibrationRoute =
   DevCareerAssessmentCalibrationRouteImport.update({
     id: '/dev/career-assessment-calibration',
@@ -759,6 +766,7 @@ export interface FileRoutesByFullPath {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -862,6 +870,7 @@ export interface FileRoutesByTo {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -963,6 +972,7 @@ export interface FileRoutesById {
   '/career-center/$profession': typeof CareerCenterProfessionRoute
   '/career-center/start': typeof CareerCenterStartRoute
   '/dev/career-assessment-calibration': typeof DevCareerAssessmentCalibrationRoute
+  '/dev/career-discovery-preview': typeof DevCareerDiscoveryPreviewRoute
   '/employer/login': typeof EmployerLoginRoute
   '/employer/register': typeof EmployerRegisterRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -1073,6 +1083,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/dev/career-discovery-preview'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -1176,6 +1187,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/dev/career-discovery-preview'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -1276,6 +1288,7 @@ export interface FileRouteTypes {
     | '/career-center/$profession'
     | '/career-center/start'
     | '/dev/career-assessment-calibration'
+    | '/dev/career-discovery-preview'
     | '/employer/login'
     | '/employer/register'
     | '/invite/$token'
@@ -1378,6 +1391,7 @@ export interface RootRouteChildren {
   CandidateLoginRoute: typeof CandidateLoginRoute
   CandidateRegisterRoute: typeof CandidateRegisterRoute
   DevCareerAssessmentCalibrationRoute: typeof DevCareerAssessmentCalibrationRoute
+  DevCareerDiscoveryPreviewRoute: typeof DevCareerDiscoveryPreviewRoute
   EmployerLoginRoute: typeof EmployerLoginRoute
   EmployerRegisterRoute: typeof EmployerRegisterRoute
   InviteTokenRoute: typeof InviteTokenRoute
@@ -1531,6 +1545,13 @@ declare module '@tanstack/react-router' {
       path: '/employer/login'
       fullPath: '/employer/login'
       preLoaderRoute: typeof EmployerLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/career-discovery-preview': {
+      id: '/dev/career-discovery-preview'
+      path: '/dev/career-discovery-preview'
+      fullPath: '/dev/career-discovery-preview'
+      preLoaderRoute: typeof DevCareerDiscoveryPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dev/career-assessment-calibration': {
@@ -2552,6 +2573,7 @@ const rootRouteChildren: RootRouteChildren = {
   CandidateLoginRoute: CandidateLoginRoute,
   CandidateRegisterRoute: CandidateRegisterRoute,
   DevCareerAssessmentCalibrationRoute: DevCareerAssessmentCalibrationRoute,
+  DevCareerDiscoveryPreviewRoute: DevCareerDiscoveryPreviewRoute,
   EmployerLoginRoute: EmployerLoginRoute,
   EmployerRegisterRoute: EmployerRegisterRoute,
   InviteTokenRoute: InviteTokenRoute,
