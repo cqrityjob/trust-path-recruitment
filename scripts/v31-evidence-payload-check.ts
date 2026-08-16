@@ -45,7 +45,7 @@ function group(n: string) {
 
 const SESSION = "00000000-0000-0000-0000-0000000000aa";
 
-/** The 20 scored answers, in the shape the buffer produces. */
+/** The scored answers (22, since CQ21/CQ22), in the shape the buffer produces. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function coreAnswers(): any[] {
   return CORE_ITEMS.map((i) =>
@@ -73,7 +73,11 @@ group("1 · answer_tags is never null — the 23502 that emptied cd_evidence");
 for (const status of CONTEXT_STATUS_VALUES) {
   const rows = buildEvidenceRows(SESSION, coreAnswers(), personalAnswers(status));
 
-  ok(rows.length === 26, `1.1 ${status}: the payload is twenty-six rows`);
+  // 2 context + CORE_ITEMS.length (22, since CQ21/CQ22) + 4 adaptive.
+  ok(
+    rows.length === 2 + CORE_ITEMS.length + 4,
+    `1.1 ${status}: the payload is ${2 + CORE_ITEMS.length + 4} rows`,
+  );
 
   // The exact defect. `null` here fails the column's NOT NULL constraint and
   // takes the entire multi-row statement with it.
@@ -197,8 +201,8 @@ group("4 · The scoring boundary survives the payload");
   const rows = buildEvidenceRows(SESSION, coreAnswers(), personalAnswers("changing_career_area"));
   const coreIds = new Set(CORE_ITEMS.map((i) => i.id));
   ok(
-    rows.filter((r) => coreIds.has(r.item_id)).length === 20,
-    "4.1 exactly twenty Career DNA rows",
+    rows.filter((r) => coreIds.has(r.item_id)).length === CORE_ITEMS.length,
+    `4.1 exactly ${CORE_ITEMS.length} Career DNA rows`,
   );
   ok(
     rows.filter((r) => !coreIds.has(r.item_id)).length === 6,

@@ -225,7 +225,7 @@ function answerWholeRun(
 }
 
 buf = answerWholeRun(buf);
-ok(isComplete(buf), "2.5 answering all twenty-six questions completes the buffer");
+ok(isComplete(buf), "2.5 answering the whole run completes the buffer");
 ok(remainingItemIds(buf).length === 0, "2.6 nothing remains outstanding");
 
 // Survives a refresh: re-reading from storage returns the same answers.
@@ -297,16 +297,17 @@ ok(
 );
 
 // =========================================================================
-group("2b · The frozen MVP: 2 context + 20 Career DNA + 4 Discovery Path");
+group("2b · The frozen MVP: 2 context + 22 Career DNA + 4 Discovery Path");
 // =========================================================================
 //
 // The failure this section exists to catch is a SHORT INSTRUMENT: a run that
-// serves 25 questions, or skips the routing question, or persists as complete
-// without a Discovery Path. None of those is visible by reading the flow.
+// serves fewer questions than the registry defines, or skips the routing
+// question, or persists as complete without a Discovery Path. None of those
+// is visible by reading the flow.
 
-ok(MVP_QUESTION_COUNT === 26, "2b.1 the frozen MVP is twenty-six questions");
+ok(MVP_QUESTION_COUNT === 28, "2b.1 the frozen MVP is twenty-eight questions");
 ok(CONTEXT_ITEMS.length === 2, "2b.2 exactly two context questions");
-ok(CORE_ITEMS.length === 20, "2b.3 exactly twenty Career DNA questions");
+ok(CORE_ITEMS.length === 22, "2b.3 exactly twenty-two Career DNA questions");
 ok(ADAPTIVE_ITEMS_PER_SESSION === 4, "2b.4 exactly four Discovery Path questions per run");
 
 // The owner-locked context questions, by id. If either id changes, the
@@ -328,7 +329,7 @@ for (const option of CONTEXT_ITEMS[0].options) {
   );
   ok(
     sessionItemIds(status).length === MVP_QUESTION_COUNT,
-    `2b.7 ${option.value} produces a twenty-six question run`,
+    `2b.7 ${option.value} produces a full-length run`,
   );
   ok(
     typeof pathForContextStatus(status) === "string",
@@ -406,7 +407,7 @@ storage.clear();
   for (const item of adaptiveItemsForStatus("exploring_security" as never)) {
     b = recordAnswer(b, { itemId: item.id, format: "personal", value: item.options[0].value });
   }
-  ok(isComplete(b), "2b.20 all twenty-six answers complete the run");
+  ok(isComplete(b), "2b.20 answering the whole run completes it");
 }
 
 // Changing C1 re-routes the run and drops the now-foreign Discovery Path
@@ -425,7 +426,10 @@ storage.clear();
   });
 
   const dnaAfter = b.answers.filter((a) => !isPersonalItemId(a.itemId)).length;
-  ok(dnaBefore === 20 && dnaAfter === 20, "2b.21 re-routing keeps all twenty Career DNA answers");
+  ok(
+    dnaBefore === CORE_ITEMS.length && dnaAfter === CORE_ITEMS.length,
+    "2b.21 re-routing keeps all Career DNA answers",
+  );
 
   const stillHeld = new Set(b.answers.map((a) => a.itemId));
   ok(
