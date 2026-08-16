@@ -80,14 +80,21 @@ function esc(s: string): string {
 
 const REQUESTED: readonly { id: string; label: string }[] = [
   { id: "student", label: "1. Student" },
-  { id: "vaktare", label: "2. Väktare (1-3 years)" },
-  { id: "experienced-vaktare", label: "3. Experienced Väktare (8+ years)" },
-  { id: "sakerhetschef-senior", label: "4. Säkerhetschef / Head of Security (8+ years)" },
-  { id: "experienced-coordinator", label: "5. Experienced Security Coordinator" },
-  { id: "technical", label: "6. Technical" },
-  { id: "investigation", label: "7. Investigation / Analysis" },
-  { id: "broad-profile", label: "8. Broad" },
-  { id: "sparse", label: "9. Sparse" },
+  { id: "new-to-security", label: "2. New entrant" },
+  { id: "vaktare", label: "3. Väktare (1-3 years)" },
+  { id: "experienced-vaktare", label: "4. Experienced Väktare (8+ years)" },
+  { id: "operational-guarding", label: "5. Operational guarding" },
+  { id: "experienced-coordinator", label: "6. Experienced Security Coordinator" },
+  { id: "sakerhetschef-senior", label: "7. Säkerhetschef / Head of Security (8+ years)" },
+  { id: "career-changer", label: "8. Career changer" },
+  { id: "technical", label: "9. Technical" },
+  { id: "cyber", label: "10. Cyber" },
+  { id: "investigation", label: "11. Investigation / Analysis" },
+  { id: "aml-compliance", label: "12. AML / Compliance" },
+  { id: "risk-crisis", label: "13. Risk / Crisis" },
+  { id: "broad-profile", label: "14. Broad (junior)" },
+  { id: "broad-profile-senior", label: "15. Broad (senior)" },
+  { id: "sparse", label: "16. Sparse" },
 ];
 
 const STAGE_CLASS: Record<string, string> = {

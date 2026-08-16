@@ -1,8 +1,16 @@
-// The 9 required golden personas (Execution Mandate §30), as plain
-// dimension-score data. Shared by scripts/career-discovery-v31-golden-
-// personas.ts (engine-level regression) and the admin owner-preview route
+// The golden personas, as plain dimension-score data. Shared by
+// scripts/career-discovery-v31-golden-personas.ts (engine-level regression)
+// and the admin owner-preview route
 // (src/routes/_authenticated.admin.career-discovery-preview.tsx), so the
 // two never drift into describing different personas.
+//
+// Originally the 9 required by Execution Mandate §30, extended to today's
+// 16 by the Final Autonomous Matching Engine Completion Mandate's
+// real-world validation list: Student, New entrant, Väktare 1-3y,
+// Experienced Väktare, Security Coordinator, Security Manager 8+, Career
+// changer, Technical, Cyber (distinct from Technical), Investigation, AML/
+// compliance, Risk/crisis, Operational guarding, Broad junior, Broad
+// senior, Sparse/ambiguous.
 
 import type { DimensionId } from "./dimensions";
 import type { ContextStatus } from "../types";
@@ -53,6 +61,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.6,
       CID14: 0.75,
       CID16: 0.65,
+      CID17: 0.4,
     },
   },
   {
@@ -75,6 +84,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.55,
       CID14: 0.6,
       CID16: 0.6,
+      CID17: 0.4,
     },
   },
   {
@@ -105,6 +115,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.6,
       CID14: 0.75,
       CID16: 0.6,
+      CID17: 0.45,
     },
   },
   {
@@ -136,6 +147,39 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.65,
       CID14: 0.55,
       CID16: 0.9,
+      CID17: 0.55,
+    },
+  },
+  {
+    // Final Autonomous Matching Engine Completion Mandate: pure operational/
+    // protective DNA evidence with NO current profession set -- deliberately
+    // distinct from "vaktare"/"experienced-vaktare" (which both carry
+    // currentProfessionCigSlug: "vaktare"). Tests that raw Career DNA alone,
+    // with zero context/current-role influence, correctly surfaces Guarding
+    // & Operational Protection professions strongly -- a candidate who has
+    // never worked in security but whose answers show a decisive
+    // operational/risk/conflict-handling lean, exactly Väktare/Ordningsvakt/
+    // Skyddsvakt's shared central profile.
+    id: "operational-guarding",
+    name: { sv: "Operativ vaktprofil", en: "Operational guarding profile" },
+    contextStatus: "exploring_security",
+    dims: {
+      CID01: 0.85,
+      CID02: 0.3,
+      CID03: 0.4,
+      CID04: 0.3,
+      CID05: 0.25,
+      CID06: 0.8,
+      CID07: 0.55,
+      CID08: 0.55,
+      CID09: 0.65,
+      CID10: 0.35,
+      CID11: 0.6,
+      CID12: 0.55,
+      CID13: 0.55,
+      CID14: 0.55,
+      CID16: 0.7,
+      CID17: 0.4,
     },
   },
   {
@@ -169,6 +213,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.85,
       CID14: 0.65,
       CID16: 0.78,
+      CID17: 0.55,
     },
   },
   {
@@ -192,6 +237,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.8,
       CID14: 0.7,
       CID16: 0.65,
+      CID17: 0.55,
     },
   },
   {
@@ -217,6 +263,7 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.65,
       CID14: 0.65,
       CID16: 0.6,
+      CID17: 0.5,
     },
   },
   {
@@ -239,6 +286,38 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.5,
       CID14: 0.75,
       CID16: 0.55,
+      CID17: 0.35,
+    },
+  },
+  {
+    // Final Autonomous Matching Engine Completion Mandate: distinct from
+    // "technical" (SP014 Sakerhetstekniker -- physical installation/
+    // maintenance, CID01+CID04 central). This persona is forward-looking
+    // information-security work: strategic orientation (staying ahead of
+    // evolving threats, SP009 Cybersakerhetsanalytiker's third central
+    // dimension) is genuinely elevated, not just "high analytical/technical
+    // again" -- and CID01 is pushed low enough to clearly miss
+    // Sakerhetstekniker's central band, so the two personas separate.
+    id: "cyber",
+    name: { sv: "Cybersäkerhetsprofil", en: "Cyber profile" },
+    contextStatus: "working_in_security",
+    dims: {
+      CID01: 0.25,
+      CID02: 0.35,
+      CID03: 0.8,
+      CID04: 0.85,
+      CID05: 0.7,
+      CID06: 0.65,
+      CID07: 0.45,
+      CID08: 0.25,
+      CID09: 0.2,
+      CID10: 0.45,
+      CID11: 0.55,
+      CID12: 0.55,
+      CID13: 0.5,
+      CID14: 0.8,
+      CID16: 0.55,
+      CID17: 0.4,
     },
   },
   {
@@ -261,11 +340,77 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID13: 0.5,
       CID14: 0.65,
       CID16: 0.55,
+      // Investigative genuinely overlaps compliance-review work, but
+      // deliberately kept short of the AML persona's 0.85 -- a real
+      // Sakerhetsutredare/AML pairwise test needs one to clear CID17's
+      // central-coverage gate and the other not to.
+      CID17: 0.45,
+    },
+  },
+  {
+    // Final Autonomous Matching Engine Completion Mandate: the persona
+    // CID17 (Regulatory & Compliance Orientation) was built for. Analytical
+    // + Investigative are genuinely present (shared with "investigation"),
+    // but CID17 is the clearly dominant, distinguishing signal at 0.85 --
+    // without it this profile would be indistinguishable from
+    // Sakerhetsutredare (Security Investigator), exactly the pairing
+    // DOMAIN_ONLY_CENTRAL_RULE's recalibration had to solve. Operational
+    // and conflict-handling are pushed low: this is desk-based transaction
+    // review, not frontline work.
+    id: "aml-compliance",
+    name: { sv: "AML / regelefterlevnadsprofil", en: "AML / compliance profile" },
+    contextStatus: "working_in_security",
+    dims: {
+      CID01: 0.2,
+      CID02: 0.3,
+      CID03: 0.8,
+      CID04: 0.4,
+      CID05: 0.45,
+      CID06: 0.6,
+      CID07: 0.5,
+      CID08: 0.25,
+      CID09: 0.25,
+      CID10: 0.7,
+      CID11: 0.65,
+      CID12: 0.55,
+      CID13: 0.5,
+      CID14: 0.6,
+      CID16: 0.55,
+      CID17: 0.85,
+    },
+  },
+  {
+    // Final Autonomous Matching Engine Completion Mandate: built to clear
+    // both Riskchef (SP011: Analytical + Strategic + Risk central) and
+    // Krisberedskapssamordnare (SP012: Strategic + Risk central) -- a real
+    // risk/crisis-oriented profile, genuinely different from
+    // "sakerhetschef-senior" (leadership-led) and "aml-compliance"
+    // (compliance-led) despite sharing some analytical/strategic ground.
+    id: "risk-crisis",
+    name: { sv: "Risk- och krisprofil", en: "Risk / crisis profile" },
+    contextStatus: "working_in_security",
+    dims: {
+      CID01: 0.3,
+      CID02: 0.55,
+      CID03: 0.75,
+      CID04: 0.4,
+      CID05: 0.8,
+      CID06: 0.85,
+      CID07: 0.55,
+      CID08: 0.3,
+      CID09: 0.4,
+      CID10: 0.4,
+      CID11: 0.7,
+      CID12: 0.6,
+      CID13: 0.65,
+      CID14: 0.65,
+      CID16: 0.65,
+      CID17: 0.5,
     },
   },
   {
     id: "broad-profile",
-    name: { sv: "Bred profil", en: "Broad profile" },
+    name: { sv: "Bred profil (junior)", en: "Broad profile (junior)" },
     contextStatus: "working_in_security",
     // "Broad" means several genuine directions remain plausible, NOT that
     // every profession is strong (Autonomous Quality Pass, golden persona
@@ -318,6 +463,45 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
       CID09: 0.35,
       CID10: 0.35,
       CID14: 0.35,
+      CID17: 0.35,
+    },
+  },
+  {
+    // Final Autonomous Matching Engine Completion Mandate: senior-tier
+    // counterpart to "broad-profile" (junior) -- a capable senior candidate
+    // who genuinely spans several senior-appropriate directions (Head of
+    // Security, Risk Manager, Security Coordinator) rather than one narrow
+    // specialty. Same design discipline as the junior version: one coherent
+    // primary cluster (leadership + strategic + risk, all senior-central
+    // dimensions across SP007/SP011/SP012) at 0.75, not a flat-high wall --
+    // true specialty dimensions (technical, investigative, service) stay
+    // clearly suppressed at 0.35 so this remains "broad within a plausible
+    // senior band", not "matches everything".
+    id: "broad-profile-senior",
+    name: { sv: "Bred profil (senior)", en: "Broad profile (senior)" },
+    contextStatus: "security_leader",
+    experienceBand: "8_plus_y",
+    dims: {
+      // Primary strength: leadership + strategic + risk (coherent senior
+      // cluster spanning Head of Security / Risk Manager / Crisis Coord.)
+      CID02: 0.75,
+      CID05: 0.75,
+      CID06: 0.75,
+      // Near-universal senior secondary competence
+      CID07: 0.65,
+      CID11: 0.65,
+      CID13: 0.6,
+      CID16: 0.65,
+      // True specialty dimensions -- clearly suppressed, not just "lower"
+      CID01: 0.35,
+      CID03: 0.4,
+      CID04: 0.3,
+      CID08: 0.35,
+      CID09: 0.4,
+      CID10: 0.35,
+      CID12: 0.55,
+      CID14: 0.5,
+      CID17: 0.4,
     },
   },
   {

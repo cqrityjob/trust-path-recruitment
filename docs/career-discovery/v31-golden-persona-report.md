@@ -9,7 +9,7 @@ Context: `exploring_security`
 ### Career Areas (broad orientation, top 3)
   1. **Guarding & Operational Protection** (SCA01) — aligned: Service Orientation, Learning & Development, Analytical Orientation, Leadership Orientation
   2. **Security Technology & Physical Security** (SCA03) — aligned: Service Orientation, Operational Orientation, Communication, Leadership Orientation
-  3. **Public Order, Defence & Public Safety** (SCA02) — aligned: Learning & Development, Service Orientation, Technical Orientation
+  3. **Public Order, Defence & Public Safety** (SCA02) — aligned: Learning & Development, Service Orientation, Regulatory & Compliance Orientation, Technical Orientation
 
 ### Strongest directions to explore
   - **Polis** (SP005) — stage: explore_now, fit: strong
@@ -56,9 +56,9 @@ Context: `exploring_security`
 Context: `exploring_security`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Guarding & Operational Protection** (SCA01) — aligned: Learning & Development, Technical Orientation, Investigative Orientation, Strategic Orientation
-  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Service Orientation, Technical Orientation
-  3. **Security Technology & Physical Security** (SCA03) — aligned: Operational Orientation, Conflict Management
+  1. **Guarding & Operational Protection** (SCA01) — aligned: Learning & Development, Technical Orientation, Investigative Orientation, Regulatory & Compliance Orientation
+  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Service Orientation, Regulatory & Compliance Orientation, Technical Orientation
+  3. **Security Technology & Physical Security** (SCA03) — aligned: Operational Orientation, Conflict Management, Regulatory & Compliance Orientation
 
 ### Strongest directions to explore
   - **Väktare** (SP001) — stage: explore_now, fit: strong
@@ -100,9 +100,9 @@ Context: `exploring_security`
 Context: `working_in_security` · experience: `1_3y` · current profession: `vaktare`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Guarding & Operational Protection** (SCA01) — aligned: Learning & Development
-  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Learning & Development, Service Orientation, Technical Orientation
-  3. **Security Technology & Physical Security** (SCA03) — aligned: Operational Orientation, Service Orientation, Conflict Management
+  1. **Guarding & Operational Protection** (SCA01) — aligned: Learning & Development, Regulatory & Compliance Orientation
+  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Learning & Development, Service Orientation, Regulatory & Compliance Orientation, Technical Orientation
+  3. **Security Technology & Physical Security** (SCA03) — aligned: Operational Orientation, Service Orientation, Conflict Management, Regulatory & Compliance Orientation
 
 ### Strongest directions to explore
   - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
@@ -140,7 +140,7 @@ Context: `developing_current_role` · experience: `8_plus_y` · current professi
 
 ### Career Areas (broad orientation, top 3)
   1. **Guarding & Operational Protection** (SCA01) — aligned: Composure Under Pressure, Risk Awareness, Operational Orientation, Structure & Documentation
-  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Composure Under Pressure, Structure & Documentation, Service Orientation, Technical Orientation
+  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Composure Under Pressure, Structure & Documentation, Service Orientation, Regulatory & Compliance Orientation
   3. **Security Technology & Physical Security** (SCA03) — aligned: Risk Awareness, Composure Under Pressure, Independent Decision-Making, Operational Orientation
 
 ### Strongest directions to explore
@@ -173,14 +173,58 @@ Context: `developing_current_role` · experience: `8_plus_y` · current professi
     aligned: Konflikthantering, Serviceorientering, Operativ orientering, Teknisk orientering
     card indicators: Konflikthantering (70% bar), Service (60% bar), Operativ (85% bar), Teknisk (45% bar)
 
+## Operational guarding profile
+
+Context: `exploring_security`
+
+### Career Areas (broad orientation, top 3)
+  1. **Guarding & Operational Protection** (SCA01) — aligned: Operational Orientation, Risk Awareness, Regulatory & Compliance Orientation
+  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Service Orientation, Regulatory & Compliance Orientation, Technical Orientation
+  3. **Security Technology & Physical Security** (SCA03) — aligned: Risk Awareness, Composure Under Pressure, Operational Orientation, Conflict Management
+
+### Strongest directions to explore
+  - **Väktare** (SP001) — stage: explore_now, fit: strong
+    why: Ditt svarsmönster visar ett tydligt drag mot praktiskt, situationsnära arbete kombinerat med riskmedvetenhet och strukturerad dokumentation -- kärnan i en väktarroll.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Operativ orientering, Riskmedvetenhet, Konflikthantering, Lärande och utveckling
+    card indicators: Operativ (85% bar), Riskmedveten (80% bar), Konflikthantering (65% bar), Lärande (55% bar)
+  - **Skyddsvakt** (SP003) — stage: explore_now, fit: strong
+    why: Din höga riskmedvetenhet tillsammans med struktur och självständigt beslutsfattande passar väl med skyddsvaktens roll att skydda skyddsobjekt enligt skyddslagen.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Riskmedvetenhet, Operativ orientering, Konflikthantering, Lärande och utveckling
+    card indicators: Riskmedveten (80% bar), Operativ (85% bar), Konflikthantering (65% bar), Lärande (55% bar)
+  - **Ordningsvakt** (SP002) — stage: explore_now, fit: strong
+    why: Du kombinerar operativ handlingskraft med förmåga att hantera motstånd och sätta gränser -- centralt i ordningsvaktsrollen, som ofta innebär direkt konflikthantering i publika miljöer.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Konflikthantering, Operativ orientering, Serviceorientering, Teknisk orientering
+    card indicators: Konflikthantering (65% bar), Operativ (85% bar), Service (55% bar), Teknisk (30% bar)
+
+### Also worth exploring
+  - **Polis** (SP005) — stage: explore_now, fit: strong
+    why: Ditt mönster av serviceorientering, konflikthantering, självständigt beslutsfattande och lugn under press liknar den bredd som polisyrket kräver i det dagliga arbetet.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Konflikthantering, Serviceorientering, Operativ orientering, Teknisk orientering
+    card indicators: Konflikthantering (65% bar), Service (55% bar), Operativ (85% bar), Teknisk (30% bar)
+  - **Personskyddsvakt** (SP004) — stage: possible_next_step, fit: strong
+    why: Din kombination av konflikthantering, självständiga beslut under press och lugn i pressade lägen matchar personskyddets krav på ständig vaksamhet och snabba avgöranden.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Riskmedvetenhet, Konflikthantering, Operativ orientering, Lärande och utveckling
+    card indicators: Riskmedveten (80% bar), Konflikthantering (65% bar), Operativ (85% bar), Lärande (55% bar)
+
+### Longer-term possibilities
+  (none)
+
+### Career pivot — real affinity, different direction
+  (none)
+
 ## Säkerhetschef / Head of Security (8+ years)
 
 Context: `security_leader` · experience: `8_plus_y` · current profession: `sakerhetschef`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Security Leadership & Coordination** (SCA04) — aligned: Leadership Orientation
-  2. **Risk, Crisis Preparedness & Resilience** (SCA05) — aligned: Leadership Orientation, Service Orientation
-  3. **Security Advisory & Specialist Services** (SCA10) — aligned: Leadership Orientation, Risk Awareness
+  1. **Security Leadership & Coordination** (SCA04) — aligned: Leadership Orientation, Regulatory & Compliance Orientation
+  2. **Risk, Crisis Preparedness & Resilience** (SCA05) — aligned: Leadership Orientation, Regulatory & Compliance Orientation, Service Orientation
+  3. **Investigations, Intelligence & Analysis** (SCA06) — aligned: Communication, Risk Awareness, Strategic Orientation, Collaboration
   (top areas are closely grouped, not a strict order)
 
 ### Strongest directions to explore
@@ -213,8 +257,8 @@ Context: `security_leader` · experience: `8_plus_y` · current profession: `sak
 Context: `developing_current_role` · current profession: `sakerhetssamordnare`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Security Leadership & Coordination** (SCA04) — aligned: —
-  2. **Risk, Crisis Preparedness & Resilience** (SCA05) — aligned: Leadership Orientation, Conflict Management, Service Orientation
+  1. **Security Leadership & Coordination** (SCA04) — aligned: Regulatory & Compliance Orientation
+  2. **Risk, Crisis Preparedness & Resilience** (SCA05) — aligned: Leadership Orientation, Conflict Management, Service Orientation, Regulatory & Compliance Orientation
   3. **Guarding & Operational Protection** (SCA01) — aligned: Communication, Structure & Documentation, Collaboration, Independent Decision-Making
   (top areas are closely grouped, not a strict order)
 
@@ -329,7 +373,7 @@ Context: `working_in_security`
 ### Career Areas (broad orientation, top 3)
   1. **Security Technology & Physical Security** (SCA03) — aligned: Analytical Orientation, Investigative Orientation, Strategic Orientation, Leadership Orientation
   2. **Cyber & Information Security** (SCA09) — aligned: —
-  3. **Financial Crime Prevention & Compliance** (SCA07) — aligned: Technical Orientation, Operational Orientation
+  3. **Data Centres & Critical Infrastructure** (SCA08) — aligned: Technical Orientation, Analytical Orientation, Investigative Orientation, Regulatory & Compliance Orientation
   (top areas are closely grouped, not a strict order)
 
 ### Strongest directions to explore
@@ -340,11 +384,6 @@ Context: `working_in_security`
     card indicators: Teknisk (85% bar), Analytisk (80% bar), Utredande (60% bar), Konflikthantering (25% bar)
 
 ### Also worth exploring
-  - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
-    why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Analytisk orientering, Utredande orientering, Teknisk orientering, Operativ orientering
-    card indicators: Analytisk (80% bar), Utredande (60% bar), Teknisk (85% bar), Operativ (30% bar)
   - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
     why: Din tekniska och analytiska profil, i kombination med lärandeorientering, passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
@@ -376,14 +415,53 @@ Context: `working_in_security`
 ### Career pivot — real affinity, different direction
   (none)
 
+## Cyber profile
+
+Context: `working_in_security`
+
+### Career Areas (broad orientation, top 3)
+  1. **Security Technology & Physical Security** (SCA03) — aligned: Analytical Orientation, Strategic Orientation, Regulatory & Compliance Orientation
+  2. **Cyber & Information Security** (SCA09) — aligned: Strategic Orientation
+  3. **Financial Crime Prevention & Compliance** (SCA07) — aligned: Technical Orientation, Strategic Orientation
+  (top areas are closely grouped, not a strict order)
+
+### Strongest directions to explore
+  - **SOC-analytiker** (SP008) — stage: explore_now, fit: strong
+    why: Ditt analytiska och tekniska intresse, tillsammans med utredande läggning, matchar arbetet i ett Security Operations Center: att upptäcka, granska och agera på avvikelser i realtid.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Teknisk orientering, Analytisk orientering, Strategisk orientering, Konflikthantering
+    card indicators: Teknisk (85% bar), Analytisk (80% bar), Strategisk (70% bar), Konflikthantering (20% bar)
+
+### Also worth exploring
+  - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
+    why: Din tekniska och analytiska profil, i kombination med lärandeorientering, passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Teknisk orientering, Analytisk orientering, Strategisk orientering, Lärande och utveckling
+    card indicators: Teknisk (85% bar), Analytisk (80% bar), Strategisk (70% bar), Lärande (80% bar)
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Riskmedvetenhet, Strategisk orientering, Teknisk orientering, Analytisk orientering
+    card indicators: Riskmedveten (65% bar), Strategisk (70% bar), Teknisk (85% bar), Analytisk (80% bar)
+
+### Longer-term possibilities
+  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+    why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
+    Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
+    aligned: Riskmedvetenhet, Analytisk orientering, Strategisk orientering, Teknisk orientering
+    card indicators: Riskmedveten (65% bar), Analytisk (80% bar), Strategisk (70% bar), Teknisk (85% bar)
+
+### Career pivot — real affinity, different direction
+  (none)
+
 ## Investigation / analysis profile
 
 Context: `working_in_security`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Financial Crime Prevention & Compliance** (SCA07) — aligned: Operational Orientation
+  1. **Cyber & Information Security** (SCA09) — aligned: Conflict Management
   2. **Investigations, Intelligence & Analysis** (SCA06) — aligned: —
-  3. **Cyber & Information Security** (SCA09) — aligned: Conflict Management
+  3. **Security Technology & Physical Security** (SCA03) — aligned: Communication, Investigative Orientation, Strategic Orientation, Leadership Orientation
   (top areas are closely grouped, not a strict order)
 
 ### Strongest directions to explore
@@ -404,16 +482,16 @@ Context: `working_in_security`
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Utredande orientering, Analytisk orientering, Struktur och dokumentation, Operativ orientering
     card indicators: Utredande (85% bar), Analytisk (75% bar), Struktur (80% bar), Operativ (35% bar)
-  - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
-    why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
-    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
-    aligned: Analytisk orientering, Utredande orientering, Operativ orientering, Struktur och dokumentation
-    card indicators: Analytisk (75% bar), Utredande (85% bar), Operativ (35% bar), Struktur (80% bar)
   - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
     why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Riskmedvetenhet, Utredande orientering, Struktur och dokumentation, Teknisk orientering
     card indicators: Riskmedveten (60% bar), Utredande (85% bar), Struktur (80% bar), Teknisk (50% bar)
+  - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
+    why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Analytisk orientering, Utredande orientering, Operativ orientering, Struktur och dokumentation
+    card indicators: Analytisk (75% bar), Utredande (85% bar), Operativ (35% bar), Struktur (80% bar)
   - **Cybersäkerhetsanalytiker** (SP009) — stage: possible_next_step, fit: strong
     why: Din tekniska och analytiska profil, i kombination med lärandeorientering, passar en roll som kräver att ligga steget före ständigt föränderliga hot mot informationstillgångar.
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
@@ -435,12 +513,92 @@ Context: `working_in_security`
 ### Career pivot — real affinity, different direction
   (none)
 
-## Broad profile
+## AML / compliance profile
 
 Context: `working_in_security`
 
 ### Career Areas (broad orientation, top 3)
-  1. **Guarding & Operational Protection** (SCA01) — aligned: Independent Decision-Making, Leadership Orientation, Strategic Orientation
+  1. **Financial Crime Prevention & Compliance** (SCA07) — aligned: —
+  2. **Investigations, Intelligence & Analysis** (SCA06) — aligned: Regulatory & Compliance Orientation
+  3. **Security Technology & Physical Security** (SCA03) — aligned: Analytical Orientation, Investigative Orientation, Regulatory & Compliance Orientation
+  (top areas are closely grouped, not a strict order)
+
+### Strongest directions to explore
+
+
+### Also worth exploring
+  - **Säkerhetsutredare** (SP010) — stage: possible_next_step, fit: strong
+    why: Ditt starka utredande drag, analytiska förmåga och strukturerade arbetssätt ligger nära det som ofta krävs för att granska, verifiera och fastställa vad som faktiskt hänt.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Utredande orientering, Analytisk orientering, Serviceorientering, Operativ orientering
+    card indicators: Utredande (70% bar), Analytisk (80% bar), Service (25% bar), Operativ (20% bar)
+  - **AML-specialist** (SP013) — stage: possible_next_step, fit: strong
+    why: Din analytiska och utredande läggning, tillsammans med strukturerat arbetssätt, matchar arbetet med att granska transaktioner och identifiera misstänkta mönster.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Analytisk orientering, Regelefterlevnad och granskning, Utredande orientering, Operativ orientering
+    card indicators: Analytisk (80% bar), Regelefterlevnad (85% bar), Utredande (70% bar), Operativ (20% bar)
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Riskmedvetenhet, Utredande orientering, Analytisk orientering, Teknisk orientering
+    card indicators: Riskmedveten (60% bar), Utredande (70% bar), Analytisk (80% bar), Teknisk (40% bar)
+
+### Longer-term possibilities
+  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+    why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
+    Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
+    aligned: Analytisk orientering, Utredande orientering, Teknisk orientering
+    card indicators: Analytisk (80% bar), Utredande (70% bar), Teknisk (40% bar)
+
+### Career pivot — real affinity, different direction
+  (none)
+
+## Risk / crisis profile
+
+Context: `working_in_security`
+
+### Career Areas (broad orientation, top 3)
+  1. **Financial Crime Prevention & Compliance** (SCA07) — aligned: Strategic Orientation, Leadership Orientation, Conflict Management, Operational Orientation
+  2. **Cyber & Information Security** (SCA09) — aligned: Strategic Orientation, Leadership Orientation, Regulatory & Compliance Orientation, Conflict Management
+  3. **Investigations, Intelligence & Analysis** (SCA06) — aligned: Risk Awareness, Strategic Orientation, Leadership Orientation
+  (top areas are closely grouped, not a strict order)
+
+### Strongest directions to explore
+
+
+### Also worth exploring
+  - **Säkerhetssamordnare** (SP006) — stage: possible_next_step, fit: strong
+    why: Du visar en kombination av ledarskapsintresse, tydlig kommunikation och strukturerat arbetssätt -- drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Ledarskapsorientering, Analytisk orientering, Riskmedvetenhet, Strategisk orientering
+    card indicators: Ledarskap (55% bar), Analytisk (75% bar), Riskmedveten (85% bar), Strategisk (80% bar)
+  - **Krisberedskapssamordnare** (SP012) — stage: possible_next_step, fit: strong
+    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
+    aligned: Riskmedvetenhet, Strategisk orientering, Lugn under press, Ledarskapsorientering
+    card indicators: Riskmedveten (85% bar), Strategisk (80% bar), Lugn under press (65% bar), Ledarskap (55% bar)
+
+### Longer-term possibilities
+  - **Riskchef** (SP011) — stage: longer_term, fit: strong
+    why: Din analytiska och strategiska läggning, tillsammans med hög riskmedvetenhet, pekar mot en roll där du bedömer och prioriterar risk på organisationsnivå.
+    Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
+    aligned: Riskmedvetenhet, Strategisk orientering, Analytisk orientering, Ledarskapsorientering
+    card indicators: Riskmedveten (85% bar), Strategisk (80% bar), Analytisk (75% bar), Ledarskap (55% bar)
+  - **Säkerhetschef** (SP007) — stage: longer_term, fit: strong
+    why: Din profil visar starka signaler för ledarskap, strategiskt tänkande och kommunikation -- egenskaper som väger tungt när säkerhetsarbete ska styras på organisationsnivå.
+    Det här är en längre sikt-riktning. Den passar din profil, men vägen dit går normalt via mer erfarenhet eller andra roller först.
+    aligned: Strategisk orientering, Analytisk orientering, Riskmedvetenhet, Utredande orientering
+    card indicators: Strategisk (80% bar), Analytisk (75% bar), Riskmedveten (85% bar), Utredande (40% bar)
+
+### Career pivot — real affinity, different direction
+  (none)
+
+## Broad profile (junior)
+
+Context: `working_in_security`
+
+### Career Areas (broad orientation, top 3)
+  1. **Guarding & Operational Protection** (SCA01) — aligned: Independent Decision-Making, Leadership Orientation, Strategic Orientation, Regulatory & Compliance Orientation
   2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Leadership Orientation, Technical Orientation
   3. **Security Technology & Physical Security** (SCA03) — aligned: Independent Decision-Making, Composure Under Pressure, Operational Orientation, Leadership Orientation
   (top areas are closely grouped, not a strict order)
@@ -463,6 +621,42 @@ Context: `working_in_security`
     Det här är en möjlig nästa steg utifrån var du är idag — inte något att hoppa rakt in i, men värt att ha som mål.
     aligned: Ledarskapsorientering, Operativ orientering, Självständiga beslut, Lugn under press
     card indicators: Ledarskap (55% bar), Operativ (78% bar), Beslutsam (78% bar), Lugn under press (78% bar)
+
+### Longer-term possibilities
+  (none)
+
+### Career pivot — real affinity, different direction
+  (none)
+
+## Broad profile (senior)
+
+Context: `security_leader` · experience: `8_plus_y`
+
+### Career Areas (broad orientation, top 3)
+  1. **Guarding & Operational Protection** (SCA01) — aligned: Leadership Orientation, Strategic Orientation, Regulatory & Compliance Orientation
+  2. **Public Order, Defence & Public Safety** (SCA02) — aligned: Leadership Orientation, Strategic Orientation, Regulatory & Compliance Orientation, Technical Orientation
+  3. **Investigations, Intelligence & Analysis** (SCA06) — aligned: Strategic Orientation, Leadership Orientation
+  (top areas are closely grouped, not a strict order)
+
+### Strongest directions to explore
+  - **Säkerhetssamordnare** (SP006) — stage: explore_now, fit: strong
+    why: Du visar en kombination av ledarskapsintresse, tydlig kommunikation och strukturerat arbetssätt -- drag som ofta förekommer hos den som samordnar säkerhetsarbete mellan flera team och funktioner.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Ledarskapsorientering, Strategisk orientering, Riskmedvetenhet, Kommunikation
+    card indicators: Ledarskap (75% bar), Strategisk (75% bar), Riskmedveten (75% bar), Kommunikation (65% bar)
+  - **Säkerhetschef** (SP007) — stage: explore_now, fit: strong
+    why: Din profil visar starka signaler för ledarskap, strategiskt tänkande och kommunikation -- egenskaper som väger tungt när säkerhetsarbete ska styras på organisationsnivå.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Ledarskapsorientering, Strategisk orientering, Riskmedvetenhet, Kommunikation
+    card indicators: Ledarskap (75% bar), Strategisk (75% bar), Riskmedveten (75% bar), Kommunikation (65% bar)
+  - **Krisberedskapssamordnare** (SP012) — stage: explore_now, fit: strong
+    why: Din förmåga att samarbeta brett, tänka framåt och hålla huvudet kallt matchar arbetet med att förbereda organisationer för kriser innan de inträffar.
+    Det här är en riktning du kan börja utforska direkt.
+    aligned: Riskmedvetenhet, Strategisk orientering, Ledarskapsorientering, Lugn under press
+    card indicators: Riskmedveten (75% bar), Strategisk (75% bar), Ledarskap (75% bar), Lugn under press (65% bar)
+
+### Also worth exploring
+  (none)
 
 ### Longer-term possibilities
   (none)
