@@ -451,9 +451,17 @@ export function PublicAssessmentFlow() {
         experienceBand: careerContext.experienceBand,
         discoveryTags,
         // No professionCatalog: an anonymous browser session has no
-        // business reading cd_professions (RLS grants it to `authenticated`
-        // only), and nothing is approved for ranking yet regardless — the
-        // result would be identical either way, `available: false`.
+        // business reading cd_professions — RLS grants SELECT on it to
+        // `authenticated` only, `anon` holds nothing (see
+        // v31-public-buffer.ts's header). This is permanent, independent of
+        // approved_for_ranking: even now that professions are activated
+        // (Owner Approval & Production Activation), an anonymous candidate's
+        // client-computed report still always gets `available: false` here
+        // by construction — only a signed-in candidate's report (built
+        // server-side, with real RLS-scoped access) can ever include
+        // profession recommendations. Confirmed live: activating all 14
+        // professions had zero effect on the anonymous result page, exactly
+        // as this boundary predicts.
       });
     } catch (err) {
       if (!(err instanceof SnapshotValidationError)) throw err;
