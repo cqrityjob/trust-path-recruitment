@@ -653,6 +653,8 @@ export const dictionaries = {
       "Inga registrerade krav eller utbildningsvägar för de här riktningarna ännu.",
     "careerDiscovery.report.v31.moveForward.appliesTo": "Gäller",
     "careerDiscovery.report.v31.otherDirectionsTitle": "Andra riktningar att utforska",
+    "careerDiscovery.report.v31.showMoreDirections": "Visa fler riktningar",
+    "careerDiscovery.report.v31.showFewerDirections": "Visa färre",
     "careerDiscovery.report.v31.strongestLead": "Starkaste riktningarna",
     "careerDiscovery.report.v31.createCareerCardFor":
       "Skapa mitt Career Card för den här riktningen",
@@ -782,7 +784,8 @@ export const dictionaries = {
     "cd.public.downloadResult": "Ladda ner resultat",
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
-    "cd.public.shareText": "Jag gjorde precis CQrityjobs karriärtest inom säkerhet och fick reda på min Security Career DNA. Testa själv:",
+    "cd.public.shareText":
+      "Jag gjorde precis CQrityjobs karriärtest inom säkerhet och fick reda på min Security Career DNA. Testa själv:",
     "cd.public.shareShared": "Delat",
     "cd.public.shareCopied": "Kopierat till urklipp",
     "cd.public.saving": "Sparar din rapport…",
@@ -2990,6 +2993,8 @@ export const dictionaries = {
       "No requirements or education pathways recorded for these directions yet.",
     "careerDiscovery.report.v31.moveForward.appliesTo": "Applies to",
     "careerDiscovery.report.v31.otherDirectionsTitle": "Other directions to explore",
+    "careerDiscovery.report.v31.showMoreDirections": "Show more directions",
+    "careerDiscovery.report.v31.showFewerDirections": "Show fewer",
     "careerDiscovery.report.v31.strongestLead": "Strongest directions",
     "careerDiscovery.report.v31.createCareerCardFor": "Create my Career Card for this direction",
     "careerDiscovery.report.v31.setAsGoal": "Set as career goal",

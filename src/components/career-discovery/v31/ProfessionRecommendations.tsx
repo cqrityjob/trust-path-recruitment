@@ -24,7 +24,7 @@
 // This never runs in production today: snapshot.professions.available is
 // false until an owner approves a profession (see ./professions.ts).
 
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -571,11 +571,42 @@ export function ProfessionRecommendations({
   });
   const detailsBySlug = query.data ?? {};
 
-  const secondaryTiers = [
+  // PROFESSION SCORING FRAMEWORK v1 §7: secondary/alternative directions
+  // default to at most SECONDARY_VISIBLE_DEFAULT cards, the rest behind
+  // "Show more" — presentation only, the engine still returns every
+  // legitimate match (alsoWorthExploring/longerTermPossibilities/
+  // careerPivots), this just caps what's visible before the candidate asks
+  // for more. Tier headings/semantics (§8: distinguishable pathway labels)
+  // are unchanged — a tier only disappears when collapsing leaves it with
+  // zero visible matches, never merged into an undifferentiated bucket.
+  const [secondaryExpanded, setSecondaryExpanded] = useState(false);
+  const SECONDARY_VISIBLE_DEFAULT = 2;
+  const secondaryTiersAll = [
     { heading: TIER_HEADING.alsoWorth[locale], matches: alsoWorthExploring },
     { heading: TIER_HEADING.longerTerm[locale], matches: longerTermPossibilities },
     { heading: TIER_HEADING.careerPivot[locale], matches: careerPivots ?? [] },
   ].filter((tier) => tier.matches.length > 0);
+  const secondaryTotal = secondaryTiersAll.reduce((sum, tier) => sum + tier.matches.length, 0);
+  const hiddenSecondaryCount = Math.max(0, secondaryTotal - SECONDARY_VISIBLE_DEFAULT);
+  const secondaryTiers = useMemo(() => {
+    if (secondaryExpanded || hiddenSecondaryCount === 0) return secondaryTiersAll;
+    let remaining = SECONDARY_VISIBLE_DEFAULT;
+    return secondaryTiersAll
+      .map((tier) => {
+        const take = tier.matches.slice(0, Math.max(0, remaining));
+        remaining -= take.length;
+        return { ...tier, matches: take };
+      })
+      .filter((tier) => tier.matches.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    secondaryExpanded,
+    hiddenSecondaryCount,
+    alsoWorthExploring,
+    longerTermPossibilities,
+    careerPivots,
+    locale,
+  ]);
 
   return (
     <div>
@@ -634,6 +665,22 @@ export function ProfessionRecommendations({
               onEvent={onEvent}
             />
           ))}
+          {hiddenSecondaryCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setSecondaryExpanded((v) => !v)}
+              aria-expanded={secondaryExpanded}
+              className="mt-6 inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
+            >
+              {secondaryExpanded
+                ? t("careerDiscovery.report.v31.showFewerDirections")
+                : `${t("careerDiscovery.report.v31.showMoreDirections")} (${hiddenSecondaryCount})`}
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${secondaryExpanded ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
+          )}
         </div>
       )}
     </div>
