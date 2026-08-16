@@ -75,7 +75,7 @@ export interface DimensionResult {
   readonly dimensions: Readonly<Record<DimensionId, DimensionScore>>;
   /** Item ids answered, in registry order. */
   readonly answeredItems: readonly string[];
-  /** True when all 20 core items were answered. */
+  /** True when all 22 core items were answered. */
   readonly complete: boolean;
 }
 

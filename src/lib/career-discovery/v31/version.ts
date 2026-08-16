@@ -21,16 +21,32 @@
  *  VERSION of the same instrument, not a different product. */
 export const DEFINITION_ID = "security-career-discovery-v3" as const;
 
-/** The instrument as a whole. */
+/** The instrument as a whole. Unchanged at v3.1.0: this is the outer
+ *  wrapper version (bumped only for a genuinely new product-level
+ *  instrument, as v3.0 -> v3.1 was); CONTENT_VERSION, SCORING_VERSION and
+ *  PATTERN_DEFINITION_VERSION below are the granular versions designed to
+ *  move independently within v3.1 -- exactly the same pattern
+ *  OPTION_MATRIX_VERSION's draft-1 -> draft-2 bump already established. */
 export const DEFINITION_VERSION = "2026-scd-v3.1.0" as const;
 
 /** Item wording and options. Bumped when any candidate-facing string
- *  changes. Owner-approved as "Core Question Options v3.1-draft-1". */
-export const CONTENT_VERSION = "v3.1-draft-1" as const;
+ *  changes. Bumped to draft-2 (Final Autonomous Matching Engine Completion
+ *  Mandate): CQ21 + CQ22 added (CID17 Regulatory & Compliance Orientation
+ *  needed a real evidence source, and a second question was required to
+ *  clear the 0.60 dominance cap -- see core-items.ts). Same
+ *  definition_version_id as before -- this is a same-generation content
+ *  addition, not a new product-level instrument (see DEFINITION_VERSION). */
+export const CONTENT_VERSION = "v3.1-draft-3" as const;
 
 /** How answers become dimension scores: role weights, option loadings,
- *  aggregation and confidence. Bumped when any of those change. */
-export const SCORING_VERSION = "v3.1-draft-1" as const;
+ *  aggregation and confidence. Bumped when any of those change. Bumped to
+ *  draft-3 alongside CONTENT_VERSION (not draft-2 -- STORY_TEMPLATE_VERSION
+ *  already holds that string and story.ts's own guard requires this to
+ *  differ from it): CID17 added as a 17th matchable dimension (CQ21/CQ22
+ *  evidence); CID06 and CID11's evidence weights shift accordingly (see
+ *  EXPECTED_WEIGHTS in scripts/career-discovery-v31-check.ts for the exact
+ *  deltas). */
+export const SCORING_VERSION = "v3.1-draft-3" as const;
 
 /** Which option loadings the matrix table holds. Kept as its own string so
  *  the matrix can be re-seeded independently of the aggregation rules.
@@ -45,8 +61,14 @@ export const SCORING_VERSION = "v3.1-draft-1" as const;
  *  loadings. */
 export const OPTION_MATRIX_VERSION = "v3.1-draft-2" as const;
 
-/** Central/supporting dimension sets and the resolution thresholds. */
-export const PATTERN_DEFINITION_VERSION = "v3.1-draft-1" as const;
+/** Central/supporting dimension sets and the resolution thresholds. Bumped
+ *  to draft-3 (not draft-2 -- see SCORING_VERSION's comment on
+ *  STORY_TEMPLATE_VERSION) (Final Autonomous Matching Engine Completion
+ *  Mandate): CP06 "Compliance Guardian"'s central set swapped CID09
+ *  (Conflict Management, a work-style proxy that never actually described
+ *  compliance work) for CID17 (Regulatory & Compliance Orientation), its
+ *  genuine defining trait. */
+export const PATTERN_DEFINITION_VERSION = "v3.1-draft-3" as const;
 
 /** The Security Career Area taxonomy recommendations resolve against. */
 export const TAXONOMY_VERSION = "cig-areas-v1" as const;

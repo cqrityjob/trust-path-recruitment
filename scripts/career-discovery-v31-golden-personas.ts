@@ -28,7 +28,11 @@ import {
 } from "../src/lib/career-discovery/v31/career-card";
 import { CAREER_AREAS, rankCareerAreas } from "../src/lib/career-discovery/v31/career-areas";
 import { explainMatch } from "../src/lib/career-discovery/v31/profession-explanations";
-import { matchProfessions, type ProfessionMatch } from "../src/lib/career-discovery/v31/professions";
+import {
+  matchProfessions,
+  validateDomainOnlyCentralRule,
+  type ProfessionMatch,
+} from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
 import { GOLDEN_PERSONAS } from "../src/lib/career-discovery/v31/golden-persona-fixtures";
 import { FIRST_WAVE_CATALOG } from "./fixtures/first-wave-profession-catalog";
@@ -104,6 +108,17 @@ function describeMatch(m: ProfessionMatch, dims: DimensionResult): string {
     `    card indicators: ${card.indicators.map((i) => `${i.label} (${Math.round(i.value * 100)}% bar)`).join(", ") || "none"}`,
   ].join("\n");
 }
+
+group("0 · DOMAIN_ONLY_CENTRAL_RULE (Final Autonomous Matching Engine Completion Mandate)");
+const domainOnlyCentralViolations = validateDomainOnlyCentralRule(FIRST_WAVE_CATALOG);
+ok(
+  domainOnlyCentralViolations.length === 0,
+  domainOnlyCentralViolations.length === 0
+    ? "every profession's central dimensions are domain-classified"
+    : `${domainOnlyCentralViolations.length} central-dimension violation(s): ${domainOnlyCentralViolations
+        .map((v) => `${v.professionId}/${v.dimensionId}`)
+        .join(", ")}`,
+);
 
 for (const persona of GOLDEN_PERSONAS) {
   group(persona.name.en);

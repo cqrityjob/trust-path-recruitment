@@ -1,13 +1,31 @@
-// The 20 core Career DNA items.
+// The 22 core Career DNA items.
 //
-// Stems are owner-locked and reproduced VERBATIM from
+// CQ01–CQ20 stems are owner-locked and reproduced VERBATIM from
 // CQrityjob_Career_Intelligence_Matrix_LOCKED_v0_2.xlsx, sheet 10. Twelve are
 // 1–10 scales; eight are single-choice, whose options live in
 // option-matrix.ts because they carry their own dimension loadings.
 //
-// Declared primary and secondary dimensions are also owner-locked. Owner
-// decision A-3 permits an OPTION to carry evidence for further dimensions,
-// but never changes what is declared here.
+// CQ21 and CQ22 are new (Final Autonomous Matching Engine Completion
+// Mandate): CID17 (Regulatory & Compliance Orientation) postdates the locked
+// workbook and had no scored evidence source at all. Both are scale items,
+// like CQ01/CQ04/etc — no option-matrix.ts entry needed; scale items score
+// directly off primary/secondary, only single_choice items carry
+// option-level loadings.
+//
+// TWO items, not one: a dimension with a single 0.70-weight primary source
+// cannot clear owner decision 6's 0.60 dominance cap (0.70/0.70 = 100%) no
+// matter how the rest of the instrument is built — the cap exists precisely
+// so one question can never single-handedly decide a whole dimension. CQ21
+// and CQ22 measure genuinely distinct expressions of the same construct
+// (motivation/preference vs. observed working behaviour) rather than
+// restating each other, so together they are real evidence, not statistical
+// padding: 0.70/(0.70+0.70) = 50%, comfortably under the cap.
+//
+// Declared primary and secondary dimensions are also owner-locked (CQ01–20)
+// or newly declared following the same primary=0.70/secondary=0.30 role-
+// weight convention (CQ21, CQ22). Owner decision A-3 permits an OPTION to
+// carry evidence for further dimensions, but never changes what is declared
+// here.
 //
 // ── WHY SCALE MAPPINGS LIVE IN CODE AND OPTIONS LIVE IN THE DATABASE ────
 //
@@ -280,6 +298,30 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     stem: {
       sv: "Vilket resultat känns mest meningsfullt efter en arbetsdag?",
       en: "Which outcome feels most meaningful after a working day?",
+    },
+  },
+  {
+    id: "CQ21",
+    format: "scale",
+    primary: "CID17",
+    secondary: "CID11",
+    order: 21,
+    purpose: "Core DNA",
+    stem: {
+      sv: "Jag tycker om att sätta mig in i regelverk och rutiner, och känner mig motiverad av att upptäcka avvikelser från dem.",
+      en: "I enjoy getting to grips with rules and procedures, and feel motivated by spotting deviations from them.",
+    },
+  },
+  {
+    id: "CQ22",
+    format: "scale",
+    primary: "CID17",
+    secondary: "CID06",
+    order: 22,
+    purpose: "Core DNA",
+    stem: {
+      sv: "Jag är noggrann med att kontrollera att underlag och transaktioner stämmer mot gällande krav, och reagerar snabbt om något inte stämmer.",
+      en: "I am careful to check that records and transactions match applicable requirements, and I react quickly when something doesn't add up.",
     },
   },
 ];

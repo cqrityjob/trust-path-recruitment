@@ -437,10 +437,11 @@ export function validateSnapshot(snapshot: ReportSnapshot): ValidationFailure[] 
     });
   }
 
-  if (snapshot.outputA.dimensions.length !== 16) {
+  const expectedDimensionCount = Object.keys(DIMENSIONS).length;
+  if (snapshot.outputA.dimensions.length !== expectedDimensionCount) {
     failures.push({
       code: "CD_DIMENSION_COUNT",
-      detail: `expected 16 dimensions, got ${snapshot.outputA.dimensions.length}`,
+      detail: `expected ${expectedDimensionCount} dimensions, got ${snapshot.outputA.dimensions.length}`,
     });
   }
 

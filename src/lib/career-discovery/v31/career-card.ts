@@ -37,6 +37,7 @@ const SHORT_DIMENSION_LABEL: Readonly<Record<DimensionId, Record<Locale, string>
   CID14: { sv: "Lärande", en: "Learning" },
   CID15: { sv: "", en: "" }, // never rendered — matchingWeight 0, owner decision A-4
   CID16: { sv: "Lugn under press", en: "Composure" },
+  CID17: { sv: "Regelefterlevnad", en: "Compliance" },
 };
 
 export interface CareerCardIndicator {

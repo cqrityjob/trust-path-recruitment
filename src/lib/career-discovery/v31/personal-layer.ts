@@ -1,5 +1,5 @@
 // The v3.1 personal layer — the 2 context questions and the 4 adaptive
-// Discovery Path questions that bracket the 20 Career DNA items.
+// Discovery Path questions that bracket the 22 Career DNA items.
 //
 // ── THIS MODULE AUTHORS NOTHING ────────────────────────────────────────
 //
@@ -8,7 +8,14 @@
 // both owner-locked and both already registered for v3.0. This module only
 // binds them to the v3.1 flow and states the frozen MVP order:
 //
-//     2 Context  →  20 Career DNA  →  4 Discovery Path
+//     2 Context  →  22 Career DNA  →  4 Discovery Path
+//
+// The Career DNA item count moved from 20 to 22 with CQ21+CQ22 (Final
+// Autonomous Matching Engine Completion Mandate — CID17 Regulatory &
+// Compliance Orientation needed a real evidence source, and a second
+// question was required to clear the 0.60 dominance cap, see core-items.ts).
+// MVP_QUESTION_COUNT below is asserted, not hardcoded silently, so this was
+// caught at import time rather than shipped as a silently-short instrument.
 //
 // Owner decision (MVP v1.0): the adaptive bank already implemented in this
 // repository is canonical. The Career Intelligence Excel is the Career
@@ -30,7 +37,7 @@
 // array, so it cannot reach scoring even by mistake: the registry marks it
 // unscored under a CHECK constraint, and `cd_v31_validate_session_evidence`
 // counts only `is_scored AND item_kind IN ('scale','single_choice')`. The
-// Career DNA snapshot is built from the 20 core answers alone — see
+// Career DNA snapshot is built from the 22 core answers alone — see
 // `buildValidatedSnapshot` in ./snapshot.ts, which this module never calls.
 
 import {
@@ -62,7 +69,7 @@ export type { AdaptivePath, ContextStatus, DiscoveryItem };
 
 /** The frozen MVP length. Asserted below rather than trusted, because a
  *  drifting bank would otherwise shorten the assessment silently. */
-export const MVP_QUESTION_COUNT = 26;
+export const MVP_QUESTION_COUNT = 28;
 
 /** Every personal-layer item id, across all five paths. The registry
  *  migration seeds exactly this set for v3.1. */

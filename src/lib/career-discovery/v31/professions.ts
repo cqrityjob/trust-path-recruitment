@@ -75,7 +75,7 @@
 
 import type { ExperienceBand } from "../career-context";
 import type { ContextStatus } from "../types";
-import { MATCHABLE_DIMENSION_IDS, type DimensionId } from "./dimensions";
+import { DOMAIN_DIMENSION_IDS, MATCHABLE_DIMENSION_IDS, type DimensionId } from "./dimensions";
 import type { DimensionResult } from "./scoring";
 
 // -------------------------------------------------------------------------
@@ -90,7 +90,37 @@ export type ProfessionCareerStage = "entry" | "developing" | "senior";
  *  actually DEFINE a profession; "supporting"/"neutral" are dimensions most
  *  security roles share to some degree (risk awareness, composure,
  *  structure...) and cannot, on their own, justify a recommendation — see
- *  the central-dominant fit formula below and its header comment. */
+ *  the central-dominant fit formula below and its header comment.
+ *
+ *  ── DOMAIN_ONLY_CENTRAL_RULE (Final Autonomous Matching Engine Completion
+ *  Mandate) ────────────────────────────────────────────────────────────────
+ *
+ *  Root cause of the owner's real Security Manager result (Guarding #1,
+ *  explained by Composure/Risk Awareness/Collaboration/Conflict Management —
+ *  generic, universally-necessary WORK STYLE traits, not career-direction
+ *  evidence): several first-wave professions had a work-style dimension as
+ *  part of their "central" (defining) set, alongside genuine domain/career-
+ *  direction dimensions. Because the central-dominant formula above
+ *  (CENTRAL_WEIGHT = 0.75) treats every central dimension as equally
+ *  decisive, a candidate who only clears the low, near-universal style bars
+ *  could look like a strong match for many professions regardless of true
+ *  specialty — the CENTRAL_WEIGHT/CENTRAL_DIMENSION_MAX_MISS machinery was
+ *  sound, it was just being fed the wrong INPUT data.
+ *
+ *  Every dimension in dimensions.ts now carries a `signalType`: "domain"
+ *  (career-direction/specialty evidence — Operational, Investigative,
+ *  Technical, Regulatory & Compliance, etc.) or "style" (transferable work-
+ *  style evidence — Communication, Collaboration, Composure Under Pressure,
+ *  etc., useful across nearly all of security and therefore structurally
+ *  incapable of telling two professions apart on their own). The rule this
+ *  file now enforces: `centrality: "central"` may ONLY be assigned to a
+ *  DOMAIN_DIMENSION_IDS-classified dimension. A style dimension remains
+ *  perfectly valid, genuinely differentiating SUPPORTING evidence (e.g. an
+ *  elevated supporting weight for Personskyddsvakt's Composure) — it simply
+ *  cannot, on its own, structurally drive a "strong" match. Checked by
+ *  validateDomainOnlyCentralRule below, run by the guard script against
+ *  every profession in the catalogue; not runtime-enforced in scoreProfession
+ *  itself; a bad catalogue row fails CI before it fails a candidate. */
 export type ProfessionDimensionCentrality = "central" | "supporting" | "neutral";
 
 export interface ProfessionDimensionBand {
@@ -124,6 +154,34 @@ export interface ProfessionCatalogEntry {
    *  Null only if a profession is somehow approved without ever being
    *  linked to CIG, which authoring practice does not currently allow. */
   readonly cigProfessionSlug: string | null;
+}
+
+/** One catalogue row assigning `centrality: "central"` to a dimension that
+ *  is not domain-classified — see DOMAIN_ONLY_CENTRAL_RULE above. */
+export interface DomainOnlyCentralViolation {
+  readonly professionId: string;
+  readonly dimensionId: DimensionId;
+}
+
+/**
+ * Data-integrity check for DOMAIN_ONLY_CENTRAL_RULE (see the doc comment on
+ * ProfessionDimensionCentrality). Pure, catalogue-in/violations-out — run by
+ * the guard script against the real first-wave catalogue; not called from
+ * scoreProfession itself, so a violation fails CI rather than silently
+ * shipping a work-style-driven "strong" match.
+ */
+export function validateDomainOnlyCentralRule(
+  catalog: readonly ProfessionCatalogEntry[],
+): readonly DomainOnlyCentralViolation[] {
+  const violations: DomainOnlyCentralViolation[] = [];
+  for (const entry of catalog) {
+    for (const band of entry.bands) {
+      if (band.centrality === "central" && !DOMAIN_DIMENSION_IDS.includes(band.dimensionId)) {
+        violations.push({ professionId: entry.professionId, dimensionId: band.dimensionId });
+      }
+    }
+  }
+  return violations;
 }
 
 // -------------------------------------------------------------------------

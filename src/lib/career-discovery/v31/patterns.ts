@@ -113,9 +113,14 @@ export const PATTERNS: Readonly<Record<PatternId, PatternDefinition>> = {
   CP06: {
     id: "CP06",
     name: { sv: "Regelefterlevnadsspecialist", en: "Compliance Guardian" },
-    central: ["CID11", "CID06", "CID09"],
-    supporting: ["CID03", "CID07", "CID12"],
-    superpowerDimension: "CID09",
+    // CID17 (Regulatory & Compliance Orientation) replaces CID09 (Conflict
+    // Management) as this pattern's defining trait (Final Autonomous Matching
+    // Engine Completion Mandate): conflict handling never actually described
+    // compliance work, it was a work-style proxy standing in for a domain
+    // signal that did not exist yet. CID09 remains valid supporting evidence.
+    central: ["CID11", "CID06", "CID17"],
+    supporting: ["CID03", "CID07", "CID09"],
+    superpowerDimension: "CID17",
     growthEdgeDimension: "CID10",
     progressionTarget: "CP03",
   },

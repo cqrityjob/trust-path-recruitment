@@ -1,7 +1,21 @@
-// AUTO-GENERATED fixture — mirrors the applied migration
+// Mirrors the applied migration
 // supabase/migrations/20260814180000_cd_layer4_first_wave_professions.sql
-// byte-for-byte in calibration values. Regenerate deliberately if that
-// migration ever changes; do not hand-edit the band numbers below.
+// in calibration values, EXCEPT for the recalibration below (Final
+// Autonomous Matching Engine Completion Mandate): every profession's
+// `centrality: "central"` set was audited against DOMAIN_ONLY_CENTRAL_RULE
+// (see professions.ts) and any work-style dimension (Communication,
+// Structure & Documentation, Independent Decision-Making, Collaboration,
+// Composure Under Pressure) previously marked central was demoted to
+// supporting -- it remains real, differentiating evidence, just not on its
+// own capable of defining a profession. AML-specialist additionally gained
+// CID17 (Regulatory & Compliance Orientation) as a new central dimension: it
+// otherwise shared an IDENTICAL domain-central set with Säkerhetsutredare
+// (Analytical + Investigative) once CID11 was demoted, an unresolvable
+// pairing without it. This TS file is the edited source of truth for that
+// recalibration; a new additive migration mirrors it into the DB under a new
+// cd_profession_profiles.calibration_version (never overwriting the applied
+// migration above, so any historical report scored under the old
+// calibration stays reproducible).
 import type { ProfessionCatalogEntry } from "../../src/lib/career-discovery/v31/professions";
 
 export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
@@ -30,12 +44,13 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -64,11 +79,12 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID09", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.95 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
-      { dimensionId: "CID12", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.9 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.65, bandHigh: 0.95, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -97,11 +113,12 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
-      { dimensionId: "CID12", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -130,11 +147,12 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID09", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
-      { dimensionId: "CID12", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.9 },
+      { dimensionId: "CID12", centrality: "supporting", bandLow: 0.65, bandHigh: 0.95, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.7, bandHigh: 0.95, weight: 0.95 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.7, bandHigh: 0.95, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -163,11 +181,12 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID09", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.8 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
-      { dimensionId: "CID12", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.6, bandHigh: 0.95, weight: 0.85 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 0.95, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -191,16 +210,17 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID05", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID06", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID07", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.85 },
+      { dimensionId: "CID07", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.8 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID13", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -224,16 +244,17 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID05", centrality: "central", bandLow: 0.6, bandHigh: 0.95, weight: 0.9 },
       { dimensionId: "CID06", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID07", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.7 },
+      { dimensionId: "CID07", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID13", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -261,12 +282,13 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.1, bandHigh: 0.5, weight: 0.25 },
       { dimensionId: "CID10", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.6 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.8, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -297,9 +319,10 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID14", centrality: "central", bandLow: 0.6, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID14", centrality: "supporting", bandLow: 0.6, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -323,16 +346,17 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID05", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID06", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID07", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.5 },
+      { dimensionId: "CID07", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID10", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.95 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.85 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.65, bandHigh: 0.95, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -356,7 +380,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID04", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID05", centrality: "central", bandLow: 0.6, bandHigh: 0.95, weight: 0.85 },
       { dimensionId: "CID06", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.9 },
-      { dimensionId: "CID07", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.5 },
+      { dimensionId: "CID07", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
@@ -366,6 +390,7 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -395,10 +420,11 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID11", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
-      { dimensionId: "CID13", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.85 },
+      { dimensionId: "CID13", centrality: "supporting", bandLow: 0.65, bandHigh: 0.95, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
-      { dimensionId: "CID16", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID16", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
   {
@@ -426,12 +452,13 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.2, bandHigh: 0.6, weight: 0.25 },
       { dimensionId: "CID10", centrality: "central", bandLow: 0.6, bandHigh: 0.95, weight: 0.85 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.65, bandHigh: 0.95, weight: 0.85 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.65, bandHigh: 0.95, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.6, bandHigh: 1, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "central", bandLow: 0.6, bandHigh: 0.95, weight: 0.85 },
     ],
   },
   {
@@ -459,12 +486,13 @@ export const FIRST_WAVE_CATALOG: readonly ProfessionCatalogEntry[] = [
       { dimensionId: "CID08", centrality: "supporting", bandLow: 0.4, bandHigh: 0.8, weight: 0.25 },
       { dimensionId: "CID09", centrality: "supporting", bandLow: 0.1, bandHigh: 0.5, weight: 0.25 },
       { dimensionId: "CID10", centrality: "supporting", bandLow: 0.3, bandHigh: 0.7, weight: 0.25 },
-      { dimensionId: "CID11", centrality: "central", bandLow: 0.55, bandHigh: 0.9, weight: 0.6 },
+      { dimensionId: "CID11", centrality: "supporting", bandLow: 0.55, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID12", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID13", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
       { dimensionId: "CID14", centrality: "supporting", bandLow: 0.7, bandHigh: 1, weight: 0.25 },
       { dimensionId: "CID15", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
       { dimensionId: "CID16", centrality: "supporting", bandLow: 0.5, bandHigh: 0.9, weight: 0.25 },
+      { dimensionId: "CID17", centrality: "neutral", bandLow: 0.2, bandHigh: 0.8, weight: 0 },
     ],
   },
 ];

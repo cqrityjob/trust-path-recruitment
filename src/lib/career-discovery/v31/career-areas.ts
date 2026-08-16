@@ -20,6 +20,30 @@
 //    near-constant even if it were scored. It is excluded regardless, under
 //    owner decision A-4.
 //
+// ── CID17 (Final Autonomous Matching Engine Completion Mandate) ─────────
+//
+// CID17 (Regulatory & Compliance Orientation) postdates the locked
+// workbook, so no owner-locked target exists for it. Values below are a
+// reasoned estimate, not reproduced-verbatim locked data: high (10) for
+// SCA07 Financial Crime Prevention & Compliance, where it is literally the
+// area's subject; moderate (5-7) for areas with a genuine governance/
+// advisory/investigative compliance component (SCA04, SCA05, SCA06, SCA09,
+// SCA10); low (3-4) for areas it has little to do with (SCA01, SCA02,
+// SCA03, SCA08). Documented explicitly per this mandate's requirement that
+// any departure from the locked model states what changed and why.
+//
+// ── PROFESSION MATCHING IS THE PRIMARY OUTCOME, THIS IS EXPLANATORY ─────
+//
+// Explicitly re-affirmed under the Final Autonomous Matching Engine
+// Completion Mandate: profession matching (professions.ts) is where the
+// domain-vs-style signal architecture (see dimensions.ts) actually lives.
+// This module's locked, uniformly-weighted target data is NOT recalibrated
+// with that framework -- it remains a broad-orientation explanatory layer,
+// intentionally out of scope for the domain/style redesign, per PMR004
+// below and this mandate's own instruction that Career Areas are useful
+// only insofar as they explain DNA and organise professions, not as a
+// second matching engine.
+//
 // ── SCORING ────────────────────────────────────────────────────────────
 //
 // Distance-based, not threshold-based, and asymmetric: exceeding a target is
@@ -79,6 +103,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 6,
       CID15: 9,
       CID16: 8,
+      CID17: 3,
     },
   },
   SCA02: {
@@ -108,6 +133,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 7,
       CID15: 9,
       CID16: 9,
+      CID17: 4,
     },
   },
   SCA03: {
@@ -137,6 +163,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 9,
       CID15: 8,
       CID16: 7,
+      CID17: 3,
     },
   },
   SCA04: {
@@ -163,6 +190,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 8,
       CID15: 9,
       CID16: 8,
+      CID17: 5,
     },
   },
   SCA05: {
@@ -192,6 +220,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 9,
       CID15: 9,
       CID16: 9,
+      CID17: 5,
     },
   },
   SCA06: {
@@ -221,6 +250,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 9,
       CID15: 10,
       CID16: 8,
+      CID17: 6,
     },
   },
   SCA07: {
@@ -250,6 +280,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 9,
       CID15: 10,
       CID16: 8,
+      CID17: 10,
     },
   },
   SCA08: {
@@ -279,6 +310,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 9,
       CID15: 10,
       CID16: 9,
+      CID17: 3,
     },
   },
   SCA09: {
@@ -305,6 +337,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 10,
       CID15: 10,
       CID16: 8,
+      CID17: 5,
     },
   },
   SCA10: {
@@ -334,6 +367,7 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
       CID14: 10,
       CID15: 10,
       CID16: 8,
+      CID17: 7,
     },
   },
 };

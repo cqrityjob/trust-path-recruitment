@@ -106,8 +106,8 @@ function group(name: string): void {
 group("1 · The instrument");
 // =========================================================================
 
-eq(CORE_ITEMS.length, 20, "1.1 exactly 20 core items");
-eq(SCALE_ITEMS.length, 12, "1.2 exactly 12 scale items");
+eq(CORE_ITEMS.length, 22, "1.1 exactly 22 core items");
+eq(SCALE_ITEMS.length, 14, "1.2 exactly 14 scale items");
 eq(SINGLE_CHOICE_ITEMS.length, 8, "1.3 exactly 8 single-choice items");
 eq(
   SINGLE_CHOICE_ITEMS.map((i) => i.id),
@@ -119,7 +119,7 @@ ok(
   "1.5 every stem is present in both languages",
 );
 ok(
-  new Set(CORE_ITEMS.map((i) => i.order)).size === 20,
+  new Set(CORE_ITEMS.map((i) => i.order)).size === 22,
   "1.6 display order is unique across the instrument",
 );
 ok(
@@ -228,17 +228,25 @@ const EXPECTED_WEIGHTS: Record<DimensionId, number> = {
   CID03: 1.6,
   CID04: 1.55,
   CID05: 1.7,
-  CID06: 1.35,
+  // 1.35 -> 1.65: CQ22 (Final Autonomous Matching Engine Completion Mandate)
+  // adds CID06 as its secondary, +0.3.
+  CID06: 1.65,
   CID07: 1.3,
   CID08: 1.3,
   CID09: 1.3,
   CID10: 1.45,
-  CID11: 1.9,
+  // 1.9 -> 2.2: CQ21 (Final Autonomous Matching Engine Completion Mandate)
+  // adds CID11 as its secondary, +0.3.
+  CID11: 2.2,
   CID12: 1.45,
   CID13: 1.6,
   CID14: 1.3,
   CID15: 1.4,
   CID16: 1.7,
+  // New: CQ21 + CQ22 both carry CID17 as primary (0.7 each) — a single
+  // 0.7-weight source cannot clear the 0.60 dominance cap on its own, see
+  // core-items.ts's header comment.
+  CID17: 1.4,
 };
 
 for (const d of DIMENSION_IDS) {
@@ -283,7 +291,7 @@ console.log(`       worst dominance ${(worstDominance * 100).toFixed(1)}%`);
 // Every dimension must actually be reachable.
 ok(
   DIMENSION_IDS.every((d) => MAX_EVIDENCE_WEIGHT[d] > 0),
-  "3.3 every one of the 16 dimensions has evidence in a complete run",
+  "3.3 every one of the 17 dimensions has evidence in a complete run",
 );
 
 // =========================================================================
@@ -293,7 +301,9 @@ group("4 · CID15 (owner decision A-4)");
 eq(DIMENSIONS.CID15.matchingWeight, 0, "4.1 CID15 carries profession-matching weight 0");
 ok(!MATCHABLE_DIMENSION_IDS.includes("CID15"), "4.2 CID15 is excluded from matchable dimensions");
 ok(!PATTERN_SCORED_DIMENSION_IDS.includes("CID15"), "4.3 CID15 is excluded from pattern scoring");
-eq(MATCHABLE_DIMENSION_IDS.length, 15, "4.4 fifteen dimensions drive profession matching");
+// 15 -> 16: CID17 joins profession matching (Final Autonomous Matching
+// Engine Completion Mandate). CID15 remains the sole exclusion (A-4).
+eq(MATCHABLE_DIMENSION_IDS.length, 16, "4.4 sixteen dimensions drive profession matching");
 ok(
   PATTERN_IDS.every(
     (p) => !PATTERNS[p].central.includes("CID15") && !PATTERNS[p].supporting.includes("CID15"),
@@ -586,12 +596,13 @@ eq(
 // any of them alters a hash, and the only correct response is to bump the
 // version strings below and re-freeze deliberately.
 const FROZEN: Record<string, string> = {
-  // Re-frozen for OPTION_MATRIX_VERSION v3.1-draft-2 (Owner Approval Gate
-  // item 2: CQ06/CQ09 CID02 loadings promoted tertiary -> secondary).
-  CP01: "4886dda65533f7f4",
-  CP05: "d32d9fdc32d6aaf4",
-  CP10: "f31e18d7399ff1d4",
-  balanced: "e69237eb17e645ef",
+  // Re-frozen for CONTENT_VERSION/SCORING_VERSION/PATTERN_DEFINITION_VERSION
+  // v3.1-draft-3 (Final Autonomous Matching Engine Completion Mandate: CID17
+  // + CQ21/CQ22, CP06's central set swapped CID09 -> CID17).
+  CP01: "a4bd2d5eca8df52f",
+  CP05: "a03c8fa82f6ee383",
+  CP10: "38257685f6e4d28d",
+  balanced: "1df068a88a4af70a",
 };
 
 const fixtureHashes: Record<string, string> = {
@@ -616,10 +627,10 @@ if (process.env.FREEZE_FIXTURES === "1") {
 }
 
 // The version strings the fixtures are pinned to.
-eq(CONTENT_VERSION, "v3.1-draft-1", "9.4 content version is pinned");
-eq(SCORING_VERSION, "v3.1-draft-1", "9.5 scoring version is pinned");
+eq(CONTENT_VERSION, "v3.1-draft-3", "9.4 content version is pinned");
+eq(SCORING_VERSION, "v3.1-draft-3", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-2", "9.6 option matrix version is pinned");
-eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-1", "9.7 pattern definition version is pinned");
+eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-3", "9.7 pattern definition version is pinned");
 eq(STORY_TEMPLATE_VERSION, "v3.1-draft-2", "9.7b story template version is pinned");
 // The story template version must move INDEPENDENTLY of the scoring and
 // pattern contracts. If it ever equals them again, either a content change
@@ -795,14 +806,54 @@ for (const [, id, kind] of registryIds) {
   );
 }
 
-// The version strings must agree between code and migration.
+// The definition version is unchanged since the original migration -- see
+// version.ts's DEFINITION_VERSION comment -- so it still checks there.
+ok(
+  migration.includes(`'2026-scd-v3.1.0'`),
+  "11.8 the migration carries the same definition version",
+);
+
+// content_version/scoring_version moved to draft-3 in a LATER, separate
+// migration (same reason OPTION_MATRIX_VERSION above points at its own
+// "current" file rather than the original): CQ21/CQ22 registration, the
+// version bump, and the recalibrated profession catalogue.
+const contentV2MigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260816150000_cd_v31_content_v2_compliance_dimension.sql",
+);
+const contentV2Migration = readFileSync(contentV2MigrationPath, "utf8");
+
 for (const v of [
-  { value: "2026-scd-v3.1.0", label: "definition version" },
   { value: CONTENT_VERSION, label: "content version" },
   { value: SCORING_VERSION, label: "scoring version" },
 ]) {
-  ok(migration.includes(`'${v.value}'`), `11.8 the migration carries the same ${v.label}`);
+  ok(
+    contentV2Migration.includes(`'${v.value}'`),
+    `11.8b the content-v2 migration carries the same ${v.label}`,
+  );
 }
+
+// CQ21 + CQ22 are registered against the existing definition_version_id in
+// the content-v2 migration, not the original instrument migration.
+const newItemsBlock = contentV2Migration.slice(
+  contentV2Migration.indexOf("CROSS JOIN (VALUES"),
+  contentV2Migration.indexOf(") AS v(item_id, item_kind, section_id, display_order)"),
+);
+const newItemIds = [...newItemsBlock.matchAll(/'(CQ\d{2})','(scale|single_choice)'/g)];
+eq(newItemIds.length, 2, "11.6b the content-v2 migration registers exactly 2 new items");
+for (const [, id, kind] of newItemIds) {
+  eq(
+    CORE_ITEM_BY_ID[id]?.format,
+    kind,
+    `11.7b ${id} has the same format in the content-v2 registry and in code`,
+  );
+}
+
+// The recalibrated profession catalogue: 14 professions x 17 dimensions.
+const recalCount = [
+  ...contentV2Migration.matchAll(/\('SP\d+', 'layer4-recalibrated-2026-08-16'/g),
+].length;
+eq(recalCount, 238, "11.10 the migration seeds 238 recalibrated profession-profile rows");
 
 // v3.1 must be registered as internal_test: not reachable by real candidates.
 ok(
@@ -816,8 +867,8 @@ group("12 · Career Areas");
 
 eq(CAREER_AREA_IDS.length, 10, "12.1 exactly ten Career Areas");
 ok(
-  CAREER_AREA_IDS.every((a) => Object.keys(CAREER_AREAS[a].targets).length === 16),
-  "12.2 every area carries a target for all sixteen dimensions",
+  CAREER_AREA_IDS.every((a) => Object.keys(CAREER_AREAS[a].targets).length === 17),
+  "12.2 every area carries a target for all seventeen dimensions",
 );
 ok(
   CAREER_AREA_IDS.every(
@@ -1174,7 +1225,7 @@ eq(
 );
 eq(snap.professions.available, false, "14.6 Layer 4 is present and explicitly unavailable");
 eq(snap.professions.matches.length, 0, "14.7 no profession match is stored");
-eq(snap.outputA.dimensions.length, 16, "14.8 all sixteen dimensions are stored");
+eq(snap.outputA.dimensions.length, 17, "14.8 all seventeen dimensions are stored");
 ok(
   snap.outputA.dimensions.every((d) => d.sources.length > 0 || d.score === null),
   "14.9 every scored dimension stores its evidence sources",
