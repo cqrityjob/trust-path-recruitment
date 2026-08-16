@@ -271,9 +271,9 @@ export const OPTION_SETS: readonly OptionSet[] = [
       },
       {
         dimension: "CID02",
-        role: "tertiary",
+        role: "secondary",
         rationale:
-          "Taking direction of a situation, or convening the people in it, is leadership expressed as behaviour rather than as stated ambition.",
+          "Taking direction of a situation, or convening the people in it, is leadership expressed as behaviour rather than as stated ambition. Promoted from tertiary (Owner Approval Gate item 2, OPTION_MATRIX_VERSION v3.1-draft-2): this is direct observed leadership behaviour, not a stated preference, and CID02 previously had only one primary source across the whole instrument.",
       },
     ],
     [
@@ -332,9 +332,9 @@ export const OPTION_SETS: readonly OptionSet[] = [
       },
       {
         dimension: "CID02",
-        role: "tertiary",
+        role: "secondary",
         rationale:
-          "Convening the affected people and driving to a resolution is coordination and influence, measured without asking whether the candidate wants to manage.",
+          "Convening the affected people and driving to a resolution is coordination and influence, measured without asking whether the candidate wants to manage. Promoted from tertiary (Owner Approval Gate item 2, OPTION_MATRIX_VERSION v3.1-draft-2): direct observed leadership behaviour, same reasoning as CQ06.",
       },
       {
         dimension: "CID11",

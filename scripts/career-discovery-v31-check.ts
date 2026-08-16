@@ -222,7 +222,9 @@ group("3 · Dimension coverage (owner decision 6: dominance cap 0.60)");
 // this is what protects the model from a silent typo.
 const EXPECTED_WEIGHTS: Record<DimensionId, number> = {
   CID01: 1.55,
-  CID02: 1.3,
+  // 1.3 -> 1.6: Owner Approval Gate item 2, CQ06/CQ09 CID02 loadings
+  // promoted tertiary (0.15) to secondary (0.3), +0.15 each.
+  CID02: 1.6,
   CID03: 1.6,
   CID04: 1.55,
   CID05: 1.7,
@@ -584,10 +586,12 @@ eq(
 // any of them alters a hash, and the only correct response is to bump the
 // version strings below and re-freeze deliberately.
 const FROZEN: Record<string, string> = {
-  CP01: "7325d7871c5b56fb",
-  CP05: "d0a74d6ee434f8cb",
-  CP10: "7aa2b96f7da12b0c",
-  balanced: "80b3e8e048b78b7f",
+  // Re-frozen for OPTION_MATRIX_VERSION v3.1-draft-2 (Owner Approval Gate
+  // item 2: CQ06/CQ09 CID02 loadings promoted tertiary -> secondary).
+  CP01: "4886dda65533f7f4",
+  CP05: "d32d9fdc32d6aaf4",
+  CP10: "f31e18d7399ff1d4",
+  balanced: "e69237eb17e645ef",
 };
 
 const fixtureHashes: Record<string, string> = {
@@ -614,7 +618,7 @@ if (process.env.FREEZE_FIXTURES === "1") {
 // The version strings the fixtures are pinned to.
 eq(CONTENT_VERSION, "v3.1-draft-1", "9.4 content version is pinned");
 eq(SCORING_VERSION, "v3.1-draft-1", "9.5 scoring version is pinned");
-eq(OPTION_MATRIX_VERSION, "v3.1-draft-1", "9.6 option matrix version is pinned");
+eq(OPTION_MATRIX_VERSION, "v3.1-draft-2", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-1", "9.7 pattern definition version is pinned");
 eq(STORY_TEMPLATE_VERSION, "v3.1-draft-2", "9.7b story template version is pinned");
 // The story template version must move INDEPENDENTLY of the scoring and
@@ -674,17 +678,36 @@ group("11 · TypeScript ↔ database parity");
 // needing a live database — which means it also runs on a developer's
 // machine before the migration is ever applied.
 
+// The original instrument migration -- item registry, definition version
+// and lifecycle status all still live here and are unaffected by the
+// option-matrix version bump below, so this stays the source for those.
 const migrationPath = path.join(
   process.cwd(),
   "supabase/migrations/20260730100000_career_discovery_v3_1_instrument.sql",
 );
 const migration = readFileSync(migrationPath, "utf8");
 
-const valuesBlock = migration.slice(
-  migration.indexOf(
+// Option loadings specifically are read from whichever migration seeds the
+// CURRENT OPTION_MATRIX_VERSION, a separate file from the one above.
+// 20260730100000_career_discovery_v3_1_instrument.sql seeded v3.1-draft-1
+// and is left untouched forever (any report snapshot frozen under that
+// version must stay reproducible against those exact rows).
+// 20260816105618_cd_v31_option_matrix_v2_cid02_leadership.sql seeds
+// v3.1-draft-2 (Owner Approval Gate item 2, CID02 coverage fix) as a
+// complete, freshly-generated 164-row set -- not a diff against the first
+// migration -- so this only ever needs to point at ONE file: the one
+// matching OPTION_MATRIX_VERSION right now.
+const optionMatrixMigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260816105618_cd_v31_option_matrix_v2_cid02_leadership.sql",
+);
+const optionMatrixMigration = readFileSync(optionMatrixMigrationPath, "utf8");
+
+const valuesBlock = optionMatrixMigration.slice(
+  optionMatrixMigration.indexOf(
     "(scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)\nVALUES",
   ),
-  migration.indexOf("ON CONFLICT (scoring_version, question_id, option_id, dimension_id)"),
+  optionMatrixMigration.indexOf("ON CONFLICT (scoring_version, question_id, option_id, dimension_id)"),
 );
 
 // Each tuple: ('ver','Q','OPT','CID','role',w,v,\n   'rationale')
@@ -806,9 +829,18 @@ ok(
 const areasForCp01 = rankCareerAreas(scoreDimensions(archetype("CP01")));
 eq(areasForCp01.ranked.length, 10, "12.4 a complete run ranks all ten areas");
 ok(areasForCp01.sufficientEvidence, "12.5 a complete run has sufficient evidence to rank");
+// Owner Approval Gate item 1: ranking order is no longer driven by the raw
+// absolute score (see career-areas.ts's AREA_RANK_METHOD doc comment for
+// why that was a real, owner-confirmed defect -- SCA01 Guarding
+// structurally outranking demanding areas for any candidate, regardless of
+// fit, because its target bands are easier to clear). Areas are still
+// returned in a real, deterministic order (by rank), but that order and
+// the absolute score's own order can now legitimately diverge -- that
+// divergence IS the fix, not a bug, so this no longer asserts score is
+// monotonic across the array.
 ok(
-  areasForCp01.ranked.every((a, i, arr) => i === 0 || arr[i - 1].score >= a.score),
-  "12.6 areas are returned in descending score order",
+  areasForCp01.ranked.every((a, i) => a.rank === i + 1),
+  "12.6 areas are returned in rank order (1..10, sequential)",
 );
 ok(
   areasForCp01.ranked.every((a) => a.score >= 0 && a.score <= 100),

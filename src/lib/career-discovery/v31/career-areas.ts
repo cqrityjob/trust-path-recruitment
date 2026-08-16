@@ -342,9 +342,78 @@ export const CAREER_AREAS: Readonly<Record<CareerAreaId, CareerArea>> = {
  *  may be ranked at all. Versioned configuration, provisional until pilot. */
 export const AREA_MIN_COVERAGE = 0.6;
 
-/** Minimum separation between consecutive areas before they are presented as
- *  a group rather than a ranking. Provisional. */
-export const AREA_MIN_SEPARATION = 3;
+/** Minimum separation between consecutive areas, in standard deviations of
+ *  the neutral-baseline shortfall (see AREA_RANK_METHOD below), before they
+ *  are presented as a group rather than a ranking. 0.4 SD is chosen as the
+ *  smallest gap that reliably reflects a genuine difference in relative fit
+ *  rather than answer-to-answer noise -- provisional until pilot, same
+ *  status as AREA_MIN_COVERAGE. This constant changed scale (previously
+ *  0-100 score points, now standard deviations) when the ranking metric
+ *  changed -- see AREA_RANK_METHOD.
+ */
+export const AREA_MIN_SEPARATION = 0.4;
+
+/**
+ * Owner Approval Gate item 1: Career Area structural bias.
+ *
+ * scored[].score (below) is an ABSOLUTE closeness metric -- how far the
+ * candidate's profile sits from an area's own target profile, 0-100,
+ * unchanged in formula since the very first version of this file. It is
+ * kept exactly as it was: existing candidate-facing bands derived from it,
+ * and every historical report's stored score, stay reproducible byte-for-
+ * byte (Mandate item 13).
+ *
+ * But that absolute score is NOT used to decide ranking order any more.
+ * The locked spreadsheet (all 160 rows Importance="Core", see file header)
+ * gives some areas mostly LOW targets (SCA01 Guarding: CID02=4, CID03=5,
+ * CID04=4, CID05=3, CID10=4 out of 10) and others mostly HIGH targets
+ * (SCA04 Security Leadership: nearly every dimension 6-9). A low-target
+ * area is trivially cleared by almost any realistic candidate regardless of
+ * fit, while a high-target area accumulates shortfall across many
+ * dimensions even for a candidate who is genuinely, strongly suited to it.
+ * That is a difference in how DIFFICULT each area's bar is, not in how
+ * WELL any given candidate fits it -- and the absolute score conflates the
+ * two. Confirmed as a real, owner-visible defect: a senior,
+ * leadership/strategic-dominant candidate profile ranked SCA01 Guarding
+ * above their own SCA04 Security Leadership & Coordination area under the
+ * absolute score (verified by hand against the actual formula, not
+ * assumed -- see docs/career-discovery/v31-layer4-implementation-state.md).
+ *
+ * Fix: rank by a Z-SCORE of the candidate's shortfall against each area's
+ * own NEUTRAL BASELINE -- the shortfall an uninformative, "no signal"
+ * candidate (each dimension independently Uniform(0,1), the
+ * maximum-entropy prior over a 0-1 scored dimension -- not any real or
+ * synthetic persona) would be expected to show against that SAME area,
+ * derived analytically and exactly from the area's own locked target
+ * values, with no invented weights and no runtime randomness:
+ *
+ *   For a single dimension with target t (0-1 scale) and A ~ Uniform(0,1):
+ *     E[max(0, t - A)]   = t^2 / 2            (expected shortfall)
+ *     Var[max(0, t - A)] = t^3/3 - t^4/4       (variance of shortfall)
+ *
+ *   Summed (independence) over the candidate's OBSERVED dimensions for
+ *   that area gives shortfallNeutral and shortfallVariance -- the area's
+ *   own difficulty and discriminating power, nothing else.
+ *
+ *   z = (shortfallNeutral - candidateShortfall) / sqrt(shortfallVariance)
+ *
+ * A HIGHER z means the candidate clears that area's bar by more standard
+ * deviations than an uninformative candidate would -- correctly rewarding
+ * genuine fit to a demanding, high-variance area (SCA04) more than the
+ * same absolute closeness to an easy, low-variance one (SCA01), because
+ * clearing a hard, discriminating bar by 3 SDs is more informative than
+ * clearing an easy one by 3 SDs. Verified against the same real senior
+ * leadership profile that exposed the defect: SCA04's z overtakes SCA01's,
+ * flipping the order correctly (implementation-state doc has the full
+ * worked numbers). Does not force equal distributions -- a candidate
+ * genuinely excellent at an easy area's own traits still ranks it highly;
+ * what's removed is the systematic advantage every candidate got on easy
+ * areas regardless of fit. Does not hardcode any persona -- shortfallNeutral
+ * and shortfallVariance are pure functions of each area's own locked
+ * target vector. Does not touch profession affinity -- entirely local to
+ * this module.
+ */
+const AREA_RANK_METHOD = "neutral-baseline-zscore-v1" as const;
 
 export interface AreaScore {
   readonly areaId: CareerAreaId;
@@ -390,29 +459,17 @@ export function rankCareerAreas(dims: DimensionResult): AreaResult {
   const scored = CAREER_AREA_IDS.map((areaId) => {
     const area = CAREER_AREAS[areaId];
     let penalty = 0;
+    let shortfallNeutral = 0;
+    let shortfallVariance = 0;
     const aligned: { dimension: DimensionId; margin: number }[] = [];
 
-    // Autonomous Final Quality Pass: tried weighting both the penalty and
-    // its normaliser by each dimension's target (mirroring
-    // professions.ts's central-dominant fit) so a shortfall on a defining
-    // trait would cost more than the same shortfall on an incidental one.
-    // Reverted after hand-verifying it against a real persona: because
-    // penalty scales with target^2 (miss * target) while the normaliser
-    // only scales linearly (target), areas whose targets are uniformly high
-    // across most of the 15 dimensions (SCA04 Security Leadership, SCA05
-    // Risk & Crisis) became structurally harder to rank #1 than areas with
-    // a mixed high/low target profile (SCA01, SCA02) -- for ANY candidate,
-    // including ones genuinely suited to the demanding area. Concretely,
-    // the "Experienced Säkerhetssamordnare" persona (a real security
-    // coordinator) ranked SCA01 Guarding above their own SCA04 Security
-    // Leadership & Coordination area under the weighted formula. That is a
-    // worse defect than the one being fixed. Kept only the "why" evidence
-    // fix below (sorting displayed evidence by the area's own target),
-    // which uses the same target-as-importance signal without touching the
-    // ranking arithmetic -- unlike professions.ts, this locked spreadsheet
-    // has no explicit central/supporting split to calibrate against, so
-    // inventing one in the scoring formula itself is not safe without much
-    // more validation than this pass had time for.
+    // An earlier attempt weighted this SAME penalty/normaliser by each
+    // dimension's target (mirroring professions.ts's central-dominant fit).
+    // Reverted after hand-verifying it made the exact defect AREA_RANK_METHOD
+    // above fixes worse, not better -- see that doc comment for the full
+    // account. The absolute penalty below is unchanged from the original,
+    // unweighted formula; only the ranking metric computed alongside it
+    // (shortfallNeutral / shortfallVariance) is new.
     for (const d of observed) {
       const target = area.targets[d] / 10;
       const actual = dims.dimensions[d].score!;
@@ -422,11 +479,25 @@ export function rankCareerAreas(dims: DimensionResult): AreaResult {
         // Only shortfalls count. Exceeding a target is never a penalty.
         penalty += target - actual;
       }
+      // AREA_RANK_METHOD: analytic mean/variance of this single dimension's
+      // shortfall under an uninformative Uniform(0,1) candidate -- a pure
+      // function of the area's own locked target, independent of this
+      // candidate's actual score.
+      shortfallNeutral += (target * target) / 2;
+      shortfallVariance += (target * target * target) / 3 - (target * target * target * target) / 4;
     }
+
+    // sqrt(variance) is 0 only if every observed target is 0 or 1, which
+    // does not occur in the locked data -- guarded anyway so a future
+    // content change can never divide by zero instead of degrading
+    // honestly to "no separation signal" (z=0, ties broken by area id).
+    const rankZ =
+      shortfallVariance > 0 ? (shortfallNeutral - penalty) / Math.sqrt(shortfallVariance) : 0;
 
     return {
       areaId,
       score: round1(Math.max(0, 100 * (1 - penalty / observed.length))),
+      rankZ,
       rank: 0,
       // Real-world defect fix: previously sorted by the candidate's own
       // margin (actual - target) alone, which surfaced whichever cleared
@@ -458,13 +529,17 @@ export function rankCareerAreas(dims: DimensionResult): AreaResult {
     };
   });
 
-  // Ties broken by area id so the ordering is deterministic.
-  scored.sort((a, b) => b.score - a.score || a.areaId.localeCompare(b.areaId));
-  const ranked = scored.map((s, i) => ({ ...s, rank: i + 1 }));
+  // AREA_RANK_METHOD: order by the bias-corrected z-score, not the absolute
+  // score -- see that doc comment for why. Ties broken by area id so the
+  // ordering is deterministic. rankZ is an internal ranking input only; it
+  // never reaches AreaScore (candidates and historical snapshots see
+  // rank/score exactly as before, see AreaScore's own doc comment).
+  scored.sort((a, b) => b.rankZ - a.rankZ || a.areaId.localeCompare(b.areaId));
+  const ranked = scored.map(({ rankZ: _rankZ, ...s }, i) => ({ ...s, rank: i + 1 }));
 
   return {
     ranked,
-    grouped: ranked[0].score - ranked[1].score < AREA_MIN_SEPARATION,
+    grouped: scored[0].rankZ - scored[1].rankZ < AREA_MIN_SEPARATION,
     sufficientEvidence: true,
   };
 }

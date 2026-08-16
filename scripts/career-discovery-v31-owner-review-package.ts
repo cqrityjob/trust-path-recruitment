@@ -80,12 +80,14 @@ function esc(s: string): string {
 
 const REQUESTED: readonly { id: string; label: string }[] = [
   { id: "student", label: "1. Student" },
-  { id: "vaktare", label: "2. Väktare" },
-  { id: "experienced-coordinator", label: "3. Experienced Security Coordinator" },
-  { id: "technical", label: "4. Technical" },
-  { id: "investigation", label: "5. Investigation / Analysis" },
-  { id: "broad-profile", label: "6. Broad" },
-  { id: "sparse", label: "7. Sparse" },
+  { id: "vaktare", label: "2. Väktare (1-3 years)" },
+  { id: "experienced-vaktare", label: "3. Experienced Väktare (8+ years)" },
+  { id: "sakerhetschef-senior", label: "4. Säkerhetschef / Head of Security (8+ years)" },
+  { id: "experienced-coordinator", label: "5. Experienced Security Coordinator" },
+  { id: "technical", label: "6. Technical" },
+  { id: "investigation", label: "7. Investigation / Analysis" },
+  { id: "broad-profile", label: "8. Broad" },
+  { id: "sparse", label: "9. Sparse" },
 ];
 
 const STAGE_CLASS: Record<string, string> = {
@@ -149,6 +151,7 @@ function personaSection(persona: GoldenPersona, label: string): string {
     persona.currentProfessionCigSlug ?? null,
     [],
     new Set(),
+    persona.experienceBand ?? null,
   );
   const result = diagnostics.result;
   const diagById = new Map(diagnostics.diagnostics.map((d) => [d.professionId, d]));

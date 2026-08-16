@@ -6,6 +6,7 @@
 
 import type { DimensionId } from "./dimensions";
 import type { ContextStatus } from "../types";
+import type { ExperienceBand } from "../career-context";
 
 export interface GoldenPersona {
   readonly id: string;
@@ -19,6 +20,16 @@ export interface GoldenPersona {
    *  defined identity — Master Completion Mandate item 2 is explicit that
    *  this must never be inferred, so most personas correctly have none. */
   readonly currentProfessionCigSlug?: string;
+  /** Self-reported years in the current profession — Owner Approval Gate
+   *  item 3: personas whose own name names an experience tier (Väktare
+   *  1-3 years, Experienced Väktare, Säkerhetschef 8+ years) carry it here
+   *  so the fixture is self-contained and the regression script actually
+   *  exercises resolveStageBaseline's experience-refinement path, which no
+   *  golden persona previously did (matchProfessions was always called
+   *  without an experienceBand argument at all). Absent where experience
+   *  isn't part of the persona's defined identity, same rule as
+   *  currentProfessionCigSlug. */
+  readonly experienceBand?: ExperienceBand;
 }
 
 export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
@@ -67,26 +78,97 @@ export const GOLDEN_PERSONAS: readonly GoldenPersona[] = [
     },
   },
   {
+    // Owner Approval Gate item 3.A. Early-career: genuinely operational and
+    // risk-aware from the start (why they chose the role), but the traits
+    // that only come from years of real incidents -- composure,
+    // independent decision-making, procedural structure -- are still
+    // developing, not yet at a veteran's level. High learning orientation
+    // reflects early-career growth.
     id: "vaktare",
-    name: { sv: "Väktare", en: "Väktare" },
+    name: { sv: "Väktare (1-3 år)", en: "Väktare (1-3 years)" },
     contextStatus: "working_in_security",
     currentProfessionCigSlug: "vaktare",
+    experienceBand: "1_3y",
+    dims: {
+      CID01: 0.75,
+      CID02: 0.3,
+      CID03: 0.45,
+      CID04: 0.35,
+      CID05: 0.25,
+      CID06: 0.7,
+      CID07: 0.55,
+      CID08: 0.6,
+      CID09: 0.55,
+      CID10: 0.35,
+      CID11: 0.6,
+      CID12: 0.5,
+      CID13: 0.6,
+      CID14: 0.75,
+      CID16: 0.6,
+    },
+  },
+  {
+    // Owner Approval Gate item 3.B. A genuine veteran who chose depth in
+    // the frontline role over pursuing management -- composure, structure
+    // and independent decision-making are now at their peak (sharpened by
+    // years of real incidents), but leadership/strategic orientation stay
+    // low precisely because that path was never pursued. This is the
+    // control case against 3.A: same profession, same central dimensions,
+    // years of real experience are the only thing that moved.
+    id: "experienced-vaktare",
+    name: { sv: "Erfaren väktare (8+ år)", en: "Experienced Väktare (8+ years)" },
+    contextStatus: "developing_current_role",
+    currentProfessionCigSlug: "vaktare",
+    experienceBand: "8_plus_y",
     dims: {
       CID01: 0.85,
-      CID02: 0.4,
+      CID02: 0.35,
       CID03: 0.5,
-      CID04: 0.4,
+      CID04: 0.45,
       CID05: 0.3,
-      CID06: 0.85,
-      CID07: 0.6,
+      CID06: 0.88,
+      CID07: 0.65,
       CID08: 0.6,
-      CID09: 0.6,
+      CID09: 0.7,
       CID10: 0.4,
-      CID11: 0.8,
-      CID12: 0.65,
-      CID13: 0.6,
+      CID11: 0.85,
+      CID12: 0.8,
+      CID13: 0.65,
       CID14: 0.55,
-      CID16: 0.85,
+      CID16: 0.9,
+    },
+  },
+  {
+    // Owner Approval Gate item 3.C — mandatory. A genuine senior security
+    // leader, 8+ years, years removed from frontline work: leadership,
+    // strategic thinking and communication are the defining traits;
+    // operational/conflict/investigative orientation are real but
+    // secondary, reflecting oversight rather than hands-on frontline work.
+    // This is the exact profile shape the Career Area structural-bias fix
+    // (career-areas.ts, AREA_RANK_METHOD) must rank correctly: SCA04
+    // Security Leadership & Coordination should outrank SCA01 Guarding &
+    // Operational Protection for this candidate, not the other way round.
+    id: "sakerhetschef-senior",
+    name: { sv: "Säkerhetschef (8+ år)", en: "Säkerhetschef / Head of Security (8+ years)" },
+    contextStatus: "security_leader",
+    currentProfessionCigSlug: "sakerhetschef",
+    experienceBand: "8_plus_y",
+    dims: {
+      CID01: 0.3,
+      CID02: 0.9,
+      CID03: 0.7,
+      CID04: 0.4,
+      CID05: 0.88,
+      CID06: 0.8,
+      CID07: 0.88,
+      CID08: 0.5,
+      CID09: 0.5,
+      CID10: 0.35,
+      CID11: 0.78,
+      CID12: 0.78,
+      CID13: 0.85,
+      CID14: 0.65,
+      CID16: 0.78,
     },
   },
   {

@@ -22,10 +22,11 @@
 // owner flip it later.
 
 import { writeFileSync } from "node:fs";
-import { DIMENSION_IDS, type DimensionId } from "../src/lib/career-discovery/v31/dimensions";
+import { DIMENSION_IDS, DIMENSIONS, type DimensionId } from "../src/lib/career-discovery/v31/dimensions";
 import {
   buildCareerCardData,
 } from "../src/lib/career-discovery/v31/career-card";
+import { CAREER_AREAS, rankCareerAreas } from "../src/lib/career-discovery/v31/career-areas";
 import { explainMatch } from "../src/lib/career-discovery/v31/profession-explanations";
 import { matchProfessions, type ProfessionMatch } from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
@@ -112,10 +113,28 @@ for (const persona of GOLDEN_PERSONAS) {
     FIRST_WAVE_CATALOG,
     persona.contextStatus,
     persona.currentProfessionCigSlug ?? null,
+    [],
+    undefined,
+    persona.experienceBand ?? null,
   );
+  const areas = rankCareerAreas(dims);
 
   report.push(`## ${persona.name.en}\n`);
-  report.push(`Context: \`${persona.contextStatus}\`\n`);
+  report.push(
+    `Context: \`${persona.contextStatus}\`${persona.experienceBand ? ` · experience: \`${persona.experienceBand}\`` : ""}${persona.currentProfessionCigSlug ? ` · current profession: \`${persona.currentProfessionCigSlug}\`` : ""}\n`,
+  );
+
+  if (areas.sufficientEvidence) {
+    report.push(
+      `### Career Areas (broad orientation, top 3)\n${areas.ranked
+        .slice(0, 3)
+        .map(
+          (a) =>
+            `  ${a.rank}. **${CAREER_AREAS[a.areaId].name.en}** (${a.areaId}) — aligned: ${a.alignedDimensions.map((d) => DIMENSIONS[d].name.en).join(", ") || "—"}`,
+        )
+        .join("\n")}${areas.grouped ? "\n  (top areas are closely grouped, not a strict order)" : ""}\n`,
+    );
+  }
 
   if (!result.available) {
     report.push("No professions cleared matching (insufficient coverage or fit) — shown honestly as unavailable, not padded.\n");
@@ -133,24 +152,78 @@ for (const persona of GOLDEN_PERSONAS) {
     ok(!seniorAsExploreNow, `${persona.name.en}: no senior-stage profession is ever "explore now" for a novice baseline`);
   }
 
-  if (persona.name.en === "Väktare") {
+  if (persona.name.en === "Väktare (1-3 years)" || persona.name.en === "Experienced Väktare (8+ years)") {
     const skyddsvakt = result.matches.find((m) => m.professionId === "SP003");
     const coordinator = result.matches.find((m) => m.professionId === "SP006");
     const headOfSecurity = result.matches.find((m) => m.professionId === "SP007");
-    ok(skyddsvakt?.stage === "explore_now", "Väktare: Skyddsvakt is explore_now");
-    ok(coordinator === undefined || coordinator.stage === "possible_next_step", "Väktare: Säkerhetssamordnare, if matched, is possible_next_step");
-    ok(headOfSecurity === undefined || headOfSecurity.stage === "longer_term", "Väktare: Säkerhetschef, if matched, is longer_term");
-    // Item 23: "you are here" (Väktare, SCA01) -> meaningful next directions,
-    // never career_pivot for a same-area move like Skyddsvakt (adjacent
-    // operational specialisation, not a change of direction) — this now
-    // uses the persona's real self-reported current profession, not a guess.
+    ok(skyddsvakt?.stage === "explore_now", `${persona.name.en}: Skyddsvakt is explore_now`);
+    ok(coordinator === undefined || coordinator.stage === "possible_next_step", `${persona.name.en}: Säkerhetssamordnare, if matched, is possible_next_step`);
+    ok(headOfSecurity === undefined || headOfSecurity.stage === "longer_term", `${persona.name.en}: Säkerhetschef, if matched, is longer_term`);
     ok(
       persona.currentProfessionCigSlug === "vaktare",
-      "Väktare: persona fixture reports a real current profession (item 2 requires this for pivot classification to run at all)",
+      `${persona.name.en}: persona fixture reports a real current profession (item 2 requires this for pivot classification to run at all)`,
     );
     ok(
       skyddsvakt?.stage !== "career_pivot",
-      "Väktare: Skyddsvakt (same career area, SCA01) is never a career_pivot -- an adjacent, same-track move",
+      `${persona.name.en}: Skyddsvakt (same career area, SCA01) is never a career_pivot -- an adjacent, same-track move`,
+    );
+    // Owner Approval Gate item 3: SCA01 Guarding must still legitimately
+    // rank #1 for a genuinely operational Väktare profile -- the Career
+    // Area bias fix must not overcorrect into hiding a real fit.
+    ok(
+      areas.ranked[0]?.areaId === "SCA01",
+      `${persona.name.en}: SCA01 Guarding & Operational Protection is genuinely the top Career Area`,
+    );
+  }
+
+  if (persona.name.en === "Väktare (1-3 years)") {
+    ok(persona.experienceBand === "1_3y", "Väktare (1-3 years): experience band is set correctly");
+  }
+
+  if (persona.name.en === "Experienced Väktare (8+ years)") {
+    ok(persona.experienceBand === "8_plus_y", "Experienced Väktare (8+ years): experience band is set correctly");
+    // Owner Approval Gate item 3.B: 8+ years genuinely changes the realistic
+    // pathway vs the 1-3y persona -- Personskyddsvakt (a "developing"-stage
+    // profession) should read as an immediate direction, not a stretch
+    // possible_next_step, once real seniority is on record.
+    const personskyddsvakt = result.matches.find((m) => m.professionId === "SP004");
+    ok(
+      personskyddsvakt?.stage === "explore_now",
+      "Experienced Väktare (8+ years): Personskyddsvakt (developing-stage) is explore_now, not a stretch possible_next_step",
+    );
+  }
+
+  if (persona.name.en === "Säkerhetschef / Head of Security (8+ years)") {
+    // Owner Approval Gate item 1 (mandatory acceptance case) + item 3.C.
+    // This is the exact profile shape that exposed the Career Area
+    // structural bias: strong leadership/strategic/communication evidence,
+    // genuinely low operational evidence. SCA04 must rank ahead of SCA01 --
+    // not because SCA01 is suppressed, but because the bias that let SCA01
+    // win on target-band easiness alone is fixed (see AREA_RANK_METHOD).
+    const sca01Rank = areas.ranked.find((a) => a.areaId === "SCA01")?.rank ?? 99;
+    const sca04Rank = areas.ranked.find((a) => a.areaId === "SCA04")?.rank ?? 99;
+    ok(
+      areas.ranked[0]?.areaId === "SCA04",
+      "Säkerhetschef 8+: SCA04 Security Leadership & Coordination is the top Career Area",
+    );
+    ok(
+      sca04Rank < sca01Rank,
+      `Säkerhetschef 8+: SCA04 (rank ${sca04Rank}) outranks SCA01 (rank ${sca01Rank}) -- the structural bias fix holds for a real senior-leadership profile`,
+    );
+    // Item 3.C, mandatory: frontline roles never appear as explore_now
+    // (natural progression) for a senior security leader -- either absent
+    // entirely (DNA genuinely does not support them, the honest outcome
+    // here) or, if present at all, only as career_pivot.
+    const frontlineIds = ["SP001", "SP002", "SP003", "SP004", "SP005"];
+    const frontlineMatches = result.matches.filter((m) => frontlineIds.includes(m.professionId));
+    ok(
+      frontlineMatches.every((m) => m.stage === "career_pivot"),
+      "Säkerhetschef 8+: every frontline profession that clears matching at all is career_pivot, never explore_now/possible_next_step/longer_term",
+    );
+    ok(
+      !result.strongestDirections.some((m) => frontlineIds.includes(m.professionId)) &&
+        !result.alsoWorthExploring.some((m) => frontlineIds.includes(m.professionId)),
+      "Säkerhetschef 8+: no frontline profession appears in strongestDirections or alsoWorthExploring",
     );
   }
 

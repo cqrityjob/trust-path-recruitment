@@ -33,8 +33,17 @@ export const CONTENT_VERSION = "v3.1-draft-1" as const;
 export const SCORING_VERSION = "v3.1-draft-1" as const;
 
 /** Which option loadings the matrix table holds. Kept as its own string so
- *  the matrix can be re-seeded independently of the aggregation rules. */
-export const OPTION_MATRIX_VERSION = "v3.1-draft-1" as const;
+ *  the matrix can be re-seeded independently of the aggregation rules.
+ *  Bumped to draft-2 (Owner Approval Gate item 2): CID02 Leadership had
+ *  only one primary source across the whole instrument (CQ13) while
+ *  materially contributing to two profession centrals (SP006, SP007).
+ *  CQ06 and CQ09 each already carried a genuine, direct-observed-behaviour
+ *  CID02 tertiary loading (not a stated preference) that was underweighted
+ *  relative to its actual evidentiary strength -- promoted both to
+ *  secondary. No question wording, option text, dimension spans or option
+ *  values changed; only the role (and therefore weight) of two existing
+ *  loadings. */
+export const OPTION_MATRIX_VERSION = "v3.1-draft-2" as const;
 
 /** Central/supporting dimension sets and the resolution thresholds. */
 export const PATTERN_DEFINITION_VERSION = "v3.1-draft-1" as const;
