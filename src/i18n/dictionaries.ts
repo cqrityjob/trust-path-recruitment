@@ -678,7 +678,7 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Delat.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Bilden är sparad. Lägg till den i din Instagram- eller TikTok-story.",
-    "careerDiscovery.report.v31.feedback.title": "Hjälp oss förbättra testet",
+    "careerDiscovery.report.v31.feedback.title": "Hjälp oss förbättra vägledningen",
     "careerDiscovery.report.v31.feedback.relevant":
       "Hur relevanta kändes karriärrekommendationerna? (1–5)",
     "careerDiscovery.report.v31.feedback.understoodWhy": "Förstod du varför de rekommenderades?",
@@ -3017,7 +3017,7 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Shared.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Image saved. Add it to your Instagram or TikTok story.",
-    "careerDiscovery.report.v31.feedback.title": "Help us improve the test",
+    "careerDiscovery.report.v31.feedback.title": "Help us improve this guidance",
     "careerDiscovery.report.v31.feedback.relevant":
       "How relevant did the career recommendations feel? (1–5)",
     "careerDiscovery.report.v31.feedback.understoodWhy":
