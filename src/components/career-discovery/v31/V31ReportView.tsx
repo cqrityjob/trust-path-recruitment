@@ -366,9 +366,11 @@ export function V31ReportView({
 
       {areas.length > 0 && (
         <>
-          <h3 className="mt-12 text-lg font-semibold tracking-tight text-foreground">
+          {/* Top-level report section (not a sub-part of "Your working
+              style" above), so h2 — sibling of the other section headings. */}
+          <h2 className="mt-16 text-xl font-semibold tracking-tight text-foreground md:text-2xl">
             {t("careerDiscovery.report.v31.areasTitle")}
-          </h3>
+          </h2>
           {/* Owner Security Manager scenario fix (§6): a ranked "01/02/03"
               card grid can otherwise read as a job recommendation on its
               own, especially to a senior candidate scrolling past the
