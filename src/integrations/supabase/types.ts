@@ -7247,6 +7247,325 @@ export type Database = {
           },
         ]
       }
+      sp_claims: {
+        Row: {
+          assertion_level: string
+          claim_type: string
+          claimed_issuer_name: string | null
+          created_at: string
+          holder_user_id: string
+          id: string
+          issued_on: string | null
+          jurisdiction_code: string | null
+          lifecycle_state: string
+          supersedes_id: string | null
+          title: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+          verified_at: string | null
+          verified_by_user_id: string | null
+          version_no: number
+        }
+        Insert: {
+          assertion_level?: string
+          claim_type: string
+          claimed_issuer_name?: string | null
+          created_at?: string
+          holder_user_id: string
+          id?: string
+          issued_on?: string | null
+          jurisdiction_code?: string | null
+          lifecycle_state?: string
+          supersedes_id?: string | null
+          title: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          verified_at?: string | null
+          verified_by_user_id?: string | null
+          version_no?: number
+        }
+        Update: {
+          assertion_level?: string
+          claim_type?: string
+          claimed_issuer_name?: string | null
+          created_at?: string
+          holder_user_id?: string
+          id?: string
+          issued_on?: string | null
+          jurisdiction_code?: string | null
+          lifecycle_state?: string
+          supersedes_id?: string | null
+          title?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          verified_at?: string | null
+          verified_by_user_id?: string | null
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_claims_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_claims_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_experience_periods: {
+        Row: {
+          assertion_level: string
+          cig_profession_slug: string | null
+          created_at: string
+          employer_id: string | null
+          employer_name: string
+          employment_type: string
+          ended_on: string | null
+          fte_fraction: number
+          holder_user_id: string
+          id: string
+          jurisdiction_code: string
+          lifecycle_state: string
+          profession_family: string | null
+          role_title: string
+          security_fraction: number
+          security_relevance: string
+          started_on: string
+          supersedes_id: string | null
+          updated_at: string
+          version_no: number
+        }
+        Insert: {
+          assertion_level?: string
+          cig_profession_slug?: string | null
+          created_at?: string
+          employer_id?: string | null
+          employer_name: string
+          employment_type?: string
+          ended_on?: string | null
+          fte_fraction?: number
+          holder_user_id: string
+          id?: string
+          jurisdiction_code?: string
+          lifecycle_state?: string
+          profession_family?: string | null
+          role_title: string
+          security_fraction?: number
+          security_relevance?: string
+          started_on: string
+          supersedes_id?: string | null
+          updated_at?: string
+          version_no?: number
+        }
+        Update: {
+          assertion_level?: string
+          cig_profession_slug?: string | null
+          created_at?: string
+          employer_id?: string | null
+          employer_name?: string
+          employment_type?: string
+          ended_on?: string | null
+          fte_fraction?: number
+          holder_user_id?: string
+          id?: string
+          jurisdiction_code?: string
+          lifecycle_state?: string
+          profession_family?: string | null
+          role_title?: string
+          security_fraction?: number
+          security_relevance?: string
+          started_on?: string
+          supersedes_id?: string | null
+          updated_at?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_experience_periods_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_experience_periods_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_experience_periods_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_jurisdictions: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      sp_passport_events: {
+        Row: {
+          actor_user_id: string | null
+          detail: Json
+          event_type: string
+          holder_user_id: string
+          id: string
+          occurred_at: string
+          subject_id: string | null
+          subject_type: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          detail?: Json
+          event_type: string
+          holder_user_id: string
+          id?: string
+          occurred_at?: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          detail?: Json
+          event_type?: string
+          holder_user_id?: string
+          id?: string
+          occurred_at?: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Relationships: []
+      }
+      sp_passport_profiles: {
+        Row: {
+          cig_profession_slug: string | null
+          created_at: string
+          declared_accurate_at: string | null
+          display_name: string | null
+          headline: string | null
+          holder_user_id: string
+          is_private: boolean
+          jurisdiction_code: string
+          onboarding_answers: Json
+          onboarding_state: string
+          onboarding_step: number
+          privacy_mode: string
+          profession_family: string | null
+          question_version: string
+          recognition_policy_version: string
+          updated_at: string
+        }
+        Insert: {
+          cig_profession_slug?: string | null
+          created_at?: string
+          declared_accurate_at?: string | null
+          display_name?: string | null
+          headline?: string | null
+          holder_user_id: string
+          is_private?: boolean
+          jurisdiction_code?: string
+          onboarding_answers?: Json
+          onboarding_state?: string
+          onboarding_step?: number
+          privacy_mode?: string
+          profession_family?: string | null
+          question_version?: string
+          recognition_policy_version?: string
+          updated_at?: string
+        }
+        Update: {
+          cig_profession_slug?: string | null
+          created_at?: string
+          declared_accurate_at?: string | null
+          display_name?: string | null
+          headline?: string | null
+          holder_user_id?: string
+          is_private?: boolean
+          jurisdiction_code?: string
+          onboarding_answers?: Json
+          onboarding_state?: string
+          onboarding_step?: number
+          privacy_mode?: string
+          profession_family?: string | null
+          question_version?: string
+          recognition_policy_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_passport_profiles_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_passport_profiles_recognition_policy_version_fkey"
+            columns: ["recognition_policy_version"]
+            isOneToOne: false
+            referencedRelation: "sp_recognition_policies"
+            referencedColumns: ["version"]
+          },
+        ]
+      }
+      sp_recognition_policies: {
+        Row: {
+          basis: string
+          created_at: string
+          is_active: boolean
+          threshold_years: number[]
+          version: string
+        }
+        Insert: {
+          basis: string
+          created_at?: string
+          is_active?: boolean
+          threshold_years: number[]
+          version: string
+        }
+        Update: {
+          basis?: string
+          created_at?: string
+          is_active?: boolean
+          threshold_years?: number[]
+          version?: string
+        }
+        Relationships: []
+      }
       target_professions: {
         Row: {
           chosen_at: string
@@ -8009,6 +8328,23 @@ export type Database = {
           previous_status: string
           updated_at: string
         }[]
+      }
+      sp_correct_claim: {
+        Args: {
+          _claim_id: string
+          _claimed_issuer_name: string
+          _issued_on: string
+          _jurisdiction_code: string
+          _reason: string
+          _title: string
+          _valid_from: string
+          _valid_until: string
+        }
+        Returns: string
+      }
+      sp_withdraw_claim: {
+        Args: { _claim_id: string; _reason: string }
+        Returns: undefined
       }
       sweep_analytics_retention: {
         Args: never
