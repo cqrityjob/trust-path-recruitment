@@ -91,6 +91,7 @@ import { Route as AuthenticatedAdminAssignmentsIndexRouteImport } from './routes
 import { Route as AuthenticatedAdminAssessmentsIndexRouteImport } from './routes/_authenticated.admin.assessments.index'
 import { Route as AuthenticatedAdminApplicationsIndexRouteImport } from './routes/_authenticated.admin.applications.index'
 import { Route as AuthenticatedSecurityCareerAssessmentReportSnapshotIdRouteImport } from './routes/_authenticated.security-career-assessment.report.$snapshotId'
+import { Route as AuthenticatedPassportCredentialsNewRouteImport } from './routes/_authenticated.passport.credentials.new'
 import { Route as AuthenticatedMyCareerReportsRunIdRouteImport } from './routes/_authenticated.my-career.reports.$runId'
 import { Route as AuthenticatedEmployerEmployerSlugTrainingRouteImport } from './routes/_authenticated.employer.$employerSlug.training'
 import { Route as AuthenticatedEmployerEmployerSlugSitesRouteImport } from './routes/_authenticated.employer.$employerSlug.sites'
@@ -582,6 +583,12 @@ const AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute =
     path: '/security-career-assessment/report/$snapshotId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPassportCredentialsNewRoute =
+  AuthenticatedPassportCredentialsNewRouteImport.update({
+    id: '/credentials/new',
+    path: '/credentials/new',
+    getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
 const AuthenticatedMyCareerReportsRunIdRoute =
   AuthenticatedMyCareerReportsRunIdRouteImport.update({
     id: '/reports/$runId',
@@ -905,6 +912,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
   '/employer/$employerSlug/training': typeof AuthenticatedEmployerEmployerSlugTrainingRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
+  '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
   '/admin/applications/': typeof AuthenticatedAdminApplicationsIndexRoute
   '/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
@@ -1010,6 +1018,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
   '/employer/$employerSlug/training': typeof AuthenticatedEmployerEmployerSlugTrainingRoute
   '/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
+  '/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
   '/admin/applications': typeof AuthenticatedAdminApplicationsIndexRoute
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsIndexRoute
@@ -1132,6 +1141,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/sites': typeof AuthenticatedEmployerEmployerSlugSitesRoute
   '/_authenticated/employer/$employerSlug/training': typeof AuthenticatedEmployerEmployerSlugTrainingRoute
   '/_authenticated/my-career/reports/$runId': typeof AuthenticatedMyCareerReportsRunIdRoute
+  '/_authenticated/passport/credentials/new': typeof AuthenticatedPassportCredentialsNewRoute
   '/_authenticated/security-career-assessment/report/$snapshotId': typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRoute
   '/_authenticated/admin/applications/': typeof AuthenticatedAdminApplicationsIndexRoute
   '/_authenticated/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
@@ -1254,6 +1264,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/sites'
     | '/employer/$employerSlug/training'
     | '/my-career/reports/$runId'
+    | '/passport/credentials/new'
     | '/security-career-assessment/report/$snapshotId'
     | '/admin/applications/'
     | '/admin/assessments/'
@@ -1359,6 +1370,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/sites'
     | '/employer/$employerSlug/training'
     | '/my-career/reports/$runId'
+    | '/passport/credentials/new'
     | '/security-career-assessment/report/$snapshotId'
     | '/admin/applications'
     | '/admin/assessments'
@@ -1480,6 +1492,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/sites'
     | '/_authenticated/employer/$employerSlug/training'
     | '/_authenticated/my-career/reports/$runId'
+    | '/_authenticated/passport/credentials/new'
     | '/_authenticated/security-career-assessment/report/$snapshotId'
     | '/_authenticated/admin/applications/'
     | '/_authenticated/admin/assessments/'
@@ -2114,6 +2127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSecurityCareerAssessmentReportSnapshotIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/passport/credentials/new': {
+      id: '/_authenticated/passport/credentials/new'
+      path: '/credentials/new'
+      fullPath: '/passport/credentials/new'
+      preLoaderRoute: typeof AuthenticatedPassportCredentialsNewRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
+    }
     '/_authenticated/my-career/reports/$runId': {
       id: '/_authenticated/my-career/reports/$runId'
       path: '/reports/$runId'
@@ -2696,6 +2716,7 @@ interface AuthenticatedPassportRouteChildren {
   AuthenticatedPassportPrivacyRoute: typeof AuthenticatedPassportPrivacyRoute
   AuthenticatedPassportShareRoute: typeof AuthenticatedPassportShareRoute
   AuthenticatedPassportIndexRoute: typeof AuthenticatedPassportIndexRoute
+  AuthenticatedPassportCredentialsNewRoute: typeof AuthenticatedPassportCredentialsNewRoute
   AuthenticatedPassportEntryKindEntryIdRoute: typeof AuthenticatedPassportEntryKindEntryIdRoute
 }
 
@@ -2705,6 +2726,8 @@ const AuthenticatedPassportRouteChildren: AuthenticatedPassportRouteChildren = {
   AuthenticatedPassportPrivacyRoute: AuthenticatedPassportPrivacyRoute,
   AuthenticatedPassportShareRoute: AuthenticatedPassportShareRoute,
   AuthenticatedPassportIndexRoute: AuthenticatedPassportIndexRoute,
+  AuthenticatedPassportCredentialsNewRoute:
+    AuthenticatedPassportCredentialsNewRoute,
   AuthenticatedPassportEntryKindEntryIdRoute:
     AuthenticatedPassportEntryKindEntryIdRoute,
 }

@@ -165,6 +165,14 @@ export interface RecipientClaim {
   readonly id: string;
   readonly type: string;
   readonly title: string;
+  /** Supported-credential taxonomy code (VU1 / VU2 / OV / SV), or null for a
+   *  free-text credential. Phase 7.
+   *
+   *  This is the ONLY thing the public page may derive a credential symbol
+   *  from. It is server-authored and FK-constrained, unlike `title`, which
+   *  the holder types — deriving a symbol from the title would let a holder
+   *  choose the mark a stranger sees. */
+  readonly credential_code: string | null;
   readonly issuer: string | null;
   readonly jurisdiction: string | null;
   readonly issued_on: string | null;

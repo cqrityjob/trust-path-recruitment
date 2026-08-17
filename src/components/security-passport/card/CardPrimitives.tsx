@@ -21,6 +21,8 @@
 
 import { useId } from "react";
 import { TRUST_PALETTE, type MilestoneStyle } from "@/lib/security-passport/design/trust-system";
+import type { CredentialPresentationState } from "@/lib/security-passport/design/credential-symbols";
+import { CredentialSymbol } from "../CredentialSymbol";
 
 /* ------------------------------------------------------------------ */
 /* Engraved field — the ownable texture                                */
@@ -244,6 +246,11 @@ export interface CredentialPlateProps {
   readonly evidenceWord: string;
   /** Lifecycle word, when the state needs qualifying. Null otherwise. */
   readonly lifecycleWord: string | null;
+  /** True when the credential is no longer current, so the lifecycle word
+   *  is printed FIRST and in the qualifying tone. "EXPIRED · PREVIOUSLY
+   *  VERIFIED" is honest; "VERIFIED · EXPIRED" invites the reader to stop
+   *  after the first word. */
+  readonly lifecycleLeads?: boolean;
   readonly edge: string;
   readonly edgeStyle: "solid" | "dashed";
   readonly fill: string;
@@ -252,6 +259,12 @@ export interface CredentialPlateProps {
   /** Issuer text. Never a logo — Phase 1B holds no issuer rights. */
   readonly issuer?: string | null;
   readonly overlayTone?: string | null;
+  /** Taxonomy code for the credential symbol. Null keeps the plate's
+   *  original seal treatment for free-text claims. */
+  readonly symbolCode?: string | null;
+  /** Presentation state for the symbol. Required whenever symbolCode is
+   *  set, so a mark can never render without its status treatment. */
+  readonly symbolState?: CredentialPresentationState;
 }
 
 /**
@@ -273,6 +286,9 @@ export function CredentialPlate({
   premium,
   issuer,
   overlayTone,
+  symbolCode,
+  symbolState,
+  lifecycleLeads = false,
 }: CredentialPlateProps) {
   return (
     <div
@@ -282,7 +298,14 @@ export function CredentialPlate({
         border: `1px ${edgeStyle} ${overlayTone ?? edge}`,
       }}
     >
-      {premium ? (
+      {/* A supported credential leads with its mark; the mark's own state
+          treatment repeats what the words beside it say. Free-text claims
+          keep the original seal-on-verified treatment. */}
+      {symbolCode && symbolState ? (
+        <span className="mt-0.5 shrink-0">
+          <CredentialSymbol code={symbolCode} state={symbolState} name={title} size={34} />
+        </span>
+      ) : premium ? (
         <span className="mt-0.5">
           <VerifiedSeal tone={overlayTone ?? edge} size={28} />
         </span>
@@ -292,25 +315,47 @@ export function CredentialPlate({
           {title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-            style={{ color: overlayTone ?? textTone }}
-          >
-            {evidenceWord}
-          </span>
-          {lifecycleWord ? (
+          {lifecycleWord && lifecycleLeads ? (
             <>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: overlayTone ?? TRUST_PALETTE.amber }}
+              >
+                {lifecycleWord}
+              </span>
               <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
                 ·
               </span>
               <span
                 className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: overlayTone ?? TRUST_PALETTE.inkMuted }}
+                style={{ color: TRUST_PALETTE.inkMuted }}
               >
-                {lifecycleWord}
+                {evidenceWord}
               </span>
             </>
-          ) : null}
+          ) : (
+            <>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: overlayTone ?? textTone }}
+              >
+                {evidenceWord}
+              </span>
+              {lifecycleWord ? (
+                <>
+                  <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
+                    ·
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                    style={{ color: overlayTone ?? TRUST_PALETTE.inkMuted }}
+                  >
+                    {lifecycleWord}
+                  </span>
+                </>
+              ) : null}
+            </>
+          )}
         </div>
         {issuer ? (
           <p className="mt-1 truncate text-[11px]" style={{ color: TRUST_PALETTE.inkFaint }}>

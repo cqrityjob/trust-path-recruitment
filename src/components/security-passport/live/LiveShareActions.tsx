@@ -149,7 +149,10 @@ export function LiveShareActions({ shareUrl, model, qrDataUrl }: LiveShareAction
           verifiedLabel: pt("assertion.verified"),
           yearsLabel: pt("recognition.years"),
           verifyAtSource: pt("card.verifyAtSource"),
-          noVerifiedYet: pt("card.noVerifiedYet"),
+          noVerifiedYet:
+            model.verifiedCredentials.length > 0
+              ? pt("card.noVerifiedExperience")
+              : pt("card.noVerifiedYet"),
           staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
         },
         qrDataUrl,
@@ -209,6 +212,13 @@ export function LiveShareActions({ shareUrl, model, qrDataUrl }: LiveShareAction
       </div>
 
       <p className="mt-3 text-sm text-muted-foreground">{pt("share.instagramNote")}</p>
+
+      {/* Platforms keep what they are given — said where the images are
+          downloaded, not discovered after a revocation does less than the
+          holder expected. */}
+      <p className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+        {pt("sc.retentionNote")}
+      </p>
 
       <div className="mt-5 border-t border-border pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">

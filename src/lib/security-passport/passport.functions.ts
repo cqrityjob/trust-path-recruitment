@@ -100,6 +100,7 @@ type PeriodRow = {
 type ClaimRow = {
   id: string;
   claim_type: string;
+  credential_code: string | null;
   title: string;
   claimed_issuer_name: string | null;
   jurisdiction_code: string | null;
@@ -160,6 +161,7 @@ function toClaim(row: ClaimRow): Claim {
   return {
     id: row.id,
     claimType: row.claim_type as ClaimType,
+    credentialCode: row.credential_code,
     titleSv: title,
     titleEn: title,
     issuerName: row.claimed_issuer_name ?? "—",
@@ -205,7 +207,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_claims")
         .select(
-          "id, claim_type, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
+          "id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
         )
         .eq("holder_user_id", userId)
         .order("created_at", { ascending: false }),
@@ -494,11 +496,23 @@ const correctionInput = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable(),
   reason: z.string().max(300),
+  /** Phase 6 fields. Required rather than optional on purpose: the RPC treats
+   *  every parameter as a full replacement, so an omitted credential code
+   *  would blank it. The correction form is pre-filled with the current
+   *  values, so "unchanged" arrives as the same value rather than as absence. */
+  credentialCode: z.string().max(16).nullable(),
+  credentialReference: z.string().max(120).nullable(),
+  holderNote: z.string().max(2000).nullable(),
 });
 
 /** Correction goes through the database RPC rather than two client writes,
  *  so the new version, the supersession and the event are one transaction
- *  with one author. */
+ *  with one author.
+ *
+ *  The RPC decides what happens to trust: a correction that changes what is
+ *  being asserted resets the claim to self_declared and drops the verifier
+ *  attribution, so a verified credential cannot be edited into a different
+ *  one while keeping its seal. Nothing here can influence that. */
 export const correctClaim = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => correctionInput.parse(data))
@@ -514,6 +528,9 @@ export const correctClaim = createServerFn({ method: "POST" })
       _valid_from: orNull(data.issuedOn),
       _valid_until: orNull(data.validUntil),
       _reason: data.reason,
+      _credential_code: orNull(data.credentialCode),
+      _credential_reference: orNull(data.credentialReference),
+      _holder_note: orNull(data.holderNote),
     });
     if (error) throw new Error(error.message);
     return { id: newId as unknown as string };

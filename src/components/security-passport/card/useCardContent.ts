@@ -17,6 +17,7 @@ import {
   milestoneStyle,
   type MilestoneStyle,
 } from "@/lib/security-passport/design/trust-system";
+import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
 import type { CredentialPlateProps } from "./CardPrimitives";
@@ -91,13 +92,22 @@ export function useCardContent(
   const credentials: CredentialPlateProps[] = card.credentials.map((c) => {
     const ev = evidenceStyle(c.assertionLevel);
     const overlay = lifecycleOverlay(c.lifecycleState);
+    const isCurrent = c.lifecycleState === "active";
     return {
       title: lang === "sv" ? c.titleSv : c.titleEn,
-      evidenceWord: pt(`assertion.${c.assertionLevel}` as const),
+      // A credential that is no longer current must not print the bare word
+      // VERIFIED: on a card, beside a name, that reads as a present fact.
+      // The verification is real and is not erased — it is stated as the
+      // past event it is, and the lifecycle word leads.
+      evidenceWord:
+        !isCurrent && c.assertionLevel === "verified"
+          ? pt("assertion.verified.historical")
+          : pt(`assertion.${c.assertionLevel}` as const),
       // The lifecycle word appears only when it qualifies the entry.
       // "Active" beside every plate is noise; "Expired" is the point.
-      lifecycleWord:
-        c.lifecycleState === "active" ? null : pt(`lifecycle.${c.lifecycleState}` as const),
+      lifecycleWord: isCurrent ? null : pt(`lifecycle.${c.lifecycleState}` as const),
+      // Drives which word the plate prints first.
+      lifecycleLeads: !isCurrent,
       edge: ev.edge,
       edgeStyle: ev.edgeStyle,
       fill: ev.fill,
@@ -105,6 +115,8 @@ export function useCardContent(
       premium: ev.premium,
       issuer: socialSafe ? null : (c.verifierName ?? c.issuerName),
       overlayTone: overlay ? overlay.edge : null,
+      symbolCode: c.credentialCode,
+      symbolState: credentialPresentation(c.assertionLevel, c.lifecycleState),
     };
   });
 
@@ -136,6 +148,11 @@ export function useCardContent(
     stateWords,
     emptyHeading: pt("card.emptyState"),
     emptyBody: pt("card.emptyBody"),
-    noVerifiedYet: pt("card.noVerifiedYet"),
+    // The empty milestone slot must not contradict a VERIFIED plate below
+    // it: with verified credentials present, the missing thing is verified
+    // EXPERIENCE, and the label says so.
+    noVerifiedYet: card.credentials.some((c) => c.assertionLevel === "verified")
+      ? pt("card.noVerifiedExperience")
+      : pt("card.noVerifiedYet"),
   };
 }

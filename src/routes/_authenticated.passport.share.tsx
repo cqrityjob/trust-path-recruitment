@@ -42,6 +42,7 @@ import { buildSocialCard } from "@/lib/security-passport/social";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import { SocialFrame } from "@/components/security-passport/social/SocialFrame";
 import { LiveShareActions } from "@/components/security-passport/live/LiveShareActions";
+import { LinkedInShareSection } from "@/components/security-passport/live/LinkedInShareSection";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
@@ -421,6 +422,8 @@ function PassportShareRoute() {
               </section>
 
               <LiveShareActions shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
+
+              <LinkedInShareSection shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
             </>
           ) : null}
         </>

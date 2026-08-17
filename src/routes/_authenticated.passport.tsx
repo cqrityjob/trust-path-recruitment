@@ -33,6 +33,9 @@ export const Route = createFileRoute("/_authenticated/passport")({
 const NAV: readonly { to: string; labelKey: PassportCopyKey }[] = [
   { to: "/passport", labelKey: "nav.overview" },
   { to: "/passport/onboarding", labelKey: "nav.onboarding" },
+  // Adding a credential is the main thing a holder comes here to do, so it
+  // is reachable from every Passport page, not only from the overview.
+  { to: "/passport/credentials/new", labelKey: "nav.credentials" },
   { to: "/passport/card", labelKey: "nav.card" },
   { to: "/passport/share", labelKey: "sc.title" },
   { to: "/passport/privacy", labelKey: "nav.privacy" },

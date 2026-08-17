@@ -7253,6 +7253,9 @@ export type Database = {
           claim_type: string
           claimed_issuer_name: string | null
           created_at: string
+          credential_code: string | null
+          credential_reference: string | null
+          holder_note: string | null
           holder_user_id: string
           id: string
           issued_on: string | null
@@ -7272,6 +7275,9 @@ export type Database = {
           claim_type: string
           claimed_issuer_name?: string | null
           created_at?: string
+          credential_code?: string | null
+          credential_reference?: string | null
+          holder_note?: string | null
           holder_user_id: string
           id?: string
           issued_on?: string | null
@@ -7291,6 +7297,9 @@ export type Database = {
           claim_type?: string
           claimed_issuer_name?: string | null
           created_at?: string
+          credential_code?: string | null
+          credential_reference?: string | null
+          holder_note?: string | null
           holder_user_id?: string
           id?: string
           issued_on?: string | null
@@ -7307,6 +7316,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "sp_claims_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "sp_claims_jurisdiction_code_fkey"
             columns: ["jurisdiction_code"]
             isOneToOne: false
@@ -7321,6 +7337,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sp_credential_types: {
+        Row: {
+          category: string
+          claim_type: string
+          code: string
+          created_at: string
+          is_active: boolean
+          name_en: string
+          name_sv: string
+          requires_issuer: boolean
+          requires_valid_until: boolean
+          sort_order: number
+          symbol_label: string
+        }
+        Insert: {
+          category: string
+          claim_type: string
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name_en: string
+          name_sv: string
+          requires_issuer?: boolean
+          requires_valid_until?: boolean
+          sort_order?: number
+          symbol_label: string
+        }
+        Update: {
+          category?: string
+          claim_type?: string
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name_en?: string
+          name_sv?: string
+          requires_issuer?: boolean
+          requires_valid_until?: boolean
+          sort_order?: number
+          symbol_label?: string
+        }
+        Relationships: []
       }
       sp_disclosure_accesses: {
         Row: {
@@ -8614,6 +8672,9 @@ export type Database = {
         Args: {
           _claim_id: string
           _claimed_issuer_name: string
+          _credential_code: string
+          _credential_reference: string
+          _holder_note: string
           _issued_on: string
           _jurisdiction_code: string
           _reason: string

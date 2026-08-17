@@ -39,6 +39,13 @@ import {
   TRUST_PALETTE,
   milestoneStyle,
 } from "../src/lib/security-passport/design/trust-system";
+import {
+  CREDENTIAL_PRESENTATION_STATES,
+  SYMBOL_CODES,
+  credentialPresentation,
+  credentialSymbolMarkup,
+  symbolTreatment,
+} from "../src/lib/security-passport/design/credential-symbols";
 
 const errors: string[] = [];
 function expect(condition: boolean, message: string): void {
@@ -670,6 +677,174 @@ for (const pkg of DISCLOSURE_PACKAGES) {
     expect(
       typeof passportCopy.sv[f.labelKey as PassportCopyKey] === "string",
       `Share format ${f.id} has no Swedish label.`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 17. Phase 7 — credential symbols and credential fixtures
+// ---------------------------------------------------------------------------
+{
+  // Every required credential state has a persona a reviewer can select.
+  const REQUIRED_CREDENTIAL_PERSONAS = [
+    "cred-vu1-draft",
+    "cred-vu1-documented",
+    "cred-vu1-approved",
+    "cred-vu1-vu2",
+    "cred-vu2-ov-self",
+    "cred-ov-documented",
+    "cred-ov-current",
+    "cred-ov-expired",
+    "cred-sv-current",
+    "cred-sv-disputed",
+    "cred-corrected",
+  ];
+  for (const id of REQUIRED_CREDENTIAL_PERSONAS) {
+    expect(
+      PERSONAS.some((p) => p.id === id),
+      `Required credential fixture persona "${id}" is missing.`,
+    );
+  }
+
+  // The corrected persona must really carry a superseded version and a
+  // current one that points back at it.
+  const corrected = PERSONAS.find((p) => p.id === "cred-corrected");
+  if (corrected) {
+    const v1 = corrected.claims.find((c) => c.lifecycleState === "superseded");
+    const v2 = corrected.claims.find((c) => c.lifecycleState === "active");
+    expect(Boolean(v1 && v2), "cred-corrected must hold both versions.");
+    expect(
+      Boolean(v1 && v2 && v2.supersedesClaimId === v1.id && v2.versionNo > v1.versionNo),
+      "The current version must supersede the old one with a higher version number.",
+    );
+  }
+
+  // The presentation derivation: lifecycle qualifications always beat
+  // evidence level, and only VERIFIED+ACTIVE is ever "approved".
+  expect(
+    credentialPresentation("verified", "active") === "verified",
+    "verified+active must present as verified.",
+  );
+  expect(
+    credentialPresentation("verified", "expired") === "expired",
+    "An expired verified credential must NOT present as approved.",
+  );
+  expect(
+    credentialPresentation("verified", "revoked") === "revoked",
+    "A revoked verified credential must present as revoked.",
+  );
+  expect(
+    credentialPresentation("document_provided", "active") === "documented",
+    "document_provided+active must present as documented.",
+  );
+  expect(
+    credentialPresentation("self_declared", "disputed") === "disputed",
+    "A disputed credential must present as disputed.",
+  );
+
+  // Only approved receives the doubled gold rim; revoked is the only state
+  // with the void strike; every non-active state carries a drawn glyph, so
+  // colour is never the sole channel.
+  for (const state of CREDENTIAL_PRESENTATION_STATES) {
+    const t = symbolTreatment(state);
+    expect(
+      t.doubleRim === (state === "verified"),
+      `Symbol treatment: doubled rim must be exclusive to approved (violated by ${state}).`,
+    );
+    expect(
+      t.strike === (state === "revoked"),
+      `Symbol treatment: the void strike must be exclusive to revoked (violated by ${state}).`,
+    );
+    if (
+      ["documented", "approved", "expired", "revoked", "superseded", "disputed"].includes(state)
+    ) {
+      expect(t.glyph !== null, `Symbol treatment: ${state} must carry a status glyph.`);
+    }
+  }
+
+  // The markup is self-contained: no external reference can appear in an
+  // exported PNG, and every mark carries its label text.
+  for (const code of SYMBOL_CODES) {
+    for (const state of CREDENTIAL_PRESENTATION_STATES) {
+      const svg = credentialSymbolMarkup(code, state);
+      expect(svg.length > 0, `Symbol markup empty for ${code}/${state}.`);
+      expect(
+        !svg.includes("http") && !svg.includes("<image"),
+        `Symbol markup for ${code}/${state} must be self-contained.`,
+      );
+      expect(
+        svg.includes(`>${code}</text>`),
+        `Symbol markup for ${code}/${state} must carry its label.`,
+      );
+    }
+  }
+
+  // ── Expiry is DERIVED everywhere, never read from the stored row ──────
+  //
+  // Nothing writes `expired` on the day a licence lapses. A card or a social
+  // image built from the stored state would therefore print a lapsed
+  // authorisation as currently VERIFIED — on the two artifacts that get
+  // screenshotted and cached. This persona is stored `active` with a
+  // `validUntil` in the past, so it fails every check that trusts the row.
+  {
+    const lapsed = personaById("cred-ov-lapsed-silently");
+    const stored = lapsed.claims[0];
+    expect(
+      stored.lifecycleState === "active" && stored.validUntil !== null,
+      "The lapsed persona must be STORED active, or it does not exercise the bug.",
+    );
+    expect(
+      stored.validUntil !== null && stored.validUntil < EVAL,
+      "The lapsed persona's validity must have ended before the evaluation date.",
+    );
+
+    const card = buildPassportCard(lapsed, EVAL);
+    expect(
+      card.credentials[0].lifecycleState === "expired",
+      `A lapsed credential must reach the card as expired, got ${card.credentials[0].lifecycleState}.`,
+    );
+    expect(card.credentials[0].lapsed, "The card must mark the credential as lapsed by date.");
+    expect(
+      card.containsExpired,
+      "A card holding a lapsed credential must report that it contains expired content.",
+    );
+    expect(
+      credentialPresentation("verified", card.credentials[0].lifecycleState) === "expired",
+      "A lapsed credential must never take the approved symbol treatment.",
+    );
+
+    const social = buildSocialCard(lapsed, EVAL, {
+      privacyMode: "full_name",
+      anonymousLabel: "Verifierad väktare",
+    });
+    expect(
+      social.verifiedCredentials.length === 0,
+      "A lapsed credential must never be published to a social image.",
+    );
+  }
+
+  // The social card now carries the taxonomy code — and still only for
+  // verified, active credentials (asserted per-claim in section 15c).
+  const ovCurrent = PERSONAS.find((p) => p.id === "cred-ov-current");
+  if (ovCurrent) {
+    const social = buildSocialCard(ovCurrent, EVAL, {
+      privacyMode: "full_name",
+      anonymousLabel: "Verifierad väktare",
+    });
+    expect(
+      social.verifiedCredentials.some((c) => c.code === "OV"),
+      "The social card must carry the OV code for a current verified appointment.",
+    );
+  }
+  const ovExpired = PERSONAS.find((p) => p.id === "cred-ov-expired");
+  if (ovExpired) {
+    const social = buildSocialCard(ovExpired, EVAL, {
+      privacyMode: "full_name",
+      anonymousLabel: "Verifierad väktare",
+    });
+    expect(
+      !social.verifiedCredentials.some((c) => c.code === "OV"),
+      "An expired OV must never be published on a social card.",
     );
   }
 }

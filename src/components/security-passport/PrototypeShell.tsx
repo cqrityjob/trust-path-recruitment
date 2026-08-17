@@ -32,6 +32,12 @@ import { clearState, readState } from "@/lib/security-passport/prototype-state";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CandidateHomeMock } from "./CandidateHomeMock";
 import { CardStudio } from "./CardStudio";
+import { CredentialFormFixture } from "./CredentialFormFixture";
+import { CredentialHistoryFixture } from "./CredentialHistoryFixture";
+import { LinkedInShareSection } from "./live/LinkedInShareSection";
+import { RecipientCardFixture } from "./RecipientCardFixture";
+import { buildSocialCard } from "@/lib/security-passport/social";
+import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
 import { DisclosurePackagePicker } from "./DisclosurePackagePicker";
 import { ExperienceTimeline } from "./ExperienceTimeline";
@@ -49,6 +55,11 @@ type ScreenId =
   | "timeline"
   | "card"
   | "studio"
+  | "symbols"
+  | "credentialForm"
+  | "credentialHistory"
+  | "linkedin"
+  | "recipientCard"
   | "share"
   | "shareHistory"
   | "recipient"
@@ -61,6 +72,11 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "overview", labelKey: "screen.overview" },
   { id: "timeline", labelKey: "screen.timeline" },
   { id: "studio", labelKey: "screen.studio" },
+  { id: "symbols", labelKey: "screen.symbols" },
+  { id: "credentialForm", labelKey: "screen.credentialForm" },
+  { id: "credentialHistory", labelKey: "screen.credentialHistory" },
+  { id: "linkedin", labelKey: "screen.linkedin" },
+  { id: "recipientCard", labelKey: "screen.recipientCard" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
@@ -280,6 +296,8 @@ export function PrototypeShell() {
             onContinue={() => setScreen("onboarding")}
             onOpenCard={() => setScreen("card")}
             onShare={() => setScreen("share")}
+            onAddCredential={() => setScreen("credentialForm")}
+            onResumeDraft={() => setScreen("credentialForm")}
           />
         ) : null}
 
@@ -290,6 +308,28 @@ export function PrototypeShell() {
         ) : null}
 
         {screen === "studio" ? <CardStudio personaId={personaId} /> : null}
+
+        {screen === "symbols" ? <CredentialSymbolMatrix /> : null}
+
+        {screen === "credentialForm" ? <CredentialFormFixture /> : null}
+
+        {screen === "credentialHistory" ? <CredentialHistoryFixture /> : null}
+
+        {screen === "recipientCard" ? <RecipientCardFixture /> : null}
+
+        {screen === "linkedin" ? (
+          <div className="mx-auto w-full max-w-2xl">
+            <LinkedInShareSection
+              shareUrl={`https://cqrityjob.example/p/${personaId}`}
+              model={buildSocialCard(holder, FIXTURE_EVALUATION_DATE, {
+                privacyMode: "full_name",
+                anonymousLabel: pt("share.anonymousLabel"),
+                verifyUrl: `cqrityjob.example/p/fixture-${personaId}`,
+              })}
+              qrDataUrl={null}
+            />
+          </div>
+        ) : null}
 
         {screen === "card" ? (
           <div className="mx-auto max-w-md space-y-4">
