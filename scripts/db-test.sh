@@ -634,6 +634,31 @@ if [ "$ARCH_PASSED" -lt 14 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 2 assertions"
+set +e
+SP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase2_test.sql 2>&1)"
+SP_RC=$?
+set -e
+
+SP_PASSED="$(echo "$SP_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 2 suite exited with code ${SP_RC}." >&2
+  echo "$SP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SP_PASSED} Security Passport assertions passed"
+
+# The floor matters: a suite that silently stops running its denial tests
+# would otherwise report success for doing nothing.
+if [ "$SP_PASSED" -lt 30 ]; then
+  echo "FAIL: expected at least 30 Security Passport assertions, only ${SP_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null

@@ -1,0 +1,127 @@
+// One claim, with the context that must always travel with it.
+//
+// Issuer, verifier, jurisdiction, dates, evidence level, lifecycle state and
+// any limitation are rendered together, in one block, always. They are not
+// progressive-disclosure details behind a chevron: a licence shown without
+// its expiry, or a certification shown without the fact that nobody
+// verified it, is the specific failure the whole trust model exists to
+// prevent (Product Architecture v1.1 §7.3).
+//
+// The same component renders the holder's private view and the recipient's
+// verification page, so the two can never drift into showing different
+// context for the same entry.
+
+import { cn } from "@/lib/utils";
+import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { formatDate, formatExpiry } from "@/lib/security-passport/format";
+import type { Claim } from "@/lib/security-passport/types";
+import { AssertionChip } from "./AssertionChip";
+import { LifecycleChip, LifecycleNote } from "./LifecycleChip";
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-0.5 truncate text-sm text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+export function ClaimRow({
+  claim,
+  className,
+  /** Suppressed when the list is already grouped under a type heading —
+   *  otherwise every card in a "Certification" group is itself captioned
+   *  "Certification". Kept on by default because the recipient page renders
+   *  claims ungrouped, where the type is the first thing a reader needs. */
+  showType = true,
+}: {
+  claim: Claim;
+  className?: string;
+  showType?: boolean;
+}) {
+  const { pt, lang } = usePassportCopy();
+  const title = lang === "sv" ? claim.titleSv : claim.titleEn;
+  const limitation = lang === "sv" ? claim.limitationSv : claim.limitationEn;
+
+  return (
+    <li
+      className={cn(
+        "rounded-lg border border-border bg-card p-4",
+        // Expired, revoked and disputed entries stay fully legible. Fading
+        // them would hide exactly the information a reader most needs.
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1">
+          {showType ? (
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {pt(`claims.type.${claim.claimType}` as const)}
+            </p>
+          ) : null}
+          <h4 className="mt-1 text-base font-semibold tracking-tight text-foreground">{title}</h4>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <AssertionChip level={claim.assertionLevel} size="sm" />
+          <LifecycleChip state={claim.lifecycleState} />
+        </div>
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Field label={pt("claims.issuer")} value={claim.issuerName} />
+        {claim.jurisdictionCode ? (
+          <Field
+            label={pt("claims.jurisdiction")}
+            value={claim.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : claim.jurisdictionCode}
+          />
+        ) : null}
+        <Field label={pt("claims.issuedOn")} value={formatDate(claim.issuedOn, lang)} />
+        <Field label={pt("claims.validUntil")} value={formatExpiry(claim.validUntil, lang)} />
+        {claim.verifierName ? (
+          <Field label={pt("claims.verifier")} value={claim.verifierName} />
+        ) : null}
+      </dl>
+
+      <LifecycleNote state={claim.lifecycleState} />
+
+      {limitation ? (
+        <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+          <span className="font-semibold uppercase tracking-widest">
+            {pt("claims.limitation")}:{" "}
+          </span>
+          {limitation}
+        </p>
+      ) : null}
+
+      {claim.versionNo > 1 ? (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {pt("claims.version")} {claim.versionNo} · {pt("claims.history")}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+export function ClaimList({
+  claims,
+  emptyLabel,
+  showType = true,
+}: {
+  claims: readonly Claim[];
+  emptyLabel: string;
+  showType?: boolean;
+}) {
+  if (claims.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
+  }
+  return (
+    <ul className="space-y-3">
+      {claims.map((c) => (
+        <ClaimRow key={c.id} claim={c} showType={showType} />
+      ))}
+    </ul>
+  );
+}
