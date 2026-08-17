@@ -32,6 +32,7 @@ import {
   shareFormat,
   type ShareFormat,
 } from "./design/trust-system";
+import { SYMBOL_VIEWBOX, credentialSymbolMarkup } from "./design/credential-symbols";
 import type { SocialCardModel } from "./social";
 import type { PassportLang } from "./i18n";
 
@@ -185,11 +186,26 @@ export function buildSocialSvg(
   } else {
     for (const cred of model.verifiedCredentials) {
       const name = lang === "sv" ? cred.nameSv : cred.nameEn;
+      const rowH = fs(64);
       body.push(
-        `<rect x="${pad}" y="${y - fs(30)}" width="${W - pad * 2}" height="${fs(56)}" rx="${fs(8)}" fill="${TRUST_PALETTE.navyRaised}" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.35"/>`,
-        `<text x="${pad + fs(20)}" y="${y + fs(6)}" font-family="${FONT_STACK}" font-size="${fs(28)}" fill="${TRUST_PALETTE.ink}">${esc(wrap(name, compact ? 44 : 34, 1)[0] ?? "")}</text>`,
+        `<rect x="${pad}" y="${y - fs(34)}" width="${W - pad * 2}" height="${rowH}" rx="${fs(8)}" fill="${TRUST_PALETTE.navyRaised}" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.35"/>`,
       );
-      y += fs(compact ? 62 : 76);
+      // The credential mark, identical geometry to the on-screen card.
+      // Everything in this list is verified and active, so the approved
+      // state is the only one that can be exported.
+      const symSize = fs(48);
+      const symX = pad + fs(10);
+      const symY = y - fs(34) + Math.round((rowH - symSize) / 2);
+      if (cred.code) {
+        body.push(
+          `<g transform="translate(${symX} ${symY}) scale(${(symSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(cred.code, "approved")}</g>`,
+        );
+      }
+      const textX = cred.code ? symX + symSize + fs(16) : pad + fs(20);
+      body.push(
+        `<text x="${textX}" y="${y + fs(6)}" font-family="${FONT_STACK}" font-size="${fs(28)}" fill="${TRUST_PALETTE.ink}">${esc(wrap(name, compact ? 40 : 30, 1)[0] ?? "")}</text>`,
+      );
+      y += fs(compact ? 70 : 84);
     }
   }
 

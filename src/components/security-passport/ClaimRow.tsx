@@ -14,8 +14,10 @@
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDate, formatExpiry } from "@/lib/security-passport/format";
+import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
+import { CredentialSymbol } from "./CredentialSymbol";
 import { LifecycleChip, LifecycleNote } from "./LifecycleChip";
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -61,13 +63,27 @@ export function ClaimRow({
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0 flex-1">
-          {showType ? (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt(`claims.type.${claim.claimType}` as const)}
-            </p>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {/* A supported credential carries its mark. The symbol repeats the
+              state the chips beside it spell out — a fifth channel, never
+              the only one. */}
+          {claim.credentialCode ? (
+            <CredentialSymbol
+              code={claim.credentialCode}
+              state={credentialPresentation(claim.assertionLevel, claim.lifecycleState)}
+              name={title}
+              size={40}
+              className="mt-0.5 shrink-0"
+            />
           ) : null}
-          <h4 className="mt-1 text-base font-semibold tracking-tight text-foreground">{title}</h4>
+          <div className="min-w-0 flex-1">
+            {showType ? (
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {pt(`claims.type.${claim.claimType}` as const)}
+              </p>
+            ) : null}
+            <h4 className="mt-1 text-base font-semibold tracking-tight text-foreground">{title}</h4>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <AssertionChip level={claim.assertionLevel} size="sm" />

@@ -452,6 +452,7 @@ const sv = {
   "card.cta.viewCredentials": "Visa verifierade uppgifter",
   "card.cta.create": "Skapa ditt Security Passport med CQrityjob",
   "card.noVerifiedYet": "Inga verifierade uppgifter ännu",
+  "card.noVerifiedExperience": "Ingen verifierad yrkeserfarenhet ännu",
   "card.selfDeclaredHeading": "Egenrapporterad yrkesprofil",
 
   "share.title": "Dela som bild",
@@ -1250,6 +1251,7 @@ const en: Record<PassportCopyKey, string> = {
   "card.cta.viewCredentials": "View verified credentials",
   "card.cta.create": "Create your Security Passport with CQrityjob",
   "card.noVerifiedYet": "No verified entries yet",
+  "card.noVerifiedExperience": "No verified professional experience yet",
   "card.selfDeclaredHeading": "Self-reported professional profile",
 
   "share.title": "Share as an image",

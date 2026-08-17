@@ -21,6 +21,8 @@
 
 import { useId } from "react";
 import { TRUST_PALETTE, type MilestoneStyle } from "@/lib/security-passport/design/trust-system";
+import type { CredentialPresentationState } from "@/lib/security-passport/design/credential-symbols";
+import { CredentialSymbol } from "../CredentialSymbol";
 
 /* ------------------------------------------------------------------ */
 /* Engraved field — the ownable texture                                */
@@ -252,6 +254,12 @@ export interface CredentialPlateProps {
   /** Issuer text. Never a logo — Phase 1B holds no issuer rights. */
   readonly issuer?: string | null;
   readonly overlayTone?: string | null;
+  /** Taxonomy code for the credential symbol. Null keeps the plate's
+   *  original seal treatment for free-text claims. */
+  readonly symbolCode?: string | null;
+  /** Presentation state for the symbol. Required whenever symbolCode is
+   *  set, so a mark can never render without its status treatment. */
+  readonly symbolState?: CredentialPresentationState;
 }
 
 /**
@@ -273,6 +281,8 @@ export function CredentialPlate({
   premium,
   issuer,
   overlayTone,
+  symbolCode,
+  symbolState,
 }: CredentialPlateProps) {
   return (
     <div
@@ -282,7 +292,19 @@ export function CredentialPlate({
         border: `1px ${edgeStyle} ${overlayTone ?? edge}`,
       }}
     >
-      {premium ? (
+      {/* A supported credential leads with its mark; the mark's own state
+          treatment repeats what the words beside it say. Free-text claims
+          keep the original seal-on-verified treatment. */}
+      {symbolCode && symbolState ? (
+        <span className="mt-0.5 shrink-0">
+          <CredentialSymbol
+            code={symbolCode}
+            state={symbolState}
+            name={title}
+            size={34}
+          />
+        </span>
+      ) : premium ? (
         <span className="mt-0.5">
           <VerifiedSeal tone={overlayTone ?? edge} size={28} />
         </span>

@@ -45,6 +45,10 @@ export const FIXTURE_VERIFY_ORIGIN = "cqrityjob.example/p";
 
 export interface SocialCredentialName {
   readonly id: string;
+  /** Taxonomy code for the credential symbol, or null for free text. Only
+   *  ever an approved-state mark here: everything in this list is verified
+   *  AND active by the filter below, so the symbol cannot overstate. */
+  readonly code: string | null;
   readonly nameSv: string;
   readonly nameEn: string;
 }
@@ -155,7 +159,7 @@ export function buildSocialCard(
   const verifiedCredentials = holder.claims
     .filter((c) => c.assertionLevel === "verified" && c.lifecycleState === "active")
     .slice(0, options.maxCredentials ?? MAX_SOCIAL_CREDENTIALS)
-    .map((c) => ({ id: c.id, nameSv: c.titleSv, nameEn: c.titleEn }));
+    .map((c) => ({ id: c.id, code: c.credentialCode, nameSv: c.titleSv, nameEn: c.titleEn }));
 
   return {
     holderLabel: holderLabelFor(holder, options.privacyMode, options.anonymousLabel),

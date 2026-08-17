@@ -17,6 +17,7 @@ import {
   milestoneStyle,
   type MilestoneStyle,
 } from "@/lib/security-passport/design/trust-system";
+import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
 import type { CredentialPlateProps } from "./CardPrimitives";
@@ -105,6 +106,8 @@ export function useCardContent(
       premium: ev.premium,
       issuer: socialSafe ? null : (c.verifierName ?? c.issuerName),
       overlayTone: overlay ? overlay.edge : null,
+      symbolCode: c.credentialCode,
+      symbolState: credentialPresentation(c.assertionLevel, c.lifecycleState),
     };
   });
 
@@ -136,6 +139,11 @@ export function useCardContent(
     stateWords,
     emptyHeading: pt("card.emptyState"),
     emptyBody: pt("card.emptyBody"),
-    noVerifiedYet: pt("card.noVerifiedYet"),
+    // The empty milestone slot must not contradict a VERIFIED plate below
+    // it: with verified credentials present, the missing thing is verified
+    // EXPERIENCE, and the label says so.
+    noVerifiedYet: card.credentials.some((c) => c.assertionLevel === "verified")
+      ? pt("card.noVerifiedExperience")
+      : pt("card.noVerifiedYet"),
   };
 }
