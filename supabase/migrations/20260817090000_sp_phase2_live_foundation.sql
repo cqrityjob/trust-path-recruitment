@@ -357,7 +357,19 @@ CREATE TRIGGER sp_periods_trust_immutable
   FOR EACH ROW EXECUTE FUNCTION public.sp_guard_trust_fields_immutable();
 
 
--- History is append-only, for everyone.
+-- History is append-only — but append-only must not mean "this account can
+-- never be erased".
+--
+-- An unconditional refusal here was the first version, and production
+-- verification caught what it actually did: auth.users cascades into this
+-- table, so deleting a holder's account raised inside the cascade and the
+-- whole deletion failed. A holder who created a Passport could never be
+-- erased, which is a GDPR problem, not merely an inconvenience.
+--
+-- During a cascade the parent row is already gone by the time the child
+-- delete fires, so the holder's absence from auth.users is a reliable
+-- signal that this delete IS the erasure. A direct delete, where the holder
+-- still exists, stays refused for every caller including service_role.
 CREATE OR REPLACE FUNCTION public.sp_guard_events_append_only()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -365,8 +377,17 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  RAISE EXCEPTION 'SP_EVENTS_APPEND_ONLY: passport history cannot be % ', TG_OP
-    USING ERRCODE = 'check_violation';
+  IF TG_OP = 'UPDATE' THEN
+    RAISE EXCEPTION 'SP_EVENTS_APPEND_ONLY: passport history cannot be updated'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = OLD.holder_user_id) THEN
+    RAISE EXCEPTION 'SP_EVENTS_APPEND_ONLY: passport history cannot be deleted'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN OLD;
 END;
 $$;
 

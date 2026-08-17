@@ -302,6 +302,30 @@ BEGIN
   RESET ROLE;
 END $$;
 
+-- Append-only must not block erasure. Production verification caught the
+-- first version of the guard refusing the auth.users cascade, which made a
+-- holder's account undeletable once they had a Passport. This asserts both
+-- halves: erasure works, and a direct delete is still refused.
+DO $$
+DECLARE _u uuid; _left integer;
+BEGIN
+  INSERT INTO auth.users (id, email)
+  VALUES (gen_random_uuid(), 'erasure-probe@example.test')
+  RETURNING id INTO _u;
+
+  INSERT INTO public.sp_passport_profiles (holder_user_id, display_name) VALUES (_u, 'erasure probe');
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title) VALUES (_u, 'training', 'probe');
+  INSERT INTO public.sp_passport_events (holder_user_id, actor_user_id, event_type, subject_type)
+  VALUES (_u, _u, 'passport_created', 'profile');
+
+  DELETE FROM auth.users WHERE id = _u;
+
+  SELECT count(*) INTO _left FROM public.sp_passport_events WHERE holder_user_id = _u;
+  PERFORM pg_temp.ok(_left = 0, '3.5 deleting the account erases the Passport history with it');
+  SELECT count(*) INTO _left FROM public.sp_claims WHERE holder_user_id = _u;
+  PERFORM pg_temp.ok(_left = 0, '3.6 deleting the account erases the claims with it');
+END $$;
+
 -- A holder cannot forge history for someone else.
 DO $$
 BEGIN
