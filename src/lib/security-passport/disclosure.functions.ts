@@ -17,7 +17,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { spDb } from "./sp-database.server";
+import { orNull } from "./rpc";
 import { DISCLOSURE_PACKAGE_CODES, type DisclosurePackageCode } from "./packages";
 
 export interface DisclosureRecord {
@@ -71,7 +71,7 @@ export const listMyDisclosures = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     // `token_hash` is deliberately not selected. It is of no use to the
     // holder and there is no reason for it to leave the database.
-    const { data, error } = await spDb(supabase)
+    const { data, error } = await supabase
       .from("sp_disclosures")
       .select(
         "id, package_code, purpose, recipient_hint, created_at, expires_at, revoked_at, access_count",
@@ -94,11 +94,11 @@ export const createDisclosure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => createInput.parse(data))
   .handler(async ({ context, data }): Promise<{ token: string }> => {
-    const { data: token, error } = await spDb(context.supabase).rpc("sp_create_disclosure", {
+    const { data: token, error } = await context.supabase.rpc("sp_create_disclosure", {
       _package_code: data.packageCode,
-      _expires_days: data.expiresDays,
-      _purpose: data.purpose,
-      _recipient_hint: data.recipientHint,
+      _expires_days: orNull(data.expiresDays),
+      _purpose: orNull(data.purpose),
+      _recipient_hint: orNull(data.recipientHint),
     });
     if (error) throw new Error(error.message);
     return { token: token as unknown as string };
@@ -108,7 +108,7 @@ export const revokeDisclosure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ disclosureId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { error } = await spDb(context.supabase).rpc("sp_revoke_disclosure", {
+    const { error } = await context.supabase.rpc("sp_revoke_disclosure", {
       _id: data.disclosureId,
     });
     if (error) throw new Error(error.message);

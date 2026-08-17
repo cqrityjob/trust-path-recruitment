@@ -487,4 +487,39 @@ SELECT pg_temp.ok(
       AND NOT c.relrowsecurity) = 0,
   '8.2 RLS remains enabled on every sp_* table, including the new one');
 
+-- =============================================================================
+\echo '    GROUP 9 -- pgcrypto is reachable where it actually lives'
+-- =============================================================================
+-- This suite passed locally and the product still broke in production: a
+-- plain CREATE EXTENSION puts pgcrypto in `public` here, but Supabase keeps
+-- it in `extensions`, so `SET search_path = public` could not find digest()
+-- or gen_random_bytes(). Creating a share and opening a share link both
+-- failed on the hosted project and nowhere else.
+--
+-- Asserting the search_path rather than the behaviour is deliberate: the
+-- behaviour is environment-dependent and would keep passing here for the
+-- wrong reason. The declaration is the thing that was wrong.
+SELECT pg_temp.ok(
+  (SELECT p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname='sp_get_disclosure')
+    @> ARRAY['search_path=public, extensions'],
+  '9.1 sp_get_disclosure can reach pgcrypto wherever the platform installs it');
+
+SELECT pg_temp.ok(
+  (SELECT p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname='sp_create_disclosure')
+    @> ARRAY['search_path=public, extensions'],
+  '9.2 sp_create_disclosure can too');
+
+-- Every other sp_* function must keep the narrow search_path. A blanket
+-- widening would be a privilege-escalation surface, so only the two that
+-- genuinely need pgcrypto are allowed the second schema.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname LIKE 'sp\_%'
+      AND p.prosecdef
+      AND p.proconfig IS NOT NULL
+      AND p.proconfig @> ARRAY['search_path=public, extensions']) = 2,
+  '9.3 and no other SECURITY DEFINER function widened its search_path');
+
 \echo '    ok  Security Passport Phase 5 assertions passed'

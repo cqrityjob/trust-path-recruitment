@@ -29,8 +29,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+import { orNull } from "./rpc";
 import type { Claim, ClaimType, ExperiencePeriod, PassportHolder } from "./types";
-import { spDb } from "./sp-database.server";
 
 /** The question set these answers were given against. Bumped when the
  *  authored wording changes, so a stored answer always means what the
@@ -184,7 +185,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PassportSnapshot> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     const [profileRes, periodsRes, claimsRes, eventsRes] = await Promise.all([
       db
@@ -252,7 +253,7 @@ export const ensureMyPassport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ created: boolean }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     const existing = await db
       .from("sp_passport_profiles")
@@ -294,9 +295,19 @@ export const saveOnboardingProgress = createServerFn({ method: "POST" })
   .validator((data: unknown) => onboardingInput.parse(data))
   .handler(async ({ context, data }): Promise<{ savedAt: string }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
-    const patch: Record<string, unknown> = {
+    // Typed against the generated Update shape rather than
+    // Record<string, unknown>. That is not cosmetic: the loose record let a
+    // misspelled column compile, and PostgREST would have accepted the write
+    // and silently ignored the field. Every key here is now checked.
+    //
+    // `assertion_level`, `lifecycle_state`, `verified_by_user_id` and
+    // `verified_at` are absent, as everywhere else in this file. There is no
+    // branch that could add one.
+    type ProfileUpdate = Database["public"]["Tables"]["sp_passport_profiles"]["Update"];
+
+    const patch: ProfileUpdate = {
       onboarding_step: data.step,
       onboarding_answers: data.answers,
       onboarding_state: "in_progress",
@@ -324,7 +335,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ completedAt: string }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
     const now = new Date().toISOString();
 
     const { error } = await db
@@ -374,7 +385,7 @@ export const addExperiencePeriod = createServerFn({ method: "POST" })
   .validator((data: unknown) => experienceInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     // assertion_level and lifecycle_state are deliberately absent: they take
     // their column defaults (self_declared / active). There is no parameter
@@ -438,7 +449,7 @@ export const addClaim = createServerFn({ method: "POST" })
   .validator((data: unknown) => claimInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     const { data: row, error } = await db
       .from("sp_claims")
@@ -493,15 +504,15 @@ export const correctClaim = createServerFn({ method: "POST" })
   .validator((data: unknown) => correctionInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
     const { supabase } = context;
-    const db = spDb(supabase);
+    const db = supabase;
     const { data: newId, error } = await db.rpc("sp_correct_claim", {
       _claim_id: data.claimId,
       _title: data.title,
-      _claimed_issuer_name: data.claimedIssuerName,
-      _jurisdiction_code: data.jurisdictionCode,
-      _issued_on: data.issuedOn,
-      _valid_from: data.issuedOn,
-      _valid_until: data.validUntil,
+      _claimed_issuer_name: orNull(data.claimedIssuerName),
+      _jurisdiction_code: orNull(data.jurisdictionCode),
+      _issued_on: orNull(data.issuedOn),
+      _valid_from: orNull(data.issuedOn),
+      _valid_until: orNull(data.validUntil),
       _reason: data.reason,
     });
     if (error) throw new Error(error.message);
@@ -515,7 +526,7 @@ export const withdrawClaim = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
     const { supabase } = context;
-    const db = spDb(supabase);
+    const db = supabase;
     const { error } = await db.rpc("sp_withdraw_claim", {
       _claim_id: data.claimId,
       _reason: data.reason,
@@ -531,7 +542,7 @@ export const setPrivacyMode = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
     const { error } = await db
       .from("sp_passport_profiles")
       .update({ privacy_mode: data.privacyMode })

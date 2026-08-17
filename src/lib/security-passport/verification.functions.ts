@@ -23,7 +23,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { spDb } from "./sp-database.server";
+import { orNull } from "./rpc";
 
 export type VerificationStatus =
   | "pending"
@@ -93,7 +93,7 @@ export const listMyVerificationRequests = createServerFn({ method: "GET" })
       readonly decisions: readonly VerificationDecisionRecord[];
     }> => {
       const { supabase, userId } = context;
-      const db = spDb(supabase);
+      const db = supabase;
 
       // `decision_note` is deliberately absent from this select. It is the
       // reviewer's internal reasoning; the holder is told `holder_message`.
@@ -170,11 +170,11 @@ export const submitForVerification = createServerFn({ method: "POST" })
   .validator((data: unknown) => submitInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
     const { supabase } = context;
-    const { data: id, error } = await spDb(supabase).rpc("sp_submit_for_verification", {
-      _claim_id: data.claimId,
-      _period_id: data.periodId,
+    const { data: id, error } = await supabase.rpc("sp_submit_for_verification", {
+      _claim_id: orNull(data.claimId),
+      _period_id: orNull(data.periodId),
       _kind: data.kind,
-      _employer_id: data.employerId,
+      _employer_id: orNull(data.employerId),
     });
     if (error) throw new Error(error.message);
     return { id: id as unknown as string };
@@ -184,7 +184,7 @@ export const withdrawVerificationRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { error } = await spDb(context.supabase).rpc("sp_withdraw_verification_request", {
+    const { error } = await context.supabase.rpc("sp_withdraw_verification_request", {
       _request_id: data.requestId,
     });
     if (error) throw new Error(error.message);
@@ -203,9 +203,9 @@ export const raiseDispute = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { error } = await spDb(context.supabase).rpc("sp_raise_dispute", {
-      _claim_id: data.claimId,
-      _period_id: data.periodId,
+    const { error } = await context.supabase.rpc("sp_raise_dispute", {
+      _claim_id: orNull(data.claimId),
+      _period_id: orNull(data.periodId),
       _reason: data.reason,
     });
     if (error) throw new Error(error.message);
@@ -238,7 +238,7 @@ export interface VerifierQueueItem {
 export const passportVerifierWhoAmI = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ isVerifier: boolean }> => {
-    const { data, error } = await spDb(context.supabase).rpc("sp_is_verifier", {
+    const { data, error } = await context.supabase.rpc("sp_is_verifier", {
       _user_id: context.userId,
     });
     if (error) return { isVerifier: false };
@@ -251,8 +251,8 @@ export const listVerifierQueue = createServerFn({ method: "POST" })
     z.object({ status: z.string().max(40).nullable().optional() }).parse(data ?? {}),
   )
   .handler(async ({ context, data }): Promise<readonly VerifierQueueItem[]> => {
-    const { data: rows, error } = await spDb(context.supabase).rpc("sp_verifier_queue", {
-      _status: data.status ?? null,
+    const { data: rows, error } = await context.supabase.rpc("sp_verifier_queue", {
+      _status: orNull(data.status),
     });
     if (error) throw new Error(error.message);
 
@@ -313,7 +313,7 @@ export const getVerifierRequestDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<VerifierRequestDetail> => {
-    const { data: detail, error } = await spDb(context.supabase).rpc("sp_verifier_request_detail", {
+    const { data: detail, error } = await context.supabase.rpc("sp_verifier_request_detail", {
       _request_id: data.requestId,
     });
     if (error) throw new Error(error.message);
@@ -378,14 +378,14 @@ export const decideVerification = createServerFn({ method: "POST" })
     if (data.decision === "approved" && !data.method) {
       throw new Error("SP_APPROVAL_REQUIRES_METHOD");
     }
-    const { error } = await spDb(context.supabase).rpc("sp_verifier_decide", {
+    const { error } = await context.supabase.rpc("sp_verifier_decide", {
       _request_id: data.requestId,
       _decision: data.decision,
-      _method: data.method,
-      _decision_note: data.decisionNote,
-      _holder_message: data.holderMessage,
-      _valid_from: data.validFrom,
-      _valid_until: data.validUntil,
+      _method: orNull(data.method),
+      _decision_note: orNull(data.decisionNote),
+      _holder_message: orNull(data.holderMessage),
+      _valid_from: orNull(data.validFrom),
+      _valid_until: orNull(data.validUntil),
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -403,9 +403,9 @@ export const revokeVerification = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
-    const { error } = await spDb(context.supabase).rpc("sp_verifier_revoke", {
-      _claim_id: data.claimId,
-      _period_id: data.periodId,
+    const { error } = await context.supabase.rpc("sp_verifier_revoke", {
+      _claim_id: orNull(data.claimId),
+      _period_id: orNull(data.periodId),
       _reason: data.reason,
     });
     if (error) throw new Error(error.message);
@@ -444,7 +444,7 @@ export interface EmployerAttestationItem {
 export const listAttestableEmployers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly { id: string; name: string }[]> => {
-    const { data, error } = await spDb(context.supabase)
+    const { data, error } = await context.supabase
       .from("employers")
       .select("id, name")
       .order("name", { ascending: true })
@@ -460,10 +460,9 @@ export const listEmployerAttestations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ employerId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<readonly EmployerAttestationItem[]> => {
-    const { data: rows, error } = await spDb(context.supabase).rpc(
-      "sp_employer_attestation_queue",
-      { _employer_id: data.employerId },
-    );
+    const { data: rows, error } = await context.supabase.rpc("sp_employer_attestation_queue", {
+      _employer_id: data.employerId,
+    });
     if (error) throw new Error(error.message);
 
     return ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({

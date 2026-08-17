@@ -25,7 +25,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { spDb } from "./sp-database.server";
+import { orNull } from "./rpc";
 
 export const EVIDENCE_BUCKET = "passport-evidence";
 
@@ -110,7 +110,7 @@ export const uploadEvidence = createServerFn({ method: "POST" })
   .validator((data: unknown) => uploadInput.parse(data))
   .handler(async ({ context, data }): Promise<EvidenceRecord> => {
     const { supabase, userId } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     if (!data.claimId && !data.periodId) {
       throw new Error("SP_EVIDENCE_NO_TARGET");
@@ -138,8 +138,8 @@ export const uploadEvidence = createServerFn({ method: "POST" })
     // caller, so a row can never point at another holder's object even if
     // this function were called with a crafted path.
     const { data: evidenceId, error } = await db.rpc("sp_attach_evidence", {
-      _claim_id: data.claimId,
-      _period_id: data.periodId,
+      _claim_id: orNull(data.claimId),
+      _period_id: orNull(data.periodId),
       _storage_path: storagePath,
       _file_name: safeDisplayName(data.fileName),
       _mime_type: data.mimeType,
@@ -170,7 +170,7 @@ export const listMyEvidence = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly EvidenceRecord[]> => {
     const { supabase, userId } = context;
-    const { data, error } = await spDb(supabase)
+    const { data, error } = await supabase
       .from("sp_evidence")
       .select(
         "id, claim_id, period_id, file_name, mime_type, size_bytes, uploaded_at, lifecycle_state",
@@ -195,7 +195,7 @@ export const getEvidenceViewUrl = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ evidenceId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<{ url: string; expiresInSeconds: number }> => {
     const { supabase } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     const { data: row, error } = await db
       .from("sp_evidence")
@@ -221,7 +221,7 @@ export const withdrawEvidence = createServerFn({ method: "POST" })
   .validator((data: unknown) => z.object({ evidenceId: z.string().uuid() }).parse(data))
   .handler(async ({ context, data }): Promise<{ ok: true }> => {
     const { supabase } = context;
-    const db = spDb(supabase);
+    const db = supabase;
 
     const { data: row } = await db
       .from("sp_evidence")
