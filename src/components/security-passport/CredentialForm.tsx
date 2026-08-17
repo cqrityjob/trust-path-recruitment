@@ -189,7 +189,9 @@ export function CredentialForm({
               <label
                 key={t.code}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
+                  // focus-within: the radio itself is visually hidden, so
+                  // the card must carry the keyboard focus indicator.
+                  "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring",
                   chosen ? "border-accent bg-accent/5" : "border-border hover:bg-accent/5",
                 )}
               >

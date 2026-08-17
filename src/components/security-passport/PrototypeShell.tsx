@@ -293,6 +293,8 @@ export function PrototypeShell() {
             onContinue={() => setScreen("onboarding")}
             onOpenCard={() => setScreen("card")}
             onShare={() => setScreen("share")}
+            onAddCredential={() => setScreen("credentialForm")}
+            onResumeDraft={() => setScreen("credentialForm")}
           />
         ) : null}
 
