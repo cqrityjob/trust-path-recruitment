@@ -128,6 +128,14 @@ export interface SocialCardOptions {
    *  card stays a summary rather than a dossier. */
   readonly maxCredentials?: number;
   readonly staleWarning?: boolean;
+  /** The live recipient URL for a real, revocable disclosure.
+   *
+   *  Optional so the fixture prototype keeps its opaque fixture token and
+   *  stays incapable of pointing at a real page. When the sharing centre
+   *  passes one it is the /p/<token> address of a share the holder has just
+   *  created — still opaque, still not derived from any identifier, and
+   *  revocable, which the fixture token could never be. */
+  readonly verifyUrl?: string;
 }
 
 const MAX_SOCIAL_CREDENTIALS = 3;
@@ -157,7 +165,7 @@ export function buildSocialCard(
     jurisdictionCode: holder.jurisdictionCode,
     milestoneYears: recognition.earnedYears,
     verifiedCredentials,
-    verifyUrl: `${FIXTURE_VERIFY_ORIGIN}/${fixtureToken(holder.id)}`,
+    verifyUrl: options.verifyUrl ?? `${FIXTURE_VERIFY_ORIGIN}/${fixtureToken(holder.id)}`,
     staleWarning: options.staleWarning ?? false,
   };
 }

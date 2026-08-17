@@ -37,10 +37,15 @@ export function ClaimRow({
    *  "Certification". Kept on by default because the recipient page renders
    *  claims ungrouped, where the type is the first thing a reader needs. */
   showType = true,
+  /** Optional on purpose. The recipient page and the fixture prototype render
+   *  the same row with nothing to open — a claim is a fact there, not a
+   *  destination. Only the holder's own overview passes this. */
+  onOpen,
 }: {
   claim: Claim;
   className?: string;
   showType?: boolean;
+  onOpen?: () => void;
 }) {
   const { pt, lang } = usePassportCopy();
   const title = lang === "sv" ? claim.titleSv : claim.titleEn;
@@ -101,6 +106,16 @@ export function ClaimRow({
           {pt("claims.version")} {claim.versionNo} · {pt("claims.history")}
         </p>
       ) : null}
+
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("claim.openDetail")}
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -109,10 +124,12 @@ export function ClaimList({
   claims,
   emptyLabel,
   showType = true,
+  onOpenClaim,
 }: {
   claims: readonly Claim[];
   emptyLabel: string;
   showType?: boolean;
+  onOpenClaim?: (claimId: string) => void;
 }) {
   if (claims.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
@@ -120,7 +137,12 @@ export function ClaimList({
   return (
     <ul className="space-y-3">
       {claims.map((c) => (
-        <ClaimRow key={c.id} claim={c} showType={showType} />
+        <ClaimRow
+          key={c.id}
+          claim={c}
+          showType={showType}
+          onOpen={onOpenClaim ? () => onOpenClaim(c.id) : undefined}
+        />
       ))}
     </ul>
   );

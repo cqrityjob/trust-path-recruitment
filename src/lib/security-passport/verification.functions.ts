@@ -1,0 +1,484 @@
+// Security Passport — verification server functions.
+//
+// Three audiences, three completely separate reads, no shared payload:
+//
+//   * the HOLDER sees their own requests and what they were told;
+//   * the CQRITYJOB VERIFIER sees a queue assembled by
+//     `sp_verifier_queue()`, because a verifier has no blanket read over
+//     Passport content and must not gain one;
+//   * the EMPLOYER REPRESENTATIVE sees `sp_employer_attestation_queue()`,
+//     which returns one employment period and a name — and cannot be made
+//     to return anything else, whatever this file asks for.
+//
+// The decision itself goes through `sp_verifier_decide` in every case. That
+// function is the only path to VERIFIED in the entire system: it refuses a
+// holder deciding on their own request, refuses a non-verifier on a
+// CQrityjob review, refuses a representative of the wrong employer, and
+// writes attribution — who, when, by what method, valid until when —
+// atomically with the trust change.
+//
+// Nothing in this file can produce a verified claim on its own, and nothing
+// here decides who may verify. Both live in the database.
+
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { spDb } from "./sp-database.server";
+
+export type VerificationStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "clarification_requested"
+  | "withdrawn";
+
+export type VerificationMethod =
+  | "document_review"
+  | "employer_confirmation"
+  | "issuer_confirmation";
+
+export interface MyVerificationRequest {
+  readonly id: string;
+  readonly claimId: string | null;
+  readonly periodId: string | null;
+  readonly kind: "cqrityjob_review" | "employer_attestation";
+  readonly status: VerificationStatus;
+  readonly submittedAt: string;
+  readonly decidedAt: string | null;
+  readonly method: VerificationMethod | null;
+  /** What the holder was told. Never the reviewer's internal note. */
+  readonly holderMessage: string | null;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+  readonly targetEmployerId: string | null;
+}
+
+export interface VerificationDecisionRecord {
+  readonly id: string;
+  readonly requestId: string;
+  readonly decision: "approved" | "rejected" | "clarification_requested" | "revoked";
+  readonly organisation: string | null;
+  readonly method: string | null;
+  readonly decidedAt: string;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Holder                                                              */
+/* ------------------------------------------------------------------ */
+
+type RequestRow = {
+  id: string;
+  claim_id: string | null;
+  period_id: string | null;
+  request_kind: string;
+  status: string;
+  submitted_at: string;
+  decided_at: string | null;
+  verification_method: string | null;
+  holder_message: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  target_employer_id: string | null;
+};
+
+export const listMyVerificationRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(
+    async ({
+      context,
+    }): Promise<{
+      readonly requests: readonly MyVerificationRequest[];
+      readonly decisions: readonly VerificationDecisionRecord[];
+    }> => {
+      const { supabase, userId } = context;
+      const db = spDb(supabase);
+
+      // `decision_note` is deliberately absent from this select. It is the
+      // reviewer's internal reasoning; the holder is told `holder_message`.
+      // Two fields exist precisely so one cannot leak as the other.
+      const [reqRes, decRes] = await Promise.all([
+        db
+          .from("sp_verification_requests")
+          .select(
+            "id, claim_id, period_id, request_kind, status, submitted_at, decided_at, verification_method, holder_message, valid_from, valid_until, target_employer_id",
+          )
+          .eq("holder_user_id", userId)
+          .order("submitted_at", { ascending: false }),
+        db
+          .from("sp_verification_decisions")
+          .select(
+            "id, request_id, decision, decider_organisation, verification_method, decided_at, valid_from, valid_until",
+          )
+          .eq("holder_user_id", userId)
+          .order("decided_at", { ascending: false }),
+      ]);
+
+      if (reqRes.error) throw new Error(reqRes.error.message);
+
+      const requests = ((reqRes.data ?? []) as RequestRow[]).map((r) => ({
+        id: r.id,
+        claimId: r.claim_id,
+        periodId: r.period_id,
+        kind: r.request_kind as MyVerificationRequest["kind"],
+        status: r.status as VerificationStatus,
+        submittedAt: r.submitted_at,
+        decidedAt: r.decided_at,
+        method: r.verification_method as VerificationMethod | null,
+        holderMessage: r.holder_message,
+        validFrom: r.valid_from,
+        validUntil: r.valid_until,
+        targetEmployerId: r.target_employer_id,
+      }));
+
+      const decisions = (
+        (decRes.data ?? []) as Array<{
+          id: string;
+          request_id: string;
+          decision: string;
+          decider_organisation: string | null;
+          verification_method: string | null;
+          decided_at: string;
+          valid_from: string | null;
+          valid_until: string | null;
+        }>
+      ).map((d) => ({
+        id: d.id,
+        requestId: d.request_id,
+        decision: d.decision as VerificationDecisionRecord["decision"],
+        organisation: d.decider_organisation,
+        method: d.verification_method,
+        decidedAt: d.decided_at,
+        validFrom: d.valid_from,
+        validUntil: d.valid_until,
+      }));
+
+      return { requests, decisions };
+    },
+  );
+
+const submitInput = z.object({
+  claimId: z.string().uuid().nullable(),
+  periodId: z.string().uuid().nullable(),
+  kind: z.enum(["cqrityjob_review", "employer_attestation"]),
+  employerId: z.string().uuid().nullable(),
+});
+
+export const submitForVerification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => submitInput.parse(data))
+  .handler(async ({ context, data }): Promise<{ id: string }> => {
+    const { supabase } = context;
+    const { data: id, error } = await spDb(supabase).rpc("sp_submit_for_verification", {
+      _claim_id: data.claimId,
+      _period_id: data.periodId,
+      _kind: data.kind,
+      _employer_id: data.employerId,
+    });
+    if (error) throw new Error(error.message);
+    return { id: id as unknown as string };
+  });
+
+export const withdrawVerificationRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { error } = await spDb(context.supabase).rpc("sp_withdraw_verification_request", {
+      _request_id: data.requestId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const raiseDispute = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        claimId: z.string().uuid().nullable(),
+        periodId: z.string().uuid().nullable(),
+        reason: z.string().min(1).max(300),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { error } = await spDb(context.supabase).rpc("sp_raise_dispute", {
+      _claim_id: data.claimId,
+      _period_id: data.periodId,
+      _reason: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/* ------------------------------------------------------------------ */
+/* CQrityjob verifier                                                  */
+/* ------------------------------------------------------------------ */
+
+export interface VerifierQueueItem {
+  readonly id: string;
+  readonly status: VerificationStatus;
+  readonly submittedAt: string;
+  readonly subjectType: "claim" | "experience";
+  readonly holderName: string;
+  readonly title: string | null;
+  readonly claimType: string | null;
+  readonly issuer: string | null;
+  readonly employer: string | null;
+  readonly jurisdiction: string | null;
+  readonly assertion: string | null;
+  readonly lifecycle: string | null;
+  readonly evidenceCount: number;
+}
+
+/** Whether the caller may act as a CQrityjob verifier. Answered by the
+ *  database (`sp_is_verifier`, which is the platform-admin capability), not
+ *  by anything this application decides for itself. */
+export const passportVerifierWhoAmI = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ isVerifier: boolean }> => {
+    const { data, error } = await spDb(context.supabase).rpc("sp_is_verifier", {
+      _user_id: context.userId,
+    });
+    if (error) return { isVerifier: false };
+    return { isVerifier: data === true };
+  });
+
+export const listVerifierQueue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z.object({ status: z.string().max(40).nullable().optional() }).parse(data ?? {}),
+  )
+  .handler(async ({ context, data }): Promise<readonly VerifierQueueItem[]> => {
+    const { data: rows, error } = await spDb(context.supabase).rpc("sp_verifier_queue", {
+      _status: data.status ?? null,
+    });
+    if (error) throw new Error(error.message);
+
+    return ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: String(r.id),
+      status: r.status as VerificationStatus,
+      submittedAt: String(r.submitted_at),
+      subjectType: r.subject_type as "claim" | "experience",
+      holderName: String(r.holder_name ?? ""),
+      title: (r.title as string | null) ?? null,
+      claimType: (r.claim_type as string | null) ?? null,
+      issuer: (r.issuer as string | null) ?? null,
+      employer: (r.employer as string | null) ?? null,
+      jurisdiction: (r.jurisdiction as string | null) ?? null,
+      assertion: (r.assertion as string | null) ?? null,
+      lifecycle: (r.lifecycle as string | null) ?? null,
+      evidenceCount: Number(r.evidence_count ?? 0),
+    }));
+  });
+
+export interface VerifierEvidenceRef {
+  readonly id: string;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly uploadedAt: string;
+}
+
+export interface VerifierPriorDecision {
+  readonly decision: string;
+  readonly organisation: string | null;
+  readonly method: string | null;
+  readonly decidedAt: string;
+}
+
+export interface VerifierClaimVersion {
+  readonly id: string;
+  readonly title: string;
+  readonly versionNo: number;
+  readonly lifecycle: string;
+}
+
+export interface VerifierRequestDetail {
+  readonly id: string;
+  readonly status: VerificationStatus;
+  readonly holderName: string;
+  readonly evidence: readonly VerifierEvidenceRef[];
+  readonly previousVersions: readonly VerifierClaimVersion[];
+  readonly priorDecisions: readonly VerifierPriorDecision[];
+}
+
+/** Mapped into a concrete shape rather than passed through as loose JSON.
+ *
+ *  Not merely for the type checker: `decision_note` is INTERNAL reviewer
+ *  reasoning and lives on the same rows this function reads. Naming every
+ *  field that crosses to the browser means the internal note cannot ride
+ *  along in a spread, which is exactly how that kind of field leaks. */
+export const getVerifierRequestDetail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
+  .handler(async ({ context, data }): Promise<VerifierRequestDetail> => {
+    const { data: detail, error } = await spDb(context.supabase).rpc("sp_verifier_request_detail", {
+      _request_id: data.requestId,
+    });
+    if (error) throw new Error(error.message);
+
+    const raw = (detail ?? {}) as Record<string, unknown>;
+    const list = (key: string): Array<Record<string, unknown>> =>
+      Array.isArray(raw[key]) ? (raw[key] as Array<Record<string, unknown>>) : [];
+
+    return {
+      id: String(raw.id ?? data.requestId),
+      status: (raw.status as VerificationStatus) ?? "pending",
+      holderName: String(raw.holder_name ?? ""),
+      evidence: list("evidence").map((e) => ({
+        id: String(e.id),
+        fileName: String(e.file_name ?? ""),
+        mimeType: String(e.mime_type ?? ""),
+        uploadedAt: String(e.uploaded_at ?? ""),
+      })),
+      previousVersions: list("previous_versions").map((v) => ({
+        id: String(v.id),
+        title: String(v.title ?? ""),
+        versionNo: Number(v.version_no ?? 1),
+        lifecycle: String(v.lifecycle ?? ""),
+      })),
+      priorDecisions: list("prior_decisions").map((d) => ({
+        decision: String(d.decision ?? ""),
+        organisation: (d.organisation as string | null) ?? null,
+        method: (d.method as string | null) ?? null,
+        decidedAt: String(d.decided_at ?? ""),
+      })),
+    };
+  });
+
+const decideInput = z.object({
+  requestId: z.string().uuid(),
+  decision: z.enum(["approved", "rejected", "clarification_requested"]),
+  method: z.enum(["document_review", "employer_confirmation", "issuer_confirmation"]).nullable(),
+  /** Internal reasoning. Never disclosed to a recipient, never shown on a card. */
+  decisionNote: z.string().max(2000).nullable(),
+  /** What the holder reads. */
+  holderMessage: z.string().max(2000).nullable(),
+  validFrom: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+  validUntil: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+});
+
+/** The single decision entry point, shared by the CQrityjob verifier and the
+ *  employer representative. It does not branch on who is calling: the
+ *  database resolves the caller's authority from the request itself, so this
+ *  function cannot grant an authority the caller does not have. */
+export const decideVerification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => decideInput.parse(data))
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    // An approval must say how it was reached. "Verified" with no method is
+    // exactly the unfalsifiable claim this product exists to avoid.
+    if (data.decision === "approved" && !data.method) {
+      throw new Error("SP_APPROVAL_REQUIRES_METHOD");
+    }
+    const { error } = await spDb(context.supabase).rpc("sp_verifier_decide", {
+      _request_id: data.requestId,
+      _decision: data.decision,
+      _method: data.method,
+      _decision_note: data.decisionNote,
+      _holder_message: data.holderMessage,
+      _valid_from: data.validFrom,
+      _valid_until: data.validUntil,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const revokeVerification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        claimId: z.string().uuid().nullable(),
+        periodId: z.string().uuid().nullable(),
+        reason: z.string().min(1).max(1000),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { error } = await spDb(context.supabase).rpc("sp_verifier_revoke", {
+      _claim_id: data.claimId,
+      _period_id: data.periodId,
+      _reason: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Employer representative                                             */
+/* ------------------------------------------------------------------ */
+
+export interface EmployerAttestationItem {
+  readonly id: string;
+  readonly status: VerificationStatus;
+  readonly submittedAt: string;
+  readonly decidedAt: string | null;
+  readonly holderName: string;
+  readonly roleTitle: string;
+  readonly employerName: string;
+  readonly startedOn: string;
+  readonly endedOn: string | null;
+  readonly employmentType: string;
+  readonly fteFraction: number;
+  readonly securityRelevance: string;
+  readonly holderMessage: string | null;
+}
+
+/** Employers the holder can address an attestation request to.
+ *
+ *  Deliberately read with the CALLER'S client and no filter of our own: the
+ *  existing `employers` RLS decides. A holder therefore sees the employers
+ *  this site already shows them — organisations with active job listings,
+ *  plus any they are themselves a member of — and no more. Asking the
+ *  database rather than inventing a second visibility rule means this list
+ *  cannot become a way to enumerate organisations that are otherwise
+ *  private. */
+export const listAttestableEmployers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly { id: string; name: string }[]> => {
+    const { data, error } = await spDb(context.supabase)
+      .from("employers")
+      .select("id, name")
+      .order("name", { ascending: true })
+      .limit(200);
+    if (error) return [];
+    return ((data ?? []) as Array<{ id: string; name: string }>).map((e) => ({
+      id: e.id,
+      name: e.name,
+    }));
+  });
+
+export const listEmployerAttestations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ employerId: z.string().uuid() }).parse(data))
+  .handler(async ({ context, data }): Promise<readonly EmployerAttestationItem[]> => {
+    const { data: rows, error } = await spDb(context.supabase).rpc(
+      "sp_employer_attestation_queue",
+      { _employer_id: data.employerId },
+    );
+    if (error) throw new Error(error.message);
+
+    return ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: String(r.id),
+      status: r.status as VerificationStatus,
+      submittedAt: String(r.submitted_at),
+      decidedAt: (r.decided_at as string | null) ?? null,
+      holderName: String(r.holder_name ?? ""),
+      roleTitle: String(r.role_title ?? ""),
+      employerName: String(r.employer_name ?? ""),
+      startedOn: String(r.started_on ?? ""),
+      endedOn: (r.ended_on as string | null) ?? null,
+      employmentType: String(r.employment_type ?? ""),
+      fteFraction: Number(r.fte_fraction ?? 0),
+      securityRelevance: String(r.security_relevance ?? ""),
+      holderMessage: (r.holder_message as string | null) ?? null,
+    }));
+  });

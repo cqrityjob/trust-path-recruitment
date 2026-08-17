@@ -155,7 +155,13 @@ function PassportOverviewRoute() {
         viewingJurisdiction={snapshot.holder.jurisdictionCode}
         onContinue={() => void navigate({ to: "/passport/onboarding" })}
         onOpenCard={() => void navigate({ to: "/passport/card" })}
-        onShare={() => void navigate({ to: "/passport/privacy" })}
+        onShare={() => void navigate({ to: "/passport/share" })}
+        onOpenEntry={(kind, id) =>
+          void navigate({
+            to: "/passport/entry/$kind/$entryId",
+            params: { kind, entryId: id },
+          })
+        }
       />
     </div>
   );

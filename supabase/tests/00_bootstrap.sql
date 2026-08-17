@@ -63,3 +63,61 @@ LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
 
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT SELECT ON auth.users TO anon, authenticated, service_role;
+
+
+-- ---------------------------------------------------------------------------
+-- Storage
+--
+-- Previously left unstubbed, which meant the two migrations that define
+-- Storage RLS were allowlisted as known failures and their policies were
+-- never executed, let alone tested. Phase 5 puts a holder's private
+-- documents in a bucket, so "the Storage policy is probably fine" stopped
+-- being an acceptable position.
+--
+-- This is the same minimal-stub approach as auth above: enough shape for the
+-- real policies to compile and evaluate, and no attempt to reimplement
+-- Supabase Storage. What is asserted is the POLICY, which is the part this
+-- repository actually authors.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS storage.buckets (
+  id                 text PRIMARY KEY,
+  name               text NOT NULL,
+  public             boolean NOT NULL DEFAULT false,
+  file_size_limit    bigint,
+  allowed_mime_types text[],
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS storage.objects (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  bucket_id  text NOT NULL REFERENCES storage.buckets(id) ON DELETE CASCADE,
+  name       text NOT NULL,
+  owner      uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (bucket_id, name)
+);
+
+-- Supabase's own helper: the path segments BEFORE the filename. For
+-- `<uid>/<uuid>.pdf` that is `{<uid>}`, which is what every bucket policy in
+-- this repository keys on.
+CREATE OR REPLACE FUNCTION storage.foldername(name text)
+RETURNS text[] LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN array_length(string_to_array(name, '/'), 1) <= 1 THEN ARRAY[]::text[]
+    ELSE (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION storage.filename(name text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT (string_to_array(name, '/'))[array_length(string_to_array(name, '/'), 1)];
+$$;
+
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Grants mirror Supabase, so RLS is the only thing standing between a role
+-- and an object. A test that passed because of a missing GRANT would prove
+-- nothing about the policy.
+GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
+GRANT SELECT ON storage.buckets TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated, service_role;

@@ -430,18 +430,36 @@ SELECT pg_temp.ok(
       AND c.relname LIKE 'sp\_%' AND NOT c.relrowsecurity) = 0,
   '5.3 every sp_* table has RLS enabled');
 
--- Phase 2 must not have quietly created Phase 3+ infrastructure.
+-- This assertion originally read "no verification, disclosure, share, ledger
+-- or proof table exists yet", which was a statement about PHASE ORDER: at the
+-- time, verification did not exist and Phase 2 must not have quietly built it.
+--
+-- Phase 3 then legitimately created the verification and disclosure tables,
+-- which turned a correct guard into a false one. It is rewritten here to the
+-- part that was never temporary: the anchor / ledger / proof / chain / token /
+-- wallet vocabulary is PROHIBITED IN THIS PRODUCT, not merely deferred. That
+-- prohibition has no expiry date, so unlike the original it cannot go stale.
 SELECT pg_temp.ok(
   NOT EXISTS (
     SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = 'public'
-       AND (c.relname LIKE 'sp\_verification%'
-         OR c.relname LIKE 'sp\_disclosure%'
-         OR c.relname LIKE 'sp\_share%'
-         OR c.relname LIKE 'sp\_anchor%'
+       AND (c.relname LIKE 'sp\_anchor%'
          OR c.relname LIKE 'sp\_ledger%'
-         OR c.relname LIKE 'sp\_proof%')),
-  '5.4 no verification, disclosure, share, ledger or proof table exists yet');
+         OR c.relname LIKE 'sp\_proof%'
+         OR c.relname LIKE 'sp\_chain%'
+         OR c.relname LIKE 'sp\_token%'
+         OR c.relname LIKE 'sp\_wallet%')),
+  '5.4 no ledger, anchor, proof, chain, token or wallet table exists — blockchain stays out of the MVP');
+
+-- The tables Phase 3 DID create are expected, and their absence would mean a
+-- broken replay rather than a clean one.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'r'
+      AND c.relname IN ('sp_evidence','sp_verification_requests',
+                        'sp_verification_decisions','sp_disclosures',
+                        'sp_disclosure_accesses')) = 5,
+  '5.4b the five Phase 3 trust tables are present');
 
 -- =============================================================================
 -- GROUP 6 — the recognition rule is recorded, and recognitions are not stored

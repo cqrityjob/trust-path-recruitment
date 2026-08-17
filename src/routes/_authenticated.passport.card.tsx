@@ -14,11 +14,22 @@
 // most damaging thing this product could do, because the card is the
 // artifact people screenshot.
 //
-// Sharing is Phase 4. There is no share control on this page, and the
-// social formats built in Phase 1B stay behind the dev-only prototype.
+// ── THE CARD IS LOCKED ─────────────────────────────────────────────────
+//
+// The holder chooses whether to share it. They do not choose what it says:
+// profession, jurisdiction, verified status, expiry, recognition, verifier
+// identity and which credentials appear are all derived by
+// `buildPassportCard` from their entries and the decisions made about them.
+// There is no control on this page for any of it, and no prop that could
+// carry one.
+//
+// Sharing lives in the sharing centre, where a package and an expiry are
+// chosen and a revocable link is created. This page links there rather than
+// producing a link of its own, so every share that exists is one the holder
+// created deliberately and can revoke.
 
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -69,11 +80,12 @@ function PassportCardRoute() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
       <div className="w-full lg:w-[380px] lg:shrink-0">
-        {/* No verifyUrl is issued in Phase 2: there is no verification page
-            to point at yet. The card renders its QR block against the
-            holder's private destination so the layout is honest about
-            where the affordance will live, without implying a live public
-            check that does not exist. */}
+        {/* The private card carries no live token. A token belongs to a
+            SHARE, not to the holder — issuing one here would create a
+            durable public address nobody chose to create and nobody would
+            think to revoke. The QR block renders the product's own
+            verification address so the layout is honest; the real,
+            revocable /p/<token> URL is minted in the sharing centre. */}
         <DirectionC card={card} verifyUrl="cqrityjob.se/passport" className="min-h-[560px]" />
       </div>
 
@@ -84,18 +96,33 @@ function PassportCardRoute() {
             {pt("overview.privateNote")}
           </span>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {pt("live.selfReportedOnly")}
+            {pt("livecard.lockedNote")}
           </p>
+          <Link
+            to="/passport/share"
+            className="mt-4 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("livecard.shareCta")}
+          </Link>
         </section>
 
-        <section className="rounded-xl border border-border bg-secondary/40 p-5">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {pt("live.noVerificationYet")}
-          </h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {pt("live.noVerificationBody")}
-          </p>
-        </section>
+        {/* The honest empty state. A card with nothing verified shows no
+            seal and no milestone, and says why — rather than looking
+            unfinished or, far worse, being dressed up so it looks
+            finished. */}
+        {card.state === "self_declared_only" || card.state === "empty" ? (
+          <section className="rounded-xl border border-border bg-secondary/40 p-5">
+            <h3 className="text-base font-semibold tracking-tight text-foreground">
+              {pt("livecard.selfReportedTitle")}
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {pt("livecard.selfReportedBody")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {pt("live.noVerificationBody")}
+            </p>
+          </section>
+        ) : null}
 
         <section className="rounded-xl border border-border bg-card p-5">
           <h3 className="text-base font-semibold tracking-tight text-foreground">

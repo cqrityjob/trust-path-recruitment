@@ -34,6 +34,7 @@ const NAV: readonly { to: string; labelKey: PassportCopyKey }[] = [
   { to: "/passport", labelKey: "nav.overview" },
   { to: "/passport/onboarding", labelKey: "nav.onboarding" },
   { to: "/passport/card", labelKey: "nav.card" },
+  { to: "/passport/share", labelKey: "sc.title" },
   { to: "/passport/privacy", labelKey: "nav.privacy" },
 ];
 
