@@ -608,8 +608,8 @@ fi
 
 echo "    ok  ${VJ_PASSED} Vaktare journey assertions passed"
 
-if [ "$VJ_PASSED" -lt 24 ]; then
-  echo "FAIL: expected at least 24 Vaktare journey assertions, only ${VJ_PASSED} ran." >&2
+if [ "$VJ_PASSED" -lt 55 ]; then
+  echo "FAIL: expected at least 55 Vaktare journey assertions, only ${VJ_PASSED} ran." >&2
   exit 1
 fi
 

@@ -406,79 +406,284 @@ SELECT pg_temp.ok(
       AND r.best_option_id <> r.worst_option_id) = 3,
   'VJ6.1b all three best/worst answers name two distinct options');
 
--- ── THE SECOND BLOCKER, PINNED ──────────────────────────────────────────
---
--- Submission now reaches the scoring path — the option-label defect is gone —
--- and fails there instead.
---
--- scp_submit_attempt writes each response as competency evidence, copying
--- is_safety_critical from the item but NEVER setting safety_severity.
--- scp_evidence_safety_is_specified requires a severity whenever the evidence
--- is safety-critical, so the INSERT is refused and the whole submission aborts.
---
--- Twelve of the eighteen Väktare items are safety-critical. Ten of those do not
--- require human review, so they take this deterministic path. The 4-item
--- delivery fixture has ZERO safety-critical items, which is exactly why 102
--- journey assertions passed for years while this was broken.
---
--- There is no authored severity anywhere in the content model — not on the item
--- version, not on the behaviour version. The only severity input in the whole
--- system is the _safety_severity parameter of scp_complete_human_review, i.e.
--- a REVIEWER's judgement. The schema states the intent plainly: "A
--- safety-critical observation must state how severe and must be reviewable."
---
--- Resolving it is a governance decision, not an engineering one — see the
--- engineering report. Defaulting a severity here would fabricate a safety
--- judgement about a security guard's behaviour, which is precisely what the
--- constraint exists to prevent.
-SELECT pg_temp.must_fail(format(
-  'SELECT * FROM public.scp_submit_attempt(%L::uuid)', (SELECT attempt_id FROM vja)),
-  'scp_evidence_safety_is_specified',
-  'VJ6.2 submission FAILS — safety-critical evidence has no severity (OPEN GOVERNANCE BLOCKER)');
+-- Submission succeeds. Twelve of the eighteen items are safety-critical, and a
+-- safety-critical observation carries a severity that only a human can supply —
+-- so those responses are routed to review rather than scored here. The
+-- candidate is finished either way: waiting for a reviewer is not their problem.
+CREATE TEMP TABLE vjs AS
+SELECT * FROM public.scp_submit_attempt((SELECT attempt_id FROM vja));
 
+SELECT pg_temp.ok((SELECT attempt_status FROM vjs) = 'submitted',
+  'VJ6.2 the candidate submits the full 18-item run successfully');
+
+SELECT pg_temp.ok((SELECT reviews_opened FROM vjs) = 13,
+  'VJ6.3 thirteen responses are routed to human review (12 safety-critical + 1 constructed)');
+
+SELECT pg_temp.ok((SELECT evidence_written FROM vjs) = 5,
+  'VJ6.4 only the five non-safety auto-scored responses become evidence immediately');
+
+-- The invariant. No deterministic path may ever mint safety-critical evidence.
 SELECT pg_temp.ok(
-  (SELECT status FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
-    = 'in_progress',
-  'VJ6.3 the failed submission left the attempt open and resumable, losing nothing');
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.is_safety_critical) = 0,
+  'VJ6.5 no safety-critical evidence was fabricated at submission');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence
-    WHERE source_ref = (SELECT attempt_id FROM vja)) = 0,
-  'VJ6.4 the aborted submission wrote no partial evidence');
+    WHERE is_safety_critical AND safety_severity IS NULL) = 0,
+  'VJ6.5b no safety-critical evidence anywhere lacks a severity');
 
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_candidate_responses
-    WHERE attempt_id = (SELECT attempt_id FROM vja)) = 18,
-  'VJ6.5 all 18 answers survived the failed submission');
+-- Retry safety. A double-tap, two tabs, or a resubmit after a timeout.
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.scp_submit_attempt(%L::uuid)', (SELECT attempt_id FROM vja)),
+  'SCP_ATTEMPT_ALREADY_SUBMITTED',
+  'VJ6.6 submitting twice is refused, not silently repeated');
+
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_save_response(%L::uuid, %L::uuid, NULL, NULL, NULL, %L)',
+  (SELECT attempt_id FROM vja),
+  (SELECT item_version_id FROM vj_answerable WHERE n = 1),
+  'changed my mind afterwards'),
+  'SCP_ATTEMPT_NOT_OPEN',
+  'VJ6.8 no answer can be changed after submission');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
-DO $$ BEGIN RAISE NOTICE 'GROUP VJ7 — nothing leaked from the unfinished run'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP VJ7 — awaiting review, nothing released'; END $$;
 
 -- =========================================================================
--- Group VJ7 — lifecycle
---
--- The post-submission half (evidence, reviews opened, ALREADY_SUBMITTED on
--- retry, release gated behind human review) is proven for the 4-item delivery
--- fixture in scp_phase2_journey_test.sql groups J3-J5. It cannot be proven for
--- the real 18-item form until the safety-severity question is answered.
+-- Group VJ7 — the candidate is done; the result is not
 -- =========================================================================
+
+-- Checked here rather than inside the participant block above: scp_human_reviews
+-- is RLS-protected from the candidate, so counting it as them would report 0
+-- and pass for the wrong reason.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_human_reviews hr
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)) = 13,
+  'VJ7.0 the refused retry opened no duplicate reviews');
 
 SELECT pg_temp.ok(
-  (SELECT released_at FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
+  (SELECT status FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
+    = 'submitted',
+  'VJ7.1 the attempt is submitted — candidate complete, reviewer outstanding');
+
+SELECT pg_temp.ok(
+  (SELECT scored_at FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
     IS NULL,
-  'VJ7.1 nothing is released to the employer from an unfinished run');
+  'VJ7.2 it is not scored while reviews remain, which is what the release gate reads');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_human_reviews hr
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND hr.trigger_reason = 'safety_critical_detected') = 12,
+  'VJ7.3 all twelve safety-critical observations are queued as such');
+
+-- The employer cannot release over unreviewed work.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.scp_release_attempt_report(%L::uuid)', (SELECT attempt_id FROM vja)),
+  'SCP_RELEASE_BEFORE_SCORED',
+  'VJ7.4 the employer cannot release a report while safety review is outstanding');
+RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_report_snapshots
     WHERE attempt_id = (SELECT attempt_id FROM vja)) = 0,
-  'VJ7.2 no report snapshot exists for an unfinished run');
+  'VJ7.5 no report snapshot exists before release');
 
--- The pilot basis stays attached regardless of how far the run got.
 SELECT pg_temp.ok(
   (SELECT a.governance_mode FROM public.scp_attempts a
     WHERE a.id = (SELECT attempt_id FROM vja)) = 'closed_test',
-  'VJ7.3 the run is still labelled a closed test');
+  'VJ7.6 the run is still labelled a closed test');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP VJ9 — who may judge a safety observation'; END $$;
+
+-- =========================================================================
+-- Group VJ9 — the review, and who is allowed to perform it
+-- =========================================================================
+
+CREATE TEMP TABLE vjr AS
+SELECT hr.id AS review_id, hr.trigger_reason
+  FROM public.scp_human_reviews hr
+  JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+ WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+   AND hr.review_status = 'pending';
+GRANT SELECT ON vjr TO authenticated;
+
+-- The candidate may not grade their own safety-critical behaviour.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''mine'', 0.5, ''low'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_NOT_A_REVIEWER',
+  'VJ9.1 the candidate cannot set the severity of their own observation');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Nor may the employer who commissioned the assessment. Reviewing is an
+-- authoring capability precisely so an employer cannot decide what its own
+-- candidate's evidence says.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ours'', 0.5, ''high'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_NOT_A_REVIEWER',
+  'VJ9.2 the commissioning employer cannot set the severity either');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- A real reviewer holds the content-review capability.
+INSERT INTO auth.users (id, email)
+VALUES ('dd000000-0000-0000-0000-000000000004', 'reviewer@sakerhet-vj.test');
+INSERT INTO public.scp_content_roles (user_id, role, granted_by)
+VALUES ('dd000000-0000-0000-0000-000000000004', 'reviewer',
+        'dd000000-0000-0000-0000-000000000002');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
+
+-- Severity is never inferred. Omitting it on a safety-critical observation is
+-- refused by name, not by a raw constraint violation.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, NULL)',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_SAFETY_SEVERITY_REQUIRED',
+  'VJ9.3 a reviewer cannot complete a safety review without stating a severity');
+
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, ''catastrophic'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_BAD_SAFETY_SEVERITY',
+  'VJ9.4 an invented severity value is refused');
+
+-- And a NON-safety observation may not carry one.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, ''low'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason <> 'safety_critical_detected' LIMIT 1)),
+  'SCP_SEVERITY_ON_NON_SAFETY_ITEM',
+  'VJ9.5 a non-safety observation refuses to carry a severity');
+
+-- A rationale is always required: a severity with no reasoning is not a review.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''  '', 0.5, ''medium'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_REVIEW_WITHOUT_RATIONALE',
+  'VJ9.6 a review decision must state its reasons');
+
+-- Now do the work: every outstanding review, with a severity on each
+-- safety-critical one.
+DO $$
+DECLARE _r record;
+BEGIN
+  FOR _r IN SELECT * FROM vjr LOOP
+    PERFORM public.scp_complete_human_review(
+      _r.review_id, 'upheld',
+      'Bedömd mot observerbart beteende i scenariot.',
+      0.5,
+      CASE WHEN _r.trigger_reason = 'safety_critical_detected' THEN 'medium' END);
+  END LOOP;
+END $$;
+
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_human_reviews hr
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND hr.review_status = 'pending') = 0,
+  'VJ9.7 every outstanding review is completed');
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
+    = 'scored'
+  AND (SELECT scored_at FROM public.scp_attempts
+        WHERE id = (SELECT attempt_id FROM vja)) IS NOT NULL,
+  'VJ9.8 the attempt becomes scored only once no review remains');
+
+-- Provenance: reviewed safety evidence names its reviewer and its severity.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.is_safety_critical
+      AND e.safety_severity = 'medium'
+      AND e.provenance_type = 'human_review'
+      AND e.assessor_actor_id = 'dd000000-0000-0000-0000-000000000004') = 12,
+  'VJ9.9 all twelve safety observations carry a severity and a named reviewer');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP VJ10 — release, and what each side sees'; END $$;
+
+-- =========================================================================
+-- Group VJ10 — the release gate
+-- =========================================================================
+
+-- A different organisation's owner cannot release this attempt.
+INSERT INTO auth.users (id, email)
+VALUES ('dd000000-0000-0000-0000-000000000005', 'other-owner@elsewhere.test');
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('dd000000-1111-0000-0000-000000000009', 'Annan AB', 'annan-ab-vj', 'active');
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('dd000000-1111-0000-0000-000000000009',
+        'dd000000-0000-0000-0000-000000000005', 'owner', 'active');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000005';
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.scp_release_attempt_report(%L::uuid)', (SELECT attempt_id FROM vja)),
+  'SCP_NOT_AUTHORISED_TO_RELEASE',
+  'VJ10.1 an owner of another organisation cannot release this result');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE vjrel AS
+SELECT * FROM public.scp_release_attempt_report((SELECT attempt_id FROM vja));
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT participant_snapshot FROM vjrel) IS NOT NULL
+  AND (SELECT employer_snapshot FROM vjrel) IS NOT NULL,
+  'VJ10.2 once review is complete the employer can release both reports');
+
+SELECT pg_temp.ok(
+  (SELECT released_at FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
+    IS NOT NULL,
+  'VJ10.3 the attempt records when it was released');
+
+-- Severity survives release. A released report must still be able to state the
+-- basis of a safety observation.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.is_safety_critical AND e.safety_severity IS NOT NULL) = 12,
+  'VJ10.4 severity persists after release');
+
+-- Releasing twice is refused; snapshots are immutable.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.scp_release_attempt_report(%L::uuid)', (SELECT attempt_id FROM vja)),
+  'SCP_ALREADY_RELEASED',
+  'VJ10.5 a second release is refused — snapshots are immutable');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Reassessment must not rewrite history. Completing the same review again is
+-- refused, so an old severity can never be silently replaced.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''overturned'', ''second thoughts'', 0.9, ''low'')',
+  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SCP_REVIEW_NOT_PENDING',
+  'VJ10.6 a completed review cannot be re-decided, so history is not overwritten');
+RESET ROLE; RESET request.jwt.claim.sub;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP VJ8 — the grant is bounded'; END $$;
 

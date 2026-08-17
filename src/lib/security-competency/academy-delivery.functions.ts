@@ -44,6 +44,8 @@ export type AcademyDeliveryErrorCode =
   | "not_found"
   | "not_open"
   | "item_not_on_form"
+  | "incomplete"
+  | "incomplete_best_worst"
   | "load_failed"
   | "save_failed"
   | "submit_failed";
@@ -58,9 +60,18 @@ export class AcademyDeliveryError extends Error {
   }
 }
 
-/** Map a database refusal onto a code the UI can act on, keeping the real
- *  message for the log. A bare "something went wrong" here would repeat the
- *  mistake that made the cd_evidence defect so slow to diagnose. */
+/** Map a database refusal onto a code the UI can act on.
+ *
+ *  A recognised SCP_* refusal is deliberate, participant-safe wording written
+ *  by whoever raised it, so it is carried through. Anything else is an
+ *  UNEXPECTED database error — a constraint name, a SQLSTATE, a fragment of
+ *  SQL — and must never reach a candidate or an employer. It is logged
+ *  server-side, in full, and replaced with a neutral message.
+ *
+ *  This is not "a bare something-went-wrong": the code still tells the UI what
+ *  happened, and the real text is one log line away for whoever is debugging.
+ *  What changes is that the participant no longer sees
+ *  `scp_evidence_safety_is_specified` when a submission fails. */
 function classify(dbMessage: string, fallback: AcademyDeliveryErrorCode): AcademyDeliveryError {
   if (dbMessage.includes("SCP_ATTEMPT_NOT_YOURS")) {
     return new AcademyDeliveryError("not_found", dbMessage);
@@ -74,7 +85,19 @@ function classify(dbMessage: string, fallback: AcademyDeliveryErrorCode): Academ
   if (dbMessage.includes("SCP_ITEM_NOT_ON_FORM")) {
     return new AcademyDeliveryError("item_not_on_form", dbMessage);
   }
-  return new AcademyDeliveryError(fallback, dbMessage);
+  if (dbMessage.includes("SCP_INCOMPLETE_ATTEMPT")) {
+    return new AcademyDeliveryError("incomplete", dbMessage);
+  }
+  if (dbMessage.includes("SCP_INCOMPLETE_BEST_WORST")) {
+    return new AcademyDeliveryError("incomplete_best_worst", dbMessage);
+  }
+  if (dbMessage.includes("SCP_RESPONSE_SHAPE")) {
+    return new AcademyDeliveryError("save_failed", dbMessage);
+  }
+
+  // Unrecognised. Keep the detail in the server log, give the caller nothing.
+  console.error("[academy-delivery] unexpected database error", dbMessage);
+  return new AcademyDeliveryError(fallback, "UNEXPECTED_ERROR");
 }
 
 const LANGUAGE = { sv: "sv-SE", en: "en-GB" } as const;

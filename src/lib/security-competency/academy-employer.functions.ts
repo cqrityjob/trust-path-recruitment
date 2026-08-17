@@ -112,10 +112,17 @@ export class AcademyEmployerError extends Error {
 }
 
 /** Keep the database's own error identifier, so the UI can say something
- *  specific and the log still carries the original sentence. */
+ *  specific.
+ *
+ *  A recognised SCP_* refusal is deliberate wording written by whoever raised
+ *  it and is carried through. Anything else is an unexpected database error —
+ *  a constraint name, a SQLSTATE, a fragment of SQL — and must not reach the
+ *  employer UI, so it is logged server-side and replaced. */
 function fail(message: string, fallback: string): AcademyEmployerError {
   const m = /SCP_[A-Z_]+/.exec(message ?? "");
-  return new AcademyEmployerError(m ? m[0] : fallback, message ?? fallback);
+  if (m) return new AcademyEmployerError(m[0], message ?? fallback);
+  console.error("[academy-employer] unexpected database error", message);
+  return new AcademyEmployerError(fallback, "UNEXPECTED_ERROR");
 }
 
 const employerInput = z.object({ employerId: z.string().uuid() });
