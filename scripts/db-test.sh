@@ -38,6 +38,40 @@ cd "$ROOT"
 
 psql_q() { psql -v ON_ERROR_STOP=1 -q "$@"; }
 
+# ---------------------------------------------------------------------------
+# Suite failure policy.
+#
+# DEFAULT (unset or 0): the first failing suite aborts the run, exactly as
+# before. Fail-fast is right for a normal PR -- the first failure is the one
+# to fix.
+#
+# DB_TEST_CONTINUE_ON_SUITE_FAILURE=1: a failing suite is RECORDED and the run
+# continues to the next one. The script still exits non-zero at the end, and
+# still prints every failure. This exists because the suites run in one long
+# sequence and the later ones -- the whole Security Passport set among them --
+# are invisible while an earlier suite is red. One CI run then reports the real
+# blast radius instead of one symptom at a time.
+#
+# It changes REPORTING, never what counts as a pass: no threshold is relaxed
+# and no assertion is skipped. Note that later suites then run against a
+# database an earlier failure may have left dirty, so a cascade of failures
+# under this flag should be re-confirmed fail-fast before being believed.
+#
+# Migration-replay deviations (section 3) are deliberately NOT covered: if the
+# schema did not replay, every suite result afterwards is meaningless.
+# ---------------------------------------------------------------------------
+DB_TEST_CONTINUE_ON_SUITE_FAILURE="${DB_TEST_CONTINUE_ON_SUITE_FAILURE:-0}"
+SUITE_FAILURES=()
+
+suite_failed() {
+  local label="$1"
+  SUITE_FAILURES+=("$label")
+  if [ "$DB_TEST_CONTINUE_ON_SUITE_FAILURE" != "1" ]; then
+    exit 1
+  fi
+  echo "    !!  ${label} FAILED -- continuing (DB_TEST_CONTINUE_ON_SUITE_FAILURE=1)" >&2
+}
+
 echo "==> Target: $PGUSER@$PGHOST:$PGPORT/$TEST_DB"
 
 # ---------------------------------------------------------------------------
@@ -320,15 +354,14 @@ if [ "$SUITE_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the assertion suite exited with code ${SUITE_RC}." >&2
   echo "$SUITE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${PASSED} assertions passed"
-
-if [ "$PASSED" -lt 153 ]; then
-  echo "FAIL: expected at least 153 assertions, only ${PASSED} ran." >&2
-  echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-  exit 1
+  suite_failed "domain model + RLS"
+else
+  echo "    ok  ${PASSED} assertions passed"
+  if [ "$PASSED" -lt 153 ]; then
+    echo "FAIL: expected at least 153 assertions, only ${PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "domain model + RLS (assertion shortfall: floor 153)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -349,15 +382,14 @@ if [ "$CD_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Career Discovery suite exited with code ${CD_RC}." >&2
   echo "$CD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${CD_PASSED} Career Discovery assertions passed"
-
-if [ "$CD_PASSED" -lt 130 ]; then
-  echo "FAIL: expected at least 130 Career Discovery assertions, only ${CD_PASSED} ran." >&2
-  echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-  exit 1
+  suite_failed "Career Discovery v3"
+else
+  echo "    ok  ${CD_PASSED} Career Discovery assertions passed"
+  if [ "$CD_PASSED" -lt 130 ]; then
+    echo "FAIL: expected at least 130 Career Discovery assertions, only ${CD_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "Career Discovery v3 (assertion shortfall: floor 130)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -382,15 +414,14 @@ if [ "$CD31_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Career Discovery v3.1 suite exited with code ${CD31_RC}." >&2
   echo "$CD31_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${CD31_PASSED} Career Discovery v3.1 assertions passed"
-
-if [ "$CD31_PASSED" -lt 45 ]; then
-  echo "FAIL: expected at least 45 Career Discovery v3.1 assertions, only ${CD31_PASSED} ran." >&2
-  echo "      A suite that silently stops running assertions is worse than one that fails." >&2
-  exit 1
+  suite_failed "Career Discovery v3.1 schema"
+else
+  echo "    ok  ${CD31_PASSED} Career Discovery v3.1 assertions passed"
+  if [ "$CD31_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 Career Discovery v3.1 assertions, only ${CD31_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "Career Discovery v3.1 schema (assertion shortfall: floor 45)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -413,14 +444,13 @@ if [ "$CDC_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Career Discovery v3.1 completion suite exited with code ${CDC_RC}." >&2
   echo "$CDC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${CDC_PASSED} Career Discovery v3.1 completion assertions passed"
-
-if [ "$CDC_PASSED" -lt 35 ]; then
-  echo "FAIL: expected at least 35 completion assertions, only ${CDC_PASSED} ran." >&2
-  exit 1
+  suite_failed "Career Discovery v3.1 completion"
+else
+  echo "    ok  ${CDC_PASSED} Career Discovery v3.1 completion assertions passed"
+  if [ "$CDC_PASSED" -lt 35 ]; then
+    echo "FAIL: expected at least 35 completion assertions, only ${CDC_PASSED} ran." >&2
+    suite_failed "Career Discovery v3.1 completion (assertion shortfall: floor 35)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -439,12 +469,13 @@ PUB_PASSED="$(echo "$PUB_OUT" | grep -c "ok  " || true)"
 if [ "$PUB_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the public v3.1 flow suite exited with code ${PUB_RC}." >&2
   echo "$PUB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${PUB_PASSED} public v3.1 flow assertions passed"
-if [ "$PUB_PASSED" -lt 20 ]; then
-  echo "FAIL: expected at least 20 public-flow assertions, only ${PUB_PASSED} ran." >&2
-  exit 1
+  suite_failed "public v3.1 flow"
+else
+  echo "    ok  ${PUB_PASSED} public v3.1 flow assertions passed"
+  if [ "$PUB_PASSED" -lt 20 ]; then
+    echo "FAIL: expected at least 20 public-flow assertions, only ${PUB_PASSED} ran." >&2
+    suite_failed "public v3.1 flow (assertion shortfall: floor 20)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -464,12 +495,13 @@ PL_PASSED="$(echo "$PL_OUT" | grep -c "ok  " || true)"
 if [ "$PL_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the v3.1 personal layer suite exited with code ${PL_RC}." >&2
   echo "$PL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${PL_PASSED} personal layer assertions passed"
-if [ "$PL_PASSED" -lt 24 ]; then
-  echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
-  exit 1
+  suite_failed "v3.1 personal layer"
+else
+  echo "    ok  ${PL_PASSED} personal layer assertions passed"
+  if [ "$PL_PASSED" -lt 24 ]; then
+    echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
+    suite_failed "v3.1 personal layer (assertion shortfall: floor 24)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -490,12 +522,13 @@ GRAPH_PASSED="$(echo "$GRAPH_OUT" | grep -c "ok  " || true)"
 if [ "$GRAPH_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the Competency Graph suite exited with code ${GRAPH_RC}." >&2
   echo "$GRAPH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${GRAPH_PASSED} Competency Graph assertions passed"
-if [ "$GRAPH_PASSED" -lt 45 ]; then
-  echo "FAIL: expected at least 45 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
-  exit 1
+  suite_failed "Competency Graph"
+else
+  echo "    ok  ${GRAPH_PASSED} Competency Graph assertions passed"
+  if [ "$GRAPH_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 Competency Graph assertions, only ${GRAPH_PASSED} ran." >&2
+    suite_failed "Competency Graph (assertion shortfall: floor 45)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -516,12 +549,13 @@ ACAD_PASSED="$(echo "$ACAD_OUT" | grep -c "ok  " || true)"
 if [ "$ACAD_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the Academy suite exited with code ${ACAD_RC}." >&2
   echo "$ACAD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${ACAD_PASSED} Academy assertions passed"
-if [ "$ACAD_PASSED" -lt 39 ]; then
-  echo "FAIL: expected at least 39 Academy assertions, only ${ACAD_PASSED} ran." >&2
-  exit 1
+  suite_failed "Academy"
+else
+  echo "    ok  ${ACAD_PASSED} Academy assertions passed"
+  if [ "$ACAD_PASSED" -lt 39 ]; then
+    echo "FAIL: expected at least 39 Academy assertions, only ${ACAD_PASSED} ran." >&2
+    suite_failed "Academy (assertion shortfall: floor 39)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -537,12 +571,13 @@ CONT_PASSED="$(echo "$CONT_OUT" | grep -c "ok  " || true)"
 if [ "$CONT_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the Phase 1F content suite exited with code ${CONT_RC}." >&2
   echo "$CONT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${CONT_PASSED} content assertions passed"
-if [ "$CONT_PASSED" -lt 50 ]; then
-  echo "FAIL: expected at least 50 content assertions, only ${CONT_PASSED} ran." >&2
-  exit 1
+  suite_failed "Phase 1F content"
+else
+  echo "    ok  ${CONT_PASSED} content assertions passed"
+  if [ "$CONT_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 content assertions, only ${CONT_PASSED} ran." >&2
+    suite_failed "Phase 1F content (assertion shortfall: floor 50)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -558,12 +593,13 @@ P2_PASSED="$(echo "$P2_OUT" | grep -c "ok  " || true)"
 if [ "$P2_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the Phase 2 suite exited with code ${P2_RC}." >&2
   echo "$P2_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${P2_PASSED} Phase 2 assertions passed"
-if [ "$P2_PASSED" -lt 18 ]; then
-  echo "FAIL: expected at least 18 Phase 2 assertions, only ${P2_PASSED} ran." >&2
-  exit 1
+  suite_failed "Phase 2 identity and read models"
+else
+  echo "    ok  ${P2_PASSED} Phase 2 assertions passed"
+  if [ "$P2_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 Phase 2 assertions, only ${P2_PASSED} ran." >&2
+    suite_failed "Phase 2 identity and read models (assertion shortfall: floor 18)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -579,12 +615,13 @@ J_PASSED="$(echo "$J_OUT" | grep -c "ok  " || true)"
 if [ "$J_RC" -ne 0 ]; then
   echo ""; echo "FAIL: the Phase 2 journey suite exited with code ${J_RC}." >&2
   echo "$J_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-echo "    ok  ${J_PASSED} journey assertions passed"
-if [ "$J_PASSED" -lt 102 ]; then
-  echo "FAIL: expected at least 102 journey assertions, only ${J_PASSED} ran." >&2
-  exit 1
+  suite_failed "Phase 2 journey"
+else
+  echo "    ok  ${J_PASSED} journey assertions passed"
+  if [ "$J_PASSED" -lt 102 ]; then
+    echo "FAIL: expected at least 102 journey assertions, only ${J_PASSED} ran." >&2
+    suite_failed "Phase 2 journey (assertion shortfall: floor 102)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -602,14 +639,13 @@ if [ "$ROLLBACK_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: rollback verification exited with code ${ROLLBACK_RC}." >&2
   echo "$ROLLBACK_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${ROLLBACK_PASSED} rollback assertions passed"
-
-if [ "$ROLLBACK_PASSED" -lt 26 ]; then
-  echo "FAIL: expected at least 26 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
-  exit 1
+  suite_failed "rollback verification"
+else
+  echo "    ok  ${ROLLBACK_PASSED} rollback assertions passed"
+  if [ "$ROLLBACK_PASSED" -lt 26 ]; then
+    echo "FAIL: expected at least 26 rollback assertions, only ${ROLLBACK_PASSED} ran." >&2
+    suite_failed "rollback verification (assertion shortfall: floor 26)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -625,14 +661,13 @@ if [ "$ARCH_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the job archive suite exited with code ${ARCH_RC}." >&2
   echo "$ARCH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${ARCH_PASSED} job archive assertions passed"
-
-if [ "$ARCH_PASSED" -lt 14 ]; then
-  echo "FAIL: expected at least 14 job archive assertions, only ${ARCH_PASSED} ran." >&2
-  exit 1
+  suite_failed "job advertisement archiving"
+else
+  echo "    ok  ${ARCH_PASSED} job archive assertions passed"
+  if [ "$ARCH_PASSED" -lt 14 ]; then
+    echo "FAIL: expected at least 14 job archive assertions, only ${ARCH_PASSED} ran." >&2
+    suite_failed "job advertisement archiving (assertion shortfall: floor 14)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -648,16 +683,15 @@ if [ "$SP_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Security Passport Phase 2 suite exited with code ${SP_RC}." >&2
   echo "$SP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${SP_PASSED} Security Passport assertions passed"
-
-# The floor matters: a suite that silently stops running its denial tests
-# would otherwise report success for doing nothing.
-if [ "$SP_PASSED" -lt 30 ]; then
-  echo "FAIL: expected at least 30 Security Passport assertions, only ${SP_PASSED} ran." >&2
-  exit 1
+  suite_failed "Security Passport Phase 2"
+else
+  echo "    ok  ${SP_PASSED} Security Passport assertions passed"
+  # The floor matters: a suite that silently stops running its denial tests
+  # would otherwise report success for doing nothing.
+  if [ "$SP_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 Security Passport assertions, only ${SP_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 2 (assertion shortfall: floor 30)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -673,14 +707,13 @@ if [ "$SP3_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Security Passport Phase 3/4 suite exited with code ${SP3_RC}." >&2
   echo "$SP3_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${SP3_PASSED} Security Passport Phase 3/4 assertions passed"
-
-if [ "$SP3_PASSED" -lt 35 ]; then
-  echo "FAIL: expected at least 35 Phase 3/4 assertions, only ${SP3_PASSED} ran." >&2
-  exit 1
+  suite_failed "Security Passport Phase 3/4"
+else
+  echo "    ok  ${SP3_PASSED} Security Passport Phase 3/4 assertions passed"
+  if [ "$SP3_PASSED" -lt 35 ]; then
+    echo "FAIL: expected at least 35 Phase 3/4 assertions, only ${SP3_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 3/4 (assertion shortfall: floor 35)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -696,14 +729,13 @@ if [ "$SP5_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Security Passport Phase 5 suite exited with code ${SP5_RC}." >&2
   echo "$SP5_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${SP5_PASSED} Security Passport Phase 5 assertions passed"
-
-if [ "$SP5_PASSED" -lt 40 ]; then
-  echo "FAIL: expected at least 40 Phase 5 assertions, only ${SP5_PASSED} ran." >&2
-  exit 1
+  suite_failed "Security Passport Phase 5"
+else
+  echo "    ok  ${SP5_PASSED} Security Passport Phase 5 assertions passed"
+  if [ "$SP5_PASSED" -lt 40 ]; then
+    echo "FAIL: expected at least 40 Phase 5 assertions, only ${SP5_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 5 (assertion shortfall: floor 40)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -762,6 +794,21 @@ fi
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
+
+# ---------------------------------------------------------------------------
+# 8. Aggregate verdict
+#
+# Only reachable with DB_TEST_CONTINUE_ON_SUITE_FAILURE=1; without it the run
+# has already exited at the first failure.
+# ---------------------------------------------------------------------------
+if [ "${#SUITE_FAILURES[@]}" -gt 0 ]; then
+  echo ""
+  echo "===================================================="
+  echo " DB suite FAILED: ${#SUITE_FAILURES[@]} suite(s) did not pass"
+  echo "===================================================="
+  printf '  - %s\n' "${SUITE_FAILURES[@]}" >&2
+  exit 1
+fi
 
 echo ""
 echo "===================================================="

@@ -112,6 +112,12 @@ jobs:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
+      # Report every failing suite in one run instead of stopping at the first.
+      # The suites run as one long sequence and the job still fails on any
+      # failure -- this only changes how much of the picture a single run gives
+      # a reviewer. Without it the later suites (the whole Security Passport
+      # set among them) stay invisible while an earlier suite is red.
+      DB_TEST_CONTINUE_ON_SUITE_FAILURE: 1
 
     steps:
       - name: Checkout repository
