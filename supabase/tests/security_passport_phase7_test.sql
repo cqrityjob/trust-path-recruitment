@@ -508,3 +508,126 @@ END $$;
 SELECT pg_temp.ok(
   NOT has_function_privilege('authenticated', 'public.sp_get_disclosure(text)', 'EXECUTE'),
   '10.3 an authenticated caller cannot execute the recipient function either');
+
+-- =============================================================================
+\echo '    GROUP 11 -- the private credential reads are bounded by RLS'
+-- =============================================================================
+-- `listClaimVersions` and `getCredentialPrivateFields` (Phase 7, client side)
+-- read sp_claims through the RLS-scoped client: the anon key plus the
+-- caller's JWT. So the decisive boundary is the SELECT policy, not the
+-- `.eq(holder_user_id)` the functions also write. These assertions prove the
+-- policy carries that weight on its own, against every principal that might
+-- plausibly think it has a reason to look.
+
+INSERT INTO public.employers (id, slug, name, status)
+VALUES ('d7000000-0000-0000-0000-0000000000e1','p7-employer','P7 Employer AB (fiktiv)','active')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.users (id, email)
+VALUES ('d7000000-0000-0000-0000-000000000003','p7-employer-user@example.test')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('d7000000-0000-0000-0000-0000000000e1','d7000000-0000-0000-0000-000000000003','owner','active')
+ON CONFLICT DO NOTHING;
+
+-- Exactly one SELECT policy may exist on sp_claims. A second one is how a
+-- "just for the admin console" read gets added without anyone noticing.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname='public' AND tablename='sp_claims' AND cmd='SELECT') = 1,
+  '11.1 sp_claims has exactly one SELECT policy');
+
+SELECT pg_temp.ok(
+  (SELECT qual FROM pg_policies
+    WHERE schemaname='public' AND tablename='sp_claims' AND cmd='SELECT')
+    LIKE '%holder_user_id = auth.uid()%',
+  '11.2 that policy is holder-only');
+
+DO $$
+DECLARE _h uuid := 'd7000000-0000-0000-0000-000000000001'; _seen int;
+BEGIN
+  -- The VERIFIER. Holds the platform-admin capability, and still reads
+  -- nothing: verification happens through bounded RPCs, never a table read.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', 'd7000000-0000-0000-0000-000000000009', true);
+  SELECT count(*) INTO _seen FROM public.sp_claims WHERE holder_user_id = _h;
+  RESET ROLE;
+  PERFORM pg_temp.ok(_seen = 0,
+    '11.3 a verifier/platform admin reads none of the holder''s claims directly');
+
+  -- The EMPLOYER. A membership role is not a reason to read a Passport.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', 'd7000000-0000-0000-0000-000000000003', true);
+  SELECT count(*) INTO _seen FROM public.sp_claims WHERE holder_user_id = _h;
+  RESET ROLE;
+  PERFORM pg_temp.ok(_seen = 0,
+    '11.4 an employer member reads none of the holder''s claims');
+
+  -- ANON does not merely see zero rows: it holds no grant on the table, so
+  -- the read is refused outright, one layer before RLS is consulted.
+  PERFORM pg_temp.must_fail(
+    'SET LOCAL ROLE anon; SELECT count(*) FROM public.sp_claims',
+    'permission denied',
+    '11.5 anon is refused the claims table outright');
+  RESET ROLE;
+
+  -- The HOLDER does, or the policy would be proving nothing.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  SELECT count(*) INTO _seen FROM public.sp_claims WHERE holder_user_id = _h;
+  RESET ROLE;
+  PERFORM pg_temp.ok(_seen > 0, '11.6 the holder reads their own claims');
+END $$;
+
+-- The version chain the holder's history view walks is the same table, so a
+-- stranger walking it from a known id gets nothing rather than a neighbour's
+-- correction history.
+DO $$
+DECLARE _other uuid := 'd7000000-0000-0000-0000-000000000002'; _seen int;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _other::text, true);
+  SELECT count(*) INTO _seen FROM public.sp_claims
+   WHERE supersedes_id IS NOT NULL
+      OR holder_user_id = 'd7000000-0000-0000-0000-000000000001';
+  RESET ROLE;
+  PERFORM pg_temp.ok(_seen = 0,
+    '11.7 a stranger can walk no part of another holder''s version chain');
+END $$;
+
+-- The private columns must not reach the verifier's review payload either.
+-- The verifier is the one principal with a legitimate reason to look at a
+-- claim, and they still see the assertion, not the holder's private note.
+DO $$
+DECLARE
+  _v uuid := 'd7000000-0000-0000-0000-000000000009';
+  _req uuid; _detail jsonb;
+BEGIN
+  SELECT r.id INTO _req FROM public.sp_verification_requests r
+   WHERE r.holder_user_id = 'd7000000-0000-0000-0000-000000000001'
+   ORDER BY r.submitted_at DESC LIMIT 1;
+
+  IF _req IS NULL THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 11.8 expected a verification request to inspect';
+  END IF;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _v::text, true);
+  _detail := public.sp_verifier_request_detail(_req);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_detail::text NOT LIKE '%P7-REF-OV-SECRET%',
+    '11.8 the verifier review payload carries no credential_reference');
+  PERFORM pg_temp.ok(_detail::text NOT LIKE '%privat anteckning%',
+    '11.9 the verifier review payload carries no holder_note');
+END $$;
+
+-- Audit events are read by more principals than the claim itself, so the
+-- private columns must never have been written into one.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_passport_events
+    WHERE detail::text LIKE '%P7-REF-OV-SECRET%'
+       OR detail::text LIKE '%P7-REF-VU1-SECRET%'
+       OR detail::text LIKE '%privat anteckning%') = 0,
+  '11.10 no audit event payload contains a private credential field');

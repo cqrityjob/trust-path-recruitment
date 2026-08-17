@@ -807,9 +807,9 @@ else
   echo "    ok  ${SP7_PASSED} Security Passport Phase 7 assertions passed"
   # This suite guards the ONLY anonymous surface in the product. A short run
   # here means the package-boundary and fail-closed checks did not execute.
-  if [ "$SP7_PASSED" -lt 45 ]; then
-    echo "FAIL: expected at least 45 Phase 7 assertions, only ${SP7_PASSED} ran." >&2
-    suite_failed "Security Passport Phase 7 (assertion shortfall: floor 45)"
+  if [ "$SP7_PASSED" -lt 75 ]; then
+    echo "FAIL: expected at least 75 Phase 7 assertions, only ${SP7_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 7 (assertion shortfall: floor 75)"
   fi
 fi
 
