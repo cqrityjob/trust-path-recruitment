@@ -31,7 +31,7 @@ import { CredentialSymbol } from "../CredentialSymbol";
 /** Tones for the status word ON THE CARD's navy ground. Distinct from the
  *  theme-surface tones used elsewhere; both are supplementary to the word. */
 const CARD_WORD_TONE: Record<string, string> = {
-  approved: TRUST_PALETTE.goldBright,
+  verified: TRUST_PALETTE.goldBright,
   documented: TRUST_PALETTE.ink,
   self_declared: TRUST_PALETTE.inkMuted,
   draft: TRUST_PALETTE.inkMuted,

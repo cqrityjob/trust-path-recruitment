@@ -198,7 +198,7 @@ export function buildSocialSvg(
       const symY = y - fs(34) + Math.round((rowH - symSize) / 2);
       if (cred.code) {
         body.push(
-          `<g transform="translate(${symX} ${symY}) scale(${(symSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(cred.code, "approved")}</g>`,
+          `<g transform="translate(${symX} ${symY}) scale(${(symSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(cred.code, "verified")}</g>`,
         );
       }
       const textX = cred.code ? symX + symSize + fs(16) : pad + fs(20);

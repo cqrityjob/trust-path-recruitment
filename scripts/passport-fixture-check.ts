@@ -722,8 +722,8 @@ for (const pkg of DISCLOSURE_PACKAGES) {
   // The presentation derivation: lifecycle qualifications always beat
   // evidence level, and only VERIFIED+ACTIVE is ever "approved".
   expect(
-    credentialPresentation("verified", "active") === "approved",
-    "verified+active must present as approved.",
+    credentialPresentation("verified", "active") === "verified",
+    "verified+active must present as verified.",
   );
   expect(
     credentialPresentation("verified", "expired") === "expired",
@@ -748,7 +748,7 @@ for (const pkg of DISCLOSURE_PACKAGES) {
   for (const state of CREDENTIAL_PRESENTATION_STATES) {
     const t = symbolTreatment(state);
     expect(
-      t.doubleRim === (state === "approved"),
+      t.doubleRim === (state === "verified"),
       `Symbol treatment: doubled rim must be exclusive to approved (violated by ${state}).`,
     );
     expect(

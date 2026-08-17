@@ -27,7 +27,7 @@
 // fourth channel, never the first. A greyscale print of any card still
 // reads correctly.
 //
-// Only `approved` — a VERIFIED credential whose lifecycle is currently
+// Only `verified` — a VERIFIED credential whose lifecycle is currently
 // ACTIVE — receives the full treatment: gold, the doubled rim and the check
 // seal. An expired or disputed credential keeps its dignity but visibly is
 // not current, which is the single most important honesty property of the
@@ -56,7 +56,7 @@ export type CredentialPresentationState =
   | "draft"
   | "self_declared"
   | "documented"
-  | "approved"
+  | "verified"
   | "expired"
   | "revoked"
   | "superseded"
@@ -67,7 +67,7 @@ export type CredentialPresentationState =
  *
  * Callers pass the EFFECTIVE lifecycle (from validityOf), so a stored-active
  * appointment whose valid-until has passed arrives here as "expired" and can
- * never take the approved treatment. Lifecycle qualifications always win
+ * never take the verified treatment. Lifecycle qualifications always win
  * over evidence level: a revoked verified licence presents as revoked.
  */
 export function credentialPresentation(
@@ -88,7 +88,7 @@ export function credentialPresentation(
     case "active":
       break;
   }
-  if (assertionLevel === "verified") return "approved";
+  if (assertionLevel === "verified") return "verified";
   if (assertionLevel === "document_provided") return "documented";
   return "self_declared";
 }
@@ -104,7 +104,7 @@ export function presentationWordKey(state: CredentialPresentationState): Passpor
       return "assertion.self_declared";
     case "documented":
       return "assertion.document_provided";
-    case "approved":
+    case "verified":
       return "assertion.verified";
     case "expired":
       return "lifecycle.expired";
@@ -128,7 +128,7 @@ export interface SymbolTreatment {
   readonly edge: string;
   /** Dash pattern, or null for solid. The non-colour border channel. */
   readonly dash: string | null;
-  /** True adds the doubled inner rim — reserved for `approved`. */
+  /** True adds the doubled inner rim — reserved for `verified`. */
   readonly doubleRim: boolean;
   /** Device and label tone. */
   readonly device: string;
@@ -144,7 +144,7 @@ export interface SymbolTreatment {
 
 export function symbolTreatment(state: CredentialPresentationState): SymbolTreatment {
   switch (state) {
-    case "approved":
+    case "verified":
       return {
         edge: TRUST_PALETTE.gold,
         dash: null,
@@ -366,7 +366,7 @@ export function credentialSymbolMarkup(
   ];
 
   if (t.doubleRim) {
-    // The approved rim: one extra bright hairline, the only doubled border
+    // The verified rim: one extra bright hairline, the only doubled border
     // in the system. Restrained metal, not a glow.
     parts.push(
       `<rect x="3.1" y="3.1" width="37.8" height="37.8" rx="8.1" fill="none" stroke="${TRUST_PALETTE.goldBright}" stroke-opacity="0.55" stroke-width="0.8"/>`,
@@ -399,7 +399,7 @@ export const CREDENTIAL_PRESENTATION_STATES: readonly CredentialPresentationStat
   "draft",
   "self_declared",
   "documented",
-  "approved",
+  "verified",
   "expired",
   "revoked",
   "superseded",

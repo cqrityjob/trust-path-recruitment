@@ -119,7 +119,7 @@ export function CredentialSymbolMatrix() {
             <CredentialSymbol
               key={code}
               code={code}
-              state="approved"
+              state="verified"
               name={CODE_NAMES[code] ?? code}
               size={28}
             />

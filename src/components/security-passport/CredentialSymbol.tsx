@@ -76,7 +76,7 @@ const WORD_TONE: Record<CredentialPresentationState, string> = {
   draft: "text-muted-foreground",
   self_declared: "text-muted-foreground",
   documented: "text-foreground",
-  approved: "text-foreground",
+  verified: "text-foreground",
   expired: "text-amber-700 dark:text-amber-400",
   revoked: "text-destructive",
   superseded: "text-muted-foreground",

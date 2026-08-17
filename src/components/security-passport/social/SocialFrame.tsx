@@ -144,9 +144,9 @@ function CredentialLine({
     <li className="flex items-start" style={{ gap: 14 * scale }}>
       <span style={{ marginTop: 2 * scale }}>
         {/* Everything in this list is verified AND active by construction,
-            so the approved mark is the only state that can appear here. */}
+            so the verified mark is the only state that can appear here. */}
         {code ? (
-          <CredentialSymbol code={code} state="approved" name={name} size={44 * scale} />
+          <CredentialSymbol code={code} state="verified" name={name} size={44 * scale} />
         ) : (
           <VerifiedSeal tone={TRUST_PALETTE.goldBright} size={34 * scale} />
         )}
