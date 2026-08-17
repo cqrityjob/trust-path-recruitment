@@ -52,6 +52,7 @@ const sv = {
   "screen.credentialForm": "Behörighetsformulär",
   "screen.credentialHistory": "Rättelse och versioner",
   "screen.linkedin": "LinkedIn-delning",
+  "screen.recipientCard": "Mottagarens Passport-kort",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
     "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
@@ -746,6 +747,12 @@ const sv = {
   "rec.holder": "Innehavare",
   "rec.anonymousHolder": "Namnet visas inte",
   "rec.profession": "Yrke",
+  "rec.professionVaktare": "Väktare",
+  "rec.cardTitle": "Delat Security Passport",
+  "rec.detailsTitle": "Uppgifter i delningen",
+  "rec.packageShows": "Den här delningen visar",
+  "rec.expiredNotice":
+    "En eller flera uppgifter är inte längre gällande. De visas med sitt nuvarande läge, inte som aktuella.",
   "rec.jurisdiction": "Jurisdiktion",
   "rec.qualifications": "Verifierade behörigheter",
   "rec.experience": "Verifierad anställning",
@@ -923,6 +930,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.credentialForm": "Credential form",
   "screen.credentialHistory": "Correction and versions",
   "screen.linkedin": "LinkedIn sharing",
+  "screen.recipientCard": "Recipient Passport card",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
     "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
@@ -1602,6 +1610,12 @@ const en: Record<PassportCopyKey, string> = {
   "rec.holder": "Holder",
   "rec.anonymousHolder": "The name is not shown",
   "rec.profession": "Profession",
+  "rec.professionVaktare": "Security Officer (Väktare)",
+  "rec.cardTitle": "Shared Security Passport",
+  "rec.detailsTitle": "What this share contains",
+  "rec.packageShows": "This share shows",
+  "rec.expiredNotice":
+    "One or more entries are no longer current. They are shown with their present state, not as current.",
   "rec.jurisdiction": "Jurisdiction",
   "rec.qualifications": "Verified authorisations",
   "rec.experience": "Verified employment",
