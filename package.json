@@ -28,6 +28,8 @@
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts",
     "security-competency-separation:check": "bun run scripts/security-competency-separation-check.ts",
     "career-discovery:check": "bun run scripts/career-discovery-check.ts",
+    "passport-separation:check": "bun run scripts/passport-separation-check.ts",
+    "passport-fixture:check": "bun run scripts/passport-fixture-check.ts",
     "db:test": "bash scripts/db-test.sh",
     "e2e": "playwright test"
   },
