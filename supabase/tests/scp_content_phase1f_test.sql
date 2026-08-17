@@ -355,14 +355,14 @@ SELECT pg_temp.ok(
     WHERE NOT EXISTS (SELECT 1 FROM public.scp_item_option_texts t
                        WHERE t.item_option_id = o.id AND t.language = 'sv-SE'
                          AND btrim(coalesce(t.label,'')) <> '')) = 0,
-  'F2.7 every option has a non-empty Swedish label');
+  'F2.8 every option has a non-empty Swedish label');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_item_options o
     WHERE NOT EXISTS (SELECT 1 FROM public.scp_item_option_texts t
                        WHERE t.item_option_id = o.id AND t.language = 'en-GB'
                          AND btrim(coalesce(t.label,'')) <> '')) = 0,
-  'F2.8 every option has a non-empty English label');
+  'F2.9 every option has a non-empty English label');
 
 -- THE 1F defect: a candidate label must never be its internal rationale.
 SELECT pg_temp.ok(

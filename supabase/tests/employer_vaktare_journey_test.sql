@@ -202,24 +202,49 @@ SELECT pg_temp.ok(
   (SELECT bool_and(prompt IS NOT NULL AND btrim(prompt) <> '') FROM vji),
   'VJ4.2 every item arrives with Swedish text — the run is genuinely takeable');
 
--- Every single-choice item arrives with its options.
---
--- NOTE: the three sjt_best_worst items are deliberately NOT covered here. They
--- have four options each in scp_item_options but no rows at all in
--- scp_item_option_texts, so they reach the participant with an empty option
--- list and cannot be answered in the UI. That is a real, open content defect —
--- see F2.7/F2.8 in the Phase 1F content suite, which is where it is named and
--- where it fails. This suite proves the DELIVERY mechanism, and answers those
--- items by option id, which the database accepts.
+-- Every choice item arrives with its options. The three sjt_best_worst items
+-- reached the participant with an EMPTY option list until 20260819110000
+-- authored the missing scp_item_option_texts rows; this is the assertion that
+-- caught it, now covering all choice formats rather than only single-choice.
 SELECT pg_temp.ok(
   (SELECT bool_and(jsonb_array_length(options) >= 2) FROM vji
-    WHERE item_format = 'sjt_best_response'),
-  'VJ4.3 every single-choice item arrives with at least two options');
+    WHERE item_format <> 'constructed_response'),
+  'VJ4.3 every choice item arrives with at least two options');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM vji WHERE item_format = 'sjt_best_worst'
-     AND jsonb_array_length(options) = 0) = 3,
-  'VJ4.3b the three best/worst items reach the participant with NO options — the open content defect, pinned so it cannot be forgotten');
+     AND jsonb_array_length(options) = 4) = 3,
+  'VJ4.3b all three best/worst items arrive with their full four options');
+
+-- Options arrive in authored display order, not in whatever order the join
+-- happened to produce. A best/worst item read out of order is a different
+-- question from the one that was reviewed.
+SELECT pg_temp.ok(
+  (SELECT bool_and(labels_ordered) FROM (
+     SELECT (SELECT bool_and(o.display_order = ord)
+               FROM jsonb_array_elements(v.options) WITH ORDINALITY e(elem, ord)
+               JOIN public.scp_item_options o
+                 ON o.id = (elem->>'option_id')::uuid) AS labels_ordered
+       FROM vji v WHERE v.item_format <> 'constructed_response') s),
+  'VJ4.3c options are served in their authored display order');
+
+-- Every served option carries readable text. An option_id with a blank label
+-- is unanswerable in the UI even though the payload looks populated.
+SELECT pg_temp.ok(
+  (SELECT bool_and(btrim(coalesce(elem->>'label','')) <> '')
+     FROM vji v, jsonb_array_elements(v.options) elem
+    WHERE v.item_format <> 'constructed_response'),
+  'VJ4.3d every served option has a non-empty label');
+
+-- The served payload carries the label and nothing else about the option. No
+-- score, no rationale, no error type, no best/worst flag.
+SELECT pg_temp.ok(
+  (SELECT bool_and(
+     (SELECT bool_and(k IN ('option_id','option_key','label'))
+        FROM jsonb_object_keys(elem) k))
+     FROM vji v, jsonb_array_elements(v.options) elem
+    WHERE v.item_format <> 'constructed_response'),
+  'VJ4.3e a served option exposes only its id, key and label — no scoring metadata');
 
 -- The scoring key must not travel with the question. Read from the function's
 -- actual result signature, which is what the participant receives.
@@ -286,14 +311,18 @@ BEGIN
   END IF;
 END $$;
 
--- The 15 items a participant can actually answer today. The other three are
--- the open content defect; they are handled explicitly in VJ6.
+-- All 18 items are answerable since 20260819110000. Kept as a separate
+-- relation (rather than reusing vj_items) so that if any item ever becomes
+-- unanswerable again, VJ6.1's count moves and says so.
 CREATE TEMP TABLE vj_answerable AS
 SELECT item_version_id, item_format,
        row_number() OVER (ORDER BY n) AS n
-  FROM vj_items WHERE item_format <> 'sjt_best_worst';
+  FROM vj_items;
 
 GRANT SELECT ON vj_answerable, vji TO authenticated;
+
+SELECT pg_temp.ok((SELECT count(*) FROM vj_answerable) = 18,
+  'VJ5.0 all 18 items are answerable — none is blocked by missing content');
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000003';
@@ -359,46 +388,68 @@ END $$;
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_candidate_responses
-    WHERE attempt_id = (SELECT attempt_id FROM vja)) = 15,
-  'VJ6.1 all fifteen ANSWERABLE items are answered');
+    WHERE attempt_id = (SELECT attempt_id FROM vja)) = 18,
+  'VJ6.1 all 18 items are answered');
 
--- ── THE BLOCKER, PINNED ─────────────────────────────────────────────────
+-- Both halves of every best/worst answer are stored, and they differ. This is
+-- what could not be reached at all while the labels were missing.
+-- Item format comes from vj_answerable, not from a join onto
+-- scp_item_versions: the item bank is RLS-protected and this assertion runs as
+-- the PARTICIPANT, so that join would silently return zero rows and the
+-- assertion would fail for a reason that has nothing to do with the answers.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_candidate_responses r
+     JOIN vj_answerable a ON a.item_version_id = r.item_version_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND a.item_format = 'sjt_best_worst'
+      AND r.best_option_id IS NOT NULL AND r.worst_option_id IS NOT NULL
+      AND r.best_option_id <> r.worst_option_id) = 3,
+  'VJ6.1b all three best/worst answers name two distinct options');
+
+-- ── THE SECOND BLOCKER, PINNED ──────────────────────────────────────────
 --
--- The run cannot be finished. Three of the eighteen items reach the
--- participant with no options (see VJ4.3b), and scp_submit_attempt correctly
--- refuses a partial run — a result must never be produced from half a form.
+-- Submission now reaches the scoring path — the option-label defect is gone —
+-- and fails there instead.
 --
--- This assertion is deliberately written as the CURRENT truth rather than as
--- the desired one. It is not a weakened test: it is the strongest honest
--- statement available, and it fails the moment the missing option texts are
--- authored — at which point the rest of VJ6, plus VJ7, must be restored from
--- the block below.
+-- scp_submit_attempt writes each response as competency evidence, copying
+-- is_safety_critical from the item but NEVER setting safety_severity.
+-- scp_evidence_safety_is_specified requires a severity whenever the evidence
+-- is safety-critical, so the INSERT is refused and the whole submission aborts.
+--
+-- Twelve of the eighteen Väktare items are safety-critical. Ten of those do not
+-- require human review, so they take this deterministic path. The 4-item
+-- delivery fixture has ZERO safety-critical items, which is exactly why 102
+-- journey assertions passed for years while this was broken.
+--
+-- There is no authored severity anywhere in the content model — not on the item
+-- version, not on the behaviour version. The only severity input in the whole
+-- system is the _safety_severity parameter of scp_complete_human_review, i.e.
+-- a REVIEWER's judgement. The schema states the intent plainly: "A
+-- safety-critical observation must state how severe and must be reviewable."
+--
+-- Resolving it is a governance decision, not an engineering one — see the
+-- engineering report. Defaulting a severity here would fabricate a safety
+-- judgement about a security guard's behaviour, which is precisely what the
+-- constraint exists to prevent.
 SELECT pg_temp.must_fail(format(
   'SELECT * FROM public.scp_submit_attempt(%L::uuid)', (SELECT attempt_id FROM vja)),
-  'SCP_INCOMPLETE_ATTEMPT',
-  'VJ6.2 the Väktare run CANNOT be submitted — 3 of 18 items are unanswerable (OPEN CONTENT DEFECT)');
+  'scp_evidence_safety_is_specified',
+  'VJ6.2 submission FAILS — safety-critical evidence has no severity (OPEN GOVERNANCE BLOCKER)');
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.scp_attempts WHERE id = (SELECT attempt_id FROM vja))
     = 'in_progress',
-  'VJ6.3 the refused submission left the attempt open and resumable, losing nothing');
+  'VJ6.3 the failed submission left the attempt open and resumable, losing nothing');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence
     WHERE source_ref = (SELECT attempt_id FROM vja)) = 0,
-  'VJ6.4 no evidence was written from the incomplete run');
-
--- Idempotency of the REFUSAL: retrying a blocked submission is still safe and
--- still writes nothing. This is the part of retry-safety reachable today.
-SELECT pg_temp.must_fail(format(
-  'SELECT * FROM public.scp_submit_attempt(%L::uuid)', (SELECT attempt_id FROM vja)),
-  'SCP_INCOMPLETE_ATTEMPT',
-  'VJ6.5 retrying the blocked submission is refused identically, writing nothing');
+  'VJ6.4 the aborted submission wrote no partial evidence');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_candidate_responses
-    WHERE attempt_id = (SELECT attempt_id FROM vja)) = 15,
-  'VJ6.6 the answers already given survived both refused submissions');
+    WHERE attempt_id = (SELECT attempt_id FROM vja)) = 18,
+  'VJ6.5 all 18 answers survived the failed submission');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -407,12 +458,10 @@ DO $$ BEGIN RAISE NOTICE 'GROUP VJ7 — nothing leaked from the unfinished run';
 -- =========================================================================
 -- Group VJ7 — lifecycle
 --
--- The post-submission half of this journey (evidence written, reviews opened,
--- double-submit refused as ALREADY_SUBMITTED, release gated behind human
--- review) is proven for the 4-item delivery fixture in
--- scp_phase2_journey_test.sql groups J3-J5. It cannot be proven for the REAL
--- 18-item form until the missing option texts exist. That gap is the launch
--- blocker, and it is stated here rather than papered over.
+-- The post-submission half (evidence, reviews opened, ALREADY_SUBMITTED on
+-- retry, release gated behind human review) is proven for the 4-item delivery
+-- fixture in scp_phase2_journey_test.sql groups J3-J5. It cannot be proven for
+-- the real 18-item form until the safety-severity question is answered.
 -- =========================================================================
 
 SELECT pg_temp.ok(
