@@ -38,6 +38,11 @@ import { LifecycleChip, LifecycleNote } from "@/components/security-passport/Lif
 import { RecipientPassportCard } from "@/components/security-passport/live/RecipientPassportCard";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
+/** Canonical public origin, matching src/routes/sitemap[.]xml.ts. Only ever
+ *  used to make the GENERIC preview image absolute — never to build a link
+ *  that carries a share token. */
+const PUBLIC_ORIGIN = "https://trust-path-recruitment.lovable.app";
+
 export const Route = createFileRoute("/p/$token")({
   ssr: false,
   head: () => ({
@@ -54,7 +59,22 @@ export const Route = createFileRoute("/p/$token")({
           "Verifierade yrkesuppgifter, delade av innehavaren. / Verified professional records, shared by the holder.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      // A real branded card rather than no image at all — but GENERIC, and
+      // identical for every share. A crawler caches what it fetches and
+      // cannot be told to forget it, so a personalised preview would be a
+      // public artifact outliving the share that produced it. Because this
+      // one carries nothing about the holder, possessing it reveals not even
+      // that a particular share exists, and revocation costs it nothing.
+      // Absolute: crawlers resolve og:image poorly or not at all when it is
+      // relative. Same canonical origin the sitemap route already uses.
+      { property: "og:image", content: `${PUBLIC_ORIGIN}/og-security-passport.png` },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content: "CQrityjob Security Passport",
+      },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: RecipientRoute,

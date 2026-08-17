@@ -32,7 +32,7 @@ import {
   shareFormat,
   type ShareFormat,
 } from "./design/trust-system";
-import { SYMBOL_VIEWBOX, credentialSymbolMarkup } from "./design/credential-symbols";
+import { SYMBOL_CODES, SYMBOL_VIEWBOX, credentialSymbolMarkup } from "./design/credential-symbols";
 import type { SocialCardModel } from "./social";
 import type { PassportLang } from "./i18n";
 
@@ -241,6 +241,93 @@ export function buildSocialSvg(
     `<rect width="${W}" height="${H}" fill="url(#sp-ground)"/>`,
     engraving(W, H),
     `<rect x="${Math.round(pad / 2)}" y="${Math.round(pad / 2)}" width="${W - pad}" height="${H - pad}" fill="none" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.25" stroke-width="${Math.max(1, fs(2))}"/>`,
+    body.join(""),
+    `</svg>`,
+  ].join("");
+}
+
+/**
+ * The GENERIC branded link preview, 1200×630.
+ *
+ * ── WHY THE PUBLIC PREVIEW IS DELIBERATELY IMPERSONAL ──────────────────
+ *
+ * `og:image` is fetched and cached by every platform that sees the link,
+ * and a cached image cannot be revoked. A personalised preview would
+ * therefore be a durable public artifact that outlives the share it came
+ * from — the exact failure the recipient page exists to avoid.
+ *
+ * So the image a crawler receives says what CQrityjob Security Passport is
+ * and nothing whatsoever about the holder: no name, no credential, no
+ * milestone, no jurisdiction. It is safe to cache forever because it is
+ * true forever, and it is identical for every share, so possessing it
+ * reveals not even that a particular share exists.
+ *
+ * The holder's personalised card is still produced — they download it from
+ * the sharing centre and attach it deliberately, which keeps the decision
+ * to publish their own credentials with them.
+ *
+ * Rendered from this module rather than hand-drawn so the asset stays
+ * traceable to the same palette and engraving vocabulary as every other
+ * Passport surface. Regenerate with scripts/generate-og-image.mjs.
+ */
+export function buildGenericOgSvg(strings: {
+  readonly brand: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly note: string;
+}): string {
+  const W = 1200;
+  const H = 630;
+  const pad = 72;
+  const fs = (n: number) => n;
+
+  const body: string[] = [];
+
+  body.push(
+    `<text x="${pad}" y="${pad + 40}" font-family="${FONT_STACK}" font-size="${fs(28)}" font-weight="700" letter-spacing="${fs(4)}" fill="${TRUST_PALETTE.goldBright}">${esc(strings.brand.toUpperCase())}</text>`,
+    `<line x1="${pad}" y1="${pad + 66}" x2="${W - pad}" y2="${pad + 66}" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.55" stroke-width="2"/>`,
+  );
+
+  let y = pad + 170;
+  for (const line of wrap(strings.title, 30, 2)) {
+    body.push(
+      `<text x="${pad}" y="${y}" font-family="${FONT_STACK}" font-size="${fs(64)}" font-weight="600" fill="${TRUST_PALETTE.ink}">${esc(line)}</text>`,
+    );
+    y += fs(76);
+  }
+
+  y += fs(12);
+  for (const line of wrap(strings.subtitle, 58, 2)) {
+    body.push(
+      `<text x="${pad}" y="${y}" font-family="${FONT_STACK}" font-size="${fs(28)}" fill="${TRUST_PALETTE.inkMuted}">${esc(line)}</text>`,
+    );
+    y += fs(40);
+  }
+
+  // The four credential marks, as the product's own vocabulary. Generic:
+  // these are the credentials the product supports, not anyone's holdings.
+  const symbolSize = 84;
+  const symbolY = H - pad - symbolSize - 54;
+  SYMBOL_CODES.forEach((code, i) => {
+    const x = pad + i * (symbolSize + 20);
+    body.push(
+      `<g transform="translate(${x} ${symbolY}) scale(${(symbolSize / SYMBOL_VIEWBOX).toFixed(4)})">${credentialSymbolMarkup(code, "self_declared")}</g>`,
+    );
+  });
+
+  body.push(
+    `<text x="${pad}" y="${H - pad + 6}" font-family="${FONT_STACK}" font-size="${fs(22)}" fill="${TRUST_PALETTE.inkFaint}">${esc(strings.note)}</text>`,
+  );
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+    `<defs><linearGradient id="sp-og-ground" x1="0" y1="0" x2="0" y2="1">`,
+    `<stop offset="0%" stop-color="${TRUST_PALETTE.navyRaised}"/>`,
+    `<stop offset="100%" stop-color="${TRUST_PALETTE.navyDeep}"/>`,
+    `</linearGradient></defs>`,
+    `<rect width="${W}" height="${H}" fill="url(#sp-og-ground)"/>`,
+    engraving(W, H),
+    `<rect x="${pad / 2}" y="${pad / 2}" width="${W - pad}" height="${H - pad}" fill="none" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.28" stroke-width="2"/>`,
     body.join(""),
     `</svg>`,
   ].join("");
