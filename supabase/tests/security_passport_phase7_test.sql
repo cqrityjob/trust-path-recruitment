@@ -463,6 +463,19 @@ SELECT pg_temp.ok(
   NOT has_table_privilege('anon', 'public.sp_credential_types', 'SELECT'),
   '9.4 anon cannot read the credential taxonomy directly');
 
+-- Named explicitly because this one actually regressed on the hosted project.
+-- Supabase grants EXECUTE on every new public function to anon by default, and
+-- the Phase 6 trigger function shipped without the REVOKE every other Passport
+-- function carries. Phase 7b revokes it and reproduces those default privileges
+-- locally, so 9.2 above can finally see what the hosted project sees.
+SELECT pg_temp.ok(
+  NOT has_function_privilege('anon', 'public.sp_claims_credential_rules()', 'EXECUTE'),
+  '9.4b anon cannot execute the credential-rules trigger function');
+
+SELECT pg_temp.ok(
+  NOT has_function_privilege('authenticated', 'public.sp_claims_credential_rules()', 'EXECUTE'),
+  '9.4c neither can an authenticated caller — it runs as a trigger, never a call');
+
 -- The function must stay SECURITY DEFINER with an immutable search path.
 SELECT pg_temp.ok(
   (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
