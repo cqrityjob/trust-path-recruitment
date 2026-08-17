@@ -150,14 +150,58 @@ for (const file of passportFiles) {
 
 // The service-role client bypasses RLS. A Passport read that succeeds because
 // the server held a master key is exactly the failure mode RLS exists to
-// prevent, so it is banned everywhere in this domain including the server tier.
+// prevent, so it is banned everywhere in this domain — with ONE named
+// exception.
+//
+// The exception is the public recipient boundary. A recipient is anonymous:
+// there is no session, so there is no auth.uid() for RLS to key on, and RLS
+// cannot express "whoever holds this token" because a token is not an
+// identity. The authorisation is the token, checked inside a SECURITY
+// DEFINER function that assembles the payload from the package contract and
+// which the service role cannot make return more.
+//
+// Naming the file here is the control: the exception is one path, reviewed
+// once, and any second file reaching for the service role fails the build.
+const SERVICE_ROLE_EXCEPTION = path.join(PASSPORT_LIB, "public-disclosure.server.ts");
+
 for (const file of passportFiles) {
-  for (const line of importLines(read(file))) {
+  if (file === SERVICE_ROLE_EXCEPTION) continue;
+  const src = read(file);
+  for (const line of importLines(src)) {
     expect(
       !line.includes("client.server") && !line.includes("supabaseAdmin"),
       `${rel(file)}: Passport must never use the service-role client — RLS is the boundary. ${line.trim()}`,
     );
   }
+  // Dynamic import is the repository's own convention for loading the admin
+  // client inside a handler, so the import-line scan alone would miss it.
+  expect(
+    !/client\.server|supabaseAdmin/.test(stripComments(src)),
+    `${rel(file)}: Passport must never use the service-role client — RLS is the boundary.`,
+  );
+}
+
+// The exception must stay minimal: exactly one database call, through the
+// disclosure function, and nothing else. A `.from(` here would be a direct
+// table read with RLS bypassed, which is the thing the ban exists to stop.
+{
+  const src = stripComments(read(SERVICE_ROLE_EXCEPTION));
+  expect(
+    !/\.from\s*\(/.test(src),
+    "public-disclosure.server.ts must never read a table directly — only sp_get_disclosure.",
+  );
+  const rpcNames = [...src.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
+  const allowed = new Set(["sp_get_disclosure", "sp_throttle_public_access"]);
+  for (const name of rpcNames) {
+    expect(
+      allowed.has(name),
+      `public-disclosure.server.ts may only call sp_get_disclosure and sp_throttle_public_access — found ${name}.`,
+    );
+  }
+  expect(
+    rpcNames.includes("sp_throttle_public_access"),
+    "The public recipient path must go through the rate limit.",
+  );
 }
 
 // Bare network calls, outside the server tier.
@@ -371,12 +415,40 @@ expect(
   "Phase 2 must provide an _authenticated Passport route.",
 );
 
-// Phase 4 owns public sharing. Until scoped, expiring, revocable disclosure
-// exists, no public recipient route may be claimed.
-for (const forbidden of ["p.$token.tsx", "p.tsx", "passport.$token.tsx"]) {
+// Phase 4/5 ships public sharing, so the recipient route now EXISTS and the
+// rule inverts: it must be the one public Passport route, it must not be
+// indexed, and it must never reach a Passport table directly.
+expect(
+  routeFiles.includes("p.$token.tsx"),
+  "The public recipient route src/routes/p.$token.tsx must exist.",
+);
+for (const forbidden of ["p.tsx", "passport.$token.tsx"]) {
   expect(
     !routeFiles.includes(forbidden),
-    `Public sharing is Phase 4: src/routes/${forbidden} must not exist yet.`,
+    `src/routes/${forbidden} must not exist — /p/$token is the only public Passport route.`,
+  );
+}
+
+{
+  const recipientRoute = read(path.join(root, "src/routes/p.$token.tsx"));
+  expect(
+    /noindex/.test(recipientRoute),
+    "The recipient page must declare robots noindex — a share link is for one recipient, not a search engine.",
+  );
+  expect(
+    recipientRoute.includes("getPublicDisclosure"),
+    "The recipient page must read through getPublicDisclosure, the throttled server boundary.",
+  );
+  expect(
+    !/@\/integrations\/supabase/.test(recipientRoute),
+    "The recipient page must not talk to Supabase directly.",
+  );
+  // The payload is assembled server-side from the package contract. A page
+  // that filtered a fuller object would make "hidden UI is not access
+  // control" false again.
+  expect(
+    !/sp_passport_profiles|sp_claims|sp_experience_periods/.test(recipientRoute),
+    "The recipient page must never name a Passport table.",
   );
 }
 
@@ -394,15 +466,54 @@ for (const file of walk(path.join(root, "src/routes")).concat(
   );
 }
 
-// The social-share surfaces stay unreachable from production until Phase 4
-// provides real scoped disclosure.
+// Phase 5 wires the social formats to real, revocable disclosures, so the
+// share surfaces are now legitimately reachable — from the holder's own
+// sharing centre and nowhere else. CardStudio stays dev-only: it is a
+// three-direction comparison harness, not a product surface.
+const SHARING_CENTRE = path.join(root, "src/routes/_authenticated.passport.share.tsx");
+
 for (const file of walk(path.join(root, "src/routes"))) {
   if (file === PASSPORT_ROUTE) continue;
   const src = read(file);
-  for (const deferred of ["social/SocialFrame", "social/ShareActions", "CardStudio"]) {
+  expect(
+    !src.includes("CardStudio"),
+    `${rel(file)}: CardStudio is a dev-only comparison harness and must not be reachable from a production route.`,
+  );
+  if (file === SHARING_CENTRE) continue;
+  for (const deferred of ["social/SocialFrame", "social/ShareActions"]) {
     expect(
       !src.includes(deferred),
-      `${rel(file)}: "${deferred}" is Phase 4 surface and must not be reachable from a production route.`,
+      `${rel(file)}: "${deferred}" belongs to the holder's sharing centre only.`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 8. Internal reviewer notes never leave the review
+// ---------------------------------------------------------------------------
+// `decision_note` is the reviewer's private reasoning; `holder_message` is
+// what the holder is told. Two fields exist so one cannot leak as the other,
+// and the holder-facing read must never select the internal one.
+{
+  // Comments stripped first: the holder read legitimately CARRIES a comment
+  // saying decision_note is deliberately absent, and a check that failed on
+  // its own documentation would be turned off within a week.
+  const holderRead = stripComments(read(path.join(PASSPORT_LIB, "verification.functions.ts")));
+  const holderSelect = holderRead.slice(
+    holderRead.indexOf("listMyVerificationRequests"),
+    holderRead.indexOf("submitForVerification"),
+  );
+  expect(
+    !holderSelect.includes("decision_note"),
+    "The holder-facing verification read must not select decision_note — that is the reviewer's internal reasoning.",
+  );
+}
+
+for (const file of passportFiles) {
+  if (file.includes("/social/") || file.endsWith("card.ts") || file.includes("/card/")) {
+    expect(
+      !stripComments(read(file)).includes("decision_note"),
+      `${rel(file)}: internal reviewer notes must never reach a card or a social image.`,
     );
   }
 }
@@ -421,5 +532,7 @@ console.log(
     `(${passportFiles.length} Passport files; no Career Discovery, Career Card or SCP import; ` +
     `no Supabase/server/network access; no guidance-indicator vocabulary; ` +
     `copy domain-local; no criminal-record concept; dev route fails closed; ` +
-    `/passport is _authenticated-only; no public share route claimed)`,
+    `/passport is _authenticated-only; /p/$token is noindex and reads only ` +
+    `through the throttled server boundary; the service role is confined to ` +
+    `that one file; internal reviewer notes never reach a card or a holder)`,
 );

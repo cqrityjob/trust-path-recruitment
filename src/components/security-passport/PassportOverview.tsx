@@ -54,6 +54,10 @@ export function PassportOverview({
   onContinue,
   onOpenCard,
   onShare,
+  /** Optional: the fixture prototype has nowhere to navigate to, so it does
+   *  not pass this and no entry becomes clickable there. The live overview
+   *  passes it and every entry gains a route into its own trust journey. */
+  onOpenEntry,
   className,
 }: {
   holder: PassportHolder;
@@ -62,6 +66,7 @@ export function PassportOverview({
   onContinue: () => void;
   onOpenCard: () => void;
   onShare: () => void;
+  onOpenEntry?: (kind: "claim" | "experience", id: string) => void;
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
@@ -142,6 +147,28 @@ export function PassportOverview({
             <SectionHeading>{pt("overview.sectionExperience")}</SectionHeading>
             <ExperienceTotalsPanel totals={totals} periods={holder.periods} />
             <ExperienceTimeline periods={holder.periods} evaluationOn={evaluationOn} />
+
+            {onOpenEntry && holder.periods.length > 0 ? (
+              <ul className="space-y-2">
+                {holder.periods.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+                  >
+                    <span className="min-w-0 text-sm text-foreground">
+                      {p.roleTitle} · {p.employerName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenEntry("experience", p.id)}
+                      className="inline-flex h-11 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {pt("claim.openDetail")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </section>
 
           {/* No outer heading: the panel titles itself, and the two strings
@@ -165,6 +192,9 @@ export function PassportOverview({
                     claims={g.claims}
                     emptyLabel={pt("overview.noClaims")}
                     showType={false}
+                    onOpenClaim={
+                      onOpenEntry ? (claimId) => onOpenEntry("claim", claimId) : undefined
+                    }
                   />
                 </div>
               ))

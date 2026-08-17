@@ -86,12 +86,16 @@ EOF
 # ---------------------------------------------------------------------------
 # 3. Replay the full migration history, in order
 #
-# Nineteen migrations are known to fail on a clean replay and fail identically
-# on origin/main: seventeen are duplicate Lovable-generated files that
-# re-create objects an earlier migration already made, and two require
-# storage.objects which the harness deliberately does not stub. They are
+# Seventeen migrations are known to fail on a clean replay and fail
+# identically on origin/main: they are duplicate Lovable-generated files that
+# re-create objects an earlier migration already made. They are
 # allowlisted BY NAME, so a NEW failure -- or one of these starting to pass --
 # is caught rather than silently absorbed.
+#
+# The two storage migrations that used to sit on this list no longer do:
+# Phase 5 stubs storage.buckets and storage.objects in 00_bootstrap.sql, so
+# the bucket policies this repository authors now actually execute and are
+# asserted rather than assumed.
 #
 # The 20260728 17:59-18:22 block is Lovable Cloud's own re-issue of the
 # Security Competency and Career Discovery migrations, generated when the
@@ -111,13 +115,11 @@ EOF
 KNOWN_FAILURES=(
   "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql|||relation \"security_career_profiles\" already exists"
   "20260719115332_aa5ec826-c781-4d2d-a03e-f6c744d43272.sql|||column \"status\" of relation \"employers\" already exists"
-  "20260719180509_f897a9d9-28c9-41ed-b398-05030b81ec40.sql|||relation \"storage.objects\" does not exist"
   "20260719220600_0e43ff83-6b6a-4bd0-ab65-f16e86f79946.sql|||column \"registration_number\" of relation \"employers\" already exists"
   "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql|||policy \"employers_owner_admin_update\" for table \"employers\" already exists"
   "20260720124636_c5e57833-aa14-4466-a5ec-03c29424eac0.sql|||relation \"employer_moderation_events\" already exists"
   "20260720150000_h3_4a_candidate_application_core.sql|||relation \"job_application_status_events\" already exists"
   "20260720160000_h3_4b_beta_feedback.sql|||relation \"beta_feedback\" already exists"
-  "20260721085020_796e7c92-8234-4081-87b4-0b57dce9f35d.sql|||relation \"storage.objects\" does not exist"
   "20260723192846_096c5154-1c66-4089-bd18-b5b349d69f18.sql|||relation \"employees\" already exists"
   "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql|||relation \"assessment_assignments\" already exists"
   "20260724130000_admin_portal_operational_scope.sql|||policy \"employees_admin_select\" for table \"employees\" already exists"
@@ -678,6 +680,29 @@ echo "    ok  ${SP3_PASSED} Security Passport Phase 3/4 assertions passed"
 
 if [ "$SP3_PASSED" -lt 35 ]; then
   echo "FAIL: expected at least 35 Phase 3/4 assertions, only ${SP3_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 5 assertions"
+set +e
+SP5_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase5_test.sql 2>&1)"
+SP5_RC=$?
+set -e
+
+SP5_PASSED="$(echo "$SP5_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP5_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 5 suite exited with code ${SP5_RC}." >&2
+  echo "$SP5_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SP5_PASSED} Security Passport Phase 5 assertions passed"
+
+if [ "$SP5_PASSED" -lt 40 ]; then
+  echo "FAIL: expected at least 40 Phase 5 assertions, only ${SP5_PASSED} ran." >&2
   exit 1
 fi
 

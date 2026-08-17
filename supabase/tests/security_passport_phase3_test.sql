@@ -263,8 +263,11 @@ BEGIN
   PERFORM pg_temp.ok(_stored = encode(digest(_tok,'sha256'),'hex'),
     '5.3 only the token hash is stored');
 
-  -- Anonymous recipient path.
-  SET LOCAL ROLE anon;
+  -- The recipient path. Phase 5 moved execution behind the application
+  -- server, so the caller here is service_role rather than anon. Every
+  -- assertion below is unchanged: what is disclosed must not depend on who
+  -- makes the call, only on the package and the token.
+  SET LOCAL ROLE service_role;
   _payload := public.sp_get_disclosure(_tok);
   PERFORM pg_temp.ok(_payload->>'status' = 'active', '5.4 a valid token returns an active payload');
   PERFORM pg_temp.ok(jsonb_array_length(_payload->'verified_claims') = 1,
@@ -293,7 +296,7 @@ BEGIN
   PERFORM public.sp_revoke_disclosure(_id);
   RESET ROLE;
 
-  SET LOCAL ROLE anon;
+  SET LOCAL ROLE service_role;
   _revoked := public.sp_get_disclosure(_tok);
   _unknown := public.sp_get_disclosure('deadbeef');
   PERFORM pg_temp.ok(_revoked->>'status' = 'unavailable', '5.10 a revoked share fails closed');
@@ -309,7 +312,7 @@ BEGIN
   UPDATE public.sp_disclosures SET expires_at = now() - interval '1 day'
    WHERE token_hash = encode(digest(_tok,'sha256'),'hex');
 
-  SET LOCAL ROLE anon;
+  SET LOCAL ROLE service_role;
   _expired := public.sp_get_disclosure(_tok);
   PERFORM pg_temp.ok(_expired->>'status' = 'unavailable', '5.12 an expired share fails closed');
   PERFORM pg_temp.ok(_expired = _unknown, '5.13 expired and unknown are byte-identical');
@@ -324,16 +327,23 @@ SELECT pg_temp.ok(
                WHERE grantee='anon' AND table_schema='public' AND table_name LIKE 'sp\_%'),
   '6.1 anon holds no table grant on any sp_* table');
 
+-- Phase 3 granted sp_get_disclosure to anon so the recipient page could call
+-- it directly. Phase 5 removed that: the only public endpoint in the product
+-- now sits behind the application server, where a rate limit can reach it.
+-- The assertion inverts accordingly, and gets stricter — anon has NO
+-- execution anywhere in this domain.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_routine_grants
-    WHERE grantee='anon' AND routine_schema='public' AND routine_name LIKE 'sp\_%') = 1,
-  '6.2 anon may execute exactly one sp_* function');
+    WHERE grantee='anon' AND routine_schema='public' AND routine_name LIKE 'sp\_%') = 0,
+  '6.2 anon may execute NO sp_* function');
 
 SELECT pg_temp.ok(
-  (SELECT routine_name FROM information_schema.role_routine_grants
-    WHERE grantee='anon' AND routine_schema='public' AND routine_name LIKE 'sp\_%')
-    = 'sp_get_disclosure',
-  '6.3 and that function is sp_get_disclosure');
+  NOT has_function_privilege('anon', 'public.sp_get_disclosure(text)', 'EXECUTE'),
+  '6.3 the recipient function is specifically closed to anon');
+
+SELECT pg_temp.ok(
+  has_function_privilege('service_role', 'public.sp_get_disclosure(text)', 'EXECUTE'),
+  '6.3b and reachable by the application server');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
