@@ -183,7 +183,12 @@ DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numer
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
 -- Phase 2e: the remaining Assessment Center operations.
 DROP FUNCTION IF EXISTS public.scp_employer_library(uuid) CASCADE;
+-- Both signatures: the ungoverned 5-argument original and the governed
+-- 7-argument replacement from 20260819100000. A replay that stopped before
+-- that migration still has the old one.
 DROP FUNCTION IF EXISTS public.scp_employer_assign(uuid, uuid, text, timestamptz, text) CASCADE;
+DROP FUNCTION IF EXISTS
+  public.scp_employer_assign(uuid, uuid, text, timestamptz, text, text, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_participants(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_review_pressure(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_development_recommendations(uuid) CASCADE;

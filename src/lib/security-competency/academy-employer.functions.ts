@@ -158,22 +158,47 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         recipientEmail: z.string().email(),
         deadline: z.string().nullable().default(null),
         language: z.enum(["sv", "en"]).default("sv"),
+        // The people model: who the participant is to this organisation.
+        // Defaults to workforce, which is what the Academy has always meant.
+        useCase: z.enum(["workforce", "recruitment"]).default("workforce"),
+        employeeId: z.string().uuid().nullable().default(null),
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<{ assignmentId: string; attemptId: string }> => {
-    const ctx = context as Ctx;
-    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assign", {
-      _employer_id: data.employerId,
-      _assessment_version_id: data.assessmentVersionId,
-      _recipient_email: data.recipientEmail,
-      _deadline: data.deadline,
-      _language: data.language,
-    });
-    if (error) throw fail(error.message, "assign_failed");
-    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
-    return { assignmentId: String(r.assignment_id), attemptId: String(r.attempt_id) };
-  });
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      assignmentId: string;
+      attemptId: string;
+      governanceMode: "development" | "closed_test" | "recruitment";
+    }> => {
+      const ctx = context as Ctx;
+      const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assign", {
+        _employer_id: data.employerId,
+        _assessment_version_id: data.assessmentVersionId,
+        _recipient_email: data.recipientEmail,
+        _deadline: data.deadline,
+        _language: data.language,
+        _use_case: data.useCase,
+        _employee_id: data.employeeId,
+      });
+      if (error) throw fail(error.message, "assign_failed");
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+      // The basis is returned so the caller can label the assignment
+      // truthfully. A closed-test pilot must never be presented as a
+      // validated selection instrument.
+      return {
+        assignmentId: String(r.assignment_id),
+        attemptId: String(r.attempt_id),
+        governanceMode: String(r.governance_mode) as
+          | "development"
+          | "closed_test"
+          | "recruitment",
+      };
+    },
+  );
 
 export const listAcademyParticipants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

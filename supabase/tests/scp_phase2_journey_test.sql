@@ -562,11 +562,16 @@ BEGIN
   END IF;
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000001', true);
+  -- Still refused, but since 20260819100000 the reason is stated in governance
+  -- terms rather than as a bare publication check: this organisation holds no
+  -- basis to run unvalidated content. An employer WITH a closed-test grant can
+  -- run it as a pilot — proved in employer_vaktare_journey_test.sql — and even
+  -- then never as recruitment.
   PERFORM pg_temp.must_fail(
     format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
            'c3000000-1111-0000-0000-000000000001', _real, 'participant@journey.invalid'),
-    'SCP_PROGRAMME_NOT_ASSIGNABLE',
-    'J7.5 the real Security Guard programme cannot be assigned');
+    'SCP_NO_GOVERNANCE_BASIS',
+    'J7.5 the real Security Guard programme cannot be assigned without a grant');
   RESET ROLE;
 END $$;
 
@@ -1186,7 +1191,11 @@ BEGIN
   PERFORM pg_temp.must_fail(
     format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
            'c3000000-1111-0000-0000-000000000002', _av, 'participant@journey.invalid'),
-    'SCP_FIXTURE_NOT_AVAILABLE',
+    -- Since 20260819100000 every "may this organisation run this content"
+    -- refusal comes back through one governance message rather than a
+    -- per-reason code. The refusal itself is unchanged: no grant and no
+    -- fixture-access row means no assignment, whatever the caller supplies.
+    'SCP_NO_GOVERNANCE_BASIS',
     'J12.4 an organisation without a grant CANNOT assign a fixture by id');
   RESET ROLE;
 END $$;

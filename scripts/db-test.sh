@@ -588,6 +588,32 @@ if [ "$J_PASSED" -lt 102 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l. The full Security Guard / Väktare journey (18 items, closed-test grant)
+# ---------------------------------------------------------------------------
+echo "==> Running the full Vaktare journey"
+set +e
+VJ_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_vaktare_journey_test.sql 2>&1)"
+VJ_RC=$?
+set -e
+
+echo "$VJ_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+VJ_PASSED="$(echo "$VJ_OUT" | grep -c "ok  " || true)"
+
+if [ "$VJ_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Vaktare journey suite exited with code ${VJ_RC}." >&2
+  echo "$VJ_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${VJ_PASSED} Vaktare journey assertions passed"
+
+if [ "$VJ_PASSED" -lt 24 ]; then
+  echo "FAIL: expected at least 24 Vaktare journey assertions, only ${VJ_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -753,6 +779,7 @@ echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
+echo "              ${VJ_PASSED} Vaktare journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"

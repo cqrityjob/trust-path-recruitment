@@ -331,6 +331,39 @@ DO $$ BEGIN RAISE NOTICE 'GROUP F6 — Phase 1G corrections'; END $$;
 -- Group F6 — the Phase 1G corrections
 -- =========================================================================
 
+-- ── THE PRESENCE GAP ────────────────────────────────────────────────────
+--
+-- Every assertion about option labels in this suite checks what a label SAYS:
+-- that it does not reuse the scoring rationale, that it does not leak the
+-- error taxonomy. Not one checked that a label EXISTS.
+--
+-- That gap shipped a real defect. The three sjt_best_worst items in
+-- sg-operational-baseline (the 18-item Väktare form) have four options each
+-- and no rows at all in scp_item_option_texts, in either language. They reach
+-- the participant with an empty option list, cannot be answered, and therefore
+-- the assessment cannot be submitted — proven at VJ4.3b/VJ6.2 in
+-- employer_vaktare_journey_test.sql.
+--
+-- Fixing it means AUTHORING 12 Swedish and 12 English situational-judgement
+-- option labels for a security-guard instrument. That is assessment content
+-- and belongs to the content owner and SME, not to an engineering pass.
+--
+-- These two assertions are therefore expected to FAIL until that content
+-- exists. They are the honest record of an open defect, not a broken test.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+    WHERE NOT EXISTS (SELECT 1 FROM public.scp_item_option_texts t
+                       WHERE t.item_option_id = o.id AND t.language = 'sv-SE'
+                         AND btrim(coalesce(t.label,'')) <> '')) = 0,
+  'F2.7 every option has a non-empty Swedish label');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+    WHERE NOT EXISTS (SELECT 1 FROM public.scp_item_option_texts t
+                       WHERE t.item_option_id = o.id AND t.language = 'en-GB'
+                         AND btrim(coalesce(t.label,'')) <> '')) = 0,
+  'F2.8 every option has a non-empty English label');
+
 -- THE 1F defect: a candidate label must never be its internal rationale.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_item_option_texts t
