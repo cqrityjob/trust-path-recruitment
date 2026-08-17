@@ -659,6 +659,29 @@ if [ "$SP_PASSED" -lt 30 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 3/4 assertions"
+set +e
+SP3_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase3_test.sql 2>&1)"
+SP3_RC=$?
+set -e
+
+SP3_PASSED="$(echo "$SP3_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP3_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 3/4 suite exited with code ${SP3_RC}." >&2
+  echo "$SP3_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SP3_PASSED} Security Passport Phase 3/4 assertions passed"
+
+if [ "$SP3_PASSED" -lt 35 ]; then
+  echo "FAIL: expected at least 35 Phase 3/4 assertions, only ${SP3_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
