@@ -765,6 +765,67 @@ const sv = {
   "common.error": "Något gick fel. Försök igen.",
   "common.loading": "Hämtar …",
   "common.days": "dagar",
+
+  // ── Credential forms (Phase 6) ───────────────────────────────────────
+  // The four launch credentials. The credential NAMES are not here: they
+  // come from sp_credential_types.name_sv/name_en, so adding a supported
+  // credential needs no copy change. Only the surrounding form language and
+  // the validation messages live here.
+  "cred.add.title": "Lägg till behörighet eller utbildning",
+  "cred.add.body":
+    "Du fyller i uppgifterna själv. Allt du lägger till räknas som uppgivet av dig tills någon annan har kontrollerat det.",
+  "cred.select.label": "Vad vill du lägga till?",
+  "cred.select.placeholder": "Välj …",
+  "cred.section.about": "Om behörigheten",
+  "cred.section.dates": "Datum",
+  "cred.section.evidence": "Underlag och anteckning",
+
+  "cred.field.title": "Benämning",
+  "cred.field.titleHelp": "Namnet som står på beviset eller beslutet.",
+  "cred.field.trainingProvider": "Utbildningsanordnare",
+  "cred.field.appointingAuthority": "Förordnande myndighet",
+  "cred.field.authorityHelp": "Myndigheten som fattade beslutet, till exempel Polismyndigheten.",
+  "cred.field.jurisdiction": "Land",
+  "cred.field.completedOn": "Slutfört datum",
+  "cred.field.decidedOn": "Beslutsdatum",
+  "cred.field.validFrom": "Gäller från",
+  "cred.field.validUntil": "Gäller till",
+  "cred.field.validUntilRequired": "Gäller till (obligatoriskt för förordnande)",
+  "cred.field.reference": "Referens- eller beslutsnummer",
+  "cred.field.referenceHelp": "Visas aldrig publikt. Endast du och en granskare ser det.",
+  "cred.field.holderNote": "Din egen anteckning",
+  "cred.field.holderNoteHelp":
+    "Dina egna ord. Markeras alltid som uppgiven av dig och delas aldrig publikt.",
+
+  "cred.appointment.notice":
+    "Ett förordnande är en tidsbegränsad behörighet. Utbildning är inte samma sak som ett gällande förordnande.",
+  "cred.qualification.notice":
+    "Detta är en genomförd utbildning. Den har inget slutdatum om inte beviset anger ett.",
+
+  "cred.action.saveDraft": "Spara utkast",
+  "cred.action.saving": "Sparar …",
+  "cred.action.savedAt": "Utkast sparat",
+  "cred.action.resume": "Fortsätt med utkast",
+  "cred.action.activate": "Lägg till i passet",
+  "cred.action.submitVerification": "Skicka för kontroll",
+  "cred.action.uploadEvidence": "Ladda upp underlag",
+  "cred.action.correct": "Rätta uppgift",
+  "cred.action.discard": "Ta bort utkast",
+
+  "cred.error.selectCredential": "Välj vilken behörighet du lägger till.",
+  "cred.error.titleRequired": "Ange en benämning.",
+  "cred.error.jurisdictionRequired": "Ange land.",
+  "cred.error.authorityRequired": "Ange vilken myndighet som förordnade dig.",
+  "cred.error.validUntilRequired": "Ett förordnande måste ha ett slutdatum.",
+  "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
+  "cred.error.endBeforeStart": "Slutdatumet kan inte vara före startdatumet.",
+  "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
+  "cred.error.noteTooLong": "Anteckningen är för lång (max 2000 tecken).",
+  "cred.error.incompleteForActive":
+    "Fyll i de obligatoriska fälten innan du lägger till uppgiften.",
+  "cred.error.incompleteForVerification":
+    "Uppgiften måste vara komplett innan den skickas för kontroll.",
+  "cred.errorSummary": "Kontrollera fälten nedan.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -1498,6 +1559,63 @@ const en: Record<PassportCopyKey, string> = {
   "common.error": "Something went wrong. Please try again.",
   "common.loading": "Loading …",
   "common.days": "days",
+
+  // ── Credential forms (Phase 6) ───────────────────────────────────────
+  "cred.add.title": "Add a credential or training",
+  "cred.add.body":
+    "You fill this in yourself. Anything you add counts as stated by you until someone else has checked it.",
+  "cred.select.label": "What would you like to add?",
+  "cred.select.placeholder": "Choose …",
+  "cred.section.about": "About the credential",
+  "cred.section.dates": "Dates",
+  "cred.section.evidence": "Documentation and note",
+
+  "cred.field.title": "Name",
+  "cred.field.titleHelp": "The name as it appears on the certificate or decision.",
+  "cred.field.trainingProvider": "Training provider",
+  "cred.field.appointingAuthority": "Appointing authority",
+  "cred.field.authorityHelp":
+    "The authority that made the decision, for example the Swedish Police Authority.",
+  "cred.field.jurisdiction": "Country",
+  "cred.field.completedOn": "Completed on",
+  "cred.field.decidedOn": "Decision date",
+  "cred.field.validFrom": "Valid from",
+  "cred.field.validUntil": "Valid until",
+  "cred.field.validUntilRequired": "Valid until (required for an appointment)",
+  "cred.field.reference": "Reference or decision number",
+  "cred.field.referenceHelp": "Never shown publicly. Only you and a reviewer can see it.",
+  "cred.field.holderNote": "Your own note",
+  "cred.field.holderNoteHelp":
+    "Your own words. Always marked as stated by you, and never shared publicly.",
+
+  "cred.appointment.notice":
+    "An appointment is a time-limited authorisation. Training is not the same thing as a current appointment.",
+  "cred.qualification.notice":
+    "This is completed training. It has no end date unless the certificate states one.",
+
+  "cred.action.saveDraft": "Save draft",
+  "cred.action.saving": "Saving …",
+  "cred.action.savedAt": "Draft saved",
+  "cred.action.resume": "Continue draft",
+  "cred.action.activate": "Add to my Passport",
+  "cred.action.submitVerification": "Submit for checking",
+  "cred.action.uploadEvidence": "Upload documentation",
+  "cred.action.correct": "Correct this entry",
+  "cred.action.discard": "Delete draft",
+
+  "cred.error.selectCredential": "Choose which credential you are adding.",
+  "cred.error.titleRequired": "Enter a name.",
+  "cred.error.jurisdictionRequired": "Enter a country.",
+  "cred.error.authorityRequired": "Enter the authority that appointed you.",
+  "cred.error.validUntilRequired": "An appointment must have an end date.",
+  "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
+  "cred.error.endBeforeStart": "The end date cannot be before the start date.",
+  "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",
+  "cred.error.noteTooLong": "That note is too long (2000 characters maximum).",
+  "cred.error.incompleteForActive": "Fill in the required fields before adding this entry.",
+  "cred.error.incompleteForVerification":
+    "This entry must be complete before it is submitted for checking.",
+  "cred.errorSummary": "Please check the fields below.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {
