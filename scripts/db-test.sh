@@ -707,6 +707,32 @@ if [ "$SP5_PASSED" -lt 40 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 6 assertions"
+set +e
+SP6_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase6_test.sql 2>&1)"
+SP6_RC=$?
+set -e
+
+echo "$SP6_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP6_PASSED="$(echo "$SP6_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP6_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 6 suite exited with code ${SP6_RC}." >&2
+  echo "$SP6_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SP6_PASSED} Security Passport Phase 6 assertions passed"
+
+# Every rule in the taxonomy is asserted by mutation, so a suite that stopped
+# early would be reporting success for having attempted nothing.
+if [ "$SP6_PASSED" -lt 20 ]; then
+  echo "FAIL: expected at least 20 Phase 6 assertions, only ${SP6_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
