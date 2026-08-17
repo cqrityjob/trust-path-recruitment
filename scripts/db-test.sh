@@ -588,6 +588,35 @@ if [ "$J_PASSED" -lt 102 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5m. Employer Assessment Center — the people model
+#
+# Runs BEFORE the rollback step: it reads scp_subject_identities and the
+# participant read model, both of which the rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running employer people model assertions"
+set +e
+PM_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_people_model_test.sql 2>&1)"
+PM_RC=$?
+set -e
+
+echo "$PM_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PM_PASSED="$(echo "$PM_OUT" | grep -c "ok  " || true)"
+
+if [ "$PM_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the people model suite exited with code ${PM_RC}." >&2
+  echo "$PM_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${PM_PASSED} people model assertions passed"
+
+if [ "$PM_PASSED" -lt 18 ]; then
+  echo "FAIL: expected at least 18 people model assertions, only ${PM_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -724,6 +753,7 @@ echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
+echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
 echo "===================================================="

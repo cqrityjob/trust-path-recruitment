@@ -164,6 +164,9 @@ DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
 
 -- Phase 2 comes off next: its read models depend on Phase 1 columns.
+-- The participant read model (20260819090000) is a read model over
+-- assessment_assignments, which is pre-existing and stays; only the view goes.
+DROP VIEW IF EXISTS public.scp_rm_employer_participants CASCADE;
 DROP VIEW IF EXISTS public.scp_rm_employer_assignments CASCADE;
 DROP VIEW IF EXISTS public.scp_rm_review_queue CASCADE;
 DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASCADE;

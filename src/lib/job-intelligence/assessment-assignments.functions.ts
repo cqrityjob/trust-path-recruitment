@@ -93,19 +93,36 @@ function hashToken(token: string): string {
 
 // -------- createAssessmentAssignment --------
 
-const createSchema = z.object({
-  employerId: z.string().uuid(),
-  assessmentId: z.string().min(1),
-  useCase: z.enum(["recruitment", "workforce"]),
-  recipientEmail: z.string().trim().email().max(320),
-  recipientUserId: z.string().uuid().nullable().optional(),
-  jobId: z.string().uuid().nullable().optional(),
-  applicationId: z.string().uuid().nullable().optional(),
-  employeeId: z.string().uuid().nullable().optional(),
-  language: z.enum(["sv", "en"]).default("sv"),
-  employerMessage: z.string().trim().max(2000).nullable().optional(),
-  expiresAt: z.string().datetime().optional(),
-});
+const createSchema = z
+  .object({
+    employerId: z.string().uuid(),
+    assessmentId: z.string().min(1),
+    useCase: z.enum(["recruitment", "workforce"]),
+    recipientEmail: z.string().trim().email().max(320),
+    recipientUserId: z.string().uuid().nullable().optional(),
+    jobId: z.string().uuid().nullable().optional(),
+    applicationId: z.string().uuid().nullable().optional(),
+    employeeId: z.string().uuid().nullable().optional(),
+    language: z.enum(["sv", "en"]).default("sv"),
+    employerMessage: z.string().trim().max(2000).nullable().optional(),
+    expiresAt: z.string().datetime().optional(),
+  })
+  // The people model, checked before anything is written: a recruitment
+  // assignment describes a candidate and may not point at an employee record;
+  // a workforce assignment describes existing staff and may not point at a job
+  // or application. Either combination silently reclassifies a real person.
+  //
+  // assessment_assignments_person_context_agrees (20260819090000) is the
+  // authority; this mirror exists so the caller gets a named, translatable
+  // error instead of a raw 23514 from the database.
+  .refine((d) => !(d.useCase === "recruitment" && d.employeeId), {
+    message: "PERSON_CONTEXT_MISMATCH",
+    path: ["employeeId"],
+  })
+  .refine((d) => !(d.useCase === "workforce" && (d.applicationId || d.jobId)), {
+    message: "PERSON_CONTEXT_MISMATCH",
+    path: ["applicationId"],
+  });
 
 export const createAssessmentAssignment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

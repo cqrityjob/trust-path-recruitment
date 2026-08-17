@@ -41,13 +41,20 @@ const ERROR_CODE_KEY: Record<string, TranslationKey> = {
   ACCESS_NOT_AVAILABLE: "assignment.form.error.generic",
   ASSIGNMENT_CREATE_FAILED: "assignment.form.error.generic",
   ASSIGNMENT_ALREADY_ACTIVE: "assignment.form.error.alreadyActive",
+  PERSON_CONTEXT_MISMATCH: "assignment.form.error.personContextMismatch",
 };
 
 function translateAssignmentError(
   message: string | undefined,
   t: (k: TranslationKey) => string,
 ): string {
-  return t(ERROR_CODE_KEY[message ?? ""] ?? "assignment.form.error.generic");
+  const raw = message ?? "";
+  const exact = ERROR_CODE_KEY[raw];
+  if (exact) return t(exact);
+  // A validator rejection arrives as a ZodError whose message is a serialised
+  // issue list, so the code is inside the string rather than equal to it.
+  const embedded = Object.keys(ERROR_CODE_KEY).find((code) => raw.includes(code));
+  return t(embedded ? ERROR_CODE_KEY[embedded] : "assignment.form.error.generic");
 }
 
 const searchSchema = z.object({
@@ -137,6 +144,24 @@ function AssignForm({
   const [recipientMode, setRecipientMode] = useState<RecipientMode>(
     initialEmployeeId ? "employee" : initialApplicationId ? "applicant" : "email",
   );
+
+  // The people model: who the recipient IS determines the relationship the
+  // assessment is taken under. Picking an applicant means recruitment; picking
+  // an employee means development. Leaving these as two free controls let an
+  // employer file an employee inside the recruitment pipeline, or a candidate
+  // as staff — which is refused by
+  // assessment_assignments_person_context_agrees anyway, so offering it here
+  // only produced a late, confusing error.
+  //
+  // A bare email carries no relationship of its own, so that is the one mode
+  // where the employer genuinely has to say which it is.
+  const useCaseIsImpliedByRecipient = recipientMode !== "email";
+
+  function chooseRecipientMode(mode: RecipientMode) {
+    setRecipientMode(mode);
+    if (mode === "applicant") setUseCase("recruitment");
+    if (mode === "employee") setUseCase("workforce");
+  }
   const [applicationId, setApplicationId] = useState<string>(initialApplicationId ?? "");
   const [employeeId, setEmployeeId] = useState<string>(initialEmployeeId ?? "");
   const [email, setEmail] = useState("");
@@ -333,11 +358,18 @@ function AssignForm({
                   key={uc}
                   type="button"
                   onClick={() => setUseCase(uc)}
+                  disabled={useCaseIsImpliedByRecipient}
+                  aria-describedby={
+                    useCaseIsImpliedByRecipient ? "use-case-implied" : undefined
+                  }
                   className={
                     "rounded-md border px-3 py-1.5 text-sm font-medium " +
                     (useCase === uc
                       ? "border-accent bg-accent/10 text-accent"
-                      : "border-border text-muted-foreground hover:text-foreground")
+                      : "border-border text-muted-foreground hover:text-foreground") +
+                    (useCaseIsImpliedByRecipient
+                      ? " cursor-not-allowed opacity-60"
+                      : "")
                   }
                 >
                   {t(
@@ -348,6 +380,15 @@ function AssignForm({
                 </button>
               ))}
             </div>
+            {useCaseIsImpliedByRecipient && (
+              <p id="use-case-implied" className="mt-2 text-xs text-muted-foreground">
+                {t(
+                  recipientMode === "applicant"
+                    ? "assignment.form.useCase.impliedByApplicant"
+                    : "assignment.form.useCase.impliedByEmployee",
+                )}
+              </p>
+            )}
           </fieldset>
 
           <fieldset>
@@ -359,7 +400,7 @@ function AssignForm({
                 <button
                   key={m}
                   type="button"
-                  onClick={() => setRecipientMode(m)}
+                  onClick={() => chooseRecipientMode(m)}
                   className={
                     "rounded-md border px-3 py-1.5 text-sm font-medium " +
                     (recipientMode === m

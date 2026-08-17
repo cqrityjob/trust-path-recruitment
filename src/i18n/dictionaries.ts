@@ -1353,6 +1353,12 @@ export const dictionaries = {
     "assignment.form.orgNotActive":
       "Er organisation måste vara godkänd och aktiv för att kunna tilldela riktiga bedömningar.",
     "assignment.form.useCase": "Syfte",
+    "assignment.form.useCase.impliedByApplicant":
+      "Syftet är rekrytering eftersom mottagaren är en sökande. Välj E-postadress som mottagare om du i stället vill göra en utvecklingsbedömning.",
+    "assignment.form.useCase.impliedByEmployee":
+      "Syftet är utveckling eftersom mottagaren är en medarbetare. Välj E-postadress som mottagare om du i stället vill göra en rekryteringsbedömning.",
+    "assignment.form.error.personContextMismatch":
+      "Syftet stämmer inte med mottagaren. En sökande bedöms i rekrytering, en medarbetare i utveckling.",
     "assignment.form.recipient": "Mottagare",
     "assignment.form.recipientMode.applicant": "Sökande",
     "assignment.form.recipientMode.employee": "Medarbetare",
@@ -3689,6 +3695,12 @@ export const dictionaries = {
     "assignment.form.orgNotActive":
       "Your organisation must be approved and active to assign real assessments.",
     "assignment.form.useCase": "Purpose",
+    "assignment.form.useCase.impliedByApplicant":
+      "The purpose is recruitment because the recipient is an applicant. Choose Email address as the recipient if you want a development assessment instead.",
+    "assignment.form.useCase.impliedByEmployee":
+      "The purpose is development because the recipient is an employee. Choose Email address as the recipient if you want a recruitment assessment instead.",
+    "assignment.form.error.personContextMismatch":
+      "The purpose does not match the recipient. An applicant is assessed in recruitment, an employee in development.",
     "assignment.form.recipient": "Recipient",
     "assignment.form.recipientMode.applicant": "Applicant",
     "assignment.form.recipientMode.employee": "Employee",
