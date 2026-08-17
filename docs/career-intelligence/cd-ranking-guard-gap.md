@@ -1,6 +1,6 @@
 # Career Discovery — profession ranking guard is global, not per-match
 
-**Status:** open, CD owner's to decide
+**Status:** CLOSED by 20260818100000_cd_ranking_guard_per_match.sql (owner-authorised)
 **Found:** 2026-08-18, while clearing pre-existing CD test debt for the employer track
 **Severity:** governance / correctness. Not exploitable by an anonymous caller;
 reachable by any code path that composes a completion payload.
@@ -81,3 +81,46 @@ refused; and a payload of approved, non-derived professions still succeeds.
 
 This is a production change to Career Discovery scoring/validation and so was
 explicitly out of scope for the employer track.
+
+
+---
+
+## Resolution — 2026-08-18
+
+Owner authorised a narrow production governance fix.
+`20260818100000_cd_ranking_guard_per_match.sql` replaces the global existence
+check with a per-match one. Every profession in a candidate-facing payload must
+exist in `cd_professions`, be `approved_for_ranking`, and not be
+`derived_from_area`. Both candidate-facing locations are validated: the ranked
+`matches` list and `currentProfessionMatch`. `professionId` is the canonical key
+(v31/professions.ts `ProfessionMatch`); `id` is accepted as an alias so an older
+payload shape is validated rather than slipping past.
+
+Fails closed — the exception aborts before the snapshot INSERT, so nothing
+partial persists and no ineligible profession is quietly filtered out after
+scoring. Two in-migration assertions confirm the per-match form is present, the
+old global form is gone, and no profession's approval state changed.
+
+Scoring, option loadings, Career DNA, weights, calibration, ranking order,
+profession profiles, Career Areas and existing snapshots are untouched. No data
+migration.
+
+### Coverage
+
+| Case | Assertion |
+|---|---|
+| unapproved among approved | C8.5 |
+| refusal names the offender | C8.5a |
+| unknown identifier | C8.5c |
+| ineligible `currentProfessionMatch` | C8.5d |
+| catalogue left intact | C8.5e |
+| no snapshot before completion | C8.5f |
+| multiple approved professions succeed | C8.5g |
+
+`derived_from_area` could not be asserted from the test: setting it on an
+approved profession raises `CD_PROFESSION_DERIVED_FROM_AREA` from
+`cd_guard_profession_ranking_approval`, so "approved AND derived" is an
+unconstructible state. The per-match check still tests it as defence in depth —
+if that guard were relaxed, or a row written around it, ranking would still
+refuse. Asserting it would have meant disabling a working guard, which is a
+worse test than none.

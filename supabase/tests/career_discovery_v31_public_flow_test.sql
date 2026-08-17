@@ -125,17 +125,23 @@ SELECT (SELECT defver FROM t_dv), di.item_id, di.item_version, di.item_kind,
   JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
  WHERE dv.definition_version = '2026-scd-v3.1.0';
 
+-- Derived from the live definition rather than hardcoded. The literal was 42
+-- and the instrument is now 44; a copied fixture should be asserted to match
+-- its source, not to match a number somebody typed once.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items
-    WHERE definition_version_id = (SELECT defver FROM t_dv)) = 42,
-  'P2.1 the test instrument carries the same forty-two items');
+    WHERE definition_version_id = (SELECT defver FROM t_dv))
+  = (SELECT count(*) FROM public.cd_definition_items di
+       JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+      WHERE dv.definition_version = '2026-scd-v3.1.0'),
+  'P2.1 the test instrument carries the same items as the live definition');
 
 -- The half that matters for this fixture: the scored set it will be validated
--- against is still exactly twenty.
+-- against. Pinned at the current 22-item Career DNA contract, matching C1.2b.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items
-    WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored) = 20,
-  'P2.1b the fixture''s scored set is still exactly twenty items');
+    WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored) = 22,
+  'P2.1b the fixture''s scored set is the current 22-item Career DNA contract');
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions

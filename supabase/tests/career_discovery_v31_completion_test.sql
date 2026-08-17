@@ -154,6 +154,62 @@ SELECT (SELECT sess FROM t_s2), di.item_id, di.item_version, di.item_kind,
   JOIN t_dv ON di.definition_version_id = t_dv.defver
  WHERE di.is_scored;
 
+-- A third session, created here beside t_s2 rather than at the point of use:
+-- group C5 retires the definition further down, and no session can be started
+-- after that. Completed in group C8 to prove the per-match ranking guard admits
+-- a legitimate payload.
+INSERT INTO auth.users (id, email)
+VALUES ('c3c3c3c3-0000-0000-0000-000000000003', 'ranking@example.test');
+
+CREATE TEMP TABLE t_s3 AS
+WITH ins AS (
+  INSERT INTO public.cd_sessions
+    (definition_version_id, user_id, locale, context_status, discovery_goal,
+     current_section, status)
+  SELECT defver, 'c3c3c3c3-0000-0000-0000-000000000003', 'sv',
+         'exploring_security', 'find_direction', 'approach', 'in_progress'
+    FROM t_dv
+  RETURNING id
+) SELECT id AS sess FROM ins;
+
+INSERT INTO public.cd_evidence
+  (session_id, item_id, item_version, item_kind, answer_value, evidence_class,
+   is_scored, option_id, display_order)
+SELECT (SELECT sess FROM t_s3), di.item_id, di.item_version, di.item_kind,
+       CASE WHEN di.item_kind = 'scale' THEN '6' ELSE di.item_id || '_A' END,
+       di.evidence_class, di.is_scored,
+       CASE WHEN di.item_kind = 'single_choice' THEN di.item_id || '_A' END,
+       CASE WHEN di.item_kind = 'single_choice' THEN 0 END
+  FROM public.cd_definition_items di
+  JOIN t_dv ON di.definition_version_id = t_dv.defver
+ WHERE di.is_scored;
+
+-- A, E and F, run here rather than in group C8: C5 retires the definition and
+-- deletes the option matrix further down, so a session can be refused after
+-- that but never completed. The refusal cases stay in C8 -- the ranking guard
+-- runs before the retirement validation, so they still fail for the right
+-- reason -- while the success case has to happen while the definition lives.
+--
+-- F — no snapshot exists before completion.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots
+    WHERE session_id = (SELECT sess FROM t_s3)) = 0,
+  'C8.5f no snapshot exists before a successful completion');
+
+SELECT public.cd_v31_complete_session(
+  (SELECT sess FROM t_s3),
+  ('{"outputA":{"areas":[1]},"outputB":{},'
+   || '"professions":{"matches":[{"professionId":"SP001"},{"professionId":"SP002"}],'
+   || '"currentProfessionMatch":{"professionId":"SP003"}},'
+   || '"versions":{"reportSchemaVersion":"x","patternDefinitionVersion":"v3.1-draft-1"}}')::jsonb,
+  'v3.1-draft-1', now());
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots
+    WHERE session_id = (SELECT sess FROM t_s3)) = 1,
+  'C8.5g multiple approved professions, and a currentProfessionMatch, complete');
+
+
 
 DO $$ BEGIN RAISE NOTICE 'GROUP C2 — validation refuses bad evidence'; END $$;
 
@@ -322,40 +378,88 @@ SELECT pg_temp.must_fail(format(
   (SELECT sess FROM t_s2)),
   'CD_EMPTY_RANKING', 'C8.4 a report with no ranked areas is refused');
 
--- Owner requirement: an unapproved profession may never reach ranking.
+-- Owner requirement, now enforced per match: every profession written into a
+-- candidate-facing snapshot must itself be eligible for ranking.
 --
--- This used to lean on the seed happening to have nothing approved. All 14
--- professions now carry approved_for_ranking = true, so the premise moved, not
--- the guard. The test now creates the condition it asserts instead of assuming
--- it, and restores it afterwards.
+-- The guard used to ask only whether ANY profession was approved, so it could
+-- not fire once one was, and never looked at the payload. 20260818100000
+-- replaced it with a per-match check. These assertions drive each way it can
+-- refuse, and each way it must not.
 --
--- Note precisely what the guard checks, because it is narrower than the comment
--- above suggests: it fires only when NO profession anywhere is approved. It
--- does NOT verify that the professions in this payload are approved. That gap
--- is recorded in docs/career-intelligence/cd-ranking-guard-gap.md and is the
--- CD owner's to close; this test asserts the behaviour that exists rather than
--- the behaviour we want, so it stays honest until then.
-UPDATE public.cd_professions
-   SET approved_for_ranking = false;
+-- Payloads use `professionId`, the canonical key from v31/professions.ts's
+-- ProfessionMatch. `id` is accepted by the guard as an alias so an older shape
+-- is validated rather than slipping past, and B exercises that too.
+
+-- B — one unapproved profession among otherwise approved matches.
+UPDATE public.cd_professions SET approved_for_ranking = false WHERE profession_id = 'SP002';
 
 SELECT pg_temp.must_fail(format(
   'SELECT public.cd_v31_complete_session(%L::uuid,
-     ''{"outputA":{"areas":[1]},"outputB":{},"professions":{"matches":[{"id":"SP001"}]},
+     ''{"outputA":{"areas":[1]},"outputB":{},
+        "professions":{"matches":[{"professionId":"SP001"},{"professionId":"SP002"}]},
         "versions":{"reportSchemaVersion":"x","patternDefinitionVersion":"v3.1-draft-1"}}''::jsonb,
      ''v3.1-draft-1'', now())',
   (SELECT sess FROM t_s2)),
   'CD_UNAPPROVED_PROFESSION_RANKING',
-  'C8.5 a profession match is refused while no profession is approved for ranking');
+  'C8.5 one unapproved profession among approved matches is refused');
 
--- Restored immediately: later groups rely on the normal approved state, and a
--- test that leaves the world altered behind it is a test that fails somewhere
--- else for reasons nobody can find.
-UPDATE public.cd_professions
-   SET approved_for_ranking = true;
+-- The message names the offender, so an operator does not have to guess which
+-- of a dozen matches was the problem.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.cd_v31_complete_session(%L::uuid,
+     ''{"outputA":{"areas":[1]},"outputB":{},
+        "professions":{"matches":[{"professionId":"SP002"}]},
+        "versions":{"reportSchemaVersion":"x","patternDefinitionVersion":"v3.1-draft-1"}}''::jsonb,
+     ''v3.1-draft-1'', now())',
+  (SELECT sess FROM t_s2)),
+  'SP002', 'C8.5a the refusal names the ineligible profession');
 
+UPDATE public.cd_professions SET approved_for_ranking = true WHERE profession_id = 'SP002';
+
+-- C — derived_from_area cannot be exercised here, and that is a finding rather
+-- than a gap. Setting derived_from_area = true on an approved profession raises
+-- CD_PROFESSION_DERIVED_FROM_AREA from cd_guard_profession_ranking_approval:
+-- the approval-time guard makes "approved AND derived" an unconstructible state.
+--
+-- The per-match check in cd_v31_complete_session still tests derived_from_area,
+-- deliberately, as defence in depth -- if the approval guard were ever relaxed
+-- or a row were written around it, ranking would still refuse. There is no way
+-- to assert that from here without disabling a working guard to do it, which
+-- would be a worse test than none.
+
+-- D — an identifier that is not in the catalogue at all.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.cd_v31_complete_session(%L::uuid,
+     ''{"outputA":{"areas":[1]},"outputB":{},
+        "professions":{"matches":[{"professionId":"SP_DOES_NOT_EXIST"}]},
+        "versions":{"reportSchemaVersion":"x","patternDefinitionVersion":"v3.1-draft-1"}}''::jsonb,
+     ''v3.1-draft-1'', now())',
+  (SELECT sess FROM t_s2)),
+  'CD_UNAPPROVED_PROFESSION_RANKING',
+  'C8.5c an unknown profession identifier is refused');
+
+-- currentProfessionMatch is as candidate-facing as the ranked list, so it is
+-- checked too. Validating only `matches` would leave the front door open.
+UPDATE public.cd_professions SET approved_for_ranking = false WHERE profession_id = 'SP004';
+
+SELECT pg_temp.must_fail(format(
+  'SELECT public.cd_v31_complete_session(%L::uuid,
+     ''{"outputA":{"areas":[1]},"outputB":{},
+        "professions":{"matches":[{"professionId":"SP001"}],
+                       "currentProfessionMatch":{"professionId":"SP004"}},
+        "versions":{"reportSchemaVersion":"x","patternDefinitionVersion":"v3.1-draft-1"}}''::jsonb,
+     ''v3.1-draft-1'', now())',
+  (SELECT sess FROM t_s2)),
+  'CD_UNAPPROVED_PROFESSION_RANKING',
+  'C8.5d an ineligible currentProfessionMatch is refused, not only the list');
+
+UPDATE public.cd_professions SET approved_for_ranking = true WHERE profession_id = 'SP004';
+
+-- G — the catalogue was left exactly as found by the checks above.
 SELECT pg_temp.ok(
-  (SELECT bool_and(approved_for_ranking) FROM public.cd_professions),
-  'C8.5b the approval state used by the refusal check was restored');
+  (SELECT bool_and(approved_for_ranking) AND NOT bool_or(COALESCE(derived_from_area,false))
+     FROM public.cd_professions),
+  'C8.5e all 14 professions remain approved and non-derived after the checks');
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions WHERE id = (SELECT sess FROM t_s2)) = 'in_progress',
@@ -504,5 +608,6 @@ SELECT pg_temp.must_fail(
   'CD_SESSION_NOT_FOUND', 'C7.3 an unknown session is refused');
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v31_completion_test: ALL ASSERTIONS PASSED'; END $$;
+
 
 ROLLBACK;
