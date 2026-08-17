@@ -33,6 +33,7 @@ import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CandidateHomeMock } from "./CandidateHomeMock";
 import { CardStudio } from "./CardStudio";
 import { CredentialFormFixture } from "./CredentialFormFixture";
+import { CredentialHistoryFixture } from "./CredentialHistoryFixture";
 import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
 import { DisclosurePackagePicker } from "./DisclosurePackagePicker";
@@ -53,6 +54,7 @@ type ScreenId =
   | "studio"
   | "symbols"
   | "credentialForm"
+  | "credentialHistory"
   | "share"
   | "shareHistory"
   | "recipient"
@@ -67,6 +69,7 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "studio", labelKey: "screen.studio" },
   { id: "symbols", labelKey: "screen.symbols" },
   { id: "credentialForm", labelKey: "screen.credentialForm" },
+  { id: "credentialHistory", labelKey: "screen.credentialHistory" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
@@ -300,6 +303,8 @@ export function PrototypeShell() {
         {screen === "symbols" ? <CredentialSymbolMatrix /> : null}
 
         {screen === "credentialForm" ? <CredentialFormFixture /> : null}
+
+        {screen === "credentialHistory" ? <CredentialHistoryFixture /> : null}
 
         {screen === "card" ? (
           <div className="mx-auto max-w-md space-y-4">

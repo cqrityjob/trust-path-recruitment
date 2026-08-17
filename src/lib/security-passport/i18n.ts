@@ -50,6 +50,7 @@ const sv = {
   "screen.studio": "Kortstudio",
   "screen.symbols": "Behörighetssymboler",
   "screen.credentialForm": "Behörighetsformulär",
+  "screen.credentialHistory": "Rättelse och versioner",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
     "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
@@ -857,6 +858,19 @@ const sv = {
   "cred.onboardingCta": "Lägg till den nu",
   "cred.new.resumeOr": "eller börja på en ny",
   "cred.added": "Uppgiften är tillagd i ditt Passport.",
+
+  "cred.correct.title": "Rätta uppgiften",
+  "cred.correct.trustNote":
+    "En rättelse skapar en ny version och behåller den gamla i historiken. Om du ändrar det som intygas börjar den nya versionen om som egenrapporterad — en eventuell verifiering följer inte med.",
+  "cred.correct.reason": "Vad rättar du?",
+  "cred.correct.reasonHelp": "Sparas i historiken tillsammans med rättelsen.",
+  "cred.correct.reasonRequired": "Ange vad du rättar.",
+  "cred.correct.submit": "Spara rättelsen",
+  "cred.versions.title": "Versionshistorik",
+  "cred.versions.lead":
+    "Tidigare versioner sparas och märks som ersatta. Ingen version försvinner.",
+  "cred.versions.current": "Gällande",
+  "cred.versions.recordedAt": "Registrerad",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -886,6 +900,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.studio": "Card studio",
   "screen.symbols": "Credential symbols",
   "screen.credentialForm": "Credential form",
+  "screen.credentialHistory": "Correction and versions",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
     "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
@@ -1678,6 +1693,19 @@ const en: Record<PassportCopyKey, string> = {
   "cred.onboardingCta": "Add it now",
   "cred.new.resumeOr": "or start a new one",
   "cred.added": "The entry has been added to your Passport.",
+
+  "cred.correct.title": "Correct this entry",
+  "cred.correct.trustNote":
+    "A correction creates a new version and keeps the old one in the history. If you change what is being asserted, the new version starts over as self-declared — any verification does not carry across.",
+  "cred.correct.reason": "What are you correcting?",
+  "cred.correct.reasonHelp": "Stored in the history together with the correction.",
+  "cred.correct.reasonRequired": "State what you are correcting.",
+  "cred.correct.submit": "Save the correction",
+  "cred.versions.title": "Version history",
+  "cred.versions.lead":
+    "Earlier versions are kept and marked as superseded. No version disappears.",
+  "cred.versions.current": "Current",
+  "cred.versions.recordedAt": "Recorded",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

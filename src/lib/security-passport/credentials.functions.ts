@@ -273,6 +273,130 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
     }));
   });
 
+/* ------------------------------------------------------------------ */
+/* History                                                             */
+/* ------------------------------------------------------------------ */
+
+export interface ClaimVersion {
+  readonly id: string;
+  readonly versionNo: number;
+  readonly credentialCode: string | null;
+  readonly title: string;
+  readonly issuerName: string | null;
+  readonly jurisdictionCode: string | null;
+  readonly issuedOn: string | null;
+  readonly validFrom: string | null;
+  readonly validUntil: string | null;
+  readonly assertionLevel: string;
+  readonly lifecycleState: string;
+  readonly supersedesId: string | null;
+  readonly updatedAt: string;
+}
+
+/**
+ * Every version of one credential, newest first.
+ *
+ * The chain is walked in both directions from the given claim, so the same
+ * history renders whether the holder opens the current version or a
+ * superseded one. RLS scopes the read to the holder's own rows; there is
+ * nothing here a holder cannot already see one row at a time.
+ */
+export const listClaimVersions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ claimId: z.string().uuid() }).parse(data))
+  .handler(async ({ context, data }): Promise<readonly ClaimVersion[]> => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("sp_claims")
+      .select(
+        "id, version_no, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, supersedes_id, updated_at",
+      )
+      .eq("holder_user_id", userId);
+    if (error) throw new Error(error.message);
+
+    type Row = {
+      id: string;
+      version_no: number;
+      credential_code: string | null;
+      title: string;
+      claimed_issuer_name: string | null;
+      jurisdiction_code: string | null;
+      issued_on: string | null;
+      valid_from: string | null;
+      valid_until: string | null;
+      assertion_level: string;
+      lifecycle_state: string;
+      supersedes_id: string | null;
+      updated_at: string;
+    };
+    const all = (rows ?? []) as Row[];
+    const byId = new Map(all.map((r) => [r.id, r]));
+    const bySupersedes = new Map(
+      all.filter((r) => r.supersedes_id).map((r) => [r.supersedes_id, r]),
+    );
+
+    const chain: Row[] = [];
+    const start = byId.get(data.claimId);
+    if (!start) return [];
+
+    // Backwards to the origin…
+    let cursor: Row | undefined = start;
+    while (cursor) {
+      chain.unshift(cursor);
+      cursor = cursor.supersedes_id ? byId.get(cursor.supersedes_id) : undefined;
+    }
+    // …and forwards to the newest correction.
+    cursor = bySupersedes.get(start.id);
+    while (cursor) {
+      chain.push(cursor);
+      cursor = bySupersedes.get(cursor.id);
+    }
+
+    return chain
+      .map((r) => ({
+        id: r.id,
+        versionNo: r.version_no,
+        credentialCode: r.credential_code,
+        title: r.title,
+        issuerName: r.claimed_issuer_name,
+        jurisdictionCode: r.jurisdiction_code,
+        issuedOn: r.issued_on,
+        validFrom: r.valid_from,
+        validUntil: r.valid_until,
+        assertionLevel: r.assertion_level,
+        lifecycleState: r.lifecycle_state,
+        supersedesId: r.supersedes_id,
+        updatedAt: r.updated_at,
+      }))
+      .reverse();
+  });
+
+/** The two private columns the overview read deliberately omits, fetched
+ *  only to prefill the correction form. The correction RPC replaces every
+ *  field, so a prefill missing these would silently blank them. */
+export const getCredentialPrivateFields = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ claimId: z.string().uuid() }).parse(data))
+  .handler(
+    async ({
+      context,
+      data,
+    }): Promise<{ credentialReference: string | null; holderNote: string | null }> => {
+      const { supabase, userId } = context;
+      const { data: row, error } = await supabase
+        .from("sp_claims")
+        .select("credential_reference, holder_note")
+        .eq("id", data.claimId)
+        .eq("holder_user_id", userId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return {
+        credentialReference: (row?.credential_reference as string | null) ?? null,
+        holderNote: (row?.holder_note as string | null) ?? null,
+      };
+    },
+  );
+
 /** Removes an unfinished credential. Restricted to drafts on purpose: a real
  *  claim is corrected or withdrawn through the versioning workflow, which
  *  keeps its history, rather than deleted. */
