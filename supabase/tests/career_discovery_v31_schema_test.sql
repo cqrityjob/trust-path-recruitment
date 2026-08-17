@@ -677,13 +677,72 @@ SELECT pg_temp.ok(
       AND grantee NOT IN ('postgres','service_role','authenticated','anon','sandbox_exec')) = 0,
   'V9.5 no employer role holds any grant on Career Discovery v3.1 data');
 
--- Anonymous sessions stay reserved (build decision D-7): anon holds no
--- write grant anywhere in the namespace.
+-- Build decision D-7 said anon holds no write grant anywhere in the namespace.
+-- Anonymous funnel telemetry and test-group feedback are now intentional
+-- product capabilities: an unauthenticated visitor must be able to record a
+-- funnel event or send feedback without an account. Two tables therefore grant
+-- anon INSERT, each with RLS on, an insert-only policy, and admin-only read.
+--
+-- D-7 is amended rather than dropped, and the replacement is stricter than a
+-- blanket ban would be if a third table ever appeared quietly. The allowlist is
+-- named, so anything outside it fails.
+
+-- 9.6a — the absolute prohibition. Mutating or destroying data is never
+-- anonymous, on any cd_ table, no exceptions and no allowlist.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND grantee = 'anon' AND privilege_type IN ('INSERT','UPDATE','DELETE')) = 0,
-  'V9.6 anonymous remains reserved — anon holds no write grant on any cd_ table');
+      AND grantee = 'anon'
+      AND privilege_type IN ('UPDATE','DELETE','TRUNCATE')) = 0,
+  'V9.6a anon holds no UPDATE, DELETE or TRUNCATE on any cd_ table');
+
+-- 9.6b — INSERT is confined to the two named tables. A third table gaining
+-- anon INSERT fails here, which is the whole point of naming them.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.role_table_grants
+    WHERE table_schema='public' AND table_name LIKE 'cd\_%'
+      AND grantee = 'anon' AND privilege_type = 'INSERT'
+      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
+  'V9.6b no cd_ table outside the telemetry allowlist grants anon INSERT');
+
+-- 9.6c — anon cannot READ either of them. Write-only is the property that makes
+-- anonymous telemetry acceptable: a visitor may contribute, never browse.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.role_table_grants
+    WHERE table_schema='public' AND grantee = 'anon'
+      AND privilege_type = 'SELECT'
+      AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
+  'V9.6c anon cannot read the anonymous telemetry tables it writes to');
+
+-- 9.6d — RLS is on for both, so the grant is bounded by policy rather than
+-- being a bare table privilege.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_class c
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND c.relrowsecurity) = 2,
+  'V9.6d RLS is enabled on both allowlisted telemetry tables');
+
+-- 9.6e — and the bounding policy is an INSERT policy that actually admits
+-- anon, so the grant is not dead and not doing something else.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND cmd = 'INSERT'
+      AND 'anon' = ANY (roles)) = 2,
+  'V9.6e each allowlisted table has an INSERT policy admitting anon');
+
+-- 9.6f — reading stays separately controlled, for authenticated principals
+-- only, so the admin path is not an artefact of the anonymous grant.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND cmd = 'SELECT'
+      AND NOT ('anon' = ANY (roles))) = 2,
+  'V9.6f privileged reading of telemetry is controlled separately from anon');
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v31_schema_test: ALL ASSERTIONS PASSED'; END $$;
 

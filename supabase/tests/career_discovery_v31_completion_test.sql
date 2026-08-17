@@ -84,7 +84,7 @@ SELECT pg_temp.ok(
            WHERE code = 'CD_CORE_INCOMPLETE'),
   'C1.1 an unanswered session is reported incomplete, not scored');
 
--- Answer all 20 items: scales get a value, single-choice items get option A.
+-- Answer every scored item: scales get a value, single-choice items get option A.
 INSERT INTO public.cd_evidence
   (session_id, item_id, item_version, item_kind, answer_value, evidence_class,
    is_scored, option_id, display_order)
@@ -97,9 +97,28 @@ SELECT (SELECT sess FROM t_s), di.item_id, di.item_version, di.item_kind,
   JOIN t_dv ON di.definition_version_id = t_dv.defver
  WHERE di.is_scored;
 
+-- Two assertions where there was one, because the number and the relationship
+-- protect different things.
+--
+-- C1.2 used to hardcode 20, from the contract before the Career DNA set grew to
+-- 22 scored items. Hardcoding meant the check went stale silently the moment the
+-- content advanced -- it kept passing for the wrong reason until it finally
+-- failed for the wrong reason too. Derived from the definition, it cannot.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s)) = 20,
-  'C1.2 all twenty scored items are answered');
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s))
+  = (SELECT count(*) FROM public.cd_definition_items di
+       JOIN t_dv ON di.definition_version_id = t_dv.defver
+      WHERE di.is_scored),
+  'C1.2 every scored item in the active definition has been answered');
+
+-- And the contract itself is pinned, so growing or shrinking the scored set is
+-- a deliberate act that updates this line rather than a silent drift. 22 scored
+-- Career DNA items is the current model.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_definition_items di
+     JOIN t_dv ON di.definition_version_id = t_dv.defver
+    WHERE di.is_scored) = 22,
+  'C1.2b the current scored-item contract is 22 Career DNA items');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.cd_v31_validate_session_evidence((SELECT sess FROM t_s))),
@@ -304,6 +323,21 @@ SELECT pg_temp.must_fail(format(
   'CD_EMPTY_RANKING', 'C8.4 a report with no ranked areas is refused');
 
 -- Owner requirement: an unapproved profession may never reach ranking.
+--
+-- This used to lean on the seed happening to have nothing approved. All 14
+-- professions now carry approved_for_ranking = true, so the premise moved, not
+-- the guard. The test now creates the condition it asserts instead of assuming
+-- it, and restores it afterwards.
+--
+-- Note precisely what the guard checks, because it is narrower than the comment
+-- above suggests: it fires only when NO profession anywhere is approved. It
+-- does NOT verify that the professions in this payload are approved. That gap
+-- is recorded in docs/career-intelligence/cd-ranking-guard-gap.md and is the
+-- CD owner's to close; this test asserts the behaviour that exists rather than
+-- the behaviour we want, so it stays honest until then.
+UPDATE public.cd_professions
+   SET approved_for_ranking = false;
+
 SELECT pg_temp.must_fail(format(
   'SELECT public.cd_v31_complete_session(%L::uuid,
      ''{"outputA":{"areas":[1]},"outputB":{},"professions":{"matches":[{"id":"SP001"}]},
@@ -312,6 +346,16 @@ SELECT pg_temp.must_fail(format(
   (SELECT sess FROM t_s2)),
   'CD_UNAPPROVED_PROFESSION_RANKING',
   'C8.5 a profession match is refused while no profession is approved for ranking');
+
+-- Restored immediately: later groups rely on the normal approved state, and a
+-- test that leaves the world altered behind it is a test that fails somewhere
+-- else for reasons nobody can find.
+UPDATE public.cd_professions
+   SET approved_for_ranking = true;
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(approved_for_ranking) FROM public.cd_professions),
+  'C8.5b the approval state used by the refusal check was restored');
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions WHERE id = (SELECT sess FROM t_s2)) = 'in_progress',
