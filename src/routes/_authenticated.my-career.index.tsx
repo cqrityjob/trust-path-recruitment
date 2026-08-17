@@ -204,6 +204,29 @@ function MyCareerPage() {
   });
   const hasEmployerWorkspace = (employerWorkspacesQ.data?.length ?? 0) > 0;
 
+  // Pilot Readiness Track 1: the "Apply" and "Develop" journey steps were
+  // hardcoded to false, so a candidate who had genuinely applied to a job or
+  // been assigned development work still saw an unfinished journey. Both now
+  // read real signals. Neither may break the dashboard if its backend is
+  // unavailable -- both are non-critical, hence retry: false and no error UI.
+  const fetchMyApplications = useServerFn(listMyApplications);
+  const myApplicationsQ = useQuery({
+    queryKey: ["my-career", "applications"],
+    queryFn: () => fetchMyApplications(),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const hasApplied = (myApplicationsQ.data?.length ?? 0) > 0;
+
+  // Same query key as MyAcademyWorkCard, so this shares one request.
+  const fetchAcademyWork = useServerFn(listMyAcademyWork);
+  const academyWorkQ = useQuery({
+    queryKey: ["academy", "my-work"],
+    queryFn: () => fetchAcademyWork(),
+    retry: false,
+  });
+  const hasDevelopment = (academyWorkQ.data?.length ?? 0) > 0;
+
   const profileState = useCareerProfileForJobs();
   const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
 
@@ -318,8 +341,8 @@ function MyCareerPage() {
               assessment: hasCompletedAssessment || activeIsDiscovery,
               profile: hasProfile || activeIsDiscovery,
               explore: (hasProfile && topProfessions.length > 0) || activeIsDiscovery,
-              apply: false,
-              develop: false,
+              apply: hasApplied,
+              develop: hasDevelopment,
             }}
           />
         </div>
