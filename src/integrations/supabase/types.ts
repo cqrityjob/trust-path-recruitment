@@ -7667,6 +7667,24 @@ export type Database = {
           },
         ]
       }
+      sp_public_access_throttle: {
+        Row: {
+          attempts: number
+          client_hash: string
+          window_start: string
+        }
+        Insert: {
+          attempts?: number
+          client_hash: string
+          window_start: string
+        }
+        Update: {
+          attempts?: number
+          client_hash?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       sp_recognition_policies: {
         Row: {
           basis: string
@@ -8614,8 +8632,16 @@ export type Database = {
         }
         Returns: string
       }
+      sp_employer_attestation_queue: {
+        Args: { _employer_id: string }
+        Returns: Json
+      }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_raise_dispute: {
+        Args: { _claim_id: string; _period_id: string; _reason: string }
+        Returns: undefined
+      }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
       sp_submit_for_verification: {
         Args: {
@@ -8625,6 +8651,10 @@ export type Database = {
           _period_id: string
         }
         Returns: string
+      }
+      sp_throttle_public_access: {
+        Args: { _client_hash: string; _limit: number; _window_seconds: number }
+        Returns: boolean
       }
       sp_verifier_decide: {
         Args: {
@@ -8638,8 +8668,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      sp_verifier_queue: { Args: { _status?: string }; Returns: Json }
+      sp_verifier_request_detail: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      sp_verifier_revoke: {
+        Args: { _claim_id: string; _period_id: string; _reason: string }
+        Returns: undefined
+      }
       sp_withdraw_claim: {
         Args: { _claim_id: string; _reason: string }
+        Returns: undefined
+      }
+      sp_withdraw_evidence: {
+        Args: { _evidence_id: string }
+        Returns: undefined
+      }
+      sp_withdraw_verification_request: {
+        Args: { _request_id: string }
         Returns: undefined
       }
       sweep_analytics_retention: {
