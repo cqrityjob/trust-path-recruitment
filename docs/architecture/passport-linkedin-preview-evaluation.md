@@ -28,7 +28,7 @@ free plan, 10 MB paid. A Satori + `resvg-wasm` pipeline adds roughly
 0.9–1.3 MB gzipped (the wasm binary dominates and compresses poorly) plus an
 embedded font subset. That lands around 2.4–2.6 MB — under the free-tier limit,
 but consuming almost all remaining headroom for the entire application, on a
-plan this session cannot confirm. Worker *startup* CPU time is a second,
+plan this session cannot confirm. Worker _startup_ CPU time is a second,
 separate limit that wasm instantiation is known to press against.
 
 ## Why the personalised preview is still not shipped
@@ -36,7 +36,7 @@ separate limit that wasm instantiation is known to press against.
 **1. It cannot be verified here, and an unverified claim is the thing to avoid.**
 The only authority on what LinkedIn renders is LinkedIn's own crawler. Proving
 it requires Post Inspector, which requires signing into a LinkedIn account —
-an action this session must not take. Shipping the pipeline and *describing* it
+an action this session must not take. Shipping the pipeline and _describing_ it
 as working would be exactly the overstatement the brief forbids.
 
 **2. A cached personalised image outlives the share, by construction.**
