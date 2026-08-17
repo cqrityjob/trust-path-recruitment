@@ -69,6 +69,15 @@ Then run the full suite (see [test matrix](./test-matrix.md)).
 
 Nothing pre-existing is altered, so rollback cannot lose pre-existing data.
 
+> **This block rolls back PR-A only.** Later layers were built on top of it —
+> the Competency Graph (Phase 0), the Academy (Phase 1), the Assessment Center
+> (Phase 2) and closed-test governance (`20260818090000`) — and they must come
+> off first, newest layer first, or these statements fail on dependencies.
+> That unwind is executed and asserted in
+> `supabase/tests/scp_a_rollback_test.sql`, which runs the block below verbatim
+> afterwards; treat that file as the current end-to-end procedure and this
+> block as the PR-A step within it.
+
 ```sql
 BEGIN;
 
