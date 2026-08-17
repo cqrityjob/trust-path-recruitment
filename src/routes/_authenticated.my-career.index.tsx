@@ -48,6 +48,8 @@ import {
   claimAssessmentAssignment,
 } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import { listMyApplications } from "@/lib/job-intelligence/applications.functions";
+import { listMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
