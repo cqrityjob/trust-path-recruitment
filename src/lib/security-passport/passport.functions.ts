@@ -100,6 +100,7 @@ type PeriodRow = {
 type ClaimRow = {
   id: string;
   claim_type: string;
+  credential_code: string | null;
   title: string;
   claimed_issuer_name: string | null;
   jurisdiction_code: string | null;
@@ -160,6 +161,7 @@ function toClaim(row: ClaimRow): Claim {
   return {
     id: row.id,
     claimType: row.claim_type as ClaimType,
+    credentialCode: row.credential_code,
     titleSv: title,
     titleEn: title,
     issuerName: row.claimed_issuer_name ?? "—",
@@ -205,7 +207,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_claims")
         .select(
-          "id, claim_type, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
+          "id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
         )
         .eq("holder_user_id", userId)
         .order("created_at", { ascending: false }),

@@ -110,6 +110,11 @@ export interface ExperiencePeriod {
 export interface Claim {
   readonly id: string;
   readonly claimType: ClaimType;
+  /** Supported-credential taxonomy code (VU1, VU2, OV, SV) or null for a
+   *  free-text claim. Decides which credential symbol the claim carries;
+   *  a null code takes the neutral document mark. Written only through the
+   *  taxonomy-checked credential path — never invented in the UI. */
+  readonly credentialCode: string | null;
   readonly titleSv: string;
   readonly titleEn: string;
   /** Proper noun; not translated. */
