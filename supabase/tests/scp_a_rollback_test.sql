@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 63,
-    'pre-rollback: 63 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2)');
+        AND table_name LIKE 'scp\_%') = 64,
+    'pre-rollback: 64 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
