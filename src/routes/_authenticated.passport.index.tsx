@@ -162,6 +162,18 @@ function PassportOverviewRoute() {
             params: { kind, entryId: id },
           })
         }
+        onAddCredential={(code) =>
+          void navigate({
+            to: "/passport/credentials/new",
+            search: code ? { code } : {},
+          })
+        }
+        onResumeDraft={(claimId) =>
+          void navigate({
+            to: "/passport/credentials/new",
+            search: { draft: claimId },
+          })
+        }
       />
     </div>
   );

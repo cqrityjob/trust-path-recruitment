@@ -297,12 +297,7 @@ export function CredentialPlate({
           keep the original seal-on-verified treatment. */}
       {symbolCode && symbolState ? (
         <span className="mt-0.5 shrink-0">
-          <CredentialSymbol
-            code={symbolCode}
-            state={symbolState}
-            name={title}
-            size={34}
-          />
+          <CredentialSymbol code={symbolCode} state={symbolState} name={title} size={34} />
         </span>
       ) : premium ? (
         <span className="mt-0.5">

@@ -118,7 +118,11 @@ function LiveOnboardingRoute() {
           {error}
         </p>
       ) : null}
-      <Onboarding persistence={persistence} onFinish={() => void onFinish()} />
+      <Onboarding
+        persistence={persistence}
+        onFinish={() => void onFinish()}
+        onAddCredential={() => void navigate({ to: "/passport/credentials/new" })}
+      />
     </div>
   );
 }

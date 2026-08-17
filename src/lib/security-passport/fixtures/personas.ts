@@ -262,8 +262,7 @@ function credentialClaim(c: {
     credentialCode: c.code,
     titleSv: names.sv,
     titleEn: names.en,
-    issuerName:
-      c.issuer ?? (isAppointment ? "Fiktiva Myndigheten" : "Väktarskolan Fiktiv AB"),
+    issuerName: c.issuer ?? (isAppointment ? "Fiktiva Myndigheten" : "Väktarskolan Fiktiv AB"),
     jurisdictionCode: "SE",
     issuedOn: c.issuedOn,
     validFrom: c.issuedOn,

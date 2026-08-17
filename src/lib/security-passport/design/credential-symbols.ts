@@ -318,15 +318,24 @@ function glyphMarkup(glyph: StatusGlyph, tone: string): string {
     case "question":
       return (
         disc +
-        stroke(`M${cx - 1.9} ${cy - 1.6} a1.9 1.9 0 1 1 2.6 1.8 c-0.5 0.25 -0.7 0.6 -0.7 1.2`, 1.4) +
+        stroke(
+          `M${cx - 1.9} ${cy - 1.6} a1.9 1.9 0 1 1 2.6 1.8 c-0.5 0.25 -0.7 0.6 -0.7 1.2`,
+          1.4,
+        ) +
         `<circle cx="${cx}" cy="${cy + 3.1}" r="0.8" fill="${tone}"/>`
       );
     case "cross":
-      return disc + stroke(`M${cx - 2.3} ${cy - 2.3} L${cx + 2.3} ${cy + 2.3}`) +
-        stroke(`M${cx + 2.3} ${cy - 2.3} L${cx - 2.3} ${cy + 2.3}`);
+      return (
+        disc +
+        stroke(`M${cx - 2.3} ${cy - 2.3} L${cx + 2.3} ${cy + 2.3}`) +
+        stroke(`M${cx + 2.3} ${cy - 2.3} L${cx - 2.3} ${cy + 2.3}`)
+      );
     case "arrow":
-      return disc + stroke(`M${cx - 2.8} ${cy} H${cx + 2.4}`) +
-        stroke(`M${cx + 0.4} ${cy - 2.2} L${cx + 2.6} ${cy} L${cx + 0.4} ${cy + 2.2}`);
+      return (
+        disc +
+        stroke(`M${cx - 2.8} ${cy} H${cx + 2.4}`) +
+        stroke(`M${cx + 0.4} ${cy - 2.2} L${cx + 2.6} ${cy} L${cx + 0.4} ${cy + 2.2}`)
+      );
   }
 }
 

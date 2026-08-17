@@ -49,6 +49,7 @@ const sv = {
   "screen.privacy": "Integritet",
   "screen.studio": "Kortstudio",
   "screen.symbols": "Behörighetssymboler",
+  "screen.credentialForm": "Behörighetsformulär",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
     "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
@@ -834,6 +835,28 @@ const sv = {
   "cred.error.incompleteForVerification":
     "Uppgiften måste vara komplett innan den skickas för kontroll.",
   "cred.errorSummary": "Kontrollera fälten nedan.",
+
+  // ── Credential UI (Phase 7) ──────────────────────────────────────────
+  "cred.category.qualification": "Genomförd utbildning",
+  "cred.category.appointment": "Tidsbegränsat förordnande",
+  "cred.field.validFromHelp": "Endast om beslutet anger ett annat startdatum än beslutsdatumet.",
+  "cred.docsNotApproval":
+    "Underlag är inte samma sak som godkännande. En uppladdad handling gör uppgiften dokumenterad — bara en genomförd kontroll kan göra den verifierad.",
+  "cred.evidenceNext":
+    "När uppgiften är tillagd kan du ladda upp underlag och skicka den för kontroll.",
+  "cred.addAction": "Lägg till behörighet",
+  "cred.overview.title": "Behörigheter och utbildningar",
+  "cred.overview.body":
+    "Lägg till VU1, VU2, ordningsvaktsförordnande eller skyddsvaktsförordnande. Du kan spara ett utkast och fortsätta senare.",
+  "cred.drafts.title": "Utkast",
+  "cred.drafts.lead": "Sparade men inte tillagda. Bara du ser dem.",
+  "cred.drafts.updated": "Senast sparat",
+  "cred.drafts.untitled": "Utan benämning",
+  "cred.discardConfirm": "Utkastet tas bort permanent. Det går inte att ångra.",
+  "cred.discarded": "Utkastet är borttaget.",
+  "cred.onboardingCta": "Lägg till den nu",
+  "cred.new.resumeOr": "eller börja på en ny",
+  "cred.added": "Uppgiften är tillagd i ditt Passport.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -862,6 +885,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.privacy": "Privacy",
   "screen.studio": "Card studio",
   "screen.symbols": "Credential symbols",
+  "screen.credentialForm": "Credential form",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
     "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
@@ -1632,6 +1656,28 @@ const en: Record<PassportCopyKey, string> = {
   "cred.error.incompleteForVerification":
     "This entry must be complete before it is submitted for checking.",
   "cred.errorSummary": "Please check the fields below.",
+
+  "cred.category.qualification": "Completed training",
+  "cred.category.appointment": "Time-limited appointment",
+  "cred.field.validFromHelp":
+    "Only if the decision states a start date other than the decision date.",
+  "cred.docsNotApproval":
+    "Documentation is not the same as approval. An uploaded document makes an entry documented — only a completed check can make it verified.",
+  "cred.evidenceNext":
+    "Once the entry is added you can upload documentation and submit it for checking.",
+  "cred.addAction": "Add a credential",
+  "cred.overview.title": "Credentials and training",
+  "cred.overview.body":
+    "Add VU1, VU2, a public order guard appointment or a protective security guard appointment. You can save a draft and continue later.",
+  "cred.drafts.title": "Drafts",
+  "cred.drafts.lead": "Saved but not yet added. Only you can see them.",
+  "cred.drafts.updated": "Last saved",
+  "cred.drafts.untitled": "Untitled",
+  "cred.discardConfirm": "The draft will be deleted permanently. This cannot be undone.",
+  "cred.discarded": "The draft has been deleted.",
+  "cred.onboardingCta": "Add it now",
+  "cred.new.resumeOr": "or start a new one",
+  "cred.added": "The entry has been added to your Passport.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

@@ -34,6 +34,10 @@ export interface CredentialSymbolProps {
   readonly name: string;
   /** Rendered size in px. The drawing is vector; any size is crisp. */
   readonly size?: number;
+  /** True where the credential's name and state already appear as text
+   *  right beside the mark — the mark is then hidden from assistive tech
+   *  so the reader hears the information once, not twice. */
+  readonly decorative?: boolean;
   readonly className?: string;
 }
 
@@ -43,14 +47,16 @@ export function CredentialSymbol({
   symbolLabel,
   name,
   size = 44,
+  decorative = false,
   className,
 }: CredentialSymbolProps) {
   const { pt } = usePassportCopy();
   const word = pt(presentationWordKey(state));
   return (
     <svg
-      role="img"
-      aria-label={`${name} — ${word}`}
+      role={decorative ? undefined : "img"}
+      aria-hidden={decorative ? true : undefined}
+      aria-label={decorative ? undefined : `${name} — ${word}`}
       width={size}
       height={size}
       viewBox={`0 0 ${SYMBOL_VIEWBOX} ${SYMBOL_VIEWBOX}`}

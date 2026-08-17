@@ -79,10 +79,14 @@ export function Onboarding({
   onFinish,
   className,
   persistence = SESSION_PERSISTENCE,
+  /** Opens the supported-credential form from the licence and training
+   *  steps. Optional: the prototype has no router and hides the action. */
+  onAddCredential,
 }: {
   onFinish: () => void;
   className?: string;
   persistence?: OnboardingPersistence;
+  onAddCredential?: () => void;
 }) {
   const { pt } = usePassportCopy();
   const [state, setState] = useState<PrototypeState>(() => persistence.read() ?? emptyState());
@@ -283,6 +287,20 @@ export function Onboarding({
           <p className="mt-6 rounded-lg border border-dashed border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
             {pt("onboarding.createsClaim")}
           </p>
+        ) : null}
+
+        {/* The licence and training steps are where a holder is thinking
+            about VU1, VU2 or a förordnande — so the credential form is one
+            action away from exactly there. Progress is already saved on
+            every answer, so leaving for the form loses nothing. */}
+        {onAddCredential && (step.id === "licence" || step.id === "training") ? (
+          <button
+            type="button"
+            onClick={onAddCredential}
+            className="mt-4 inline-flex h-11 items-center gap-1.5 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("cred.addAction")}
+          </button>
         ) : null}
 
         <div className="mt-6 flex items-start gap-2.5 border-t border-border pt-4">
