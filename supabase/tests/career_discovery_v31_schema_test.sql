@@ -261,16 +261,88 @@ DO $$ BEGIN RAISE NOTICE 'GROUP V4 — option loadings'; END $$;
 SELECT pg_temp.ok(to_regclass('public.cd_option_loadings') IS NOT NULL,
   'V4.1 cd_option_loadings exists');
 
--- PR1 created this table empty; PR2 seeded it from option-matrix.ts. The
--- assertion moved with the code rather than being deleted: what matters is
--- that the table holds exactly the approved matrix and nothing else.
+-- PR1 created this table empty; PR2 seeded it from option-matrix.ts.
+--
+-- V4.2b used to assert that exactly ONE scoring_version existed in the whole
+-- table. That held while there had only ever been one. It stopped being true
+-- when the content advanced v3.1-draft-1 -> draft-2 -> draft-3, each step
+-- copying the matrix forward and KEEPING the previous one, which is the
+-- deliberate lineage decision -- a report has to stay reproducible against the
+-- matrix it was actually scored with.
+--
+-- Counting distinct versions was always the wrong invariant. What matters is
+-- not how much history is stored, but that exactly one version is CURRENT,
+-- that it is complete, and that nothing historical can leak into live scoring.
+-- The assertions below say that instead, and say it about whichever version is
+-- active rather than about a hardcoded string that goes stale on every bump.
+
+-- Scoped to the v3.1 lineage on purpose. This suite activates the v3.0 row
+-- transaction-locally further up (line ~143) to open the review gates it needs,
+-- so "how many rows are active" is not a question this file can ask. What it
+-- can ask -- and what actually matters -- is that the v3.1 lineage resolves to
+-- exactly one current scoring version.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_option_loadings
-    WHERE scoring_version = 'v3.1-draft-1') = 164,
-  'V4.2 the v3.1 option matrix is seeded with all 164 loadings');
+  (SELECT count(*) FROM public.cd_definition_versions
+    WHERE content_version LIKE 'v3.1%'
+      AND lifecycle_status = 'active') = 1,
+  'V4.2 the v3.1 lineage has exactly one current definition version');
+
 SELECT pg_temp.ok(
-  (SELECT count(DISTINCT scoring_version) FROM public.cd_option_loadings) = 1,
-  'V4.2b only the approved scoring version is present');
+  (SELECT count(DISTINCT scoring_version) FROM public.cd_definition_versions
+    WHERE content_version LIKE 'v3.1%'
+      AND lifecycle_status = 'active') = 1,
+  'V4.2a it resolves to exactly one scoring version');
+
+-- Its matrix is complete. Derived from the definition rather than named, so
+-- advancing the content does not silently skip this check the way a hardcoded
+-- 'v3.1-draft-1' did.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_option_loadings l
+    WHERE l.scoring_version = (
+      SELECT dv.scoring_version FROM public.cd_definition_versions dv
+       WHERE dv.content_version LIKE 'v3.1%'
+         AND dv.lifecycle_status = 'active')) = 164,
+  'V4.2b the current v3.1 scoring version carries all 164 option loadings');
+
+-- Superseded versions are kept, and each is a COMPLETE historical record. A
+-- partial leftover would be worse than none: it would score reproducibly wrong.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.cd_option_loadings
+     GROUP BY scoring_version
+    HAVING count(*) <> 164),
+  'V4.2c every stored scoring version carries a complete 164-loading matrix');
+
+-- The live path is scoped to the active version, so history cannot participate
+-- in current scoring. Proven by construction: scoping to the active version
+-- must exclude every row belonging to a superseded one.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_option_loadings l
+    WHERE l.scoring_version <> (
+      SELECT dv.scoring_version FROM public.cd_definition_versions dv
+       WHERE dv.content_version LIKE 'v3.1%'
+         AND dv.lifecycle_status = 'active')) > 0
+  AND (SELECT count(DISTINCT l.scoring_version) FROM public.cd_option_loadings l
+        WHERE l.scoring_version = (
+          SELECT dv.scoring_version FROM public.cd_definition_versions dv
+           WHERE dv.content_version LIKE 'v3.1%'
+             AND dv.lifecycle_status = 'active')) = 1,
+  'V4.2d superseded matrices are retained, and an active-version scope selects exactly one');
+
+-- And the guard that enforces it in production is still wired: the session
+-- validator rejects an answer whose option has no loading AT THE ACTIVE
+-- scoring version, rather than at any version.
+SELECT pg_temp.ok(
+  EXISTS (
+    SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+       -- prokind='f': pg_get_functiondef() errors on aggregates and window
+       -- functions, and public holds some.
+       AND p.prokind = 'f'
+       AND pg_get_functiondef(p.oid) LIKE '%cd_option_loadings l%'
+       AND pg_get_functiondef(p.oid) LIKE '%l.scoring_version = _dv.scoring_version%'),
+  'V4.2e live scoring is scoped to the active definition''s scoring version');
 
 INSERT INTO public.cd_option_loadings
   (scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)
@@ -435,16 +507,20 @@ $$, 'CD_PROFESSION_PROFILE_INCOMPLETE',
 INSERT INTO public.cd_profession_profiles
   (profession_id, calibration_version, dimension_id, band_low, band_high,
    weight, centrality, evidence_basis, confidence)
+-- 17, not 16. CID17 brought every profession to 17 calibrated dimensions and
+-- 20260816161000 correctly moved the ranking-approval guard from 16 to 17. This
+-- fixture was left behind, so V6.10's approval attempt hit
+-- CD_PROFESSION_PROFILE_INCOMPLETE. The guard is right; the fixture was stale.
 SELECT 'SP999','cal-v1', 'CID' || lpad(g::text, 2, '0'),
        0.400, 0.900,
        CASE WHEN g = 15 THEN 0 ELSE 0.500 END,
        CASE WHEN g = 15 THEN 'neutral' ELSE 'supporting' END,
        'derived','medium'
-  FROM generate_series(1,16) g;
+  FROM generate_series(1,17) g;
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_profession_profiles WHERE profession_id='SP999') = 16,
-  'V6.9 a full 16-dimension calibration is storable, CID15 at weight 0');
+  (SELECT count(*) FROM public.cd_profession_profiles WHERE profession_id='SP999') = 17,
+  'V6.9 a full 17-dimension calibration is storable, CID15 at weight 0');
 
 UPDATE public.cd_professions SET approved_for_ranking = true WHERE profession_id='SP999';
 SELECT pg_temp.ok(
