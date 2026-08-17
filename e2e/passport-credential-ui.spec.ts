@@ -171,10 +171,43 @@ test.describe("overview", () => {
   });
 });
 
+test.describe("the shared recipient Passport", () => {
+  test("a lapsed credential is never presented as current", async ({ page }) => {
+    await openHarness(page, "recipientCard", undefined, "en");
+
+    // The case that stored state gets wrong: recorded active, validity gone.
+    const lapsed = page.locator("article").nth(1);
+    await expect(lapsed.getByText("Ingrid Testsson")).toBeVisible();
+    // The lifecycle word leads (rendered uppercase by CSS from "Expired"),
+    // and the whole card warns as well.
+    await expect(lapsed.getByText("Expired", { exact: true })).toBeVisible();
+    await expect(lapsed.getByText("Contains expired entries")).toBeVisible();
+    await expect(lapsed.getByText("PREVIOUSLY VERIFIED")).toBeVisible();
+    // And it must NOT carry the bare present-tense claim.
+    await expect(lapsed.getByText("VERIFIED", { exact: true })).toHaveCount(0);
+
+    // The current one does read as verified.
+    const current = page.locator("article").first();
+    await expect(current.getByText("Stina Testsson")).toBeVisible();
+    await expect(current.getByText("VERIFIED", { exact: true }).first()).toBeVisible();
+
+    await page.screenshot({ path: `${EVIDENCE}/recipient-cards-en.png`, fullPage: true });
+  });
+
+  test("anonymous and empty shares stay dignified, in Swedish", async ({ page }) => {
+    await openHarness(page, "recipientCard", undefined, "sv");
+    await expect(page.getByText("Namnet visas inte")).toBeVisible();
+    await expect(
+      page.getByText("Det här paketet innehåller inget verifierat just nu."),
+    ).toBeVisible();
+    await page.screenshot({ path: `${EVIDENCE}/recipient-cards-sv.png`, fullPage: true });
+  });
+});
+
 test.describe("mobile 375px", () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  const screens = ["symbols", "credentialForm", "linkedin", "overview"] as const;
+  const screens = ["symbols", "credentialForm", "linkedin", "overview", "recipientCard"] as const;
   for (const screen of screens) {
     test(`${screen} has no horizontal overflow at 375px`, async ({ page }) => {
       await openHarness(page, screen, "cred-ov-current", "sv");
