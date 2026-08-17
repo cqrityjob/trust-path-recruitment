@@ -34,6 +34,8 @@ import { CandidateHomeMock } from "./CandidateHomeMock";
 import { CardStudio } from "./CardStudio";
 import { CredentialFormFixture } from "./CredentialFormFixture";
 import { CredentialHistoryFixture } from "./CredentialHistoryFixture";
+import { LinkedInShareSection } from "./live/LinkedInShareSection";
+import { buildSocialCard } from "@/lib/security-passport/social";
 import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
 import { DisclosurePackagePicker } from "./DisclosurePackagePicker";
@@ -55,6 +57,7 @@ type ScreenId =
   | "symbols"
   | "credentialForm"
   | "credentialHistory"
+  | "linkedin"
   | "share"
   | "shareHistory"
   | "recipient"
@@ -70,6 +73,7 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "symbols", labelKey: "screen.symbols" },
   { id: "credentialForm", labelKey: "screen.credentialForm" },
   { id: "credentialHistory", labelKey: "screen.credentialHistory" },
+  { id: "linkedin", labelKey: "screen.linkedin" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
@@ -305,6 +309,20 @@ export function PrototypeShell() {
         {screen === "credentialForm" ? <CredentialFormFixture /> : null}
 
         {screen === "credentialHistory" ? <CredentialHistoryFixture /> : null}
+
+        {screen === "linkedin" ? (
+          <div className="mx-auto w-full max-w-2xl">
+            <LinkedInShareSection
+              shareUrl={`https://cqrityjob.example/p/${personaId}`}
+              model={buildSocialCard(holder, FIXTURE_EVALUATION_DATE, {
+                privacyMode: "full_name",
+                anonymousLabel: pt("share.anonymousLabel"),
+                verifyUrl: `cqrityjob.example/p/fixture-${personaId}`,
+              })}
+              qrDataUrl={null}
+            />
+          </div>
+        ) : null}
 
         {screen === "card" ? (
           <div className="mx-auto max-w-md space-y-4">

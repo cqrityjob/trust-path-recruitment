@@ -51,6 +51,7 @@ const sv = {
   "screen.symbols": "Behörighetssymboler",
   "screen.credentialForm": "Behörighetsformulär",
   "screen.credentialHistory": "Rättelse och versioner",
+  "screen.linkedin": "LinkedIn-delning",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
     "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
@@ -871,6 +872,22 @@ const sv = {
     "Tidigare versioner sparas och märks som ersatta. Ingen version försvinner.",
   "cred.versions.current": "Gällande",
   "cred.versions.recordedAt": "Registrerad",
+
+  // ── LinkedIn sharing (fallback experience) ───────────────────────────
+  "li.title": "Dela på LinkedIn",
+  "li.lead":
+    "Så här ser ditt kort ut i LinkedIns format. Tre steg: ladda ner bilden, kopiera länken, bifoga bilden i ditt inlägg.",
+  "li.step1": "Ladda ner kortbilden i LinkedIns format (1200×630).",
+  "li.step1Action": "Ladda ner bilden",
+  "li.step1Done": "Nedladdad — ladda ner igen",
+  "li.step2": "Kopiera den levande verifieringslänken och klistra in den i inlägget.",
+  "li.step3":
+    "Öppna LinkedIn och bifoga den nedladdade bilden i inlägget. Bilden bifogas inte automatiskt.",
+  "li.step3Action": "Öppna LinkedIn",
+  "li.previewNote":
+    "Länkens automatiska förhandsvisning på LinkedIn visar CQrityjobs allmänna kort — inte ditt personliga. Ditt kort syns när du själv bifogar bilden. Länken är alltid källan: sidan bakom den visar aktuellt läge och kan återkallas.",
+  "sc.retentionNote":
+    "Sociala plattformar kan behålla bilder som redan publicerats eller cachats — även efter att du återkallat länken. Det du återkallar är sidan bakom länken, inte kopior av bilden.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -901,6 +918,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.symbols": "Credential symbols",
   "screen.credentialForm": "Credential form",
   "screen.credentialHistory": "Correction and versions",
+  "screen.linkedin": "LinkedIn sharing",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
     "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
@@ -1706,6 +1724,21 @@ const en: Record<PassportCopyKey, string> = {
     "Earlier versions are kept and marked as superseded. No version disappears.",
   "cred.versions.current": "Current",
   "cred.versions.recordedAt": "Recorded",
+
+  "li.title": "Share on LinkedIn",
+  "li.lead":
+    "This is your card in LinkedIn's format. Three steps: download the image, copy the link, attach the image to your post.",
+  "li.step1": "Download the card image in LinkedIn's format (1200×630).",
+  "li.step1Action": "Download the image",
+  "li.step1Done": "Downloaded — download again",
+  "li.step2": "Copy the live verification link and paste it into the post.",
+  "li.step3":
+    "Open LinkedIn and attach the downloaded image to the post. The image is not attached automatically.",
+  "li.step3Action": "Open LinkedIn",
+  "li.previewNote":
+    "The link's automatic preview on LinkedIn shows CQrityjob's generic card — not your personal one. Your card appears when you attach the image yourself. The link is always the source: the page behind it shows the current position and can be revoked.",
+  "sc.retentionNote":
+    "Social platforms may keep images that have already been published or cached — even after you withdraw the link. What you revoke is the page behind the link, not copies of the image.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {
