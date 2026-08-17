@@ -7322,6 +7322,131 @@ export type Database = {
           },
         ]
       }
+      sp_disclosure_accesses: {
+        Row: {
+          accessed_at: string
+          client_hint_hash: string | null
+          disclosure_id: string
+          id: string
+        }
+        Insert: {
+          accessed_at?: string
+          client_hint_hash?: string | null
+          disclosure_id: string
+          id?: string
+        }
+        Update: {
+          accessed_at?: string
+          client_hint_hash?: string | null
+          disclosure_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_disclosure_accesses_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_disclosures: {
+        Row: {
+          access_count: number
+          created_at: string
+          expires_at: string | null
+          holder_user_id: string
+          id: string
+          package_code: string
+          purpose: string | null
+          recipient_hint: string | null
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          expires_at?: string | null
+          holder_user_id: string
+          id?: string
+          package_code: string
+          purpose?: string | null
+          recipient_hint?: string | null
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          expires_at?: string | null
+          holder_user_id?: string
+          id?: string
+          package_code?: string
+          purpose?: string | null
+          recipient_hint?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: []
+      }
+      sp_evidence: {
+        Row: {
+          claim_id: string | null
+          file_name: string
+          holder_user_id: string
+          id: string
+          lifecycle_state: string
+          mime_type: string
+          period_id: string | null
+          sha256: string | null
+          size_bytes: number
+          storage_path: string
+          uploaded_at: string
+        }
+        Insert: {
+          claim_id?: string | null
+          file_name: string
+          holder_user_id: string
+          id?: string
+          lifecycle_state?: string
+          mime_type: string
+          period_id?: string | null
+          sha256?: string | null
+          size_bytes: number
+          storage_path: string
+          uploaded_at?: string
+        }
+        Update: {
+          claim_id?: string | null
+          file_name?: string
+          holder_user_id?: string
+          id?: string
+          lifecycle_state?: string
+          mime_type?: string
+          period_id?: string | null
+          sha256?: string | null
+          size_bytes?: number
+          storage_path?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_evidence_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_evidence_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sp_experience_periods: {
         Row: {
           assertion_level: string
@@ -7565,6 +7690,132 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      sp_verification_decisions: {
+        Row: {
+          decided_at: string
+          decided_by: string | null
+          decider_organisation: string | null
+          decision: string
+          decision_note: string | null
+          holder_user_id: string
+          id: string
+          request_id: string
+          valid_from: string | null
+          valid_until: string | null
+          verification_method: string | null
+        }
+        Insert: {
+          decided_at?: string
+          decided_by?: string | null
+          decider_organisation?: string | null
+          decision: string
+          decision_note?: string | null
+          holder_user_id: string
+          id?: string
+          request_id: string
+          valid_from?: string | null
+          valid_until?: string | null
+          verification_method?: string | null
+        }
+        Update: {
+          decided_at?: string
+          decided_by?: string | null
+          decider_organisation?: string | null
+          decision?: string
+          decision_note?: string | null
+          holder_user_id?: string
+          id?: string
+          request_id?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          verification_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_verification_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "sp_verification_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_verification_requests: {
+        Row: {
+          claim_id: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          holder_message: string | null
+          holder_user_id: string
+          id: string
+          period_id: string | null
+          request_kind: string
+          status: string
+          submitted_at: string
+          target_employer_id: string | null
+          valid_from: string | null
+          valid_until: string | null
+          verification_method: string | null
+        }
+        Insert: {
+          claim_id?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          holder_message?: string | null
+          holder_user_id: string
+          id?: string
+          period_id?: string | null
+          request_kind: string
+          status?: string
+          submitted_at?: string
+          target_employer_id?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          verification_method?: string | null
+        }
+        Update: {
+          claim_id?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          holder_message?: string | null
+          holder_user_id?: string
+          id?: string
+          period_id?: string | null
+          request_kind?: string
+          status?: string
+          submitted_at?: string
+          target_employer_id?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          verification_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_verification_requests_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_verification_requests_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_verification_requests_target_employer_id_fkey"
+            columns: ["target_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       target_professions: {
         Row: {
@@ -8329,6 +8580,18 @@ export type Database = {
           updated_at: string
         }[]
       }
+      sp_attach_evidence: {
+        Args: {
+          _claim_id: string
+          _file_name: string
+          _mime_type: string
+          _period_id: string
+          _sha256: string
+          _size_bytes: number
+          _storage_path: string
+        }
+        Returns: string
+      }
       sp_correct_claim: {
         Args: {
           _claim_id: string
@@ -8341,6 +8604,39 @@ export type Database = {
           _valid_until: string
         }
         Returns: string
+      }
+      sp_create_disclosure: {
+        Args: {
+          _expires_days: number
+          _package_code: string
+          _purpose: string
+          _recipient_hint: string
+        }
+        Returns: string
+      }
+      sp_get_disclosure: { Args: { _token: string }; Returns: Json }
+      sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
+      sp_submit_for_verification: {
+        Args: {
+          _claim_id: string
+          _employer_id: string
+          _kind: string
+          _period_id: string
+        }
+        Returns: string
+      }
+      sp_verifier_decide: {
+        Args: {
+          _decision: string
+          _decision_note: string
+          _holder_message: string
+          _method: string
+          _request_id: string
+          _valid_from: string
+          _valid_until: string
+        }
+        Returns: undefined
       }
       sp_withdraw_claim: {
         Args: { _claim_id: string; _reason: string }
