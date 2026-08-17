@@ -779,6 +779,50 @@ for (const pkg of DISCLOSURE_PACKAGES) {
     }
   }
 
+  // ── Expiry is DERIVED everywhere, never read from the stored row ──────
+  //
+  // Nothing writes `expired` on the day a licence lapses. A card or a social
+  // image built from the stored state would therefore print a lapsed
+  // authorisation as currently VERIFIED — on the two artifacts that get
+  // screenshotted and cached. This persona is stored `active` with a
+  // `validUntil` in the past, so it fails every check that trusts the row.
+  {
+    const lapsed = personaById("cred-ov-lapsed-silently");
+    const stored = lapsed.claims[0];
+    expect(
+      stored.lifecycleState === "active" && stored.validUntil !== null,
+      "The lapsed persona must be STORED active, or it does not exercise the bug.",
+    );
+    expect(
+      stored.validUntil !== null && stored.validUntil < EVAL,
+      "The lapsed persona's validity must have ended before the evaluation date.",
+    );
+
+    const card = buildPassportCard(lapsed, EVAL);
+    expect(
+      card.credentials[0].lifecycleState === "expired",
+      `A lapsed credential must reach the card as expired, got ${card.credentials[0].lifecycleState}.`,
+    );
+    expect(card.credentials[0].lapsed, "The card must mark the credential as lapsed by date.");
+    expect(
+      card.containsExpired,
+      "A card holding a lapsed credential must report that it contains expired content.",
+    );
+    expect(
+      credentialPresentation("verified", card.credentials[0].lifecycleState) === "expired",
+      "A lapsed credential must never take the approved symbol treatment.",
+    );
+
+    const social = buildSocialCard(lapsed, EVAL, {
+      privacyMode: "full_name",
+      anonymousLabel: "Verifierad väktare",
+    });
+    expect(
+      social.verifiedCredentials.length === 0,
+      "A lapsed credential must never be published to a social image.",
+    );
+  }
+
   // The social card now carries the taxonomy code — and still only for
   // verified, active credentials (asserted per-claim in section 15c).
   const ovCurrent = PERSONAS.find((p) => p.id === "cred-ov-current");

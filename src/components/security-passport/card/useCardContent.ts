@@ -92,13 +92,22 @@ export function useCardContent(
   const credentials: CredentialPlateProps[] = card.credentials.map((c) => {
     const ev = evidenceStyle(c.assertionLevel);
     const overlay = lifecycleOverlay(c.lifecycleState);
+    const isCurrent = c.lifecycleState === "active";
     return {
       title: lang === "sv" ? c.titleSv : c.titleEn,
-      evidenceWord: pt(`assertion.${c.assertionLevel}` as const),
+      // A credential that is no longer current must not print the bare word
+      // VERIFIED: on a card, beside a name, that reads as a present fact.
+      // The verification is real and is not erased — it is stated as the
+      // past event it is, and the lifecycle word leads.
+      evidenceWord:
+        !isCurrent && c.assertionLevel === "verified"
+          ? pt("assertion.verified.historical")
+          : pt(`assertion.${c.assertionLevel}` as const),
       // The lifecycle word appears only when it qualifies the entry.
       // "Active" beside every plate is noise; "Expired" is the point.
-      lifecycleWord:
-        c.lifecycleState === "active" ? null : pt(`lifecycle.${c.lifecycleState}` as const),
+      lifecycleWord: isCurrent ? null : pt(`lifecycle.${c.lifecycleState}` as const),
+      // Drives which word the plate prints first.
+      lifecycleLeads: !isCurrent,
       edge: ev.edge,
       edgeStyle: ev.edgeStyle,
       fill: ev.fill,

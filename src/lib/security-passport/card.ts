@@ -21,11 +21,49 @@
 
 import { totalsByEvidenceLevel } from "./experience";
 import { recognitionFor, type RecognitionState } from "./recognition";
-import type { Claim, ExperiencePeriod, IsoDate, PassportHolder } from "./types";
+import { validityOf } from "./validity";
+import type {
+  AssertionLevel,
+  Claim,
+  ExperiencePeriod,
+  IsoDate,
+  LifecycleState,
+  PassportHolder,
+} from "./types";
 
 export type PassportCardState = "empty" | "self_declared_only" | "partially_verified" | "verified";
 
 export type ShareOverlayState = "none" | "share_expired" | "share_revoked";
+
+/**
+ * One credential as the card presents it.
+ *
+ * ── WHY THIS TYPE EXISTS RATHER THAN REUSING `Claim` ───────────────────
+ *
+ * `lifecycleState` here is the EFFECTIVE state on the evaluation date, not
+ * the stored one. Expiry is derived from `validUntil` at read time (see
+ * validity.ts) precisely because nothing writes `expired` on the day a
+ * licence lapses — so a card built from stored state alone would print a
+ * lapsed authorisation as VERIFIED with nothing qualifying it. The card is
+ * the artifact people screenshot; that is the worst possible place for it.
+ *
+ * The field keeps its name so every consumer reads the derived value by
+ * default. Opting back into the stored value has to be deliberate.
+ */
+export interface CardCredential {
+  readonly id: string;
+  readonly titleSv: string;
+  readonly titleEn: string;
+  readonly credentialCode: string | null;
+  readonly issuerName: string;
+  readonly verifierName: string | null;
+  readonly assertionLevel: AssertionLevel;
+  /** Effective on the evaluation date. */
+  readonly lifecycleState: LifecycleState;
+  /** True when the stored state was overtaken by the calendar. */
+  readonly lapsed: boolean;
+  readonly validUntil: IsoDate | null;
+}
 
 export interface PassportCardModel {
   readonly holderDisplayName: string;
@@ -35,7 +73,7 @@ export interface PassportCardModel {
   readonly state: PassportCardState;
   /** Null unless the whole qualifying threshold is verified. */
   readonly recognition: RecognitionState;
-  readonly credentials: readonly Claim[];
+  readonly credentials: readonly CardCredential[];
   readonly containsExpired: boolean;
   readonly containsDisputed: boolean;
   /** Distinct attributions behind the shown credentials. */
@@ -44,14 +82,17 @@ export interface PassportCardModel {
 
 const CARD_CREDENTIAL_LIMIT = 3;
 
-function evidenceRank(claim: Claim): number {
+function evidenceRank(claim: CardCredential): number {
   if (claim.assertionLevel === "verified") return 2;
   if (claim.assertionLevel === "document_provided") return 1;
   return 0;
 }
 
-function recency(claim: Claim): number {
-  return claim.issuedOn ? Date.parse(claim.issuedOn) : 0;
+/** Recency by the date the credential's validity begins or ends. Card
+ *  credentials no longer carry `issuedOn`, and `validUntil` is the more
+ *  useful ordering for an appointment anyway. */
+function recency(claim: CardCredential): number {
+  return claim.validUntil ? Date.parse(claim.validUntil) : 0;
 }
 
 function deriveState(
@@ -71,6 +112,23 @@ function deriveState(
   return allVerified ? "verified" : "partially_verified";
 }
 
+/** A claim as of the evaluation date, with expiry applied. */
+function toCardCredential(claim: Claim, evaluationOn: IsoDate): CardCredential {
+  const validity = validityOf(claim.lifecycleState, claim.validUntil, evaluationOn);
+  return {
+    id: claim.id,
+    titleSv: claim.titleSv,
+    titleEn: claim.titleEn,
+    credentialCode: claim.credentialCode,
+    issuerName: claim.issuerName,
+    verifierName: claim.verifierName,
+    assertionLevel: claim.assertionLevel,
+    lifecycleState: validity.effectiveState,
+    lapsed: validity.hasExpired,
+    validUntil: claim.validUntil,
+  };
+}
+
 export function buildPassportCard(
   holder: PassportHolder,
   evaluationOn: IsoDate,
@@ -78,7 +136,12 @@ export function buildPassportCard(
   const totals = totalsByEvidenceLevel(holder.periods, evaluationOn);
   const recognition = recognitionFor(totals);
 
-  const credentials = [...holder.claims]
+  // Expiry is applied BEFORE the card is assembled, so every downstream
+  // consumer — plates, symbols, state words, the exported PNG — reads the
+  // state that is true today rather than the one stored last year.
+  const dated = holder.claims.map((c) => toCardCredential(c, evaluationOn));
+
+  const credentials = [...dated]
     .sort((a, b) => evidenceRank(b) - evidenceRank(a) || recency(b) - recency(a))
     .slice(0, CARD_CREDENTIAL_LIMIT);
 
@@ -98,11 +161,13 @@ export function buildPassportCard(
     state: deriveState(holder.periods, holder.claims),
     recognition,
     credentials,
+    // Derived, so a licence that lapsed yesterday is reported today. The
+    // whole card carries the warning, not only the plate.
     containsExpired:
-      holder.claims.some((c) => c.lifecycleState === "expired") ||
+      dated.some((c) => c.lifecycleState === "expired") ||
       holder.periods.some((p) => p.lifecycleState === "expired"),
     containsDisputed:
-      holder.claims.some((c) => c.lifecycleState === "disputed") ||
+      dated.some((c) => c.lifecycleState === "disputed") ||
       holder.periods.some((p) => p.lifecycleState === "disputed"),
     attributions,
   };

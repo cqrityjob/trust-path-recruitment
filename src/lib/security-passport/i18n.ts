@@ -275,6 +275,10 @@ const sv = {
   "assertion.self_declared": "EGENRAPPORTERAD",
   "assertion.document_provided": "DOKUMENT TILLHANDAHÅLLET",
   "assertion.verified": "VERIFIERAD",
+  // Used wherever a verified credential is no longer CURRENT. The
+  // verification really happened and is never erased — but on a card, beside
+  // someone's name, the bare word reads as a present fact.
+  "assertion.verified.historical": "TIDIGARE VERIFIERAD",
   "assertion.self_declared.help":
     "Uppgiften kommer från dig och är inte kontrollerad av någon annan.",
   "assertion.document_provided.help":
@@ -1137,6 +1141,7 @@ const en: Record<PassportCopyKey, string> = {
   "assertion.self_declared": "SELF-DECLARED",
   "assertion.document_provided": "DOCUMENT PROVIDED",
   "assertion.verified": "VERIFIED",
+  "assertion.verified.historical": "PREVIOUSLY VERIFIED",
   "assertion.self_declared.help": "This comes from you and has not been checked by anyone else.",
   "assertion.document_provided.help":
     "Documentation has been provided. A document existing does not mean the entry is verified.",

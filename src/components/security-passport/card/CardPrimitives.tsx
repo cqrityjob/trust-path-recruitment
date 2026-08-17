@@ -246,6 +246,11 @@ export interface CredentialPlateProps {
   readonly evidenceWord: string;
   /** Lifecycle word, when the state needs qualifying. Null otherwise. */
   readonly lifecycleWord: string | null;
+  /** True when the credential is no longer current, so the lifecycle word
+   *  is printed FIRST and in the qualifying tone. "EXPIRED · PREVIOUSLY
+   *  VERIFIED" is honest; "VERIFIED · EXPIRED" invites the reader to stop
+   *  after the first word. */
+  readonly lifecycleLeads?: boolean;
   readonly edge: string;
   readonly edgeStyle: "solid" | "dashed";
   readonly fill: string;
@@ -283,6 +288,7 @@ export function CredentialPlate({
   overlayTone,
   symbolCode,
   symbolState,
+  lifecycleLeads = false,
 }: CredentialPlateProps) {
   return (
     <div
@@ -309,25 +315,47 @@ export function CredentialPlate({
           {title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-            style={{ color: overlayTone ?? textTone }}
-          >
-            {evidenceWord}
-          </span>
-          {lifecycleWord ? (
+          {lifecycleWord && lifecycleLeads ? (
             <>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: overlayTone ?? TRUST_PALETTE.amber }}
+              >
+                {lifecycleWord}
+              </span>
               <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
                 ·
               </span>
               <span
                 className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: overlayTone ?? TRUST_PALETTE.inkMuted }}
+                style={{ color: TRUST_PALETTE.inkMuted }}
               >
-                {lifecycleWord}
+                {evidenceWord}
               </span>
             </>
-          ) : null}
+          ) : (
+            <>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                style={{ color: overlayTone ?? textTone }}
+              >
+                {evidenceWord}
+              </span>
+              {lifecycleWord ? (
+                <>
+                  <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
+                    ·
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                    style={{ color: overlayTone ?? TRUST_PALETTE.inkMuted }}
+                  >
+                    {lifecycleWord}
+                  </span>
+                </>
+              ) : null}
+            </>
+          )}
         </div>
         {issuer ? (
           <p className="mt-1 truncate text-[11px]" style={{ color: TRUST_PALETTE.inkFaint }}>

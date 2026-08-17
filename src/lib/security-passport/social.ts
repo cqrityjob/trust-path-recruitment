@@ -35,6 +35,7 @@
 
 import { totalsByEvidenceLevel } from "./experience";
 import { recognitionFor } from "./recognition";
+import { validityOf } from "./validity";
 import type { IsoDate, PassportHolder } from "./types";
 
 export type PrivacyMode = "full_name" | "initials" | "anonymous";
@@ -152,12 +153,21 @@ export function buildSocialCard(
   const totals = totalsByEvidenceLevel(holder.periods, evaluationOn);
   const recognition = recognitionFor(totals);
 
-  // Verified AND currently active. An expired credential is honest content
+  // Verified AND currently valid. An expired credential is honest content
   // on the Passport Card, where its state is shown beside it — but a social
   // image cannot carry that qualification reliably once it is cached, so it
   // is simply not published.
+  //
+  // "Currently valid" is DERIVED, not read from the stored state. Nothing
+  // writes `expired` on the day a licence lapses, so a stored-state filter
+  // would publish a lapsed authorisation to the one surface that can never
+  // be recalled. That is the single worst failure this module could have.
   const verifiedCredentials = holder.claims
-    .filter((c) => c.assertionLevel === "verified" && c.lifecycleState === "active")
+    .filter(
+      (c) =>
+        c.assertionLevel === "verified" &&
+        validityOf(c.lifecycleState, c.validUntil, evaluationOn).effectiveState === "active",
+    )
     .slice(0, options.maxCredentials ?? MAX_SOCIAL_CREDENTIALS)
     .map((c) => ({ id: c.id, code: c.credentialCode, nameSv: c.titleSv, nameEn: c.titleEn }));
 

@@ -419,6 +419,21 @@ const CREDENTIAL_PERSONAS: readonly PassportHolder[] = [
       verifier: "Väktarskolan Fiktiv AB",
     }),
   ]),
+  // The case a stored-state filter gets wrong: still recorded `active`,
+  // because nothing writes `expired` on the day a licence lapses, but its
+  // validity ended before the evaluation date. Every surface must derive
+  // the expiry rather than believe the row.
+  credentialPersona("cred-ov-lapsed-silently", "Ingrid Testsson", [
+    credentialClaim({
+      id: "c-ov-lapsed",
+      code: "OV",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2023-06-01",
+      validUntil: "2026-05-31",
+      verifier: "Fiktiva Myndigheten",
+    }),
+  ]),
   credentialPersona("cred-sv-current", "Folke Exempelsson", [
     credentialClaim({
       id: "c-sv-curr",
