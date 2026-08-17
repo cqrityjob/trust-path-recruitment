@@ -31,6 +31,11 @@ export type LibraryEntry = {
   validationStatus: string;
   isTestFixture: boolean;
   assignable: boolean;
+  /** The basis on which this organisation may run it, or null if it may not.
+   *  `closed_test` means a scoped pilot of content that is genuinely not yet
+   *  validated — assignable and unvalidated at the same time, which a boolean
+   *  alone cannot express without misleading in one direction. */
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
   itemCount: number;
   minutesMin: number | null;
   minutesMax: number | null;
@@ -145,6 +150,7 @@ export const listAcademyLibrary = createServerFn({ method: "GET" })
       validationStatus: String(r.validation_status),
       isTestFixture: Boolean(r.is_test_fixture),
       assignable: Boolean(r.assignable),
+      governanceMode: (r.governance_mode ?? null) as LibraryEntry["governanceMode"],
       itemCount: Number(r.item_count ?? 0),
       minutesMin: r.target_minutes_min ?? null,
       minutesMax: r.target_minutes_max ?? null,
@@ -451,6 +457,11 @@ export const completeReview = createServerFn({ method: "POST" })
         outcome: z.enum(["upheld", "adjusted", "overturned"]),
         rationale: z.string().min(1),
         contribution: z.number().min(0).max(1).default(0.5),
+        // A safety-critical observation carries a severity, and only the
+        // reviewer can supply it — scp_complete_human_review refuses without
+        // one. Null for every other observation, where the same function
+        // refuses a severity that was never asked for.
+        safetySeverity: z.enum(["low", "medium", "high", "critical"]).nullable().default(null),
       })
       .parse(d),
   )
@@ -461,6 +472,7 @@ export const completeReview = createServerFn({ method: "POST" })
       _outcome: data.outcome,
       _rationale: data.rationale,
       _contribution: data.contribution,
+      _safety_severity: data.safetySeverity,
     });
     if (error) throw fail(error.message, "review_failed");
     return { evidenceId: String(id) };

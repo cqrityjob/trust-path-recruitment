@@ -2188,6 +2188,10 @@ export const dictionaries = {
     "academy.library.emptyBody": "När ett program har publicerats visas det här.",
     "academy.status.available": "Tillgängligt",
     "academy.status.development": "Under utveckling",
+    "academy.status.closedTest": "Pilot – sluten testning",
+    "academy.library.closedTest.title": "Sluten testning",
+    "academy.library.closedTest.body":
+      "Er organisation har ett tidsbegränsat pilotmedgivande för det här programmet. Innehållet är ännu inte validerat, så resultatet är utvecklingsinriktat underlag – det får inte användas för urval, rangordning eller anställningsbeslut. Varje resultat märks med att det kommer från en sluten testning.",
     "academy.status.fixture": "Testfixtur",
     "academy.assign.email": "Deltagarens e-postadress",
     "academy.assign.deadline": "Sista dag (valfritt)",
@@ -4525,6 +4529,10 @@ export const dictionaries = {
     "academy.library.emptyBody": "Published programmes will appear here.",
     "academy.status.available": "Available",
     "academy.status.development": "In development",
+    "academy.status.closedTest": "Pilot – closed test",
+    "academy.library.closedTest.title": "Closed test",
+    "academy.library.closedTest.body":
+      "Your organisation holds a time-limited pilot grant for this programme. The content is not yet validated, so the result is developmental input only — it must not be used for selection, ranking or hiring decisions. Every result is labelled as coming from a closed test.",
     "academy.status.fixture": "Test fixture",
     "academy.assign.email": "Participant's email address",
     "academy.assign.deadline": "Deadline (optional)",

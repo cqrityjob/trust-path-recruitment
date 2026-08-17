@@ -135,6 +135,20 @@ function ProgrammeCard({
         </div>
       )}
 
+      {/* A pilot must say so where the employer decides to use it, not only in
+          a status chip. This is the difference between "we ran an assessment"
+          and "we ran a controlled test of an unvalidated instrument". */}
+      {entry.governanceMode === "closed_test" && (
+        <div className="mt-4 rounded-[10px] border border-border bg-muted/40 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("academy.library.closedTest.title")}
+          </p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+            {t("academy.library.closedTest.body")}
+          </p>
+        </div>
+      )}
+
       <div className="mt-5 flex-1" />
 
       {entry.assignable && canAssign ? (
@@ -164,11 +178,16 @@ function ProgrammeCard({
 
 function StatusChip({ entry }: { entry: LibraryEntry }) {
   const { t } = useT();
+  // A closed-test pilot is assignable AND not yet validated. Showing it as
+  // plain "available" would overclaim; showing it as "in development" told the
+  // employer it could not be used, which was false and hid the pilot entirely.
   const [Icon, key] = entry.isTestFixture
     ? ([FlaskConical, "academy.status.fixture"] as const)
-    : entry.assignable
-      ? ([CheckCircle2, "academy.status.available"] as const)
-      : ([Hammer, "academy.status.development"] as const);
+    : entry.governanceMode === "closed_test"
+      ? ([FlaskConical, "academy.status.closedTest"] as const)
+      : entry.assignable
+        ? ([CheckCircle2, "academy.status.available"] as const)
+        : ([Hammer, "academy.status.development"] as const);
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
       <Icon className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
