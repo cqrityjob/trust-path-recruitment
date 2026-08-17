@@ -32,6 +32,7 @@ import { clearState, readState } from "@/lib/security-passport/prototype-state";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CandidateHomeMock } from "./CandidateHomeMock";
 import { CardStudio } from "./CardStudio";
+import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
 import { DisclosurePackagePicker } from "./DisclosurePackagePicker";
 import { ExperienceTimeline } from "./ExperienceTimeline";
@@ -49,6 +50,7 @@ type ScreenId =
   | "timeline"
   | "card"
   | "studio"
+  | "symbols"
   | "share"
   | "shareHistory"
   | "recipient"
@@ -61,6 +63,7 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "overview", labelKey: "screen.overview" },
   { id: "timeline", labelKey: "screen.timeline" },
   { id: "studio", labelKey: "screen.studio" },
+  { id: "symbols", labelKey: "screen.symbols" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
@@ -290,6 +293,8 @@ export function PrototypeShell() {
         ) : null}
 
         {screen === "studio" ? <CardStudio personaId={personaId} /> : null}
+
+        {screen === "symbols" ? <CredentialSymbolMatrix /> : null}
 
         {screen === "card" ? (
           <div className="mx-auto max-w-md space-y-4">
