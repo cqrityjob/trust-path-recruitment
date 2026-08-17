@@ -752,16 +752,15 @@ if [ "$SP6_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Security Passport Phase 6 suite exited with code ${SP6_RC}." >&2
   echo "$SP6_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
-fi
-
-echo "    ok  ${SP6_PASSED} Security Passport Phase 6 assertions passed"
-
-# Every rule in the taxonomy is asserted by mutation, so a suite that stopped
-# early would be reporting success for having attempted nothing.
-if [ "$SP6_PASSED" -lt 20 ]; then
-  echo "FAIL: expected at least 20 Phase 6 assertions, only ${SP6_PASSED} ran." >&2
-  exit 1
+  suite_failed "Security Passport Phase 6"
+else
+  echo "    ok  ${SP6_PASSED} Security Passport Phase 6 assertions passed"
+  # Every rule in the taxonomy is asserted by mutation, so a suite that stopped
+  # early would be reporting success for having attempted nothing.
+  if [ "$SP6_PASSED" -lt 20 ]; then
+    echo "FAIL: expected at least 20 Phase 6 assertions, only ${SP6_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 6 (assertion shortfall: floor 20)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -778,16 +777,40 @@ if [ "$SP6B_RC" -ne 0 ]; then
   echo ""
   echo "FAIL: the Security Passport Phase 6b suite exited with code ${SP6B_RC}." >&2
   echo "$SP6B_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
-  exit 1
+  suite_failed "Security Passport Phase 6b"
+else
+  echo "    ok  ${SP6B_PASSED} Security Passport Phase 6b assertions passed"
+  # Correction is where trust can leak forward onto a changed claim, so a suite
+  # that stopped early here would be the worst kind of false pass.
+  if [ "$SP6B_PASSED" -lt 25 ]; then
+    echo "FAIL: expected at least 25 Phase 6b assertions, only ${SP6B_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 6b (assertion shortfall: floor 25)"
+  fi
 fi
 
-echo "    ok  ${SP6B_PASSED} Security Passport Phase 6b assertions passed"
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 7 assertions"
+set +e
+SP7_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase7_test.sql 2>&1)"
+SP7_RC=$?
+set -e
 
-# Correction is where trust can leak forward onto a changed claim, so a suite
-# that stopped early here would be the worst kind of false pass.
-if [ "$SP6B_PASSED" -lt 25 ]; then
-  echo "FAIL: expected at least 25 Phase 6b assertions, only ${SP6B_PASSED} ran." >&2
-  exit 1
+echo "$SP7_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP7_PASSED="$(echo "$SP7_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP7_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 7 suite exited with code ${SP7_RC}." >&2
+  echo "$SP7_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Phase 7"
+else
+  echo "    ok  ${SP7_PASSED} Security Passport Phase 7 assertions passed"
+  # This suite guards the ONLY anonymous surface in the product. A short run
+  # here means the package-boundary and fail-closed checks did not execute.
+  if [ "$SP7_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 Phase 7 assertions, only ${SP7_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 7 (assertion shortfall: floor 45)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
