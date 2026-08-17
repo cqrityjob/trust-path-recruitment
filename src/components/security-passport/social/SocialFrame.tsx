@@ -57,7 +57,13 @@ function useSocialStrings(model: SocialCardModel) {
     verifiedLabel: pt("recognition.badgePrefix"),
     verifiedWord: pt("assertion.verified"),
     verifyAtSource: pt("card.verifyAtSource"),
-    noVerified: pt("card.noVerifiedYet"),
+    // With verified credentials named below, the empty milestone slot must
+    // say what is actually missing — verified EXPERIENCE — rather than
+    // contradicting the list under it.
+    noVerified:
+      model.verifiedCredentials.length > 0
+        ? pt("card.noVerifiedExperience")
+        : pt("card.noVerifiedYet"),
     credentials: model.verifiedCredentials.map((c) => ({
       code: c.code,
       name: lang === "sv" ? c.nameSv : c.nameEn,

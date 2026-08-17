@@ -755,7 +755,9 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       t.strike === (state === "revoked"),
       `Symbol treatment: the void strike must be exclusive to revoked (violated by ${state}).`,
     );
-    if (["documented", "approved", "expired", "revoked", "superseded", "disputed"].includes(state)) {
+    if (
+      ["documented", "approved", "expired", "revoked", "superseded", "disputed"].includes(state)
+    ) {
       expect(t.glyph !== null, `Symbol treatment: ${state} must carry a status glyph.`);
     }
   }
@@ -770,7 +772,10 @@ for (const pkg of DISCLOSURE_PACKAGES) {
         !svg.includes("http") && !svg.includes("<image"),
         `Symbol markup for ${code}/${state} must be self-contained.`,
       );
-      expect(svg.includes(`>${code}</text>`), `Symbol markup for ${code}/${state} must carry its label.`);
+      expect(
+        svg.includes(`>${code}</text>`),
+        `Symbol markup for ${code}/${state} must carry its label.`,
+      );
     }
   }
 

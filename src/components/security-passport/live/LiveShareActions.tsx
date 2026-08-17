@@ -149,7 +149,10 @@ export function LiveShareActions({ shareUrl, model, qrDataUrl }: LiveShareAction
           verifiedLabel: pt("assertion.verified"),
           yearsLabel: pt("recognition.years"),
           verifyAtSource: pt("card.verifyAtSource"),
-          noVerifiedYet: pt("card.noVerifiedYet"),
+          noVerifiedYet:
+            model.verifiedCredentials.length > 0
+              ? pt("card.noVerifiedExperience")
+              : pt("card.noVerifiedYet"),
           staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
         },
         qrDataUrl,
