@@ -733,6 +733,32 @@ if [ "$SP6_PASSED" -lt 20 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 6b assertions"
+set +e
+SP6B_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase6b_test.sql 2>&1)"
+SP6B_RC=$?
+set -e
+
+echo "$SP6B_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP6B_PASSED="$(echo "$SP6B_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP6B_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 6b suite exited with code ${SP6B_RC}." >&2
+  echo "$SP6B_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SP6B_PASSED} Security Passport Phase 6b assertions passed"
+
+# Correction is where trust can leak forward onto a changed claim, so a suite
+# that stopped early here would be the worst kind of false pass.
+if [ "$SP6B_PASSED" -lt 25 ]; then
+  echo "FAIL: expected at least 25 Phase 6b assertions, only ${SP6B_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null

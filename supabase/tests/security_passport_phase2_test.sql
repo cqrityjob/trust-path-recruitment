@@ -355,9 +355,13 @@ BEGIN
    WHERE holder_user_id = 'a0000000-0000-0000-0000-000000000001'
      AND lifecycle_state = 'active' LIMIT 1;
 
+  -- Phase 6b widened this RPC with the credential code, reference and holder
+  -- note. This Phase 2 claim carries none of them, so all three are NULL; what
+  -- the assertions below check is unchanged.
   _new := public.sp_correct_claim(
     _claim, 'Väktargrundutbildning (VU1)', 'Nordvakt (fiktiv)', 'SE',
-    DATE '2024-02-10', DATE '2024-02-10', NULL, 'typo in title');
+    DATE '2024-02-10', DATE '2024-02-10', NULL, 'typo in title',
+    NULL, NULL, NULL);
 
   SELECT lifecycle_state INTO _old_state FROM public.sp_claims WHERE id = _claim;
   SELECT version_no INTO _new_ver FROM public.sp_claims WHERE id = _new;
@@ -393,7 +397,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', 'a0000000-0000-0000-0000-000000000002', true);
   PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_correct_claim(%L, ''hijacked'', NULL, ''SE'', NULL, NULL, NULL, ''x'')', _claim),
+    format('SELECT public.sp_correct_claim(%L, ''hijacked'', NULL, ''SE'', NULL, NULL, NULL, ''x'', NULL, NULL, NULL)', _claim),
     'SP_NOT_HOLDER',
     '4.7 holder B cannot correct holder A''s claim through the RPC');
   RESET ROLE;

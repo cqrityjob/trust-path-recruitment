@@ -8672,6 +8672,9 @@ export type Database = {
         Args: {
           _claim_id: string
           _claimed_issuer_name: string
+          _credential_code: string
+          _credential_reference: string
+          _holder_note: string
           _issued_on: string
           _jurisdiction_code: string
           _reason: string
