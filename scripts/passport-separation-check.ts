@@ -10,9 +10,13 @@
 //   1. No Passport module imports Career Discovery, Career Card or
 //      Security Competence Platform code (Product Architecture v1.1 §2,
 //      rules B6-B9).
-//   2. No Passport module imports a Supabase client, a server function or
-//      an auth middleware — the strongest available evidence that the
-//      Phase 1 prototype makes no database, auth or hosted-data call.
+//   2. Only `*.functions.ts` / `*.server.ts` may reach the server tier.
+//      Components, pure domain modules and the fixture prototype cannot
+//      import a Supabase client at all, which is what keeps the calculation
+//      layer testable and the dev prototype genuinely offline. The
+//      service-role client is banned everywhere, including the server tier:
+//      RLS is the Passport's boundary, and a read that succeeded because the
+//      server held a master key would defeat it.
 //   3. No Career Discovery or SCP module imports Passport code, so the
 //      boundary holds in both directions.
 //   4. The Passport tree renders no bar, meter, percentage or normalised
@@ -118,6 +122,13 @@ for (const file of passportFiles) {
 // ---------------------------------------------------------------------------
 // 2. No database, auth or server access from the Passport tree
 // ---------------------------------------------------------------------------
+// Phase 2 gave the Passport a real server tier, so database and server-
+// function imports are now legitimate — but ONLY in files whose name says
+// they are the server tier. Components, the pure domain modules and the
+// fixture tree stay unable to reach a database, which is what keeps the
+// calculation layer testable and the dev prototype genuinely offline.
+const SERVER_TIER = /\.(functions|server)\.ts$/;
+
 const FORBIDDEN_RUNTIME_FRAGMENTS = [
   "@/integrations/supabase",
   "@supabase/supabase-js",
@@ -126,26 +137,79 @@ const FORBIDDEN_RUNTIME_FRAGMENTS = [
 ];
 
 for (const file of passportFiles) {
+  if (SERVER_TIER.test(file)) continue;
   for (const line of importLines(read(file))) {
     for (const fragment of FORBIDDEN_RUNTIME_FRAGMENTS) {
       expect(
         !line.includes(fragment),
-        `${rel(file)}: Phase 1 is fixture-only; "${fragment}" must not be imported — ${line.trim()}`,
+        `${rel(file)}: only *.functions.ts may reach the server tier; "${fragment}" must not be imported here — ${line.trim()}`,
       );
     }
   }
 }
 
-// Also catch bare fetch/XHR, which would be a network call without an import.
+// The service-role client bypasses RLS. A Passport read that succeeds because
+// the server held a master key is exactly the failure mode RLS exists to
+// prevent, so it is banned everywhere in this domain including the server tier.
 for (const file of passportFiles) {
+  for (const line of importLines(read(file))) {
+    expect(
+      !line.includes("client.server") && !line.includes("supabaseAdmin"),
+      `${rel(file)}: Passport must never use the service-role client — RLS is the boundary. ${line.trim()}`,
+    );
+  }
+}
+
+// Bare network calls, outside the server tier.
+for (const file of passportFiles) {
+  if (SERVER_TIER.test(file)) continue;
   const src = read(file);
   expect(
     !/\bfetch\s*\(/.test(src),
-    `${rel(file)}: Phase 1 is fixture-only and must make no network call (found fetch()).`,
+    `${rel(file)}: components and domain modules must make no network call (found fetch()).`,
   );
   expect(
     !/\bXMLHttpRequest\b/.test(src),
-    `${rel(file)}: Phase 1 is fixture-only and must make no network call (found XMLHttpRequest).`,
+    `${rel(file)}: components and domain modules must make no network call (found XMLHttpRequest).`,
+  );
+}
+
+// The fixture tree must stay a pure, offline prototype: it is the thing that
+// proves the calculations without a database, and it is what the dev-only
+// route renders.
+for (const file of passportFiles) {
+  if (!file.includes("/fixtures/") && !file.endsWith("PrototypeShell.tsx")) continue;
+  for (const line of importLines(read(file))) {
+    expect(
+      !line.includes("passport.functions"),
+      `${rel(file)}: the fixture prototype must not call live Passport server functions.`,
+    );
+  }
+}
+
+// Phase 2 writes only self-declared claims. No module may name a higher
+// assertion level in a write position — the database refuses it, and this
+// catches the attempt at review time instead of at runtime.
+for (const file of passportFiles) {
+  if (!SERVER_TIER.test(file)) continue;
+  const src = stripComments(read(file));
+  // Only a QUOTED LITERAL is a write. `assertion_level: row.assertion_level`
+  // is the read mapping and `assertion_level: string` is the row type — both
+  // are legitimate, and a rule that flagged them would be turned off within
+  // a week. What must never appear is a hard-coded trust value.
+  expect(
+    !/assertion_level\s*:\s*["'`]/.test(src),
+    `${rel(file)}: Phase 2 server code must never assign a literal assertion_level — it takes the column default.`,
+  );
+  expect(
+    !/lifecycle_state\s*:\s*["'`](verified|document_provided|disputed|revoked|expired)["'`]/.test(
+      src,
+    ),
+    `${rel(file)}: Phase 2 server code must not write a Phase 3+ lifecycle state.`,
+  );
+  expect(
+    !/verified_by_user_id\s*:\s*[^;\n]*\b(userId|auth)\b/.test(src),
+    `${rel(file)}: Phase 2 server code must never write verification attribution.`,
   );
 }
 
@@ -294,23 +358,53 @@ expect(
 );
 
 const routeFiles = readdirSync(path.join(root, "src/routes"));
-for (const forbidden of ["passport.tsx", "passport.index.tsx", "p.$token.tsx", "p.tsx"]) {
+
+// Phase 2 claims /passport as the authenticated product destination, and it
+// must live behind the existing _authenticated guard rather than as a bare
+// top-level route.
+expect(
+  !routeFiles.includes("passport.tsx") && !routeFiles.includes("passport.index.tsx"),
+  "The Passport must be an _authenticated route, not a public top-level one.",
+);
+expect(
+  routeFiles.some((f) => f.startsWith("_authenticated.passport.")),
+  "Phase 2 must provide an _authenticated Passport route.",
+);
+
+// Phase 4 owns public sharing. Until scoped, expiring, revocable disclosure
+// exists, no public recipient route may be claimed.
+for (const forbidden of ["p.$token.tsx", "p.tsx", "passport.$token.tsx"]) {
   expect(
     !routeFiles.includes(forbidden),
-    `Phase 1 must not claim a production route: src/routes/${forbidden} exists.`,
+    `Public sharing is Phase 4: src/routes/${forbidden} must not exist yet.`,
   );
 }
 
-// No production surface may link to the prototype.
+// No production surface may link to the DEV prototype. Live Passport routes
+// legitimately import the shared Passport components, so the rule is about
+// the dev route specifically.
 for (const file of walk(path.join(root, "src/routes")).concat(
   walk(path.join(root, "src/components/site")),
 )) {
   if (file === PASSPORT_ROUTE) continue;
   const src = read(file);
   expect(
-    !src.includes("dev/security-passport") && !src.includes("security-passport"),
+    !src.includes("dev/security-passport") && !src.includes("dev.security-passport"),
     `${rel(file)}: production surfaces must not reference the dev-only Passport prototype.`,
   );
+}
+
+// The social-share surfaces stay unreachable from production until Phase 4
+// provides real scoped disclosure.
+for (const file of walk(path.join(root, "src/routes"))) {
+  if (file === PASSPORT_ROUTE) continue;
+  const src = read(file);
+  for (const deferred of ["social/SocialFrame", "social/ShareActions", "CardStudio"]) {
+    expect(
+      !src.includes(deferred),
+      `${rel(file)}: "${deferred}" is Phase 4 surface and must not be reachable from a production route.`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -327,5 +421,5 @@ console.log(
     `(${passportFiles.length} Passport files; no Career Discovery, Career Card or SCP import; ` +
     `no Supabase/server/network access; no guidance-indicator vocabulary; ` +
     `copy domain-local; no criminal-record concept; dev route fails closed; ` +
-    `/passport and /p unclaimed)`,
+    `/passport is _authenticated-only; no public share route claimed)`,
 );

@@ -56,9 +56,36 @@ function StepDots({ current, total }: { current: number; total: number }) {
   );
 }
 
-export function Onboarding({ onFinish, className }: { onFinish: () => void; className?: string }) {
+/** Where progress is kept.
+ *
+ *  Phase 2 gave this component a second home: the dev prototype still saves
+ *  to sessionStorage, while the authenticated product saves to the holder's
+ *  own database row. Parameterising the persistence — rather than forking
+ *  the component — keeps one reviewed onboarding UX instead of two that
+ *  drift apart the first time a step changes. */
+export interface OnboardingPersistence {
+  readonly read: () => PrototypeState | null;
+  /** Called after every mutation. The sessionStorage helpers already write
+   *  on their own, so the prototype's implementation is a no-op. */
+  readonly save: (state: PrototypeState) => void;
+}
+
+const SESSION_PERSISTENCE: OnboardingPersistence = {
+  read: readState,
+  save: () => {},
+};
+
+export function Onboarding({
+  onFinish,
+  className,
+  persistence = SESSION_PERSISTENCE,
+}: {
+  onFinish: () => void;
+  className?: string;
+  persistence?: OnboardingPersistence;
+}) {
   const { pt } = usePassportCopy();
-  const [state, setState] = useState<PrototypeState>(() => readState() ?? emptyState());
+  const [state, setState] = useState<PrototypeState>(() => persistence.read() ?? emptyState());
   const [errorFieldIds, setErrorFieldIds] = useState<readonly string[]>([]);
   const [savedFlash, setSavedFlash] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -81,7 +108,11 @@ export function Onboarding({ onFinish, className }: { onFinish: () => void; clas
   );
 
   function setAnswer(fieldId: string, value: string) {
-    setState((s) => recordAnswer(s, step.id, fieldId, value));
+    setState((s) => {
+      const next = recordAnswer(s, step.id, fieldId, value);
+      persistence.save(next);
+      return next;
+    });
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1200);
   }
@@ -98,16 +129,28 @@ export function Onboarding({ onFinish, className }: { onFinish: () => void; clas
       onFinish();
       return;
     }
-    setState((s) => goToStep(s, stepIndex + 1));
+    setState((s) => {
+      const next = goToStep(s, stepIndex + 1);
+      persistence.save(next);
+      return next;
+    });
   }
 
   function goBack() {
     if (stepIndex === 0) return;
-    setState((s) => goToStep(s, stepIndex - 1));
+    setState((s) => {
+      const next = goToStep(s, stepIndex - 1);
+      persistence.save(next);
+      return next;
+    });
   }
 
   function skip() {
-    setState((s) => goToStep(markSkipped(s, step.id), stepIndex + 1));
+    setState((s) => {
+      const next = goToStep(markSkipped(s, step.id), stepIndex + 1);
+      persistence.save(next);
+      return next;
+    });
   }
 
   return (

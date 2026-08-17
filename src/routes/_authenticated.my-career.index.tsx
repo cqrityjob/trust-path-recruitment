@@ -26,6 +26,7 @@ import { Section } from "@/components/site/Section";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { MyAcademyWorkCard } from "@/components/academy/MyAcademyWorkCard";
 import { MyReviewQueueCard } from "@/components/academy/MyReviewQueueCard";
+import { MyPassportEntryCard } from "@/components/security-passport/MyPassportEntryCard";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
 import {
   DiscoveryCareerSummary,
@@ -296,6 +297,14 @@ function MyCareerPage() {
         {/* Renders only for an account holding the content-review capability --
             the RLS-gated queue is the gate, not a client-side role check. */}
         <MyReviewQueueCard />
+
+        {/* Security Passport — a separate Trust product under the same
+            account, per the approved shared-home architecture. Career
+            Discovery and Career Card are untouched and continue to render
+            below; this is an adjacent entry, not a step in their flow. */}
+        <div className="mt-6">
+          <MyPassportEntryCard />
+        </div>
 
         {/* ---------------- Career Journey ---------------- */}
         <div className="mt-8">

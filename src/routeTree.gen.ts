@@ -39,6 +39,7 @@ import { Route as CandidateRegisterRouteImport } from './routes/candidate.regist
 import { Route as CandidateLoginRouteImport } from './routes/candidate.login'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated.reviews'
+import { Route as AuthenticatedPassportRouteImport } from './routes/_authenticated.passport'
 import { Route as AuthenticatedMyCareerRouteImport } from './routes/_authenticated.my-career'
 import { Route as AuthenticatedJourneyRouteImport } from './routes/_authenticated.journey'
 import { Route as AuthenticatedFeedbackRouteImport } from './routes/_authenticated.feedback'
@@ -46,6 +47,7 @@ import { Route as AuthenticatedEmployerRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedPassportIndexRouteImport } from './routes/_authenticated.passport.index'
 import { Route as AuthenticatedMyCareerIndexRouteImport } from './routes/_authenticated.my-career.index'
 import { Route as AuthenticatedEmployerIndexRouteImport } from './routes/_authenticated.employer.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
@@ -54,6 +56,9 @@ import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
 import { Route as AuthenticatedSecurityCareerAssessmentSessionRouteImport } from './routes/_authenticated.security-career-assessment.session'
 import { Route as AuthenticatedSecurityCareerAssessmentHistoryRouteImport } from './routes/_authenticated.security-career-assessment.history'
+import { Route as AuthenticatedPassportPrivacyRouteImport } from './routes/_authenticated.passport.privacy'
+import { Route as AuthenticatedPassportOnboardingRouteImport } from './routes/_authenticated.passport.onboarding'
+import { Route as AuthenticatedPassportCardRouteImport } from './routes/_authenticated.passport.card'
 import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/_authenticated.my-career.applications'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedEmployerOnboardingRouteImport } from './routes/_authenticated.employer.onboarding'
@@ -271,6 +276,11 @@ const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
   path: '/reviews',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPassportRoute = AuthenticatedPassportRouteImport.update({
+  id: '/passport',
+  path: '/passport',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMyCareerRoute = AuthenticatedMyCareerRouteImport.update({
   id: '/my-career',
   path: '/my-career',
@@ -307,6 +317,12 @@ const Char91DotmcpChar93ListToolsRoute =
     id: '/.mcp/list-tools',
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedPassportIndexRoute =
+  AuthenticatedPassportIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
 const AuthenticatedMyCareerIndexRoute =
   AuthenticatedMyCareerIndexRouteImport.update({
@@ -353,6 +369,24 @@ const AuthenticatedSecurityCareerAssessmentHistoryRoute =
     id: '/security-career-assessment/history',
     path: '/security-career-assessment/history',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPassportPrivacyRoute =
+  AuthenticatedPassportPrivacyRouteImport.update({
+    id: '/privacy',
+    path: '/privacy',
+    getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
+const AuthenticatedPassportOnboardingRoute =
+  AuthenticatedPassportOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
+const AuthenticatedPassportCardRoute =
+  AuthenticatedPassportCardRouteImport.update({
+    id: '/card',
+    path: '/card',
+    getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
 const AuthenticatedMyCareerApplicationsRoute =
   AuthenticatedMyCareerApplicationsRouteImport.update({
@@ -765,6 +799,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof AuthenticatedFeedbackRoute
   '/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/passport': typeof AuthenticatedPassportRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
@@ -798,6 +833,9 @@ export interface FileRoutesByFullPath {
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
+  '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
@@ -806,6 +844,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/employer/': typeof AuthenticatedEmployerIndexRoute
   '/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/passport/': typeof AuthenticatedPassportIndexRoute
   '/academy/learning/$formId': typeof AuthenticatedAcademyLearningFormIdRoute
   '/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
@@ -894,6 +933,9 @@ export interface FileRoutesByTo {
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
+  '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
@@ -902,6 +944,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/employer': typeof AuthenticatedEmployerIndexRoute
   '/my-career': typeof AuthenticatedMyCareerIndexRoute
+  '/passport': typeof AuthenticatedPassportIndexRoute
   '/academy/learning/$formId': typeof AuthenticatedAcademyLearningFormIdRoute
   '/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
@@ -973,6 +1016,7 @@ export interface FileRoutesById {
   '/_authenticated/feedback': typeof AuthenticatedFeedbackRoute
   '/_authenticated/journey': typeof AuthenticatedJourneyRouteWithChildren
   '/_authenticated/my-career': typeof AuthenticatedMyCareerRouteWithChildren
+  '/_authenticated/passport': typeof AuthenticatedPassportRouteWithChildren
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/admin/login': typeof AdminLoginRoute
   '/candidate/login': typeof CandidateLoginRoute
@@ -1006,6 +1050,9 @@ export interface FileRoutesById {
   '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
+  '/_authenticated/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
+  '/_authenticated/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/_authenticated/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/_authenticated/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
@@ -1014,6 +1061,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/employer/': typeof AuthenticatedEmployerIndexRoute
   '/_authenticated/my-career/': typeof AuthenticatedMyCareerIndexRoute
+  '/_authenticated/passport/': typeof AuthenticatedPassportIndexRoute
   '/_authenticated/academy/learning/$formId': typeof AuthenticatedAcademyLearningFormIdRoute
   '/_authenticated/academy/report/$attemptId': typeof AuthenticatedAcademyReportAttemptIdRoute
   '/_authenticated/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
@@ -1085,6 +1133,7 @@ export interface FileRouteTypes {
     | '/feedback'
     | '/journey'
     | '/my-career'
+    | '/passport'
     | '/reviews'
     | '/admin/login'
     | '/candidate/login'
@@ -1118,6 +1167,9 @@ export interface FileRouteTypes {
     | '/employer/onboarding'
     | '/journey/$targetId'
     | '/my-career/applications'
+    | '/passport/card'
+    | '/passport/onboarding'
+    | '/passport/privacy'
     | '/security-career-assessment/history'
     | '/security-career-assessment/session'
     | '/jobs/family/$familyId'
@@ -1126,6 +1178,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/employer/'
     | '/my-career/'
+    | '/passport/'
     | '/academy/learning/$formId'
     | '/academy/report/$attemptId'
     | '/admin/applications/$applicationId'
@@ -1214,6 +1267,9 @@ export interface FileRouteTypes {
     | '/employer/onboarding'
     | '/journey/$targetId'
     | '/my-career/applications'
+    | '/passport/card'
+    | '/passport/onboarding'
+    | '/passport/privacy'
     | '/security-career-assessment/history'
     | '/security-career-assessment/session'
     | '/jobs/family/$familyId'
@@ -1222,6 +1278,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/employer'
     | '/my-career'
+    | '/passport'
     | '/academy/learning/$formId'
     | '/academy/report/$attemptId'
     | '/admin/applications/$applicationId'
@@ -1292,6 +1349,7 @@ export interface FileRouteTypes {
     | '/_authenticated/feedback'
     | '/_authenticated/journey'
     | '/_authenticated/my-career'
+    | '/_authenticated/passport'
     | '/_authenticated/reviews'
     | '/admin/login'
     | '/candidate/login'
@@ -1325,6 +1383,9 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/onboarding'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/my-career/applications'
+    | '/_authenticated/passport/card'
+    | '/_authenticated/passport/onboarding'
+    | '/_authenticated/passport/privacy'
     | '/_authenticated/security-career-assessment/history'
     | '/_authenticated/security-career-assessment/session'
     | '/jobs/family/$familyId'
@@ -1333,6 +1394,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/employer/'
     | '/_authenticated/my-career/'
+    | '/_authenticated/passport/'
     | '/_authenticated/academy/learning/$formId'
     | '/_authenticated/academy/report/$attemptId'
     | '/_authenticated/admin/applications/$applicationId'
@@ -1623,6 +1685,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReviewsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/passport': {
+      id: '/_authenticated/passport'
+      path: '/passport'
+      fullPath: '/passport'
+      preLoaderRoute: typeof AuthenticatedPassportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/my-career': {
       id: '/_authenticated/my-career'
       path: '/my-career'
@@ -1671,6 +1740,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/list-tools'
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/passport/': {
+      id: '/_authenticated/passport/'
+      path: '/'
+      fullPath: '/passport/'
+      preLoaderRoute: typeof AuthenticatedPassportIndexRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
     }
     '/_authenticated/my-career/': {
       id: '/_authenticated/my-career/'
@@ -1727,6 +1803,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/security-career-assessment/history'
       preLoaderRoute: typeof AuthenticatedSecurityCareerAssessmentHistoryRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/passport/privacy': {
+      id: '/_authenticated/passport/privacy'
+      path: '/privacy'
+      fullPath: '/passport/privacy'
+      preLoaderRoute: typeof AuthenticatedPassportPrivacyRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
+    }
+    '/_authenticated/passport/onboarding': {
+      id: '/_authenticated/passport/onboarding'
+      path: '/onboarding'
+      fullPath: '/passport/onboarding'
+      preLoaderRoute: typeof AuthenticatedPassportOnboardingRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
+    }
+    '/_authenticated/passport/card': {
+      id: '/_authenticated/passport/card'
+      path: '/card'
+      fullPath: '/passport/card'
+      preLoaderRoute: typeof AuthenticatedPassportCardRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
     }
     '/_authenticated/my-career/applications': {
       id: '/_authenticated/my-career/applications'
@@ -2490,12 +2587,32 @@ const AuthenticatedMyCareerRouteWithChildren =
     AuthenticatedMyCareerRouteChildren,
   )
 
+interface AuthenticatedPassportRouteChildren {
+  AuthenticatedPassportCardRoute: typeof AuthenticatedPassportCardRoute
+  AuthenticatedPassportOnboardingRoute: typeof AuthenticatedPassportOnboardingRoute
+  AuthenticatedPassportPrivacyRoute: typeof AuthenticatedPassportPrivacyRoute
+  AuthenticatedPassportIndexRoute: typeof AuthenticatedPassportIndexRoute
+}
+
+const AuthenticatedPassportRouteChildren: AuthenticatedPassportRouteChildren = {
+  AuthenticatedPassportCardRoute: AuthenticatedPassportCardRoute,
+  AuthenticatedPassportOnboardingRoute: AuthenticatedPassportOnboardingRoute,
+  AuthenticatedPassportPrivacyRoute: AuthenticatedPassportPrivacyRoute,
+  AuthenticatedPassportIndexRoute: AuthenticatedPassportIndexRoute,
+}
+
+const AuthenticatedPassportRouteWithChildren =
+  AuthenticatedPassportRoute._addFileChildren(
+    AuthenticatedPassportRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedEmployerRoute: typeof AuthenticatedEmployerRouteWithChildren
   AuthenticatedFeedbackRoute: typeof AuthenticatedFeedbackRoute
   AuthenticatedJourneyRoute: typeof AuthenticatedJourneyRouteWithChildren
   AuthenticatedMyCareerRoute: typeof AuthenticatedMyCareerRouteWithChildren
+  AuthenticatedPassportRoute: typeof AuthenticatedPassportRouteWithChildren
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedAcademyAttemptIdRoute: typeof AuthenticatedAcademyAttemptIdRoute
   AuthenticatedDiscoveryHistoryRoute: typeof AuthenticatedDiscoveryHistoryRoute
@@ -2515,6 +2632,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedFeedbackRoute: AuthenticatedFeedbackRoute,
   AuthenticatedJourneyRoute: AuthenticatedJourneyRouteWithChildren,
   AuthenticatedMyCareerRoute: AuthenticatedMyCareerRouteWithChildren,
+  AuthenticatedPassportRoute: AuthenticatedPassportRouteWithChildren,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedAcademyAttemptIdRoute: AuthenticatedAcademyAttemptIdRoute,
   AuthenticatedDiscoveryHistoryRoute: AuthenticatedDiscoveryHistoryRoute,
