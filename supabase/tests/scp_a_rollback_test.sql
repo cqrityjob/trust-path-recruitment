@@ -181,6 +181,23 @@ DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, te
 DROP FUNCTION IF EXISTS public.scp_employer_decisions(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_decision_append_only() CASCADE;
 DROP TABLE    IF EXISTS public.scp_employer_report_decisions CASCADE;
+-- Phase 8.5A (20260821090000). The SCP duplicate protection lives ON the
+-- pre-existing assessment_assignments table, so it cannot ride out on a
+-- DROP TABLE the way the rest of the domain does. The three trigger functions
+-- return `trigger`, so the governance-enum cascade below does not reach them
+-- either: they have to be named. CASCADE takes their triggers with them, and
+-- dropping the column takes the partial unique index.
+--
+-- The rest of the phase needs no unwind. The read-only policies it installed
+-- sit on scp_ tables that are dropped outright below. The narrowed legacy
+-- write policies (assignments_employer_insert / _update, owner+admin instead
+-- of any member) are deliberately NOT reopened: rolling the SCP platform back
+-- is not a reason to hand an ordinary member write access to the legacy
+-- assignment table again, and the legacy product never relied on it.
+DROP FUNCTION IF EXISTS public.scp_guard_one_open_assignment() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_mark_assignment_open() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_clear_assignment_open() CASCADE;
+ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_open;
 DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
 
@@ -513,6 +530,19 @@ BEGIN
     (SELECT count(*) FROM information_schema.columns
       WHERE table_name = 'assessment_versions' AND column_name = 'retired_reason') = 0,
     'rollback removes the additive retired_reason column');
+
+  -- Phase 8.5A added one column to a legacy table. A rollback that left it
+  -- behind would leave the legacy path carrying an SCP lifecycle flag that
+  -- nothing maintains.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.columns
+      WHERE table_name = 'assessment_assignments' AND column_name = 'scp_open') = 0,
+    'rollback removes the additive scp_open column from the legacy table');
+
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_indexes
+      WHERE indexname = 'scp_assignments_one_open_per_subject_idx') = 0,
+    'rollback removes the SCP duplicate-protection index');
 
   PERFORM pg_temp.assert(
     (SELECT employer_visible FROM public.assessments WHERE id = 'security-guard-foundation'),

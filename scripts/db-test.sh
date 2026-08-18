@@ -745,6 +745,39 @@ if [ "$ASCOPE_PASSED" -lt 23 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-e. Pilot security gate
+#
+# Phase 8.5A. Four confirmed findings, each proven closed against a REAL
+# principal: SET ROLE authenticated plus a JWT claim, so RLS is genuinely in
+# force. Denial suites fail silently when they are pointed at a row the
+# principal could not see anyway, so every denial here is paired with proof
+# that somebody can still read or write the same row through the authorised
+# path -- and the positive flows (save, submit, review, release) run in full.
+# ---------------------------------------------------------------------------
+echo "==> Running pilot security-gate assertions"
+set +e
+GATE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_pilot_security_gate_test.sql 2>&1)"
+GATE_RC=$?
+set -e
+
+echo "$GATE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+GATE_PASSED="$(echo "$GATE_OUT" | grep -c "ok  " || true)"
+
+if [ "$GATE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot security-gate suite exited with code ${GATE_RC}." >&2
+  echo "$GATE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${GATE_PASSED} pilot security-gate assertions passed"
+
+if [ "$GATE_PASSED" -lt 38 ]; then
+  echo "FAIL: expected at least 38 pilot security-gate assertions, only ${GATE_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -1050,6 +1083,7 @@ echo "              ${VJ_PASSED} Vaktare journey assertions,"
 echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
+echo "              ${GATE_PASSED} pilot security-gate assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
