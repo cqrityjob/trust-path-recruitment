@@ -7401,13 +7401,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sp_claims_skill_code_fkey"
-            columns: ["skill_code"]
-            isOneToOne: false
-            referencedRelation: "sp_skill_types"
-            referencedColumns: ["code"]
-          },
-          {
             foreignKeyName: "sp_claims_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: false
@@ -7419,6 +7412,13 @@ export type Database = {
             columns: ["jurisdiction_code"]
             isOneToOne: false
             referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_claims_skill_code_fkey"
+            columns: ["skill_code"]
+            isOneToOne: false
+            referencedRelation: "sp_skill_types"
             referencedColumns: ["code"]
           },
           {
