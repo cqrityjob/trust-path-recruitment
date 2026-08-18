@@ -50,12 +50,21 @@ import { TRUST_PALETTE } from "./trust-system";
 /* Presentation state                                                  */
 /* ------------------------------------------------------------------ */
 
-/** The eight ways a credential can present. Derived from the two stored
- *  axes — never stored itself, and never settable by the holder. */
+/** The ten ways a credential can present. Derived from the two stored axes
+ *  plus, where one exists, the status of the OPEN review — never stored
+ *  itself, and never settable by the holder.
+ *
+ *  `under_review` and `clarification_required` are not lifecycle states: they
+ *  live on `sp_verification_requests`, because a review happens TO an entry
+ *  rather than being a property of it. They are presentation states all the
+ *  same, because a holder needs to see that something is being looked at, or
+ *  that somebody is waiting on them. */
 export type CredentialPresentationState =
   | "draft"
   | "self_declared"
   | "documented"
+  | "under_review"
+  | "clarification_required"
   | "verified"
   | "expired"
   | "revoked"
@@ -70,9 +79,14 @@ export type CredentialPresentationState =
  * never take the verified treatment. Lifecycle qualifications always win
  * over evidence level: a revoked verified licence presents as revoked.
  */
+/** The status of an open review, as `sp_verification_requests.status` records
+ *  it. Null when no review is open. */
+export type OpenReviewStatus = "pending" | "clarification_requested" | null;
+
 export function credentialPresentation(
   assertionLevel: AssertionLevel,
   effectiveLifecycle: LifecycleState,
+  openReview: OpenReviewStatus = null,
 ): CredentialPresentationState {
   switch (effectiveLifecycle) {
     case "draft":
@@ -88,6 +102,16 @@ export function credentialPresentation(
     case "active":
       break;
   }
+
+  // A live review shows ONLY on an otherwise-active entry whose trust has not
+  // yet been granted. It never overrides a lifecycle qualification above, and
+  // never overrides VERIFIED: reopening a review on a verified credential must
+  // not make the existing verification look provisional to a reader.
+  if (assertionLevel !== "verified") {
+    if (openReview === "clarification_requested") return "clarification_required";
+    if (openReview === "pending") return "under_review";
+  }
+
   if (assertionLevel === "verified") return "verified";
   if (assertionLevel === "document_provided") return "documented";
   return "self_declared";
@@ -104,6 +128,10 @@ export function presentationWordKey(state: CredentialPresentationState): Passpor
       return "assertion.self_declared";
     case "documented":
       return "assertion.document_provided";
+    case "under_review":
+      return "ver.status.pending";
+    case "clarification_required":
+      return "ver.status.clarification_requested";
     case "verified":
       return "assertion.verified";
     case "expired":
@@ -153,6 +181,34 @@ export function symbolTreatment(state: CredentialPresentationState): SymbolTreat
         label: TRUST_PALETTE.goldBright,
         glyph: "check",
         glyphTone: TRUST_PALETTE.goldBright,
+        opacity: 1,
+        strike: false,
+      };
+    case "under_review":
+      // Dashed rim and a question glyph: something is in motion and nothing is
+      // concluded. Told apart from `documented` by dash and glyph, not hue.
+      return {
+        edge: TRUST_PALETTE.steel,
+        dash: "5 3",
+        doubleRim: false,
+        device: TRUST_PALETTE.ink,
+        label: TRUST_PALETTE.ink,
+        glyph: "question",
+        glyphTone: TRUST_PALETTE.steel,
+        opacity: 1,
+        strike: false,
+      };
+    case "clarification_required":
+      // The reviewer is waiting on the holder. A warning glyph and a tighter
+      // dash say "your move" without implying the claim is false.
+      return {
+        edge: TRUST_PALETTE.steel,
+        dash: "2 3",
+        doubleRim: false,
+        device: TRUST_PALETTE.ink,
+        label: TRUST_PALETTE.ink,
+        glyph: "warning",
+        glyphTone: TRUST_PALETTE.steel,
         opacity: 1,
         strike: false,
       };
@@ -399,6 +455,8 @@ export const CREDENTIAL_PRESENTATION_STATES: readonly CredentialPresentationStat
   "draft",
   "self_declared",
   "documented",
+  "under_review",
+  "clarification_required",
   "verified",
   "expired",
   "revoked",

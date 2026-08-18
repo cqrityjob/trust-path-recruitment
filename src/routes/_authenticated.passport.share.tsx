@@ -36,7 +36,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Copy, Link2, Share2, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Copy, Eye, Link2, Share2, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
@@ -361,6 +361,19 @@ function PassportShareRoute() {
               )}
               {copied ? pt("share2.copied") : pt("share2.copy")}
             </button>
+            {/* The third and last primary action: see it as the recipient
+                sees it. A holder who cannot check what they just handed over
+                has to trust us about it, which is the opposite of the point.
+                A plain link, not a button, because it navigates. */}
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <Eye aria-hidden="true" className="h-4 w-4" />
+              {pt("share2.view")}
+            </a>
           </div>
 
           {/* One sentence, once. Not the same warning three times. */}
