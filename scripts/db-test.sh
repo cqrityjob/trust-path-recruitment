@@ -839,6 +839,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 10 assertions"
+set +e
+SP10_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase10_test.sql 2>&1)"
+SP10_RC=$?
+set -e
+
+echo "$SP10_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP10_PASSED="$(echo "$SP10_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP10_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 10 suite exited with code ${SP10_RC}." >&2
+  echo "$SP10_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Phase 10"
+else
+  echo "    ok  ${SP10_PASSED} Security Passport Phase 10 assertions passed"
+  # This suite runs the real decision RPC and then reads the rows it left.
+  # A short run means the atomicity and refusal groups did not execute, which
+  # is exactly the gap that let the production decision defect through.
+  if [ "$SP10_PASSED" -lt 40 ]; then
+    echo "FAIL: expected at least 40 Phase 10 assertions, only ${SP10_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 10 (assertion shortfall: floor 40)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null

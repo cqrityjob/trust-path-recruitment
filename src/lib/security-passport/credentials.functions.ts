@@ -217,7 +217,11 @@ export const saveCredential = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    await supabase.from("sp_passport_events").insert({
+    // The result is READ. It used to be discarded, and `claim_drafted` was
+    // not in the event-type allowlist, so every saved draft created its claim
+    // and then dropped its audit event with a 23514 nobody ever saw. An
+    // append-only history with silent holes in it is not a history.
+    const { error: eventError } = await supabase.from("sp_passport_events").insert({
       holder_user_id: userId,
       actor_user_id: userId,
       event_type: data.activate ? "claim_created" : "claim_drafted",
@@ -225,6 +229,7 @@ export const saveCredential = createServerFn({ method: "POST" })
       subject_id: row.id,
       detail: { credential_code: type.code },
     });
+    if (eventError) throw new Error(eventError.message);
 
     return {
       id: row.id,

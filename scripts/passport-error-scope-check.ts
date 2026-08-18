@@ -158,6 +158,76 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
+// 7. A refusal the reviewer can act on, and a review they may not act on
+//
+// The second production defect: the queue offered a decision that could never
+// succeed. `sp_verifier_decide` refuses SP_SELF_VERIFICATION_FORBIDDEN before
+// it writes anything when the caller is the holder, and the page learned that
+// only after the reviewer had filled the form in and confirmed a permanent
+// record. Both halves are asserted here — the marker BEFORE the action, and a
+// specific message AFTER a refusal — because either alone leaves the trap.
+// ---------------------------------------------------------------------------
+{
+  const declineSource = readFileSync(
+    path.join(root, "src/lib/security-passport/decision-errors.ts"),
+    "utf8",
+  );
+  const codeList = declineSource.slice(
+    declineSource.indexOf("DECISION_ERROR_CODES = ["),
+    declineSource.indexOf("] as const;"),
+  );
+  const codes = [...codeList.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+
+  expect(codes.length >= 8, "The decision-error code list could not be read.");
+
+  // Every code the classifier can produce needs a sentence in the route's map.
+  // A missing one reads as a generic "try again", which is the behaviour this
+  // whole change exists to remove.
+  for (const c of codes) {
+    expect(
+      new RegExp(`\\b${c}:\\s*"vq\\.decline\\.${c}"`).test(code),
+      `Refusal code "${c}" has no copy in DECLINE_KEY: it would read as a generic retry.`,
+    );
+  }
+
+  // The raw database message must never be what the reviewer reads.
+  expect(
+    !/setDecisionError\(\s*(?:err\b|error\b|String\()/.test(code),
+    "The decision error must be a mapped copy key, never the raw error text.",
+  );
+  expect(
+    /decisionErrorCodeFrom\(err\)/.test(code),
+    "A failed decision must be classified into a code before it is shown.",
+  );
+
+  // The self-review marker must gate the FORM, not merely label the row. Two
+  // separate branches are required, and the second is checked by anchoring on
+  // the notice that replaces the fieldset — a check that only counted
+  // `item.isSelf` would pass on the badge alone and leave the trap in place.
+  const selfBranches = [...code.matchAll(/item\.isSelf\s*\?/g)].length;
+  expect(
+    selfBranches >= 2,
+    "isSelf must both mark the row and withhold the decision form; " +
+      `only ${selfBranches} branch(es) found.`,
+  );
+  const noticeAt = code.indexOf('pt("vq.selfNotice")');
+  const fieldsetAt = code.indexOf('<fieldset className="space-y-3">');
+  expect(
+    noticeAt !== -1 && fieldsetAt !== -1 && noticeAt < fieldsetAt,
+    "The self-review notice must stand in place of the decision fieldset, " +
+      "not merely appear somewhere alongside it.",
+  );
+  expect(
+    /pt\("vq\.selfNotice"\)/.test(code),
+    "A reviewer's own request must explain why it cannot be decided here.",
+  );
+  expect(
+    /pt\("vq\.selfBadge"\)/.test(code),
+    "A reviewer's own request must be marked in the queue list, before it is opened.",
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 if (errors.length > 0) {
@@ -170,5 +240,6 @@ console.log(
   "passport-error-scope:check OK " +
     "(no page-level setError; queue, review, evidence and decision each own their error; " +
     "each is cleared on success; the evidence error names its row; a failed decision keeps " +
-    "the verifier's entries; no generic catch-all message)",
+    "the verifier's entries; no generic catch-all message; every refusal code has copy; " +
+    "a review the reviewer may not decide is marked and its form withheld)",
 );
