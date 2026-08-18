@@ -118,22 +118,16 @@ async function fetchFullCatalog(ctx: Ctx): Promise<ProfessionCatalogEntry[]> {
   const rows = (professions ?? []) as ProfessionRow[];
   if (rows.length === 0) return [];
 
-  // cd_profession_profiles_current, not the raw table: cd_profession_profiles
-  // keeps every historical calibration_version batch for audit purposes, and
-  // reading it unfiltered would combine two coexisting batches' bands into
-  // one profession's scoring input (found during the Release Completion
-  // mandate's real-data verification — see the view's own migration
-  // comment). The view exposes exactly one row per (profession_id,
-  // dimension_id): the most recently authored.
-  const { data: profiles, error: profErr } = await ctx.supabase
-    .from("cd_profession_profiles_current")
-    .select(
-      "profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality",
-    )
-    .in(
-      "profession_id",
-      rows.map((p) => p.profession_id),
-    );
+  // cd_profession_bands_for_matching, not the base table and not the view.
+  // Same reasoning as the candidate path: one row per (profession_id,
+  // dimension_id) from the current calibration batch, seven columns only.
+  // Direct SELECT on both is revoked from authenticated; see 20260822092000.
+  const { data: profiles, error: profErr } = await ctx.supabase.rpc(
+    "cd_profession_bands_for_matching",
+    {
+      _profession_ids: rows.map((p) => p.profession_id),
+    },
+  );
   if (profErr) throw new OwnerPreviewError("query_failed");
 
   const bandsByProfession = new Map<string, ProfessionDimensionBand[]>();
