@@ -23,6 +23,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { classifyDecisionError, DECISION_ERROR_PREFIX } from "./decision-errors";
 import { orNull } from "./rpc";
 
 export type VerificationStatus =
@@ -230,6 +231,11 @@ export interface VerifierQueueItem {
   readonly assertion: string | null;
   readonly lifecycle: string | null;
   readonly evidenceCount: number;
+  /** The caller is this request's holder, so no decision they make on it can
+   *  ever succeed — `sp_verifier_decide` refuses self-verification before it
+   *  writes anything. Answered by the database from `auth.uid()`, never
+   *  inferred here, so the page and the guard cannot disagree. */
+  readonly isSelf: boolean;
 }
 
 /** Whether the caller may act as a CQrityjob verifier. Answered by the
@@ -270,6 +276,7 @@ export const listVerifierQueue = createServerFn({ method: "POST" })
       assertion: (r.assertion as string | null) ?? null,
       lifecycle: (r.lifecycle as string | null) ?? null,
       evidenceCount: Number(r.evidence_count ?? 0),
+      isSelf: r.is_self === true,
     }));
   });
 
@@ -298,6 +305,8 @@ export interface VerifierRequestDetail {
   readonly id: string;
   readonly status: VerificationStatus;
   readonly holderName: string;
+  /** See `VerifierQueueItem.isSelf`. */
+  readonly isSelf: boolean;
   readonly evidence: readonly VerifierEvidenceRef[];
   readonly previousVersions: readonly VerifierClaimVersion[];
   readonly priorDecisions: readonly VerifierPriorDecision[];
@@ -309,6 +318,38 @@ export interface VerifierRequestDetail {
  *  reasoning and lives on the same rows this function reads. Naming every
  *  field that crosses to the browser means the internal note cannot ride
  *  along in a spread, which is exactly how that kind of field leaks. */
+/**
+ * How much is waiting, for the admin shell badge and the dashboard card.
+ *
+ * Derived from `sp_verifier_queue` rather than a new RPC on purpose: the
+ * queue function already carries the verifier capability check and the
+ * "which requests may this principal see" logic. A separate counting query
+ * would be a second place for that authorisation to be got right, and
+ * eventually wrong.
+ *
+ * A non-verifier gets zeroes rather than an error, because the caller is a
+ * navigation badge: the admin shell has already refused a non-admin, and a
+ * badge that throws would break the whole shell for an edge case.
+ */
+export const passportReviewCounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ open: number; clarification: number; total: number }> => {
+    // `orNull` is the repository's narrow nullable-RPC convention; the
+    // generated signature types the argument as optional, not nullable.
+    const { data: rows, error } = await context.supabase.rpc("sp_verifier_queue", {
+      _status: orNull<string>(null),
+    });
+    if (error) return { open: 0, clarification: 0, total: 0 };
+
+    // A request the badge-holder submitted themselves is not work waiting for
+    // them: they are barred from deciding it. Counting it would send them to a
+    // queue where the only item is one they must leave for someone else.
+    const list = ((rows ?? []) as Array<Record<string, unknown>>).filter((r) => r.is_self !== true);
+    const open = list.filter((r) => r.status === "pending").length;
+    const clarification = list.filter((r) => r.status === "clarification_requested").length;
+    return { open, clarification, total: open + clarification };
+  });
+
 export const getVerifierRequestDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
@@ -326,6 +367,7 @@ export const getVerifierRequestDetail = createServerFn({ method: "POST" })
       id: String(raw.id ?? data.requestId),
       status: (raw.status as VerificationStatus) ?? "pending",
       holderName: String(raw.holder_name ?? ""),
+      isSelf: raw.is_self === true,
       evidence: list("evidence").map((e) => ({
         id: String(e.id),
         fileName: String(e.file_name ?? ""),
@@ -376,7 +418,7 @@ export const decideVerification = createServerFn({ method: "POST" })
     // An approval must say how it was reached. "Verified" with no method is
     // exactly the unfalsifiable claim this product exists to avoid.
     if (data.decision === "approved" && !data.method) {
-      throw new Error("SP_APPROVAL_REQUIRES_METHOD");
+      throw new Error(`${DECISION_ERROR_PREFIX}method_required`);
     }
     const { error } = await context.supabase.rpc("sp_verifier_decide", {
       _request_id: data.requestId,
@@ -387,7 +429,20 @@ export const decideVerification = createServerFn({ method: "POST" })
       _valid_from: orNull(data.validFrom),
       _valid_until: orNull(data.validUntil),
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      // The raw refusal stays here, in the server log, where an operator can
+      // read the constraint or function that fired. What crosses to the
+      // browser is a code from a fixed list — never the database's own words.
+      console.error("[passport] sp_verifier_decide refused", {
+        requestId: data.requestId,
+        decision: data.decision,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      throw new Error(`${DECISION_ERROR_PREFIX}${classifyDecisionError(error.message)}`);
+    }
     return { ok: true };
   });
 

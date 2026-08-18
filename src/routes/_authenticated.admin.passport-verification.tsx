@@ -42,12 +42,33 @@ import {
   type VerifierRequestDetail,
 } from "@/lib/security-passport/verification.functions";
 import { getEvidenceViewUrl } from "@/lib/security-passport/evidence.functions";
+import {
+  decisionErrorCodeFrom,
+  type DecisionErrorCode,
+} from "@/lib/security-passport/decision-errors";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 
 export const Route = createFileRoute("/_authenticated/admin/passport-verification")({
   ssr: false,
   component: PassportVerificationQueueRoute,
 });
+
+/** One line of copy per refusal the database can give. Kept as a total map so
+ *  adding a code without adding its sentence fails the type check rather than
+ *  silently falling back to "try again". */
+const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
+  self_verification: "vq.decline.self_verification",
+  not_authorised: "vq.decline.not_authorised",
+  already_decided: "vq.decline.already_decided",
+  not_found: "vq.decline.not_found",
+  method_required: "vq.decline.method_required",
+  invalid_validity: "vq.decline.invalid_validity",
+  issuer_required: "vq.decline.issuer_required",
+  entry_not_active: "vq.decline.entry_not_active",
+  unknown: "vq.decline.unknown",
+};
 
 const FILTERS: readonly { value: string | null; labelKey: PassportCopyKey }[] = [
   { value: null, labelKey: "vq.filter.open" },
@@ -67,7 +88,21 @@ const STATUS_KEY: Readonly<Record<string, PassportCopyKey>> = {
 
 type Decision = "approved" | "rejected" | "clarification_requested";
 
+/** The page, inside the shared admin chrome. Split from the queue body so
+ *  every state — loading, not-a-verifier, error, empty and populated — is
+ *  rendered in the same navigation, rather than a bare centred message on a
+ *  blank page for the states that are not the happy path. */
 function PassportVerificationQueueRoute() {
+  return (
+    <SiteLayout>
+      <AdminShellChrome activeSection="passportVerification">
+        <PassportVerificationQueue />
+      </AdminShellChrome>
+    </SiteLayout>
+  );
+}
+
+function PassportVerificationQueue() {
   const { pt } = usePassportCopy();
 
   const whoAmI = useServerFn(passportVerifierWhoAmI);
@@ -82,8 +117,25 @@ function PassportVerificationQueueRoute() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerifierRequestDetail | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // ── ONE ERROR PER OPERATION, NOT ONE PER PAGE ────────────────────────
+  //
+  // These were a single `error` string written by four unrelated
+  // operations — loading the queue, opening a review, opening a document
+  // and saving a decision — and rendered once, above the filter. Any one
+  // of them failing therefore painted a page-wide red banner over a queue
+  // that was working perfectly, and because nothing ever cleared it on
+  // success, it stayed until a hard reload. That is the state the
+  // production report photographed: a complete, usable queue underneath a
+  // generic "something went wrong".
+  //
+  // Each operation now owns its own message, renders it where the failure
+  // happened, and clears it when it next succeeds.
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] = useState<{ id: string; message: string } | null>(null);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const [decision, setDecision] = useState<Decision>("approved");
   const [method, setMethod] = useState<string>("document_review");
@@ -96,9 +148,12 @@ function PassportVerificationQueueRoute() {
     try {
       const rows = await loadQueue({ data: { status: filter } });
       setQueue(rows);
+      // Cleared on success: a stale banner from an earlier transient
+      // failure must not outlive the request that fixed it.
+      setQueueError(null);
     } catch (err) {
       console.error("[passport] verifier queue failed", err);
-      setError(pt("common.error"));
+      setQueueError(pt("vq.error.queue"));
     }
   }, [loadQueue, filter, pt]);
 
@@ -115,27 +170,29 @@ function PassportVerificationQueueRoute() {
   useEffect(() => {
     if (!selected) {
       setDetail(null);
+      setDetailError(null);
       return;
     }
+    setDetailError(null);
     void loadDetail({ data: { requestId: selected } })
-      .then(setDetail)
+      .then((d) => {
+        setDetail(d);
+        setDetailError(null);
+      })
       .catch((err: unknown) => {
         console.error("[passport] verifier detail failed", err);
-        setError(pt("common.error"));
+        setDetail(null);
+        setDetailError(pt("vq.error.detail"));
       });
   }, [selected, loadDetail, pt]);
 
   if (isVerifier === null) {
-    return (
-      <div className="mx-auto max-w-5xl px-4 py-10">
-        <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>
-      </div>
-    );
+    return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
   }
 
   if (!isVerifier) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <div className="mx-auto max-w-md py-10 text-center">
         <p className="text-sm text-muted-foreground">{pt("vq.notVerifier")}</p>
       </div>
     );
@@ -144,7 +201,7 @@ function PassportVerificationQueueRoute() {
   async function submitDecision() {
     if (!selected) return;
     if (decision === "approved" && !method) {
-      setError(pt("vq.methodRequired"));
+      setDecisionError(pt(DECLINE_KEY.method_required));
       return;
     }
 
@@ -157,7 +214,7 @@ function PassportVerificationQueueRoute() {
     if (!window.confirm(`${pt("vq.confirmTitle")}\n\n${pt(confirmKey)}`)) return;
 
     setBusy(true);
-    setError(null);
+    setDecisionError(null);
     try {
       await decide({
         data: {
@@ -178,8 +235,11 @@ function PassportVerificationQueueRoute() {
       setValidUntil("");
       await refresh();
     } catch (err) {
+      // Deliberately does NOT reset the form: the verifier has just typed a
+      // decision note and a holder message, and throwing that away on a
+      // transient failure would be worse than the failure.
       console.error("[passport] decision failed", err);
-      setError(pt("common.error"));
+      setDecisionError(pt(DECLINE_KEY[decisionErrorCodeFrom(err)]));
     } finally {
       setBusy(false);
     }
@@ -190,7 +250,7 @@ function PassportVerificationQueueRoute() {
   const previousVersions = detail?.previousVersions ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div>
       <header>
         <h1
           className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground"
@@ -209,10 +269,17 @@ function PassportVerificationQueueRoute() {
           {notice}
         </p>
       ) : null}
-      {error ? (
-        <p role="alert" className="mt-4 text-sm text-destructive">
-          {error}
-        </p>
+      {queueError ? (
+        <div role="alert" className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-destructive">{queueError}</p>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("vq.retry")}
+          </button>
+        </div>
       ) : null}
 
       <div className="mt-6">
@@ -260,9 +327,16 @@ function PassportVerificationQueueRoute() {
                     {item.evidenceCount}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
-                  {pt(STATUS_KEY[item.status] ?? "ver.status.pending")}
-                </span>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {item.isSelf ? (
+                    <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-foreground">
+                      {pt("vq.selfBadge")}
+                    </span>
+                  ) : null}
+                  <span className="rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
+                    {pt(STATUS_KEY[item.status] ?? "ver.status.pending")}
+                  </span>
+                </div>
               </div>
 
               <button
@@ -274,7 +348,26 @@ function PassportVerificationQueueRoute() {
                 {pt("vq.open")}
               </button>
 
-              {selected === item.id ? (
+              {selected === item.id && detailError ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p role="alert" className="text-sm text-destructive">
+                    {detailError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Re-trigger the detail effect for this same review.
+                      setSelected(null);
+                      window.setTimeout(() => setSelected(item.id), 0);
+                    }}
+                    className="mt-2 inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {pt("vq.retry")}
+                  </button>
+                </div>
+              ) : null}
+
+              {selected === item.id && !detailError ? (
                 <div className="mt-4 space-y-4 border-t border-border pt-4">
                   {/* Documents — reachable only while this review is open. */}
                   <div>
@@ -297,16 +390,31 @@ function PassportVerificationQueueRoute() {
                             <button
                               type="button"
                               onClick={() => {
+                                setEvidenceError(null);
                                 void viewEvidence({ data: { evidenceId: ev.id } })
                                   .then(({ url }) =>
                                     window.open(url, "_blank", "noopener,noreferrer"),
                                   )
-                                  .catch(() => setError(pt("common.error")));
+                                  .catch((err: unknown) => {
+                                    // Scoped to this row. A document that
+                                    // cannot be opened says nothing about
+                                    // the queue around it.
+                                    console.error("[passport] evidence url failed", err);
+                                    setEvidenceError({
+                                      id: ev.id,
+                                      message: pt("vq.error.evidence"),
+                                    });
+                                  });
                               }}
                               className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                               {pt("ev.view")}
                             </button>
+                            {evidenceError?.id === ev.id ? (
+                              <p role="alert" className="w-full text-sm text-destructive">
+                                {evidenceError.message}
+                              </p>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -345,149 +453,170 @@ function PassportVerificationQueueRoute() {
                   ) : null}
 
                   {/* ── The decision ─────────────────────────────────── */}
-                  <fieldset className="space-y-3">
-                    <legend className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {pt("vq.decision")}
-                    </legend>
-
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["approved", "vq.approve"],
-                          ["rejected", "vq.reject"],
-                          ["clarification_requested", "vq.requestClarification"],
-                        ] as const
-                      ).map(([value, labelKey]) => (
-                        <label
-                          key={value}
-                          className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground"
-                        >
-                          <input
-                            type="radio"
-                            name="sp-decision"
-                            value={value}
-                            checked={decision === value}
-                            onChange={() => setDecision(value)}
-                            className="h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          />
-                          {pt(labelKey)}
-                        </label>
-                      ))}
+                  {/* A reviewer may read their own submission — the evidence
+                      and history above are theirs already. What they may not
+                      do is decide it, so the form is not rendered at all
+                      rather than rendered and rejected on submit. */}
+                  {item.isSelf ? (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("vq.decision")}
+                      </p>
+                      <p role="note" className="mt-2 text-sm text-foreground">
+                        {pt("vq.selfNotice")}
+                      </p>
                     </div>
+                  ) : (
+                    <fieldset className="space-y-3">
+                      <legend className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("vq.decision")}
+                      </legend>
 
-                    {decision === "approved" ? (
-                      <>
-                        <div>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ["approved", "vq.approve"],
+                            ["rejected", "vq.reject"],
+                            ["clarification_requested", "vq.requestClarification"],
+                          ] as const
+                        ).map(([value, labelKey]) => (
                           <label
-                            htmlFor="sp-method"
-                            className="block text-sm font-medium text-foreground"
+                            key={value}
+                            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground"
                           >
-                            {pt("vq.methodLabel")}
+                            <input
+                              type="radio"
+                              name="sp-decision"
+                              value={value}
+                              checked={decision === value}
+                              onChange={() => setDecision(value)}
+                              className="h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            />
+                            {pt(labelKey)}
                           </label>
-                          <select
-                            id="sp-method"
-                            value={method}
-                            onChange={(e) => setMethod(e.target.value)}
-                            className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72"
-                          >
-                            <option value="document_review">
-                              {pt("ver.method.document_review")}
-                            </option>
-                            <option value="issuer_confirmation">
-                              {pt("ver.method.issuer_confirmation")}
-                            </option>
-                            <option value="employer_confirmation">
-                              {pt("ver.method.employer_confirmation")}
-                            </option>
-                          </select>
-                        </div>
+                        ))}
+                      </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                      {decision === "approved" ? (
+                        <>
                           <div>
                             <label
-                              htmlFor="sp-valid-from"
+                              htmlFor="sp-method"
                               className="block text-sm font-medium text-foreground"
                             >
-                              {pt("vq.validFrom")}
+                              {pt("vq.methodLabel")}
                             </label>
-                            <input
-                              id="sp-valid-from"
-                              type="date"
-                              value={validFrom}
-                              onChange={(e) => setValidFrom(e.target.value)}
-                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            />
-                          </div>
-                          <div>
-                            <label
-                              htmlFor="sp-valid-until"
-                              className="block text-sm font-medium text-foreground"
+                            <select
+                              id="sp-method"
+                              value={method}
+                              onChange={(e) => setMethod(e.target.value)}
+                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72"
                             >
-                              {pt("vq.validUntil")}
-                            </label>
-                            <input
-                              id="sp-valid-until"
-                              type="date"
-                              value={validUntil}
-                              onChange={(e) => setValidUntil(e.target.value)}
-                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            />
+                              <option value="document_review">
+                                {pt("ver.method.document_review")}
+                              </option>
+                              <option value="issuer_confirmation">
+                                {pt("ver.method.issuer_confirmation")}
+                              </option>
+                              <option value="employer_confirmation">
+                                {pt("ver.method.employer_confirmation")}
+                              </option>
+                            </select>
                           </div>
-                        </div>
-                      </>
-                    ) : null}
 
-                    <div>
-                      <label
-                        htmlFor="sp-internal"
-                        className="block text-sm font-medium text-foreground"
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                htmlFor="sp-valid-from"
+                                className="block text-sm font-medium text-foreground"
+                              >
+                                {pt("vq.validFrom")}
+                              </label>
+                              <input
+                                id="sp-valid-from"
+                                type="date"
+                                value={validFrom}
+                                onChange={(e) => setValidFrom(e.target.value)}
+                                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor="sp-valid-until"
+                                className="block text-sm font-medium text-foreground"
+                              >
+                                {pt("vq.validUntil")}
+                              </label>
+                              <input
+                                id="sp-valid-until"
+                                type="date"
+                                value={validUntil}
+                                onChange={(e) => setValidUntil(e.target.value)}
+                                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : null}
+
+                      <div>
+                        <label
+                          htmlFor="sp-internal"
+                          className="block text-sm font-medium text-foreground"
+                        >
+                          {pt("vq.noteInternal")}
+                        </label>
+                        <textarea
+                          id="sp-internal"
+                          rows={3}
+                          value={decisionNote}
+                          aria-describedby="sp-internal-help"
+                          onChange={(e) => setDecisionNote(e.target.value)}
+                          className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        />
+                        <p id="sp-internal-help" className="mt-1 text-xs text-muted-foreground">
+                          {pt("vq.noteInternalHelp")}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="sp-holder-message"
+                          className="block text-sm font-medium text-foreground"
+                        >
+                          {pt("vq.messageHolder")}
+                        </label>
+                        <textarea
+                          id="sp-holder-message"
+                          rows={3}
+                          value={holderMessage}
+                          aria-describedby="sp-holder-help"
+                          onChange={(e) => setHolderMessage(e.target.value)}
+                          className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        />
+                        <p id="sp-holder-help" className="mt-1 text-xs text-muted-foreground">
+                          {pt("vq.messageHolderHelp")}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
+
+                      {decisionError ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {decisionError}
+                        </p>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => void submitDecision()}
+                        disabled={busy}
+                        className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
-                        {pt("vq.noteInternal")}
-                      </label>
-                      <textarea
-                        id="sp-internal"
-                        rows={3}
-                        value={decisionNote}
-                        aria-describedby="sp-internal-help"
-                        onChange={(e) => setDecisionNote(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      />
-                      <p id="sp-internal-help" className="mt-1 text-xs text-muted-foreground">
-                        {pt("vq.noteInternalHelp")}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="sp-holder-message"
-                        className="block text-sm font-medium text-foreground"
-                      >
-                        {pt("vq.messageHolder")}
-                      </label>
-                      <textarea
-                        id="sp-holder-message"
-                        rows={3}
-                        value={holderMessage}
-                        aria-describedby="sp-holder-help"
-                        onChange={(e) => setHolderMessage(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      />
-                      <p id="sp-holder-help" className="mt-1 text-xs text-muted-foreground">
-                        {pt("vq.messageHolderHelp")}
-                      </p>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
-
-                    <button
-                      type="button"
-                      onClick={() => void submitDecision()}
-                      disabled={busy}
-                      className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {busy ? pt("vq.deciding") : pt("vq.confirmYes")}
-                    </button>
-                  </fieldset>
+                        {busy ? pt("vq.deciding") : pt("vq.confirmYes")}
+                      </button>
+                    </fieldset>
+                  )}
                 </div>
               ) : null}
             </li>

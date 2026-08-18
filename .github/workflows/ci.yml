@@ -67,6 +67,23 @@ jobs:
       - name: v3.1 cd_evidence payload check
         run: bun run v31-evidence-payload:check
 
+      # The Security Passport guards. They ran on developer machines but not
+      # here, which meant the invariants they encode were only ever checked by
+      # whoever remembered to run them.
+      - name: Passport separation check
+        run: bun run passport-separation:check
+
+      - name: Passport fixture and copy-parity check
+        run: bun run passport-fixture:check
+
+      # Production reported a page-wide "something went wrong" over a
+      # verification queue that was working: four unrelated operations shared
+      # one error string that nothing cleared on success. The browser test for
+      # it needs an authenticated platform admin and therefore skips in CI, so
+      # this source guard is what actually defends the invariant.
+      - name: Passport error-scope check
+        run: bun run passport-error-scope:check
+
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.
@@ -112,6 +129,12 @@ jobs:
       PGPORT: 5432
       PGUSER: postgres
       PGPASSWORD: postgres
+      # Report every failing suite in one run instead of stopping at the first.
+      # The suites run as one long sequence and the job still fails on any
+      # failure -- this only changes how much of the picture a single run gives
+      # a reviewer. Without it the later suites (the whole Security Passport
+      # set among them) stay invisible while an earlier suite is red.
+      DB_TEST_CONTINUE_ON_SUITE_FAILURE: 1
 
     steps:
       - name: Checkout repository

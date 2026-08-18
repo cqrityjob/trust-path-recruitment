@@ -502,7 +502,7 @@ SELECT pg_temp.must_fail($$
 $$, 'CD_PROFESSION_PROFILE_INCOMPLETE',
   'V6.8 ranking approval requires all 16 dimensions to be calibrated');
 
--- Calibrate all 16. CID15 is included at weight 0, which is exactly the
+-- Calibrate all 17 (the guard moved to 17 dimensions in 20260816161000). CID15 is included at weight 0, which is exactly the
 -- shape decision A-4 requires: present in the DNA, absent from matching.
 INSERT INTO public.cd_profession_profiles
   (profession_id, calibration_version, dimension_id, band_low, band_high,

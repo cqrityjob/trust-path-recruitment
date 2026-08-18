@@ -33,6 +33,11 @@ export const Route = createFileRoute("/_authenticated/passport")({
 const NAV: readonly { to: string; labelKey: PassportCopyKey }[] = [
   { to: "/passport", labelKey: "nav.overview" },
   { to: "/passport/onboarding", labelKey: "nav.onboarding" },
+  // Entering information is the main thing a holder comes here to do, so it
+  // is reachable from every Passport page, not only from the overview. The
+  // credential form lives inside it rather than beside it: VU1/VU2/OV/SV are
+  // one kind of entry among several, not a separate destination.
+  { to: "/passport/information", labelKey: "nav.information" },
   { to: "/passport/card", labelKey: "nav.card" },
   { to: "/passport/share", labelKey: "sc.title" },
   { to: "/passport/privacy", labelKey: "nav.privacy" },

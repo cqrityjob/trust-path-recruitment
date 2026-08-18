@@ -36,6 +36,22 @@ export interface OnboardingStep {
   readonly fields: readonly OnboardingField[];
 }
 
+/**
+ * The wizard, after Phase 8.
+ *
+ * ── WHY IT IS SIX STEPS AND NOT THIRTEEN ───────────────────────────────
+ *
+ * Seven of the original steps — previous employment, authorisations,
+ * education, courses, certifications, specialisations and languages —
+ * rendered a heading, an explanation and a Continue button, with no fields
+ * and nothing to store. They were list-shaped content in a question-shaped
+ * container: a wizard asks each thing once, but a career is five jobs and
+ * four courses, added over weeks.
+ *
+ * Those seven are now sections on /passport/information, where a holder can
+ * add, edit and remove as many entries as they have, into the real tables.
+ * What remains here is exactly the profile-level facts that ARE asked once.
+ */
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   {
     id: "purpose",
@@ -109,65 +125,6 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         required: true,
       },
     ],
-  },
-  {
-    id: "history",
-    titleKey: "onboarding.history.title",
-    whyKey: "onboarding.history.why",
-    bodyKey: "onboarding.history.body",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "licence",
-    titleKey: "onboarding.licence.title",
-    whyKey: "onboarding.licence.why",
-    bodyKey: "onboarding.licence.body",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "education",
-    titleKey: "onboarding.education.title",
-    whyKey: "onboarding.education.why",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "training",
-    titleKey: "onboarding.training.title",
-    whyKey: "onboarding.training.why",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "certification",
-    titleKey: "onboarding.certification.title",
-    whyKey: "onboarding.certification.why",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "specialisation",
-    titleKey: "onboarding.specialisation.title",
-    whyKey: "onboarding.specialisation.why",
-    bodyKey: "onboarding.specialisation.body",
-    required: false,
-    createsClaim: true,
-    fields: [],
-  },
-  {
-    id: "languages",
-    titleKey: "onboarding.languages.title",
-    whyKey: "onboarding.languages.why",
-    required: false,
-    createsClaim: false,
-    fields: [],
   },
   {
     id: "declaration",

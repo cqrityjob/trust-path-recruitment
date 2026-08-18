@@ -9,6 +9,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { useT } from "@/i18n/context";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 import { adminGetOverviewMetrics } from "@/lib/job-intelligence/admin-overview.functions";
+import { passportReviewCounts } from "@/lib/security-passport/verification.functions";
 import { formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -49,6 +50,18 @@ function AdminOverviewPage() {
   const m = q.data;
   const loading = q.isLoading;
 
+  // Passport reviews are work waiting on a person, so the overview says how
+  // much of it there is. Its own query, because a Passport outage must not
+  // take the rest of the dashboard down with it.
+  const passportCountsFn = useServerFn(passportReviewCounts);
+  const passportQ = useQuery({
+    queryKey: ["admin", "passport-review-counts"],
+    queryFn: () => passportCountsFn({ data: undefined }),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const passport = passportQ.data;
+
   return (
     <SiteLayout>
       <AdminShellChrome activeSection="overview">
@@ -57,6 +70,26 @@ function AdminOverviewPage() {
         </h1>
 
         {q.isError && <p className="mt-4 text-sm text-destructive">{(q.error as Error).message}</p>}
+
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("admin.overview.section.passport")}
+          </h2>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <MetricCard
+              label={t("admin.overview.metric.passportOpen")}
+              value={passport?.open ?? 0}
+              to="/admin/passport-verification"
+              loading={passportQ.isLoading}
+            />
+            <MetricCard
+              label={t("admin.overview.metric.passportClarification")}
+              value={passport?.clarification ?? 0}
+              to="/admin/passport-verification"
+              loading={passportQ.isLoading}
+            />
+          </div>
+        </section>
 
         <section className="mt-6">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

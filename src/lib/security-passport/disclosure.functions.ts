@@ -114,3 +114,35 @@ export const revokeDisclosure = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * A share that carries ONE credential.
+ *
+ * Reuses the whole disclosure machinery — hashed token, expiry, revocation,
+ * throttle, byte-identical unavailable response — because it IS a
+ * disclosure, merely a focused one. The database refuses a claim the caller
+ * does not own, and refuses one that is not verified and active rather than
+ * minting a link to an empty page.
+ */
+export const createCredentialDisclosure = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        claimId: z.string().uuid(),
+        expiresDays: z.number().int().min(1).max(365).nullable(),
+        purpose: z.string().max(200).nullable(),
+        recipientHint: z.string().max(200).nullable(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<{ token: string }> => {
+    const { data: token, error } = await context.supabase.rpc("sp_create_credential_disclosure", {
+      _claim_id: data.claimId,
+      _expires_days: orNull(data.expiresDays),
+      _purpose: orNull(data.purpose),
+      _recipient_hint: orNull(data.recipientHint),
+    });
+    if (error) throw new Error(error.message);
+    return { token: token as unknown as string };
+  });

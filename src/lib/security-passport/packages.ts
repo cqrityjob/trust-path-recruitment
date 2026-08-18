@@ -165,6 +165,14 @@ export interface RecipientClaim {
   readonly id: string;
   readonly type: string;
   readonly title: string;
+  /** Supported-credential taxonomy code (VU1 / VU2 / OV / SV), or null for a
+   *  free-text credential. Phase 7.
+   *
+   *  This is the ONLY thing the public page may derive a credential symbol
+   *  from. It is server-authored and FK-constrained, unlike `title`, which
+   *  the holder types — deriving a symbol from the title would let a holder
+   *  choose the mark a stranger sees. */
+  readonly credential_code: string | null;
   readonly issuer: string | null;
   readonly jurisdiction: string | null;
   readonly issued_on: string | null;
@@ -190,6 +198,14 @@ export interface RecipientPeriod {
 export interface RecipientPayloadActive {
   readonly status: "active";
   readonly package: DisclosurePackageCode;
+  /** Whether this share is the whole Passport or one credential. Emitted by
+   *  the server (Phase 9) so the page never has to infer intent from how
+   *  many claims happen to be in the array.
+   *
+   *  Optional because a payload produced before Phase 9 reached the database
+   *  will not carry it; the reader defaults to "passport", which is what
+   *  every pre-Phase-9 share was. */
+  readonly focus?: "passport" | "credential";
   readonly purpose: string | null;
   readonly expires_at: string | null;
   readonly last_updated: string;

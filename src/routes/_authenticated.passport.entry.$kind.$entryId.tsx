@@ -36,9 +36,24 @@ import {
 } from "@/lib/security-passport/verification.functions";
 import { validityOf } from "@/lib/security-passport/validity";
 import { formatExpiry, formatPeriodRange } from "@/lib/security-passport/format";
+import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
+import { correctClaim } from "@/lib/security-passport/passport.functions";
+import {
+  getCredentialPrivateFields,
+  listClaimVersions,
+  type ClaimVersion,
+} from "@/lib/security-passport/credentials.functions";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
+import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
+import {
+  CredentialCorrectionForm,
+  type CorrectionValues,
+} from "@/components/security-passport/CredentialCorrectionForm";
+import { CredentialVersionHistory } from "@/components/security-passport/CredentialVersionHistory";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { EvidencePanel } from "@/components/security-passport/live/EvidencePanel";
+import { CredentialShareActions } from "@/components/security-passport/live/CredentialShareActions";
+import { createCredentialDisclosure } from "@/lib/security-passport/disclosure.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
@@ -67,6 +82,10 @@ function PassportEntryRoute() {
   const doSubmit = useServerFn(submitForVerification);
   const doWithdrawRequest = useServerFn(withdrawVerificationRequest);
   const doDispute = useServerFn(raiseDispute);
+  const doShareCredential = useServerFn(createCredentialDisclosure);
+  const doCorrect = useServerFn(correctClaim);
+  const loadVersions = useServerFn(listClaimVersions);
+  const loadPrivateFields = useServerFn(getCredentialPrivateFields);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
@@ -74,6 +93,16 @@ function PassportEntryRoute() {
   const [decisions, setDecisions] = useState<readonly VerificationDecisionRecord[]>([]);
   const [employers, setEmployers] = useState<readonly { id: string; name: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [credentialShareUrl, setCredentialShareUrl] = useState<string | null>(null);
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const [versions, setVersions] = useState<readonly ClaimVersion[]>([]);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionPrefill, setCorrectionPrefill] = useState<{
+    credentialReference: string | null;
+    holderNote: string | null;
+  } | null>(null);
+  const [correctionBusy, setCorrectionBusy] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -97,6 +126,23 @@ function PassportEntryRoute() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // The version chain is claim-only and loaded separately: it is history,
+  // and a failure to load it must not take down the entry itself.
+  useEffect(() => {
+    if (!isClaim) return;
+    let alive = true;
+    void loadVersions({ data: { claimId: entryId } })
+      .then((v) => {
+        if (alive) setVersions(v);
+      })
+      .catch((err: unknown) => {
+        console.error("[passport] version history load failed", err);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [isClaim, entryId, loadVersions]);
 
   const claim = useMemo(
     () => (isClaim ? (snapshot?.holder.claims.find((c) => c.id === entryId) ?? null) : null),
@@ -153,6 +199,58 @@ function PassportEntryRoute() {
   const title = claim ? (lang === "en" ? claim.titleEn : claim.titleSv) : period!.roleTitle;
   const validity = validityOf(subject.lifecycleState, claim ? claim.validUntil : null, today());
 
+  const mayCorrect =
+    claim !== null &&
+    (validity.effectiveState === "active" || validity.effectiveState === "expired");
+
+  async function openCorrection() {
+    setCorrectionError(null);
+    try {
+      const prefill = await loadPrivateFields({ data: { claimId: entryId } });
+      setCorrectionPrefill(prefill);
+      setCorrecting(true);
+    } catch (err) {
+      console.error("[passport] correction prefill failed", err);
+      setCorrectionError(pt("common.error"));
+    }
+  }
+
+  async function submitCorrection(values: CorrectionValues) {
+    if (!claim) return;
+    setCorrectionBusy(true);
+    setCorrectionError(null);
+    try {
+      const { id } = await doCorrect({
+        data: {
+          claimId: entryId,
+          title: values.title,
+          claimedIssuerName: values.issuerName.trim() || null,
+          jurisdictionCode: values.jurisdictionCode.trim() || null,
+          issuedOn: values.issuedOn,
+          validUntil: values.validUntil,
+          reason: values.reason,
+          // The code travels unchanged: a correction fixes a detail, it
+          // does not turn a VU1 into something else.
+          credentialCode: claim.credentialCode,
+          credentialReference: values.credentialReference.trim() || null,
+          holderNote: values.holderNote.trim() || null,
+        },
+      });
+      setCorrecting(false);
+      setCorrectionPrefill(null);
+      // The correction IS a new claim; its page is the current record.
+      void navigate({
+        to: "/passport/entry/$kind/$entryId",
+        params: { kind: "claim", entryId: id },
+      });
+    } catch (err) {
+      console.error("[passport] correction failed", err);
+      setCorrectionError(pt("common.error"));
+    } finally {
+      setCorrectionBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <Link
@@ -164,17 +262,33 @@ function PassportEntryRoute() {
       </Link>
 
       <header className="rounded-xl border border-border bg-card p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {claim
-            ? pt(`claims.type.${claim.claimType}` as PassportCopyKey)
-            : pt("claim.experienceTitle")}
-        </p>
-        <h2
-          className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {title}
-        </h2>
+        <div className="flex items-start gap-4">
+          {/* The credential's mark, in the state derived today — the header
+              repeats it in words just below. */}
+          {claim?.credentialCode ? (
+            <CredentialSymbol
+              code={claim.credentialCode}
+              state={credentialPresentation(claim.assertionLevel, validity.effectiveState)}
+              name={title}
+              size={56}
+              decorative
+              className="mt-1 shrink-0"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {claim
+                ? pt(`claims.type.${claim.claimType}` as PassportCopyKey)
+                : pt("claim.experienceTitle")}
+            </p>
+            <h2
+              className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {title}
+            </h2>
+          </div>
+        </div>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
           {claim ? (
@@ -254,6 +368,44 @@ function PassportEntryRoute() {
         }}
       />
 
+      {/* A verified, current credential can be shared on its own — the
+          holder should not have to disclose their whole Passport to prove
+          one qualification. Shown for claims only: an employment period is
+          not a credential somebody puts on LinkedIn. */}
+      {claim ? (
+        <CredentialShareActions
+          subject={{
+            title,
+            issuer: claim.issuerName === "—" ? null : claim.issuerName,
+            issuedOn: claim.issuedOn,
+            validUntil: claim.validUntil,
+            shareable: claim.assertionLevel === "verified" && validity.effectiveState === "active",
+          }}
+          shareUrl={credentialShareUrl}
+          busy={sharingBusy}
+          onCreateLink={() => {
+            setSharingBusy(true);
+            setError(null);
+            void doShareCredential({
+              data: {
+                claimId: entryId,
+                expiresDays: 30,
+                purpose: null,
+                recipientHint: null,
+              },
+            })
+              .then((r) => {
+                setCredentialShareUrl(`${window.location.origin}/p/${r.token}`);
+              })
+              .catch((err: unknown) => {
+                console.error("[passport] credential share failed", err);
+                setError(pt("common.error"));
+              })
+              .finally(() => setSharingBusy(false));
+          }}
+        />
+      ) : null}
+
       <VerificationPanel
         assertionLevel={subject.assertionLevel}
         validity={validity}
@@ -289,6 +441,56 @@ function PassportEntryRoute() {
           await navigate({ to: "/passport" });
         }}
       />
+
+      {/* Documentation ≠ approval, beside the panels where both happen. */}
+      <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+        {pt("cred.docsNotApproval")}
+      </p>
+
+      {/* ── Correction ──────────────────────────────────────────────── */}
+      {mayCorrect ? (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-base font-semibold tracking-tight text-foreground">
+            {pt("cred.correct.title")}
+          </h3>
+          {correcting && correctionPrefill && claim ? (
+            <div className="mt-3">
+              <CredentialCorrectionForm
+                claim={claim}
+                privateFields={correctionPrefill}
+                busy={correctionBusy}
+                serverError={correctionError}
+                onSubmit={(values) => void submitCorrection(values)}
+                onCancel={() => {
+                  setCorrecting(false);
+                  setCorrectionPrefill(null);
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                {pt("cred.correct.trustNote")}
+              </p>
+              {correctionError ? (
+                <p role="alert" className="mt-2 text-sm text-destructive">
+                  {correctionError}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void openCorrection()}
+                className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {pt("cred.action.correct")}
+              </button>
+            </>
+          )}
+        </section>
+      ) : null}
+
+      {/* ── Every version, oldest preserved ─────────────────────────── */}
+      {isClaim ? <CredentialVersionHistory versions={versions} currentId={entryId} /> : null}
     </div>
   );
 }

@@ -48,9 +48,22 @@ const sv = {
   "screen.recipient": "Mottagarens vy",
   "screen.privacy": "Integritet",
   "screen.studio": "Kortstudio",
+  "screen.symbols": "Behörighetssymboler",
+  "screen.credentialForm": "Behörighetsformulär",
+  "screen.credentialHistory": "Rättelse och versioner",
+  "screen.linkedin": "LinkedIn-delning",
+  "screen.recipientCard": "Mottagarens Passport-kort",
+  "screen.entries": "Mina uppgifter",
+  "symbols.title": "CQrityjobs behörighetssymboler",
+  "symbols.lead":
+    "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
+  "symbols.freeText": "Fritextmerit",
+  "symbols.smallSize": "Minsta kortstorlek (28 px)",
+  "symbols.withWord": "Märke med statusord",
   "nav.overview": "Översikt",
   "nav.onboarding": "Kom igång",
   "nav.card": "Passport Card",
+  "nav.credentials": "Behörigheter",
   "nav.privacy": "Integritet",
   "live.loading": "Hämtar ditt Security Passport …",
   "live.error": "Något gick fel. Försök igen.",
@@ -265,6 +278,10 @@ const sv = {
   "assertion.self_declared": "EGENRAPPORTERAD",
   "assertion.document_provided": "DOKUMENT TILLHANDAHÅLLET",
   "assertion.verified": "VERIFIERAD",
+  // Used wherever a verified credential is no longer CURRENT. The
+  // verification really happened and is never erased — but on a card, beside
+  // someone's name, the bare word reads as a present fact.
+  "assertion.verified.historical": "TIDIGARE VERIFIERAD",
   "assertion.self_declared.help":
     "Uppgiften kommer från dig och är inte kontrollerad av någon annan.",
   "assertion.document_provided.help":
@@ -445,6 +462,7 @@ const sv = {
   "card.cta.viewCredentials": "Visa verifierade uppgifter",
   "card.cta.create": "Skapa ditt Security Passport med CQrityjob",
   "card.noVerifiedYet": "Inga verifierade uppgifter ännu",
+  "card.noVerifiedExperience": "Ingen verifierad yrkeserfarenhet ännu",
   "card.selfDeclaredHeading": "Egenrapporterad yrkesprofil",
 
   "share.title": "Dela som bild",
@@ -731,6 +749,12 @@ const sv = {
   "rec.holder": "Innehavare",
   "rec.anonymousHolder": "Namnet visas inte",
   "rec.profession": "Yrke",
+  "rec.professionVaktare": "Väktare",
+  "rec.cardTitle": "Delat Security Passport",
+  "rec.detailsTitle": "Uppgifter i delningen",
+  "rec.packageShows": "Den här delningen visar",
+  "rec.expiredNotice":
+    "En eller flera uppgifter är inte längre gällande. De visas med sitt nuvarande läge, inte som aktuella.",
   "rec.jurisdiction": "Jurisdiktion",
   "rec.qualifications": "Verifierade behörigheter",
   "rec.experience": "Verifierad anställning",
@@ -765,6 +789,245 @@ const sv = {
   "common.error": "Något gick fel. Försök igen.",
   "common.loading": "Hämtar …",
   "common.days": "dagar",
+
+  // ── Credential forms (Phase 6) ───────────────────────────────────────
+  // The four launch credentials. The credential NAMES are not here: they
+  // come from sp_credential_types.name_sv/name_en, so adding a supported
+  // credential needs no copy change. Only the surrounding form language and
+  // the validation messages live here.
+  "cred.add.title": "Lägg till behörighet eller utbildning",
+  "cred.add.body":
+    "Du fyller i uppgifterna själv. Allt du lägger till räknas som uppgivet av dig tills någon annan har kontrollerat det.",
+  "cred.select.label": "Vad vill du lägga till?",
+  "cred.select.placeholder": "Välj …",
+  "cred.section.about": "Om behörigheten",
+  "cred.section.dates": "Datum",
+  "cred.section.evidence": "Underlag och anteckning",
+
+  "cred.field.title": "Benämning",
+  "cred.field.titleHelp": "Namnet som står på beviset eller beslutet.",
+  "cred.field.trainingProvider": "Utbildningsanordnare",
+  "cred.field.appointingAuthority": "Förordnande myndighet",
+  "cred.field.authorityHelp": "Myndigheten som fattade beslutet, till exempel Polismyndigheten.",
+  "cred.field.jurisdiction": "Land",
+  "cred.field.completedOn": "Slutfört datum",
+  "cred.field.decidedOn": "Beslutsdatum",
+  "cred.field.validFrom": "Gäller från",
+  "cred.field.validUntil": "Gäller till",
+  "cred.field.validUntilRequired": "Gäller till (obligatoriskt för förordnande)",
+  "cred.field.reference": "Referens- eller beslutsnummer",
+  "cred.field.referenceHelp": "Visas aldrig publikt. Endast du och en granskare ser det.",
+  "cred.field.holderNote": "Din egen anteckning",
+  "cred.field.holderNoteHelp":
+    "Dina egna ord. Markeras alltid som uppgiven av dig och delas aldrig publikt.",
+
+  "cred.appointment.notice":
+    "Ett förordnande är en tidsbegränsad behörighet. Utbildning är inte samma sak som ett gällande förordnande.",
+  "cred.qualification.notice":
+    "Detta är en genomförd utbildning. Den har inget slutdatum om inte beviset anger ett.",
+
+  "cred.action.saveDraft": "Spara utkast",
+  "cred.action.saving": "Sparar …",
+  "cred.action.savedAt": "Utkast sparat",
+  "cred.action.resume": "Fortsätt med utkast",
+  "cred.action.activate": "Lägg till i passet",
+  "cred.action.submitVerification": "Skicka för kontroll",
+  "cred.action.uploadEvidence": "Ladda upp underlag",
+  "cred.action.correct": "Rätta uppgift",
+  "cred.action.discard": "Ta bort utkast",
+
+  "cred.error.selectCredential": "Välj vilken behörighet du lägger till.",
+  "cred.error.titleRequired": "Ange en benämning.",
+  "cred.error.jurisdictionRequired": "Ange land.",
+  "cred.error.authorityRequired": "Ange vilken myndighet som förordnade dig.",
+  "cred.error.validUntilRequired": "Ett förordnande måste ha ett slutdatum.",
+  "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
+  "cred.error.endBeforeStart": "Slutdatumet kan inte vara före startdatumet.",
+  "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
+  "cred.error.noteTooLong": "Anteckningen är för lång (max 2000 tecken).",
+  "cred.error.incompleteForActive":
+    "Fyll i de obligatoriska fälten innan du lägger till uppgiften.",
+  "cred.error.incompleteForVerification":
+    "Uppgiften måste vara komplett innan den skickas för kontroll.",
+  "cred.errorSummary": "Kontrollera fälten nedan.",
+
+  // ── Structured entry (Phase 8) ───────────────────────────────────────
+  "entry.save": "Spara",
+  "entry.saving": "Sparar …",
+  "entry.saved": "Sparat.",
+  "entry.edit": "Ändra",
+  "entry.remove": "Ta bort",
+  "entry.removeConfirm": "Ta bort uppgiften? Det går inte att ångra.",
+  "entry.removeBlocked":
+    "Uppgiften kan inte tas bort längre eftersom den har underlag eller en granskning. Rätta den i stället.",
+  "entry.add": "Lägg till",
+  "entry.none": "Inget tillagt ännu.",
+  "entry.selfDeclaredNote":
+    "Allt du lägger till är egenrapporterat tills någon annan har kontrollerat det.",
+
+  "entry.emp.employer": "Arbetsgivare",
+  "entry.emp.role": "Roll",
+  "entry.emp.startedOn": "Från och med",
+  "entry.emp.endedOn": "Till och med",
+  "entry.emp.ongoing": "Jag arbetar kvar här",
+  "entry.emp.employmentType": "Anställningsform",
+  "entry.emp.type.full_time": "Heltid",
+  "entry.emp.type.part_time": "Deltid",
+  "entry.emp.type.hourly": "Timanställd",
+  "entry.emp.type.temporary": "Vikariat eller visstid",
+  "entry.emp.extent": "Omfattning",
+  "entry.emp.extentHelp": "Hur stor del av en heltid tjänsten motsvarade.",
+  "entry.emp.relevance": "Hur mycket av arbetet var säkerhetsarbete?",
+  "entry.emp.relevanceHelp":
+    "Vi gissar aldrig utifrån titeln. En receptionist med säkerhetsansvar och en väktare är inte samma sak.",
+  "entry.emp.relevance.primary": "Hela arbetet var säkerhetsarbete",
+  "entry.emp.relevance.partial": "En del av arbetet var säkerhetsarbete",
+  "entry.emp.relevance.none": "Inget säkerhetsarbete",
+  "entry.emp.securityShare": "Ungefär hur stor del?",
+  "entry.emp.securityShareHelp": "Anges uttryckligen — beräkningen antar aldrig en andel.",
+
+  "entry.claim.title": "Benämning",
+  "entry.claim.titleHelp": "Namnet som står på beviset, intyget eller kursbeskrivningen.",
+  "entry.claim.school": "Skola eller lärosäte",
+  "entry.claim.certBody": "Certifierande organ",
+  "entry.claim.organisation": "Organisation",
+  "entry.claim.confirmedBy": "Bekräftas av",
+  "entry.claim.completedOn": "Slutfört datum",
+  "entry.claim.hasExpiry": "Uppgiften har ett slutdatum",
+
+  "entry.error.employerRequired": "Ange arbetsgivare.",
+  "entry.error.roleRequired": "Ange roll.",
+  "entry.error.titleRequired": "Ange en benämning.",
+  "entry.error.startRequired": "Ange startdatum.",
+  "entry.error.endRequired": "Ange slutdatum.",
+  "entry.error.endBeforeStart": "Slutdatumet måste vara efter startdatumet.",
+  "entry.error.fractionRange": "Välj en andel mellan 0 och 100 procent.",
+  "entry.documentAndVerify": "Underlag och kontroll",
+  "exp.verifiedLabel": "Verifierad tid i yrket",
+  "exp.noneYet": "Ingen verifierad tid ännu",
+  "exp.selfDeclaredAlso": "Egenrapporterat, inte kontrollerat:",
+  "share2.title": "Dela ditt Passport",
+  "share2.lead":
+    "En länk som visar dina verifierade uppgifter. Du kan återkalla den när som helst.",
+  "share2.primary": "Dela mitt Passport",
+  "share2.creating": "Skapar länk …",
+  "share2.share": "Dela",
+  "share2.copy": "Kopiera länk",
+  "share2.copied": "Länken är kopierad",
+  "share2.ready": "Länken är klar",
+  "share2.terms": "Gäller i 30 dagar. Du kan återkalla den när som helst.",
+  "share2.whatIsShared":
+    "Länken visar bara verifierade uppgifter — inget egenrapporterat, inga dokument och inga referensnummer.",
+  "share2.nothingVerified":
+    "Du har inget verifierat ännu, så en länk skulle vara tom. Lägg till dina uppgifter och skicka dem för kontroll först.",
+  "share2.more": "Fler alternativ",
+  "share2.moreHint": "Egen giltighetstid, QR-kod, bilder och aktiva länkar.",
+  "share2.activeLinks": "Aktiva länkar",
+  "share2.cacheNote":
+    "En nedladdad eller publicerad bild kan finnas kvar hos plattformen även efter att du återkallat länken. Själva sidan slutar fungera direkt.",
+  "vq.error.queue": "Kön kunde inte hämtas.",
+  "vq.error.detail": "Ärendet kunde inte öppnas.",
+  "vq.error.evidence": "Dokumentet kunde inte öppnas.",
+  "vq.error.decision": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
+  "vq.retry": "Försök igen",
+  // A refusal the reviewer can act on. One line each: what happened, and what
+  // to do instead. None of them says "try again" unless trying again is
+  // genuinely the right move.
+  "vq.decline.self_verification":
+    "Det här är din egen ansökan. Du kan inte verifiera dig själv — en annan granskare måste ta beslutet.",
+  "vq.decline.not_authorised": "Du har inte behörighet att besluta i det här ärendet.",
+  "vq.decline.already_decided": "Ärendet är redan avgjort. Ladda om sidan för att se beslutet.",
+  "vq.decline.not_found": "Ärendet finns inte längre.",
+  "vq.decline.method_required": "Ett godkännande måste ange en verifieringsmetod.",
+  "vq.decline.invalid_validity":
+    "Giltighetstiden går inte att spara. Kontrollera att slutdatum ligger efter startdatum, och att ett tidsbegränsat förordnande har ett slutdatum.",
+  "vq.decline.issuer_required":
+    "Den här behörigheten måste ange vilken myndighet som utfärdat den.",
+  "vq.decline.entry_not_active":
+    "Uppgiften har ändrats sedan granskningen öppnades och går inte längre att besluta om. Ladda om sidan.",
+  "vq.decline.unknown": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
+  // The self-review notice, shown before anything is filled in.
+  "vq.selfBadge": "Din egen ansökan",
+  "vq.selfNotice":
+    "Det här är din egen ansökan. Ingen får verifiera sina egna uppgifter, så beslutsformuläret är avstängt här. En annan granskare måste ta beslutet.",
+  "cw.detailsTitle": "Uppgifter",
+  "cw.shareCredential": "Dela den här behörigheten",
+  "cw.creating": "Skapar länk …",
+  "cw.addToLinkedIn": "Lägg till på LinkedIn",
+  "cw.linkedInPanel": "Uppgifter för LinkedIn",
+  "cw.linkedInHow":
+    "LinkedIn fyller inte i uppgifterna automatiskt. Kopiera dem här, öppna LinkedIn och klistra in dem i formuläret.",
+  "cw.liName": "Namn",
+  "cw.liOrg": "Utfärdande organisation",
+  "cw.liIssued": "Utfärdat",
+  "cw.liExpires": "Upphör att gälla",
+  "cw.liId": "Legitimerings-ID",
+  "cw.liUrl": "Länk till legitimering",
+  "cw.copyDetails": "Kopiera uppgifter",
+  "cw.copied": "Uppgifterna är kopierade",
+  "cw.openLinkedIn": "Öppna LinkedIn",
+  "cw.notShareable":
+    "Bara en verifierad och gällande behörighet kan delas för sig. Skicka den för kontroll först.",
+
+  "info.title": "Mina uppgifter",
+  "info.lead":
+    "Här lägger du in din bakgrund. Allt sparas direkt och du kan fortsätta när du vill. Behörigheter har egna formulär eftersom de har egna regler.",
+  "info.employment": "Anställningar",
+  "info.employmentLead":
+    "Lägg till varje anställning för sig. Överlappande perioder räknas bara en gång.",
+  "info.addEmployment": "Lägg till anställning",
+  "nav.information": "Mina uppgifter",
+
+  // ── Credential UI (Phase 7) ──────────────────────────────────────────
+  "cred.category.qualification": "Genomförd utbildning",
+  "cred.category.appointment": "Tidsbegränsat förordnande",
+  "cred.field.validFromHelp": "Endast om beslutet anger ett annat startdatum än beslutsdatumet.",
+  "cred.docsNotApproval":
+    "Underlag är inte samma sak som godkännande. En uppladdad handling gör uppgiften dokumenterad — bara en genomförd kontroll kan göra den verifierad.",
+  "cred.evidenceNext":
+    "När uppgiften är tillagd kan du ladda upp underlag och skicka den för kontroll.",
+  "cred.addAction": "Lägg till behörighet",
+  "cred.overview.title": "Behörigheter och utbildningar",
+  "cred.overview.body":
+    "Lägg till VU1, VU2, ordningsvaktsförordnande eller skyddsvaktsförordnande. Du kan spara ett utkast och fortsätta senare.",
+  "cred.drafts.title": "Utkast",
+  "cred.drafts.lead": "Sparade men inte tillagda. Bara du ser dem.",
+  "cred.drafts.updated": "Senast sparat",
+  "cred.drafts.untitled": "Utan benämning",
+  "cred.discardConfirm": "Utkastet tas bort permanent. Det går inte att ångra.",
+  "cred.discarded": "Utkastet är borttaget.",
+  "cred.onboardingCta": "Lägg till den nu",
+  "cred.new.resumeOr": "eller börja på en ny",
+  "cred.added": "Uppgiften är tillagd i ditt Passport.",
+
+  "cred.correct.title": "Rätta uppgiften",
+  "cred.correct.trustNote":
+    "En rättelse skapar en ny version och behåller den gamla i historiken. Om du ändrar det som intygas börjar den nya versionen om som egenrapporterad — en eventuell verifiering följer inte med.",
+  "cred.correct.reason": "Vad rättar du?",
+  "cred.correct.reasonHelp": "Sparas i historiken tillsammans med rättelsen.",
+  "cred.correct.reasonRequired": "Ange vad du rättar.",
+  "cred.correct.submit": "Spara rättelsen",
+  "cred.versions.title": "Versionshistorik",
+  "cred.versions.lead":
+    "Tidigare versioner sparas och märks som ersatta. Ingen version försvinner.",
+  "cred.versions.current": "Gällande",
+  "cred.versions.recordedAt": "Registrerad",
+
+  // ── LinkedIn sharing (fallback experience) ───────────────────────────
+  "li.title": "Dela på LinkedIn",
+  "li.lead":
+    "Så här ser ditt kort ut i LinkedIns format. Tre steg: ladda ner bilden, kopiera länken, bifoga bilden i ditt inlägg.",
+  "li.step1": "Ladda ner kortbilden i LinkedIns format (1200×630).",
+  "li.step1Action": "Ladda ner bilden",
+  "li.step1Done": "Nedladdad — ladda ner igen",
+  "li.step2": "Kopiera den levande verifieringslänken och klistra in den i inlägget.",
+  "li.step3":
+    "Öppna LinkedIn och bifoga den nedladdade bilden i inlägget. Bilden bifogas inte automatiskt.",
+  "li.step3Action": "Öppna LinkedIn",
+  "li.previewNote":
+    "Länkens automatiska förhandsvisning på LinkedIn visar CQrityjobs allmänna kort — inte ditt personliga. Ditt kort syns när du själv bifogar bilden. Länken är alltid källan: sidan bakom den visar aktuellt läge och kan återkallas.",
+  "sc.retentionNote":
+    "Sociala plattformar kan behålla bilder som redan publicerats eller cachats — även efter att du återkallat länken. Det du återkallar är sidan bakom länken, inte kopior av bilden.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -792,9 +1055,22 @@ const en: Record<PassportCopyKey, string> = {
   "screen.recipient": "Recipient view",
   "screen.privacy": "Privacy",
   "screen.studio": "Card studio",
+  "screen.symbols": "Credential symbols",
+  "screen.credentialForm": "Credential form",
+  "screen.credentialHistory": "Correction and versions",
+  "screen.linkedin": "LinkedIn sharing",
+  "screen.recipientCard": "Recipient Passport card",
+  "screen.entries": "My information",
+  "symbols.title": "The CQrityjob credential symbols",
+  "symbols.lead":
+    "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
+  "symbols.freeText": "Free-text credential",
+  "symbols.smallSize": "Smallest card size (28 px)",
+  "symbols.withWord": "Mark with its status word",
   "nav.overview": "Overview",
   "nav.onboarding": "Get started",
   "nav.card": "Passport Card",
+  "nav.credentials": "Credentials",
   "nav.privacy": "Privacy",
   "live.loading": "Loading your Security Passport …",
   "live.error": "Something went wrong. Please try again.",
@@ -1004,6 +1280,7 @@ const en: Record<PassportCopyKey, string> = {
   "assertion.self_declared": "SELF-DECLARED",
   "assertion.document_provided": "DOCUMENT PROVIDED",
   "assertion.verified": "VERIFIED",
+  "assertion.verified.historical": "PREVIOUSLY VERIFIED",
   "assertion.self_declared.help": "This comes from you and has not been checked by anyone else.",
   "assertion.document_provided.help":
     "Documentation has been provided. A document existing does not mean the entry is verified.",
@@ -1175,6 +1452,7 @@ const en: Record<PassportCopyKey, string> = {
   "card.cta.viewCredentials": "View verified credentials",
   "card.cta.create": "Create your Security Passport with CQrityjob",
   "card.noVerifiedYet": "No verified entries yet",
+  "card.noVerifiedExperience": "No verified professional experience yet",
   "card.selfDeclaredHeading": "Self-reported professional profile",
 
   "share.title": "Share as an image",
@@ -1463,6 +1741,12 @@ const en: Record<PassportCopyKey, string> = {
   "rec.holder": "Holder",
   "rec.anonymousHolder": "The name is not shown",
   "rec.profession": "Profession",
+  "rec.professionVaktare": "Security Officer (Väktare)",
+  "rec.cardTitle": "Shared Security Passport",
+  "rec.detailsTitle": "What this share contains",
+  "rec.packageShows": "This share shows",
+  "rec.expiredNotice":
+    "One or more entries are no longer current. They are shown with their present state, not as current.",
   "rec.jurisdiction": "Jurisdiction",
   "rec.qualifications": "Verified authorisations",
   "rec.experience": "Verified employment",
@@ -1498,6 +1782,235 @@ const en: Record<PassportCopyKey, string> = {
   "common.error": "Something went wrong. Please try again.",
   "common.loading": "Loading …",
   "common.days": "days",
+
+  // ── Credential forms (Phase 6) ───────────────────────────────────────
+  "cred.add.title": "Add a credential or training",
+  "cred.add.body":
+    "You fill this in yourself. Anything you add counts as stated by you until someone else has checked it.",
+  "cred.select.label": "What would you like to add?",
+  "cred.select.placeholder": "Choose …",
+  "cred.section.about": "About the credential",
+  "cred.section.dates": "Dates",
+  "cred.section.evidence": "Documentation and note",
+
+  "cred.field.title": "Name",
+  "cred.field.titleHelp": "The name as it appears on the certificate or decision.",
+  "cred.field.trainingProvider": "Training provider",
+  "cred.field.appointingAuthority": "Appointing authority",
+  "cred.field.authorityHelp":
+    "The authority that made the decision, for example the Swedish Police Authority.",
+  "cred.field.jurisdiction": "Country",
+  "cred.field.completedOn": "Completed on",
+  "cred.field.decidedOn": "Decision date",
+  "cred.field.validFrom": "Valid from",
+  "cred.field.validUntil": "Valid until",
+  "cred.field.validUntilRequired": "Valid until (required for an appointment)",
+  "cred.field.reference": "Reference or decision number",
+  "cred.field.referenceHelp": "Never shown publicly. Only you and a reviewer can see it.",
+  "cred.field.holderNote": "Your own note",
+  "cred.field.holderNoteHelp":
+    "Your own words. Always marked as stated by you, and never shared publicly.",
+
+  "cred.appointment.notice":
+    "An appointment is a time-limited authorisation. Training is not the same thing as a current appointment.",
+  "cred.qualification.notice":
+    "This is completed training. It has no end date unless the certificate states one.",
+
+  "cred.action.saveDraft": "Save draft",
+  "cred.action.saving": "Saving …",
+  "cred.action.savedAt": "Draft saved",
+  "cred.action.resume": "Continue draft",
+  "cred.action.activate": "Add to my Passport",
+  "cred.action.submitVerification": "Submit for checking",
+  "cred.action.uploadEvidence": "Upload documentation",
+  "cred.action.correct": "Correct this entry",
+  "cred.action.discard": "Delete draft",
+
+  "cred.error.selectCredential": "Choose which credential you are adding.",
+  "cred.error.titleRequired": "Enter a name.",
+  "cred.error.jurisdictionRequired": "Enter a country.",
+  "cred.error.authorityRequired": "Enter the authority that appointed you.",
+  "cred.error.validUntilRequired": "An appointment must have an end date.",
+  "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
+  "cred.error.endBeforeStart": "The end date cannot be before the start date.",
+  "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",
+  "cred.error.noteTooLong": "That note is too long (2000 characters maximum).",
+  "cred.error.incompleteForActive": "Fill in the required fields before adding this entry.",
+  "cred.error.incompleteForVerification":
+    "This entry must be complete before it is submitted for checking.",
+  "cred.errorSummary": "Please check the fields below.",
+
+  "entry.save": "Save",
+  "entry.saving": "Saving …",
+  "entry.saved": "Saved.",
+  "entry.edit": "Edit",
+  "entry.remove": "Remove",
+  "entry.removeConfirm": "Remove this entry? This cannot be undone.",
+  "entry.removeBlocked":
+    "This entry can no longer be removed because it has documentation or a review. Correct it instead.",
+  "entry.add": "Add",
+  "entry.none": "Nothing added yet.",
+  "entry.selfDeclaredNote":
+    "Everything you add is self-declared until somebody else has checked it.",
+
+  "entry.emp.employer": "Employer",
+  "entry.emp.role": "Role",
+  "entry.emp.startedOn": "From",
+  "entry.emp.endedOn": "Until",
+  "entry.emp.ongoing": "I still work here",
+  "entry.emp.employmentType": "Employment type",
+  "entry.emp.type.full_time": "Full time",
+  "entry.emp.type.part_time": "Part time",
+  "entry.emp.type.hourly": "Hourly",
+  "entry.emp.type.temporary": "Temporary or fixed term",
+  "entry.emp.extent": "Extent",
+  "entry.emp.extentHelp": "What share of a full-time post the role amounted to.",
+  "entry.emp.relevance": "How much of the work was security work?",
+  "entry.emp.relevanceHelp":
+    "We never guess from the job title. A receptionist with security duties and a security officer are not the same thing.",
+  "entry.emp.relevance.primary": "All of it was security work",
+  "entry.emp.relevance.partial": "Part of it was security work",
+  "entry.emp.relevance.none": "No security work",
+  "entry.emp.securityShare": "Roughly what share?",
+  "entry.emp.securityShareHelp": "Stated explicitly — the calculation never assumes a share.",
+
+  "entry.claim.title": "Name",
+  "entry.claim.titleHelp":
+    "The name as it appears on the certificate, record or course description.",
+  "entry.claim.school": "School or institution",
+  "entry.claim.certBody": "Certifying body",
+  "entry.claim.organisation": "Organisation",
+  "entry.claim.confirmedBy": "Confirmed by",
+  "entry.claim.completedOn": "Completed on",
+  "entry.claim.hasExpiry": "This entry has an end date",
+
+  "entry.error.employerRequired": "Enter an employer.",
+  "entry.error.roleRequired": "Enter a role.",
+  "entry.error.titleRequired": "Enter a name.",
+  "entry.error.startRequired": "Enter a start date.",
+  "entry.error.endRequired": "Enter an end date.",
+  "entry.error.endBeforeStart": "The end date must be after the start date.",
+  "entry.error.fractionRange": "Choose a share between 0 and 100 per cent.",
+  "entry.documentAndVerify": "Documentation and checking",
+  "exp.verifiedLabel": "Verified time in the profession",
+  "exp.noneYet": "No verified time yet",
+  "exp.selfDeclaredAlso": "Self-declared, not checked:",
+  "share2.title": "Share your Passport",
+  "share2.lead": "One link showing your verified records. You can revoke it at any time.",
+  "share2.primary": "Share my Passport",
+  "share2.creating": "Creating link …",
+  "share2.share": "Share",
+  "share2.copy": "Copy link",
+  "share2.copied": "Link copied",
+  "share2.ready": "Your link is ready",
+  "share2.terms": "Valid for 30 days. You can revoke it at any time.",
+  "share2.whatIsShared":
+    "The link shows verified records only — nothing self-declared, no documents and no reference numbers.",
+  "share2.nothingVerified":
+    "You have nothing verified yet, so a link would be empty. Add your records and submit them for checking first.",
+  "share2.more": "More options",
+  "share2.moreHint": "Custom validity, QR code, images and active links.",
+  "share2.activeLinks": "Active links",
+  "share2.cacheNote":
+    "A downloaded or published image can remain with the platform even after you revoke the link. The page itself stops working immediately.",
+  "vq.error.queue": "The queue could not be loaded.",
+  "vq.error.detail": "This review could not be opened.",
+  "vq.error.evidence": "This document could not be opened.",
+  "vq.error.decision": "The decision could not be saved. Your entries are still here — try again.",
+  "vq.retry": "Try again",
+  "vq.decline.self_verification":
+    "This is your own request. You cannot verify yourself — another reviewer has to decide it.",
+  "vq.decline.not_authorised": "You are not authorised to decide this review.",
+  "vq.decline.already_decided":
+    "This review has already been decided. Reload the page to see the decision.",
+  "vq.decline.not_found": "This review no longer exists.",
+  "vq.decline.method_required": "An approval must state a verification method.",
+  "vq.decline.invalid_validity":
+    "That validity period cannot be saved. Check that the end date is after the start date, and that a time-limited appointment has an end date.",
+  "vq.decline.issuer_required": "This credential must name the authority that issued it.",
+  "vq.decline.entry_not_active":
+    "The entry changed after this review was opened and can no longer be decided. Reload the page.",
+  "vq.decline.unknown": "The decision could not be saved. Your entries are still here — try again.",
+  "vq.selfBadge": "Your own request",
+  "vq.selfNotice":
+    "This is your own request. Nobody may verify their own record, so the decision form is switched off here. Another reviewer has to decide it.",
+  "cw.detailsTitle": "Details",
+  "cw.shareCredential": "Share this credential",
+  "cw.creating": "Creating link …",
+  "cw.addToLinkedIn": "Add to LinkedIn",
+  "cw.linkedInPanel": "Details for LinkedIn",
+  "cw.linkedInHow":
+    "LinkedIn does not fill these in for you. Copy them here, open LinkedIn and paste them into the form.",
+  "cw.liName": "Name",
+  "cw.liOrg": "Issuing organisation",
+  "cw.liIssued": "Issue date",
+  "cw.liExpires": "Expiration date",
+  "cw.liId": "Credential ID",
+  "cw.liUrl": "Credential URL",
+  "cw.copyDetails": "Copy details",
+  "cw.copied": "Details copied",
+  "cw.openLinkedIn": "Open LinkedIn",
+  "cw.notShareable":
+    "Only a verified, current credential can be shared on its own. Submit it for checking first.",
+
+  "info.title": "My information",
+  "info.lead":
+    "This is where you enter your background. Everything saves immediately and you can continue whenever you like. Credentials have their own forms because they have their own rules.",
+  "info.employment": "Employment",
+  "info.employmentLead":
+    "Add each employment separately. Overlapping periods are only counted once.",
+  "info.addEmployment": "Add employment",
+  "nav.information": "My information",
+
+  "cred.category.qualification": "Completed training",
+  "cred.category.appointment": "Time-limited appointment",
+  "cred.field.validFromHelp":
+    "Only if the decision states a start date other than the decision date.",
+  "cred.docsNotApproval":
+    "Documentation is not the same as approval. An uploaded document makes an entry documented — only a completed check can make it verified.",
+  "cred.evidenceNext":
+    "Once the entry is added you can upload documentation and submit it for checking.",
+  "cred.addAction": "Add a credential",
+  "cred.overview.title": "Credentials and training",
+  "cred.overview.body":
+    "Add VU1, VU2, a public order guard appointment or a protective security guard appointment. You can save a draft and continue later.",
+  "cred.drafts.title": "Drafts",
+  "cred.drafts.lead": "Saved but not yet added. Only you can see them.",
+  "cred.drafts.updated": "Last saved",
+  "cred.drafts.untitled": "Untitled",
+  "cred.discardConfirm": "The draft will be deleted permanently. This cannot be undone.",
+  "cred.discarded": "The draft has been deleted.",
+  "cred.onboardingCta": "Add it now",
+  "cred.new.resumeOr": "or start a new one",
+  "cred.added": "The entry has been added to your Passport.",
+
+  "cred.correct.title": "Correct this entry",
+  "cred.correct.trustNote":
+    "A correction creates a new version and keeps the old one in the history. If you change what is being asserted, the new version starts over as self-declared — any verification does not carry across.",
+  "cred.correct.reason": "What are you correcting?",
+  "cred.correct.reasonHelp": "Stored in the history together with the correction.",
+  "cred.correct.reasonRequired": "State what you are correcting.",
+  "cred.correct.submit": "Save the correction",
+  "cred.versions.title": "Version history",
+  "cred.versions.lead":
+    "Earlier versions are kept and marked as superseded. No version disappears.",
+  "cred.versions.current": "Current",
+  "cred.versions.recordedAt": "Recorded",
+
+  "li.title": "Share on LinkedIn",
+  "li.lead":
+    "This is your card in LinkedIn's format. Three steps: download the image, copy the link, attach the image to your post.",
+  "li.step1": "Download the card image in LinkedIn's format (1200×630).",
+  "li.step1Action": "Download the image",
+  "li.step1Done": "Downloaded — download again",
+  "li.step2": "Copy the live verification link and paste it into the post.",
+  "li.step3":
+    "Open LinkedIn and attach the downloaded image to the post. The image is not attached automatically.",
+  "li.step3Action": "Open LinkedIn",
+  "li.previewNote":
+    "The link's automatic preview on LinkedIn shows CQrityjob's generic card — not your personal one. Your card appears when you attach the image yourself. The link is always the source: the page behind it shows the current position and can be revoked.",
+  "sc.retentionNote":
+    "Social platforms may keep images that have already been published or cached — even after you withdraw the link. What you revoke is the page behind the link, not copies of the image.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

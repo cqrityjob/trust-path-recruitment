@@ -40,6 +40,7 @@ import {
   Rosette,
   VerifiedSeal,
 } from "../card/CardPrimitives";
+import { CredentialSymbol } from "../CredentialSymbol";
 
 function useSocialStrings(model: SocialCardModel) {
   const { pt, lang } = usePassportCopy();
@@ -56,8 +57,17 @@ function useSocialStrings(model: SocialCardModel) {
     verifiedLabel: pt("recognition.badgePrefix"),
     verifiedWord: pt("assertion.verified"),
     verifyAtSource: pt("card.verifyAtSource"),
-    noVerified: pt("card.noVerifiedYet"),
-    credentialNames: model.verifiedCredentials.map((c) => (lang === "sv" ? c.nameSv : c.nameEn)),
+    // With verified credentials named below, the empty milestone slot must
+    // say what is actually missing — verified EXPERIENCE — rather than
+    // contradicting the list under it.
+    noVerified:
+      model.verifiedCredentials.length > 0
+        ? pt("card.noVerifiedExperience")
+        : pt("card.noVerifiedYet"),
+    credentials: model.verifiedCredentials.map((c) => ({
+      code: c.code,
+      name: lang === "sv" ? c.nameSv : c.nameEn,
+    })),
   };
 }
 
@@ -120,10 +130,12 @@ function MilestoneBlock({
 }
 
 function CredentialLine({
+  code,
   name,
   verifiedWord,
   scale,
 }: {
+  code: string | null;
   name: string;
   verifiedWord: string;
   scale: number;
@@ -131,7 +143,13 @@ function CredentialLine({
   return (
     <li className="flex items-start" style={{ gap: 14 * scale }}>
       <span style={{ marginTop: 2 * scale }}>
-        <VerifiedSeal tone={TRUST_PALETTE.goldBright} size={34 * scale} />
+        {/* Everything in this list is verified AND active by construction,
+            so the verified mark is the only state that can appear here. */}
+        {code ? (
+          <CredentialSymbol code={code} state="verified" name={name} size={44 * scale} />
+        ) : (
+          <VerifiedSeal tone={TRUST_PALETTE.goldBright} size={34 * scale} />
+        )}
       </span>
       <span className="min-w-0">
         <span
@@ -318,12 +336,13 @@ export function SocialFrame({
           </div>
 
           {/* Verified credential NAMES only */}
-          {s.credentialNames.length > 0 ? (
+          {s.credentials.length > 0 ? (
             <ul style={{ marginTop: 30 * scale, display: "grid", rowGap: 20 * scale }}>
-              {s.credentialNames.map((name) => (
+              {s.credentials.map((cred) => (
                 <CredentialLine
-                  key={name}
-                  name={name}
+                  key={cred.name}
+                  code={cred.code}
+                  name={cred.name}
                   verifiedWord={s.verifiedWord}
                   scale={scale}
                 />

@@ -1,34 +1,42 @@
-// Security Passport — the holder's sharing centre.
+// Security Passport — the sharing centre, rebuilt around one action.
 //
-// ── THE HOLDER DECIDES WHETHER, NOT WHAT ───────────────────────────────
+// ── WHAT THIS REPLACED, AND WHY ────────────────────────────────────────
 //
-// Whether to share, which package, to whom, for how long, and whether to
-// revoke — all theirs. The CONTENTS of a package are not, and this page
-// says so in words rather than leaving it to be discovered. A free-form
-// builder would make the holder responsible for the integrity of their own
-// disclosure, and somebody acting in complete good faith can still assemble
-// something technically true and materially misleading: a licence without
-// its expiry, a role without its jurisdiction.
+// The previous screen asked an ordinary holder to understand CQrityjob's
+// internal disclosure model before they could send anybody anything: five
+// package cards with includes/excludes lists, an expiry select, purpose and
+// recipient fields, then — after creation — a raw 64-character token as the
+// hero element, a QR block, four image formats, seven social buttons and the
+// same cache warning three times.
 //
-// ── THE PAGE NEVER FILTERS ─────────────────────────────────────────────
+// Every one of those controls maps to something real, and the security
+// contracts behind them are unchanged. What changed is that a holder no
+// longer has to meet them to do the ordinary thing. The default is:
 //
-// Nothing here reads a full profile and hides part of it. The payload a
-// recipient receives is assembled by `sp_get_disclosure` from the package
-// code. What this page renders is a DESCRIPTION of that contract, so a
-// holder can read what they are about to hand over before they hand it
-// over.
+//   1. look at the Passport you are about to share;
+//   2. press "Dela mitt Passport".
 //
-// ── THE LINK IS SHOWN ONCE ─────────────────────────────────────────────
+// Two actions, and the result is explained in one sentence: 30 days,
+// revocable. Everything else — a different expiry, the QR code, the image
+// downloads, the package choice, recipient labels, and managing existing
+// links — lives under "Fler alternativ", which is collapsed by default.
 //
-// Only the token's hash is stored, so nobody — not this application, not
-// CQrityjob, not a database backup — can recover the link afterwards. The
-// page states that plainly at the moment it matters, because a holder who
-// closes the tab expecting to find it later needs to know now.
+// ── THE PACKAGE IS CHOSEN FOR THEM, NOT REMOVED ────────────────────────
+//
+// `public_card` is the safe default: verified content only, no employer
+// history, no documents, no reference numbers. The other four packages are
+// still real server-side contracts and are still selectable under advanced
+// options — this screen simply stops making the taxonomy a prerequisite.
+//
+// ── THE TOKEN IS NOT THE HERO ──────────────────────────────────────────
+//
+// The link is what gets shared, so the actions that share it are prominent
+// and the 64-character string itself sits in a copyable field under details.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Copy, Download, Link2, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, Copy, Link2, Share2, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
@@ -40,14 +48,26 @@ import {
 import { LIVE_PACKAGES, type DisclosurePackageCode } from "@/lib/security-passport/packages";
 import { buildSocialCard } from "@/lib/security-passport/social";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
+import { buildPassportCard } from "@/lib/security-passport/card";
+import { DirectionC } from "@/components/security-passport/card/DirectionC";
 import { SocialFrame } from "@/components/security-passport/social/SocialFrame";
 import { LiveShareActions } from "@/components/security-passport/live/LiveShareActions";
+import { LinkedInShareSection } from "@/components/security-passport/live/LinkedInShareSection";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
   ssr: false,
   component: PassportShareRoute,
 });
+
+/** The safe default. Verified content only; no employers, documents or
+ *  reference numbers. Chosen for the holder so the taxonomy is not a
+ *  prerequisite for sharing. */
+const DEFAULT_PACKAGE: DisclosurePackageCode = "public_card";
+
+/** Recommended, and applied without asking. A holder who wants something
+ *  else finds it under advanced options. */
+const DEFAULT_EXPIRY_DAYS = 30;
 
 const EXPIRY_CHOICES: readonly { days: number | null; labelKey: PassportCopyKey }[] = [
   { days: 7, labelKey: "sc.expiry.7" },
@@ -76,14 +96,17 @@ function PassportShareRoute() {
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   const [shares, setShares] = useState<readonly DisclosureRecord[]>([]);
-  const [packageCode, setPackageCode] = useState<DisclosurePackageCode>("public_card");
-  const [expiryDays, setExpiryDays] = useState<number | null>(30);
-  const [purpose, setPurpose] = useState("");
-  const [recipientHint, setRecipientHint] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Advanced, all pre-filled with the defaults the primary action uses.
+  const [packageCode, setPackageCode] = useState<DisclosurePackageCode>(DEFAULT_PACKAGE);
+  const [expiryDays, setExpiryDays] = useState<number | null>(DEFAULT_EXPIRY_DAYS);
+  const [purpose, setPurpose] = useState("");
+  const [recipientHint, setRecipientHint] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -107,8 +130,12 @@ function PassportShareRoute() {
     () => (token && typeof window !== "undefined" ? `${window.location.origin}/p/${token}` : null),
     [token],
   );
-
   const qrDataUrl = useQrDataUrl(shareUrl ?? "");
+
+  const card = useMemo(
+    () => (snapshot ? buildPassportCard(snapshot.holder, today()) : null),
+    [snapshot],
+  );
 
   const socialModel = useMemo(() => {
     if (!snapshot?.profile || !shareUrl) return null;
@@ -131,7 +158,7 @@ function PassportShareRoute() {
     );
   }, [snapshot]);
 
-  const chosen = LIVE_PACKAGES.find((p) => p.code === packageCode)!;
+  const activeShares = shares.filter((s) => s.state === "active");
 
   async function onCreate() {
     setBusy(true);
@@ -155,6 +182,31 @@ function PassportShareRoute() {
     }
   }
 
+  async function onShare() {
+    if (!shareUrl) return;
+    // Native sharing where the device offers it; a copy is the honest
+    // fallback rather than a button that silently does nothing.
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: pt("rec.title"), url: shareUrl });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      console.error("[passport] share failed", err);
+    }
+  }
+
+  async function onCopy() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }
+
   async function onRevoke(id: string) {
     if (!window.confirm(pt("sc.revokeConfirm"))) return;
     setBusy(true);
@@ -175,15 +227,15 @@ function PassportShareRoute() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-2xl space-y-5">
       <header>
-        <h2
+        <h1
           className="text-2xl font-semibold tracking-tight text-foreground"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          {pt("sc.title")}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pt("sc.lead")}</p>
+          {pt("share2.title")}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pt("share2.lead")}</p>
       </header>
 
       {error ? (
@@ -192,92 +244,129 @@ function PassportShareRoute() {
         </p>
       ) : null}
 
-      {/* Nothing verified: a share would be an empty page. Saying so is
-          kinder and more honest than letting somebody send a blank link. */}
+      {/* ── The thing being shared, first ───────────────────────────── */}
+      {card ? (
+        <div className="mx-auto w-full max-w-sm">
+          <DirectionC
+            card={card}
+            verifyUrl={shareUrl ?? "cqrityjob.se/passport"}
+            className="min-h-[460px]"
+          />
+        </div>
+      ) : null}
+
       {!hasVerified ? (
         <section className="rounded-xl border border-dashed border-border bg-secondary/40 p-5">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
-            {pt("sc.nothingVerifiedTitle")}
-          </h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {pt("sc.nothingVerifiedBody")}
-          </p>
+          <p className="text-sm leading-relaxed text-foreground">{pt("share2.nothingVerified")}</p>
         </section>
       ) : null}
 
-      {/* ── Package choice ──────────────────────────────────────────── */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">
-          {pt("sc.choosePackage")}
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {pt("sc.packagesAreFixed")}
-        </p>
+      {/* ── One primary action, then the result ─────────────────────── */}
+      {!shareUrl ? (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <button
+            type="button"
+            onClick={() => void onCreate()}
+            disabled={busy}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-auto"
+          >
+            <Link2 aria-hidden="true" className="h-4 w-4" />
+            {busy ? pt("share2.creating") : pt("share2.primary")}
+          </button>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {pt("share2.whatIsShared")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{pt("share2.terms")}</p>
+        </section>
+      ) : (
+        <section className="rounded-xl border border-accent/40 bg-secondary/40 p-5">
+          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+            <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+            {pt("share2.ready")}
+          </h2>
 
-        <fieldset className="mt-4">
-          <legend className="sr-only">{pt("sc.choosePackage")}</legend>
-          <div className="space-y-2">
-            {LIVE_PACKAGES.map((p) => (
-              <label
-                key={p.code}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 hover:bg-accent/5"
-              >
-                <input
-                  type="radio"
-                  name="sp-package"
-                  value={p.code}
-                  checked={packageCode === p.code}
-                  onChange={() => setPackageCode(p.code)}
-                  className="mt-1 h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{pt(p.nameKey)}</span>
-                  <span className="mt-0.5 block text-sm text-muted-foreground">
-                    {pt(p.purposeKey)}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void onShare()}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <Share2 aria-hidden="true" className="h-4 w-4" />
+              {pt("share2.share")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void onCopy()}
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {copied ? (
+                <Check aria-hidden="true" className="h-4 w-4" />
+              ) : (
+                <Copy aria-hidden="true" className="h-4 w-4" />
+              )}
+              {copied ? pt("share2.copied") : pt("share2.copy")}
+            </button>
+          </div>
+
+          {/* One sentence, once. Not the same warning three times. */}
+          <p className="mt-3 text-sm text-muted-foreground">{pt("share2.terms")}</p>
+
+          {/* The token is available, but it is not the hero. */}
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              {pt("sc.onceOnly")}
+            </summary>
+            <p className="mt-2 break-all rounded-md border border-border bg-background p-3 font-mono text-xs text-foreground">
+              {shareUrl}
+            </p>
+          </details>
+        </section>
+      )}
+
+      {/* ── Everything else, collapsed ──────────────────────────────── */}
+      <details
+        className="rounded-xl border border-border bg-card"
+        open={showAdvanced}
+        onToggle={(e) => setShowAdvanced((e.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary className="flex cursor-pointer items-center gap-2 p-5 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <ChevronDown aria-hidden="true" className="h-4 w-4" />
+          {pt("share2.more")}
+          <span className="font-normal text-muted-foreground">— {pt("share2.moreHint")}</span>
+        </summary>
+
+        <div className="space-y-6 border-t border-border p-5">
+          {/* Package choice, for the holder who needs a different contract. */}
+          <div>
+            <p className="text-sm font-medium text-foreground">{pt("sc.choosePackage")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{pt("sc.packagesAreFixed")}</p>
+            <div className="mt-3 space-y-2">
+              {LIVE_PACKAGES.map((p) => (
+                <label
+                  key={p.code}
+                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 hover:bg-accent/5"
+                >
+                  <input
+                    type="radio"
+                    name="sp-package"
+                    value={p.code}
+                    checked={packageCode === p.code}
+                    onChange={() => setPackageCode(p.code)}
+                    className="mt-1 h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">
+                      {pt(p.nameKey)}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">
+                      {pt(p.purposeKey)}
+                    </span>
                   </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("sc.includes")}
-            </p>
-            <ul className="mt-2 space-y-1">
-              {chosen.includesKeys.map((k) => (
-                <li key={k} className="flex items-start gap-2 text-sm text-foreground">
-                  <Check aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-                  {pt(k)}
-                </li>
+                </label>
               ))}
-            </ul>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {pt("sc.excludes")}
-            </p>
-            <ul className="mt-2 space-y-1">
-              {chosen.excludesKeys.map((k) => (
-                <li key={k} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <X aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-                  {pt(k)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
 
-        <p className="mt-4 rounded-lg border border-border bg-secondary/40 p-3 text-sm text-foreground">
-          {pt("sc.verifiedOnlyNote")}
-        </p>
-      </section>
-
-      {/* ── Terms of the share ──────────────────────────────────────── */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <div className="space-y-4">
           <div>
             <label htmlFor="sp-expiry" className="block text-sm font-medium text-foreground">
               {pt("sc.expiry")}
@@ -298,207 +387,120 @@ function PassportShareRoute() {
             </select>
           </div>
 
-          <div>
-            <label htmlFor="sp-purpose" className="block text-sm font-medium text-foreground">
-              {pt("sc.purpose")}{" "}
-              <span className="font-normal text-muted-foreground">({pt("common.optional")})</span>
-            </label>
-            <input
-              id="sp-purpose"
-              type="text"
-              maxLength={200}
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder={pt("sc.purposePlaceholder")}
-              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="sp-recipient" className="block text-sm font-medium text-foreground">
-              {pt("sc.recipientHint")}{" "}
-              <span className="font-normal text-muted-foreground">({pt("common.optional")})</span>
-            </label>
-            <input
-              id="sp-recipient"
-              type="text"
-              maxLength={200}
-              value={recipientHint}
-              aria-describedby="sp-recipient-help"
-              onChange={(e) => setRecipientHint(e.target.value)}
-              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            />
-            <p id="sp-recipient-help" className="mt-1 text-xs text-muted-foreground">
-              {pt("sc.recipientHintHelp")}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => void onCreate()}
-            disabled={busy}
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Link2 aria-hidden="true" className="h-4 w-4" />
-            {busy ? pt("sc.creating") : pt("sc.create")}
-          </button>
-        </div>
-      </section>
-
-      {/* ── The link, shown once ────────────────────────────────────── */}
-      {shareUrl ? (
-        <>
-          <section className="rounded-xl border border-accent/40 bg-secondary/40 p-5">
-            <h3 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
-              {pt("sc.createdTitle")}
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed text-foreground">{pt("sc.onceOnly")}</p>
-
-            <p className="mt-3 break-all rounded-md border border-border bg-background p-3 font-mono text-xs text-foreground">
-              {shareUrl}
-            </p>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void navigator.clipboard.writeText(shareUrl).then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2500);
-                  });
-                }}
-                className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Copy aria-hidden="true" className="h-4 w-4" />
-                {copied ? pt("sc.copied") : pt("sc.copy")}
-              </button>
-              <a
-                href={shareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                {pt("sc.openRecipient")}
-              </a>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="sp-purpose" className="block text-sm font-medium text-foreground">
+                {pt("sc.purpose")}{" "}
+                <span className="font-normal text-muted-foreground">({pt("common.optional")})</span>
+              </label>
+              <input
+                id="sp-purpose"
+                type="text"
+                maxLength={200}
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+                placeholder={pt("sc.purposePlaceholder")}
+                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              />
             </div>
+            <div>
+              <label htmlFor="sp-recipient" className="block text-sm font-medium text-foreground">
+                {pt("sc.recipientHint")}{" "}
+                <span className="font-normal text-muted-foreground">({pt("common.optional")})</span>
+              </label>
+              <input
+                id="sp-recipient"
+                type="text"
+                maxLength={200}
+                value={recipientHint}
+                aria-describedby="sp-recipient-help"
+                onChange={(e) => setRecipientHint(e.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              />
+              <p id="sp-recipient-help" className="mt-1 text-xs text-muted-foreground">
+                {pt("sc.recipientHintHelp")}
+              </p>
+            </div>
+          </div>
 
-            {qrDataUrl ? (
-              <div className="mt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {pt("sc.qrTitle")}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">{pt("sc.qrBody")}</p>
-                <img
-                  src={qrDataUrl}
-                  alt={pt("sc.qrTitle")}
-                  className="mt-2 h-40 w-40 rounded-md border border-border bg-white p-2"
-                />
-                <a
-                  href={qrDataUrl}
-                  download="cqrityjob-passport-qr.png"
-                  className="mt-2 inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <Download aria-hidden="true" className="h-4 w-4" />
-                  {pt("sc.qrDownload")}
-                </a>
-              </div>
-            ) : null}
-          </section>
-
-          {socialModel ? (
+          {/* QR, images and LinkedIn only exist once a link does. */}
+          {shareUrl && socialModel ? (
             <>
-              <section className="rounded-xl border border-border bg-card p-5">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  {pt("share.title")}
-                </h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {pt("share.lead")}
-                </p>
-                <div className="mt-4">
-                  <SocialFrame model={socialModel} format="square" previewWidth={340} />
+              {qrDataUrl ? (
+                <div>
+                  <p className="text-sm font-medium text-foreground">{pt("sc.qrTitle")}</p>
+                  <img
+                    src={qrDataUrl}
+                    alt={pt("sc.qrTitle")}
+                    className="mt-2 h-36 w-36 rounded-md border border-border bg-white p-2"
+                  />
                 </div>
-              </section>
+              ) : null}
+
+              <div>
+                <p className="text-sm font-medium text-foreground">{pt("share.title")}</p>
+                <div className="mt-3">
+                  <SocialFrame model={socialModel} format="square" previewWidth={300} />
+                </div>
+              </div>
+
+              {/* The one place the caching caveat is stated: where an image
+                  is actually produced. */}
+              <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+                {pt("share2.cacheNote")}
+              </p>
 
               <LiveShareActions shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
+              <LinkedInShareSection shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
             </>
           ) : null}
-        </>
-      ) : null}
 
-      {/* ── History ─────────────────────────────────────────────────── */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">
-          {pt("sc.historyTitle")}
-        </h3>
-        {shares.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">{pt("sc.historyEmpty")}</p>
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {shares.map((s) => {
-              const meta = LIVE_PACKAGES.find((p) => p.code === s.packageCode);
-              return (
-                <li key={s.id} className="rounded-lg border border-border p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {meta ? pt(meta.nameKey) : s.packageCode}
-                      </p>
-                      {s.purpose ? (
-                        <p className="mt-0.5 text-sm text-muted-foreground">{s.purpose}</p>
-                      ) : null}
-                      {s.recipientHint ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{s.recipientHint}</p>
-                      ) : null}
-                    </div>
-                    <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
-                      {pt(STATE_KEY[s.state])}
-                    </span>
-                  </div>
-
-                  <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        {pt("sc.created")}
-                      </dt>
-                      <dd className="text-sm tabular-nums text-foreground">
-                        {s.createdAt.slice(0, 10)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        {pt("sc.expiresOn")}
-                      </dt>
-                      <dd className="text-sm tabular-nums text-foreground">
-                        {s.expiresAt ? s.expiresAt.slice(0, 10) : pt("sc.expiry.never")}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        {pt("sc.opened")}
-                      </dt>
-                      <dd className="text-sm tabular-nums text-foreground">
-                        {s.accessCount} {pt("sc.timesShort")}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {s.state !== "revoked" ? (
-                    <button
-                      type="button"
-                      onClick={() => void onRevoke(s.id)}
-                      disabled={busy}
-                      className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          {/* Active links and revocation. */}
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {pt("share2.activeLinks")}{" "}
+              <span className="font-normal tabular-nums text-muted-foreground">
+                ({activeShares.length})
+              </span>
+            </p>
+            {shares.length === 0 ? (
+              <p className="mt-2 text-sm text-muted-foreground">{pt("sc.historyEmpty")}</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {shares.map((s) => {
+                  const meta = LIVE_PACKAGES.find((p) => p.code === s.packageCode);
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
                     >
-                      {busy ? pt("sc.revoking") : pt("sc.revoke")}
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {meta ? pt(meta.nameKey) : s.packageCode}
+                        </p>
+                        <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                          {pt(STATE_KEY[s.state])} · {pt("sc.created")} {s.createdAt.slice(0, 10)} ·{" "}
+                          {s.accessCount} {pt("sc.timesShort")}
+                        </p>
+                      </div>
+                      {s.state !== "revoked" ? (
+                        <button
+                          type="button"
+                          onClick={() => void onRevoke(s.id)}
+                          disabled={busy}
+                          className="inline-flex h-11 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          {busy ? pt("sc.revoking") : pt("sc.revoke")}
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
