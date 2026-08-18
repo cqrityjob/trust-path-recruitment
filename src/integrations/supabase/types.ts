@@ -8618,6 +8618,7 @@ export type Database = {
           _employee_id?: string
           _employer_id: string
           _language?: string
+          _purpose_intent?: string
           _recipient_email: string
           _use_case?: string
         }
@@ -8752,6 +8753,10 @@ export type Database = {
           employer_snapshot: string
           participant_snapshot: string
         }[]
+      }
+      scp_required_purpose_code: {
+        Args: { _purpose_intent?: string; _use_case: string }
+        Returns: string
       }
       scp_resolve_participant_identity: {
         Args: { _employer_id: string; _subject_id: string }
