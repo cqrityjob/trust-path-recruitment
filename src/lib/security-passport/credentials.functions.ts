@@ -397,20 +397,39 @@ export const getCredentialPrivateFields = createServerFn({ method: "POST" })
     },
   );
 
-/** Removes an unfinished credential. Restricted to drafts on purpose: a real
- *  claim is corrected or withdrawn through the versioning workflow, which
- *  keeps its history, rather than deleted. */
+/**
+ * Removes an unfinished credential. Restricted to drafts on purpose: a real
+ * claim is corrected or withdrawn through the versioning workflow, which
+ * keeps its history.
+ *
+ * ── WHY IT UPDATES AND DOES NOT DELETE ─────────────────────────────────
+ *
+ * It used to issue a DELETE, and that silently did nothing. `sp_claims` has
+ * RLS enabled and no DELETE policy, so the statement matched zero rows,
+ * raised no error, and the function cheerfully returned ok while the draft
+ * stayed exactly where it was — "Ta bort utkast" was a button that did
+ * nothing. It went unnoticed because a clean local replay has no DELETE
+ * grant at all, so the call failed loudly there and passed silently only on
+ * the hosted project.
+ *
+ * Marking the draft withdrawn is what the holder means, works under the
+ * policies that actually exist, and matches how every other removal in the
+ * Passport behaves. `listMyCredentialDrafts` filters on `lifecycle_state =
+ * 'draft'`, so a withdrawn draft disappears from the UI as expected.
+ */
 export const discardCredentialDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ claimId: z.string().uuid() }).parse(data))
-  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+  .handler(async ({ context, data }): Promise<{ ok: true; removed: boolean }> => {
     const { supabase, userId } = context;
-    const { error } = await supabase
+    const patch: TablesUpdate<"sp_claims"> = { lifecycle_state: "withdrawn" };
+    const { data: rows, error } = await supabase
       .from("sp_claims")
-      .delete()
+      .update(patch)
       .eq("id", data.claimId)
       .eq("holder_user_id", userId)
-      .eq("lifecycle_state", "draft");
+      .eq("lifecycle_state", "draft")
+      .select("id");
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, removed: (rows ?? []).length > 0 };
   });
