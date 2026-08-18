@@ -43,6 +43,8 @@ import {
 } from "@/lib/security-passport/verification.functions";
 import { getEvidenceViewUrl } from "@/lib/security-passport/evidence.functions";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+import { SiteLayout } from "@/components/site/SiteLayout";
+import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 
 export const Route = createFileRoute("/_authenticated/admin/passport-verification")({
   ssr: false,
@@ -67,7 +69,21 @@ const STATUS_KEY: Readonly<Record<string, PassportCopyKey>> = {
 
 type Decision = "approved" | "rejected" | "clarification_requested";
 
+/** The page, inside the shared admin chrome. Split from the queue body so
+ *  every state — loading, not-a-verifier, error, empty and populated — is
+ *  rendered in the same navigation, rather than a bare centred message on a
+ *  blank page for the states that are not the happy path. */
 function PassportVerificationQueueRoute() {
+  return (
+    <SiteLayout>
+      <AdminShellChrome activeSection="passportVerification">
+        <PassportVerificationQueue />
+      </AdminShellChrome>
+    </SiteLayout>
+  );
+}
+
+function PassportVerificationQueue() {
   const { pt } = usePassportCopy();
 
   const whoAmI = useServerFn(passportVerifierWhoAmI);
@@ -126,16 +142,12 @@ function PassportVerificationQueueRoute() {
   }, [selected, loadDetail, pt]);
 
   if (isVerifier === null) {
-    return (
-      <div className="mx-auto max-w-5xl px-4 py-10">
-        <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>
-      </div>
-    );
+    return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
   }
 
   if (!isVerifier) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <div className="mx-auto max-w-md py-10 text-center">
         <p className="text-sm text-muted-foreground">{pt("vq.notVerifier")}</p>
       </div>
     );
@@ -190,7 +202,7 @@ function PassportVerificationQueueRoute() {
   const previousVersions = detail?.previousVersions ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
+    <div>
       <header>
         <h1
           className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground"

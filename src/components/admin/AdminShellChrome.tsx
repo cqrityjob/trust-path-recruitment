@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { adminCountPendingEmployers } from "@/lib/job-intelligence/admin-employer-moderation.functions";
+import { passportReviewCounts } from "@/lib/security-passport/verification.functions";
 
 export type AdminNavSection =
   | "overview"
@@ -40,7 +41,8 @@ export type AdminNavSection =
   | "assignments"
   | "results"
   | "workforce"
-  | "feedback";
+  | "feedback"
+  | "passportVerification";
 
 export interface AdminShellChromeProps {
   activeSection: AdminNavSection;
@@ -70,6 +72,18 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
   });
   const pendingCount = pendingCountQuery.data ?? 0;
 
+  // Passport reviews wait on a person, so the queue carries a count in the
+  // navigation exactly as pending employers already do. `retry: false` and a
+  // zero default keep a badge from ever being able to break the chrome.
+  const passportCountFn = useServerFn(passportReviewCounts);
+  const passportCountQuery = useQuery({
+    queryKey: ["admin", "passport-review-counts"],
+    queryFn: () => passportCountFn({ data: undefined }),
+    staleTime: 30_000,
+    retry: false,
+  });
+  const passportWaiting = passportCountQuery.data?.total ?? 0;
+
   async function onSignOut() {
     await supabase.auth.signOut();
     navigate({ to: "/admin/login", replace: true });
@@ -86,6 +100,11 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
     { key: "results", labelKey: "admin.nav.results", to: "/admin/results" },
     { key: "workforce", labelKey: "admin.nav.workforce", to: "/admin/workforce" },
     { key: "feedback", labelKey: "admin.nav.feedback", to: "/admin/feedback" },
+    {
+      key: "passportVerification",
+      labelKey: "admin.nav.passportVerification",
+      to: "/admin/passport-verification",
+    },
   ];
 
   return (
@@ -158,6 +177,11 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
                 {item.key === "employers" && pendingCount > 0 && (
                   <Badge variant="secondary" className="ml-2">
                     {pendingCount}
+                  </Badge>
+                )}
+                {item.key === "passportVerification" && passportWaiting > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {passportWaiting}
                   </Badge>
                 )}
               </Link>

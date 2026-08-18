@@ -309,6 +309,35 @@ export interface VerifierRequestDetail {
  *  reasoning and lives on the same rows this function reads. Naming every
  *  field that crosses to the browser means the internal note cannot ride
  *  along in a spread, which is exactly how that kind of field leaks. */
+/**
+ * How much is waiting, for the admin shell badge and the dashboard card.
+ *
+ * Derived from `sp_verifier_queue` rather than a new RPC on purpose: the
+ * queue function already carries the verifier capability check and the
+ * "which requests may this principal see" logic. A separate counting query
+ * would be a second place for that authorisation to be got right, and
+ * eventually wrong.
+ *
+ * A non-verifier gets zeroes rather than an error, because the caller is a
+ * navigation badge: the admin shell has already refused a non-admin, and a
+ * badge that throws would break the whole shell for an edge case.
+ */
+export const passportReviewCounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ open: number; clarification: number; total: number }> => {
+    // `orNull` is the repository's narrow nullable-RPC convention; the
+    // generated signature types the argument as optional, not nullable.
+    const { data: rows, error } = await context.supabase.rpc("sp_verifier_queue", {
+      _status: orNull<string>(null),
+    });
+    if (error) return { open: 0, clarification: 0, total: 0 };
+
+    const list = (rows ?? []) as Array<Record<string, unknown>>;
+    const open = list.filter((r) => r.status === "pending").length;
+    const clarification = list.filter((r) => r.status === "clarification_requested").length;
+    return { open, clarification, total: open + clarification };
+  });
+
 export const getVerifierRequestDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => z.object({ requestId: z.string().uuid() }).parse(data))
