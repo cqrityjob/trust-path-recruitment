@@ -2,10 +2,12 @@
 --
 -- Proves the frozen MVP is actually administrable end to end:
 --
---     2 Context  →  20 Career DNA  →  4 Discovery Path   =  26
+--     2 Context  →  22 Career DNA  →  4 Discovery Path   =  28
 --
--- and, more importantly, proves what did NOT change: the scored set is still
--- exactly the 20 CQ items, so no stored report can move.
+-- The scored set is the 22 CQ items: CQ21/CQ22 joined it with CID17 in
+-- 20260816150000_cd_v31_content_v2_compliance_dimension.sql. A stored report
+-- still cannot move, and that is now asserted directly rather than implied by
+-- a frozen count -- see groups C6 and C10 in career_discovery_v31_completion_test.sql.
 --
 -- Runs against PRODUCTION v3.1 ('active'), not a fixture, because the point is
 -- that a real candidate's session works. Everything rolls back.
@@ -35,7 +37,7 @@ BEGIN
   RAISE EXCEPTION 'ASSERTION FAILED: % — statement unexpectedly SUCCEEDED', label;
 END $$;
 
-DO $$ BEGIN RAISE NOTICE 'GROUP L1 — the registry holds all 26 questions'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP L1 — the registry holds all 28 questions'; END $$;
 
 -- =========================================================================
 -- Group L1 — registry shape
@@ -44,22 +46,25 @@ DO $$ BEGIN RAISE NOTICE 'GROUP L1 — the registry holds all 26 questions'; END
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
-    WHERE dv.definition_version = '2026-scd-v3.1.0') = 42,
-  'L1.1 v3.1 registers 42 items (2 context + 20 core + 20 adaptive)');
+    WHERE dv.definition_version = '2026-scd-v3.1.0') = 44,
+  'L1.1 v3.1 registers 44 items (2 context + 22 core + 20 adaptive)');
 
--- THE load-bearing assertion of this whole change. If it ever fails, Career
--- DNA has moved and every stored report is suspect.
+-- The load-bearing assertion: it pins the scored set, so a silent change to
+-- Career DNA is never absorbed quietly. A failure here means the instrument
+-- moved and this expectation must be re-approved deliberately -- it does NOT
+-- mean stored reports are suspect. Each snapshot freezes its own version tuple
+-- and payload, proven by groups C6 and C10 in career_discovery_v31_completion_test.sql.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
-    WHERE dv.definition_version = '2026-scd-v3.1.0' AND di.is_scored) = 20,
-  'L1.2 the scored set is STILL exactly twenty items');
+    WHERE dv.definition_version = '2026-scd-v3.1.0' AND di.is_scored) = 22,
+  'L1.2 the scored set is STILL exactly twenty-two items');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
     WHERE dv.definition_version = '2026-scd-v3.1.0'
-      AND di.is_scored AND di.item_kind IN ('scale','single_choice')) = 20,
+      AND di.is_scored AND di.item_kind IN ('scale','single_choice')) = 22,
   'L1.3 every scored item is a Career DNA item');
 
 SELECT pg_temp.ok(
@@ -179,15 +184,15 @@ SELECT (SELECT sess FROM t_sess), di.item_id, 'a', ARRAY['leadership_signal']
    AND di.item_kind = 'adaptive' AND di.adaptive_path = 'E';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_sess)) = 26,
-  'L3.1 all twenty-six answers persist');
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_sess)) = 28,
+  'L3.1 all twenty-eight answers persist');
 
 -- Metadata is DERIVED from the registry, not taken from the caller. The split
 -- below is the scoring boundary, as stored.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
-    WHERE session_id = (SELECT sess FROM t_sess) AND is_scored) = 20,
-  'L3.2 exactly twenty answers are stored as scored');
+    WHERE session_id = (SELECT sess FROM t_sess) AND is_scored) = 22,
+  'L3.2 exactly twenty-two answers are stored as scored');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
     WHERE session_id = (SELECT sess FROM t_sess) AND NOT is_scored) = 6,
@@ -276,8 +281,8 @@ SELECT (SELECT sess FROM t_payload), di.item_id, 1, 'a', NULL, ARRAY['operationa
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
-    WHERE session_id = (SELECT sess FROM t_payload)) = 26,
-  'L3b.3 the corrected payload persists all twenty-six rows');
+    WHERE session_id = (SELECT sess FROM t_payload)) = 28,
+  'L3b.3 the corrected payload persists all twenty-eight rows');
 
 -- An empty array is stored as empty, never as null — so a later read cannot
 -- reintroduce the same confusion.
@@ -289,8 +294,8 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
     WHERE session_id = (SELECT sess FROM t_payload)
-      AND cardinality(answer_tags) = 0) = 22,
-  'L3b.5 the twenty-two non-adaptive rows store an empty tag array');
+      AND cardinality(answer_tags) = 0) = 24,
+  'L3b.5 the twenty-four non-adaptive rows store an empty tag array');
 
 -- A non-empty array on a non-adaptive item is still refused. The fix must not
 -- have been "send tags everywhere".
@@ -392,7 +397,7 @@ SELECT (SELECT sess FROM t_core_only), di.item_id,
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
      (SELECT sess FROM t_core_only))) = 0,
-  'L5.2 the scored requirement is still twenty items, not twenty-six');
+  'L5.2 the scored requirement is still the scored core only (22), not the full run (28)');
 
 -- Removing one Career DNA answer DOES break it. Proves L5.1 and L5.2 pass for
 -- the right reason rather than because the validator stopped counting.
@@ -474,11 +479,11 @@ BEGIN
        AND di.item_kind = 'adaptive' AND di.adaptive_path = _path;
 
     SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess;
-    PERFORM pg_temp.ok(_n = 26, format('L6.1 %s: all twenty-six answers persist', _status));
+    PERFORM pg_temp.ok(_n = 28, format('L6.1 %s: all twenty-eight answers persist', _status));
 
     SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess AND is_scored;
-    PERFORM pg_temp.ok(_n = 20,
-      format('L6.2 %s: Career DNA rests on exactly the twenty scored answers', _status));
+    PERFORM pg_temp.ok(_n = 22,
+      format('L6.2 %s: Career DNA rests on exactly the twenty-two scored answers', _status));
 
     SELECT count(*) INTO _n FROM public.cd_evidence
      WHERE session_id = _sess AND NOT is_scored;
