@@ -219,6 +219,17 @@ const sv = {
     "Ett intygande gör skillnaden mellan en anteckning och en yrkesuppgift tydlig.",
 
   // ── Overview ─────────────────────────────────────────────────────────
+  "att.title": "Behöver din uppmärksamhet",
+  "att.clear": "Inget väntar på dig just nu.",
+  "att.waiting": "Granskas just nu",
+  "att.waitingHint": "Någon annan tittar på det här. Du behöver inte göra något.",
+  "att.needsHolder": "Väntar på dig",
+  "att.needsHolderHint": "Granskaren har bett om komplettering.",
+  "att.expiring": "Går ut snart",
+  "att.expiringHint": "Förnya i god tid — ett förordnande förnyas hos myndigheten, inte här.",
+  "att.expired": "Har gått ut",
+  "att.expiredHint": "Visas inte längre som giltigt. Rätta eller förnya uppgiften.",
+  "att.daysLeft": "dagar kvar",
   "overview.title": "Mitt Security Passport",
   "overview.privateNote": "Bara du ser den här sidan.",
   "overview.emptyTitle": "Ditt Passport är tomt",
@@ -1260,6 +1271,18 @@ const en: Record<PassportCopyKey, string> = {
   "onboarding.declaration.why":
     "A declaration makes the difference between a note and a professional record explicit.",
 
+  "att.title": "Needs your attention",
+  "att.clear": "Nothing is waiting on you right now.",
+  "att.waiting": "Being reviewed",
+  "att.waitingHint": "Someone else is looking at this. You do not need to do anything.",
+  "att.needsHolder": "Waiting on you",
+  "att.needsHolderHint": "The reviewer has asked for something more.",
+  "att.expiring": "Expiring soon",
+  "att.expiringHint":
+    "Renew in good time — an appointment is renewed with the authority, not here.",
+  "att.expired": "Has expired",
+  "att.expiredHint": "No longer shown as valid. Correct or renew the entry.",
+  "att.daysLeft": "days left",
   "overview.title": "My Security Passport",
   "overview.privateNote": "Only you can see this page.",
   "overview.emptyTitle": "Your Passport is empty",

@@ -28,6 +28,9 @@ import {
   type PassportSnapshot,
 } from "@/lib/security-passport/passport.functions";
 import { PassportOverview } from "@/components/security-passport/PassportOverview";
+import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
+import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
+import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/")({
   ssr: false,
@@ -45,22 +48,37 @@ function PassportOverviewRoute() {
   const navigate = useNavigate();
   const load = useServerFn(getMyPassport);
   const create = useServerFn(ensureMyPassport);
+  const loadRequests = useServerFn(listMyVerificationRequests);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
+  // Which entries have a review open. The overview cannot say "waiting on you"
+  // without it, and the holder's own requests are the only honest source.
+  const [openReviews, setOpenReviews] = useState<OpenReviews>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      setSnapshot(await load({ data: undefined }));
+      const [snap, reqs] = await Promise.all([
+        load({ data: undefined }),
+        loadRequests({ data: undefined }),
+      ]);
+      setSnapshot(snap);
+      const open = new Map<string, "pending" | "clarification_requested">();
+      for (const r of reqs.requests) {
+        if (r.status !== "pending" && r.status !== "clarification_requested") continue;
+        const subject = r.claimId ?? r.periodId;
+        if (subject) open.set(subject, r.status);
+      }
+      setOpenReviews(open);
     } catch (err) {
       // The message is logged, not shown: a raw PostgREST error reads as a
       // crash and can leak schema detail.
       console.error("[passport] load failed", err);
       setError(pt("live.error"));
     }
-  }, [load, pt]);
+  }, [load, loadRequests, pt]);
 
   useEffect(() => {
     void refresh();
@@ -148,6 +166,24 @@ function PassportOverviewRoute() {
           </div>
         </div>
       </section>
+
+      {/* What needs doing comes before the inventory of what exists. A holder
+          who opens this page wants to know whether anything is on them. */}
+      <AttentionPanel
+        summary={attentionFor(
+          snapshot.holder.claims,
+          snapshot.holder.periods,
+          today(),
+          openReviews,
+        )}
+        onOpenEntry={(kind, id) =>
+          void navigate({
+            to: "/passport/entry/$kind/$entryId",
+            params: { kind, entryId: id },
+          })
+        }
+        className="mb-5"
+      />
 
       <PassportOverview
         holder={snapshot.holder}

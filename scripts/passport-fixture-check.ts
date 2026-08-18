@@ -39,6 +39,7 @@ import {
   TRUST_PALETTE,
   milestoneStyle,
 } from "../src/lib/security-passport/design/trust-system";
+import * as attentionModule from "../src/lib/security-passport/attention";
 import {
   EXPERIENCE_BANDS,
   EXPERIENCE_POLICY_VERSION,
@@ -782,6 +783,80 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       expect(
         svg.includes(`>${code}</text>`),
         `Symbol markup for ${code}/${state} must carry its label.`,
+      );
+    }
+  }
+
+  // ── The overview says who is blocked, and never scores the Passport ────
+  {
+    const { attentionFor, EXPIRY_HORIZON_DAYS } = attentionModule;
+
+    expect(
+      EXPIRY_HORIZON_DAYS >= 30 && EXPIRY_HORIZON_DAYS <= 120,
+      `The expiry horizon must be a usable notice period, got ${EXPIRY_HORIZON_DAYS} days.`,
+    );
+
+    const persona = PERSONAS[0];
+    const on = "2026-08-18";
+
+    // Nothing open means nothing waiting: the panel must not invent work.
+    const quiet = attentionFor(persona.claims, persona.periods, on, new Map());
+    expect(
+      quiet.waiting.length === 0 && quiet.needsHolder.length === 0,
+      "With no open review, nothing may appear as waiting or as the holder's job.",
+    );
+
+    // A pending review is somebody else's work; clarification is the holder's.
+    const claimId = persona.claims[0]?.id;
+    if (claimId) {
+      const pending = attentionFor(
+        persona.claims,
+        persona.periods,
+        on,
+        new Map([[claimId, "pending" as const]]),
+      );
+      expect(
+        pending.waiting.some((i) => i.id === claimId),
+        "A pending review must appear as waiting on someone else.",
+      );
+      expect(
+        pending.needsHolder.length === 0,
+        "A pending review must not be presented as the holder's job.",
+      );
+
+      const clarify = attentionFor(
+        persona.claims,
+        persona.periods,
+        on,
+        new Map([[claimId, "clarification_requested" as const]]),
+      );
+      expect(
+        clarify.needsHolder.some((i) => i.id === claimId),
+        "A clarification request must appear as waiting on the holder.",
+      );
+      expect(
+        clarify.waiting.length === 0,
+        "A clarification request must not also read as somebody else's work.",
+      );
+    }
+
+    // Only a VERIFIED entry can be "expiring": a self-declared entry with a
+    // past date needs correcting, and telling the holder to renew it is wrong.
+    for (const p of PERSONAS) {
+      const a = attentionFor(p.claims, p.periods, on, new Map());
+      for (const item of [...a.expiring, ...a.expired]) {
+        const claim = p.claims.find((c) => c.id === item.id);
+        if (!claim) continue;
+        expect(
+          claim.assertionLevel === "verified",
+          `${p.id}: ${item.title} is offered for renewal but was never verified.`,
+        );
+      }
+      // Soonest first, or the notice buries the urgent one.
+      const days = a.expiring.map((i) => i.daysLeft ?? 0);
+      expect(
+        days.every((d, k) => k === 0 || d >= days[k - 1]),
+        `${p.id}: expiring entries are not ordered soonest-first.`,
       );
     }
   }
