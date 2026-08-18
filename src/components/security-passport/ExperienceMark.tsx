@@ -62,7 +62,7 @@ export function ExperienceMark({
         {pt("exp.verifiedLabel")}
       </p>
 
-      <div className="mt-1.5 flex items-center gap-3">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span
           className="flex items-center gap-1"
           role="img"

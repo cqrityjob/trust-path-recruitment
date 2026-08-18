@@ -53,6 +53,7 @@ const sv = {
   "screen.credentialHistory": "Rättelse och versioner",
   "screen.linkedin": "LinkedIn-delning",
   "screen.recipientCard": "Mottagarens Passport-kort",
+  "screen.entries": "Mina uppgifter",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
     "Fyra egna märken — VU1, VU2, OV och SV — i systemets alla tillstånd. Status bärs alltid av ord, kantstil och statusmärke tillsammans; färgen är aldrig ensam bärare. Endast en gällande, verifierad behörighet får den fulla guldbehandlingen.",
@@ -996,6 +997,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.credentialHistory": "Correction and versions",
   "screen.linkedin": "LinkedIn sharing",
   "screen.recipientCard": "Recipient Passport card",
+  "screen.entries": "My information",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
     "Four original marks — VU1, VU2, OV and SV — in every state the system knows. Status is always carried by the word, the border style and the status glyph together; colour is never the only channel. Only a current, verified credential receives the full gold treatment.",
