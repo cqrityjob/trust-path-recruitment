@@ -614,6 +614,37 @@ if [ "$VJ_PASSED" -lt 55 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-b. Purpose governance — an assignment names why it processes a person
+#
+# Guards the mapping that replaced "newest published purpose, across all
+# purposes". Recruitment and reassessment are expected to FAIL here: their
+# purpose versions are deliberately unpublished pending Product Owner and legal
+# review, and the suite asserts the closure is real rather than papered over.
+# ---------------------------------------------------------------------------
+echo "==> Running purpose-governance assertions"
+set +e
+PGOV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_purpose_governance_test.sql 2>&1)"
+PGOV_RC=$?
+set -e
+
+echo "$PGOV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PGOV_PASSED="$(echo "$PGOV_OUT" | grep -c "ok  " || true)"
+
+if [ "$PGOV_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the purpose-governance suite exited with code ${PGOV_RC}." >&2
+  echo "$PGOV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${PGOV_PASSED} purpose-governance assertions passed"
+
+if [ "$PGOV_PASSED" -lt 23 ]; then
+  echo "FAIL: expected at least 23 purpose-governance assertions, only ${PGOV_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -780,6 +811,7 @@ echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
 echo "              ${VJ_PASSED} Vaktare journey assertions,"
+echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"

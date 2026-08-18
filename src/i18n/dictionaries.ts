@@ -2224,6 +2224,8 @@ export const dictionaries = {
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
     "academy.participants.reassessmentFailed": "Omprövningen kunde inte bokas.",
+    "academy.participants.reassessmentPurposePending":
+      "Omprövning är inte tillgänglig ännu. Ändamålet för omprövning behöver godkännas innan en ny bedömning får begäras.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
     "academy.participants.emptyBody":
       "Tilldela ett program från testbiblioteket för att komma igång.",
@@ -2261,7 +2263,8 @@ export const dictionaries = {
     "academy.reviews.whySafety":
       "Situationen rör säkerhetskritisk bedömning. Sådana svar poängsätts inte automatiskt — de bedöms av en människa som också anger hur allvarligt det är.",
     "academy.reviews.whyRequested": "Deltagaren har själv begärt att en människa läser svaret.",
-    "academy.reviews.whyOther": "Det här svaret kräver en mänsklig bedömning innan det kan bli underlag.",
+    "academy.reviews.whyOther":
+      "Det här svaret kräver en mänsklig bedömning innan det kan bli underlag.",
     "academy.reviews.participant": "Deltagare",
     "academy.reviews.organisation": "Organisation",
     "academy.reviews.assessment": "Bedömning",
@@ -4612,6 +4615,8 @@ export const dictionaries = {
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",
     "academy.participants.reassessmentFailed": "The reassessment could not be scheduled.",
+    "academy.participants.reassessmentPurposePending":
+      "Reassessment is not available yet. Its processing purpose has to be approved before a new assessment can be requested.",
     "academy.participants.emptyTitle": "No participants yet",
     "academy.participants.emptyBody": "Assign a programme from the library to get started.",
     "academy.attempt.inProgress": "In progress",
@@ -4648,7 +4653,8 @@ export const dictionaries = {
     "academy.reviews.whySafety":
       "This situation involves safety-critical judgement. Such answers are not scored automatically — a person assesses them and states how serious it is.",
     "academy.reviews.whyRequested": "The participant asked for a person to read this answer.",
-    "academy.reviews.whyOther": "This answer needs a human judgement before it can become evidence.",
+    "academy.reviews.whyOther":
+      "This answer needs a human judgement before it can become evidence.",
     "academy.reviews.participant": "Participant",
     "academy.reviews.organisation": "Organisation",
     "academy.reviews.assessment": "Assessment",

@@ -161,6 +161,37 @@ export const listAcademyLibrary = createServerFn({ method: "GET" })
     }));
   });
 
+/** Which processing purposes currently have an approved, published version.
+ *
+ *  scp_employer_assign now resolves the purpose from the use case and REFUSES
+ *  when that purpose has no approved version — recruitment and reassessment are
+ *  deliberately closed until a Product Owner and legal review publishes one.
+ *
+ *  A refusal the user only discovers by pressing the button is a bad refusal.
+ *  This lets a surface disable the control and say why, so "not yet available"
+ *  is visible before the click rather than after it.
+ *
+ *  Deliberately just the codes. No lawful basis, no privacy-notice reference —
+ *  a UI has no business rendering either, and this is read by any authenticated
+ *  member of the workspace. */
+export const listAvailablePurposeCodes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<string[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase
+      .from("scp_purpose_versions")
+      .select("purpose_code, published_at, retired_at, scp_processing_purposes(is_active)")
+      .not("published_at", "is", null)
+      .is("retired_at", null);
+    if (error) throw fail(error.message, "purposes_failed");
+    const codes = new Set<string>();
+    for (const r of (rows ?? []) as RpcRow[]) {
+      const purpose = r.scp_processing_purposes as { is_active?: boolean } | null;
+      if (purpose?.is_active) codes.add(String(r.purpose_code));
+    }
+    return [...codes];
+  });
+
 export const assignAcademyProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

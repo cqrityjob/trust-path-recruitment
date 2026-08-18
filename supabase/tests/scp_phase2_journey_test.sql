@@ -616,6 +616,24 @@ SELECT pg_temp.ok(
   'J7.9 the participants projection returns no response text and no contact field');
 
 -- Reassessment: allowed after a released result, and it creates a fresh attempt.
+--
+-- 20260820090000 made scp_schedule_reassessment ask for the `reassessment`
+-- processing purpose by name instead of silently inheriting the workforce one.
+-- That purpose is deliberately NOT published in the product — publishing it
+-- asserts a lawful basis and a privacy notice, which is a Product Owner and
+-- legal decision — so this suite supplies its own, exactly as it already
+-- supplies its own competence_development version above. Both are rolled back
+-- with the transaction and neither activates anything in the product.
+--
+-- The real seeded state (reassessment closed, and refusing safely) is asserted
+-- by supabase/tests/scp_purpose_governance_test.sql, group PG4.
+UPDATE public.scp_processing_purposes SET is_active = true WHERE code = 'reassessment';
+INSERT INTO public.scp_purpose_versions
+  (purpose_code, version_number, privacy_notice_version, lawful_basis_reference,
+   jurisdiction_id, published_at)
+SELECT 'reassessment', 91, 'pn-journey-reassessment', 'GDPR Art.6(1)(f)',
+       (SELECT id FROM public.scp_jurisdictions WHERE code='SE'), now();
+
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
 CREATE TEMP TABLE reass AS
@@ -628,6 +646,16 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_attempts
     WHERE subject_id = :'sid'::uuid AND mode = 'assessment') = 2,
   'J7.11 the reassessment is a NEW attempt — the first one is untouched');
+
+-- The point of the change: a reassessment is recorded as a reassessment. It
+-- used to inherit whatever purpose was published most recently, which made it
+-- indistinguishable from a first development assessment in the lineage.
+SELECT pg_temp.ok(
+  (SELECT p.purpose_code
+     FROM public.scp_attempts a
+     JOIN public.scp_purpose_versions p ON p.id = a.purpose_version_id
+    WHERE a.id = (SELECT attempt_id FROM reass)) = 'reassessment',
+  'J7.11b the reassessment attempt records the reassessment purpose, not the first one');
 
 -- And is refused for somebody with no prior released result.
 SET LOCAL ROLE authenticated;

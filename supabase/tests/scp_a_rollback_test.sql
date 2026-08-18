@@ -160,6 +160,12 @@ DROP FUNCTION IF EXISTS
 DROP FUNCTION IF EXISTS
   public.scp_has_test_grant(uuid, public.scp_governance_mode, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_governance_lineage_immutable() CASCADE;
+-- The purpose mapping (20260820090000) has to be named explicitly. Most SCP
+-- functions disappear with `DROP TYPE scp_governance_mode CASCADE` below,
+-- because that enum appears in their signature or return type. This one takes
+-- text and returns text, so nothing cascades to it and it would otherwise
+-- survive a rollback that claims to remove every scp_ object.
+DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text) CASCADE;
 DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
 
