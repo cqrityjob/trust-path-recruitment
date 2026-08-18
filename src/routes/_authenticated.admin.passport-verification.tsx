@@ -98,8 +98,25 @@ function PassportVerificationQueue() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<VerifierRequestDetail | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // ── ONE ERROR PER OPERATION, NOT ONE PER PAGE ────────────────────────
+  //
+  // These were a single `error` string written by four unrelated
+  // operations — loading the queue, opening a review, opening a document
+  // and saving a decision — and rendered once, above the filter. Any one
+  // of them failing therefore painted a page-wide red banner over a queue
+  // that was working perfectly, and because nothing ever cleared it on
+  // success, it stayed until a hard reload. That is the state the
+  // production report photographed: a complete, usable queue underneath a
+  // generic "something went wrong".
+  //
+  // Each operation now owns its own message, renders it where the failure
+  // happened, and clears it when it next succeeds.
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [evidenceError, setEvidenceError] = useState<{ id: string; message: string } | null>(null);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const [decision, setDecision] = useState<Decision>("approved");
   const [method, setMethod] = useState<string>("document_review");
@@ -112,9 +129,12 @@ function PassportVerificationQueue() {
     try {
       const rows = await loadQueue({ data: { status: filter } });
       setQueue(rows);
+      // Cleared on success: a stale banner from an earlier transient
+      // failure must not outlive the request that fixed it.
+      setQueueError(null);
     } catch (err) {
       console.error("[passport] verifier queue failed", err);
-      setError(pt("common.error"));
+      setQueueError(pt("vq.error.queue"));
     }
   }, [loadQueue, filter, pt]);
 
@@ -131,13 +151,19 @@ function PassportVerificationQueue() {
   useEffect(() => {
     if (!selected) {
       setDetail(null);
+      setDetailError(null);
       return;
     }
+    setDetailError(null);
     void loadDetail({ data: { requestId: selected } })
-      .then(setDetail)
+      .then((d) => {
+        setDetail(d);
+        setDetailError(null);
+      })
       .catch((err: unknown) => {
         console.error("[passport] verifier detail failed", err);
-        setError(pt("common.error"));
+        setDetail(null);
+        setDetailError(pt("vq.error.detail"));
       });
   }, [selected, loadDetail, pt]);
 
@@ -156,7 +182,7 @@ function PassportVerificationQueue() {
   async function submitDecision() {
     if (!selected) return;
     if (decision === "approved" && !method) {
-      setError(pt("vq.methodRequired"));
+      setDecisionError(pt("vq.methodRequired"));
       return;
     }
 
@@ -169,7 +195,7 @@ function PassportVerificationQueue() {
     if (!window.confirm(`${pt("vq.confirmTitle")}\n\n${pt(confirmKey)}`)) return;
 
     setBusy(true);
-    setError(null);
+    setDecisionError(null);
     try {
       await decide({
         data: {
@@ -190,8 +216,11 @@ function PassportVerificationQueue() {
       setValidUntil("");
       await refresh();
     } catch (err) {
+      // Deliberately does NOT reset the form: the verifier has just typed a
+      // decision note and a holder message, and throwing that away on a
+      // transient failure would be worse than the failure.
       console.error("[passport] decision failed", err);
-      setError(pt("common.error"));
+      setDecisionError(pt("vq.error.decision"));
     } finally {
       setBusy(false);
     }
@@ -221,10 +250,17 @@ function PassportVerificationQueue() {
           {notice}
         </p>
       ) : null}
-      {error ? (
-        <p role="alert" className="mt-4 text-sm text-destructive">
-          {error}
-        </p>
+      {queueError ? (
+        <div role="alert" className="mt-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-destructive">{queueError}</p>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("vq.retry")}
+          </button>
+        </div>
       ) : null}
 
       <div className="mt-6">
@@ -286,7 +322,26 @@ function PassportVerificationQueue() {
                 {pt("vq.open")}
               </button>
 
-              {selected === item.id ? (
+              {selected === item.id && detailError ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p role="alert" className="text-sm text-destructive">
+                    {detailError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Re-trigger the detail effect for this same review.
+                      setSelected(null);
+                      window.setTimeout(() => setSelected(item.id), 0);
+                    }}
+                    className="mt-2 inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {pt("vq.retry")}
+                  </button>
+                </div>
+              ) : null}
+
+              {selected === item.id && !detailError ? (
                 <div className="mt-4 space-y-4 border-t border-border pt-4">
                   {/* Documents — reachable only while this review is open. */}
                   <div>
@@ -309,16 +364,31 @@ function PassportVerificationQueue() {
                             <button
                               type="button"
                               onClick={() => {
+                                setEvidenceError(null);
                                 void viewEvidence({ data: { evidenceId: ev.id } })
                                   .then(({ url }) =>
                                     window.open(url, "_blank", "noopener,noreferrer"),
                                   )
-                                  .catch(() => setError(pt("common.error")));
+                                  .catch((err: unknown) => {
+                                    // Scoped to this row. A document that
+                                    // cannot be opened says nothing about
+                                    // the queue around it.
+                                    console.error("[passport] evidence url failed", err);
+                                    setEvidenceError({
+                                      id: ev.id,
+                                      message: pt("vq.error.evidence"),
+                                    });
+                                  });
                               }}
                               className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                               {pt("ev.view")}
                             </button>
+                            {evidenceError?.id === ev.id ? (
+                              <p role="alert" className="w-full text-sm text-destructive">
+                                {evidenceError.message}
+                              </p>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -490,6 +560,12 @@ function PassportVerificationQueue() {
                     </div>
 
                     <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
+
+                    {decisionError ? (
+                      <p role="alert" className="text-sm text-destructive">
+                        {decisionError}
+                      </p>
+                    ) : null}
 
                     <button
                       type="button"
