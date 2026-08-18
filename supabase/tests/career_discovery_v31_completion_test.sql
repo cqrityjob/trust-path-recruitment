@@ -98,8 +98,8 @@ SELECT (SELECT sess FROM t_s), di.item_id, di.item_version, di.item_kind,
  WHERE di.is_scored;
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s)) = 20,
-  'C1.2 all twenty scored items are answered');
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s)) = 22,
+  'C1.2 all twenty-two scored items are answered');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.cd_v31_validate_session_evidence((SELECT sess FROM t_s))),
@@ -304,6 +304,22 @@ SELECT pg_temp.must_fail(format(
   'CD_EMPTY_RANKING', 'C8.4 a report with no ranked areas is refused');
 
 -- Owner requirement: an unapproved profession may never reach ranking.
+--
+-- The guard fires only when the catalogue holds NOTHING approved. That used to
+-- be the state of a fresh database, so the test could simply assume it; since
+-- 20260816150000 shipped the recalibrated first-wave catalogue, all 14
+-- professions are approved and the assumption is false. The precondition is
+-- therefore built explicitly here and torn down again -- without this the
+-- assertion passes vacuously and proves nothing about the guard.
+CREATE TEMP TABLE t_approved AS
+SELECT profession_id FROM public.cd_professions WHERE approved_for_ranking;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM t_approved) > 0,
+  'C8.5a the catalogue ships approved professions, so the guard needs a built precondition');
+
+UPDATE public.cd_professions SET approved_for_ranking = false WHERE approved_for_ranking;
+
 SELECT pg_temp.must_fail(format(
   'SELECT public.cd_v31_complete_session(%L::uuid,
      ''{"outputA":{"areas":[1]},"outputB":{},"professions":{"matches":[{"id":"SP001"}]},
@@ -313,6 +329,14 @@ SELECT pg_temp.must_fail(format(
   'CD_UNAPPROVED_PROFESSION_RANKING',
   'C8.5 a profession match is refused while no profession is approved for ranking');
 
+UPDATE public.cd_professions SET approved_for_ranking = true
+ WHERE profession_id IN (SELECT profession_id FROM t_approved);
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_professions WHERE approved_for_ranking)
+  = (SELECT count(*) FROM t_approved),
+  'C8.5b the approved catalogue is restored, so later groups see the real state');
+
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions WHERE id = (SELECT sess FROM t_s2)) = 'in_progress',
   'C8.6 every refused payload left the second session resumable');
@@ -320,6 +344,119 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_report_snapshots WHERE session_id = (SELECT sess FROM t_s2)) = 0,
   'C8.7 no partial snapshot was written for any refused payload');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP C9 — the matrix is resolved by version, never by recency'; END $$;
+
+-- =========================================================================
+-- Group C9 — retained scoring generations are inert
+-- =========================================================================
+--
+-- Superseding a scoring generation RETAINS the old one (20260816160000 left
+-- draft-1 and draft-2 in place when it re-tagged the matrix to draft-3), so a
+-- stored report stays reproducible against the generation it was scored under.
+--
+-- Two things must hold for that retention to be safe, and neither is about how
+-- many generations happen to be stored: an extra generation must not disturb an
+-- active session, and it must never be reachable as a fallback. Proven here on
+-- a generation this test creates and removes itself, so the assertion does not
+-- depend on how much history the database happens to be carrying.
+
+INSERT INTO public.cd_option_loadings
+  (scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)
+SELECT 'v3.1-test-historical', ol.question_id, ol.option_id, ol.dimension_id,
+       ol.role, ol.role_weight, ol.value, ol.rationale
+  FROM public.cd_option_loadings ol
+ WHERE ol.scoring_version = (SELECT dv.scoring_version
+                               FROM public.cd_definition_versions dv
+                              WHERE dv.id = (SELECT defver FROM t_dv));
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_option_loadings
+    WHERE scoring_version = 'v3.1-test-historical') = 164,
+  'C9.1 a second, complete scoring generation is now stored alongside the active one');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_v31_validate_session_evidence((SELECT sess FROM t_s))) = 0,
+  'C9.2 a retained generation is not an error: the active session still validates cleanly');
+
+DELETE FROM public.cd_option_loadings WHERE scoring_version = 'v3.1-test-historical';
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_v31_validate_session_evidence((SELECT sess FROM t_s))) = 0,
+  'C9.3 removing it changes nothing for the active session: it was never reachable');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP C10 — the version tuple is the server''s'; END $$;
+
+-- =========================================================================
+-- Group C10 — server-assigned versions, and stability across growth
+-- =========================================================================
+--
+-- A stored report is reproducible only if the tuple it froze is the one the
+-- server actually held, and if a later, larger instrument cannot reach back and
+-- disturb it. CQ21/CQ22 joined the scored set in
+-- 20260816150000_cd_v31_content_v2_compliance_dimension.sql; this group is what
+-- makes the NEXT such addition safe by construction instead of by review.
+
+INSERT INTO public.cd_report_snapshots
+  (session_id, definition_version, content_version, scoring_version, taxonomy_version,
+   dna_scores, career_areas, pattern_definition_version, patterns, candidate_story)
+SELECT (SELECT sess FROM t_s2),
+       'caller-supplied-lie', 'caller-supplied-lie', 'caller-supplied-lie', 'caller-supplied-lie',
+       '{"dna":"c10"}'::jsonb, '[{"area":"c10"}]'::jsonb,
+       'v3.1-draft-1', '{"p":"c10"}'::jsonb, '{"story":"c10"}'::jsonb;
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.cd_report_snapshots
+               WHERE session_id = (SELECT sess FROM t_s2)
+                 AND 'caller-supplied-lie' IN (definition_version, content_version,
+                                               scoring_version, taxonomy_version)),
+  'C10.1 a caller-supplied version tuple is discarded, never stored');
+
+SELECT pg_temp.ok(
+  (SELECT (s.definition_version, s.content_version, s.scoring_version, s.taxonomy_version)
+     FROM public.cd_report_snapshots s WHERE s.session_id = (SELECT sess FROM t_s2))
+  = (SELECT (dv.definition_version, dv.content_version, dv.scoring_version, dv.taxonomy_version)
+       FROM public.cd_definition_versions dv WHERE dv.id = (SELECT defver FROM t_dv)),
+  'C10.2 the stored tuple is exactly the session definition''s, assigned by the server');
+
+CREATE TEMP TABLE t_c10 AS
+SELECT md5(s::text) AS digest FROM public.cd_report_snapshots s
+ WHERE s.session_id = (SELECT sess FROM t_s2);
+
+-- Grow the instrument the way the compliance dimension did.
+INSERT INTO public.cd_definition_items
+  (definition_version_id, item_id, item_version, item_kind, evidence_class,
+   is_scored, section_id, display_order)
+SELECT (SELECT defver FROM t_dv), 'CQ_GROWTH_PROBE', di.item_version, 'scale',
+       di.evidence_class, true, di.section_id, 99
+  FROM public.cd_definition_items di
+ WHERE di.definition_version_id = (SELECT defver FROM t_dv) AND di.is_scored
+ ORDER BY di.display_order LIMIT 1;
+
+SELECT pg_temp.ok(
+  (SELECT expected FROM public.cd_session_core_completion((SELECT sess FROM t_s2)))
+  = (SELECT count(*)::int FROM public.cd_definition_items
+      WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored AND is_active),
+  'C10.3 the required core set is derived from the definition, never a fixed number');
+
+SELECT pg_temp.ok(
+  (SELECT md5(s::text) FROM public.cd_report_snapshots s
+    WHERE s.session_id = (SELECT sess FROM t_s2)) = (SELECT digest FROM t_c10),
+  'C10.4 growing the instrument leaves an already-stored report byte-identical');
+
+DELETE FROM public.cd_definition_items
+ WHERE definition_version_id = (SELECT defver FROM t_dv) AND item_id = 'CQ_GROWTH_PROBE';
+
+-- Leave the fixture exactly as found. C7 later switches to t_s2's owner and
+-- asserts that they can see no stored report at all; that is only a real
+-- isolation check while t_s2 genuinely has none, so this group takes its probe
+-- snapshot back out rather than quietly relaxing C7.
+DELETE FROM public.cd_report_snapshots WHERE session_id = (SELECT sess FROM t_s2);
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_report_snapshots
+    WHERE session_id = (SELECT sess FROM t_s2)) = 0,
+  'C10.5 the probe snapshot is removed, restoring the fixture for later groups');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP C5 — snapshot stability under later change'; END $$;
 
@@ -337,8 +474,18 @@ SELECT md5(patterns::text || candidate_story::text || career_areas::text
            || scoring_version || COALESCE(pattern_definition_version,'')) AS digest
 FROM public.cd_report_snapshots WHERE session_id = (SELECT sess FROM t_s);
 
+-- The generation this session actually depends on, captured BEFORE anything is
+-- mutated: step 3 rewrites the definition's scoring_version, so resolving it
+-- later would aim these edits at a generation that holds no rows and the proof
+-- would pass without disturbing anything.
+CREATE TEMP TABLE t_active_sv AS
+SELECT dv.scoring_version AS sv
+  FROM public.cd_definition_versions dv
+ WHERE dv.id = (SELECT defver FROM t_dv);
+
 -- 1. A later SCORING configuration.
-UPDATE public.cd_option_loadings SET value = 0.111 WHERE scoring_version = 'v3.1-draft-1';
+UPDATE public.cd_option_loadings SET value = 0.111
+ WHERE scoring_version = (SELECT sv FROM t_active_sv);
 SELECT pg_temp.ok(
   (SELECT md5(patterns::text || candidate_story::text || career_areas::text
               || dna_scores::text || definition_version || content_version
@@ -372,7 +519,7 @@ SELECT pg_temp.ok(
   'C5.3 retiring the definition and bumping its versions leaves the snapshot byte-identical');
 
 -- 4. Deleting the option matrix entirely.
-DELETE FROM public.cd_option_loadings WHERE scoring_version = 'v3.1-draft-1';
+DELETE FROM public.cd_option_loadings WHERE scoring_version = (SELECT sv FROM t_active_sv);
 SELECT pg_temp.ok(
   (SELECT md5(patterns::text || candidate_story::text || career_areas::text
               || dna_scores::text || definition_version || content_version
@@ -422,6 +569,24 @@ SELECT pg_temp.must_fail(format($f$
   UPDATE public.cd_report_snapshots SET pattern_definition_version = 'v9'
    WHERE session_id = %L::uuid $f$, (SELECT sess FROM t_s)),
   'CD_SNAPSHOT_IMMUTABLE', 'C6.3 the stored pattern version cannot be rewritten');
+
+-- The version tuple is guarded separately from the payload, so it needs its own
+-- proof: a stored report that could be re-pointed at another generation would
+-- stop being reproducible even with its payload intact.
+SELECT pg_temp.must_fail(format($f$
+  UPDATE public.cd_report_snapshots SET scoring_version = 'v9.9-later'
+   WHERE session_id = %L::uuid $f$, (SELECT sess FROM t_s)),
+  'CD_SNAPSHOT_VERSIONS_IMMUTABLE', 'C6.4 the stored scoring version cannot be rewritten');
+
+SELECT pg_temp.must_fail(format($f$
+  UPDATE public.cd_report_snapshots SET definition_version = 'v9.9-later'
+   WHERE session_id = %L::uuid $f$, (SELECT sess FROM t_s)),
+  'CD_SNAPSHOT_VERSIONS_IMMUTABLE', 'C6.5 the stored definition version cannot be rewritten');
+
+SELECT pg_temp.must_fail(format($f$
+  UPDATE public.cd_report_snapshots SET content_version = 'v9.9-later'
+   WHERE session_id = %L::uuid $f$, (SELECT sess FROM t_s)),
+  'CD_SNAPSHOT_VERSIONS_IMMUTABLE', 'C6.6 the stored content version cannot be rewritten');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP C7 — ownership and isolation'; END $$;
 
