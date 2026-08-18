@@ -925,6 +925,11 @@ const sv = {
   "share2.activeLinks": "Aktiva länkar",
   "share2.cacheNote":
     "En nedladdad eller publicerad bild kan finnas kvar hos plattformen även efter att du återkallat länken. Själva sidan slutar fungera direkt.",
+  "vq.error.queue": "Kön kunde inte hämtas.",
+  "vq.error.detail": "Ärendet kunde inte öppnas.",
+  "vq.error.evidence": "Dokumentet kunde inte öppnas.",
+  "vq.error.decision": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
+  "vq.retry": "Försök igen",
   "cw.detailsTitle": "Uppgifter",
   "cw.shareCredential": "Dela den här behörigheten",
   "cw.creating": "Skapar länk …",
@@ -1888,6 +1893,11 @@ const en: Record<PassportCopyKey, string> = {
   "share2.activeLinks": "Active links",
   "share2.cacheNote":
     "A downloaded or published image can remain with the platform even after you revoke the link. The page itself stops working immediately.",
+  "vq.error.queue": "The queue could not be loaded.",
+  "vq.error.detail": "This review could not be opened.",
+  "vq.error.evidence": "This document could not be opened.",
+  "vq.error.decision": "The decision could not be saved. Your entries are still here — try again.",
+  "vq.retry": "Try again",
   "cw.detailsTitle": "Details",
   "cw.shareCredential": "Share this credential",
   "cw.creating": "Creating link …",
