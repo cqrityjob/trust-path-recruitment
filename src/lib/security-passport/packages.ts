@@ -198,6 +198,14 @@ export interface RecipientPeriod {
 export interface RecipientPayloadActive {
   readonly status: "active";
   readonly package: DisclosurePackageCode;
+  /** Whether this share is the whole Passport or one credential. Emitted by
+   *  the server (Phase 9) so the page never has to infer intent from how
+   *  many claims happen to be in the array.
+   *
+   *  Optional because a payload produced before Phase 9 reached the database
+   *  will not carry it; the reader defaults to "passport", which is what
+   *  every pre-Phase-9 share was. */
+  readonly focus?: "passport" | "credential";
   readonly purpose: string | null;
   readonly expires_at: string | null;
   readonly last_updated: string;

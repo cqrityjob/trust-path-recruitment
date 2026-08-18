@@ -832,9 +832,9 @@ else
   echo "    ok  ${SP8_PASSED} Security Passport Phase 8 assertions passed"
   # This suite guards what a holder may do to their own record. A short run
   # means the deletion and cross-holder guards did not execute.
-  if [ "$SP8_PASSED" -lt 18 ]; then
-    echo "FAIL: expected at least 18 Phase 8 assertions, only ${SP8_PASSED} ran." >&2
-    suite_failed "Security Passport Phase 8 (assertion shortfall: floor 18)"
+  if [ "$SP8_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 Phase 8 assertions, only ${SP8_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 8 (assertion shortfall: floor 30)"
   fi
 fi
 

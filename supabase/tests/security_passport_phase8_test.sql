@@ -348,3 +348,117 @@ BEGIN
     '6.1 the holder cannot decide their own review');
   RESET ROLE;
 END $$;
+
+-- =============================================================================
+\echo '    GROUP 7 -- Phase 9: a share can carry ONE credential, and only narrow'
+-- =============================================================================
+DO $$
+DECLARE
+  _h uuid := 'd8000000-0000-0000-0000-000000000001';
+  _v uuid := 'd8000000-0000-0000-0000-000000000009';
+  _target uuid; _second uuid; _req uuid; _tok text; _payload jsonb;
+BEGIN
+  -- The claim verified in Group 5 is the one to focus on.
+  SELECT id INTO _target FROM public.sp_claims
+   WHERE holder_user_id = _h AND assertion_level = 'verified'
+     AND lifecycle_state = 'active' LIMIT 1;
+
+  -- A second verified credential, so "only one is disclosed" is a real test
+  -- rather than true by there being nothing else.
+  INSERT INTO public.sp_claims
+    (holder_user_id, claim_type, title, claimed_issuer_name, issued_on)
+  VALUES (_h, 'certification', 'P8 Andra certifieringen (fiktiv)', 'P8 Organ (fiktiv)', DATE '2024-01-01')
+  RETURNING id INTO _second;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  _req := public.sp_submit_for_verification(_second, NULL, 'cqrityjob_review', NULL);
+  RESET ROLE;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _v::text, true);
+  PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review', 'x', 'y', NULL, NULL);
+  RESET ROLE;
+
+  -- Now share exactly one of the two.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  _tok := public.sp_create_credential_disclosure(_target, 30, NULL, NULL);
+  RESET ROLE;
+
+  SET LOCAL ROLE service_role;
+  _payload := public.sp_get_disclosure(_tok);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_payload->>'status' = 'active', '7.1 the credential share resolves');
+  PERFORM pg_temp.ok(_payload->>'focus' = 'credential',
+    '7.2 the payload says it is a credential, not a Passport');
+  PERFORM pg_temp.ok(jsonb_array_length(_payload->'verified_claims') = 1,
+    '7.3 exactly one credential is disclosed');
+  PERFORM pg_temp.ok(
+    (_payload->'verified_claims'->0->>'id')::uuid = _target,
+    '7.4 and it is the one that was shared');
+  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Andra certifieringen%',
+    '7.5 the holder''s other verified credential is NOT disclosed');
+  PERFORM pg_temp.ok(jsonb_array_length(_payload->'verified_experience') = 0,
+    '7.6 a credential share carries no employment');
+  PERFORM pg_temp.ok((_payload->>'verified_experience_days')::numeric = 0,
+    '7.7 nor any tenure total');
+END $$;
+
+-- Ownership and shareability are enforced at creation.
+DO $$
+DECLARE
+  _h uuid := 'd8000000-0000-0000-0000-000000000001';
+  _o uuid := 'd8000000-0000-0000-0000-000000000002';
+  _target uuid; _unverified uuid;
+BEGIN
+  SELECT id INTO _target FROM public.sp_claims
+   WHERE holder_user_id = _h AND assertion_level = 'verified' LIMIT 1;
+  SELECT id INTO _unverified FROM public.sp_claims
+   WHERE holder_user_id = _h AND assertion_level = 'self_declared'
+     AND lifecycle_state = 'active' LIMIT 1;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _o::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.sp_create_credential_disclosure(%L, 30, NULL, NULL)', _target),
+    'SP_NOT_HOLDER',
+    '7.8 another holder cannot share someone elses credential');
+  RESET ROLE;
+
+  IF _unverified IS NOT NULL THEN
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+    PERFORM pg_temp.must_fail(
+      format('SELECT public.sp_create_credential_disclosure(%L, 30, NULL, NULL)', _unverified),
+      'SP_CREDENTIAL_NOT_SHAREABLE',
+      '7.9 an unverified credential cannot be shared on its own');
+    RESET ROLE;
+  END IF;
+END $$;
+
+-- Revocation and the fail-closed head work identically for a focused share.
+DO $$
+DECLARE
+  _h uuid := 'd8000000-0000-0000-0000-000000000001';
+  _target uuid; _tok text; _id uuid;
+BEGIN
+  SELECT id INTO _target FROM public.sp_claims
+   WHERE holder_user_id = _h AND assertion_level = 'verified' LIMIT 1;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  _tok := public.sp_create_credential_disclosure(_target, 30, NULL, NULL);
+  RESET ROLE;
+
+  SELECT id INTO _id FROM public.sp_disclosures
+   WHERE token_hash = encode(digest(_tok, 'sha256'), 'hex');
+  UPDATE public.sp_disclosures SET revoked_at = now() WHERE id = _id;
+
+  SET LOCAL ROLE service_role;
+  PERFORM pg_temp.ok(
+    public.sp_get_disclosure(_tok)::text = '{"status": "unavailable"}',
+    '7.10 a revoked credential share is byte-identical to an unknown token');
+  RESET ROLE;
+END $$;

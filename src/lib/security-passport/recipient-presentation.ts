@@ -70,6 +70,8 @@ export interface RecipientPresentation {
   readonly professionSlug: string | null;
   readonly jurisdiction: string;
   readonly packageCode: string;
+  /** "credential" when the holder shared exactly one credential. */
+  readonly focus: "passport" | "credential";
   readonly purpose: string | null;
   readonly expiresAt: string | null;
   readonly lastUpdated: string;
@@ -126,6 +128,7 @@ export function buildRecipientPresentation(
     professionSlug: payload.profession_slug,
     jurisdiction: payload.jurisdiction,
     packageCode: payload.package,
+    focus: payload.focus ?? "passport",
     purpose: payload.purpose,
     expiresAt: payload.expires_at,
     lastUpdated: payload.last_updated,

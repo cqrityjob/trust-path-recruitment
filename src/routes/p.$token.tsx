@@ -36,6 +36,7 @@ import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { RecipientPassportCard } from "@/components/security-passport/live/RecipientPassportCard";
+import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 /** Canonical public origin, matching src/routes/sitemap[.]xml.ts. Only ever
@@ -167,6 +168,35 @@ function RecipientRoute() {
   // keeps TypeScript honest without a cast.
   if (!presentation) return null;
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  // A single-credential share is a different object from a Passport, so it
+  // gets its own presentation rather than the Passport page with one row.
+  if (presentation.focus === "credential" && presentation.credentials.length === 1) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:py-10">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          {pt("rec.brand")}
+        </p>
+        <p className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+          <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          {pt("rec.authoritative")}
+        </p>
+        <div className="mt-6">
+          <CredentialVerificationPage
+            credential={presentation.credentials[0]}
+            holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
+            jurisdiction={
+              presentation.jurisdiction === "SE" ? pt("jurisdiction.SE") : presentation.jurisdiction
+            }
+            verifyUrl={shareUrl}
+          />
+        </div>
+        <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+          {pt("rec.checkedAt")}: {checkedAt}
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-10">

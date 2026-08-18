@@ -511,15 +511,27 @@ SELECT pg_temp.ok(
     @> ARRAY['search_path=public, extensions'],
   '9.2 sp_create_disclosure can too');
 
--- Every other sp_* function must keep the narrow search_path. A blanket
--- widening would be a privilege-escalation surface, so only the two that
--- genuinely need pgcrypto are allowed the second schema.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  (SELECT p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.proname='sp_create_credential_disclosure')
+    @> ARRAY['search_path=public, extensions'],
+  '9.2b so can sp_create_credential_disclosure (Phase 9), which mints a token');
+
+-- Every other sp_* function must keep the narrow search_path. A blanket
+-- widening would be a privilege-escalation surface, so only the functions
+-- that genuinely need pgcrypto are allowed the second schema.
+--
+-- Asserted BY NAME rather than by count. A count passes just as happily when
+-- one allowed function is removed and an unrelated one widens, which is the
+-- exact substitution this check exists to catch.
+SELECT pg_temp.ok(
+  (SELECT coalesce(array_agg(p.proname ORDER BY p.proname), ARRAY[]::name[])
+     FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public' AND p.proname LIKE 'sp\_%'
       AND p.prosecdef
       AND p.proconfig IS NOT NULL
-      AND p.proconfig @> ARRAY['search_path=public, extensions']) = 2,
-  '9.3 and no other SECURITY DEFINER function widened its search_path');
+      AND p.proconfig @> ARRAY['search_path=public, extensions'])
+    = ARRAY['sp_create_credential_disclosure','sp_create_disclosure','sp_get_disclosure']::name[],
+  '9.3 and exactly those three SECURITY DEFINER functions widened their search_path');
 
 \echo '    ok  Security Passport Phase 5 assertions passed'

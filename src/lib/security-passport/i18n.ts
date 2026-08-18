@@ -916,7 +916,8 @@ const sv = {
   "share2.copied": "Länken är kopierad",
   "share2.ready": "Länken är klar",
   "share2.terms": "Gäller i 30 dagar. Du kan återkalla den när som helst.",
-  "share2.whatIsShared": "Länken visar bara verifierade uppgifter — inget egenrapporterat, inga dokument och inga referensnummer.",
+  "share2.whatIsShared":
+    "Länken visar bara verifierade uppgifter — inget egenrapporterat, inga dokument och inga referensnummer.",
   "share2.nothingVerified":
     "Du har inget verifierat ännu, så en länk skulle vara tom. Lägg till dina uppgifter och skicka dem för kontroll först.",
   "share2.more": "Fler alternativ",
@@ -924,6 +925,24 @@ const sv = {
   "share2.activeLinks": "Aktiva länkar",
   "share2.cacheNote":
     "En nedladdad eller publicerad bild kan finnas kvar hos plattformen även efter att du återkallat länken. Själva sidan slutar fungera direkt.",
+  "cw.detailsTitle": "Uppgifter",
+  "cw.shareCredential": "Dela den här behörigheten",
+  "cw.creating": "Skapar länk …",
+  "cw.addToLinkedIn": "Lägg till på LinkedIn",
+  "cw.linkedInPanel": "Uppgifter för LinkedIn",
+  "cw.linkedInHow":
+    "LinkedIn fyller inte i uppgifterna automatiskt. Kopiera dem här, öppna LinkedIn och klistra in dem i formuläret.",
+  "cw.liName": "Namn",
+  "cw.liOrg": "Utfärdande organisation",
+  "cw.liIssued": "Utfärdat",
+  "cw.liExpires": "Upphör att gälla",
+  "cw.liId": "Legitimerings-ID",
+  "cw.liUrl": "Länk till legitimering",
+  "cw.copyDetails": "Kopiera uppgifter",
+  "cw.copied": "Uppgifterna är kopierade",
+  "cw.openLinkedIn": "Öppna LinkedIn",
+  "cw.notShareable":
+    "Bara en verifierad och gällande behörighet kan delas för sig. Skicka den för kontroll först.",
 
   "info.title": "Mina uppgifter",
   "info.lead":
@@ -1852,8 +1871,7 @@ const en: Record<PassportCopyKey, string> = {
   "exp.noneYet": "No verified time yet",
   "exp.selfDeclaredAlso": "Self-declared, not checked:",
   "share2.title": "Share your Passport",
-  "share2.lead":
-    "One link showing your verified records. You can revoke it at any time.",
+  "share2.lead": "One link showing your verified records. You can revoke it at any time.",
   "share2.primary": "Share my Passport",
   "share2.creating": "Creating link …",
   "share2.share": "Share",
@@ -1861,7 +1879,8 @@ const en: Record<PassportCopyKey, string> = {
   "share2.copied": "Link copied",
   "share2.ready": "Your link is ready",
   "share2.terms": "Valid for 30 days. You can revoke it at any time.",
-  "share2.whatIsShared": "The link shows verified records only — nothing self-declared, no documents and no reference numbers.",
+  "share2.whatIsShared":
+    "The link shows verified records only — nothing self-declared, no documents and no reference numbers.",
   "share2.nothingVerified":
     "You have nothing verified yet, so a link would be empty. Add your records and submit them for checking first.",
   "share2.more": "More options",
@@ -1869,6 +1888,24 @@ const en: Record<PassportCopyKey, string> = {
   "share2.activeLinks": "Active links",
   "share2.cacheNote":
     "A downloaded or published image can remain with the platform even after you revoke the link. The page itself stops working immediately.",
+  "cw.detailsTitle": "Details",
+  "cw.shareCredential": "Share this credential",
+  "cw.creating": "Creating link …",
+  "cw.addToLinkedIn": "Add to LinkedIn",
+  "cw.linkedInPanel": "Details for LinkedIn",
+  "cw.linkedInHow":
+    "LinkedIn does not fill these in for you. Copy them here, open LinkedIn and paste them into the form.",
+  "cw.liName": "Name",
+  "cw.liOrg": "Issuing organisation",
+  "cw.liIssued": "Issue date",
+  "cw.liExpires": "Expiration date",
+  "cw.liId": "Credential ID",
+  "cw.liUrl": "Credential URL",
+  "cw.copyDetails": "Copy details",
+  "cw.copied": "Details copied",
+  "cw.openLinkedIn": "Open LinkedIn",
+  "cw.notShareable":
+    "Only a verified, current credential can be shared on its own. Submit it for checking first.",
 
   "info.title": "My information",
   "info.lead":
