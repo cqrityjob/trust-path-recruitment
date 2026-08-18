@@ -3,7 +3,6 @@
   "policyVersion": 1,
   "activeDirectory": "supabase/migrations",
   "parkedDirectory": "supabase/archive/parked-migrations",
-
   "parked": [
     {
       "version": "20260720180000",
@@ -12,7 +11,6 @@
       "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
     }
   ],
-
   "neverReplay": [
     {
       "version": "20260730110000",
@@ -24,7 +22,6 @@
       "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
     }
   ],
-
   "approvedDuplicateVersions": [
     {
       "version": "20260813090000",
@@ -32,13 +29,24 @@
       "reason": "Both versions are already recorded in hosted production. Consolidating an already-applied pair is a separate owner-reviewed history operation, not a repository repair. Retained deliberately."
     }
   ],
-
   "hostedLedgerOverrides": [
     {
-      "file": "20260818090001_sp_phase10_self_review_and_decision_events.sql",
-      "hostedVersion": "20260818090001",
-      "reason": "Security Passport Phase 10 is recorded in hosted production as 20260818090001, not 20260818090000. The repository file was renamed to match hosted truth; hosted 20260818090000 is scp_closed_test_governance. This is the resolution of the only version collision in the repository.",
-      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20260818090000','20260818090001');"
+      "file": "20260818090000_sp_phase10_self_review_and_decision_events.sql",
+      "hostedVersion": "20260818090000",
+      "reason": "Hosted production records Passport Phase 10 at 20260818090000. Canonical replay identity and hosted ledger identity agree. A Phase 0C rename to 20260818090001 was WRONG and has been backed out: 20260818090001 does not exist in production.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818090000';"
+    },
+    {
+      "file": "20260818162445_scp_closed_test_governance.sql",
+      "hostedVersion": "20260818162445",
+      "reason": "Production applied closed-test governance through Lovable under the generated UUID version 20260818162445, not under the authored version 20260818090000. The repository file now carries the hosted ledger identity so canonical replay identity and hosted ledger identity agree, and so the 20260818090000 collision with Passport Phase 10 is resolved without inventing a version.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818162445';"
     }
-  ]
+  ],
+  "canonicalProject": {
+    "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
+    "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
+    "ledgerRowsAtSnapshot": 97,
+    "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
+  }
 }
