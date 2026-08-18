@@ -44,6 +44,8 @@ export type AcademyDeliveryErrorCode =
   | "not_found"
   | "not_open"
   | "item_not_on_form"
+  | "incomplete"
+  | "incomplete_best_worst"
   | "load_failed"
   | "save_failed"
   | "submit_failed";
@@ -58,9 +60,18 @@ export class AcademyDeliveryError extends Error {
   }
 }
 
-/** Map a database refusal onto a code the UI can act on, keeping the real
- *  message for the log. A bare "something went wrong" here would repeat the
- *  mistake that made the cd_evidence defect so slow to diagnose. */
+/** Map a database refusal onto a code the UI can act on.
+ *
+ *  A recognised SCP_* refusal is deliberate, participant-safe wording written
+ *  by whoever raised it, so it is carried through. Anything else is an
+ *  UNEXPECTED database error — a constraint name, a SQLSTATE, a fragment of
+ *  SQL — and must never reach a candidate or an employer. It is logged
+ *  server-side, in full, and replaced with a neutral message.
+ *
+ *  This is not "a bare something-went-wrong": the code still tells the UI what
+ *  happened, and the real text is one log line away for whoever is debugging.
+ *  What changes is that the participant no longer sees
+ *  `scp_evidence_safety_is_specified` when a submission fails. */
 function classify(dbMessage: string, fallback: AcademyDeliveryErrorCode): AcademyDeliveryError {
   if (dbMessage.includes("SCP_ATTEMPT_NOT_YOURS")) {
     return new AcademyDeliveryError("not_found", dbMessage);
@@ -74,7 +85,19 @@ function classify(dbMessage: string, fallback: AcademyDeliveryErrorCode): Academ
   if (dbMessage.includes("SCP_ITEM_NOT_ON_FORM")) {
     return new AcademyDeliveryError("item_not_on_form", dbMessage);
   }
-  return new AcademyDeliveryError(fallback, dbMessage);
+  if (dbMessage.includes("SCP_INCOMPLETE_ATTEMPT")) {
+    return new AcademyDeliveryError("incomplete", dbMessage);
+  }
+  if (dbMessage.includes("SCP_INCOMPLETE_BEST_WORST")) {
+    return new AcademyDeliveryError("incomplete_best_worst", dbMessage);
+  }
+  if (dbMessage.includes("SCP_RESPONSE_SHAPE")) {
+    return new AcademyDeliveryError("save_failed", dbMessage);
+  }
+
+  // Unrecognised. Keep the detail in the server log, give the caller nothing.
+  console.error("[academy-delivery] unexpected database error", dbMessage);
+  return new AcademyDeliveryError(fallback, "UNEXPECTED_ERROR");
 }
 
 const LANGUAGE = { sv: "sv-SE", en: "en-GB" } as const;
@@ -118,6 +141,43 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
         savedText: r.saved_text ? String(r.saved_text) : null,
       }),
     );
+  });
+
+/** Where an attempt stands, as far as the participant is allowed to know.
+ *
+ *  Read straight off the attempt row, which `scp_attempts_own_select` already
+ *  lets a participant see for their own attempt only. It exists because the
+ *  item payload alone cannot tell the difference between "not started" and
+ *  "already handed in" — `scp_get_attempt_items` keeps returning items after
+ *  submission, so a reload would otherwise offer to resume a run that is
+ *  closed, and the participant would only discover it by pressing submit
+ *  again.
+ *
+ *  Deliberately four fields. Not the reviews, not the evidence, not the
+ *  scoring state: a participant may know that their answers are in and that a
+ *  person still has to read one, and nothing further. */
+export type AcademyAttemptState = {
+  status: "in_progress" | "submitted" | "scored" | "released" | "abandoned";
+  isOpen: boolean;
+};
+
+export const getAcademyAttemptState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<AcademyAttemptState | null> => {
+    const ctx = context as Ctx;
+    const { data: row, error } = await ctx.supabase
+      .from("scp_attempts")
+      .select("status")
+      .eq("id", data.attemptId)
+      .maybeSingle();
+    // No row means "not yours, or does not exist" — RLS makes those the same
+    // answer, and so does this. The caller treats null exactly like an empty
+    // item list.
+    if (error) throw classify(error.message ?? "", "load_failed");
+    if (!row) return null;
+    const status = String(row.status) as AcademyAttemptState["status"];
+    return { status, isOpen: status === "in_progress" };
   });
 
 /** Save or replace one answer. Idempotent — the RPC upserts on (attempt, item). */

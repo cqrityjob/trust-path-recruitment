@@ -1353,6 +1353,12 @@ export const dictionaries = {
     "assignment.form.orgNotActive":
       "Er organisation måste vara godkänd och aktiv för att kunna tilldela riktiga bedömningar.",
     "assignment.form.useCase": "Syfte",
+    "assignment.form.useCase.impliedByApplicant":
+      "Syftet är rekrytering eftersom mottagaren är en sökande. Välj E-postadress som mottagare om du i stället vill göra en utvecklingsbedömning.",
+    "assignment.form.useCase.impliedByEmployee":
+      "Syftet är utveckling eftersom mottagaren är en medarbetare. Välj E-postadress som mottagare om du i stället vill göra en rekryteringsbedömning.",
+    "assignment.form.error.personContextMismatch":
+      "Syftet stämmer inte med mottagaren. En sökande bedöms i rekrytering, en medarbetare i utveckling.",
     "assignment.form.recipient": "Mottagare",
     "assignment.form.recipientMode.applicant": "Sökande",
     "assignment.form.recipientMode.employee": "Medarbetare",
@@ -1370,6 +1376,8 @@ export const dictionaries = {
     "assignment.form.error.generic": "Tilldelningen kunde inte skapas. Försök igen.",
     "assignment.form.error.orgNotActive":
       "Er organisation måste vara godkänd och aktiv för att tilldela bedömningar.",
+    "assignment.form.error.notAuthorised":
+      "Bara ägare och administratörer kan tilldela bedömningar. Be någon av dem att skicka inbjudan.",
     "assignment.form.error.alreadyActive":
       "Den här personen har redan en pågående inbjudan till det här testet. Vänta tills den är klar, utgången eller avbruten innan du skickar en ny.",
     "assignment.form.success.heading": "Inbjudan skapad",
@@ -2128,6 +2136,11 @@ export const dictionaries = {
       "Svaren har sparats. Du får din utvecklingsrapport när den har frisläppts.",
     "academy.done.reviewPending":
       "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
+    "academy.done.alreadyTitle": "Dina svar är redan inlämnade",
+    "academy.done.alreadyBody":
+      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar. Du får din utvecklingsrapport när den har frisläppts.",
+    "academy.done.releasedBody":
+      "Den här bedömningen är inlämnad och din utvecklingsrapport är frisläppt. Du hittar den under Min karriär.",
     "academy.error.title": "Det gick inte att öppna bedömningen",
     "academy.error.unavailableTitle": "Den här delen är inte tillgänglig ännu",
     "academy.error.unavailableBody":
@@ -2186,6 +2199,10 @@ export const dictionaries = {
     "academy.library.emptyBody": "När ett program har publicerats visas det här.",
     "academy.status.available": "Tillgängligt",
     "academy.status.development": "Under utveckling",
+    "academy.status.closedTest": "Pilot – sluten testning",
+    "academy.library.closedTest.title": "Sluten testning",
+    "academy.library.closedTest.body":
+      "Er organisation har ett tidsbegränsat pilotmedgivande för det här programmet. Innehållet är ännu inte validerat, så resultatet är utvecklingsinriktat underlag – det får inte användas för urval, rangordning eller anställningsbeslut. Varje resultat märks med att det kommer från en sluten testning.",
     "academy.status.fixture": "Testfixtur",
     "academy.assign.email": "Deltagarens e-postadress",
     "academy.assign.deadline": "Sista dag (valfritt)",
@@ -2213,6 +2230,8 @@ export const dictionaries = {
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
     "academy.participants.reassessmentFailed": "Omprövningen kunde inte bokas.",
+    "academy.participants.reassessmentPurposePending":
+      "Omprövning är inte tillgänglig ännu. Ändamålet för omprövning behöver godkännas innan en ny bedömning får begäras.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
     "academy.participants.emptyBody":
       "Tilldela ett program från testbiblioteket för att komma igång.",
@@ -2244,6 +2263,49 @@ export const dictionaries = {
     "academy.reviews.needRationale": "En granskning måste ange sina skäl.",
     "academy.reviews.notAuthorised": "Du har inte behörighet att slutföra granskningar.",
     "academy.reviews.failed": "Granskningen kunde inte sparas.",
+    "academy.reviews.safetyCritical": "Säkerhetskritisk",
+    "academy.reviews.whyNoProvider":
+      "Svaret är skrivet med egna ord och ingen automatisk bedömning är tillgänglig. Det måste läsas av en människa innan det kan bli underlag.",
+    "academy.reviews.whySafety":
+      "Situationen rör säkerhetskritisk bedömning. Sådana svar poängsätts inte automatiskt — de bedöms av en människa som också anger hur allvarligt det är.",
+    "academy.reviews.whyRequested": "Deltagaren har själv begärt att en människa läser svaret.",
+    "academy.reviews.whyOther":
+      "Det här svaret kräver en mänsklig bedömning innan det kan bli underlag.",
+    "academy.reviews.participant": "Deltagare",
+    "academy.reviews.organisation": "Organisation",
+    "academy.reviews.assessment": "Bedömning",
+    "academy.reviews.purpose": "Syfte",
+    "academy.reviews.unknown": "Uppgift saknas",
+    "academy.reviews.purposeDevelopment": "Kompetensutveckling",
+    "academy.reviews.purposeRecruitment": "Rekrytering",
+    "academy.reviews.participantRefNote":
+      "Deltagaren visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
+    "academy.reviews.closedTestBasis":
+      "Stängt test. Innehållet är ännu inte validerat och bedömningen får inte användas som underlag för rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
+    "academy.reviews.chose": "Deltagaren valde",
+    "academy.reviews.choseBest": "Deltagaren valde som bästa handling",
+    "academy.reviews.choseWorst": "Deltagaren valde som sämsta handling",
+    "academy.reviews.noChoice": "Inget val registrerat.",
+    "academy.reviews.evidenceHeading": "Deltagarens underlag",
+    "academy.reviews.itemLabel": "Fråga",
+    "academy.reviews.judgementHeading": "Din bedömning",
+    "academy.reviews.severity": "Allvarlighetsgrad",
+    "academy.reviews.severityHint":
+      "Ange hur allvarlig observationen är. Den kan inte härledas ur svaret automatiskt och följer med underlaget som din bedömning.",
+    "academy.reviews.severityLow": "Låg",
+    "academy.reviews.severityMedium": "Måttlig",
+    "academy.reviews.severityHigh": "Hög",
+    "academy.reviews.severityCritical": "Kritisk",
+    "academy.reviews.needSeverity":
+      "Det här är en säkerhetskritisk observation. Ange allvarlighetsgrad innan du slutför.",
+    "academy.reviews.rationalePrivate":
+      "Motiveringen är intern och visas för granskare. Den ingår inte i deltagarens rapport.",
+    "academy.reviews.nextRemaining":
+      "När alla granskningar för det här försöket är klara blir resultatet tillgängligt för arbetsgivaren att frisläppa. Kvar att granska:",
+    "academy.reviews.nextLast":
+      "Det här är den sista granskningen för försöket. När den är klar blir resultatet tillgängligt för arbetsgivaren att frisläppa. Arbetsgivaren fattar beslutet.",
+    "academy.reviews.completeBlocked":
+      "Välj utfall, ange allvarlighetsgrad där det krävs och skriv en motivering för att kunna slutföra.",
     "academy.results.title": "Kompetensprofil",
     "academy.results.back": "Tillbaka till deltagare",
     "academy.results.releasedOn": "Frisläppt",
@@ -2281,6 +2343,112 @@ export const dictionaries = {
     "academy.maturity.strong": "Starkt underlag",
     "academy.observation.one": "1 observation",
     "academy.observation.many": "observationer",
+    "academy.state.stronglyShown": "Starkt visat",
+    "academy.state.shown": "Visat",
+    "academy.state.followUp": "Behöver följdfråga",
+    "academy.state.notYetShown": "Ännu inte visat",
+    "academy.state.criticalFollowUp": "Kritisk följdfråga",
+    "academy.state.humanReviewed": "läst av en granskare",
+    "academy.report.contextTitle": "Om den här bedömningen",
+    "academy.report.reportIdLabel": "Rapport-ID",
+    "academy.report.personContext": "Sammanhang",
+    "academy.report.personEmployee": "Medarbetare",
+    "academy.report.personCandidate": "Kandidat",
+    "academy.report.purposeReassessment": "Omprövning",
+    "academy.report.version": "Version",
+    "academy.report.versionShort": "v",
+    "academy.report.completed": "Genomförd",
+    "academy.report.started": "Påbörjad",
+    "academy.report.closedTestBanner":
+      "Stängt test. Innehållet är ännu inte validerat och rapporten får inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
+    "academy.report.lineageToggle": "Visa spårbarhet och versioner",
+    "academy.report.instrument": "Instrument",
+    "academy.report.governance": "Governance",
+    "academy.report.validation": "Valideringsstatus",
+    "academy.report.contentStatus": "Innehållsstatus",
+    "academy.report.attemptStatus": "Försöksstatus",
+    "academy.report.reviewStatus": "Granskningar klara",
+    "academy.report.language": "Språk",
+    "academy.report.reportVersion": "Rapportmall",
+    "academy.report.derivation": "Härledning",
+    "academy.report.threshold": "Tröskelversion",
+    "academy.report.scoringModel": "Bedömningsmodell",
+    "academy.report.summaryTitle": "Vad rapporten kan användas till",
+    "academy.report.canSupport": "Kan stödja:",
+    "academy.report.canSupportBody":
+      "ett strukturerat samtal om arbetssätt, val av utvecklingsinsats och vilka frågor som är värda att följa upp.",
+    "academy.report.cannotSupport": "Kan inte stödja:",
+    "academy.report.cannotSupportBody":
+      "ett beslut på egen hand, en jämförelse mellan personer eller ett omdöme om personens lämplighet. Underlaget är ett bedömningstillfälle.",
+    "academy.report.needsCritical": "Kräver mänsklig uppföljning:",
+    "academy.report.needsFollowUp": "Behöver följdfråga:",
+    "academy.report.evidenced": "Visat i underlaget:",
+    "academy.report.notYet": "Ännu inte visat:",
+    "academy.report.safetyCounted":
+      "svar rör säkerhetskritisk bedömning och har lästs av en granskare.",
+    "academy.report.reviewsOutstanding":
+      "Alla granskningar är inte klara. Underlaget kan komma att kompletteras.",
+    "academy.report.employerDecides":
+      "Arbetsgivaren fattar beslutet. Rapporten är ett underlag, inte ett besked.",
+    "academy.report.myContextTitle": "Om den här bedömningen",
+    "academy.report.whyTitle": "Varför gjordes bedömningen?",
+    "academy.report.whyBody":
+      "Din arbetsgivare har bett dig genomföra en bedömning för kompetensutveckling. Den används för att välja rätt stöd och för samtal om arbetssätt — inte som prov och inte som besked om anställning.",
+    "academy.report.humanDecides":
+      "En människa fattar arbetsgivarens beslut. Ingen automatisk bedömning avgör något om dig.",
+    "academy.report.notInability":
+      '"Behöver följdfråga" och "Ännu inte visat" beskriver underlagets omfattning. De betyder inte att du saknar förmågan.',
+    "academy.report.humanReviewOccurred":
+      "Ett eller flera av dina svar rörde säkerhetskritisk bedömning och har lästs av en granskare.",
+    "academy.report.rightsTitle": "Dina uppgifter och dina rättigheter",
+    "academy.report.rightsBody":
+      "Du kan begära rättelse av en faktauppgift, fråga hur underlaget används och begära utdrag eller radering av dina personuppgifter.",
+    "academy.decision.title": "Arbetsgivarens beslut",
+    "academy.decision.lede":
+      "Beslutet fattas av arbetsgivaren efter att rapporten frisläppts och registreras separat från bedömningen. Tidigare beslut ligger kvar — en rättelse ersätter inte historiken.",
+    "academy.decision.none": "Inget beslut är registrerat ännu.",
+    "academy.decision.record": "Registrera beslut",
+    "academy.decision.correct": "Registrera rättelse",
+    "academy.decision.correctionNote":
+      "Det här registreras som en rättelse. Det tidigare beslutet ligger kvar och markeras som ersatt.",
+    "academy.decision.current": "Gällande",
+    "academy.decision.superseded": "Ersatt",
+    "academy.decision.action": "Vald åtgärd",
+    "academy.decision.reason": "Skäl",
+    "academy.decision.note": "Kort saklig notering",
+    "academy.decision.noteHint":
+      "Frivillig. Håll den saklig och kort — det här är en arbetsanteckning om åtgärden, inte ett omdöme om personen.",
+    "academy.decision.nextStep": "Nästa steg",
+    "academy.decision.nextStepOwner": "Ansvarig",
+    "academy.decision.save": "Spara beslut",
+    "academy.decision.saving": "Sparar …",
+    "academy.decision.cancel": "Avbryt",
+    "academy.decision.blocked": "Välj åtgärd och skäl för att kunna spara.",
+    "academy.decision.failed": "Beslutet kunde inte sparas.",
+    "academy.decision.notAuthorised": "Du har inte behörighet att registrera beslut.",
+    "academy.decision.beforeRelease":
+      "Ett beslut kan registreras först när rapporten är frisläppt.",
+    "academy.decision.actionConversation": "Uppföljande samtal",
+    "academy.decision.actionDevelopment": "Tilldela utvecklingsinsats",
+    "academy.decision.actionMoreEvidence": "Komplettera underlaget",
+    "academy.decision.actionSafety": "Säkerhetsuppföljning",
+    "academy.decision.actionNone": "Ingen åtgärd behövs nu",
+    "academy.decision.reasonThin": "Tunt underlag",
+    "academy.decision.reasonSafety": "Säkerhetskritisk notering",
+    "academy.decision.reasonGap": "Identifierat utvecklingsbehov",
+    "academy.decision.reasonMeets": "Motsvarar förväntan",
+    "academy.decision.reasonOther": "Annat",
+    "academy.report.rightsContact":
+      "Kontakta din arbetsgivares kontaktperson, eller CQrityjob via kontaktsidan.",
+    "academy.coverage.title": "Vad underlaget omfattar",
+    "academy.coverage.basisOne":
+      "Underlaget bygger på {observations} observationer från en enda informationskälla.",
+    "academy.coverage.basisMany":
+      "Underlaget bygger på {observations} observationer från {contexts} informationskällor.",
+    "academy.coverage.employerBody":
+      'Ett bedömningstillfälle är en informationskälla. Flera kompetenser landar därför på "Behöver följdfråga" — det betyder att underlaget inte räcker för att uttala sig, inte att personen presterat dåligt. Följdfrågorna nedan är till för samtalet. Ytterligare underlag, till exempel ett praktiskt moment eller ett scenario i skarpt läge, gör bilden starkare.',
+    "academy.coverage.participantBody":
+      'Det här är ett bedömningstillfälle, alltså en informationskälla. Att något står som "Behöver följdfråga" betyder att underlaget inte räcker för att säga hur du arbetar — inte att du gjort fel. Frågorna nedan är till för din egen reflektion och för samtalet med din chef.',
     "academy.safety.title": "Säkerhetskritisk uppföljning",
     "academy.safety.bodyOne": "Ett svar rör säkerhetskritisk bedömning och behöver följas upp.",
     "academy.safety.bodyMany": "svar rör säkerhetskritisk bedömning och behöver följas upp.",
@@ -2337,7 +2505,7 @@ export const dictionaries = {
     "academy.learning.backHome": "Till min kompetensutveckling",
     "academy.learning.unavailable": "Övningen är inte tillgänglig just nu.",
     "academy.reviews.adminLede":
-      "Fritextsvar som väntar på en mänsklig bedömning. Endast den som har granskningsbehörighet ser något här.",
+      "Svar som väntar på en mänsklig bedömning — både fritextsvar och säkerhetskritiska situationsval. Endast den som har granskningsbehörighet ser något här.",
     "academy.reviews.adminEmptyTitle": "Inget väntar på granskning",
     "academy.reviews.adminEmptyBody":
       "Antingen finns inget att granska just nu, eller så saknar ditt konto granskningsbehörighet.",
@@ -3693,6 +3861,12 @@ export const dictionaries = {
     "assignment.form.orgNotActive":
       "Your organisation must be approved and active to assign real assessments.",
     "assignment.form.useCase": "Purpose",
+    "assignment.form.useCase.impliedByApplicant":
+      "The purpose is recruitment because the recipient is an applicant. Choose Email address as the recipient if you want a development assessment instead.",
+    "assignment.form.useCase.impliedByEmployee":
+      "The purpose is development because the recipient is an employee. Choose Email address as the recipient if you want a recruitment assessment instead.",
+    "assignment.form.error.personContextMismatch":
+      "The purpose does not match the recipient. An applicant is assessed in recruitment, an employee in development.",
     "assignment.form.recipient": "Recipient",
     "assignment.form.recipientMode.applicant": "Applicant",
     "assignment.form.recipientMode.employee": "Employee",
@@ -3710,6 +3884,8 @@ export const dictionaries = {
     "assignment.form.error.generic": "This assignment could not be created. Please try again.",
     "assignment.form.error.orgNotActive":
       "Your organisation must be approved and active to assign assessments.",
+    "assignment.form.error.notAuthorised":
+      "Only owners and administrators can assign assessments. Ask one of them to send the invitation.",
     "assignment.form.error.alreadyActive":
       "This person already has an active invitation to this assessment. Wait until it is completed, expired, or cancelled before sending a new one.",
     "assignment.form.success.heading": "Invitation created",
@@ -4463,6 +4639,11 @@ export const dictionaries = {
       "Your answers have been saved. You will receive your development report once it has been released.",
     "academy.done.reviewPending":
       "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
+    "academy.done.alreadyTitle": "Your answers are already submitted",
+    "academy.done.alreadyBody":
+      "This assessment has been submitted and can no longer be changed. Your answers are safe. You will receive your development report once it has been released.",
+    "academy.done.releasedBody":
+      "This assessment has been submitted and your development report has been released. You will find it under My Career.",
     "academy.error.title": "This assessment could not be opened",
     "academy.error.unavailableTitle": "This area is not available yet",
     "academy.error.unavailableBody":
@@ -4521,6 +4702,10 @@ export const dictionaries = {
     "academy.library.emptyBody": "Published programmes will appear here.",
     "academy.status.available": "Available",
     "academy.status.development": "In development",
+    "academy.status.closedTest": "Pilot – closed test",
+    "academy.library.closedTest.title": "Closed test",
+    "academy.library.closedTest.body":
+      "Your organisation holds a time-limited pilot grant for this programme. The content is not yet validated, so the result is developmental input only — it must not be used for selection, ranking or hiring decisions. Every result is labelled as coming from a closed test.",
     "academy.status.fixture": "Test fixture",
     "academy.assign.email": "Participant's email address",
     "academy.assign.deadline": "Deadline (optional)",
@@ -4548,6 +4733,8 @@ export const dictionaries = {
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",
     "academy.participants.reassessmentFailed": "The reassessment could not be scheduled.",
+    "academy.participants.reassessmentPurposePending":
+      "Reassessment is not available yet. Its processing purpose has to be approved before a new assessment can be requested.",
     "academy.participants.emptyTitle": "No participants yet",
     "academy.participants.emptyBody": "Assign a programme from the library to get started.",
     "academy.attempt.inProgress": "In progress",
@@ -4578,6 +4765,49 @@ export const dictionaries = {
     "academy.reviews.needRationale": "A review must state its reasons.",
     "academy.reviews.notAuthorised": "You are not authorised to complete reviews.",
     "academy.reviews.failed": "The review could not be saved.",
+    "academy.reviews.safetyCritical": "Safety-critical",
+    "academy.reviews.whyNoProvider":
+      "The answer is written in the participant's own words and no automated scoring is available. A person has to read it before it can become evidence.",
+    "academy.reviews.whySafety":
+      "This situation involves safety-critical judgement. Such answers are not scored automatically — a person assesses them and states how serious it is.",
+    "academy.reviews.whyRequested": "The participant asked for a person to read this answer.",
+    "academy.reviews.whyOther":
+      "This answer needs a human judgement before it can become evidence.",
+    "academy.reviews.participant": "Participant",
+    "academy.reviews.organisation": "Organisation",
+    "academy.reviews.assessment": "Assessment",
+    "academy.reviews.purpose": "Purpose",
+    "academy.reviews.unknown": "Not recorded",
+    "academy.reviews.purposeDevelopment": "Competence development",
+    "academy.reviews.purposeRecruitment": "Recruitment",
+    "academy.reviews.participantRefNote":
+      "The participant is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
+    "academy.reviews.closedTestBasis":
+      "Closed test. This content is not yet validated and the assessment may not be used as a basis for recruitment decisions. Your judgement is recorded with that limitation.",
+    "academy.reviews.chose": "The participant chose",
+    "academy.reviews.choseBest": "The participant chose as the best action",
+    "academy.reviews.choseWorst": "The participant chose as the worst action",
+    "academy.reviews.noChoice": "No choice recorded.",
+    "academy.reviews.evidenceHeading": "Participant evidence",
+    "academy.reviews.itemLabel": "Question",
+    "academy.reviews.judgementHeading": "Your judgement",
+    "academy.reviews.severity": "Severity",
+    "academy.reviews.severityHint":
+      "State how serious the observation is. It cannot be inferred from the answer, and it travels with the evidence as your judgement.",
+    "academy.reviews.severityLow": "Low",
+    "academy.reviews.severityMedium": "Moderate",
+    "academy.reviews.severityHigh": "High",
+    "academy.reviews.severityCritical": "Critical",
+    "academy.reviews.needSeverity":
+      "This is a safety-critical observation. State a severity before completing it.",
+    "academy.reviews.rationalePrivate":
+      "Your reasons are internal and shown to reviewers. They are not part of the participant's report.",
+    "academy.reviews.nextRemaining":
+      "Once every review for this attempt is complete, the result becomes available for the employer to release. Still to review:",
+    "academy.reviews.nextLast":
+      "This is the last review for this attempt. When it is complete the result becomes available for the employer to release. The employer makes the decision.",
+    "academy.reviews.completeBlocked":
+      "Choose an outcome, state a severity where one is required, and write your reasons to complete the review.",
     "academy.results.title": "Competency profile",
     "academy.results.back": "Back to participants",
     "academy.results.releasedOn": "Released",
@@ -4615,6 +4845,112 @@ export const dictionaries = {
     "academy.maturity.strong": "Strong evidence",
     "academy.observation.one": "1 observation",
     "academy.observation.many": "observations",
+    "academy.state.stronglyShown": "Strongly shown",
+    "academy.state.shown": "Shown",
+    "academy.state.followUp": "Needs a follow-up",
+    "academy.state.notYetShown": "Not yet shown",
+    "academy.state.criticalFollowUp": "Critical follow-up",
+    "academy.state.humanReviewed": "read by a reviewer",
+    "academy.report.contextTitle": "About this assessment",
+    "academy.report.reportIdLabel": "Report ID",
+    "academy.report.personContext": "Context",
+    "academy.report.personEmployee": "Employee",
+    "academy.report.personCandidate": "Candidate",
+    "academy.report.purposeReassessment": "Reassessment",
+    "academy.report.version": "Version",
+    "academy.report.versionShort": "v",
+    "academy.report.completed": "Completed",
+    "academy.report.started": "Started",
+    "academy.report.closedTestBanner":
+      "Closed test. This content is not yet validated, and this report must not on its own inform an employment or placement decision.",
+    "academy.report.lineageToggle": "Show lineage and versions",
+    "academy.report.instrument": "Instrument",
+    "academy.report.governance": "Governance",
+    "academy.report.validation": "Validation status",
+    "academy.report.contentStatus": "Content status",
+    "academy.report.attemptStatus": "Attempt status",
+    "academy.report.reviewStatus": "Reviews complete",
+    "academy.report.language": "Language",
+    "academy.report.reportVersion": "Report template",
+    "academy.report.derivation": "Derivation",
+    "academy.report.threshold": "Threshold version",
+    "academy.report.scoringModel": "Scoring model",
+    "academy.report.summaryTitle": "What this report can be used for",
+    "academy.report.canSupport": "Can support:",
+    "academy.report.canSupportBody":
+      "a structured conversation about ways of working, choosing a development activity, and deciding what is worth following up.",
+    "academy.report.cannotSupport": "Cannot support:",
+    "academy.report.cannotSupportBody":
+      "a decision on its own, a comparison between people, or a judgement about someone's suitability. The evidence is one assessment occasion.",
+    "academy.report.needsCritical": "Needs human follow-up:",
+    "academy.report.needsFollowUp": "Needs a follow-up:",
+    "academy.report.evidenced": "Shown in this evidence:",
+    "academy.report.notYet": "Not yet shown:",
+    "academy.report.safetyCounted":
+      "answers involved safety-critical judgement and were read by a reviewer.",
+    "academy.report.reviewsOutstanding":
+      "Not every review is complete. The evidence may still be added to.",
+    "academy.report.employerDecides":
+      "The employer makes the decision. This report is a basis for it, not a verdict.",
+    "academy.report.myContextTitle": "About this assessment",
+    "academy.report.whyTitle": "Why was this assessment done?",
+    "academy.report.whyBody":
+      "Your employer asked you to complete an assessment for competence development. It is used to choose the right support and to structure a conversation about ways of working — not as an exam, and not as a decision about employment.",
+    "academy.report.humanDecides":
+      "A person makes the employer's decision. No automated assessment decides anything about you.",
+    "academy.report.notInability":
+      '"Needs a follow-up" and "Not yet shown" describe how much evidence there is. They do not mean you lack the ability.',
+    "academy.report.humanReviewOccurred":
+      "One or more of your answers involved safety-critical judgement and was read by a reviewer.",
+    "academy.report.rightsTitle": "Your data and your rights",
+    "academy.report.rightsBody":
+      "You can ask for a factual detail to be corrected, ask how the evidence is used, and request a copy or erasure of your personal data.",
+    "academy.decision.title": "Employer decision",
+    "academy.decision.lede":
+      "The employer decides after the report is released, and it is recorded separately from the assessment. Earlier decisions remain — a correction does not replace the history.",
+    "academy.decision.none": "No decision has been recorded yet.",
+    "academy.decision.record": "Record decision",
+    "academy.decision.correct": "Record a correction",
+    "academy.decision.correctionNote":
+      "This is recorded as a correction. The earlier decision remains and is marked as superseded.",
+    "academy.decision.current": "Current",
+    "academy.decision.superseded": "Superseded",
+    "academy.decision.action": "Chosen action",
+    "academy.decision.reason": "Reason",
+    "academy.decision.note": "Short factual note",
+    "academy.decision.noteHint":
+      "Optional. Keep it factual and brief — this is a working note about the action, not a judgement about the person.",
+    "academy.decision.nextStep": "Next step",
+    "academy.decision.nextStepOwner": "Owner",
+    "academy.decision.save": "Save decision",
+    "academy.decision.saving": "Saving …",
+    "academy.decision.cancel": "Cancel",
+    "academy.decision.blocked": "Choose an action and a reason to save.",
+    "academy.decision.failed": "The decision could not be saved.",
+    "academy.decision.notAuthorised": "You do not have permission to record decisions.",
+    "academy.decision.beforeRelease":
+      "A decision can only be recorded once the report is released.",
+    "academy.decision.actionConversation": "Follow-up conversation",
+    "academy.decision.actionDevelopment": "Assign development activity",
+    "academy.decision.actionMoreEvidence": "Gather more evidence",
+    "academy.decision.actionSafety": "Safety follow-up",
+    "academy.decision.actionNone": "No action needed now",
+    "academy.decision.reasonThin": "Thin evidence",
+    "academy.decision.reasonSafety": "Safety-critical observation",
+    "academy.decision.reasonGap": "Identified development need",
+    "academy.decision.reasonMeets": "Meets expectation",
+    "academy.decision.reasonOther": "Other",
+    "academy.report.rightsContact":
+      "Contact your employer's named contact, or CQrityjob via the contact page.",
+    "academy.coverage.title": "What this evidence covers",
+    "academy.coverage.basisOne":
+      "This rests on {observations} observations from a single source of evidence.",
+    "academy.coverage.basisMany":
+      "This rests on {observations} observations from {contexts} sources of evidence.",
+    "academy.coverage.employerBody":
+      'One assessment occasion is one source. Several competencies therefore read "Needs a follow-up" — that means the evidence is not sufficient to draw a conclusion, not that the person performed poorly. The questions below are there for the conversation. Further evidence, such as a practical check or a live scenario, strengthens the picture.',
+    "academy.coverage.participantBody":
+      'This is one assessment occasion, which is one source. Something reading "Needs a follow-up" means the evidence is not enough to describe how you work — not that you did anything wrong. The prompts below are for your own reflection and for the conversation with your manager.',
     "academy.safety.title": "Safety-critical follow-up",
     "academy.safety.bodyOne":
       "One answer involves safety-critical judgement and needs following up.",
@@ -4673,7 +5009,7 @@ export const dictionaries = {
     "academy.learning.backHome": "To my competence development",
     "academy.learning.unavailable": "This practice is not available right now.",
     "academy.reviews.adminLede":
-      "Written answers awaiting human judgement. Only an account with the review capability sees anything here.",
+      "Answers awaiting human judgement — both written answers and safety-critical situational choices. Only an account with the review capability sees anything here.",
     "academy.reviews.adminEmptyTitle": "Nothing is awaiting review",
     "academy.reviews.adminEmptyBody":
       "Either there is nothing to review right now, or your account does not hold the review capability.",

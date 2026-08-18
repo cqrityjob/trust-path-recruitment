@@ -129,18 +129,83 @@ END $$;
 -- ---------------------------------------------------------------------------
 DO $$
 BEGIN
-  RAISE NOTICE 'ROLLBACK TEST -- Phase 1 (Academy) then Phase 0 (Graph) unwind first';
+  RAISE NOTICE 'ROLLBACK TEST -- closed test, Phase 2, Phase 1 (Academy), Phase 0 (Graph) unwind first';
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 63,
-    'pre-rollback: 63 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2)');
+        AND table_name LIKE 'scp\_%') = 66,
+    'pre-rollback: 66 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
 END $$;
 
--- Phase 2 comes off first of all: its read models depend on Phase 1 columns.
+-- Closed-test governance (20260818090000) comes off before everything else:
+-- it is the newest layer, and it sits ON TOP of Phase 2 — scp_attempts carries
+-- four columns it added, and scp_test_grants references scp_assessment_
+-- definitions from PR-A.
+--
+-- This step was missing until the whole suite could run far enough to reveal
+-- it: the public-flow suite aborted earlier in the run, so this file never
+-- executed and scp_test_grants survived a rollback that claims to remove every
+-- scp_ object. The four scp_attempts columns and the lineage trigger are NOT
+-- dropped individually — scp_attempts itself is dropped in the Phase 2 unwind
+-- below, and they go with it.
+--
+-- The grant rows are dropped, not preserved. A governance grant is permission
+-- to run content that no longer exists after this rollback; keeping it would
+-- leave an organisation holding a pilot grant against nothing.
+DROP FUNCTION IF EXISTS
+  public.scp_grant_permits_assignment(uuid, uuid, text, text, boolean) CASCADE;
+DROP FUNCTION IF EXISTS
+  public.scp_has_test_grant(uuid, public.scp_governance_mode, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_governance_lineage_immutable() CASCADE;
+-- The purpose mapping (20260820090000) has to be named explicitly. Most SCP
+-- functions disappear with `DROP TYPE scp_governance_mode CASCADE` below,
+-- because that enum appears in their signature or return type. This one takes
+-- text and returns text, so nothing cascades to it and it would otherwise
+-- survive a rollback that claims to remove every scp_ object.
+DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text) CASCADE;
+-- Phase 8 (20260820100000). Same reasoning: the state projection returns text
+-- and takes no governance type, so it survives the enum cascade and has to be
+-- named. The follow-up prompt catalogue is report content and goes with it.
+DROP FUNCTION IF EXISTS public.scp_display_evidence_state(uuid, uuid, text) CASCADE;
+-- 20260820130000: the attempt-scoped pair. Same reasoning again -- uuid/text
+-- signatures, so the governance-enum cascade does not reach them.
+DROP FUNCTION IF EXISTS public.scp_attempt_maturity(uuid, uuid, text, timestamptz) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASCADE;
+DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
+-- Part F (20260820120000). The decision table references scp_attempts, so it
+-- has to go before the Phase 2 unwind reaches them.
+DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, text, text, text, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_decisions(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_decision_append_only() CASCADE;
+DROP TABLE    IF EXISTS public.scp_employer_report_decisions CASCADE;
+-- Phase 8.5A (20260821090000). The SCP duplicate protection lives ON the
+-- pre-existing assessment_assignments table, so it cannot ride out on a
+-- DROP TABLE the way the rest of the domain does. The three trigger functions
+-- return `trigger`, so the governance-enum cascade below does not reach them
+-- either: they have to be named. CASCADE takes their triggers with them, and
+-- dropping the column takes the partial unique index.
+--
+-- The rest of the phase needs no unwind. The read-only policies it installed
+-- sit on scp_ tables that are dropped outright below. The narrowed legacy
+-- write policies (assignments_employer_insert / _update, owner+admin instead
+-- of any member) are deliberately NOT reopened: rolling the SCP platform back
+-- is not a reason to hand an ordinary member write access to the legacy
+-- assignment table again, and the legacy product never relied on it.
+DROP FUNCTION IF EXISTS public.scp_guard_one_open_assignment() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_mark_assignment_open() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_clear_assignment_open() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_sync_assignment_terminal_status() CASCADE;
+ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_open;
+DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
+DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
+
+-- Phase 2 comes off next: its read models depend on Phase 1 columns.
+-- The participant read model (20260819090000) is a read model over
+-- assessment_assignments, which is pre-existing and stays; only the view goes.
+DROP VIEW IF EXISTS public.scp_rm_employer_participants CASCADE;
 DROP VIEW IF EXISTS public.scp_rm_employer_assignments CASCADE;
 DROP VIEW IF EXISTS public.scp_rm_review_queue CASCADE;
 DROP FUNCTION IF EXISTS public.scp_resolve_participant_identity(uuid, uuid) CASCADE;
@@ -157,7 +222,12 @@ DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numer
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
 -- Phase 2e: the remaining Assessment Center operations.
 DROP FUNCTION IF EXISTS public.scp_employer_library(uuid) CASCADE;
+-- Both signatures: the ungoverned 5-argument original and the governed
+-- 7-argument replacement from 20260819100000. A replay that stopped before
+-- that migration still has the old one.
 DROP FUNCTION IF EXISTS public.scp_employer_assign(uuid, uuid, text, timestamptz, text) CASCADE;
+DROP FUNCTION IF EXISTS
+  public.scp_employer_assign(uuid, uuid, text, timestamptz, text, text, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_participants(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_review_pressure(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_development_recommendations(uuid) CASCADE;
@@ -304,6 +374,20 @@ BEGIN
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
         AND table_name LIKE 'scp\_%') = 23,
     'Phase 0 rollback: back to PR-A''s 23 scp_ base tables');
+  -- Named explicitly, because a count alone told us only that SOMETHING was
+  -- left over — it took a manual query to find out what.
+  PERFORM pg_temp.assert(
+    to_regclass('public.scp_test_grants') IS NULL,
+    'closed-test rollback: the grant table is gone');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_type WHERE typname = 'scp_governance_mode') = 0,
+    'closed-test rollback: the governance_mode type is gone');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN ('scp_has_test_grant','scp_grant_permits_assignment',
+                          'scp_guard_governance_lineage_immutable')) = 0,
+    'closed-test rollback: the grant functions and lineage guard are gone');
   -- The widened vocabularies are deliberately LEFT in place: they are supersets,
   -- so no existing row becomes invalid, and narrowing them again would be the
   -- only genuinely destructive step in this rollback.
@@ -447,6 +531,19 @@ BEGIN
     (SELECT count(*) FROM information_schema.columns
       WHERE table_name = 'assessment_versions' AND column_name = 'retired_reason') = 0,
     'rollback removes the additive retired_reason column');
+
+  -- Phase 8.5A added one column to a legacy table. A rollback that left it
+  -- behind would leave the legacy path carrying an SCP lifecycle flag that
+  -- nothing maintains.
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.columns
+      WHERE table_name = 'assessment_assignments' AND column_name = 'scp_open') = 0,
+    'rollback removes the additive scp_open column from the legacy table');
+
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_indexes
+      WHERE indexname = 'scp_assignments_one_open_per_subject_idx') = 0,
+    'rollback removes the SCP duplicate-protection index');
 
   PERFORM pg_temp.assert(
     (SELECT employer_visible FROM public.assessments WHERE id = 'security-guard-foundation'),

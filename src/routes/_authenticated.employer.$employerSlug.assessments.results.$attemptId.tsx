@@ -8,6 +8,7 @@
 // Safety-critical findings render from their own field, above the fold,
 // regardless of how strong the rest of the profile is.
 
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,9 +17,12 @@ import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
+import { EmployerDecisionPanel } from "@/components/academy/EmployerDecisionPanel";
+import { DecisionSummary, ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
-  maturityLabelKey,
-  MaturityRow,
+  EvidenceCoverage,
+  evidenceStateLabelKey,
+  EvidenceStateRow,
   NoEvidenceState,
   ReportLimitations,
   SafetyFlagNotice,
@@ -27,6 +31,7 @@ import {
   getAcademyReport,
   getDevelopmentRecommendations,
   getSubjectProgress,
+  resolveParticipantIdentity,
   type ProgressRow,
 } from "@/lib/security-competency/academy-employer.functions";
 
@@ -42,16 +47,35 @@ function ResultsRoute() {
   const { employerSlug, attemptId } = Route.useParams();
   return (
     <AcademyPage employerSlug={employerSlug}>
-      {() => <Report attemptId={attemptId} employerSlug={employerSlug} />}
+      {(ws) => (
+        <Report
+          attemptId={attemptId}
+          employerSlug={employerSlug}
+          employerId={ws.employerId}
+          canDecide={ws.role === "owner" || ws.role === "admin"}
+        />
+      )}
     </AcademyPage>
   );
 }
 
-function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: string }) {
+function Report({
+  attemptId,
+  employerSlug,
+  employerId,
+  canDecide,
+}: {
+  attemptId: string;
+  employerSlug: string;
+  employerId: string;
+  canDecide: boolean;
+}) {
   const { t, lang } = useT();
   const reportFn = useServerFn(getAcademyReport);
   const recsFn = useServerFn(getDevelopmentRecommendations);
   const progressFn = useServerFn(getSubjectProgress);
+  const resolveFn = useServerFn(resolveParticipantIdentity);
+  const [identity, setIdentity] = useState<string | null>(null);
 
   const report = useQuery({
     queryKey: ["academy", "report", attemptId, "employer"],
@@ -85,10 +109,18 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
         className="rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-6"
       >
         <p className="text-sm font-semibold text-foreground">
-          {t(kind === "backend_unavailable" ? "academy.error.unavailableTitle" : "academy.error.failedTitle")}
+          {t(
+            kind === "backend_unavailable"
+              ? "academy.error.unavailableTitle"
+              : "academy.error.failedTitle",
+          )}
         </p>
         <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t(kind === "backend_unavailable" ? "academy.error.unavailableBody" : "academy.error.failedBody")}
+          {t(
+            kind === "backend_unavailable"
+              ? "academy.error.unavailableBody"
+              : "academy.error.failedBody",
+          )}
         </p>
       </div>
     );
@@ -111,7 +143,7 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
       <Link
         to="/employer/$employerSlug/assessments/participants"
         params={{ employerSlug }}
-        className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="no-print mb-4 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("academy.results.back")}
@@ -124,7 +156,40 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
         )}`}
       />
 
+      <ReportContextPanel
+        context={r.context}
+        reportId={r.id}
+        releasedAt={r.releasedAt}
+        identityAction={
+          identity ? (
+            <p className="text-[13px] text-foreground">{identity}</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                void resolveFn({ data: { employerId, subjectId: r.subjectId } }).then((x) =>
+                  setIdentity(x?.email ?? t("academy.participants.identityRefused")),
+                )
+              }
+              className="inline-flex min-h-[44px] items-center rounded-[8px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.participants.showIdentity")}
+            </button>
+          )
+        }
+      />
+
+      <DecisionSummary lines={r.lines} context={r.context} safetyCount={r.safetyFlags.length} />
+
       <SafetyFlagNotice count={r.safetyFlags.length} />
+
+      <EvidenceCoverage
+        observations={
+          r.context?.evidenceObservations ?? r.lines.reduce((n, l) => n + l.observations, 0)
+        }
+        contexts={r.context?.evidenceContexts ?? 1}
+        bodyKey="academy.coverage.employerBody"
+      />
 
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">
@@ -137,11 +202,12 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
           />
         ) : (
           r.lines.map((l) => (
-            <MaturityRow
+            <EvidenceStateRow
               key={l.competencyCode}
               name={lang === "en" ? l.competencyNameEn : l.competencyNameSv}
-              level={l.maturityLevel}
+              state={l.evidenceState}
               observations={l.observations}
+              prompt={lang === "en" ? l.followupEn : l.followupSv}
             />
           ))
         )}
@@ -187,6 +253,8 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
         )}
       </section>
 
+      <EmployerDecisionPanel attemptId={attemptId} canDecide={canDecide} />
+
       <ReportLimitations items={limitations} />
     </>
   );
@@ -227,7 +295,7 @@ function ProgressTable({ rows }: { rows: ProgressRow[] }) {
                   const cell = at(c, d);
                   return (
                     <td key={d} className="py-2.5 pr-4 text-muted-foreground">
-                      {cell ? t(maturityLabelKey(cell.maturityLevel)) : "—"}
+                      {cell ? t(evidenceStateLabelKey(cell.evidenceState)) : "—"}
                     </td>
                   );
                 })}

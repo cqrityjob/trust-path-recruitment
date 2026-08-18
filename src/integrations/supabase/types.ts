@@ -8480,13 +8480,16 @@ export type Database = {
         Args: {
           _assessment_version_id: string
           _deadline?: string
+          _employee_id?: string
           _employer_id: string
           _language?: string
           _recipient_email: string
+          _use_case?: string
         }
         Returns: {
           assignment_id: string
           attempt_id: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
           subject_id: string
         }[]
       }
@@ -8826,6 +8829,7 @@ export type Database = {
         | "secondary"
         | "community"
         | "internal"
+      scp_governance_mode: "development" | "closed_test" | "recruitment"
     }
     CompositeTypes: {
       [_ in never]: never

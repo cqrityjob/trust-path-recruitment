@@ -1,13 +1,30 @@
 -- Security Career Discovery v3.1 — the personal layer, at the database level.
 --
--- Proves the frozen MVP is actually administrable end to end:
+-- Proves the MVP is actually administrable end to end:
 --
 --     2 Context  →  22 Career DNA  →  4 Discovery Path   =  28
 --
--- The scored set is the 22 CQ items: CQ21/CQ22 joined it with CID17 in
--- 20260816150000_cd_v31_content_v2_compliance_dimension.sql. A stored report
--- still cannot move, and that is now asserted directly rather than implied by
--- a frozen count -- see groups C6 and C10 in career_discovery_v31_completion_test.sql.
+-- and, more importantly, proves where the scoring boundary sits: the personal
+-- layer is contextual evidence, and only the CQ items are scored.
+--
+-- ── ON THE CAREER DNA COUNT ─────────────────────────────────────────────
+--
+-- This suite was originally written around a 20-item Career DNA block, and
+-- said so in about a dozen places. 20260816150000_cd_v31_content_v2_compliance
+-- _dimension.sql then added CQ21/CQ22 additively, taking the scored set to 22.
+--
+-- The product count is now pinned ONCE, deliberately, in group L1. Everything
+-- downstream derives its expectation from the registry via t_shape, because
+-- those groups are about persistence, routing and the scoring boundary — not
+-- about how many questions the instrument has. Restating the number in each of
+-- them is what turned one approved content change into a dozen red assertions.
+--
+-- What protects stored reports is NOT this count: cd_report_snapshots freezes
+-- its own content/scoring/pattern versions per row, so a snapshot is
+-- reproducible against the version it was taken under no matter how the live
+-- definition grows afterwards. That property is asserted in the completion
+-- suite (group C5, snapshot stability under later change), which is where it
+-- belongs.
 --
 -- Runs against PRODUCTION v3.1 ('active'), not a fixture, because the point is
 -- that a real candidate's session works. Everything rolls back.
@@ -41,6 +58,11 @@ DO $$ BEGIN RAISE NOTICE 'GROUP L1 — the registry holds all 28 questions'; END
 
 -- =========================================================================
 -- Group L1 — registry shape
+--
+-- THE pin. These four assertions are the only place the v3.1 item counts are
+-- stated as literals. Changing the instrument's size is a product decision and
+-- must land here, visibly, as a deliberate edit — never as a silent pass
+-- because every count in the file happened to be derived.
 -- =========================================================================
 
 SELECT pg_temp.ok(
@@ -49,16 +71,14 @@ SELECT pg_temp.ok(
     WHERE dv.definition_version = '2026-scd-v3.1.0') = 44,
   'L1.1 v3.1 registers 44 items (2 context + 22 core + 20 adaptive)');
 
--- The load-bearing assertion: it pins the scored set, so a silent change to
--- Career DNA is never absorbed quietly. A failure here means the instrument
--- moved and this expectation must be re-approved deliberately -- it does NOT
--- mean stored reports are suspect. Each snapshot freezes its own version tuple
--- and payload, proven by groups C6 and C10 in career_discovery_v31_completion_test.sql.
+-- The scored set is the Career DNA contract. It moved from 20 to 22 exactly
+-- once, additively, in 20260816150000 (CQ21/CQ22). It must not drift again
+-- without this line changing with it.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
     WHERE dv.definition_version = '2026-scd-v3.1.0' AND di.is_scored) = 22,
-  'L1.2 the scored set is STILL exactly twenty-two items');
+  'L1.2 the scored set is exactly the twenty-two Career DNA items');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
@@ -66,6 +86,30 @@ SELECT pg_temp.ok(
     WHERE dv.definition_version = '2026-scd-v3.1.0'
       AND di.is_scored AND di.item_kind IN ('scale','single_choice')) = 22,
   'L1.3 every scored item is a Career DNA item');
+
+-- The registry shape the rest of this suite administers, read from the live
+-- definition rather than restated. `run_total` is what one candidate actually
+-- answers: every core and context item, plus the four questions on the single
+-- Discovery Path they were routed to.
+CREATE TEMP TABLE t_shape AS
+SELECT
+  count(*) FILTER (WHERE di.item_kind IN ('scale','single_choice'))      AS core,
+  count(*) FILTER (WHERE di.item_kind = 'context')                        AS context,
+  4::bigint                                                              AS path_items,
+  count(*) FILTER (WHERE di.item_kind IN ('scale','single_choice'))
+    + count(*) FILTER (WHERE di.item_kind = 'context') + 4                AS run_total,
+  count(*) FILTER (WHERE di.item_kind IN ('scale','single_choice'))
+    + count(*) FILTER (WHERE di.item_kind = 'context')                    AS non_adaptive,
+  count(*) FILTER (WHERE di.item_kind = 'context') + 4                    AS run_unscored
+  FROM public.cd_definition_items di
+  JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+ WHERE dv.definition_version = '2026-scd-v3.1.0';
+
+-- t_shape must agree with the pin above, or the derivation is measuring
+-- something other than the instrument under test.
+SELECT pg_temp.ok(
+  (SELECT core = 22 AND context = 2 AND run_total = 28 FROM t_shape),
+  'L1.1b the derived run shape matches the pinned contract (2 + 22 + 4 = 28)');
 
 SELECT pg_temp.ok(
   (SELECT bool_and(NOT di.is_scored) FROM public.cd_definition_items di
@@ -91,12 +135,24 @@ SELECT pg_temp.ok(
       AND di.item_id IN ('CTX_CURRENT_STATUS','CTX_DISCOVERY_GOAL')) = 2,
   'L1.6 both original context questions are registered, under their own ids');
 
--- v3.0 is untouched — the same 42 rows and the same 20 scored.
+-- v3.0 is untouched — the same 42 rows and the same 20 scored. This is the
+-- historical half of the CQ21/CQ22 change: growing v3.1 must not reach
+-- backwards into the superseded instrument that older reports were taken
+-- against.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items di
      JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
     WHERE dv.definition_version = '2026-scd-v3.0.0') = 42,
   'L1.7 v3.0 still holds its own 42 items');
+
+-- The comment above claimed this; now it is checked. v3.0's scored set stays
+-- at 20 while v3.1's is 22 — the two instruments are allowed to differ, and
+-- the older one is not allowed to move.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_definition_items di
+     JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+    WHERE dv.definition_version = '2026-scd-v3.0.0' AND di.is_scored) = 20,
+  'L1.7b v3.0 still scores its own twenty items, unaffected by CQ21/CQ22');
 
 -- The same item id means the same thing in both versions. If these ever
 -- diverge, historical evidence stops being interpretable.
@@ -153,7 +209,7 @@ SELECT pg_temp.must_fail(
   'CD_CONTEXT_STATUS_IMMUTABLE',
   'L2.3 routing cannot be changed once assigned');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP L3 — all 26 answers persist'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP L3 — every answer in the run persists'; END $$;
 
 -- =========================================================================
 -- Group L3 — evidence for the whole run
@@ -165,7 +221,7 @@ VALUES
   ((SELECT sess FROM t_sess), 'CTX_CURRENT_STATUS', 'security_leader'),
   ((SELECT sess FROM t_sess), 'CTX_DISCOVERY_GOAL', 'understand_strengths');
 
--- Stage 2 · the twenty Career DNA answers.
+-- Stage 2 · the Career DNA answers, every scored item in the registry.
 INSERT INTO public.cd_evidence (session_id, item_id, answer_value, option_id)
 SELECT (SELECT sess FROM t_sess), di.item_id,
        CASE WHEN di.item_kind = 'scale' THEN '7' ELSE di.item_id || '_A' END,
@@ -184,18 +240,23 @@ SELECT (SELECT sess FROM t_sess), di.item_id, 'a', ARRAY['leadership_signal']
    AND di.item_kind = 'adaptive' AND di.adaptive_path = 'E';
 
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_sess)) = 28,
-  'L3.1 all twenty-eight answers persist');
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_sess))
+  = (SELECT run_total FROM t_shape),
+  'L3.1 every answer in the run persists — none dropped');
 
 -- Metadata is DERIVED from the registry, not taken from the caller. The split
--- below is the scoring boundary, as stored.
+-- below is the scoring boundary, as stored: the Career DNA block is scored,
+-- and the personal layer — 2 context + 4 Discovery Path — never is. That
+-- boundary is the point of these two, not the size of either side.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
-    WHERE session_id = (SELECT sess FROM t_sess) AND is_scored) = 22,
-  'L3.2 exactly twenty-two answers are stored as scored');
+    WHERE session_id = (SELECT sess FROM t_sess) AND is_scored)
+  = (SELECT core FROM t_shape),
+  'L3.2 exactly the Career DNA answers are stored as scored');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
-    WHERE session_id = (SELECT sess FROM t_sess) AND NOT is_scored) = 6,
+    WHERE session_id = (SELECT sess FROM t_sess) AND NOT is_scored)
+  = (SELECT run_unscored FROM t_shape),
   'L3.3 the six personal-layer answers are stored as unscored');
 SELECT pg_temp.ok(
   (SELECT bool_and(evidence_class = 'contextual_self_report') FROM public.cd_evidence
@@ -218,8 +279,8 @@ DO $$ BEGIN RAISE NOTICE 'GROUP L3b — the payload the APPLICATION actually sen
 -- The production failure this group exists to prevent: persistPublicV31Run
 -- sent `answer_tags: null` on every row. cd_evidence.answer_tags is
 -- `text[] NOT NULL DEFAULT ARRAY[]::text[]`, and an EXPLICIT null is not an
--- omitted column — the default only applies when the column is absent. All 26
--- rows were rejected with SQLSTATE 23502, the whole multi-row statement
+-- omitted column — the default only applies when the column is absent. Every
+-- row was rejected with SQLSTATE 23502, the whole multi-row statement
 -- aborted, cd_evidence stayed empty, and the candidate lost a completed run.
 --
 -- Group L3 above inserts WITHOUT naming answer_tags, so it exercises the
@@ -253,7 +314,7 @@ SELECT pg_temp.ok(
   'L3b.2 the rejected statement left no partial rows');
 
 -- The corrected payload: every column the application sends, named explicitly,
--- with [] on the twenty-two non-adaptive rows.
+-- with [] on the non-adaptive rows.
 INSERT INTO public.cd_evidence
   (session_id, item_id, item_version, answer_value, option_id, answer_tags)
 SELECT (SELECT sess FROM t_payload), di.item_id, 1,
@@ -281,8 +342,9 @@ SELECT (SELECT sess FROM t_payload), di.item_id, 1, 'a', NULL, ARRAY['operationa
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
-    WHERE session_id = (SELECT sess FROM t_payload)) = 28,
-  'L3b.3 the corrected payload persists all twenty-eight rows');
+    WHERE session_id = (SELECT sess FROM t_payload))
+  = (SELECT run_total FROM t_shape),
+  'L3b.3 the corrected payload persists every row in the run');
 
 -- An empty array is stored as empty, never as null — so a later read cannot
 -- reintroduce the same confusion.
@@ -294,8 +356,9 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_evidence
     WHERE session_id = (SELECT sess FROM t_payload)
-      AND cardinality(answer_tags) = 0) = 24,
-  'L3b.5 the twenty-four non-adaptive rows store an empty tag array');
+      AND cardinality(answer_tags) = 0)
+  = (SELECT non_adaptive FROM t_shape),
+  'L3b.5 every non-adaptive row stores an empty tag array, never null');
 
 -- A non-empty array on a non-adaptive item is still refused. The fix must not
 -- have been "send tags everywhere".
@@ -363,18 +426,18 @@ DO $$ BEGIN RAISE NOTICE 'GROUP L5 — the completion contract is unchanged'; EN
 -- Group L5 — the report path did not move
 -- =========================================================================
 
--- The 26-answer session validates: the six extra answers neither satisfy nor
--- obstruct the scored-evidence requirement.
+-- The full session validates: the six personal-layer answers neither satisfy
+-- nor obstruct the scored-evidence requirement.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
      (SELECT sess FROM t_sess))) = 0,
-  'L5.1 a full 26-answer run raises NO validation failure at all');
+  'L5.1 a full run raises NO validation failure at all');
 
--- And the validator still counts twenty, not twenty-six. Proven by answering
--- ONLY the Career DNA block on a second session: the database is satisfied,
--- because the personal layer is a product requirement enforced before the
--- write, not a scoring requirement. Stated explicitly so nobody later reads
--- this as the database guaranteeing 26.
+-- And the validator counts the Career DNA block only, not the whole run.
+-- Proven by answering ONLY that block on a second session: the database is
+-- satisfied, because the personal layer is a product requirement enforced
+-- before the write, not a scoring requirement. Stated explicitly so nobody
+-- later reads this as the database guaranteeing the full run.
 INSERT INTO public.cd_sessions
   (definition_version_id, user_id, locale, status, context_status)
 SELECT id, '11111111-aaaa-0000-0000-000000000002', 'sv', 'in_progress', 'exploring_security'
@@ -397,7 +460,7 @@ SELECT (SELECT sess FROM t_core_only), di.item_id,
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
      (SELECT sess FROM t_core_only))) = 0,
-  'L5.2 the scored requirement is still the scored core only (22), not the full run (28)');
+  'L5.2 the scored requirement is the Career DNA block alone, not the whole run');
 
 -- Removing one Career DNA answer DOES break it. Proves L5.1 and L5.2 pass for
 -- the right reason rather than because the validator stopped counting.
@@ -408,7 +471,26 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
      (SELECT sess FROM t_core_only))
     WHERE code = 'CD_CORE_INCOMPLETE') = 1,
-  'L5.3 nineteen Career DNA answers still fail the validator');
+  'L5.3 one missing Career DNA answer still fails the validator');
+
+-- CQ22 specifically. CQ21/CQ22 were added after this suite was written, so
+-- prove the validator genuinely requires the NEW items too rather than only
+-- the original twenty — that is the difference between an instrument that grew
+-- and one that merely registered two rows nothing reads.
+INSERT INTO public.cd_evidence (session_id, item_id, answer_value)
+VALUES ((SELECT sess FROM t_core_only), 'CQ01', '4');
+
+DELETE FROM public.cd_evidence
+ WHERE session_id = (SELECT sess FROM t_core_only) AND item_id = 'CQ22';
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_v31_validate_session_evidence(
+     (SELECT sess FROM t_core_only))
+    WHERE code = 'CD_CORE_INCOMPLETE') = 1,
+  'L5.3b a missing CQ22 fails the validator exactly like an original item');
+
+INSERT INTO public.cd_evidence (session_id, item_id, answer_value)
+VALUES ((SELECT sess FROM t_core_only), 'CQ22', '4');
 
 -- Deleting every personal-layer answer does NOT break the report path. This is
 -- the clean statement that Career DNA cannot depend on context.
@@ -426,7 +508,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP L6 — every path completes and produces a repor
 -- Group L6 — all five Discovery Paths, end to end
 -- =========================================================================
 --
--- 26 answers -> validation -> cd_v31_complete_session -> one immutable
+-- Full run -> validation -> cd_v31_complete_session -> one immutable
 -- snapshot, for every path. This is the journey the candidate actually takes,
 -- and it is what the answer_tags defect broke: the run reached this point and
 -- died on the evidence insert.
@@ -450,7 +532,7 @@ BEGIN
 
     SELECT adaptive_path INTO _path FROM public.cd_sessions WHERE id = _sess;
 
-    -- The 20 Career DNA answers, with answer_tags named explicitly, as the
+    -- The Career DNA answers, with answer_tags named explicitly, as the
     -- application sends them.
     INSERT INTO public.cd_evidence
       (session_id, item_id, item_version, answer_value, option_id, answer_tags)
@@ -479,15 +561,16 @@ BEGIN
        AND di.item_kind = 'adaptive' AND di.adaptive_path = _path;
 
     SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess;
-    PERFORM pg_temp.ok(_n = 28, format('L6.1 %s: all twenty-eight answers persist', _status));
+    PERFORM pg_temp.ok(_n = (SELECT run_total FROM t_shape),
+      format('L6.1 %s: every answer in the run persists', _status));
 
     SELECT count(*) INTO _n FROM public.cd_evidence WHERE session_id = _sess AND is_scored;
-    PERFORM pg_temp.ok(_n = 22,
-      format('L6.2 %s: Career DNA rests on exactly the twenty-two scored answers', _status));
+    PERFORM pg_temp.ok(_n = (SELECT core FROM t_shape),
+      format('L6.2 %s: Career DNA rests on exactly the scored answers', _status));
 
     SELECT count(*) INTO _n FROM public.cd_evidence
      WHERE session_id = _sess AND NOT is_scored;
-    PERFORM pg_temp.ok(_n = 6,
+    PERFORM pg_temp.ok(_n = (SELECT run_unscored FROM t_shape),
       format('L6.3 %s: the six context and Discovery Path answers stay unscored', _status));
 
     PERFORM pg_temp.ok(

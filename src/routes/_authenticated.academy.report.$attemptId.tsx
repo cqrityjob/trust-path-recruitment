@@ -14,9 +14,11 @@ import {
   AssessmentShell,
   AssessmentPanel,
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
-  maturityLabelKey,
-  MaturityRow,
+  EvidenceCoverage,
+  evidenceStateLabelKey,
+  EvidenceStateRow,
   NoEvidenceState,
   ReportLimitations,
   SafetyFlagNotice,
@@ -87,7 +89,7 @@ function ParticipantReport() {
     <AssessmentShell wide>
       <Link
         to="/academy"
-        className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="no-print mb-4 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("academy.report.back")}
@@ -108,7 +110,47 @@ function ParticipantReport() {
         {t("academy.report.whatThisIs")}
       </p>
 
+      {/* Why this happened, in the participant's own terms and before anything
+          is said about them. The employer report opens with lineage; this one
+          opens with a reason, because those are the two audiences' first
+          questions and they are not the same question. */}
+      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.whyTitle")}</h2>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.whyBody")}
+        </p>
+        <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
+          {t("academy.report.humanDecides")}
+        </p>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.notInability")}
+        </p>
+        {r.context?.humanReviewOccurred && (
+          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("academy.report.humanReviewOccurred")}
+          </p>
+        )}
+      </section>
+
+      {/* Same component as the employer surface, fed the participant's own
+          frozen context -- which carries no lifecycle status, no review counts
+          and no scoring model version, because the database never put them
+          there. */}
+      <ReportContextPanel context={r.context} reportId={r.id} releasedAt={r.releasedAt} />
+
+      {/* The participant snapshot carries no severity-bearing flags by design,
+          so this renders nothing here. It stays because the component is the
+          one place that decides how a safety notice looks, and a future
+          participant-safe notice belongs in it rather than beside it. */}
       <SafetyFlagNotice count={r.safetyFlags.length} />
+
+      <EvidenceCoverage
+        observations={
+          r.context?.evidenceObservations ?? r.lines.reduce((n, l) => n + l.observations, 0)
+        }
+        contexts={r.context?.evidenceContexts ?? 1}
+        bodyKey="academy.coverage.participantBody"
+      />
 
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">
@@ -121,11 +163,13 @@ function ParticipantReport() {
           />
         ) : (
           r.lines.map((l) => (
-            <MaturityRow
+            <EvidenceStateRow
               key={l.competencyCode}
               name={lang === "en" ? l.competencyNameEn : l.competencyNameSv}
-              level={l.maturityLevel}
+              state={l.evidenceState}
               observations={l.observations}
+              prompt={lang === "en" ? l.reflectionEn : l.reflectionSv}
+              humanReviewed={l.humanReviewed}
             />
           ))
         )}
@@ -171,12 +215,22 @@ function ParticipantReport() {
                 </span>
                 <span className="text-muted-foreground">
                   {" "}
-                  — {t(maturityLabelKey(p.maturityLevel))}
+                  — {t(evidenceStateLabelKey(p.evidenceState))}
                 </span>
               </li>
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.rightsTitle")}</h2>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.rightsBody")}
+        </p>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.rightsContact")}
+        </p>
       </section>
 
       <ReportLimitations items={limitations} />

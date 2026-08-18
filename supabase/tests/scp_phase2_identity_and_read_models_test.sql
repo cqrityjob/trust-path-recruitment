@@ -54,12 +54,23 @@ SELECT pg_temp.ok(
 
 -- The read models are security_invoker, so they cannot become a definer
 -- back door either.
+-- Every scp_rm_ view, not a hardcoded pair. The named list would have passed
+-- unchanged while a third read model was added without security_invoker, which
+-- is precisely the drift this assertion exists to catch.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_class c
-    WHERE c.relname IN ('scp_rm_employer_assignments','scp_rm_review_queue')
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'v' AND c.relname LIKE 'scp\_rm\_%'
       AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(c.reloptions,'{}'::text[])) o
                        WHERE o = 'security_invoker=true')) = 0,
-  'P2A.3 both new read models are security_invoker');
+  'P2A.3 every scp_rm_ read model is security_invoker');
+
+-- And there is more than one, so P2A.3 cannot pass vacuously.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_class c
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'v' AND c.relname LIKE 'scp\_rm\_%') >= 3,
+  'P2A.3b at least three read models exist to have been checked');
 
 -- The review queue exposes no protected scoring content.
 SELECT pg_temp.ok(

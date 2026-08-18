@@ -23,6 +23,7 @@ import {
   listAcademyParticipants,
   releaseAcademyReport,
   resolveParticipantIdentity,
+  listAvailablePurposeCodes,
   scheduleAcademyReassessment,
   type ParticipantRow,
 } from "@/lib/security-competency/academy-employer.functions";
@@ -125,6 +126,16 @@ function ParticipantCard({
   const resolve = useServerFn(resolveParticipantIdentity);
   const release = useServerFn(releaseAcademyReport);
   const reassess = useServerFn(scheduleAcademyReassessment);
+  // Reassessment resolves the `reassessment` processing purpose, which has no
+  // approved published version yet. Asking first means the control can say so
+  // instead of failing on click.
+  const purposesFn = useServerFn(listAvailablePurposeCodes);
+  const purposes = useQuery({
+    queryKey: ["academy", "purposes"],
+    queryFn: () => purposesFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const reassessmentAvailable = (purposes.data ?? []).includes("reassessment");
   const [identity, setIdentity] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -154,7 +165,14 @@ function ParticipantCard({
       setNotice(t("academy.participants.reassessmentScheduled"));
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
     },
-    onError: () => setNotice(t("academy.participants.reassessmentFailed")),
+    onError: (e: unknown) => {
+      const code = (e as { code?: string }).code ?? "";
+      setNotice(
+        code === "SCP_PURPOSE_NOT_AVAILABLE"
+          ? t("academy.participants.reassessmentPurposePending")
+          : t("academy.participants.reassessmentFailed"),
+      );
+    },
   });
 
   return (
@@ -247,12 +265,22 @@ function ParticipantCard({
           <button
             type="button"
             onClick={() => reassessM.mutate()}
-            disabled={reassessM.isPending}
+            disabled={reassessM.isPending || !reassessmentAvailable}
+            title={
+              reassessmentAvailable
+                ? undefined
+                : t("academy.participants.reassessmentPurposePending")
+            }
             className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <CalendarClock className="h-4 w-4" aria-hidden="true" />
             {t("academy.participants.reassess")}
           </button>
+        )}
+        {canManage && row.releasedAt && !reassessmentAvailable && (
+          <p className="w-full text-[12px] leading-relaxed text-muted-foreground">
+            {t("academy.participants.reassessmentPurposePending")}
+          </p>
         )}
       </div>
     </article>

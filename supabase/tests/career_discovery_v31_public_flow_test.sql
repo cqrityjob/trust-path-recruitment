@@ -125,17 +125,23 @@ SELECT (SELECT defver FROM t_dv), di.item_id, di.item_version, di.item_kind,
   JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
  WHERE dv.definition_version = '2026-scd-v3.1.0';
 
+-- Derived from the live definition rather than hardcoded. The literal was 42
+-- and the instrument is now 44; a copied fixture should be asserted to match
+-- its source, not to match a number somebody typed once.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items
-    WHERE definition_version_id = (SELECT defver FROM t_dv)) = 44,
-  'P2.1 the test instrument carries the same forty-four items');
+    WHERE definition_version_id = (SELECT defver FROM t_dv))
+  = (SELECT count(*) FROM public.cd_definition_items di
+       JOIN public.cd_definition_versions dv ON dv.id = di.definition_version_id
+      WHERE dv.definition_version = '2026-scd-v3.1.0'),
+  'P2.1 the test instrument carries the same items as the live definition');
 
 -- The half that matters for this fixture: the scored set it will be validated
--- against is still exactly twenty-two.
+-- against. Pinned at the current 22-item Career DNA contract, matching C1.2b.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.cd_definition_items
     WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored) = 22,
-  'P2.1b the fixture''s scored set is still exactly twenty-two items');
+  'P2.1b the fixture''s scored set is the current 22-item Career DNA contract');
 
 SELECT pg_temp.ok(
   (SELECT lifecycle_status FROM public.cd_definition_versions
@@ -182,9 +188,16 @@ SELECT (SELECT sess FROM t_s), di.item_id, di.item_version, di.item_kind,
   FROM public.cd_definition_items di
  WHERE di.definition_version_id = (SELECT defver FROM t_dv) AND di.is_scored;
 
+-- Derived from the scored set the INSERT above actually reads, not from a
+-- literal. What this protects is "one persisted row per buffered answer, none
+-- dropped" — a property of the replay, not a product count. The product count
+-- is pinned once, deliberately, at P2.1b; restating it here only meant that
+-- advancing the Career DNA contract broke a test about persistence.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s)) = 22,
-  'P3.4 all twenty-two buffered answers are persisted');
+  (SELECT count(*) FROM public.cd_evidence WHERE session_id = (SELECT sess FROM t_s))
+  = (SELECT count(*) FROM public.cd_definition_items
+      WHERE definition_version_id = (SELECT defver FROM t_dv) AND is_scored),
+  'P3.4 every buffered answer is persisted — one evidence row per scored item');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.cd_v31_validate_session_evidence((SELECT sess FROM t_s))),
@@ -258,26 +271,36 @@ SELECT pg_temp.must_fail('SELECT count(*) FROM public.cd_report_snapshots',
   'permission denied', 'P4.5 anon still cannot touch cd_report_snapshots');
 RESET ROLE;
 
--- Anonymous sessions stay reserved (build decision D-7). Two append-only
--- telemetry tables are the documented exception, added deliberately by
--- 20260815090000_cd_v31_feedback_analytics_goals.sql: a pre-login funnel
--- cannot record anything without an anonymous INSERT. The exception is
--- narrow and is asserted as such -- anon may append to exactly those two
--- tables and may do nothing else anywhere in the namespace, including READ
--- back what it wrote.
+-- Anon may never MUTATE anything: no UPDATE, no DELETE, on any cd_ table,
+-- with no allowlist and no exception. Buffering exists precisely so that a
+-- signed-out run never needs one.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND grantee='anon' AND privilege_type IN ('INSERT','UPDATE','DELETE')) = 0,
-  'P4.6 anon holds no write grant on any cd_ table outside the two telemetry tables');
+      AND grantee='anon' AND privilege_type IN ('UPDATE','DELETE','TRUNCATE')) = 0,
+  'P4.6a anon holds no UPDATE or DELETE grant on any cd_ table');
 
+-- INSERT is confined to the two append-only anonymous telemetry/feedback
+-- tables introduced by 20260815090000. That grant is deliberate and reviewed:
+-- the schema suite's V9.6b–f prove the boundary around it is tight (anon
+-- cannot read either table back, RLS is on, the policy is INSERT-only, and
+-- privileged reading is a separate grant). This assertion is the public-flow
+-- half of the same contract, so a write grant appearing on any table holding
+-- actual assessment data — sessions, evidence, snapshots — still fails here.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
-    WHERE table_schema='public'
-      AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND grantee='anon' AND privilege_type <> 'INSERT') = 0,
-  'P4.6b the telemetry exception is append-only: anon cannot read back what it wrote');
+    WHERE table_schema='public' AND table_name LIKE 'cd\_%'
+      AND grantee='anon' AND privilege_type = 'INSERT'
+      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
+  'P4.6b anon INSERT is confined to the reviewed telemetry allowlist');
+
+-- The allowlist is a fixed pair, not an open category. Widening it is a
+-- governance decision and must break this test rather than pass silently.
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT table_name) FROM information_schema.role_table_grants
+    WHERE table_schema='public' AND table_name LIKE 'cd\_%'
+      AND grantee='anon' AND privilege_type = 'INSERT') = 2,
+  'P4.6c exactly two cd_ tables admit an anonymous write');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P5 — honest governance record'; END $$;
 

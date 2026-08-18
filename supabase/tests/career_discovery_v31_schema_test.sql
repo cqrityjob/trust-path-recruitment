@@ -263,34 +263,86 @@ SELECT pg_temp.ok(to_regclass('public.cd_option_loadings') IS NOT NULL,
 
 -- PR1 created this table empty; PR2 seeded it from option-matrix.ts.
 --
--- The original assertion here was 'exactly one scoring_version exists in the
--- table'. That stopped being the right invariant once a scoring generation
--- could be superseded: 20260816160000 re-tagged the matrix to draft-3 and the
--- earlier generations stayed, by design. History is RETAINED, never pruned --
--- a stored report must remain reproducible against the generation it was
--- scored under.
+-- V4.2b used to assert that exactly ONE scoring_version existed in the whole
+-- table. That held while there had only ever been one. It stopped being true
+-- when the content advanced v3.1-draft-1 -> draft-2 -> draft-3, each step
+-- copying the matrix forward and KEEPING the previous one, which is the
+-- deliberate lineage decision -- a report has to stay reproducible against the
+-- matrix it was actually scored with.
 --
--- So the invariant is not "one generation exists" but all three of:
---   V4.2  the ACTIVE definition's scoring version carries the complete matrix;
---   V4.2b the active definition resolves to exactly ONE scoring version;
---   V4.2c every retained generation is whole, so retention never degrades
---         into a half-deleted matrix.
--- Unreachability of an inactive generation is behaviour, not shape, and is
--- asserted in the completion suite (group C5).
+-- Counting distinct versions was always the wrong invariant. What matters is
+-- not how much history is stored, but that exactly one version is CURRENT,
+-- that it is complete, and that nothing historical can leak into live scoring.
+-- The assertions below say that instead, and say it about whichever version is
+-- active rather than about a hardcoded string that goes stale on every bump.
+
+-- Scoped to the v3.1 lineage on purpose. This suite activates the v3.0 row
+-- transaction-locally further up (line ~143) to open the review gates it needs,
+-- so "how many rows are active" is not a question this file can ask. What it
+-- can ask -- and what actually matters -- is that the v3.1 lineage resolves to
+-- exactly one current scoring version.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_option_loadings ol
-    WHERE ol.scoring_version = (SELECT dv.scoring_version
-                                  FROM public.cd_definition_versions dv
-                                 WHERE dv.definition_version = '2026-scd-v3.1.0')) = 164,
-  'V4.2 the ACTIVE scoring version carries all 164 loadings');
+  (SELECT count(*) FROM public.cd_definition_versions
+    WHERE content_version LIKE 'v3.1%'
+      AND lifecycle_status = 'active') = 1,
+  'V4.2 the v3.1 lineage has exactly one current definition version');
+
 SELECT pg_temp.ok(
-  (SELECT count(DISTINCT dv.scoring_version) FROM public.cd_definition_versions dv
-    WHERE dv.definition_version = '2026-scd-v3.1.0') = 1,
-  'V4.2b exactly one scoring version is active for the active definition');
+  (SELECT count(DISTINCT scoring_version) FROM public.cd_definition_versions
+    WHERE content_version LIKE 'v3.1%'
+      AND lifecycle_status = 'active') = 1,
+  'V4.2a it resolves to exactly one scoring version');
+
+-- Its matrix is complete. Derived from the definition rather than named, so
+-- advancing the content does not silently skip this check the way a hardcoded
+-- 'v3.1-draft-1' did.
 SELECT pg_temp.ok(
-  NOT EXISTS (SELECT 1 FROM public.cd_option_loadings
-               GROUP BY scoring_version HAVING count(*) <> 164),
-  'V4.2c every retained scoring generation is complete, not partially deleted');
+  (SELECT count(*) FROM public.cd_option_loadings l
+    WHERE l.scoring_version = (
+      SELECT dv.scoring_version FROM public.cd_definition_versions dv
+       WHERE dv.content_version LIKE 'v3.1%'
+         AND dv.lifecycle_status = 'active')) = 164,
+  'V4.2b the current v3.1 scoring version carries all 164 option loadings');
+
+-- Superseded versions are kept, and each is a COMPLETE historical record. A
+-- partial leftover would be worse than none: it would score reproducibly wrong.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.cd_option_loadings
+     GROUP BY scoring_version
+    HAVING count(*) <> 164),
+  'V4.2c every stored scoring version carries a complete 164-loading matrix');
+
+-- The live path is scoped to the active version, so history cannot participate
+-- in current scoring. Proven by construction: scoping to the active version
+-- must exclude every row belonging to a superseded one.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_option_loadings l
+    WHERE l.scoring_version <> (
+      SELECT dv.scoring_version FROM public.cd_definition_versions dv
+       WHERE dv.content_version LIKE 'v3.1%'
+         AND dv.lifecycle_status = 'active')) > 0
+  AND (SELECT count(DISTINCT l.scoring_version) FROM public.cd_option_loadings l
+        WHERE l.scoring_version = (
+          SELECT dv.scoring_version FROM public.cd_definition_versions dv
+           WHERE dv.content_version LIKE 'v3.1%'
+             AND dv.lifecycle_status = 'active')) = 1,
+  'V4.2d superseded matrices are retained, and an active-version scope selects exactly one');
+
+-- And the guard that enforces it in production is still wired: the session
+-- validator rejects an answer whose option has no loading AT THE ACTIVE
+-- scoring version, rather than at any version.
+SELECT pg_temp.ok(
+  EXISTS (
+    SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+       -- prokind='f': pg_get_functiondef() errors on aggregates and window
+       -- functions, and public holds some.
+       AND p.prokind = 'f'
+       AND pg_get_functiondef(p.oid) LIKE '%cd_option_loadings l%'
+       AND pg_get_functiondef(p.oid) LIKE '%l.scoring_version = _dv.scoring_version%'),
+  'V4.2e live scoring is scoped to the active definition''s scoring version');
 
 INSERT INTO public.cd_option_loadings
   (scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)
@@ -455,6 +507,10 @@ $$, 'CD_PROFESSION_PROFILE_INCOMPLETE',
 INSERT INTO public.cd_profession_profiles
   (profession_id, calibration_version, dimension_id, band_low, band_high,
    weight, centrality, evidence_basis, confidence)
+-- 17, not 16. CID17 brought every profession to 17 calibrated dimensions and
+-- 20260816161000 correctly moved the ranking-approval guard from 16 to 17. This
+-- fixture was left behind, so V6.10's approval attempt hit
+-- CD_PROFESSION_PROFILE_INCOMPLETE. The guard is right; the fixture was stale.
 SELECT 'SP999','cal-v1', 'CID' || lpad(g::text, 2, '0'),
        0.400, 0.900,
        CASE WHEN g = 15 THEN 0 ELSE 0.500 END,
@@ -621,33 +677,72 @@ SELECT pg_temp.ok(
       AND grantee NOT IN ('postgres','service_role','authenticated','anon','sandbox_exec')) = 0,
   'V9.5 no employer role holds any grant on Career Discovery v3.1 data');
 
--- Anonymous sessions stay reserved (build decision D-7). Two append-only
--- telemetry tables are the documented exception, added deliberately by
--- 20260815090000_cd_v31_feedback_analytics_goals.sql: a pre-login funnel
--- cannot record anything without an anonymous INSERT. The exception is
--- narrow and is asserted as such -- anon may append to exactly those two
--- tables and may do nothing else anywhere in the namespace, including READ
--- back what it wrote.
+-- Build decision D-7 said anon holds no write grant anywhere in the namespace.
+-- Anonymous funnel telemetry and test-group feedback are now intentional
+-- product capabilities: an unauthenticated visitor must be able to record a
+-- funnel event or send feedback without an account. Two tables therefore grant
+-- anon INSERT, each with RLS on, an insert-only policy, and admin-only read.
+--
+-- D-7 is amended rather than dropped, and the replacement is stricter than a
+-- blanket ban would be if a third table ever appeared quietly. The allowlist is
+-- named, so anything outside it fails.
+
+-- 9.6a — the absolute prohibition. Mutating or destroying data is never
+-- anonymous, on any cd_ table, no exceptions and no allowlist.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND grantee = 'anon' AND privilege_type IN ('INSERT','UPDATE','DELETE')) = 0,
-  'V9.6 anon holds no write grant on any cd_ table outside the two telemetry tables');
+      AND grantee = 'anon'
+      AND privilege_type IN ('UPDATE','DELETE','TRUNCATE')) = 0,
+  'V9.6a anon holds no UPDATE, DELETE or TRUNCATE on any cd_ table');
 
+-- 9.6b — INSERT is confined to the two named tables. A third table gaining
+-- anon INSERT fails here, which is the whole point of naming them.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
-    WHERE table_schema='public'
-      AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND grantee = 'anon' AND privilege_type <> 'INSERT') = 0,
-  'V9.6b on those two, anon may only INSERT — never SELECT, UPDATE or DELETE');
+    WHERE table_schema='public' AND table_name LIKE 'cd\_%'
+      AND grantee = 'anon' AND privilege_type = 'INSERT'
+      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
+  'V9.6b no cd_ table outside the telemetry allowlist grants anon INSERT');
 
+-- 9.6c — anon cannot READ either of them. Write-only is the property that makes
+-- anonymous telemetry acceptable: a visitor may contribute, never browse.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
-    WHERE table_schema='public'
-      AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND grantee = 'anon' AND privilege_type = 'INSERT') = 2,
-  'V9.6c append-only telemetry is granted deliberately, not inherited by accident');
+    WHERE table_schema='public' AND grantee = 'anon'
+      AND privilege_type = 'SELECT'
+      AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
+  'V9.6c anon cannot read the anonymous telemetry tables it writes to');
+
+-- 9.6d — RLS is on for both, so the grant is bounded by policy rather than
+-- being a bare table privilege.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_class c
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND c.relrowsecurity) = 2,
+  'V9.6d RLS is enabled on both allowlisted telemetry tables');
+
+-- 9.6e — and the bounding policy is an INSERT policy that actually admits
+-- anon, so the grant is not dead and not doing something else.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND cmd = 'INSERT'
+      AND 'anon' = ANY (roles)) = 2,
+  'V9.6e each allowlisted table has an INSERT policy admitting anon');
+
+-- 9.6f — reading stays separately controlled, for authenticated principals
+-- only, so the admin path is not an artefact of the anonymous grant.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
+      AND cmd = 'SELECT'
+      AND NOT ('anon' = ANY (roles))) = 2,
+  'V9.6f privileged reading of telemetry is controlled separately from anon');
 
 DO $$ BEGIN RAISE NOTICE 'career_discovery_v31_schema_test: ALL ASSERTIONS PASSED'; END $$;
 

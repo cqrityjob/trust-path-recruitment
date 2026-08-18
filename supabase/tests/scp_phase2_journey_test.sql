@@ -423,18 +423,34 @@ SELECT pg_temp.ok(
      FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
   'J5.4 no snapshot contains a percentage, pass/fail, ranking or recommendation');
 
+-- 20260820100000 moved the internal maturity vocabulary OUT of both audience
+-- payloads and into derivation_input. The product speaks the Source of Truth
+-- vocabulary (evidence_state); maturity is what that was derived FROM, kept so
+-- a historical report stays reproducible. Both halves are asserted, because
+-- "absent from the payload" is only safe if it is still recorded somewhere.
 SELECT pg_temp.ok(
-  (SELECT bool_and(payload::text ILIKE '%maturity_level%')
+  (SELECT bool_and(payload::text NOT ILIKE '%maturity_level%')
      FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
-  'J5.5 the snapshot states a maturity level');
+  'J5.5 the internal maturity vocabulary is absent from every audience payload');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(payload::text ILIKE '%evidence_state%')
+     FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
+  'J5.5b the snapshot states an evidence state in the product vocabulary');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(derivation_input::text ILIKE '%maturity_level%')
+     FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
+  'J5.5c the maturity it was derived from is retained internally');
 
 -- Four observations from a single context and a single source type must NOT
--- reach a high level. This is the two-gate rule doing its job on real data.
+-- reach a high level. This is the two-gate rule doing its job on real data,
+-- now read from the frozen derivation record rather than from the payload.
 SELECT pg_temp.ok(
   (SELECT bool_and((x->>'maturity_level') IN
                    ('no_evidence','limited_evidence','developing_evidence'))
      FROM public.scp_report_snapshots s,
-          jsonb_array_elements(s.payload) x
+          jsonb_array_elements(s.derivation_input) x
     WHERE s.attempt_id = :'aid'::uuid),
   'J5.6 one assessment cannot reach consistent_evidence — the sufficiency gate caps it');
 
@@ -562,11 +578,16 @@ BEGIN
   END IF;
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000001', true);
+  -- Still refused, but since 20260819100000 the reason is stated in governance
+  -- terms rather than as a bare publication check: this organisation holds no
+  -- basis to run unvalidated content. An employer WITH a closed-test grant can
+  -- run it as a pilot — proved in employer_vaktare_journey_test.sql — and even
+  -- then never as recruitment.
   PERFORM pg_temp.must_fail(
     format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
            'c3000000-1111-0000-0000-000000000001', _real, 'participant@journey.invalid'),
-    'SCP_PROGRAMME_NOT_ASSIGNABLE',
-    'J7.5 the real Security Guard programme cannot be assigned');
+    'SCP_NO_GOVERNANCE_BASIS',
+    'J7.5 the real Security Guard programme cannot be assigned without a grant');
   RESET ROLE;
 END $$;
 
@@ -611,6 +632,24 @@ SELECT pg_temp.ok(
   'J7.9 the participants projection returns no response text and no contact field');
 
 -- Reassessment: allowed after a released result, and it creates a fresh attempt.
+--
+-- 20260820090000 made scp_schedule_reassessment ask for the `reassessment`
+-- processing purpose by name instead of silently inheriting the workforce one.
+-- That purpose is deliberately NOT published in the product — publishing it
+-- asserts a lawful basis and a privacy notice, which is a Product Owner and
+-- legal decision — so this suite supplies its own, exactly as it already
+-- supplies its own competence_development version above. Both are rolled back
+-- with the transaction and neither activates anything in the product.
+--
+-- The real seeded state (reassessment closed, and refusing safely) is asserted
+-- by supabase/tests/scp_purpose_governance_test.sql, group PG4.
+UPDATE public.scp_processing_purposes SET is_active = true WHERE code = 'reassessment';
+INSERT INTO public.scp_purpose_versions
+  (purpose_code, version_number, privacy_notice_version, lawful_basis_reference,
+   jurisdiction_id, published_at)
+SELECT 'reassessment', 91, 'pn-journey-reassessment', 'GDPR Art.6(1)(f)',
+       (SELECT id FROM public.scp_jurisdictions WHERE code='SE'), now();
+
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000001';
 CREATE TEMP TABLE reass AS
@@ -623,6 +662,16 @@ SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_attempts
     WHERE subject_id = :'sid'::uuid AND mode = 'assessment') = 2,
   'J7.11 the reassessment is a NEW attempt — the first one is untouched');
+
+-- The point of the change: a reassessment is recorded as a reassessment. It
+-- used to inherit whatever purpose was published most recently, which made it
+-- indistinguishable from a first development assessment in the lineage.
+SELECT pg_temp.ok(
+  (SELECT p.purpose_code
+     FROM public.scp_attempts a
+     JOIN public.scp_purpose_versions p ON p.id = a.purpose_version_id
+    WHERE a.id = (SELECT attempt_id FROM reass)) = 'reassessment',
+  'J7.11b the reassessment attempt records the reassessment purpose, not the first one');
 
 -- And is refused for somebody with no prior released result.
 SET LOCAL ROLE authenticated;
@@ -642,10 +691,21 @@ SELECT * FROM public.scp_subject_progress(:'sid'::uuid);
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok((SELECT count(*) FROM prog) >= 1,
   'J7.13 the participant can read their own progress');
+-- Progress now speaks the product vocabulary, like the rest of the report.
+-- It used to read maturity_level straight out of the payload; 20260820100000
+-- moved that to derivation_input and switched this projection to the states an
+-- audience is actually shown, so a reader is never asked to reconcile two
+-- different scales.
 SELECT pg_temp.ok(
-  (SELECT bool_and(maturity_level IN ('no_evidence','limited_evidence',
-     'developing_evidence','consistent_evidence','strong_evidence')) FROM prog),
-  'J7.14 progress is expressed only in maturity levels');
+  (SELECT bool_and(evidence_state IN ('strongly_shown','shown','follow_up',
+     'not_yet_shown','critical_follow_up')) FROM prog),
+  'J7.14 progress is expressed only in the product evidence vocabulary');
+
+-- One release, one audience: the series must not double up because two
+-- snapshots exist for the same attempt.
+SELECT pg_temp.ok(
+  (SELECT count(*) = count(DISTINCT (attempt_id::text || competency_code)) FROM prog),
+  'J7.14b each competency appears once per attempt, not once per audience');
 
 -- A genuinely unrelated person cannot read somebody else's progress.
 --
@@ -1186,7 +1246,11 @@ BEGIN
   PERFORM pg_temp.must_fail(
     format('SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L)',
            'c3000000-1111-0000-0000-000000000002', _av, 'participant@journey.invalid'),
-    'SCP_FIXTURE_NOT_AVAILABLE',
+    -- Since 20260819100000 every "may this organisation run this content"
+    -- refusal comes back through one governance message rather than a
+    -- per-reason code. The refusal itself is unchanged: no grant and no
+    -- fixture-access row means no assignment, whatever the caller supplies.
+    'SCP_NO_GOVERNANCE_BASIS',
     'J12.4 an organisation without a grant CANNOT assign a fixture by id');
   RESET ROLE;
 END $$;

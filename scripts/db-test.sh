@@ -283,8 +283,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
-if [ "$SCP_TABLES" -ne 63 ]; then
-  echo "FAIL: expected 63 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 66 ]; then
+  echo "FAIL: expected 66 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -625,6 +625,188 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5l. The full Security Guard / Väktare journey (18 items, closed-test grant)
+# ---------------------------------------------------------------------------
+echo "==> Running the full Vaktare journey"
+set +e
+VJ_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_vaktare_journey_test.sql 2>&1)"
+VJ_RC=$?
+set -e
+
+echo "$VJ_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+VJ_PASSED="$(echo "$VJ_OUT" | grep -c "ok  " || true)"
+
+if [ "$VJ_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Vaktare journey suite exited with code ${VJ_RC}." >&2
+  echo "$VJ_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${VJ_PASSED} Vaktare journey assertions passed"
+
+if [ "$VJ_PASSED" -lt 55 ]; then
+  echo "FAIL: expected at least 55 Vaktare journey assertions, only ${VJ_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-b. Purpose governance — an assignment names why it processes a person
+#
+# Guards the mapping that replaced "newest published purpose, across all
+# purposes". Recruitment and reassessment are expected to FAIL here: their
+# purpose versions are deliberately unpublished pending Product Owner and legal
+# review, and the suite asserts the closure is real rather than papered over.
+# ---------------------------------------------------------------------------
+echo "==> Running purpose-governance assertions"
+set +e
+PGOV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_purpose_governance_test.sql 2>&1)"
+PGOV_RC=$?
+set -e
+
+echo "$PGOV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PGOV_PASSED="$(echo "$PGOV_OUT" | grep -c "ok  " || true)"
+
+if [ "$PGOV_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the purpose-governance suite exited with code ${PGOV_RC}." >&2
+  echo "$PGOV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${PGOV_PASSED} purpose-governance assertions passed"
+
+if [ "$PGOV_PASSED" -lt 23 ]; then
+  echo "FAIL: expected at least 23 purpose-governance assertions, only ${PGOV_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-c. Report audience separation
+#
+# The test that was missing. Until Phase 8 the employer and participant
+# snapshots held the SAME payload, and the journey suite could not tell:
+# it applied one predicate to both rows, so byte-identical snapshots passed.
+# This suite asserts ABSENCE in both directions.
+# ---------------------------------------------------------------------------
+echo "==> Running report audience-separation assertions"
+set +e
+RAUD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_report_audience_test.sql 2>&1)"
+RAUD_RC=$?
+set -e
+
+echo "$RAUD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+RAUD_PASSED="$(echo "$RAUD_OUT" | grep -c "ok  " || true)"
+
+if [ "$RAUD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the report audience suite exited with code ${RAUD_RC}." >&2
+  echo "$RAUD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${RAUD_PASSED} report audience assertions passed"
+
+if [ "$RAUD_PASSED" -lt 51 ]; then
+  echo "FAIL: expected at least 51 report audience assertions, only ${RAUD_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-d. Report evidence scope
+#
+# A standard assessment report is about ONE attempt. Before 20260820130000 every
+# evidence query filtered on subject_id alone, so a second sitting made the
+# second report show the sum of both -- and a later attempt could silently
+# change what an earlier immutable report appeared to mean. This suite sits the
+# same assessment twice and holds the boundary.
+# ---------------------------------------------------------------------------
+echo "==> Running report evidence-scope assertions"
+set +e
+ASCOPE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_report_attempt_scope_test.sql 2>&1)"
+ASCOPE_RC=$?
+set -e
+
+echo "$ASCOPE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ASCOPE_PASSED="$(echo "$ASCOPE_OUT" | grep -c "ok  " || true)"
+
+if [ "$ASCOPE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the report evidence-scope suite exited with code ${ASCOPE_RC}." >&2
+  echo "$ASCOPE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${ASCOPE_PASSED} report evidence-scope assertions passed"
+
+if [ "$ASCOPE_PASSED" -lt 23 ]; then
+  echo "FAIL: expected at least 23 report evidence-scope assertions, only ${ASCOPE_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-e. Pilot security gate
+#
+# Phase 8.5A. Four confirmed findings, each proven closed against a REAL
+# principal: SET ROLE authenticated plus a JWT claim, so RLS is genuinely in
+# force. Denial suites fail silently when they are pointed at a row the
+# principal could not see anyway, so every denial here is paired with proof
+# that somebody can still read or write the same row through the authorised
+# path -- and the positive flows (save, submit, review, release) run in full.
+# ---------------------------------------------------------------------------
+echo "==> Running pilot security-gate assertions"
+set +e
+GATE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_pilot_security_gate_test.sql 2>&1)"
+GATE_RC=$?
+set -e
+
+echo "$GATE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+GATE_PASSED="$(echo "$GATE_OUT" | grep -c "ok  " || true)"
+
+if [ "$GATE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot security-gate suite exited with code ${GATE_RC}." >&2
+  echo "$GATE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${GATE_PASSED} pilot security-gate assertions passed"
+
+if [ "$GATE_PASSED" -lt 46 ]; then
+  echo "FAIL: expected at least 46 pilot security-gate assertions, only ${GATE_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5m. Employer Assessment Center — the people model
+#
+# Runs BEFORE the rollback step: it reads scp_subject_identities and the
+# participant read model, both of which the rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running employer people model assertions"
+set +e
+PM_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_people_model_test.sql 2>&1)"
+PM_RC=$?
+set -e
+
+echo "$PM_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+PM_PASSED="$(echo "$PM_OUT" | grep -c "ok  " || true)"
+
+if [ "$PM_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the people model suite exited with code ${PM_RC}." >&2
+  echo "$PM_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${PM_PASSED} people model assertions passed"
+
+if [ "$PM_PASSED" -lt 18 ]; then
+  echo "FAIL: expected at least 18 people model assertions, only ${PM_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
@@ -897,6 +1079,12 @@ echo "              ${ACAD_PASSED} Academy assertions,"
 echo "              ${CONT_PASSED} Phase 1F content assertions,"
 echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
+echo "              ${VJ_PASSED} Vaktare journey assertions,"
+echo "              ${PGOV_PASSED} purpose-governance assertions,"
+echo "              ${RAUD_PASSED} report audience assertions,"
+echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
+echo "              ${GATE_PASSED} pilot security-gate assertions,"
+echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
 echo "===================================================="

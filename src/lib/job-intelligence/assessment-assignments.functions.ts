@@ -73,6 +73,31 @@ async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<voi
   if (error || !membership) throw new Error("ACCESS_NOT_AVAILABLE");
 }
 
+/**
+ * The legacy assignment table is written by two stacks. The canonical SCP path
+ * (`scp_employer_assign`) has always required owner or admin; this file only
+ * required *some* active membership, so an ordinary member could invite a
+ * candidate through the legacy route and not through the new one.
+ *
+ * Phase 8.5A closed that at the database boundary. Without this check the
+ * member would still pass every application gate and then be refused by RLS
+ * with nothing useful to show them, so the boundary is stated here too — in
+ * the same terms, and before any email is composed or token minted.
+ */
+async function assertAssignmentWriteRole(ctx: Ctx, employerId: string): Promise<void> {
+  const { data: membership, error } = await ctx.supabase
+    .from("employer_memberships")
+    .select("role")
+    .eq("user_id", ctx.userId)
+    .eq("employer_id", employerId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error || !membership) throw new Error("ACCESS_NOT_AVAILABLE");
+  if (membership.role !== "owner" && membership.role !== "admin") {
+    throw new Error("NOT_AUTHORISED_TO_ASSIGN");
+  }
+}
+
 async function assertOrgActiveForAssignment(ctx: Ctx, employerId: string): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("employer_is_active_status", {
     _employer_id: employerId,
@@ -93,19 +118,36 @@ function hashToken(token: string): string {
 
 // -------- createAssessmentAssignment --------
 
-const createSchema = z.object({
-  employerId: z.string().uuid(),
-  assessmentId: z.string().min(1),
-  useCase: z.enum(["recruitment", "workforce"]),
-  recipientEmail: z.string().trim().email().max(320),
-  recipientUserId: z.string().uuid().nullable().optional(),
-  jobId: z.string().uuid().nullable().optional(),
-  applicationId: z.string().uuid().nullable().optional(),
-  employeeId: z.string().uuid().nullable().optional(),
-  language: z.enum(["sv", "en"]).default("sv"),
-  employerMessage: z.string().trim().max(2000).nullable().optional(),
-  expiresAt: z.string().datetime().optional(),
-});
+const createSchema = z
+  .object({
+    employerId: z.string().uuid(),
+    assessmentId: z.string().min(1),
+    useCase: z.enum(["recruitment", "workforce"]),
+    recipientEmail: z.string().trim().email().max(320),
+    recipientUserId: z.string().uuid().nullable().optional(),
+    jobId: z.string().uuid().nullable().optional(),
+    applicationId: z.string().uuid().nullable().optional(),
+    employeeId: z.string().uuid().nullable().optional(),
+    language: z.enum(["sv", "en"]).default("sv"),
+    employerMessage: z.string().trim().max(2000).nullable().optional(),
+    expiresAt: z.string().datetime().optional(),
+  })
+  // The people model, checked before anything is written: a recruitment
+  // assignment describes a candidate and may not point at an employee record;
+  // a workforce assignment describes existing staff and may not point at a job
+  // or application. Either combination silently reclassifies a real person.
+  //
+  // assessment_assignments_person_context_agrees (20260819090000) is the
+  // authority; this mirror exists so the caller gets a named, translatable
+  // error instead of a raw 23514 from the database.
+  .refine((d) => !(d.useCase === "recruitment" && d.employeeId), {
+    message: "PERSON_CONTEXT_MISMATCH",
+    path: ["employeeId"],
+  })
+  .refine((d) => !(d.useCase === "workforce" && (d.applicationId || d.jobId)), {
+    message: "PERSON_CONTEXT_MISMATCH",
+    path: ["applicationId"],
+  });
 
 export const createAssessmentAssignment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -121,7 +163,7 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       emailDeliveryStatus: "not_attempted" | "sent" | "failed";
     }> => {
       const ctx = context as Ctx;
-      await assertActiveMembership(ctx, data.employerId);
+      await assertAssignmentWriteRole(ctx, data.employerId);
       await assertOrgActiveForAssignment(ctx, data.employerId);
 
       const profileId = ASSESSMENT_PROFILE_BY_DEFINITION[data.assessmentId];
@@ -373,7 +415,7 @@ export const cancelAssessmentAssignment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => cancelSchema.parse(d))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const ctx = context as Ctx;
-    await assertActiveMembership(ctx, data.employerId);
+    await assertAssignmentWriteRole(ctx, data.employerId);
 
     const { data: updated, error } = await ctx.supabase
       .from("assessment_assignments")

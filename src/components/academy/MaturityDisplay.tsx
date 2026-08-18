@@ -97,6 +97,133 @@ export function MaturityRow({
   );
 }
 
+// ── THE PRODUCT VOCABULARY ────────────────────────────────────────────
+//
+// Maturity describes the EVIDENCE. These words describe what the evidence lets
+// anyone say about a way of working, which is what a manager and a participant
+// actually need. The projection between them lives in the database (des-v1) and
+// is frozen into the snapshot; this file only renders the result.
+
+export type EvidenceState =
+  | "strongly_shown"
+  | "shown"
+  | "follow_up"
+  | "not_yet_shown"
+  | "critical_follow_up";
+
+const STATE_LABEL: Record<EvidenceState, TranslationKey> = {
+  strongly_shown: "academy.state.stronglyShown",
+  shown: "academy.state.shown",
+  follow_up: "academy.state.followUp",
+  not_yet_shown: "academy.state.notYetShown",
+  critical_follow_up: "academy.state.criticalFollowUp",
+};
+
+export function evidenceStateLabelKey(state: EvidenceState): TranslationKey {
+  return STATE_LABEL[state] ?? "academy.state.notYetShown";
+}
+
+/**
+ * One competency, stated in the product vocabulary.
+ *
+ * ── WHY THIS IS NOT EIGHT WARNINGS ────────────────────────────────────
+ *
+ * A single assessment is one evidence context, and the sufficiency gate needs
+ * two, so from one run EVERY competency lands on "needs a follow-up". Rendered
+ * as eight red cards that reads as eight failures, which is both false and
+ * demoralising — the person did nothing wrong; the evidence base is simply one
+ * source deep.
+ *
+ * So follow-up is drawn as an ordinary row with a quiet chip, and the coverage
+ * explanation above the list carries the reason once instead of eight times.
+ * Only `critical_follow_up` — which comes from a human reviewer, never from a
+ * low score — is given emphasis, because that one genuinely asks somebody to
+ * do something.
+ */
+export function EvidenceStateRow({
+  name,
+  state,
+  observations,
+  prompt,
+  humanReviewed,
+}: {
+  name: string;
+  state: EvidenceState;
+  observations: number;
+  /** The curated follow-up (employer) or reflection (participant) line. */
+  prompt?: string | null;
+  humanReviewed?: boolean;
+}) {
+  const { t } = useT();
+  const critical = state === "critical_follow_up";
+  return (
+    <div
+      className={cn(
+        "border-t border-border py-4 first:border-t-0",
+        critical && "border-l-2 border-l-accent pl-4",
+      )}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="text-sm font-medium text-foreground">{name}</h3>
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center rounded-[6px] border px-2 py-0.5 text-[12px] font-medium",
+            critical ? "border-accent text-foreground" : "border-border text-muted-foreground",
+          )}
+        >
+          {t(evidenceStateLabelKey(state))}
+        </span>
+      </div>
+      <p className="mt-1 text-[12px] text-muted-foreground">
+        {/* The singular key already carries the numeral ("1 observation"), so
+            prefixing the count here printed "1 1 observation". */}
+        {observations === 1
+          ? t("academy.observation.one")
+          : `${observations} ${t("academy.observation.many")}`}
+        {humanReviewed ? ` · ${t("academy.state.humanReviewed")}` : ""}
+      </p>
+      {prompt && (
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-foreground">{prompt}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What this report can and cannot support, said once, before the list.
+ *
+ * The single most important paragraph in the document: without it a reader sees
+ * "needs a follow-up" eight times and concludes something about the person
+ * rather than about the evidence.
+ */
+export function EvidenceCoverage({
+  observations,
+  contexts,
+  bodyKey,
+}: {
+  observations: number;
+  contexts: number;
+  bodyKey: TranslationKey;
+}) {
+  const { t } = useT();
+  return (
+    <section className="mt-6 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Info className="h-4 w-4 text-accent" aria-hidden="true" />
+        {t("academy.coverage.title")}
+      </h2>
+      <p className="mt-2 max-w-[72ch] text-[13px] leading-relaxed text-muted-foreground">
+        {t(contexts === 1 ? "academy.coverage.basisOne" : "academy.coverage.basisMany")
+          .replace("{observations}", String(observations))
+          .replace("{contexts}", String(contexts))}
+      </p>
+      <p className="mt-2 max-w-[72ch] text-[13px] leading-relaxed text-muted-foreground">
+        {t(bodyKey)}
+      </p>
+    </section>
+  );
+}
+
 /**
  * Safety-critical findings.
  *

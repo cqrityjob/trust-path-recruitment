@@ -27,15 +27,9 @@
 // workspace.
 
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useT } from "@/i18n/context";
-import {
-  AssessmentShell,
-  AssessmentPanel,
-} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentShell } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { ReviewQueue } from "@/components/academy/ReviewQueue";
-import { listReviewQueue } from "@/lib/security-competency/academy-employer.functions";
 
 export const Route = createFileRoute("/_authenticated/reviews")({
   ssr: false,
@@ -44,9 +38,11 @@ export const Route = createFileRoute("/_authenticated/reviews")({
 
 function ReviewerWorkspace() {
   const { t } = useT();
-  const queueFn = useServerFn(listReviewQueue);
-  const queue = useQuery({ queryKey: ["academy", "review-queue"], queryFn: () => queueFn() });
 
+  // The queue owns its own fetch, loading and empty state. This route used to
+  // run a SECOND query against the same endpoint purely to read isLoading,
+  // under a different query key — two requests, two caches, and a window where
+  // the page and the list disagreed about whether there was work.
   return (
     <AssessmentShell wide>
       <header className="mb-6">
@@ -61,16 +57,10 @@ function ReviewerWorkspace() {
         </p>
       </header>
 
-      {queue.isLoading ? (
-        <AssessmentPanel>
-          <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
-        </AssessmentPanel>
-      ) : (
-        <ReviewQueue
-          emptyTitle={t("academy.reviews.adminEmptyTitle")}
-          emptyBody={t("academy.reviews.adminEmptyBody")}
-        />
-      )}
+      <ReviewQueue
+        emptyTitle={t("academy.reviews.adminEmptyTitle")}
+        emptyBody={t("academy.reviews.adminEmptyBody")}
+      />
     </AssessmentShell>
   );
 }
