@@ -112,7 +112,7 @@ function Selector<T extends string>({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="mt-1 block h-10 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="mt-1 block h-11 w-full rounded-md border border-input bg-background px-2.5 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -261,7 +261,7 @@ export function PrototypeShell() {
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <RotateCcw aria-hidden="true" className="h-4 w-4" />
               {pt("proto.reset")}

@@ -30,16 +30,28 @@ export const Route = createFileRoute("/_authenticated/passport")({
   component: PassportShell,
 });
 
+/** ── FOUR TABS, AND WHY THE OTHER TWO LEFT ─────────────────────────────
+ *
+ * Six tabs asked the holder to understand the product's internal structure
+ * before they could use it. Two of them were not destinations at all:
+ *
+ *   * "Kom igång" is a FIRST RUN, not a place. Once somebody has started,
+ *     a permanent tab back into the guided flow is a second, parallel way to
+ *     enter the same information — which is how a product ends up with two
+ *     answers to "where does my employment live". It is still reachable at
+ *     /passport/onboarding while onboarding is unfinished, and the overview
+ *     links to it; it just stops being a standing navigation item.
+ *
+ *   * "Dela" is an ACTION on the thing you are looking at, not a section of
+ *     the Passport. It belongs next to the card it shares, so it is reached
+ *     from the overview and from Passport Card.
+ *
+ * What is left are the four things a holder actually navigates between: what
+ * they have, what they can enter, what it looks like, and who can see it. */
 const NAV: readonly { to: string; labelKey: PassportCopyKey }[] = [
   { to: "/passport", labelKey: "nav.overview" },
-  { to: "/passport/onboarding", labelKey: "nav.onboarding" },
-  // Entering information is the main thing a holder comes here to do, so it
-  // is reachable from every Passport page, not only from the overview. The
-  // credential form lives inside it rather than beside it: VU1/VU2/OV/SV are
-  // one kind of entry among several, not a separate destination.
   { to: "/passport/information", labelKey: "nav.information" },
   { to: "/passport/card", labelKey: "nav.card" },
-  { to: "/passport/share", labelKey: "sc.title" },
   { to: "/passport/privacy", labelKey: "nav.privacy" },
 ];
 

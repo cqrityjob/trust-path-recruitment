@@ -23,6 +23,7 @@
 // evidence. That placement is the signature gesture.
 
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
+import { ExperienceMark } from "../ExperienceMark";
 import {
   BrandMark,
   CredentialPlate,
@@ -117,6 +118,20 @@ export function DirectionC({
                 </p>
               </div>
             )}
+
+            {/* Verified time in the profession, as the five intervals plus the
+                exact duration. It sits under the milestone because it answers
+                a different question: the milestone is a threshold reached,
+                this is how much has actually been checked. Neither is a
+                score, and the figure is always printed so the segments never
+                have to be decoded. */}
+            <div className="mt-4">
+              <ExperienceMark
+                verifiedDays={c.experience.verifiedDays}
+                selfDeclaredDays={c.experience.reportedDays}
+                onNavy
+              />
+            </div>
           </div>
         </div>
 

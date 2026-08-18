@@ -219,6 +219,17 @@ const sv = {
     "Ett intygande gör skillnaden mellan en anteckning och en yrkesuppgift tydlig.",
 
   // ── Overview ─────────────────────────────────────────────────────────
+  "att.title": "Behöver din uppmärksamhet",
+  "att.clear": "Inget väntar på dig just nu.",
+  "att.waiting": "Granskas just nu",
+  "att.waitingHint": "Någon annan tittar på det här. Du behöver inte göra något.",
+  "att.needsHolder": "Väntar på dig",
+  "att.needsHolderHint": "Granskaren har bett om komplettering.",
+  "att.expiring": "Går ut snart",
+  "att.expiringHint": "Förnya i god tid — ett förordnande förnyas hos myndigheten, inte här.",
+  "att.expired": "Har gått ut",
+  "att.expiredHint": "Visas inte längre som giltigt. Rätta eller förnya uppgiften.",
+  "att.daysLeft": "dagar kvar",
   "overview.title": "Mitt Security Passport",
   "overview.privateNote": "Bara du ser den här sidan.",
   "overview.emptyTitle": "Ditt Passport är tomt",
@@ -301,11 +312,11 @@ const sv = {
   "lifecycle.locked": "Underlagsnivå och tillstånd sätts av systemet och kan inte ändras av dig.",
 
   // ── Claims ───────────────────────────────────────────────────────────
-  "claims.type.training": "Utbildning",
+  "claims.type.training": "Kurser",
   "claims.type.certification": "Certifiering",
   "claims.type.licence": "Behörighet",
   "claims.type.specialisation": "Specialisering",
-  "claims.type.education": "Formell utbildning",
+  "claims.type.education": "Utbildning",
   "claims.type.professional_membership": "Yrkesmedlemskap",
   "claims.issuer": "Utfärdare",
   "claims.verifier": "Verifierad av",
@@ -912,7 +923,8 @@ const sv = {
   "share2.primary": "Dela mitt Passport",
   "share2.creating": "Skapar länk …",
   "share2.share": "Dela",
-  "share2.copy": "Kopiera länk",
+  "share2.copy": "Kopiera säker länk",
+  "share2.view": "Visa Passport",
   "share2.copied": "Länken är kopierad",
   "share2.ready": "Länken är klar",
   "share2.terms": "Gäller i 30 dagar. Du kan återkalla den när som helst.",
@@ -973,6 +985,37 @@ const sv = {
   "info.lead":
     "Här lägger du in din bakgrund. Allt sparas direkt och du kan fortsätta när du vill. Behörigheter har egna formulär eftersom de har egna regler.",
   "info.employment": "Anställningar",
+  // Phase 11 — languages and practical skills.
+  "info.languages": "Språk",
+  "info.skills": "Praktiska färdigheter",
+  "skill.lead.language":
+    "Språk du använder i arbetet. Nivån följer den europeiska skalan, så en läsare vet vad den betyder.",
+  "skill.lead.practical_skill": "Behörigheter och intyg som har en utfärdare och går att styrka.",
+  "skill.add.language": "Lägg till språk",
+  "skill.add.practical_skill": "Lägg till behörighet",
+  "skill.field.language": "Språk",
+  "skill.field.skill": "Behörighet",
+  "skill.field.level": "Nivå",
+  "skill.field.category": "Behörighetsklass",
+  "skill.field.jurisdiction": "Utfärdat i (landskod)",
+  "skill.field.validUntil": "Giltigt till och med",
+  "skill.field.note": "Egen anteckning",
+  "skill.noteHelp": "Syns bara för dig och för den som granskar. Delas aldrig.",
+  "skill.none.language": "Inga språk tillagda ännu.",
+  "skill.none.practical_skill": "Inga behörigheter tillagda ännu.",
+  "skill.selfDeclared": "Egen uppgift tills någon har granskat underlag för den.",
+  "skill.levelRequired": "Välj en nivå.",
+  "skill.jurisdictionRequired": "Ange landskod med två bokstäver, till exempel SE.",
+  "skill.validUntilRequired": "Den här behörigheten har ett slutdatum.",
+  // CEFR, in words rather than bare codes. The code is kept in parentheses so
+  // a reader who knows the scale still recognises it.
+  "skill.cefr.A1": "Nybörjare (A1)",
+  "skill.cefr.A2": "Grundläggande (A2)",
+  "skill.cefr.B1": "Självständig (B1)",
+  "skill.cefr.B2": "Avancerad (B2)",
+  "skill.cefr.C1": "Mycket avancerad (C1)",
+  "skill.cefr.C2": "Behärskar fullständigt (C2)",
+  "skill.cefr.native": "Modersmål",
   "info.employmentLead":
     "Lägg till varje anställning för sig. Överlappande perioder räknas bara en gång.",
   "info.addEmployment": "Lägg till anställning",
@@ -1014,6 +1057,8 @@ const sv = {
   "cred.versions.recordedAt": "Registrerad",
 
   // ── LinkedIn sharing (fallback experience) ───────────────────────────
+  "li.shareText":
+    "Mitt verifierade Security Passport från CQrityjob. Länken visar vad som är granskat och av vem.",
   "li.title": "Dela på LinkedIn",
   "li.lead":
     "Så här ser ditt kort ut i LinkedIns format. Tre steg: ladda ner bilden, kopiera länken, bifoga bilden i ditt inlägg.",
@@ -1226,6 +1271,18 @@ const en: Record<PassportCopyKey, string> = {
   "onboarding.declaration.why":
     "A declaration makes the difference between a note and a professional record explicit.",
 
+  "att.title": "Needs your attention",
+  "att.clear": "Nothing is waiting on you right now.",
+  "att.waiting": "Being reviewed",
+  "att.waitingHint": "Someone else is looking at this. You do not need to do anything.",
+  "att.needsHolder": "Waiting on you",
+  "att.needsHolderHint": "The reviewer has asked for something more.",
+  "att.expiring": "Expiring soon",
+  "att.expiringHint":
+    "Renew in good time — an appointment is renewed with the authority, not here.",
+  "att.expired": "Has expired",
+  "att.expiredHint": "No longer shown as valid. Correct or renew the entry.",
+  "att.daysLeft": "days left",
   "overview.title": "My Security Passport",
   "overview.privateNote": "Only you can see this page.",
   "overview.emptyTitle": "Your Passport is empty",
@@ -1299,11 +1356,11 @@ const en: Record<PassportCopyKey, string> = {
   "lifecycle.locked":
     "Evidence level and state are set by the system and cannot be changed by you.",
 
-  "claims.type.training": "Training",
+  "claims.type.training": "Courses",
   "claims.type.certification": "Certification",
   "claims.type.licence": "Authorisation",
   "claims.type.specialisation": "Specialisation",
-  "claims.type.education": "Formal education",
+  "claims.type.education": "Education",
   "claims.type.professional_membership": "Professional membership",
   "claims.issuer": "Issuer",
   "claims.verifier": "Verified by",
@@ -1900,7 +1957,8 @@ const en: Record<PassportCopyKey, string> = {
   "share2.primary": "Share my Passport",
   "share2.creating": "Creating link …",
   "share2.share": "Share",
-  "share2.copy": "Copy link",
+  "share2.copy": "Copy secure link",
+  "share2.view": "View Passport",
   "share2.copied": "Link copied",
   "share2.ready": "Your link is ready",
   "share2.terms": "Valid for 30 days. You can revoke it at any time.",
@@ -1957,6 +2015,35 @@ const en: Record<PassportCopyKey, string> = {
   "info.lead":
     "This is where you enter your background. Everything saves immediately and you can continue whenever you like. Credentials have their own forms because they have their own rules.",
   "info.employment": "Employment",
+  "info.languages": "Languages",
+  "info.skills": "Practical skills",
+  "skill.lead.language":
+    "Languages you use at work. The level follows the European scale, so a reader knows what it means.",
+  "skill.lead.practical_skill":
+    "Licences and certificates that have an issuer and can be evidenced.",
+  "skill.add.language": "Add a language",
+  "skill.add.practical_skill": "Add a licence",
+  "skill.field.language": "Language",
+  "skill.field.skill": "Licence",
+  "skill.field.level": "Level",
+  "skill.field.category": "Category",
+  "skill.field.jurisdiction": "Issued in (country code)",
+  "skill.field.validUntil": "Valid until",
+  "skill.field.note": "Your own note",
+  "skill.noteHelp": "Visible only to you and to a reviewer. Never shared.",
+  "skill.none.language": "No languages added yet.",
+  "skill.none.practical_skill": "No licences added yet.",
+  "skill.selfDeclared": "Self-declared until someone has reviewed evidence for it.",
+  "skill.levelRequired": "Choose a level.",
+  "skill.jurisdictionRequired": "Enter a two-letter country code, for example SE.",
+  "skill.validUntilRequired": "This licence has an end date.",
+  "skill.cefr.A1": "Beginner (A1)",
+  "skill.cefr.A2": "Elementary (A2)",
+  "skill.cefr.B1": "Independent (B1)",
+  "skill.cefr.B2": "Advanced (B2)",
+  "skill.cefr.C1": "Highly advanced (C1)",
+  "skill.cefr.C2": "Full command (C2)",
+  "skill.cefr.native": "Native",
   "info.employmentLead":
     "Add each employment separately. Overlapping periods are only counted once.",
   "info.addEmployment": "Add employment",
@@ -1997,6 +2084,8 @@ const en: Record<PassportCopyKey, string> = {
   "cred.versions.current": "Current",
   "cred.versions.recordedAt": "Recorded",
 
+  "li.shareText":
+    "My verified Security Passport from CQrityjob. The link shows what has been reviewed, and by whom.",
   "li.title": "Share on LinkedIn",
   "li.lead":
     "This is your card in LinkedIn's format. Three steps: download the image, copy the link, attach the image to your post.",

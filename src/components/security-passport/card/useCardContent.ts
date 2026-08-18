@@ -58,6 +58,13 @@ export interface CardContent {
   readonly emptyHeading: string;
   readonly emptyBody: string;
   readonly noVerifiedYet: string;
+  /** Overlap-free verified and reported time, carried straight from the card
+   *  model so the segments on the card, the figure beside them and the
+   *  recipient page all read the same number. */
+  readonly experience: {
+    readonly verifiedDays: number;
+    readonly reportedDays: number;
+  };
 }
 
 export function useCardContent(
@@ -154,5 +161,9 @@ export function useCardContent(
     noVerifiedYet: card.credentials.some((c) => c.assertionLevel === "verified")
       ? pt("card.noVerifiedExperience")
       : pt("card.noVerifiedYet"),
+    experience: {
+      verifiedDays: card.verifiedExperienceDays,
+      reportedDays: card.reportedExperienceDays,
+    },
   };
 }

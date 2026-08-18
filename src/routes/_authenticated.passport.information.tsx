@@ -31,17 +31,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Briefcase, GraduationCap, Plus, ShieldCheck } from "lucide-react";
+import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
   listMyEntries,
+  listSkillTypes,
   removeEntry,
   saveClaimEntry,
   saveExperienceEntry,
+  saveSkillEntry,
   type ClaimEntry,
   type ExperienceEntry,
   type FreeClaimKind,
+  type SkillType,
 } from "@/lib/security-passport/entries.functions";
 import { formatPeriodRange } from "@/lib/security-passport/format";
 import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
@@ -60,6 +63,12 @@ import {
   type ClaimDraft,
   type ExperienceDraft,
 } from "@/components/security-passport/EntryForms";
+import {
+  SkillSection,
+  emptySkillDraft,
+  validateSkill,
+  type SkillDraft,
+} from "@/components/security-passport/SkillSection";
 import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/types";
 
 export const Route = createFileRoute("/_authenticated/passport/information")({
@@ -112,6 +121,8 @@ function PassportInformationRoute() {
   const saveExp = useServerFn(saveExperienceEntry);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
+  const loadSkillTypes = useServerFn(listSkillTypes);
+  const saveSkill = useServerFn(saveSkillEntry);
 
   const [experience, setExperience] = useState<readonly ExperienceEntry[]>([]);
   const [claims, setClaims] = useState<readonly ClaimEntry[]>([]);
@@ -122,19 +133,34 @@ function PassportInformationRoute() {
   const [editing, setEditing] = useState<Editing>(null);
   const [expErrors, setExpErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [claimErrors, setClaimErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
+  const [skillTypes, setSkillTypes] = useState<readonly SkillType[]>([]);
+  // One draft per section, keyed by claim_type, so opening the language form
+  // does not close a half-filled licence form.
+  const [skillDrafts, setSkillDrafts] = useState<Record<string, SkillDraft | null>>({
+    language: null,
+    practical_skill: null,
+  });
+  const [skillErrors, setSkillErrors] = useState<Record<string, Record<string, PassportCopyKey>>>({
+    language: {},
+    practical_skill: {},
+  });
 
   const refresh = useCallback(async () => {
     try {
-      const data = await load({ data: undefined });
+      const [data, types] = await Promise.all([
+        load({ data: undefined }),
+        loadSkillTypes({ data: undefined }),
+      ]);
       setExperience(data.experience);
       setClaims(data.claims);
+      setSkillTypes(types);
     } catch (err) {
       console.error("[passport] entries load failed", err);
       setError(pt("common.error"));
     } finally {
       setLoaded(true);
     }
-  }, [load, pt]);
+  }, [load, loadSkillTypes, pt]);
 
   useEffect(() => {
     void refresh();
@@ -200,6 +226,39 @@ function PassportInformationRoute() {
       await refresh();
     } catch (err) {
       console.error("[passport] claim save failed", err);
+      setError(pt("common.error"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function commitSkill(claimType: "language" | "practical_skill", draft: SkillDraft) {
+    const type = skillTypes.find((t) => t.code === draft.skillCode);
+    const errs = validateSkill(draft, type);
+    setSkillErrors((prev) => ({ ...prev, [claimType]: errs }));
+    if (Object.keys(errs).length > 0) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await saveSkill({
+        data: {
+          id: null,
+          claimType,
+          skillCode: draft.skillCode,
+          // The database refuses a level on a type that has no scale, so the
+          // empty string must become null rather than travel as "".
+          skillLevel: draft.skillLevel || null,
+          jurisdictionCode: draft.jurisdictionCode.trim().toUpperCase() || null,
+          validUntil: draft.validUntil || null,
+          holderNote: draft.holderNote.trim() || null,
+        },
+      });
+      setSkillDrafts((prev) => ({ ...prev, [claimType]: null }));
+      setNotice(pt("entry.saved"));
+      await refresh();
+    } catch (err) {
+      console.error("[passport] skill save failed", err);
       setError(pt("common.error"));
     } finally {
       setBusy(false);
@@ -408,6 +467,44 @@ function PassportInformationRoute() {
           </button>
         )}
       </SectionShell>
+
+      {/* ── Languages and practical skills ────────────────────────────── */}
+      {(
+        [
+          {
+            kind: "language",
+            titleKey: "info.languages",
+            icon: <Languages aria-hidden="true" className="h-4 w-4" />,
+          },
+          {
+            kind: "practical_skill",
+            titleKey: "info.skills",
+            icon: <Wrench aria-hidden="true" className="h-4 w-4" />,
+          },
+        ] as const
+      ).map((section) => (
+        <SectionShell key={section.kind} icon={section.icon} title={pt(section.titleKey)}>
+          <SkillSection
+            claimType={section.kind}
+            types={skillTypes}
+            entries={claims.filter((c) => c.claimType === section.kind)}
+            draft={skillDrafts[section.kind]}
+            errors={skillErrors[section.kind] ?? {}}
+            busy={busy}
+            onDraftChange={(d) => setSkillDrafts((prev) => ({ ...prev, [section.kind]: d }))}
+            onStart={() =>
+              setSkillDrafts((prev) => ({ ...prev, [section.kind]: emptySkillDraft() }))
+            }
+            onCancel={() => {
+              setSkillDrafts((prev) => ({ ...prev, [section.kind]: null }));
+              setSkillErrors((prev) => ({ ...prev, [section.kind]: {} }));
+            }}
+            onSave={(d) => void commitSkill(section.kind, d)}
+            onRemove={(id) => void remove("claim", id)}
+            onOpen={(id) => openEntry("claim", id)}
+          />
+        </SectionShell>
+      ))}
 
       {/* ── Education, courses, certificates, specialisations ─────────── */}
       {CLAIM_SECTIONS.map((section) => {

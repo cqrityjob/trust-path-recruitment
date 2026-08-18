@@ -73,6 +73,18 @@ export interface PassportCardModel {
   readonly state: PassportCardState;
   /** Null unless the whole qualifying threshold is verified. */
   readonly recognition: RecognitionState;
+  /** Overlap-free VERIFIED time, in days, as of the evaluation date. The card
+   *  renders it as the five experience segments plus the exact duration; both
+   *  come from this one number so the mark and the text cannot disagree.
+   *  Computed by `totalsByEvidenceLevel`, which unions intervals rather than
+   *  summing them, so two concurrent jobs count once. Elapsed calendar time,
+   *  not FTE-weighted: the segments count time in the profession, and
+   *  discounting a part-time year would be a judgement, not a count. */
+  readonly verifiedExperienceDays: number;
+  /** Everything the holder has reported, verified or not. Shown separately and
+   *  neutrally: a holder with unverified years is not at zero, and pretending
+   *  otherwise pushes people to overclaim. */
+  readonly reportedExperienceDays: number;
   readonly credentials: readonly CardCredential[];
   readonly containsExpired: boolean;
   readonly containsDisputed: boolean;
@@ -160,6 +172,9 @@ export function buildPassportCard(
     jurisdictionCode: holder.jurisdictionCode,
     state: deriveState(holder.periods, holder.claims),
     recognition,
+    verifiedExperienceDays: totals.verified.elapsedDays,
+    reportedExperienceDays: totals.reported.elapsedDays,
+
     credentials,
     // Derived, so a licence that lapsed yesterday is reported today. The
     // whole card carries the warning, not only the plate.

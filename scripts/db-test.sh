@@ -1047,6 +1047,31 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 11 assertions"
+set +e
+SP11_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase11_test.sql 2>&1)"
+SP11_RC=$?
+set -e
+
+echo "$SP11_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP11_PASSED="$(echo "$SP11_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP11_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 11 suite exited with code ${SP11_RC}." >&2
+  echo "$SP11_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Phase 11"
+else
+  echo "    ok  ${SP11_PASSED} Security Passport Phase 11 assertions passed"
+  # A short run means the controlled-vocabulary refusals did not execute, which
+  # is the entire reason languages and skills are not free text.
+  if [ "$SP11_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 Phase 11 assertions, only ${SP11_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 11 (assertion shortfall: floor 30)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null

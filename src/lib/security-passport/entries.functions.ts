@@ -81,6 +81,12 @@ export interface ClaimEntry {
   readonly id: string;
   readonly claimType: string;
   readonly credentialCode: string | null;
+  /** Phase 11. Controlled language or practical-capability code, FK-backed.
+   *  Never both this and `credentialCode`: a language does not wear a
+   *  credential symbol, and the database refuses an entry that tries. */
+  readonly skillCode: string | null;
+  /** A value from the scale the skill type declares. Never free text. */
+  readonly skillLevel: string | null;
   readonly title: string;
   readonly issuerName: string | null;
   readonly jurisdictionCode: string | null;
@@ -127,7 +133,7 @@ export const listMyEntries = createServerFn({ method: "GET" })
         supabase
           .from("sp_claims")
           .select(
-            "id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_until, assertion_level, lifecycle_state, version_no",
+            "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_until, assertion_level, lifecycle_state, version_no",
           )
           .eq("holder_user_id", userId)
           .neq("lifecycle_state", "superseded")
@@ -163,6 +169,8 @@ export const listMyEntries = createServerFn({ method: "GET" })
           id: row.id as string,
           claimType: row.claim_type as string,
           credentialCode: (row.credential_code as string | null) ?? null,
+          skillCode: (row.skill_code as string | null) ?? null,
+          skillLevel: (row.skill_level as string | null) ?? null,
           title: row.title as string,
           issuerName: (row.claimed_issuer_name as string | null) ?? null,
           jurisdictionCode: (row.jurisdiction_code as string | null) ?? null,
@@ -274,6 +282,153 @@ export const saveExperienceEntry = createServerFn({ method: "POST" })
       subject_id: id,
       detail: { employer_name: data.employerName, role_title: data.roleTitle },
     });
+    return { id };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Languages and practical skills (Phase 11)                           */
+/* ------------------------------------------------------------------ */
+//
+// These are `sp_claims` rows like everything else, so they inherit evidence,
+// review, correction, versioning, withdrawal and disclosure for free. What
+// makes them different is that the WHAT and the LEVEL both come from a
+// controlled vocabulary, never from something the holder typed. A language
+// nobody can check is a self-declaration, and it says so.
+
+export interface SkillType {
+  readonly code: string;
+  readonly claimType: "language" | "practical_skill";
+  readonly nameSv: string;
+  readonly nameEn: string;
+  /** Presentation only: whether the field reads as a proficiency or a
+   *  category. The permitted VALUES are `allowedLevels`. */
+  readonly levelScale: string;
+  /** The scale's content, straight from the vocabulary. Empty means the
+   *  capability has no level and recording one is refused. */
+  readonly allowedLevels: readonly string[];
+  readonly requiresJurisdiction: boolean;
+  readonly requiresValidUntil: boolean;
+}
+
+/** The vocabulary the forms render. Read with the caller's own client: the
+ *  table is SELECT-only for `authenticated` and carries no personal data. */
+export const listSkillTypes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly SkillType[]> => {
+    const { data, error } = await context.supabase
+      .from("sp_skill_types")
+      .select(
+        "code, claim_type, name_sv, name_en, level_scale, requires_jurisdiction, requires_valid_until",
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    return (
+      (data ?? []) as Array<{
+        code: string;
+        claim_type: string;
+        name_sv: string;
+        name_en: string;
+        level_scale: string;
+        allowed_levels: string[] | null;
+        requires_jurisdiction: boolean;
+        requires_valid_until: boolean;
+      }>
+    ).map((r) => ({
+      code: r.code,
+      claimType: r.claim_type as SkillType["claimType"],
+      nameSv: r.name_sv,
+      nameEn: r.name_en,
+      levelScale: r.level_scale,
+      allowedLevels: r.allowed_levels ?? [],
+      requiresJurisdiction: r.requires_jurisdiction,
+      requiresValidUntil: r.requires_valid_until,
+    }));
+  });
+
+const skillInput = z
+  .object({
+    id: z.string().uuid().nullable().optional(),
+    claimType: z.enum(["language", "practical_skill"]),
+    skillCode: z.string().min(2).max(32),
+    /** Null only where the type declares the `none` scale. The database is
+     *  the authority on that; this is a shape check, not the rule. */
+    skillLevel: z.string().max(16).nullable(),
+    jurisdictionCode: z.string().length(2).nullable(),
+    validUntil: z.string().regex(ISO_DATE).nullable(),
+    holderNote: z.string().max(2000).nullable(),
+  })
+  .strict();
+
+export const saveSkillEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => skillInput.parse(data))
+  .handler(async ({ context, data }): Promise<{ id: string }> => {
+    const { supabase, userId } = context;
+
+    // The title is derived from the vocabulary rather than accepted from the
+    // browser. It is what a reader sees, so letting the client supply it would
+    // reintroduce the free-text badge the controlled model exists to prevent.
+    const { data: typeRow, error: typeError } = await supabase
+      .from("sp_skill_types")
+      .select("code, claim_type, name_sv")
+      .eq("code", data.skillCode)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (typeError) throw new Error(typeError.message);
+    if (!typeRow) throw new Error("SP_SKILL_CODE_UNKNOWN");
+    if ((typeRow as { claim_type: string }).claim_type !== data.claimType) {
+      throw new Error("SP_SKILL_CLAIM_TYPE_MISMATCH");
+    }
+    const title = (typeRow as { name_sv: string }).name_sv;
+
+    if (data.id) {
+      const patch: TablesUpdate<"sp_claims"> = {
+        skill_level: data.skillLevel,
+        jurisdiction_code: data.jurisdictionCode,
+        valid_until: data.validUntil,
+        holder_note: data.holderNote,
+      };
+      const { error } = await supabase
+        .from("sp_claims")
+        .update(patch)
+        .eq("id", data.id)
+        .eq("holder_user_id", userId)
+        .eq("assertion_level", "self_declared")
+        .eq("lifecycle_state", "active");
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+
+    const insert: TablesInsert<"sp_claims"> = {
+      holder_user_id: userId,
+      claim_type: data.claimType,
+      skill_code: data.skillCode,
+      skill_level: data.skillLevel,
+      title,
+      jurisdiction_code: data.jurisdictionCode,
+      valid_until: data.validUntil,
+      holder_note: data.holderNote,
+    };
+    const { data: row, error } = await supabase
+      .from("sp_claims")
+      .insert(insert)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const id = (row as { id: string }).id;
+    const { error: eventError } = await supabase.from("sp_passport_events").insert({
+      holder_user_id: userId,
+      actor_user_id: userId,
+      event_type: "claim_created",
+      subject_type: "claim",
+      subject_id: id,
+      detail: { skill_code: data.skillCode, skill_level: data.skillLevel },
+    });
+    if (eventError) throw new Error(eventError.message);
+
     return { id };
   });
 

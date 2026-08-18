@@ -36,7 +36,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Copy, Link2, Share2, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Copy, Eye, Link2, Share2, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
@@ -53,6 +53,8 @@ import { DirectionC } from "@/components/security-passport/card/DirectionC";
 import { SocialFrame } from "@/components/security-passport/social/SocialFrame";
 import { LiveShareActions } from "@/components/security-passport/live/LiveShareActions";
 import { LinkedInShareSection } from "@/components/security-passport/live/LinkedInShareSection";
+import { buildSocialSvg, svgToPngBlob } from "@/lib/security-passport/social-export";
+import { shareFormat } from "@/lib/security-passport/design/trust-system";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
@@ -87,7 +89,7 @@ function today(): string {
 }
 
 function PassportShareRoute() {
-  const { pt } = usePassportCopy();
+  const { pt, lang } = usePassportCopy();
 
   const loadPassport = useServerFn(getMyPassport);
   const loadShares = useServerFn(listMyDisclosures);
@@ -182,11 +184,64 @@ function PassportShareRoute() {
     }
   }
 
+  /** The card image, rendered from the SAME safe social model the recipient
+   *  page uses. It carries no credential reference, no document, no employer
+   *  history, no contact detail and no internal note — buildSocialCard decides
+   *  that, and the fixture check proves it across every persona and privacy
+   *  mode. Nothing here can widen it. */
+  async function cardImageFile(): Promise<File | null> {
+    if (!socialModel || !shareUrl) return null;
+    try {
+      const spec = shareFormat("og");
+      const svg = buildSocialSvg(
+        socialModel,
+        "og",
+        lang,
+        {
+          brand: pt("card.brand"),
+          professionLine: `${lang === "sv" ? socialModel.professionTitleSv : socialModel.professionTitleEn} · ${socialModel.jurisdictionCode}`,
+          verifiedLabel: pt("assertion.verified"),
+          yearsLabel: pt("recognition.years"),
+          verifyAtSource: pt("card.verifyAtSource"),
+          noVerifiedYet:
+            socialModel.verifiedCredentials.length > 0
+              ? pt("card.noVerifiedExperience")
+              : pt("card.noVerifiedYet"),
+          staleWarning: socialModel.staleWarning ? pt("card.shareExpired") : null,
+        },
+        qrDataUrl,
+      );
+      const blob = await svgToPngBlob(svg, spec.width, spec.height);
+      return new File([blob], "cqrityjob-passport.png", { type: "image/png" });
+    } catch (err) {
+      // A failed render must not block sharing the link, which is the part
+      // that actually verifies. The image is the nicety.
+      console.error("[passport] card image render failed", err);
+      return null;
+    }
+  }
+
   async function onShare() {
     if (!shareUrl) return;
-    // Native sharing where the device offers it; a copy is the honest
-    // fallback rather than a button that silently does nothing.
+    // Three tiers, best first:
+    //
+    //   1. the card IMAGE plus the link, where the browser supports sharing
+    //      files — this is what makes a post look like a Passport rather than
+    //      a bare URL;
+    //   2. the link alone through the native sheet;
+    //   3. a copy, because a button that silently does nothing is worse than
+    //      one that tells you what it did.
     try {
+      const file = await cardImageFile();
+      if (file && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: pt("rec.title"),
+          text: pt("li.shareText"),
+          url: shareUrl,
+          files: [file],
+        });
+        return;
+      }
       if (navigator.share) {
         await navigator.share({ title: pt("rec.title"), url: shareUrl });
         return;
@@ -306,6 +361,19 @@ function PassportShareRoute() {
               )}
               {copied ? pt("share2.copied") : pt("share2.copy")}
             </button>
+            {/* The third and last primary action: see it as the recipient
+                sees it. A holder who cannot check what they just handed over
+                has to trust us about it, which is the opposite of the point.
+                A plain link, not a button, because it navigates. */}
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              <Eye aria-hidden="true" className="h-4 w-4" />
+              {pt("share2.view")}
+            </a>
           </div>
 
           {/* One sentence, once. Not the same warning three times. */}

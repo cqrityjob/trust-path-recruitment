@@ -76,6 +76,12 @@ const WORD_TONE: Record<CredentialPresentationState, string> = {
   draft: "text-muted-foreground",
   self_declared: "text-muted-foreground",
   documented: "text-foreground",
+  // Both review states read as ordinary foreground: a review in progress is
+  // not a warning about the person, and colouring it as one would be the
+  // judgement this system exists to avoid. The dash and glyph carry the
+  // distinction.
+  under_review: "text-foreground",
+  clarification_required: "text-foreground",
   verified: "text-foreground",
   expired: "text-amber-700 dark:text-amber-400",
   revoked: "text-destructive",

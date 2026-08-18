@@ -7340,6 +7340,8 @@ export type Database = {
           issued_on: string | null
           jurisdiction_code: string | null
           lifecycle_state: string
+          skill_code: string | null
+          skill_level: string | null
           supersedes_id: string | null
           title: string
           updated_at: string
@@ -7362,6 +7364,8 @@ export type Database = {
           issued_on?: string | null
           jurisdiction_code?: string | null
           lifecycle_state?: string
+          skill_code?: string | null
+          skill_level?: string | null
           supersedes_id?: string | null
           title: string
           updated_at?: string
@@ -7384,6 +7388,8 @@ export type Database = {
           issued_on?: string | null
           jurisdiction_code?: string | null
           lifecycle_state?: string
+          skill_code?: string | null
+          skill_level?: string | null
           supersedes_id?: string | null
           title?: string
           updated_at?: string
@@ -7394,6 +7400,13 @@ export type Database = {
           version_no?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sp_claims_skill_code_fkey"
+            columns: ["skill_code"]
+            isOneToOne: false
+            referencedRelation: "sp_skill_types"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "sp_claims_credential_code_fkey"
             columns: ["credential_code"]
@@ -7854,6 +7867,48 @@ export type Database = {
           is_active?: boolean
           threshold_years?: number[]
           version?: string
+        }
+        Relationships: []
+      }
+      sp_skill_types: {
+        Row: {
+          allowed_levels: string[]
+          claim_type: string
+          code: string
+          created_at: string
+          is_active: boolean
+          level_scale: string
+          name_en: string
+          name_sv: string
+          requires_jurisdiction: boolean
+          requires_valid_until: boolean
+          sort_order: number
+        }
+        Insert: {
+          allowed_levels?: string[]
+          claim_type: string
+          code: string
+          created_at?: string
+          is_active?: boolean
+          level_scale: string
+          name_en: string
+          name_sv: string
+          requires_jurisdiction?: boolean
+          requires_valid_until?: boolean
+          sort_order?: number
+        }
+        Update: {
+          allowed_levels?: string[]
+          claim_type?: string
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          level_scale?: string
+          name_en?: string
+          name_sv?: string
+          requires_jurisdiction?: boolean
+          requires_valid_until?: boolean
+          sort_order?: number
         }
         Relationships: []
       }
@@ -8867,6 +8922,8 @@ export type Database = {
           _issued_on: string
           _jurisdiction_code: string
           _reason: string
+          _skill_code?: string
+          _skill_level?: string
           _title: string
           _valid_from: string
           _valid_until: string
