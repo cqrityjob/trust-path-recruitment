@@ -61,6 +61,7 @@ import { Route as AuthenticatedSecurityCareerAssessmentHistoryRouteImport } from
 import { Route as AuthenticatedPassportShareRouteImport } from './routes/_authenticated.passport.share'
 import { Route as AuthenticatedPassportPrivacyRouteImport } from './routes/_authenticated.passport.privacy'
 import { Route as AuthenticatedPassportOnboardingRouteImport } from './routes/_authenticated.passport.onboarding'
+import { Route as AuthenticatedPassportInformationRouteImport } from './routes/_authenticated.passport.information'
 import { Route as AuthenticatedPassportCardRouteImport } from './routes/_authenticated.passport.card'
 import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/_authenticated.my-career.applications'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
@@ -403,6 +404,12 @@ const AuthenticatedPassportOnboardingRoute =
   AuthenticatedPassportOnboardingRouteImport.update({
     id: '/onboarding',
     path: '/onboarding',
+    getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
+const AuthenticatedPassportInformationRoute =
+  AuthenticatedPassportInformationRouteImport.update({
+    id: '/information',
+    path: '/information',
     getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
 const AuthenticatedPassportCardRoute =
@@ -878,6 +885,7 @@ export interface FileRoutesByFullPath {
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/passport/share': typeof AuthenticatedPassportShareRoute
@@ -984,6 +992,7 @@ export interface FileRoutesByTo {
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
+  '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/passport/share': typeof AuthenticatedPassportShareRoute
@@ -1107,6 +1116,7 @@ export interface FileRoutesById {
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
+  '/_authenticated/passport/information': typeof AuthenticatedPassportInformationRoute
   '/_authenticated/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/_authenticated/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/_authenticated/passport/share': typeof AuthenticatedPassportShareRoute
@@ -1230,6 +1240,7 @@ export interface FileRouteTypes {
     | '/journey/$targetId'
     | '/my-career/applications'
     | '/passport/card'
+    | '/passport/information'
     | '/passport/onboarding'
     | '/passport/privacy'
     | '/passport/share'
@@ -1336,6 +1347,7 @@ export interface FileRouteTypes {
     | '/journey/$targetId'
     | '/my-career/applications'
     | '/passport/card'
+    | '/passport/information'
     | '/passport/onboarding'
     | '/passport/privacy'
     | '/passport/share'
@@ -1458,6 +1470,7 @@ export interface FileRouteTypes {
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/my-career/applications'
     | '/_authenticated/passport/card'
+    | '/_authenticated/passport/information'
     | '/_authenticated/passport/onboarding'
     | '/_authenticated/passport/privacy'
     | '/_authenticated/passport/share'
@@ -1915,6 +1928,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/passport/onboarding'
       preLoaderRoute: typeof AuthenticatedPassportOnboardingRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
+    }
+    '/_authenticated/passport/information': {
+      id: '/_authenticated/passport/information'
+      path: '/information'
+      fullPath: '/passport/information'
+      preLoaderRoute: typeof AuthenticatedPassportInformationRouteImport
       parentRoute: typeof AuthenticatedPassportRoute
     }
     '/_authenticated/passport/card': {
@@ -2712,6 +2732,7 @@ const AuthenticatedMyCareerRouteWithChildren =
 
 interface AuthenticatedPassportRouteChildren {
   AuthenticatedPassportCardRoute: typeof AuthenticatedPassportCardRoute
+  AuthenticatedPassportInformationRoute: typeof AuthenticatedPassportInformationRoute
   AuthenticatedPassportOnboardingRoute: typeof AuthenticatedPassportOnboardingRoute
   AuthenticatedPassportPrivacyRoute: typeof AuthenticatedPassportPrivacyRoute
   AuthenticatedPassportShareRoute: typeof AuthenticatedPassportShareRoute
@@ -2722,6 +2743,7 @@ interface AuthenticatedPassportRouteChildren {
 
 const AuthenticatedPassportRouteChildren: AuthenticatedPassportRouteChildren = {
   AuthenticatedPassportCardRoute: AuthenticatedPassportCardRoute,
+  AuthenticatedPassportInformationRoute: AuthenticatedPassportInformationRoute,
   AuthenticatedPassportOnboardingRoute: AuthenticatedPassportOnboardingRoute,
   AuthenticatedPassportPrivacyRoute: AuthenticatedPassportPrivacyRoute,
   AuthenticatedPassportShareRoute: AuthenticatedPassportShareRoute,

@@ -333,12 +333,65 @@ export const saveOnboardingProgress = createServerFn({ method: "POST" })
 
 /** Records the truthfulness declaration and closes onboarding. The database
  *  refuses a completed profile with no declaration, so the two cannot drift. */
+/**
+ * Closes onboarding, and — new in Phase 8 — turns the current-role answers
+ * into a real employment period.
+ *
+ * Until Phase 8 every onboarding answer went into `onboarding_answers` and
+ * stopped there, so a holder who told us where they work still had an empty
+ * Passport. The wizard asks for employer, role and start date; those three
+ * are exactly an `sp_experience_periods` row, and this is where the answer
+ * becomes the record.
+ *
+ * It is deliberately idempotent-ish: the insert is skipped when the holder
+ * already has any period, so completing onboarding twice — or completing it
+ * after adding employment on /passport/information — cannot duplicate a job.
+ * The period is written with no assertion or lifecycle argument, so it takes
+ * the `self_declared` / `active` column defaults like every other holder
+ * write.
+ */
 export const completeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ completedAt: string }> => {
+  .handler(async ({ context }): Promise<{ completedAt: string; createdPeriod: boolean }> => {
     const { supabase, userId } = context;
     const db = supabase;
     const now = new Date().toISOString();
+
+    const profileRes = await db
+      .from("sp_passport_profiles")
+      .select("onboarding_answers, jurisdiction_code")
+      .eq("holder_user_id", userId)
+      .maybeSingle();
+
+    const answers = ((profileRes.data as { onboarding_answers: Record<string, string> } | null)
+      ?.onboarding_answers ?? {}) as Record<string, string>;
+    const jurisdiction =
+      (profileRes.data as { jurisdiction_code?: string } | null)?.jurisdiction_code ?? "SE";
+
+    const employer = (answers["currentRole.employer"] ?? "").trim();
+    const role = (answers["currentRole.role"] ?? "").trim();
+    const startedOn = (answers["currentRole.startedOn"] ?? "").trim();
+
+    let createdPeriod = false;
+    if (employer && role && /^\d{4}-\d{2}-\d{2}$/.test(startedOn)) {
+      const existing = await db
+        .from("sp_experience_periods")
+        .select("id")
+        .eq("holder_user_id", userId)
+        .limit(1);
+      if ((existing.data ?? []).length === 0) {
+        const { error: periodError } = await db.from("sp_experience_periods").insert({
+          holder_user_id: userId,
+          employer_name: employer,
+          role_title: role,
+          jurisdiction_code: jurisdiction,
+          started_on: startedOn,
+          ended_on: null,
+        });
+        if (periodError) throw new Error(periodError.message);
+        createdPeriod = true;
+      }
+    }
 
     const { error } = await db
       .from("sp_passport_profiles")
@@ -363,7 +416,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       },
     ]);
 
-    return { completedAt: now };
+    return { completedAt: now, createdPeriod };
   });
 
 const experienceInput = z.object({
