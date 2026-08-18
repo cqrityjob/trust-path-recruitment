@@ -68,7 +68,7 @@ BEGIN
   PERFORM pg_temp.ok(_n >= 15, '1.1 the launch language vocabulary is present');
 
   SELECT count(*) INTO _n FROM public.sp_skill_types WHERE claim_type = 'practical_skill';
-  PERFORM pg_temp.ok(_n >= 3, '1.2 the launch practical-skill vocabulary is present');
+  PERFORM pg_temp.ok(_n >= 5, '1.2 the launch practical-skill vocabulary is present');
 
   PERFORM pg_temp.ok(
     (SELECT level_scale FROM public.sp_skill_types WHERE code = 'lang_sv') = 'cefr',
@@ -76,6 +76,20 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT requires_jurisdiction FROM public.sp_skill_types WHERE code = 'driving_licence'),
     '1.4 a driving licence must name where it was issued');
+
+  -- The scale is DATA. Adding a licence type with its own categories must be
+  -- an INSERT, never an edit to the trigger.
+  PERFORM pg_temp.ok(
+    (SELECT cardinality(allowed_levels) FROM public.sp_skill_types WHERE code = 'lift_licence') = 6,
+    '1.4b a licence type carries its own categories as data');
+  PERFORM pg_temp.ok(
+    (SELECT cardinality(allowed_levels) FROM public.sp_skill_types WHERE code = 'first_aid_cpr') = 0,
+    '1.4c a capability with no level says so with an empty array');
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public' AND p.proname = 'sp_claims_skill_rules'
+                   AND pg_get_functiondef(p.oid) ILIKE '%WHEN ''cefr''%'),
+    '1.4d the rule function does not hardcode any scale');
 
   -- A vocabulary the application can write is not a controlled vocabulary.
   PERFORM pg_temp.ok(
@@ -365,6 +379,43 @@ BEGIN
     'SP_SKILL_CLAIM_TYPE_MISMATCH',
     '6.5 a correction cannot turn a language into a practical skill');
   RESET ROLE;
+END $$;
+
+
+-- =============================================================================
+\echo '    GROUP 6b -- the taxonomy extends by data alone'
+-- =============================================================================
+DO $$
+DECLARE _h uuid := 'db000000-0000-0000-0000-000000000001'; _id uuid;
+BEGIN
+  -- A capability nobody wrote code for, inserted as pure data.
+  INSERT INTO public.sp_skill_types
+    (code, claim_type, name_sv, name_en, level_scale, allowed_levels,
+     requires_jurisdiction, requires_valid_until, sort_order)
+  VALUES ('p11_probe_licence', 'practical_skill', 'Provbehörighet (fiktiv)',
+          'Probe licence (fictional)', 'category', ARRAY['X1','X2'], false, false, 900);
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, skill_code, skill_level)
+  VALUES (_h, 'practical_skill', 'Provbehörighet', 'p11_probe_licence', 'X2')
+  RETURNING id INTO _id;
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_id IS NOT NULL,
+    '6b.1 a licence type nobody wrote code for is usable immediately');
+
+  PERFORM pg_temp.must_fail(format(
+    $q$INSERT INTO public.sp_claims (holder_user_id, claim_type, title, skill_code, skill_level)
+       VALUES (%L,'practical_skill','Provbehörighet','p11_probe_licence','X9')$q$, _h),
+    'SP_SKILL_LEVEL_INVALID',
+    '6b.2 and its categories are enforced without touching the trigger');
+
+  DELETE FROM public.sp_claims WHERE id = _id;
+  DELETE FROM public.sp_skill_types WHERE code = 'p11_probe_licence';
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM public.sp_skill_types WHERE code = 'p11_probe_licence'),
+    '6b.3 the probe vocabulary row is removed again');
 END $$;
 
 

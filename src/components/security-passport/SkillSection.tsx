@@ -26,16 +26,6 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { ClaimEntry, SkillType } from "@/lib/security-passport/entries.functions";
 
-/** The scales the database enforces, mirrored here only to build the picker.
- *  If these ever disagree, the database wins and this is the bug — which is
- *  why the level is re-checked server-side rather than trusted from here. */
-const LEVELS: Record<SkillType["levelScale"], readonly string[]> = {
-  cefr: ["A1", "A2", "B1", "B2", "C1", "C2", "native"],
-  driving: ["AM", "A1", "A2", "A", "B", "BE", "C1", "C1E", "C", "CE", "D1", "D1E", "D", "DE"],
-  truck: ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "D1", "D2"],
-  none: [],
-};
-
 export interface SkillDraft {
   readonly skillCode: string;
   readonly skillLevel: string;
@@ -56,7 +46,7 @@ export function validateSkill(
 ): Record<string, PassportCopyKey> {
   const errs: Record<string, PassportCopyKey> = {};
   if (!type) return errs;
-  if (type.levelScale !== "none" && !draft.skillLevel) errs.skillLevel = "skill.levelRequired";
+  if (type.allowedLevels.length > 0 && !draft.skillLevel) errs.skillLevel = "skill.levelRequired";
   if (type.requiresJurisdiction && !/^[A-Za-z]{2}$/.test(draft.jurisdictionCode.trim())) {
     errs.jurisdictionCode = "skill.jurisdictionRequired";
   }
@@ -109,7 +99,9 @@ export function SkillSection({
   const levelLabel = (type: SkillType | undefined, level: string | null): string => {
     if (!level) return "";
     if (type?.levelScale === "cefr") return pt(`skill.cefr.${level}` as PassportCopyKey);
-    return level;
+    // A licence category is already the thing people say out loud ("B", "CE"),
+    // so it is shown as the vocabulary stores it rather than dressed up.
+    return level.toUpperCase().replace(/_/g, " ");
   };
 
   const alreadyUsed = useMemo(
@@ -211,7 +203,7 @@ export function SkillSection({
             </select>
           </div>
 
-          {selected && selected.levelScale !== "none" ? (
+          {selected && selected.allowedLevels.length > 0 ? (
             <div>
               <label
                 htmlFor={`skill-level-${claimType}`}
@@ -227,7 +219,7 @@ export function SkillSection({
                 className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <option value="">—</option>
-                {LEVELS[selected.levelScale].map((l) => (
+                {selected.allowedLevels.map((l) => (
                   <option key={l} value={l}>
                     {levelLabel(selected, l)}
                   </option>

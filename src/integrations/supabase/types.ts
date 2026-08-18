@@ -7776,6 +7776,7 @@ export type Database = {
       };
       sp_skill_types: {
         Row: {
+          allowed_levels: string[];
           claim_type: string;
           code: string;
           created_at: string;

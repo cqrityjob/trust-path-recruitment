@@ -300,7 +300,12 @@ export interface SkillType {
   readonly claimType: "language" | "practical_skill";
   readonly nameSv: string;
   readonly nameEn: string;
-  readonly levelScale: "cefr" | "driving" | "truck" | "none";
+  /** Presentation only: whether the field reads as a proficiency or a
+   *  category. The permitted VALUES are `allowedLevels`. */
+  readonly levelScale: string;
+  /** The scale's content, straight from the vocabulary. Empty means the
+   *  capability has no level and recording one is refused. */
+  readonly allowedLevels: readonly string[];
   readonly requiresJurisdiction: boolean;
   readonly requiresValidUntil: boolean;
 }
@@ -326,6 +331,7 @@ export const listSkillTypes = createServerFn({ method: "GET" })
         name_sv: string;
         name_en: string;
         level_scale: string;
+        allowed_levels: string[] | null;
         requires_jurisdiction: boolean;
         requires_valid_until: boolean;
       }>
@@ -334,7 +340,8 @@ export const listSkillTypes = createServerFn({ method: "GET" })
       claimType: r.claim_type as SkillType["claimType"],
       nameSv: r.name_sv,
       nameEn: r.name_en,
-      levelScale: r.level_scale as SkillType["levelScale"],
+      levelScale: r.level_scale,
+      allowedLevels: r.allowed_levels ?? [],
       requiresJurisdiction: r.requires_jurisdiction,
       requiresValidUntil: r.requires_valid_until,
     }));

@@ -69,12 +69,16 @@ CREATE TABLE IF NOT EXISTS public.sp_skill_types (
   name_sv    text NOT NULL CHECK (length(btrim(name_sv)) > 0),
   name_en    text NOT NULL CHECK (length(btrim(name_en)) > 0),
 
-  -- Which named scale `sp_claims.skill_level` must come from.
-  --   'cefr'     — A1..C2 plus native, for languages.
-  --   'driving'  — Swedish driving licence categories.
-  --   'truck'    — Swedish truckkort categories.
-  --   'none'     — the capability has no level; a level must NOT be recorded.
-  level_scale text NOT NULL CHECK (level_scale IN ('cefr', 'driving', 'truck', 'none')),
+  -- The scale's NAME, used only for presentation: it tells the form whether to
+  -- label the field "Nivå" (a proficiency) or "Behörighetsklass" (a category),
+  -- and whether the levels read as words or as the code itself.
+  level_scale text NOT NULL CHECK (length(btrim(level_scale)) > 0),
+
+  -- The scale's CONTENT. Deliberately data and not a CASE inside the trigger:
+  -- adding a licence type with its own categories must be an INSERT, not a
+  -- code change in three places. An empty array means the capability has no
+  -- level at all, and recording one is refused.
+  allowed_levels text[] NOT NULL DEFAULT '{}',
 
   -- A driving licence without the country that issued it is unreadable.
   requires_jurisdiction boolean NOT NULL DEFAULT false,
@@ -134,41 +138,77 @@ CREATE INDEX IF NOT EXISTS sp_claims_skill_code_idx
 -- ---------------------------------------------------------------------------
 -- Languages. The list is the ones actually spoken across Swedish security
 -- work; it is a starting set, not a claim about which languages matter.
-INSERT INTO public.sp_skill_types (code, claim_type, name_sv, name_en, level_scale, sort_order)
+INSERT INTO public.sp_skill_types
+  (code, claim_type, name_sv, name_en, level_scale, allowed_levels, sort_order)
 VALUES
-  ('lang_sv', 'language', 'Svenska',      'Swedish',    'cefr', 10),
-  ('lang_en', 'language', 'Engelska',     'English',    'cefr', 20),
-  ('lang_ar', 'language', 'Arabiska',     'Arabic',     'cefr', 30),
-  ('lang_fa', 'language', 'Persiska',     'Persian',    'cefr', 40),
-  ('lang_so', 'language', 'Somaliska',    'Somali',     'cefr', 50),
-  ('lang_ti', 'language', 'Tigrinska',    'Tigrinya',   'cefr', 60),
-  ('lang_ku', 'language', 'Kurdiska',     'Kurdish',    'cefr', 70),
-  ('lang_pl', 'language', 'Polska',       'Polish',     'cefr', 80),
-  ('lang_uk', 'language', 'Ukrainska',    'Ukrainian',  'cefr', 90),
-  ('lang_ru', 'language', 'Ryska',        'Russian',    'cefr', 100),
-  ('lang_bs', 'language', 'Bosniska',     'Bosnian',    'cefr', 110),
-  ('lang_sq', 'language', 'Albanska',     'Albanian',   'cefr', 120),
-  ('lang_tr', 'language', 'Turkiska',     'Turkish',    'cefr', 130),
-  ('lang_es', 'language', 'Spanska',      'Spanish',    'cefr', 140),
-  ('lang_fr', 'language', 'Franska',      'French',     'cefr', 150),
-  ('lang_de', 'language', 'Tyska',        'German',     'cefr', 160),
-  ('lang_fi', 'language', 'Finska',       'Finnish',    'cefr', 170),
-  ('lang_da', 'language', 'Danska',       'Danish',     'cefr', 180),
-  ('lang_no', 'language', 'Norska',       'Norwegian',  'cefr', 190)
+  ('lang_sv', 'language', 'Svenska', 'Swedish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 10),
+  ('lang_en', 'language', 'Engelska', 'English', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 20),
+  ('lang_ar', 'language', 'Arabiska', 'Arabic', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 30),
+  ('lang_fa', 'language', 'Persiska', 'Persian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 40),
+  ('lang_so', 'language', 'Somaliska', 'Somali', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 50),
+  ('lang_ti', 'language', 'Tigrinska', 'Tigrinya', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 60),
+  ('lang_ku', 'language', 'Kurdiska', 'Kurdish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 70),
+  ('lang_pl', 'language', 'Polska', 'Polish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 80),
+  ('lang_uk', 'language', 'Ukrainska', 'Ukrainian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 90),
+  ('lang_ru', 'language', 'Ryska', 'Russian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 100),
+  ('lang_bs', 'language', 'Bosniska', 'Bosnian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 110),
+  ('lang_sq', 'language', 'Albanska', 'Albanian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 120),
+  ('lang_tr', 'language', 'Turkiska', 'Turkish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 130),
+  ('lang_es', 'language', 'Spanska', 'Spanish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 140),
+  ('lang_fr', 'language', 'Franska', 'French', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 150),
+  ('lang_de', 'language', 'Tyska', 'German', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 160),
+  ('lang_fi', 'language', 'Finska', 'Finnish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 170),
+  ('lang_da', 'language', 'Danska', 'Danish', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 180),
+  ('lang_no', 'language', 'Norska', 'Norwegian', 'cefr', ARRAY['A1','A2','B1','B2','C1','C2','native'], 190)
 ON CONFLICT (code) DO NOTHING;
 
 -- Practical capabilities. Deliberately few and formal: each one is issued by
 -- somebody, carries a real category or expiry, and can be evidenced. A
 -- capability nobody can document does not belong in a trust record.
+-- Each one is issued by somebody, carries a real category or a real expiry,
+-- and can be evidenced with a card or a certificate. Anything a holder could
+-- only assert about themselves is not a practical skill for this purpose — it
+-- would be the free-text badge the whole design refuses.
+--
+-- Deliberately NOT here, because they already have a home:
+--   * Heta arbeten, fallskydd, konflikthantering  → certification / training
+--   * VU1, VU2, OV, SV                            → sp_credential_types
+-- Duplicating them here would give one fact two places to live and two
+-- different trust stories.
 INSERT INTO public.sp_skill_types
-  (code, claim_type, name_sv, name_en, level_scale, requires_jurisdiction, requires_valid_until, sort_order)
+  (code, claim_type, name_sv, name_en, level_scale, allowed_levels,
+   requires_jurisdiction, requires_valid_until, sort_order)
 VALUES
-  ('driving_licence', 'practical_skill', 'Körkort',        'Driving licence',
-   'driving', true,  false, 10),
-  ('truck_licence',   'practical_skill', 'Truckkort',      'Forklift licence',
-   'truck',   false, false, 20),
-  ('first_aid_cpr',   'practical_skill', 'HLR och första hjälpen', 'CPR and first aid',
-   'none',    false, true,  30)
+  -- Swedish driving licence categories.
+  ('driving_licence', 'practical_skill', 'Körkort', 'Driving licence',
+   'category',
+   ARRAY['AM','A1','A2','A','B','BE','C1','C1E','C','CE','D1','D1E','D','DE'],
+   true, false, 10),
+
+  -- Truckkort, TLP10 categories.
+  ('truck_licence', 'practical_skill', 'Truckkort', 'Forklift licence',
+   'category',
+   ARRAY['A1','A2','A3','A4','B1','B2','B3','B4','C1','C2','D1','D2'],
+   false, false, 20),
+
+  -- Liftkort (mobila arbetsplattformar), LLP categories. Same shape as the
+  -- forklift licence, and the reason the scale had to become data.
+  ('lift_licence', 'practical_skill', 'Liftkort', 'Aerial platform licence',
+   'category',
+   ARRAY['A1','A2','A3','B1','B2','B3'],
+   false, false, 30),
+
+  -- ADR driver certificate for dangerous goods: issued, time-limited, and
+  -- genuinely relevant to guarding and transport assignments.
+  ('adr_certificate', 'practical_skill', 'ADR-intyg', 'ADR certificate',
+   'category',
+   ARRAY['grund','tank','klass_1','klass_7'],
+   true, true, 40),
+
+  -- No category, but a real expiry: an out-of-date CPR certificate is a
+  -- different fact from a current one.
+  ('first_aid_cpr', 'practical_skill', 'HLR och första hjälpen', 'CPR and first aid',
+   'none', '{}'::text[], false, true, 50)
 ON CONFLICT (code) DO NOTHING;
 
 
@@ -179,7 +219,7 @@ ON CONFLICT (code) DO NOTHING;
 -- one knows both, and so no caller can write a misrepresented entry.
 CREATE OR REPLACE FUNCTION public.sp_claims_skill_rules()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
-DECLARE _t public.sp_skill_types%ROWTYPE; _allowed text[];
+DECLARE _t public.sp_skill_types%ROWTYPE;
 BEGIN
   IF NEW.skill_code IS NULL THEN
     -- A language or practical skill without a controlled code would be exactly
@@ -214,14 +254,9 @@ BEGIN
       NEW.skill_code, NEW.credential_code USING ERRCODE = 'check_violation';
   END IF;
 
-  _allowed := CASE _t.level_scale
-    WHEN 'cefr'    THEN ARRAY['A1','A2','B1','B2','C1','C2','native']
-    WHEN 'driving' THEN ARRAY['AM','A1','A2','A','B','BE','C1','C1E','C','CE','D1','D1E','D','DE']
-    WHEN 'truck'   THEN ARRAY['A1','A2','A3','A4','B1','B2','B3','B4','C1','C2','D1','D2']
-    ELSE ARRAY[]::text[]
-  END;
-
-  IF _t.level_scale = 'none' THEN
+  -- The allowed values come from the row, so a new licence type with its own
+  -- categories is an INSERT and this function never changes.
+  IF cardinality(_t.allowed_levels) = 0 THEN
     IF NEW.skill_level IS NOT NULL THEN
       RAISE EXCEPTION 'SP_SKILL_LEVEL_NOT_APPLICABLE: % has no level scale', NEW.skill_code
         USING ERRCODE = 'check_violation';
@@ -231,7 +266,7 @@ BEGIN
       RAISE EXCEPTION 'SP_SKILL_LEVEL_REQUIRED: % is recorded on the % scale',
         NEW.skill_code, _t.level_scale USING ERRCODE = 'check_violation';
     END IF;
-    IF NOT (NEW.skill_level = ANY (_allowed)) THEN
+    IF NOT (NEW.skill_level = ANY (_t.allowed_levels)) THEN
       RAISE EXCEPTION 'SP_SKILL_LEVEL_INVALID: % is not on the % scale',
         NEW.skill_level, _t.level_scale USING ERRCODE = 'check_violation';
     END IF;
