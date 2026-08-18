@@ -902,6 +902,9 @@ const sv = {
   "entry.error.endBeforeStart": "Slutdatumet måste vara efter startdatumet.",
   "entry.error.fractionRange": "Välj en andel mellan 0 och 100 procent.",
   "entry.documentAndVerify": "Underlag och kontroll",
+  "exp.verifiedLabel": "Verifierad tid i yrket",
+  "exp.noneYet": "Ingen verifierad tid ännu",
+  "exp.selfDeclaredAlso": "Egenrapporterat, inte kontrollerat:",
   "info.title": "Mina uppgifter",
   "info.lead":
     "Här lägger du in din bakgrund. Allt sparas direkt och du kan fortsätta när du vill. Behörigheter har egna formulär eftersom de har egna regler.",
@@ -1824,6 +1827,9 @@ const en: Record<PassportCopyKey, string> = {
   "entry.error.endBeforeStart": "The end date must be after the start date.",
   "entry.error.fractionRange": "Choose a share between 0 and 100 per cent.",
   "entry.documentAndVerify": "Documentation and checking",
+  "exp.verifiedLabel": "Verified time in the profession",
+  "exp.noneYet": "No verified time yet",
+  "exp.selfDeclaredAlso": "Self-declared, not checked:",
   "info.title": "My information",
   "info.lead":
     "This is where you enter your background. Everything saves immediately and you can continue whenever you like. Credentials have their own forms because they have their own rules.",
