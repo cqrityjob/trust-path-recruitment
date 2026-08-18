@@ -115,6 +115,13 @@ export interface Claim {
    *  a null code takes the neutral document mark. Written only through the
    *  taxonomy-checked credential path — never invented in the UI. */
   readonly credentialCode: string | null;
+  /** Phase 11. Controlled language or practical-capability code. Mutually
+   *  exclusive with `credentialCode` — a language never wears a credential
+   *  symbol, and the database refuses an entry that carries both. */
+  readonly skillCode: string | null;
+  /** A value from the scale the skill type declares. Never free text, and
+   *  never rendered as a bare code: the reader sees the scale's own words. */
+  readonly skillLevel: string | null;
   readonly titleSv: string;
   readonly titleEn: string;
   /** Proper noun; not translated. */

@@ -101,6 +101,8 @@ type ClaimRow = {
   id: string;
   claim_type: string;
   credential_code: string | null;
+  skill_code: string | null;
+  skill_level: string | null;
   title: string;
   claimed_issuer_name: string | null;
   jurisdiction_code: string | null;
@@ -162,6 +164,8 @@ function toClaim(row: ClaimRow): Claim {
     id: row.id,
     claimType: row.claim_type as ClaimType,
     credentialCode: row.credential_code,
+    skillCode: row.skill_code,
+    skillLevel: row.skill_level,
     titleSv: title,
     titleEn: title,
     issuerName: row.claimed_issuer_name ?? "—",
@@ -207,7 +211,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_claims")
         .select(
-          "id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
+          "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
         )
         .eq("holder_user_id", userId)
         .order("created_at", { ascending: false }),
@@ -549,6 +553,11 @@ const correctionInput = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable(),
   reason: z.string().max(300),
+  /** Phase 11. Material like every other replacement field: B1 and C2 are
+   *  different assertions about the same person, so correcting the level
+   *  resets a verification that was made against the old one. Null for every
+   *  claim that is not a language or a practical skill. */
+  skillLevel: z.string().max(16).nullable(),
   /** Phase 6 fields. Required rather than optional on purpose: the RPC treats
    *  every parameter as a full replacement, so an omitted credential code
    *  would blank it. The correction form is pre-filled with the current
@@ -584,6 +593,7 @@ export const correctClaim = createServerFn({ method: "POST" })
       _credential_code: orNull(data.credentialCode),
       _credential_reference: orNull(data.credentialReference),
       _holder_note: orNull(data.holderNote),
+      _skill_level: orNull(data.skillLevel),
     });
     if (error) throw new Error(error.message);
     return { id: newId as unknown as string };

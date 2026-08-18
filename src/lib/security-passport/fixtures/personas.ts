@@ -47,8 +47,12 @@ function period(p: ExperiencePeriod): ExperiencePeriod {
   return p;
 }
 
-function claim(c: Claim): Claim {
-  return c;
+/** Phase 11 added `skillCode` and `skillLevel` to every claim. None of these
+ *  personas is a language or a practical skill, so the helper supplies the
+ *  null pair rather than repeating it eighteen times — and a persona that
+ *  genuinely needs one still passes it explicitly. */
+function claim(c: Omit<Claim, "skillCode" | "skillLevel"> & Partial<Claim>): Claim {
+  return { skillCode: null, skillLevel: null, ...c };
 }
 
 // ── Reusable claim rows ──────────────────────────────────────────────────

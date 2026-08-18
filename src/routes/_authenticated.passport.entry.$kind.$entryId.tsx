@@ -234,6 +234,9 @@ function PassportEntryRoute() {
           credentialCode: claim.credentialCode,
           credentialReference: values.credentialReference.trim() || null,
           holderNote: values.holderNote.trim() || null,
+          // Carried unchanged for the same reason as the credential code: the
+          // correction form does not offer the level, so it must not blank it.
+          skillLevel: claim.skillLevel,
         },
       });
       setCorrecting(false);
