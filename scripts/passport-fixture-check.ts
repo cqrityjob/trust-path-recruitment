@@ -40,6 +40,13 @@ import {
   milestoneStyle,
 } from "../src/lib/security-passport/design/trust-system";
 import {
+  EXPERIENCE_BANDS,
+  EXPERIENCE_POLICY_VERSION,
+  completedVerifiedYears,
+  experienceBandForDays,
+  experienceMarkStyle,
+} from "../src/lib/security-passport/experience-policy";
+import {
   CREDENTIAL_PRESENTATION_STATES,
   SYMBOL_CODES,
   credentialPresentation,
@@ -775,6 +782,70 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       expect(
         svg.includes(`>${code}</text>`),
         `Symbol markup for ${code}/${state} must carry its label.`,
+      );
+    }
+  }
+
+  // ── The experience policy is explicit, ordered and never a score ──────
+  {
+    expect(
+      EXPERIENCE_POLICY_VERSION.length > 0,
+      "The experience policy must carry a version so a presentation can be traced to it.",
+    );
+
+    // Ascending and starting at zero, or `experienceBandForDays` silently
+    // returns the wrong band for everyone above a mis-ordered threshold.
+    expect(EXPERIENCE_BANDS[0].fromYears === 0, "The first experience band must start at zero.");
+    for (let i = 1; i < EXPERIENCE_BANDS.length; i += 1) {
+      expect(
+        EXPERIENCE_BANDS[i].fromYears > EXPERIENCE_BANDS[i - 1].fromYears,
+        `Experience bands must ascend: ${EXPERIENCE_BANDS[i].band} does not exceed ${EXPERIENCE_BANDS[i - 1].band}.`,
+      );
+    }
+
+    // The documented thresholds, asserted so they cannot drift silently.
+    expect(
+      EXPERIENCE_BANDS.map((b) => `${b.band}:${b.fromYears}`).join(",") ===
+        "none:0,early:1,established:3,senior:10",
+      `Experience thresholds changed unexpectedly: ${EXPERIENCE_BANDS.map((b) => b.band + ":" + b.fromYears).join(",")}.`,
+    );
+
+    // No verified time is `none`, and it must look unfinished rather than bad.
+    expect(experienceBandForDays(0) === "none", "Zero verified days must band as none.");
+    expect(
+      experienceMarkStyle("none").filled === 0 && experienceMarkStyle("none").outline === "dashed",
+      "The none band must be dashed and empty, not a low score.",
+    );
+
+    // Only the top band takes metal, exactly as the recognition emblem does.
+    const accented = (["none", "early", "established", "senior"] as const).filter(
+      (b) => experienceMarkStyle(b).accent,
+    );
+    expect(
+      accented.length === 1 && accented[0] === "senior",
+      `Exactly one band may carry the metal accent, got: ${accented.join(",")}.`,
+    );
+
+    // Boundaries land on the right side, and never round up.
+    expect(
+      experienceBandForDays(3 * DAYS_PER_YEAR - 1) === "early",
+      "One day short of three years must still band as early.",
+    );
+    expect(
+      experienceBandForDays(3 * DAYS_PER_YEAR) === "established",
+      "Exactly three years must band as established.",
+    );
+    expect(
+      completedVerifiedYears(3 * DAYS_PER_YEAR - 1) === 2,
+      "One day short of three years must print as two completed years.",
+    );
+
+    // The mark is a count of segments, never a percentage or a rank.
+    for (const b of ["none", "early", "established", "senior"] as const) {
+      const style = experienceMarkStyle(b);
+      expect(
+        style.total === 4 && style.filled <= style.total,
+        `${b}: the experience mark must be a bounded segment count.`,
       );
     }
   }

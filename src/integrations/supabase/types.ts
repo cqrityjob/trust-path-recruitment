@@ -8684,6 +8684,16 @@ export type Database = {
         }
         Returns: string
       }
+
+      sp_create_credential_disclosure: {
+        Args: {
+          _claim_id: string
+          _expires_days: number
+          _purpose: string
+          _recipient_hint: string
+        }
+        Returns: string
+      }
       sp_create_disclosure: {
         Args: {
           _expires_days: number

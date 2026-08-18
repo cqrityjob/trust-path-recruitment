@@ -814,6 +814,31 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Phase 8 assertions"
+set +e
+SP8_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase8_test.sql 2>&1)"
+SP8_RC=$?
+set -e
+
+echo "$SP8_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP8_PASSED="$(echo "$SP8_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP8_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport Phase 8 suite exited with code ${SP8_RC}." >&2
+  echo "$SP8_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Phase 8"
+else
+  echo "    ok  ${SP8_PASSED} Security Passport Phase 8 assertions passed"
+  # This suite guards what a holder may do to their own record. A short run
+  # means the deletion and cross-holder guards did not execute.
+  if [ "$SP8_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 Phase 8 assertions, only ${SP8_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 8 (assertion shortfall: floor 30)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null

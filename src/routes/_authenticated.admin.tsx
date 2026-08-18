@@ -61,5 +61,9 @@ function AdminLayout() {
     );
   }
 
+  // Deliberately just the Outlet: every admin page renders its own
+  // SiteLayout, so wrapping here would give each of them two site headers
+  // and two footers. The shared navigation is `AdminNav`, which each admin
+  // page renders INSIDE its own SiteLayout — see the comment there.
   return <Outlet />;
 }

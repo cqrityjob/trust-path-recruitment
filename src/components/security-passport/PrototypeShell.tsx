@@ -36,6 +36,7 @@ import { CredentialFormFixture } from "./CredentialFormFixture";
 import { CredentialHistoryFixture } from "./CredentialHistoryFixture";
 import { LinkedInShareSection } from "./live/LinkedInShareSection";
 import { RecipientCardFixture } from "./RecipientCardFixture";
+import { EntryFixture } from "./EntryFixture";
 import { buildSocialCard } from "@/lib/security-passport/social";
 import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
@@ -60,6 +61,7 @@ type ScreenId =
   | "credentialHistory"
   | "linkedin"
   | "recipientCard"
+  | "entries"
   | "share"
   | "shareHistory"
   | "recipient"
@@ -77,6 +79,7 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "credentialHistory", labelKey: "screen.credentialHistory" },
   { id: "linkedin", labelKey: "screen.linkedin" },
   { id: "recipientCard", labelKey: "screen.recipientCard" },
+  { id: "entries", labelKey: "screen.entries" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
@@ -316,6 +319,8 @@ export function PrototypeShell() {
         {screen === "credentialHistory" ? <CredentialHistoryFixture /> : null}
 
         {screen === "recipientCard" ? <RecipientCardFixture /> : null}
+
+        {screen === "entries" ? <EntryFixture /> : null}
 
         {screen === "linkedin" ? (
           <div className="mx-auto w-full max-w-2xl">
