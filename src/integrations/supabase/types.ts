@@ -8637,6 +8637,7 @@ export type Database = {
           definition_slug: string
           does_not_measure_en: string[]
           does_not_measure_sv: string[]
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
           is_test_fixture: boolean
           item_count: number
           name_en: string
