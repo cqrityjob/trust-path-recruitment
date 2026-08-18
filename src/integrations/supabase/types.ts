@@ -6546,6 +6546,7 @@ export type Database = {
         Row: {
           attempt_id: string
           audience: string
+          context: Json | null
           created_at: string
           derivation_input: Json | null
           evidence_state_version: string | null
@@ -6562,6 +6563,7 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
+          context?: Json | null
           created_at?: string
           derivation_input?: Json | null
           evidence_state_version?: string | null
@@ -6578,6 +6580,7 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
+          context?: Json | null
           created_at?: string
           derivation_input?: Json | null
           evidence_state_version?: string | null
