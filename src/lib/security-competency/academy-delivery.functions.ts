@@ -143,6 +143,43 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
     );
   });
 
+/** Where an attempt stands, as far as the participant is allowed to know.
+ *
+ *  Read straight off the attempt row, which `scp_attempts_own_select` already
+ *  lets a participant see for their own attempt only. It exists because the
+ *  item payload alone cannot tell the difference between "not started" and
+ *  "already handed in" — `scp_get_attempt_items` keeps returning items after
+ *  submission, so a reload would otherwise offer to resume a run that is
+ *  closed, and the participant would only discover it by pressing submit
+ *  again.
+ *
+ *  Deliberately four fields. Not the reviews, not the evidence, not the
+ *  scoring state: a participant may know that their answers are in and that a
+ *  person still has to read one, and nothing further. */
+export type AcademyAttemptState = {
+  status: "in_progress" | "submitted" | "scored" | "released" | "abandoned";
+  isOpen: boolean;
+};
+
+export const getAcademyAttemptState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<AcademyAttemptState | null> => {
+    const ctx = context as Ctx;
+    const { data: row, error } = await ctx.supabase
+      .from("scp_attempts")
+      .select("status")
+      .eq("id", data.attemptId)
+      .maybeSingle();
+    // No row means "not yours, or does not exist" — RLS makes those the same
+    // answer, and so does this. The caller treats null exactly like an empty
+    // item list.
+    if (error) throw classify(error.message ?? "", "load_failed");
+    if (!row) return null;
+    const status = String(row.status) as AcademyAttemptState["status"];
+    return { status, isOpen: status === "in_progress" };
+  });
+
 /** Save or replace one answer. Idempotent — the RPC upserts on (attempt, item). */
 export const saveAcademyResponse = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

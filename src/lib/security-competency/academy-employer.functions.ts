@@ -423,28 +423,59 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
     }));
   });
 
-/** The reviewer's queue. Reads scp_rm_review_queue, which is security_invoker:
- *  an employer without the content-review capability sees zero rows, and that
- *  is the RLS doing it rather than this file filtering. */
+/** The reviewer's queue, with the context needed to actually judge an answer.
+ *
+ *  Reads scp_review_queue, a SECURITY DEFINER function that opens with the
+ *  same capability check the old security_invoker view relied on: without the
+ *  content-review capability it returns zero rows, and that is still an
+ *  authorisation boundary doing it rather than this file filtering.
+ *
+ *  It replaced the view because the reviewer needs the ORGANISATION, and a
+ *  reviewer is deliberately not a member of any employer -- so the employer row
+ *  is invisible to them and no invoker-rights join could ever supply it.
+ *
+ *  What comes back is scenario, prompt, assessment, governance and whether a
+ *  severity is required. What does not come back is any scoring key, rubric
+ *  weight or model rationale: those columns are absent from the function's
+ *  return type, so this cannot leak one by forgetting to strip it. */
 export const listReviewQueue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) =>
+    z.object({ locale: z.enum(["sv", "en"]).default("sv") }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
-    const { data: rows, error } = await ctx.supabase
-      .from("scp_rm_review_queue")
-      .select("review_id, trigger_reason, review_status, opened_at, response_text, subject_id")
-      .eq("review_status", "pending")
-      .order("opened_at", { ascending: true });
-    // The reviewer queue is security_invoker: zero rows is the CORRECT answer
-    // for someone without the capability, so an empty result must stay empty.
-    // A genuine failure is different and must surface.
+    const { data: rows, error } = await ctx.supabase.rpc("scp_review_queue", {
+      _language: data.locale === "en" ? "en-GB" : "sv-SE",
+    });
     if (error) throw fail(error.message, "review_queue_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       reviewId: String(r.review_id),
+      attemptId: String(r.attempt_id),
       triggerReason: String(r.trigger_reason),
       openedAt: String(r.opened_at),
+      participantRef: String(r.participant_ref ?? ""),
+      organisationName: r.organisation_name ? String(r.organisation_name) : null,
+      assessmentName: r.assessment_name ? String(r.assessment_name) : null,
+      assessmentSlug: r.assessment_slug ? String(r.assessment_slug) : null,
+      governanceMode: r.governance_mode ? String(r.governance_mode) : null,
+      validationStatus: r.validation_status_at_assignment
+        ? String(r.validation_status_at_assignment)
+        : null,
+      purposeCode: r.purpose_code ? String(r.purpose_code) : null,
+      itemDisplayOrder: r.item_display_order == null ? null : Number(r.item_display_order),
+      itemScenario: r.item_scenario ? String(r.item_scenario) : null,
+      itemPrompt: r.item_prompt ? String(r.item_prompt) : null,
+      isSafetyCritical: Boolean(r.is_safety_critical),
+      severityRequired: Boolean(r.severity_required),
+      itemFormat: r.item_format ? String(r.item_format) : null,
       responseText: r.response_text ?? null,
-      subjectId: String(r.subject_id),
+      // Labels, not keys. See the migration header for why this distinction is
+      // enforced in the function's return type rather than here.
+      chosenLabel: r.chosen_label ? String(r.chosen_label) : null,
+      chosenBestLabel: r.chosen_best_label ? String(r.chosen_best_label) : null,
+      chosenWorstLabel: r.chosen_worst_label ? String(r.chosen_worst_label) : null,
+      outstandingInAttempt: Number(r.outstanding_in_attempt ?? 0),
     }));
   });
 

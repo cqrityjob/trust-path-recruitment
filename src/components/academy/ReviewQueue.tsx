@@ -10,10 +10,30 @@
 // employer surface shows the same area with an empty queue and a count. One
 // implementation, two mount points: a second copy would drift, and the copy
 // that drifted would be the one handling somebody's competence record.
+//
+// ── WHAT A CARD HAS TO ANSWER ─────────────────────────────────────────
+//
+// A reviewer opening this page is being asked to put a judgement on somebody's
+// competence record. The card is laid out so that seven questions are answered
+// before the decision controls appear: what needs review, why it needs a
+// person, who it concerns, which assessment it came from, what the participant
+// was actually asked, what they answered, and what happens after the decision.
+//
+// The earlier version answered two of those. It showed a trigger label and the
+// free text, and left the reviewer to judge an answer without its question.
+//
+// ── THREE VOICES, KEPT APART ──────────────────────────────────────────
+//
+// Participant evidence, reviewer judgement and employer decision are different
+// claims by different parties, and the layout says so: the participant's words
+// sit in a quoted block that is never styled as a finding, the reviewer's
+// judgement is a form, and the employer's decision is described as something
+// that happens elsewhere, later, by somebody else.
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { ShieldAlert } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
@@ -24,17 +44,38 @@ import {
 
 export type ReviewQueueRow = {
   reviewId: string;
+  attemptId: string;
   triggerReason: string;
   openedAt: string;
+  participantRef: string;
+  organisationName: string | null;
+  assessmentName: string | null;
+  assessmentSlug: string | null;
+  governanceMode: string | null;
+  validationStatus: string | null;
+  purposeCode: string | null;
+  itemDisplayOrder: number | null;
+  itemScenario: string | null;
+  itemPrompt: string | null;
+  isSafetyCritical: boolean;
+  severityRequired: boolean;
+  itemFormat: string | null;
   responseText: string | null;
-  subjectId: string;
+  chosenLabel: string | null;
+  chosenBestLabel: string | null;
+  chosenWorstLabel: string | null;
+  outstandingInAttempt: number;
 };
 
-/** The queue itself. Renders nothing but an explanation when RLS returns no
- *  rows — which is exactly what an employer without the capability sees. */
+/** The queue itself. Renders nothing but an explanation when the queue returns
+ *  no rows — which is exactly what an employer without the capability sees. */
 export function ReviewQueue({ emptyTitle, emptyBody }: { emptyTitle: string; emptyBody: string }) {
+  const { lang } = useT();
   const queueFn = useServerFn(listReviewQueue);
-  const queue = useQuery({ queryKey: ["academy", "review-queue"], queryFn: () => queueFn() });
+  const queue = useQuery({
+    queryKey: ["academy", "review-queue", lang],
+    queryFn: () => queueFn({ data: { locale: lang } }),
+  });
   const rows = (queue.data ?? []) as ReviewQueueRow[];
 
   if (rows.length === 0) {
@@ -59,23 +100,174 @@ const TRIGGER_LABEL: Record<string, TranslationKey> = {
   participant_requested: "academy.reviews.triggerRequested",
 };
 
+const TRIGGER_WHY: Record<string, TranslationKey> = {
+  no_provider_available: "academy.reviews.whyNoProvider",
+  safety_critical_detected: "academy.reviews.whySafety",
+  participant_requested: "academy.reviews.whyRequested",
+};
+
 const OUTCOME_LABEL: Record<"upheld" | "adjusted" | "overturned", TranslationKey> = {
   upheld: "academy.reviews.outcomeUpheld",
   adjusted: "academy.reviews.outcomeAdjusted",
   overturned: "academy.reviews.outcomeOverturned",
 };
 
+const SEVERITY_LABEL: Record<"low" | "medium" | "high" | "critical", TranslationKey> = {
+  low: "academy.reviews.severityLow",
+  medium: "academy.reviews.severityMedium",
+  high: "academy.reviews.severityHigh",
+  critical: "academy.reviews.severityCritical",
+};
+
+const PURPOSE_LABEL: Record<string, TranslationKey> = {
+  competence_development: "academy.reviews.purposeDevelopment",
+  recruitment: "academy.reviews.purposeRecruitment",
+};
+
+type Outcome = "upheld" | "adjusted" | "overturned";
+type Severity = "low" | "medium" | "high" | "critical";
+
+/** One labelled fact in the context strip. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-0.5 break-words text-[13px] font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/** A radio group that starts with nothing chosen.
+ *
+ *  Neither control below is pre-selected, and that is the point. A default
+ *  severity is a judgement the product would be making on the reviewer's
+ *  behalf, on a safety-critical observation, and it would be recorded as
+ *  theirs. Making them choose costs one click and keeps the record honest. */
+function ChoiceGroup<T extends string>({
+  legend,
+  hint,
+  name,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string;
+  hint?: string;
+  name: string;
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-1 text-xs font-medium text-foreground">{legend}</legend>
+      {hint && <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">{hint}</p>}
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <label
+            key={o.value}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-border px-3 py-2 text-[13px] text-foreground has-[:checked]:border-accent has-[:checked]:bg-[color:var(--secondary)] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+          >
+            <input
+              type="radio"
+              name={name}
+              className="sr-only"
+              checked={value === o.value}
+              onChange={() => onChange(o.value)}
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** What the participant actually did, in their own words or their own choice.
+ *
+ *  Most safety-critical items on the Väktare form are situational-judgement
+ *  items with no free text: the participant picked an option. Showing only
+ *  `responseText` rendered those as "no written answer recorded", which asked
+ *  the reviewer to judge a safety-critical decision with the decision hidden.
+ *
+ *  Best/worst is shown as two labelled choices rather than one line, because
+ *  "worst" is a judgement about the option and reads as an endorsement when
+ *  the two are run together. */
+function ParticipantResponse({ review }: { review: ReviewQueueRow }) {
+  const { t } = useT();
+
+  // Untrusted participant content throughout: rendered as text, never markup.
+  const quote = (body: string) => (
+    <blockquote className="mt-2 whitespace-pre-wrap rounded-[10px] bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-foreground">
+      {body}
+    </blockquote>
+  );
+
+  if (review.responseText) return quote(review.responseText);
+
+  if (review.chosenBestLabel || review.chosenWorstLabel) {
+    return (
+      <div className="mt-3 space-y-3">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            {t("academy.reviews.choseBest")}
+          </p>
+          {quote(review.chosenBestLabel ?? t("academy.reviews.noChoice"))}
+        </div>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            {t("academy.reviews.choseWorst")}
+          </p>
+          {quote(review.chosenWorstLabel ?? t("academy.reviews.noChoice"))}
+        </div>
+      </div>
+    );
+  }
+
+  if (review.chosenLabel) {
+    return (
+      <div className="mt-3">
+        <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+          {t("academy.reviews.chose")}
+        </p>
+        {quote(review.chosenLabel)}
+      </div>
+    );
+  }
+
+  return quote(t("academy.reviews.noText"));
+}
+
 export function ReviewCard({ review }: { review: ReviewQueueRow }) {
   const { t } = useT();
   const qc = useQueryClient();
   const complete = useServerFn(completeReview);
   const [rationale, setRationale] = useState("");
-  const [outcome, setOutcome] = useState<"upheld" | "adjusted" | "overturned">("adjusted");
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [severity, setSeverity] = useState<Severity | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // The same rule scp_complete_human_review enforces, stated once here so the
+  // button can be honest about it instead of letting the database refuse after
+  // the reviewer has already written their reasoning.
+  const missingSeverity = review.severityRequired && severity === null;
+  const incomplete = outcome === null || rationale.trim() === "" || missingSeverity;
 
   const m = useMutation({
     mutationFn: () =>
-      complete({ data: { reviewId: review.reviewId, outcome, rationale, contribution: 0.5 } }),
+      complete({
+        data: {
+          reviewId: review.reviewId,
+          outcome: outcome as Outcome,
+          rationale,
+          contribution: 0.5,
+          // Null for anything that is not safety-critical: the same function
+          // refuses a severity that was never asked for.
+          safetySeverity: review.severityRequired ? severity : null,
+        },
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["academy", "review-queue"] });
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
@@ -87,62 +279,146 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
           ? t("academy.reviews.notAuthorised")
           : code === "SCP_REVIEW_WITHOUT_RATIONALE"
             ? t("academy.reviews.needRationale")
-            : t("academy.reviews.failed"),
+            : code === "SCP_SAFETY_SEVERITY_REQUIRED"
+              ? t("academy.reviews.needSeverity")
+              : t("academy.reviews.failed"),
       );
     },
   });
 
+  const closedTest = review.governanceMode === "closed_test";
+
   return (
     <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">
-          {t(TRIGGER_LABEL[review.triggerReason] ?? "academy.reviews.triggerOther")}
-        </h2>
-        <p className="font-mono text-xs text-muted-foreground">{review.subjectId.slice(0, 8)}</p>
+      {/* ── WHAT NEEDS REVIEW, AND WHY ── */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t(TRIGGER_LABEL[review.triggerReason] ?? "academy.reviews.triggerOther")}
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t(TRIGGER_WHY[review.triggerReason] ?? "academy.reviews.whyOther")}
+          </p>
+        </div>
+        {review.isSafetyCritical && (
+          <p className="inline-flex shrink-0 items-center gap-2 rounded-[8px] border border-border bg-[color:var(--surface-subtle)] px-3 py-1.5 text-xs font-medium text-foreground">
+            <ShieldAlert className="h-4 w-4 text-accent" aria-hidden="true" />
+            {t("academy.reviews.safetyCritical")}
+          </p>
+        )}
       </div>
 
-      {/* Untrusted candidate text. Rendered as text, never as markup. */}
-      <blockquote className="mt-3 whitespace-pre-wrap rounded-[10px] bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-foreground">
-        {review.responseText ?? t("academy.reviews.noText")}
-      </blockquote>
+      {/* ── WHO, WHICH ASSESSMENT, WHAT FOR ── */}
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-4 sm:grid-cols-4">
+        <Fact label={t("academy.reviews.participant")} value={review.participantRef} />
+        <Fact
+          label={t("academy.reviews.organisation")}
+          value={review.organisationName ?? t("academy.reviews.unknown")}
+        />
+        <Fact
+          label={t("academy.reviews.assessment")}
+          value={review.assessmentName ?? t("academy.reviews.unknown")}
+        />
+        <Fact
+          label={t("academy.reviews.purpose")}
+          value={
+            review.purposeCode
+              ? t(PURPOSE_LABEL[review.purposeCode] ?? "academy.reviews.unknown")
+              : t("academy.reviews.unknown")
+          }
+        />
+      </dl>
 
+      <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+        {t("academy.reviews.participantRefNote")}
+      </p>
+
+      {/* The governance basis, said plainly. A reviewer judging a closed-test
+          answer should know the content has not been validated — it changes how
+          much weight their words can carry. */}
+      {closedTest && (
+        <p className="mt-3 rounded-[10px] border border-border px-3 py-2 text-[12px] leading-relaxed text-foreground">
+          {t("academy.reviews.closedTestBasis")}
+        </p>
+      )}
+
+      {/* ── PARTICIPANT EVIDENCE ── */}
+      <section className="mt-5">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+          {t("academy.reviews.evidenceHeading")}
+        </h3>
+
+        {(review.itemScenario || review.itemPrompt) && (
+          <div className="mt-2 space-y-1.5">
+            {review.itemDisplayOrder != null && (
+              <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                {t("academy.reviews.itemLabel")} {review.itemDisplayOrder}
+              </p>
+            )}
+            {review.itemScenario && (
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                {review.itemScenario}
+              </p>
+            )}
+            {review.itemPrompt && (
+              <p className="text-[13px] font-semibold leading-relaxed text-foreground">
+                {review.itemPrompt}
+              </p>
+            )}
+          </div>
+        )}
+
+        <ParticipantResponse review={review} />
+      </section>
+
+      {/* ── REVIEWER JUDGEMENT ── */}
       <form
-        className="mt-4 space-y-3"
+        className="mt-5 space-y-4 border-t border-border pt-5"
         onSubmit={(ev) => {
           ev.preventDefault();
+          setError(null);
           m.mutate();
         }}
       >
-        <fieldset>
-          <legend className="mb-2 text-xs font-medium text-foreground">
-            {t("academy.reviews.outcome")}
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {(["upheld", "adjusted", "overturned"] as const).map((o) => (
-              <label
-                key={o}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-border px-3 py-2 text-[13px] text-foreground has-[:checked]:border-accent has-[:checked]:bg-[color:var(--secondary)] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-              >
-                <input
-                  type="radio"
-                  name={`outcome-${review.reviewId}`}
-                  className="sr-only"
-                  checked={outcome === o}
-                  onChange={() => setOutcome(o)}
-                />
-                {t(OUTCOME_LABEL[o])}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">
+          {t("academy.reviews.judgementHeading")}
+        </h3>
+
+        {review.severityRequired && (
+          <ChoiceGroup<Severity>
+            legend={t("academy.reviews.severity")}
+            hint={t("academy.reviews.severityHint")}
+            name={`severity-${review.reviewId}`}
+            value={severity}
+            onChange={setSeverity}
+            options={(["low", "medium", "high", "critical"] as const).map((s) => ({
+              value: s,
+              label: t(SEVERITY_LABEL[s]),
+            }))}
+          />
+        )}
+
+        <ChoiceGroup<Outcome>
+          legend={t("academy.reviews.outcome")}
+          name={`outcome-${review.reviewId}`}
+          value={outcome}
+          onChange={setOutcome}
+          options={(["upheld", "adjusted", "overturned"] as const).map((o) => ({
+            value: o,
+            label: t(OUTCOME_LABEL[o]),
+          }))}
+        />
 
         <div>
           <label
             htmlFor={`rationale-${review.reviewId}`}
-            className="mb-1.5 block text-xs font-medium text-foreground"
+            className="mb-1 block text-xs font-medium text-foreground"
           >
             {t("academy.reviews.rationale")}
           </label>
+          <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+            {t("academy.reviews.rationalePrivate")}
+          </p>
           <textarea
             id={`rationale-${review.reviewId}`}
             rows={3}
@@ -153,6 +429,13 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
           />
         </div>
 
+        {/* ── WHAT HAPPENS NEXT ── */}
+        <p className="text-[12px] leading-relaxed text-muted-foreground">
+          {review.outstandingInAttempt > 1
+            ? `${t("academy.reviews.nextRemaining")} ${review.outstandingInAttempt}`
+            : t("academy.reviews.nextLast")}
+        </p>
+
         {error && (
           <p role="alert" className="text-[13px] text-foreground">
             {error}
@@ -161,11 +444,16 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
 
         <button
           type="submit"
-          disabled={m.isPending}
+          disabled={m.isPending || incomplete}
           className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {m.isPending ? t("academy.reviews.saving") : t("academy.reviews.complete")}
         </button>
+        {incomplete && (
+          <p className="text-[12px] leading-relaxed text-muted-foreground">
+            {t("academy.reviews.completeBlocked")}
+          </p>
+        )}
       </form>
     </article>
   );

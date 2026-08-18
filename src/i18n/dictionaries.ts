@@ -2130,6 +2130,11 @@ export const dictionaries = {
       "Svaren har sparats. Du får din utvecklingsrapport när den har frisläppts.",
     "academy.done.reviewPending":
       "Ett eller flera av dina svar ska läsas av en granskare innan rapporten kan tas fram. Det är därför resultatet inte är klart ännu.",
+    "academy.done.alreadyTitle": "Dina svar är redan inlämnade",
+    "academy.done.alreadyBody":
+      "Den här bedömningen är inlämnad och kan inte ändras. Dina svar finns kvar. Du får din utvecklingsrapport när den har frisläppts.",
+    "academy.done.releasedBody":
+      "Den här bedömningen är inlämnad och din utvecklingsrapport är frisläppt. Du hittar den under Min karriär.",
     "academy.error.title": "Det gick inte att öppna bedömningen",
     "academy.error.unavailableTitle": "Den här delen är inte tillgänglig ännu",
     "academy.error.unavailableBody":
@@ -2250,6 +2255,48 @@ export const dictionaries = {
     "academy.reviews.needRationale": "En granskning måste ange sina skäl.",
     "academy.reviews.notAuthorised": "Du har inte behörighet att slutföra granskningar.",
     "academy.reviews.failed": "Granskningen kunde inte sparas.",
+    "academy.reviews.safetyCritical": "Säkerhetskritisk",
+    "academy.reviews.whyNoProvider":
+      "Svaret är skrivet med egna ord och ingen automatisk bedömning är tillgänglig. Det måste läsas av en människa innan det kan bli underlag.",
+    "academy.reviews.whySafety":
+      "Situationen rör säkerhetskritisk bedömning. Sådana svar poängsätts inte automatiskt — de bedöms av en människa som också anger hur allvarligt det är.",
+    "academy.reviews.whyRequested": "Deltagaren har själv begärt att en människa läser svaret.",
+    "academy.reviews.whyOther": "Det här svaret kräver en mänsklig bedömning innan det kan bli underlag.",
+    "academy.reviews.participant": "Deltagare",
+    "academy.reviews.organisation": "Organisation",
+    "academy.reviews.assessment": "Bedömning",
+    "academy.reviews.purpose": "Syfte",
+    "academy.reviews.unknown": "Uppgift saknas",
+    "academy.reviews.purposeDevelopment": "Kompetensutveckling",
+    "academy.reviews.purposeRecruitment": "Rekrytering",
+    "academy.reviews.participantRefNote":
+      "Deltagaren visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
+    "academy.reviews.closedTestBasis":
+      "Stängt test. Innehållet är ännu inte validerat och bedömningen får inte användas som underlag för rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
+    "academy.reviews.chose": "Deltagaren valde",
+    "academy.reviews.choseBest": "Deltagaren valde som bästa handling",
+    "academy.reviews.choseWorst": "Deltagaren valde som sämsta handling",
+    "academy.reviews.noChoice": "Inget val registrerat.",
+    "academy.reviews.evidenceHeading": "Deltagarens underlag",
+    "academy.reviews.itemLabel": "Fråga",
+    "academy.reviews.judgementHeading": "Din bedömning",
+    "academy.reviews.severity": "Allvarlighetsgrad",
+    "academy.reviews.severityHint":
+      "Ange hur allvarlig observationen är. Den kan inte härledas ur svaret automatiskt och följer med underlaget som din bedömning.",
+    "academy.reviews.severityLow": "Låg",
+    "academy.reviews.severityMedium": "Måttlig",
+    "academy.reviews.severityHigh": "Hög",
+    "academy.reviews.severityCritical": "Kritisk",
+    "academy.reviews.needSeverity":
+      "Det här är en säkerhetskritisk observation. Ange allvarlighetsgrad innan du slutför.",
+    "academy.reviews.rationalePrivate":
+      "Motiveringen är intern och visas för granskare. Den ingår inte i deltagarens rapport.",
+    "academy.reviews.nextRemaining":
+      "När alla granskningar för det här försöket är klara blir resultatet tillgängligt för arbetsgivaren att frisläppa. Kvar att granska:",
+    "academy.reviews.nextLast":
+      "Det här är den sista granskningen för försöket. När den är klar blir resultatet tillgängligt för arbetsgivaren att frisläppa. Arbetsgivaren fattar beslutet.",
+    "academy.reviews.completeBlocked":
+      "Välj utfall, ange allvarlighetsgrad där det krävs och skriv en motivering för att kunna slutföra.",
     "academy.results.title": "Kompetensprofil",
     "academy.results.back": "Tillbaka till deltagare",
     "academy.results.releasedOn": "Frisläppt",
@@ -2343,7 +2390,7 @@ export const dictionaries = {
     "academy.learning.backHome": "Till min kompetensutveckling",
     "academy.learning.unavailable": "Övningen är inte tillgänglig just nu.",
     "academy.reviews.adminLede":
-      "Fritextsvar som väntar på en mänsklig bedömning. Endast den som har granskningsbehörighet ser något här.",
+      "Svar som väntar på en mänsklig bedömning — både fritextsvar och säkerhetskritiska situationsval. Endast den som har granskningsbehörighet ser något här.",
     "academy.reviews.adminEmptyTitle": "Inget väntar på granskning",
     "academy.reviews.adminEmptyBody":
       "Antingen finns inget att granska just nu, eller så saknar ditt konto granskningsbehörighet.",
@@ -4471,6 +4518,11 @@ export const dictionaries = {
       "Your answers have been saved. You will receive your development report once it has been released.",
     "academy.done.reviewPending":
       "One or more of your answers will be read by a reviewer before the report can be produced. That is why the result is not ready yet.",
+    "academy.done.alreadyTitle": "Your answers are already submitted",
+    "academy.done.alreadyBody":
+      "This assessment has been submitted and can no longer be changed. Your answers are safe. You will receive your development report once it has been released.",
+    "academy.done.releasedBody":
+      "This assessment has been submitted and your development report has been released. You will find it under My Career.",
     "academy.error.title": "This assessment could not be opened",
     "academy.error.unavailableTitle": "This area is not available yet",
     "academy.error.unavailableBody":
@@ -4590,6 +4642,48 @@ export const dictionaries = {
     "academy.reviews.needRationale": "A review must state its reasons.",
     "academy.reviews.notAuthorised": "You are not authorised to complete reviews.",
     "academy.reviews.failed": "The review could not be saved.",
+    "academy.reviews.safetyCritical": "Safety-critical",
+    "academy.reviews.whyNoProvider":
+      "The answer is written in the participant's own words and no automated scoring is available. A person has to read it before it can become evidence.",
+    "academy.reviews.whySafety":
+      "This situation involves safety-critical judgement. Such answers are not scored automatically — a person assesses them and states how serious it is.",
+    "academy.reviews.whyRequested": "The participant asked for a person to read this answer.",
+    "academy.reviews.whyOther": "This answer needs a human judgement before it can become evidence.",
+    "academy.reviews.participant": "Participant",
+    "academy.reviews.organisation": "Organisation",
+    "academy.reviews.assessment": "Assessment",
+    "academy.reviews.purpose": "Purpose",
+    "academy.reviews.unknown": "Not recorded",
+    "academy.reviews.purposeDevelopment": "Competence development",
+    "academy.reviews.purposeRecruitment": "Recruitment",
+    "academy.reviews.participantRefNote":
+      "The participant is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
+    "academy.reviews.closedTestBasis":
+      "Closed test. This content is not yet validated and the assessment may not be used as a basis for recruitment decisions. Your judgement is recorded with that limitation.",
+    "academy.reviews.chose": "The participant chose",
+    "academy.reviews.choseBest": "The participant chose as the best action",
+    "academy.reviews.choseWorst": "The participant chose as the worst action",
+    "academy.reviews.noChoice": "No choice recorded.",
+    "academy.reviews.evidenceHeading": "Participant evidence",
+    "academy.reviews.itemLabel": "Question",
+    "academy.reviews.judgementHeading": "Your judgement",
+    "academy.reviews.severity": "Severity",
+    "academy.reviews.severityHint":
+      "State how serious the observation is. It cannot be inferred from the answer, and it travels with the evidence as your judgement.",
+    "academy.reviews.severityLow": "Low",
+    "academy.reviews.severityMedium": "Moderate",
+    "academy.reviews.severityHigh": "High",
+    "academy.reviews.severityCritical": "Critical",
+    "academy.reviews.needSeverity":
+      "This is a safety-critical observation. State a severity before completing it.",
+    "academy.reviews.rationalePrivate":
+      "Your reasons are internal and shown to reviewers. They are not part of the participant's report.",
+    "academy.reviews.nextRemaining":
+      "Once every review for this attempt is complete, the result becomes available for the employer to release. Still to review:",
+    "academy.reviews.nextLast":
+      "This is the last review for this attempt. When it is complete the result becomes available for the employer to release. The employer makes the decision.",
+    "academy.reviews.completeBlocked":
+      "Choose an outcome, state a severity where one is required, and write your reasons to complete the review.",
     "academy.results.title": "Competency profile",
     "academy.results.back": "Back to participants",
     "academy.results.releasedOn": "Released",
@@ -4685,7 +4779,7 @@ export const dictionaries = {
     "academy.learning.backHome": "To my competence development",
     "academy.learning.unavailable": "This practice is not available right now.",
     "academy.reviews.adminLede":
-      "Written answers awaiting human judgement. Only an account with the review capability sees anything here.",
+      "Answers awaiting human judgement — both written answers and safety-critical situational choices. Only an account with the review capability sees anything here.",
     "academy.reviews.adminEmptyTitle": "Nothing is awaiting review",
     "academy.reviews.adminEmptyBody":
       "Either there is nothing to review right now, or your account does not hold the review capability.",

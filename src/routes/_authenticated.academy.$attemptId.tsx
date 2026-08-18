@@ -36,8 +36,10 @@ import {
 } from "@/components/career-discovery/v31/shell/QuestionCard";
 import {
   getAcademyAttemptItems,
+  getAcademyAttemptState,
   saveAcademyResponse,
   submitAcademyAttempt,
+  type AcademyAttemptState,
   type AcademyItem,
 } from "@/lib/security-competency/academy-delivery.functions";
 
@@ -47,10 +49,21 @@ export const Route = createFileRoute("/_authenticated/academy/$attemptId")({
 
 type Phase = "loading" | "intro" | "running" | "submitting" | "done" | "error";
 
+/** Whether an item already carries a saved answer.
+ *
+ *  One definition, used by both the progress count and the resume point, so
+ *  "12 answered" and "resume at 13" can never disagree. Best/worst counts only
+ *  when BOTH halves are saved — a half-answered pairing is not an answer, and
+ *  submit would refuse it. */
+function isAnswered(i: AcademyItem): boolean {
+  return Boolean(i.savedOptionId || (i.savedBestId && i.savedWorstId) || i.savedText);
+}
+
 function AcademyAttemptRoute() {
   const { attemptId } = Route.useParams();
   const { t, lang: uiLang } = useT();
   const loadItems = useServerFn(getAcademyAttemptItems);
+  const loadState = useServerFn(getAcademyAttemptState);
   const saveResponse = useServerFn(saveAcademyResponse);
   const submitAttempt = useServerFn(submitAcademyAttempt);
 
@@ -59,6 +72,9 @@ function AcademyAttemptRoute() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<{ reviewsOpened: number } | null>(null);
+  // Set when the run was already closed before this visit, so the done screen
+  // can say "this is already in" rather than "thank you, just received".
+  const [closedStatus, setClosedStatus] = useState<AcademyAttemptState["status"] | null>(null);
   const [text, setText] = useState("");
 
   const lang = uiLang === "en" ? "en" : "sv";
@@ -67,9 +83,28 @@ function AcademyAttemptRoute() {
     let cancelled = false;
     void (async () => {
       try {
-        const rows = await loadItems({ data: { attemptId, locale: lang } });
+        const [rows, state] = await Promise.all([
+          loadItems({ data: { attemptId, locale: lang } }),
+          loadState({ data: { attemptId } }),
+        ]);
         if (cancelled) return;
         setItems(rows);
+        // A closed run never re-enters the player. Reloading the page after
+        // handing in used to offer "continue where you left off" and only
+        // refuse at the very end, which reads as though the submission had
+        // been lost.
+        if (state && !state.isOpen) {
+          setClosedStatus(state.status);
+          setPhase("done");
+          return;
+        }
+        // Resume where the participant actually stopped. The intro button says
+        // "continue where you left off", so starting at item 1 and making them
+        // click past a dozen answered items would be a small lie. If every item
+        // is answered, the last one is the right place to land: that is where
+        // the submit control is.
+        const firstUnanswered = rows.findIndex((r) => !isAnswered(r));
+        setIndex(firstUnanswered === -1 ? Math.max(0, rows.length - 1) : firstUnanswered);
         // An empty list means "not yours, or nothing to answer". The server
         // deliberately does not distinguish those, and neither does this.
         setPhase(rows.length === 0 ? "error" : "intro");
@@ -83,15 +118,10 @@ function AcademyAttemptRoute() {
     return () => {
       cancelled = true;
     };
-  }, [attemptId, lang, loadItems]);
+  }, [attemptId, lang, loadItems, loadState]);
 
   const current = items[index];
-  const answered = useMemo(
-    () =>
-      items.filter((i) => i.savedOptionId || (i.savedBestId && i.savedWorstId) || i.savedText)
-        .length,
-    [items],
-  );
+  const answered = useMemo(() => items.filter(isAnswered).length, [items]);
 
   // Keep the local copy in step with what was saved, so going back shows the
   // answer that is actually on the server rather than one this component
@@ -217,10 +247,16 @@ function AcademyAttemptRoute() {
         <AssessmentPanel>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <CheckCircle2 className="h-5 w-5 text-accent" aria-hidden="true" />
-            {t("academy.done.title")}
+            {t(closedStatus ? "academy.done.alreadyTitle" : "academy.done.title")}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("academy.done.body")}
+            {t(
+              closedStatus === "released"
+                ? "academy.done.releasedBody"
+                : closedStatus
+                  ? "academy.done.alreadyBody"
+                  : "academy.done.body",
+            )}
           </p>
           {/* Said plainly, because a result that is not final yet must not look
               final. */}
