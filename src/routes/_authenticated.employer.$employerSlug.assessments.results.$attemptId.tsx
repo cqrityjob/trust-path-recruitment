@@ -171,7 +171,7 @@ function Report({
                   setIdentity(x?.email ?? t("academy.participants.identityRefused")),
                 )
               }
-              className="inline-flex h-9 items-center rounded-[8px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex min-h-[44px] items-center rounded-[8px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {t("academy.participants.showIdentity")}
             </button>

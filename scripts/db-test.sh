@@ -676,6 +676,38 @@ if [ "$RAUD_PASSED" -lt 51 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-d. Report evidence scope
+#
+# A standard assessment report is about ONE attempt. Before 20260820130000 every
+# evidence query filtered on subject_id alone, so a second sitting made the
+# second report show the sum of both -- and a later attempt could silently
+# change what an earlier immutable report appeared to mean. This suite sits the
+# same assessment twice and holds the boundary.
+# ---------------------------------------------------------------------------
+echo "==> Running report evidence-scope assertions"
+set +e
+ASCOPE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_report_attempt_scope_test.sql 2>&1)"
+ASCOPE_RC=$?
+set -e
+
+echo "$ASCOPE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ASCOPE_PASSED="$(echo "$ASCOPE_OUT" | grep -c "ok  " || true)"
+
+if [ "$ASCOPE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the report evidence-scope suite exited with code ${ASCOPE_RC}." >&2
+  echo "$ASCOPE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${ASCOPE_PASSED} report evidence-scope assertions passed"
+
+if [ "$ASCOPE_PASSED" -lt 23 ]; then
+  echo "FAIL: expected at least 23 report evidence-scope assertions, only ${ASCOPE_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -844,6 +876,7 @@ echo "              ${P2_PASSED} Phase 2 identity assertions,
 echo "              ${VJ_PASSED} Vaktare journey assertions,"
 echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
+echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"

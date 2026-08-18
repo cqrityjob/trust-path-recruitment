@@ -170,6 +170,10 @@ DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text) CASCADE;
 -- and takes no governance type, so it survives the enum cascade and has to be
 -- named. The follow-up prompt catalogue is report content and goes with it.
 DROP FUNCTION IF EXISTS public.scp_display_evidence_state(uuid, uuid, text) CASCADE;
+-- 20260820130000: the attempt-scoped pair. Same reasoning again -- uuid/text
+-- signatures, so the governance-enum cascade does not reach them.
+DROP FUNCTION IF EXISTS public.scp_attempt_maturity(uuid, uuid, text, timestamptz) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASCADE;
 DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it
 -- has to go before the Phase 2 unwind reaches them.

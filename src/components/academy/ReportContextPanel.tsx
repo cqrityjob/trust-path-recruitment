@@ -140,7 +140,7 @@ export function ReportContextPanel({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-[8px] text-[13px] font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="mt-4 inline-flex min-h-[44px] items-center gap-1.5 rounded-[8px] text-[13px] font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         {open ? (
           <ChevronDown className="h-4 w-4" aria-hidden="true" />
