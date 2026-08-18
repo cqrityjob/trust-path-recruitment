@@ -1,0 +1,44 @@
+{
+  "$comment": "Canonical migration policy. Enforced by scripts/migration-safety-check.ts, which runs in CI and in scripts/db-test.sh. Edit this file deliberately: every entry is an owner-level decision, not a convenience.",
+  "policyVersion": 1,
+  "activeDirectory": "supabase/migrations",
+  "parkedDirectory": "supabase/archive/parked-migrations",
+
+  "parked": [
+    {
+      "version": "20260720180000",
+      "file": "20260720180000_h4_1_assessment_blueprint_engine_phase1.sql",
+      "reason": "Blueprint Engine Phase 1 (26 tables, 33 functions). Parked by owner decision F, Phase 0C: not applied to hosted production and the product does not depend on it. Physically outside supabase/migrations so no db push, CLI or replay can reach it. Its one load-bearing object, public.assessment_run_reports, was extracted to 20260720180001_assessment_run_reports_canonical_home.sql.",
+      "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
+    }
+  ],
+
+  "neverReplay": [
+    {
+      "version": "20260730110000",
+      "file": "20260730110000_career_discovery_v3_1_completion.sql",
+      "reason": "Owner decision I, Phase 0C. Re-executing this file would restore the broken global ranking guard, can strip security_invoker from the stored-report view, and would create a candidate-data exposure. It is already recorded in the hosted ledger, so supabase db push will not re-run it; the residual risk is a manual psql -f or a hand-written repair. It STAYS in the active path because later migrations correct it in sequence and a linear replay needs it.",
+      "protection": "content-pinned",
+      "sha256": "1734b25531fdb69f5eb4d332aba259f9debe873e9ea82228bdcccba4f571ac8e",
+      "manualExecution": "forbidden",
+      "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
+    }
+  ],
+
+  "approvedDuplicateVersions": [
+    {
+      "version": "20260813090000",
+      "pairedWith": "20260814054617",
+      "reason": "Both versions are already recorded in hosted production. Consolidating an already-applied pair is a separate owner-reviewed history operation, not a repository repair. Retained deliberately."
+    }
+  ],
+
+  "hostedLedgerOverrides": [
+    {
+      "file": "20260818090001_sp_phase10_self_review_and_decision_events.sql",
+      "hostedVersion": "20260818090001",
+      "reason": "Security Passport Phase 10 is recorded in hosted production as 20260818090001, not 20260818090000. The repository file was renamed to match hosted truth; hosted 20260818090000 is scp_closed_test_governance. This is the resolution of the only version collision in the repository.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20260818090000','20260818090001');"
+    }
+  ]
+}

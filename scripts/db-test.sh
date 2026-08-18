@@ -77,6 +77,9 @@ echo "==> Target: $PGUSER@$PGHOST:$PGPORT/$TEST_DB"
 # ---------------------------------------------------------------------------
 # 1. Clean database
 # ---------------------------------------------------------------------------
+echo "==> Migration safety policy"
+bun run scripts/migration-safety-check.ts
+
 echo "==> Creating a clean test database"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB};" >/dev/null
