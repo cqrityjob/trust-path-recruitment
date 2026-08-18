@@ -4379,8 +4379,12 @@ export type Database = {
           accommodation_note: string | null
           assessment_version_id: string | null
           assignment_id: string | null
+          content_status_at_assignment: string | null
           created_at: string
           form_id: string
+          governance_mode:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id: string
           issuer_organization_id: string | null
           jurisdiction_id: string | null
@@ -4395,14 +4399,20 @@ export type Database = {
           status: string
           subject_id: string
           submitted_at: string | null
+          test_grant_id: string | null
+          validation_status_at_assignment: string | null
         }
         Insert: {
           accommodation_granted?: boolean
           accommodation_note?: string | null
           assessment_version_id?: string | null
           assignment_id?: string | null
+          content_status_at_assignment?: string | null
           created_at?: string
           form_id: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id?: string
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
@@ -4417,14 +4427,20 @@ export type Database = {
           status?: string
           subject_id: string
           submitted_at?: string | null
+          test_grant_id?: string | null
+          validation_status_at_assignment?: string | null
         }
         Update: {
           accommodation_granted?: boolean
           accommodation_note?: string | null
           assessment_version_id?: string | null
           assignment_id?: string | null
+          content_status_at_assignment?: string | null
           created_at?: string
           form_id?: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id?: string
           issuer_organization_id?: string | null
           jurisdiction_id?: string | null
@@ -4439,6 +4455,8 @@ export type Database = {
           status?: string
           subject_id?: string
           submitted_at?: string | null
+          test_grant_id?: string | null
+          validation_status_at_assignment?: string | null
         }
         Relationships: [
           {
@@ -4509,6 +4527,13 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_attempts_test_grant_id_fkey"
+            columns: ["test_grant_id"]
+            isOneToOne: false
+            referencedRelation: "scp_test_grants"
             referencedColumns: ["id"]
           },
         ]
@@ -7206,6 +7231,60 @@ export type Database = {
         }
         Relationships: []
       }
+      scp_test_grants: {
+        Row: {
+          authorised_by: string | null
+          definition_id: string | null
+          employer_id: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          purpose: Database["public"]["Enums"]["scp_governance_mode"]
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          authorised_by?: string | null
+          definition_id?: string | null
+          employer_id: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          purpose: Database["public"]["Enums"]["scp_governance_mode"]
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          authorised_by?: string | null
+          definition_id?: string | null
+          employer_id?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          purpose?: Database["public"]["Enums"]["scp_governance_mode"]
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_test_grants_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_test_grants_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_career_profiles: {
         Row: {
           created_at: string
@@ -7414,6 +7493,7 @@ export type Database = {
           access_count: number
           created_at: string
           expires_at: string | null
+          focus_claim_id: string | null
           holder_user_id: string
           id: string
           package_code: string
@@ -7426,6 +7506,7 @@ export type Database = {
           access_count?: number
           created_at?: string
           expires_at?: string | null
+          focus_claim_id?: string | null
           holder_user_id: string
           id?: string
           package_code: string
@@ -7438,6 +7519,7 @@ export type Database = {
           access_count?: number
           created_at?: string
           expires_at?: string | null
+          focus_claim_id?: string | null
           holder_user_id?: string
           id?: string
           package_code?: string
@@ -7446,7 +7528,15 @@ export type Database = {
           revoked_at?: string | null
           token_hash?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sp_disclosures_focus_claim_id_fkey"
+            columns: ["focus_claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sp_evidence: {
         Row: {
@@ -8154,6 +8244,51 @@ export type Database = {
           },
         ]
       }
+      scp_rm_employer_participants: {
+        Row: {
+          application_id: string | null
+          assignment_count: number | null
+          completed_count: number | null
+          employee_id: string | null
+          employer_id: string | null
+          first_invited_at: string | null
+          job_id: string | null
+          last_invited_at: string | null
+          recipient_email: string | null
+          recipient_user_id: string | null
+          relationship: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_assignments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_rm_review_queue: {
         Row: {
           issuer_organization_id: string | null
@@ -8483,6 +8618,7 @@ export type Database = {
           _employee_id?: string
           _employer_id: string
           _language?: string
+          _purpose_intent?: string
           _recipient_email: string
           _use_case?: string
         }
@@ -8502,6 +8638,7 @@ export type Database = {
           definition_slug: string
           does_not_measure_en: string[]
           does_not_measure_sv: string[]
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
           is_test_fixture: boolean
           item_count: number
           name_en: string
@@ -8571,8 +8708,26 @@ export type Database = {
           option_id: string
         }[]
       }
+      scp_grant_permits_assignment: {
+        Args: {
+          _content_status: string
+          _definition_id: string
+          _employer_id: string
+          _is_test_fixture: boolean
+          _validation_status: string
+        }
+        Returns: Database["public"]["Enums"]["scp_governance_mode"]
+      }
       scp_has_content_role: {
         Args: { _role: string; _user_id: string }
+        Returns: boolean
+      }
+      scp_has_test_grant: {
+        Args: {
+          _definition_id?: string
+          _employer_id: string
+          _purpose: Database["public"]["Enums"]["scp_governance_mode"]
+        }
         Returns: boolean
       }
       scp_my_academy_assignments: {
@@ -8599,12 +8754,43 @@ export type Database = {
           participant_snapshot: string
         }[]
       }
+      scp_required_purpose_code: {
+        Args: { _purpose_intent?: string; _use_case: string }
+        Returns: string
+      }
       scp_resolve_participant_identity: {
         Args: { _employer_id: string; _subject_id: string }
         Returns: {
           display_email: string
           released: boolean
           subject_id: string
+        }[]
+      }
+      scp_review_queue: {
+        Args: { _language?: string }
+        Returns: {
+          assessment_name: string
+          assessment_slug: string
+          attempt_id: string
+          chosen_best_label: string
+          chosen_label: string
+          chosen_worst_label: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          is_safety_critical: boolean
+          item_display_order: number
+          item_format: string
+          item_prompt: string
+          item_scenario: string
+          opened_at: string
+          organisation_name: string
+          outstanding_in_attempt: number
+          participant_ref: string
+          purpose_code: string
+          response_text: string
+          review_id: string
+          severity_required: boolean
+          trigger_reason: string
+          validation_status_at_assignment: string
         }[]
       }
       scp_save_response: {
@@ -8687,7 +8873,6 @@ export type Database = {
         }
         Returns: string
       }
-
       sp_create_credential_disclosure: {
         Args: {
           _claim_id: string
@@ -8989,6 +9174,7 @@ export const Constants = {
         "community",
         "internal",
       ],
+      scp_governance_mode: ["development", "closed_test", "recruitment"],
     },
   },
 } as const
