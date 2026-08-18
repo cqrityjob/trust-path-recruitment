@@ -160,6 +160,19 @@ SELECT pg_temp.ok(
       AND grantee IN ('anon','authenticated','service_role','PUBLIC')) = 0,
   '3.1 no application role holds DELETE on any sp_* table');
 
+-- Phase 9b: the hosted project granted DELETE on every sp_* table by default
+-- and nothing had taken it away. Named here so a future table that forgets
+-- its REVOKE fails rather than quietly inheriting the grant.
+SELECT pg_temp.ok(
+  NOT has_table_privilege('authenticated', 'public.sp_passport_events', 'DELETE'),
+  '3.1b the append-only audit log cannot be deleted from by authenticated');
+SELECT pg_temp.ok(
+  NOT has_table_privilege('authenticated', 'public.sp_evidence', 'DELETE'),
+  '3.1c nor evidence, whose FOR ALL policy would otherwise have permitted it');
+SELECT pg_temp.ok(
+  NOT has_table_privilege('service_role', 'public.sp_passport_events', 'DELETE'),
+  '3.1d nor by service_role, which bypasses RLS');
+
 DO $$
 DECLARE
   _h uuid := 'd8000000-0000-0000-0000-000000000001';
