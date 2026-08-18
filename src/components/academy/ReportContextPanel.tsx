@@ -61,9 +61,16 @@ function fmt(iso: string | undefined, lang: string): string | undefined {
 export function ReportContextPanel({
   context,
   identityAction,
+  reportId,
+  releasedAt,
 }: {
   context: ReportContext | null;
   identityAction?: React.ReactNode;
+  /** Snapshot id and release date. On screen they sit in the lineage section;
+   *  in print they are promoted to the top, because a printed page that leaves
+   *  the system has to be identifiable on its own. */
+  reportId?: string;
+  releasedAt?: string;
 }) {
   const { t, lang } = useT();
   const [open, setOpen] = useState(false);
@@ -76,6 +83,16 @@ export function ReportContextPanel({
   return (
     <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
       <h2 className="text-sm font-semibold text-foreground">{t("academy.report.contextTitle")}</h2>
+
+      {/* Print carries the identity of the document itself. A sheet of paper
+          with competency states and no report id cannot be traced back. */}
+      {reportId && (
+        <p className="print-only mt-2 text-[11px] text-muted-foreground">
+          {t("academy.report.reportIdLabel")}: {reportId}
+          {c.reportKey ? ` · ${c.reportKey} v${c.reportVersion ?? 1}` : ""}
+          {releasedAt ? ` · ${t("academy.report.releasedOn")} ${fmt(releasedAt, lang)}` : ""}
+        </p>
+      )}
 
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
         {c.participantRef && (

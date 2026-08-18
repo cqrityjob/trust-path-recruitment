@@ -89,7 +89,7 @@ function ParticipantReport() {
     <AssessmentShell wide>
       <Link
         to="/academy"
-        className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="no-print mb-4 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {t("academy.report.back")}
@@ -136,7 +136,7 @@ function ParticipantReport() {
           frozen context -- which carries no lifecycle status, no review counts
           and no scoring model version, because the database never put them
           there. */}
-      <ReportContextPanel context={r.context} />
+      <ReportContextPanel context={r.context} reportId={r.id} releasedAt={r.releasedAt} />
 
       {/* The participant snapshot carries no severity-bearing flags by design,
           so this renders nothing here. It stays because the component is the
