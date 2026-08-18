@@ -2337,6 +2337,19 @@ export const dictionaries = {
     "academy.maturity.strong": "Starkt underlag",
     "academy.observation.one": "1 observation",
     "academy.observation.many": "observationer",
+    "academy.state.stronglyShown": "Starkt visat",
+    "academy.state.shown": "Visat",
+    "academy.state.followUp": "Behöver följdfråga",
+    "academy.state.notYetShown": "Ännu inte visat",
+    "academy.state.criticalFollowUp": "Kritisk följdfråga",
+    "academy.state.humanReviewed": "läst av en granskare",
+    "academy.coverage.title": "Vad underlaget omfattar",
+    "academy.coverage.basis":
+      "Underlaget bygger på {observations} observationer från {contexts} bedömningstillfälle.",
+    "academy.coverage.employerBody":
+      'Ett bedömningstillfälle är en informationskälla. Flera kompetenser landar därför på "Behöver följdfråga" — det betyder att underlaget inte räcker för att uttala sig, inte att personen presterat dåligt. Följdfrågorna nedan är till för samtalet. Ytterligare underlag, till exempel ett praktiskt moment eller ett scenario i skarpt läge, gör bilden starkare.',
+    "academy.coverage.participantBody":
+      'Det här är ett bedömningstillfälle, alltså en informationskälla. Att något står som "Behöver följdfråga" betyder att underlaget inte räcker för att säga hur du arbetar — inte att du gjort fel. Frågorna nedan är till för din egen reflektion och för samtalet med din chef.',
     "academy.safety.title": "Säkerhetskritisk uppföljning",
     "academy.safety.bodyOne": "Ett svar rör säkerhetskritisk bedömning och behöver följas upp.",
     "academy.safety.bodyMany": "svar rör säkerhetskritisk bedömning och behöver följas upp.",
@@ -4727,6 +4740,19 @@ export const dictionaries = {
     "academy.maturity.strong": "Strong evidence",
     "academy.observation.one": "1 observation",
     "academy.observation.many": "observations",
+    "academy.state.stronglyShown": "Strongly shown",
+    "academy.state.shown": "Shown",
+    "academy.state.followUp": "Needs a follow-up",
+    "academy.state.notYetShown": "Not yet shown",
+    "academy.state.criticalFollowUp": "Critical follow-up",
+    "academy.state.humanReviewed": "read by a reviewer",
+    "academy.coverage.title": "What this evidence covers",
+    "academy.coverage.basis":
+      "This rests on {observations} observations from {contexts} assessment occasion.",
+    "academy.coverage.employerBody":
+      'One assessment occasion is one source. Several competencies therefore read "Needs a follow-up" — that means the evidence is not sufficient to draw a conclusion, not that the person performed poorly. The questions below are there for the conversation. Further evidence, such as a practical check or a live scenario, strengthens the picture.',
+    "academy.coverage.participantBody":
+      'This is one assessment occasion, which is one source. Something reading "Needs a follow-up" means the evidence is not enough to describe how you work — not that you did anything wrong. The prompts below are for your own reflection and for the conversation with your manager.',
     "academy.safety.title": "Safety-critical follow-up",
     "academy.safety.bodyOne":
       "One answer involves safety-critical judgement and needs following up.",

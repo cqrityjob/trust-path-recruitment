@@ -63,12 +63,38 @@ export type ParticipantRow = {
   identityResolvable: boolean;
 };
 
+/** The product vocabulary. Deliberately not the maturity scale.
+ *
+ *  Maturity describes how strong the EVIDENCE is; this describes what the
+ *  evidence lets anyone say about a way of working. They are different axes, so
+ *  the report speaks one of them and `des-v1` records how it got there.
+ *  `not_yet_shown` means the evidence is insufficient — never that the person
+ *  lacks the ability. */
+export type EvidenceState =
+  | "strongly_shown"
+  | "shown"
+  | "follow_up"
+  | "not_yet_shown"
+  | "critical_follow_up";
+
+/** One competency, as the audience receives it.
+ *
+ *  The optional halves are the audience split made visible in the type: an
+ *  employer line carries an interview question, a participant line carries a
+ *  reflection prompt and the fact that a person reviewed a safety-critical
+ *  answer. Neither is filtered out of the other in the client — the database
+ *  never put it there. */
 export type CompetencyLine = {
   competencyCode: string;
   competencyNameSv: string;
   competencyNameEn: string;
-  maturityLevel: MaturityLevel;
+  evidenceState: EvidenceState;
   observations: number;
+  followupSv: string | null;
+  followupEn: string | null;
+  reflectionSv: string | null;
+  reflectionEn: string | null;
+  humanReviewed: boolean;
 };
 
 export type ReportSnapshot = {
@@ -101,7 +127,7 @@ export type ProgressRow = {
   competencyCode: string;
   competencyNameSv: string;
   competencyNameEn: string;
-  maturityLevel: MaturityLevel;
+  evidenceState: EvidenceState;
   observations: number;
   safetyFlagCount: number;
 };
@@ -236,10 +262,7 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
       return {
         assignmentId: String(r.assignment_id),
         attemptId: String(r.attempt_id),
-        governanceMode: String(r.governance_mode) as
-          | "development"
-          | "closed_test"
-          | "recruitment",
+        governanceMode: String(r.governance_mode) as "development" | "closed_test" | "recruitment",
       };
     },
   );
@@ -372,6 +395,9 @@ export const getAcademyReport = createServerFn({ method: "GET" })
     const { data: row, error } = await ctx.supabase
       .from("scp_report_snapshots")
       .select(
+        // derivation_input is deliberately NOT selected. It holds the internal
+        // maturity the state was derived from, and it exists for reproducibility,
+        // not for a reader.
         "id, attempt_id, subject_id, audience, released_at, payload, safety_flags, " +
           "scp_report_versions(limitations_sv, limitations_en)",
       )
@@ -395,8 +421,13 @@ export const getAcademyReport = createServerFn({ method: "GET" })
         competencyCode: String(x.competency_code),
         competencyNameSv: String(x.competency_name_sv),
         competencyNameEn: String(x.competency_name_en),
-        maturityLevel: x.maturity_level as MaturityLevel,
+        evidenceState: x.evidence_state as CompetencyLine["evidenceState"],
         observations: Number(x.observations ?? 0),
+        followupSv: x.followup_sv ? String(x.followup_sv) : null,
+        followupEn: x.followup_en ? String(x.followup_en) : null,
+        reflectionSv: x.reflection_sv ? String(x.reflection_sv) : null,
+        reflectionEn: x.reflection_en ? String(x.reflection_en) : null,
+        humanReviewed: Boolean(x.human_reviewed),
       })),
       safetyFlags: (Array.isArray(row.safety_flags) ? (row.safety_flags as RpcRow[]) : []).map(
         (f) => ({
@@ -448,7 +479,7 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
       competencyCode: String(r.competency_code),
       competencyNameSv: String(r.competency_name_sv),
       competencyNameEn: String(r.competency_name_en),
-      maturityLevel: r.maturity_level as MaturityLevel,
+      evidenceState: r.evidence_state as EvidenceState,
       observations: Number(r.observations ?? 0),
       safetyFlagCount: Number(r.safety_flag_count ?? 0),
     }));

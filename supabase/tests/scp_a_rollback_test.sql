@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 64,
-    'pre-rollback: 64 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants)');
+        AND table_name LIKE 'scp\_%') = 65,
+    'pre-rollback: 65 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -166,6 +166,11 @@ DROP FUNCTION IF EXISTS public.scp_guard_governance_lineage_immutable() CASCADE;
 -- text and returns text, so nothing cascades to it and it would otherwise
 -- survive a rollback that claims to remove every scp_ object.
 DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text) CASCADE;
+-- Phase 8 (20260820100000). Same reasoning: the state projection returns text
+-- and takes no governance type, so it survives the enum cascade and has to be
+-- named. The follow-up prompt catalogue is report content and goes with it.
+DROP FUNCTION IF EXISTS public.scp_display_evidence_state(uuid, uuid, text) CASCADE;
+DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
 

@@ -423,18 +423,34 @@ SELECT pg_temp.ok(
      FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
   'J5.4 no snapshot contains a percentage, pass/fail, ranking or recommendation');
 
+-- 20260820100000 moved the internal maturity vocabulary OUT of both audience
+-- payloads and into derivation_input. The product speaks the Source of Truth
+-- vocabulary (evidence_state); maturity is what that was derived FROM, kept so
+-- a historical report stays reproducible. Both halves are asserted, because
+-- "absent from the payload" is only safe if it is still recorded somewhere.
 SELECT pg_temp.ok(
-  (SELECT bool_and(payload::text ILIKE '%maturity_level%')
+  (SELECT bool_and(payload::text NOT ILIKE '%maturity_level%')
      FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
-  'J5.5 the snapshot states a maturity level');
+  'J5.5 the internal maturity vocabulary is absent from every audience payload');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(payload::text ILIKE '%evidence_state%')
+     FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
+  'J5.5b the snapshot states an evidence state in the product vocabulary');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(derivation_input::text ILIKE '%maturity_level%')
+     FROM public.scp_report_snapshots WHERE attempt_id = :'aid'::uuid),
+  'J5.5c the maturity it was derived from is retained internally');
 
 -- Four observations from a single context and a single source type must NOT
--- reach a high level. This is the two-gate rule doing its job on real data.
+-- reach a high level. This is the two-gate rule doing its job on real data,
+-- now read from the frozen derivation record rather than from the payload.
 SELECT pg_temp.ok(
   (SELECT bool_and((x->>'maturity_level') IN
                    ('no_evidence','limited_evidence','developing_evidence'))
      FROM public.scp_report_snapshots s,
-          jsonb_array_elements(s.payload) x
+          jsonb_array_elements(s.derivation_input) x
     WHERE s.attempt_id = :'aid'::uuid),
   'J5.6 one assessment cannot reach consistent_evidence — the sufficiency gate caps it');
 
@@ -675,10 +691,21 @@ SELECT * FROM public.scp_subject_progress(:'sid'::uuid);
 RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok((SELECT count(*) FROM prog) >= 1,
   'J7.13 the participant can read their own progress');
+-- Progress now speaks the product vocabulary, like the rest of the report.
+-- It used to read maturity_level straight out of the payload; 20260820100000
+-- moved that to derivation_input and switched this projection to the states an
+-- audience is actually shown, so a reader is never asked to reconcile two
+-- different scales.
 SELECT pg_temp.ok(
-  (SELECT bool_and(maturity_level IN ('no_evidence','limited_evidence',
-     'developing_evidence','consistent_evidence','strong_evidence')) FROM prog),
-  'J7.14 progress is expressed only in maturity levels');
+  (SELECT bool_and(evidence_state IN ('strongly_shown','shown','follow_up',
+     'not_yet_shown','critical_follow_up')) FROM prog),
+  'J7.14 progress is expressed only in the product evidence vocabulary');
+
+-- One release, one audience: the series must not double up because two
+-- snapshots exist for the same attempt.
+SELECT pg_temp.ok(
+  (SELECT count(*) = count(DISTINCT (attempt_id::text || competency_code)) FROM prog),
+  'J7.14b each competency appears once per attempt, not once per audience');
 
 -- A genuinely unrelated person cannot read somebody else's progress.
 --

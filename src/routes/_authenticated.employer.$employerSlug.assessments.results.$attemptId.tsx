@@ -17,8 +17,9 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import {
-  maturityLabelKey,
-  MaturityRow,
+  EvidenceCoverage,
+  evidenceStateLabelKey,
+  EvidenceStateRow,
   NoEvidenceState,
   ReportLimitations,
   SafetyFlagNotice,
@@ -85,10 +86,18 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
         className="rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-6"
       >
         <p className="text-sm font-semibold text-foreground">
-          {t(kind === "backend_unavailable" ? "academy.error.unavailableTitle" : "academy.error.failedTitle")}
+          {t(
+            kind === "backend_unavailable"
+              ? "academy.error.unavailableTitle"
+              : "academy.error.failedTitle",
+          )}
         </p>
         <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t(kind === "backend_unavailable" ? "academy.error.unavailableBody" : "academy.error.failedBody")}
+          {t(
+            kind === "backend_unavailable"
+              ? "academy.error.unavailableBody"
+              : "academy.error.failedBody",
+          )}
         </p>
       </div>
     );
@@ -126,6 +135,12 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
 
       <SafetyFlagNotice count={r.safetyFlags.length} />
 
+      <EvidenceCoverage
+        observations={r.lines.reduce((n, l) => n + l.observations, 0)}
+        contexts={1}
+        bodyKey="academy.coverage.employerBody"
+      />
+
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">
           {t("academy.results.competencies")}
@@ -137,11 +152,12 @@ function Report({ attemptId, employerSlug }: { attemptId: string; employerSlug: 
           />
         ) : (
           r.lines.map((l) => (
-            <MaturityRow
+            <EvidenceStateRow
               key={l.competencyCode}
               name={lang === "en" ? l.competencyNameEn : l.competencyNameSv}
-              level={l.maturityLevel}
+              state={l.evidenceState}
               observations={l.observations}
+              prompt={lang === "en" ? l.followupEn : l.followupSv}
             />
           ))
         )}
@@ -227,7 +243,7 @@ function ProgressTable({ rows }: { rows: ProgressRow[] }) {
                   const cell = at(c, d);
                   return (
                     <td key={d} className="py-2.5 pr-4 text-muted-foreground">
-                      {cell ? t(maturityLabelKey(cell.maturityLevel)) : "—"}
+                      {cell ? t(evidenceStateLabelKey(cell.evidenceState)) : "—"}
                     </td>
                   );
                 })}

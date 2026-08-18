@@ -249,8 +249,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
-if [ "$SCP_TABLES" -ne 64 ]; then
-  echo "FAIL: expected 64 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 65 ]; then
+  echo "FAIL: expected 65 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -645,6 +645,37 @@ if [ "$PGOV_PASSED" -lt 23 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-c. Report audience separation
+#
+# The test that was missing. Until Phase 8 the employer and participant
+# snapshots held the SAME payload, and the journey suite could not tell:
+# it applied one predicate to both rows, so byte-identical snapshots passed.
+# This suite asserts ABSENCE in both directions.
+# ---------------------------------------------------------------------------
+echo "==> Running report audience-separation assertions"
+set +e
+RAUD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_report_audience_test.sql 2>&1)"
+RAUD_RC=$?
+set -e
+
+echo "$RAUD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+RAUD_PASSED="$(echo "$RAUD_OUT" | grep -c "ok  " || true)"
+
+if [ "$RAUD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the report audience suite exited with code ${RAUD_RC}." >&2
+  echo "$RAUD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${RAUD_PASSED} report audience assertions passed"
+
+if [ "$RAUD_PASSED" -lt 24 ]; then
+  echo "FAIL: expected at least 24 report audience assertions, only ${RAUD_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -812,6 +843,7 @@ echo "              ${P2_PASSED} Phase 2 identity assertions,
               ${J_PASSED} Phase 2 journey assertions,"
 echo "              ${VJ_PASSED} Vaktare journey assertions,"
 echo "              ${PGOV_PASSED} purpose-governance assertions,"
+echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"

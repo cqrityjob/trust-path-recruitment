@@ -15,8 +15,9 @@ import {
   AssessmentPanel,
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import {
-  maturityLabelKey,
-  MaturityRow,
+  EvidenceCoverage,
+  evidenceStateLabelKey,
+  EvidenceStateRow,
   NoEvidenceState,
   ReportLimitations,
   SafetyFlagNotice,
@@ -108,7 +109,17 @@ function ParticipantReport() {
         {t("academy.report.whatThisIs")}
       </p>
 
+      {/* The participant snapshot carries no severity-bearing flags by design,
+          so this renders nothing here. It stays because the component is the
+          one place that decides how a safety notice looks, and a future
+          participant-safe notice belongs in it rather than beside it. */}
       <SafetyFlagNotice count={r.safetyFlags.length} />
+
+      <EvidenceCoverage
+        observations={r.lines.reduce((n, l) => n + l.observations, 0)}
+        contexts={1}
+        bodyKey="academy.coverage.participantBody"
+      />
 
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">
@@ -121,11 +132,13 @@ function ParticipantReport() {
           />
         ) : (
           r.lines.map((l) => (
-            <MaturityRow
+            <EvidenceStateRow
               key={l.competencyCode}
               name={lang === "en" ? l.competencyNameEn : l.competencyNameSv}
-              level={l.maturityLevel}
+              state={l.evidenceState}
               observations={l.observations}
+              prompt={lang === "en" ? l.reflectionEn : l.reflectionSv}
+              humanReviewed={l.humanReviewed}
             />
           ))
         )}
@@ -171,7 +184,7 @@ function ParticipantReport() {
                 </span>
                 <span className="text-muted-foreground">
                   {" "}
-                  — {t(maturityLabelKey(p.maturityLevel))}
+                  — {t(evidenceStateLabelKey(p.evidenceState))}
                 </span>
               </li>
             ))}
