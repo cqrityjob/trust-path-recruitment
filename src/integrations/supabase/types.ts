@@ -8761,6 +8761,33 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_review_queue: {
+        Args: { _language?: string }
+        Returns: {
+          assessment_name: string
+          assessment_slug: string
+          attempt_id: string
+          chosen_best_label: string
+          chosen_label: string
+          chosen_worst_label: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          is_safety_critical: boolean
+          item_display_order: number
+          item_format: string
+          item_prompt: string
+          item_scenario: string
+          opened_at: string
+          organisation_name: string
+          outstanding_in_attempt: number
+          participant_ref: string
+          purpose_code: string
+          response_text: string
+          review_id: string
+          severity_required: boolean
+          trigger_reason: string
+          validation_status_at_assignment: string
+        }[]
+      }
       scp_save_response: {
         Args: {
           _attempt_id: string
