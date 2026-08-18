@@ -264,8 +264,15 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
   -- note-only correction: the level is unchanged, so a real review survives
-  _v2 := public.sp_correct_claim(_claim, 'Svenska', NULL, NULL, NULL, NULL, NULL,
-                                 'typo in the note', NULL, NULL, 'ny anteckning', 'C2');
+  -- Named notation throughout: the signature now carries two trailing skill
+  -- parameters, and positional calls would silently bind the wrong one.
+  _v2 := public.sp_correct_claim(
+    _claim_id => _claim, _title => 'Svenska', _claimed_issuer_name => NULL,
+    _jurisdiction_code => NULL, _issued_on => NULL, _valid_from => NULL,
+    _valid_until => NULL, _reason => 'typo in the note',
+    _credential_code => NULL, _credential_reference => NULL,
+    _holder_note => 'ny anteckning',
+    _skill_code => 'lang_sv', _skill_level => 'C2');
   RESET ROLE;
 
   SELECT * INTO _r FROM public.sp_claims WHERE id = _v2;
@@ -282,8 +289,13 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
   -- changing the level IS material: B1 is not what anybody reviewed
-  _v3 := public.sp_correct_claim(_v2, 'Svenska', NULL, NULL, NULL, NULL, NULL,
-                                 'level was wrong', NULL, NULL, 'ny anteckning', 'B1');
+  _v3 := public.sp_correct_claim(
+    _claim_id => _v2, _title => 'Svenska', _claimed_issuer_name => NULL,
+    _jurisdiction_code => NULL, _issued_on => NULL, _valid_from => NULL,
+    _valid_until => NULL, _reason => 'level was wrong',
+    _credential_code => NULL, _credential_reference => NULL,
+    _holder_note => 'ny anteckning',
+    _skill_code => 'lang_sv', _skill_level => 'B1');
   RESET ROLE;
 
   SELECT * INTO _r FROM public.sp_claims WHERE id = _v3;
@@ -302,7 +314,62 @@ END $$;
 
 
 -- =============================================================================
-\echo '    GROUP 6 -- cleanup'
+\echo '    GROUP 6 -- a wrongly chosen type can be corrected, not escaped from'
+-- =============================================================================
+-- Picking the wrong row from a nineteen-item list is an ordinary mistake. A
+-- holder whose only way out is deleting an entry that already carries evidence
+-- or a review would be stuck with a false statement on their Passport.
+DO $$
+DECLARE
+  _h uuid := 'db000000-0000-0000-0000-000000000001';
+  _wrong uuid; _fixed uuid; _r public.sp_claims%ROWTYPE;
+BEGIN
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, skill_code, skill_level)
+  VALUES (_h, 'language', 'Arabiska', 'lang_ar', 'B2')
+  RETURNING id INTO _wrong;
+
+  -- meant Persian, picked Arabic
+  _fixed := public.sp_correct_claim(
+    _claim_id => _wrong, _title => 'Persiska', _claimed_issuer_name => NULL,
+    _jurisdiction_code => NULL, _issued_on => NULL, _valid_from => NULL,
+    _valid_until => NULL, _reason => 'valde fel språk',
+    _credential_code => NULL, _credential_reference => NULL, _holder_note => NULL,
+    _skill_code => 'lang_fa', _skill_level => 'B2');
+  RESET ROLE;
+
+  SELECT * INTO _r FROM public.sp_claims WHERE id = _fixed;
+  PERFORM pg_temp.ok(_r.skill_code = 'lang_fa', '6.1 the corrected version carries the new type');
+  PERFORM pg_temp.ok(_r.assertion_level = 'self_declared',
+    '6.2 changing the type resets trust — nobody reviewed the new language');
+  PERFORM pg_temp.ok(
+    (SELECT lifecycle_state FROM public.sp_claims WHERE id = _wrong) = 'superseded',
+    '6.3 the mistaken version is superseded, not erased');
+  PERFORM pg_temp.ok(
+    (SELECT detail->>'previous_skill_code' FROM public.sp_passport_events
+      WHERE subject_id = _fixed AND event_type = 'claim_corrected') = 'lang_ar',
+    '6.4 the audit trail records what it used to be');
+
+  -- but a language still cannot become a driving licence
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_correct_claim(
+         _claim_id => %L::uuid, _title => 'Körkort', _claimed_issuer_name => NULL,
+         _jurisdiction_code => 'SE', _issued_on => NULL, _valid_from => NULL,
+         _valid_until => NULL, _reason => 'x', _credential_code => NULL,
+         _credential_reference => NULL, _holder_note => NULL,
+         _skill_code => 'driving_licence', _skill_level => 'B')$q$, _fixed),
+    'SP_SKILL_CLAIM_TYPE_MISMATCH',
+    '6.5 a correction cannot turn a language into a practical skill');
+  RESET ROLE;
+END $$;
+
+
+-- =============================================================================
+\echo '    GROUP 7 -- cleanup'
 -- =============================================================================
 DO $$
 DECLARE _ids uuid[] := ARRAY[
@@ -323,7 +390,7 @@ BEGIN
   SELECT (SELECT count(*) FROM public.sp_claims WHERE holder_user_id = ANY(_ids))
        + (SELECT count(*) FROM auth.users WHERE id = ANY(_ids))
     INTO _left;
-  PERFORM pg_temp.ok(_left = 0, '6.1 every fictional Phase 11 record is gone');
+  PERFORM pg_temp.ok(_left = 0, '7.1 every fictional Phase 11 record is gone');
 END $$;
 
 \echo '==> Security Passport Phase 11 OK'

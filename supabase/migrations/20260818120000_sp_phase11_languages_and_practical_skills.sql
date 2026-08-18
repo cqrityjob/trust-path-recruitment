@@ -275,9 +275,13 @@ CREATE TRIGGER sp_claims_skill_rules_trg
 -- MATERIAL change resets to self_declared with no verifier attribution. Only
 -- two things are added:
 --
---   * `skill_code` is carried from the old version and is NOT a parameter —
---     changing "Swedish" into "Arabic" is a different fact, not a correction
---     of the same one, and belongs in a new entry;
+--   * `_skill_code` IS a parameter and IS material. Picking the wrong entry
+--     from a nineteen-item list is an ordinary mistake, and a holder whose
+--     only escape is withdrawing an entry that already carries evidence or a
+--     review is stuck. Correcting it resets trust to self-declared, because
+--     nobody reviewed the language it has become. The trigger still refuses a
+--     code whose claim_type does not match, so a language cannot be corrected
+--     into a driving licence.
 --   * `_skill_level` IS a parameter and IS material. B1 and C2 are different
 --     assertions about the same person, so a review of one is not a review of
 --     the other.
@@ -300,6 +304,10 @@ CREATE OR REPLACE FUNCTION public.sp_correct_claim(
   _credential_code text,
   _credential_reference text,
   _holder_note text,
+  -- DEFAULT NULL for the same reason as _skill_level below: an eleven-argument
+  -- caller keeps working, and for a language an omitted code is refused by
+  -- sp_claims_skill_rules rather than silently blanked.
+  _skill_code text DEFAULT NULL,
   -- DEFAULT NULL so the eleven-argument callers that predate this migration
   -- still resolve. That is safe precisely because it fails LOUDLY rather than
   -- silently: for a language or practical skill an omitted level is refused by
@@ -344,6 +352,7 @@ BEGIN
     OR _old.credential_code       IS DISTINCT FROM _credential_code
     OR _old.credential_reference  IS DISTINCT FROM _credential_reference
     OR _old.skill_level           IS DISTINCT FROM _skill_level
+    OR (_skill_code IS NOT NULL AND _old.skill_code IS DISTINCT FROM _skill_code)
   );
 
   IF _material AND _old.assertion_level <> 'self_declared' THEN
@@ -367,7 +376,7 @@ BEGIN
     _old.holder_user_id, _old.claim_type, _title, _claimed_issuer_name,
     _jurisdiction_code, _issued_on, _valid_from, _valid_until,
     _credential_code, _credential_reference, _holder_note,
-    _old.skill_code, _skill_level,
+    coalesce(_skill_code, _old.skill_code), _skill_level,
     _next_level, _next_by, _next_at,
     'active', _old.version_no + 1, _old.id)
   RETURNING id INTO _new_id;
@@ -391,6 +400,8 @@ BEGIN
       'verification_reset', (_material AND _old.assertion_level <> 'self_declared'),
       'previous_credential_code', _old.credential_code,
       'credential_code', _credential_code,
+      'previous_skill_code', _old.skill_code,
+      'skill_code', coalesce(_skill_code, _old.skill_code),
       'previous_skill_level', _old.skill_level,
       'skill_level', _skill_level));
 
@@ -399,6 +410,6 @@ END;
 $fn$;
 
 REVOKE ALL ON FUNCTION public.sp_correct_claim(
-  uuid, text, text, text, date, date, date, text, text, text, text, text) FROM PUBLIC, anon;
+  uuid, text, text, text, date, date, date, text, text, text, text, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.sp_correct_claim(
-  uuid, text, text, text, date, date, date, text, text, text, text, text) TO authenticated;
+  uuid, text, text, text, date, date, date, text, text, text, text, text, text) TO authenticated;

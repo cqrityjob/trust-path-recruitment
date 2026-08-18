@@ -557,6 +557,11 @@ const correctionInput = z.object({
    *  different assertions about the same person, so correcting the level
    *  resets a verification that was made against the old one. Null for every
    *  claim that is not a language or a practical skill. */
+  /** Correctable, and material: picking the wrong row from a long list is an
+   *  ordinary mistake, and a holder must not be stuck with it. The database
+   *  refuses a code whose claim_type does not match, so a language cannot be
+   *  corrected into a licence. */
+  skillCode: z.string().max(32).nullable(),
   skillLevel: z.string().max(16).nullable(),
   /** Phase 6 fields. Required rather than optional on purpose: the RPC treats
    *  every parameter as a full replacement, so an omitted credential code
@@ -593,6 +598,7 @@ export const correctClaim = createServerFn({ method: "POST" })
       _credential_code: orNull(data.credentialCode),
       _credential_reference: orNull(data.credentialReference),
       _holder_note: orNull(data.holderNote),
+      _skill_code: orNull(data.skillCode),
       _skill_level: orNull(data.skillLevel),
     });
     if (error) throw new Error(error.message);
