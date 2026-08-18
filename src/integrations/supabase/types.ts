@@ -5326,6 +5326,47 @@ export type Database = {
           },
         ]
       }
+      scp_followup_prompts: {
+        Row: {
+          audience: string
+          competency_id: string
+          content_status: string
+          created_at: string
+          id: string
+          prompt_en: string
+          prompt_sv: string
+          version_number: number
+        }
+        Insert: {
+          audience: string
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          prompt_en: string
+          prompt_sv: string
+          version_number?: number
+        }
+        Update: {
+          audience?: string
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          id?: string
+          prompt_en?: string
+          prompt_sv?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_followup_prompts_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_form_items: {
         Row: {
           block_key: string
@@ -6505,7 +6546,10 @@ export type Database = {
         Row: {
           attempt_id: string
           audience: string
+          context: Json | null
           created_at: string
+          derivation_input: Json | null
+          evidence_state_version: string | null
           id: string
           issuer_organization_id: string | null
           payload: Json
@@ -6519,7 +6563,10 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
+          context?: Json | null
           created_at?: string
+          derivation_input?: Json | null
+          evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
           payload: Json
@@ -6533,7 +6580,10 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
+          context?: Json | null
           created_at?: string
+          derivation_input?: Json | null
+          evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
           payload?: Json
@@ -6587,6 +6637,9 @@ export type Database = {
           audience: string
           content_status: string
           created_at: string
+          governance_mode:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id: string
           limitations_en: string[]
           limitations_sv: string[]
@@ -6600,6 +6653,9 @@ export type Database = {
           audience: string
           content_status?: string
           created_at?: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id?: string
           limitations_en?: string[]
           limitations_sv?: string[]
@@ -6613,6 +6669,9 @@ export type Database = {
           audience?: string
           content_status?: string
           created_at?: string
+          governance_mode?:
+            | Database["public"]["Enums"]["scp_governance_mode"]
+            | null
           id?: string
           limitations_en?: string[]
           limitations_sv?: string[]
@@ -7401,13 +7460,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sp_claims_skill_code_fkey"
-            columns: ["skill_code"]
-            isOneToOne: false
-            referencedRelation: "sp_skill_types"
-            referencedColumns: ["code"]
-          },
-          {
             foreignKeyName: "sp_claims_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: false
@@ -7419,6 +7471,13 @@ export type Database = {
             columns: ["jurisdiction_code"]
             isOneToOne: false
             referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_claims_skill_code_fkey"
+            columns: ["skill_code"]
+            isOneToOne: false
+            referencedRelation: "sp_skill_types"
             referencedColumns: ["code"]
           },
           {
@@ -8666,6 +8725,14 @@ export type Database = {
           summary_sv: string
         }[]
       }
+      scp_display_evidence_state: {
+        Args: {
+          _competency_version_id: string
+          _maturity: string
+          _subject_id: string
+        }
+        Returns: string
+      }
       scp_employer_assign: {
         Args: {
           _assessment_version_id: string
@@ -8877,7 +8944,7 @@ export type Database = {
           competency_code: string
           competency_name_en: string
           competency_name_sv: string
-          maturity_level: string
+          evidence_state: string
           observations: number
           released_at: string
           safety_flag_count: number
