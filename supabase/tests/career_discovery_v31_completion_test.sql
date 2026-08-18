@@ -461,14 +461,6 @@ SELECT pg_temp.ok(
      FROM public.cd_professions),
   'C8.5e all 14 professions remain approved and non-derived after the checks');
 
-UPDATE public.cd_professions SET approved_for_ranking = true
- WHERE profession_id IN (SELECT profession_id FROM t_approved);
-
-SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.cd_professions WHERE approved_for_ranking)
-  = (SELECT count(*) FROM t_approved),
-  'C8.5b the approved catalogue is restored, so later groups see the real state');
-
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions WHERE id = (SELECT sess FROM t_s2)) = 'in_progress',
   'C8.6 every refused payload left the second session resumable');
