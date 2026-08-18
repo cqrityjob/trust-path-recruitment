@@ -906,6 +906,25 @@ const sv = {
   "exp.verifiedLabel": "Verifierad tid i yrket",
   "exp.noneYet": "Ingen verifierad tid ännu",
   "exp.selfDeclaredAlso": "Egenrapporterat, inte kontrollerat:",
+  "share2.title": "Dela ditt Passport",
+  "share2.lead":
+    "En länk som visar dina verifierade uppgifter. Du kan återkalla den när som helst.",
+  "share2.primary": "Dela mitt Passport",
+  "share2.creating": "Skapar länk …",
+  "share2.share": "Dela",
+  "share2.copy": "Kopiera länk",
+  "share2.copied": "Länken är kopierad",
+  "share2.ready": "Länken är klar",
+  "share2.terms": "Gäller i 30 dagar. Du kan återkalla den när som helst.",
+  "share2.whatIsShared": "Länken visar bara verifierade uppgifter — inget egenrapporterat, inga dokument och inga referensnummer.",
+  "share2.nothingVerified":
+    "Du har inget verifierat ännu, så en länk skulle vara tom. Lägg till dina uppgifter och skicka dem för kontroll först.",
+  "share2.more": "Fler alternativ",
+  "share2.moreHint": "Egen giltighetstid, QR-kod, bilder och aktiva länkar.",
+  "share2.activeLinks": "Aktiva länkar",
+  "share2.cacheNote":
+    "En nedladdad eller publicerad bild kan finnas kvar hos plattformen även efter att du återkallat länken. Själva sidan slutar fungera direkt.",
+
   "info.title": "Mina uppgifter",
   "info.lead":
     "Här lägger du in din bakgrund. Allt sparas direkt och du kan fortsätta när du vill. Behörigheter har egna formulär eftersom de har egna regler.",
@@ -1832,6 +1851,25 @@ const en: Record<PassportCopyKey, string> = {
   "exp.verifiedLabel": "Verified time in the profession",
   "exp.noneYet": "No verified time yet",
   "exp.selfDeclaredAlso": "Self-declared, not checked:",
+  "share2.title": "Share your Passport",
+  "share2.lead":
+    "One link showing your verified records. You can revoke it at any time.",
+  "share2.primary": "Share my Passport",
+  "share2.creating": "Creating link …",
+  "share2.share": "Share",
+  "share2.copy": "Copy link",
+  "share2.copied": "Link copied",
+  "share2.ready": "Your link is ready",
+  "share2.terms": "Valid for 30 days. You can revoke it at any time.",
+  "share2.whatIsShared": "The link shows verified records only — nothing self-declared, no documents and no reference numbers.",
+  "share2.nothingVerified":
+    "You have nothing verified yet, so a link would be empty. Add your records and submit them for checking first.",
+  "share2.more": "More options",
+  "share2.moreHint": "Custom validity, QR code, images and active links.",
+  "share2.activeLinks": "Active links",
+  "share2.cacheNote":
+    "A downloaded or published image can remain with the platform even after you revoke the link. The page itself stops working immediately.",
+
   "info.title": "My information",
   "info.lead":
     "This is where you enter your background. Everything saves immediately and you can continue whenever you like. Credentials have their own forms because they have their own rules.",
