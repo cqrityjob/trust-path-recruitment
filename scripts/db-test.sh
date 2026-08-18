@@ -87,6 +87,60 @@ psql_q -d "$TEST_DB" -f supabase/tests/00_bootstrap.sql >/dev/null
 # ---------------------------------------------------------------------------
 # 2. Migration ordering
 #
+# A migration version is the numeric prefix before the first underscore. The
+# hosted ledger keys on that version, so two files with the same prefix cannot
+# be represented truthfully. This caught the Phase 10 Passport migration that
+# had shared 20260818090000 with closed-test governance.
+echo "==> Verifying migration ledger uniqueness"
+MIGRATION_VERSION_DUPLICATES="$(
+  for _path in supabase/migrations/*.sql; do
+    basename "$_path" | cut -d_ -f1
+  done | sort | uniq -d
+)"
+if [ -n "$MIGRATION_VERSION_DUPLICATES" ]; then
+  echo "FAIL: duplicate migration versions cannot be reconciled with the hosted ledger:" >&2
+  printf '%s\n' "$MIGRATION_VERSION_DUPLICATES" >&2
+  exit 1
+fi
+
+# Lovable may re-issue an authored migration under a generated filename. Exact
+# SQL duplicates are not harmless: a later ADD CONSTRAINT can stop a clean
+# replay, and CREATE FUNCTION can leave a temporarily callable old overload.
+# Compare content after trimming only trailing whitespace. One older pair is
+# retained because both versions are already recorded in the hosted ledger;
+# it is replay-safe and requires a separate owner-reviewed history repair if
+# it is ever consolidated.
+KNOWN_RECORDED_DUPLICATE_PAIR="20260813090000_scp_phase2m_fixture_internal_only.sql|||20260814054617_aa33afbd-687d-4c68-96d3-1c7b65056086.sql"
+MIGRATION_CONTENT_DUPLICATES="$(
+  for _path in supabase/migrations/*.sql; do
+    _fingerprint="$(perl -0777 -pe 's/\s+\z//' "$_path" | git hash-object --stdin)"
+    printf '%s %s\n' "$_fingerprint" "$(basename "$_path")"
+  done |
+    sort -k1,1 -k2,2 |
+    awk '
+      $1 == previous_fingerprint {
+        print previous_name "|||" $2
+      }
+      {
+        previous_fingerprint = $1
+        previous_name = $2
+      }
+    '
+)"
+if [ -n "$MIGRATION_CONTENT_DUPLICATES" ]; then
+  while IFS= read -r _pair; do
+    [ -z "$_pair" ] && continue
+    if [ "$_pair" != "$KNOWN_RECORDED_DUPLICATE_PAIR" ]; then
+      echo "FAIL: duplicate migration SQL has no hosted-ledger reconciliation:" >&2
+      echo "      $_pair" >&2
+      exit 1
+    fi
+    echo "    ok  recorded legacy duplicate: $_pair"
+  done <<EOF
+$MIGRATION_CONTENT_DUPLICATES
+EOF
+fi
+
 # Migrations apply in filename (timestamp) order. A2 depends on objects A1
 # creates, so assert the ordering explicitly rather than trusting the glob.
 # ---------------------------------------------------------------------------
@@ -676,8 +730,8 @@ fi
 
 echo "    ok  ${PGOV_PASSED} purpose-governance assertions passed"
 
-if [ "$PGOV_PASSED" -lt 23 ]; then
-  echo "FAIL: expected at least 23 purpose-governance assertions, only ${PGOV_PASSED} ran." >&2
+if [ "$PGOV_PASSED" -lt 27 ]; then
+  echo "FAIL: expected at least 27 purpose-governance assertions, only ${PGOV_PASSED} ran." >&2
   exit 1
 fi
 

@@ -119,6 +119,42 @@ SELECT pg_temp.must_fail(
   'SCP_UNKNOWN_PURPOSE_MAPPING',
   'PG1.6 an unmapped purpose intent refuses instead of guessing');
 
+-- The callable contract itself is part of the governance boundary. A stale
+-- overload with fewer arguments would let an authenticated caller reach the
+-- pre-purpose implementation even if the canonical function is correct.
+SELECT pg_temp.ok(
+  (SELECT count(*)
+     FROM pg_proc p
+     JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'scp_employer_assign') = 1,
+  'PG1.7 exactly one scp_employer_assign overload exists');
+
+SELECT pg_temp.ok(
+  to_regprocedure(
+    'public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text)'
+  ) IS NOT NULL,
+  'PG1.8 the sole assignment contract is the governed eight-argument signature');
+
+SELECT pg_temp.ok(
+  (SELECT p.prosecdef
+     FROM pg_proc p
+     JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'scp_employer_assign'),
+  'PG1.9 the governed assignment contract executes as SECURITY DEFINER');
+
+SELECT pg_temp.ok(
+  NOT has_function_privilege(
+        'anon',
+        'public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text)',
+        'EXECUTE')
+  AND has_function_privilege(
+        'authenticated',
+        'public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text)',
+        'EXECUTE'),
+  'PG1.10 anonymous execution is denied and authenticated execution reaches the governed contract');
+
 DO $$ BEGIN RAISE NOTICE 'GROUP PG2 — the development purpose is approved and actually used'; END $$;
 
 -- =========================================================================
