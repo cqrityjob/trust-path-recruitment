@@ -1,5 +1,28 @@
 # Phase 0C — canonical baseline repair
 
+> ## SUPERSEDED IN PART — read this first
+>
+> This document is the working record of the Phase 0C session. Two of its
+> conclusions were **wrong** and are corrected in the Phase 0 closeout:
+>
+> 1. **The hosted project.** This session could not reach production and
+>    inherited hosted facts from an analysis of project `mlvzmiutmyyqeuvjglco`.
+>    That is **not** CQrityjob production. Canonical production is
+>    **`zrahptwsnjcdyzfywbeh`**, ledger **97 rows**. Every hosted statement
+>    below that cites 172 rows is void.
+> 2. **The Passport rename.** §3 renames Passport Phase 10 to `20260818090001`.
+>    Production records Passport Phase 10 at **`20260818090000`**, and
+>    `20260818090001` does not exist. **The rename is backed out.** The version
+>    collision is instead resolved by giving `scp_closed_test_governance` the
+>    version production actually recorded for it, **`20260818162445`**.
+>
+> The repository findings in this document — the eleven duplicates, the one real
+> GRANT delta, the Blueprint dependency on `assessment_run_reports`, the trust
+> findings, the replay failure and its fix — were reproduced locally and remain
+> valid. See [State of Truth v1.0](../architecture/CQrityjob-State-of-Truth-v1.md).
+
+---
+
 **Status:** repository repair prepared and locally proven · **NO PRODUCTION WRITE PERFORMED**
 **Branch:** `fix/canonical-baseline-repair`, based on `origin/main` at `7ae642a`
 **Prepared:** 18 August 2026

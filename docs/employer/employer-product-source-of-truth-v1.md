@@ -1,6 +1,6 @@
 # CQrityjob Employer Product Source of Truth v1.1
 
-**Status:** OWNER REVIEW CANDIDATE v1.1 · **Prepared:** 18 August 2026 · **Owner:** Mostafa Alshawi
+**Status:** READY FOR OWNER PRODUCT LOCK — v1.1 · **Prepared:** 18 August 2026 · **Owner:** Mostafa Alshawi
 
 > **v1.1 changes (owner decisions locked in Phase 0C).** Development/workforce-first
 > pilot with recruitment excluded (A). The evidence-over-time model is owner-approved
@@ -647,4 +647,4 @@ Still binding and unchanged from v1: no percentages or readiness scores anywhere
 
 ---
 
-READY FOR OWNER PRODUCT REVIEW — v1.1, owner decisions A–G locked
+READY FOR OWNER PRODUCT LOCK — v1.1, owner decisions A–G locked

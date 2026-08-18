@@ -1,95 +1,125 @@
-# CQrityjob State of Truth v1
+# CQrityjob State of Truth v1.0
 
 **The technical source of truth.** Product definition lives in
-[Employer Product Source of Truth](../employer/employer-product-source-of-truth-v1.md);
+[Employer Product Source of Truth v1.1](../employer/employer-product-source-of-truth-v1.md);
 this document records what is *actually true of the systems*.
 
-**Version:** v1, with the Phase 0C addendum · **Updated:** 18 August 2026
+**Version:** v1.0 — Phase 0 closeout · **Updated:** 18 August 2026
 **Repair branch:** `fix/canonical-baseline-repair` (from `origin/main` @ `7ae642a`)
-
-> ### Verification boundary — read first
->
-> Statements below are tagged:
->
-> - **[VERIFIED]** — reproduced in the Phase 0C session against the repository or an empty PostgreSQL database.
-> - **[INHERITED]** — taken from the [Phase 0 report](../technical/phase-0-migration-ledger-reconciliation.md) and **not** re-confirmed. Hosted production was **not reachable** in the Phase 0C session.
-> - **[UNKNOWN]** — no evidence available in either.
->
-> No hosted production database was read or written during Phase 0C.
 
 ---
 
-## 1. Migration ledger
+## 0. Canonical identity — LOCKED
+
+| | |
+|---|---|
+| **Lovable project** | `9ec625ef-34a1-4b4b-8cbb-712cae168579` |
+| **Canonical hosted Supabase** | **`zrahptwsnjcdyzfywbeh`** |
+| Ledger rows (owner-asserted snapshot) | **97** |
+| `cd_sessions` / `cd_report_snapshots` / `jobs` | **40 / 22 / 15** |
+
+### Formally invalidated
+
+**Project `mlvzmiutmyyqeuvjglco` is NOT CQrityjob production and is excluded from
+every production conclusion in this document.** The earlier analysis built on it
+reported a 172-row ledger. That analysis, and all five claims below, are
+**superseded and must not be repeated or built upon**:
+
+1. ~~Production has 172 migration ledger rows~~ → production has **97**
+2. ~~All nine canonical migrations are registered canonically~~ → production registered closed-test governance under the Lovable-generated UUID version
+3. ~~Passport Phase 11 is missing~~ → **Phase 11 IS applied**
+4. ~~`20260818090000` is `scp_closed_test_governance`~~ → it is **Passport Phase 10**
+5. ~~Security-gate findings C and D are already closed~~ → **all four exposures are OPEN**
+
+> ### Verification boundary
+>
+> - **[VERIFIED]** — reproduced in this session against the repository or an empty PostgreSQL database.
+> - **[OWNER-ASSERTED]** — stated in the locked Phase 0 brief. Hosted production was **not reachable** in this session, so these are not independently re-confirmed here; each is re-checked by PHASE 0 of the runbook before any action depends on it.
+>
+> No hosted database was read or written at any point.
+
+---
+
+## 1. Migration ledger and identity
 
 | Fact | Value | Tag |
 |---|---|---|
-| Hosted ledger count | 172 versions, as of the Phase 0 run | **[INHERITED]** |
-| Hosted ledger count *now* | — | **[UNKNOWN]** — no hosted access |
+| Hosted ledger rows | **97** | **[OWNER-ASSERTED]** |
 | Repository files, `origin/main` @ `7ae642a` | 184 | **[VERIFIED]** |
-| Repository files, after repair | **175** | **[VERIFIED]** |
-| Duplicate numeric versions, before | 1 (`20260818090000`) | **[VERIFIED]** |
-| Duplicate numeric versions, after | **0** | **[VERIFIED]** |
-| Only local-not-hosted migration | `20260818120000_sp_phase11…` | **[INHERITED]** |
+| Repository files, after repair | **176** active + 1 parked | **[VERIFIED]** |
+| Duplicate numeric versions after repair | **0** | **[VERIFIED]** |
+| Clean replay from empty database | **PASSES** — 30 suites, 1,535 assertions | **[VERIFIED]** |
+
+### Canonical replay identity vs hosted ledger identity
+
+Two different things. The repository now records both, in
+`supabase/migrations-policy.json` under `hostedLedgerOverrides`.
+
+| Content | Canonical replay identity (filename) | Hosted ledger identity | Tag |
+|---|---|---|---|
+| Security Passport Phase 10 | `20260818090000_sp_phase10_self_review_and_decision_events.sql` | **`20260818090000`** | **[OWNER-ASSERTED]** |
+| SCP closed-test governance | `20260818162445_scp_closed_test_governance.sql` | **`20260818162445`** — applied through Lovable under its generated version | **[OWNER-ASSERTED]** |
+| `20260818090001` | — | **does not exist** | **[OWNER-ASSERTED]** |
+
+**The Phase 0C rename of Passport Phase 10 to `20260818090001` was wrong and is
+backed out.** The repository's only version collision is resolved instead by
+giving closed-test governance the version production actually recorded, so both
+files carry their true hosted identity and neither makes a false claim about how
+production ran. Replay order is unaffected: nothing between `20260818090000` and
+`20260818162445` depends on closed-test governance. **[VERIFIED]**
 
 ### The Lovable-edited migration fact
 
-Lovable commits generated migration files directly to `main`, under UUID
-filenames, with generic commit messages ("Changes", "Work in progress", "Made
-the requested updates"). **[VERIFIED]**
+Lovable commits generated migrations directly to `main` under UUID filenames with
+generic commit messages, and applies them to hosted production under those
+generated versions. **[VERIFIED for the repository; OWNER-ASSERTED for hosted]**
 
-- Its generator **strips SQL comments**, so a raw hash comparison against the canonical file always shows a difference even when the SQL is identical. Compare with comments stripped. **[VERIFIED]**
-- Eleven such re-issues existed on `main`. Ten were SQL-identical to a canonical migration. **One was not.** **[VERIFIED]**
-- Two of the eleven (`20260818194409`, `20260818194544`) landed **after** the Phase 0 baseline, during analysis. Any ledger snapshot ages quickly. **[VERIFIED]**
+- Its generator **strips SQL comments** — compare with comments stripped, or every pair looks different. **[VERIFIED]**
+- Eleven re-issues existed on `main`; ten were SQL-identical to a canonical file, **one was not**. **[VERIFIED]**
+- Two landed *during* the Phase 0C analysis. Any ledger snapshot ages quickly. **[VERIFIED]**
 
-### The one real delta
-
-`20260818194409` carried three `GRANT` statements on `scp_followup_prompts` that
-its canonical counterpart `20260820100000` does not issue at all. Preserved in
+The one real delta — three `GRANT`s on `scp_followup_prompts` the canonical
+migration never issues — is preserved in
 `20260822090000_scp_followup_prompts_explicit_grants.sql`. **[VERIFIED]**
-
-### Version collision resolution
-
-| File | Repository version | Hosted version |
-|---|---|---|
-| `scp_closed_test_governance` | `20260818090000` | `20260818090000` **[INHERITED]** |
-| `sp_phase10_self_review_and_decision_events` | renamed to **`20260818090001`** | `20260818090001` **[INHERITED]** |
-
-Recorded in `supabase/migrations-policy.json` → `hostedLedgerOverrides`, with the
-query that proves it. **[VERIFIED as a repository state]**
 
 ---
 
-## 2. Dangerous-to-replay files
+## 2. Dangerous-replay inventory
 
 | Version | File | Disposition | Mechanism |
 |---|---|---|---|
-| `20260730110000` | `career_discovery_v3_1_completion` | **Never replay.** Re-running restores the broken global ranking guard, can strip `security_invoker` from the stored-report view, and creates a candidate-data exposure | Stays in the active path (linear replay needs it); SHA-256 content-pinned in policy; `manualExecution: forbidden` |
-| `20260720180000` | `h4_1_assessment_blueprint_engine_phase1` | **Parked.** 26 tables, 33 functions the product does not use | Moved to `supabase/archive/parked-migrations/`; the CLI cannot reach it |
-| `20260813090000` / `20260814054617` | fixture pair | **Retained duplicate.** Both already recorded hosted | Recorded as an approved duplicate |
+| `20260730110000` | `career_discovery_v3_1_completion` | **Never replay** — would restore the broken global ranking guard, can strip `security_invoker` from the stored-report view, and creates a candidate-data exposure | Stays in the active path (linear replay needs it); SHA-256 content-pinned; `manualExecution: forbidden` |
+| `20260720180000` | `h4_1_assessment_blueprint_engine_phase1` | **Parked** — 26 tables, 33 functions the product does not use | Moved to `supabase/archive/parked-migrations/`; the CLI cannot reach it |
+| `20260813090000` / `20260814054617` | fixture pair | **Retained duplicate** — both already recorded hosted | Recorded as an approved duplicate |
 
-Enforced by `scripts/migration-safety-check.ts`, run by CI and by
+Other hazards the guard and runbook exist to prevent: obsolete
+`scp_employer_assign` overloads, safety-critical routing regressions,
+legal/human-review flag resets, Passport trust-field regressions, anchor-response
+duplication, old job-publication guard regressions. Enforced by
+`scripts/migration-safety-check.ts`, which runs in CI **and** inside
 `scripts/db-test.sh` before it creates a database. **[VERIFIED]**
 
 ### Blueprint parking uncovered a false assumption
 
-`public.assessment_run_reports` is a **live product table** whose only
-`CREATE TABLE` in the entire repository was inside the Blueprint migration.
+`public.assessment_run_reports` is **live product data** whose only
+`CREATE TABLE` anywhere in the repository sat inside the Blueprint migration.
 Rescued into `20260720180001_assessment_run_reports_canonical_home.sql`.
-`assessment_run_answers` was checked the same way and has no references; it stays
-parked. **[VERIFIED]**
+`assessment_run_answers` has no references and stays parked. **[VERIFIED]**
 
 ---
 
-## 3. Clean replay
+## 3. Security gate — ALL FOUR EXPOSURES OPEN IN PRODUCTION
 
-| State | Result |
-|---|---|
-| `origin/main` @ `7ae642a`, empty database | **FAILS** — `20260819090000_employer_people_model` (duplicate `ADD CONSTRAINT`) and `20260819100000_scp_governed_assignment` (`found 2` `scp_employer_assign` overloads) **[VERIFIED]** |
-| After repair, empty database | **PASSES** — 29 suites, **1,514 assertions** **[VERIFIED]** |
+| # | Exposure | Production | Repository |
+|---|---|---|---|
+| A | `FOR ALL` author policies on `scp_attempts`, `scp_candidate_responses`, `scp_competency_evidence`, `scp_human_reviews` | **OPEN** **[OWNER-ASSERTED]** | Closed — `FOR SELECT`; writes via `SECURITY DEFINER`. SG2.1–SG2.10 **[VERIFIED]** |
+| B | `assessment_assignments` employer INSERT/UPDATE policies use `NULL::text[]` | **OPEN** **[OWNER-ASSERTED]** | Closed — owner/admin via `has_employer_role`. SG1.1–SG1.7 **[VERIFIED]** |
+| C | `scp_compute_maturity(uuid,uuid,text,timestamptz)` executable by `authenticated` | **OPEN** **[OWNER-ASSERTED]** | Closed — revoked from `anon`, `authenticated`, `service_role`, `PUBLIC`. SG4.1–SG4.6 **[VERIFIED]** |
+| D | `assessment_assignments.scp_open` absent, duplicate-open protection inactive | **OPEN** **[OWNER-ASSERTED]** | Closed — trigger-owned flag + partial unique index. SG5.1–SG5.17 **[VERIFIED]** |
 
-Documented floor at Phase 8.5A was 1,441 assertions across 27 suites; the
-repaired baseline is above it on both counts. No test was weakened, skipped or
-re-thresholded.
+**PHASE B is the highest-priority production repair.**
+`20260821090000_scp_pilot_security_gate.sql` is prepared, locally green at 46
+assertions, with rollback SQL written in advance.
 
 ---
 
@@ -97,14 +127,12 @@ re-thresholded.
 
 | Fact | State | Tag |
 |---|---|---|
-| Phase 10 hosted version | `20260818090001`, **not** `20260818090000` | **[INHERITED]** |
+| Phase 10 hosted version | **`20260818090000`** | **[OWNER-ASSERTED]** |
 | Phase 10 suite | 54 assertions passing | **[VERIFIED]** |
-| Phase 11 (`20260818120000`, languages + practical skills) | In repository, **not applied hosted** | **[INHERITED]** |
+| Phase 11 | **APPLIED in production** | **[OWNER-ASSERTED]** |
 | Phase 11 suite | 50 assertions passing | **[VERIFIED]** |
-| Passport ↔ SCP boundary | No FK from `sp_*` into `scp_*` or `cd_*`; enforced by the separation suite | **[VERIFIED]** |
-| Uploaded evidence | Private bucket; verifier read only while a review is open; never in a disclosure | **[VERIFIED]** |
-
-Phase 11 is the single known repository-vs-hosted schema difference. **[INHERITED]**
+| Passport ↔ SCP boundary | no FK from `sp_*` into `scp_*` or `cd_*` | **[VERIFIED]** |
+| Uploaded evidence | private bucket; verifier read only while a review is open; never in a disclosure | **[VERIFIED]** |
 
 ---
 
@@ -112,81 +140,84 @@ Phase 11 is the single known repository-vs-hosted schema difference. **[INHERITE
 
 | Fact | Value | Tag |
 |---|---|---|
-| Live instrument | v3.1 | **[VERIFIED]** |
-| Session structure | **2 context + 22 scored Career DNA + 4 adaptive = 28** | **[VERIFIED]** |
-| Enforcement | `MVP_QUESTION_COUNT = 28`, asserted at import in `v31/personal-layer.ts` | **[VERIFIED]** |
-| Definition versions seeded | `2026-scd-v3.0.0`, `2026-scd-v3.1.0` | **[VERIFIED]** |
-| v3.1 lifecycle status | `active` since `20260731100000` | **[VERIFIED]** |
-| Who may persist a run | Platform admins and named `cd_internal_testers` only | **[VERIFIED]** |
-| Scoring | Frozen. Not touched by Phase 0C | **[VERIFIED]** |
+| Session structure | **2 context + 22 scored + 4 adaptive = 28** | **[VERIFIED]** — `MVP_QUESTION_COUNT = 28`, asserted at import |
+| Active content / scoring / pattern version | `v3.1-draft-3` | **[VERIFIED]** |
+| Option matrix version | `v3.1-draft-2` — unchanged in draft-3, deliberately | **[VERIFIED]** |
+| `lifecycle_status` | `active` | **[VERIFIED]** |
+| Who may persist a run | platform admins and named `cd_internal_testers` only | **[VERIFIED]** |
+| Scoring / calibration | **unchanged by Phase 0** | **[VERIFIED]** |
 
-> **Correction of record.** Several documents and at least one code comment state
-> **26 questions / 20 scored**. That was true of an earlier draft and is now
-> wrong. The correct figure is **28 / 22**, and the code asserts it. The stale
-> figures survive in `docs/assessment/career-discovery/v31-personal-layer.md` and
-> in a comment in `src/lib/career-discovery/v31-public.functions.ts`; the comment
-> was deliberately **not** edited in Phase 0C because Career Discovery is frozen
-> and a comment change is not worth touching a frozen module for.
+### Calibration data — now closed
 
-### Calibration data exposure
-
-| Table | State | Tag |
+| Path | Before | After |
 |---|---|---|
-| `cd_option_loadings` | **Closed** in `20260822091000`. No application reader — the engine scores from the TypeScript matrix | **[VERIFIED]** |
-| `cd_profession_profiles` | **Still exposed to any authenticated account.** Cannot be closed without changing a frozen CD object: `cd_profession_profiles_current` is `security_invoker`, so revoking the base grant breaks signed-in matching | **[VERIFIED]** |
+| `cd_option_loadings` — `authenticated` SELECT | true | **false** |
+| `cd_profession_profiles` — `authenticated` SELECT | true | **false** |
+| `cd_profession_profiles_current` — `authenticated` SELECT | true | **false** |
+| `cd_profession_bands_for_matching(text[])` | — | **the only application path**: `SECURITY DEFINER`, `search_path` pinned, 7 columns, current batch only, named professions only |
 
-Two prepared, unapplied options are held in the
-[Phase 0C report](../technical/phase-0c-canonical-baseline-repair.md) §8.2.
+Proven by 21 assertions: candidate path works, ordinary authenticated cannot
+dump, `anon` reaches nothing, service_role calibration path intact, stored
+reports still reproducible. **[VERIFIED]**
 
 ---
 
-## 6. Security Competency Platform
+## 6. Hosted grant divergence
 
-| Fact | State | Tag |
-|---|---|---|
-| `scp_pilot_security_gate` (`20260821090000`) | In repository; 46 assertions passing | **[VERIFIED]** |
-| — exposure A: `FOR ALL` author policies | Closed in repository | **[VERIFIED]** / hosted **[UNKNOWN]** |
-| — exposure B: assignment INSERT/UPDATE role | Closed in repository | **[VERIFIED]** / hosted **[UNKNOWN]** |
-| — exposure C: `scp_compute_maturity` EXECUTE | Closed in repository | **[VERIFIED]**; hosted reported already closed **[INHERITED]** |
-| — exposure D: `scp_open` + duplicate-open index | Closed in repository | **[VERIFIED]**; hosted index reported present **[INHERITED]** |
-| Governed assignment | Exactly one `scp_employer_assign`, 8-argument, `SECURITY DEFINER` | **[VERIFIED]**; hosted matches **[INHERITED]** |
-| `selection_support` purpose | Inactive, no published version → recruitment **fails closed** | **[VERIFIED]** |
-| `reassessment` purpose | Inactive → reassessment **fails closed** | **[VERIFIED]** |
-| `competence_development` purpose | Active and published | **[VERIFIED]** |
-| Väktare programme content | 18 items, draft/design, 12 safety-critical; closed-test grant only | **[VERIFIED]** |
-
-**Because C and D are reported already present hosted, `20260821090000` may
-already be applied.** PHASE B of the runbook checks before acting.
+Proven class of risk: Lovable-created tables can hold hosted privileges a clean
+replay does not reproduce (`scp_followup_prompts`). Canonical audit: **zero
+tables with RLS disabled while granted**; `anon` holds only three intentional,
+RLS-constrained privileges; one OVERBROAD-BUT-RLS-CONTAINED case. Full matrix and
+method in [phase-0-grant-surface-audit.md](../technical/phase-0-grant-surface-audit.md).
+Hosted comparison is PHASE 0 query 0.7. **[VERIFIED locally; hosted UNKNOWN]**
 
 ---
 
-## 7. Trust findings
+## 7. MCP
 
-| # | Finding | State |
-|---|---|---|
-| 1 | `/mcp` served the question bank, dimension model, profession target profiles and the matching engine anonymously | **Fixed in repository.** Closed unless `CQRITYJOB_MCP_ENABLED=true`; optional bearer token; returns 404 when closed **[VERIFIED]** |
-| 2 | CD calibration matrices readable by any authenticated account | **Half fixed** — see §5 |
-| 3 | Career Discovery consent not persisted | **Not implemented.** There is no consent control in the CD experience to persist. Building one requires authoring consent text and a lawful basis — an owner + legal decision **[VERIFIED]** |
-
----
-
-## 8. Production actions awaiting owner approval
-
-| Phase | Action | Precondition |
-|---|---|---|
-| **0** | Read hosted ledger, collisions, security-gate objects, function/policy fingerprints | none — READ ONLY, and mandatory first |
-| **A** | Ledger-only repair for any version applied but unrecorded | Phase 0 proves such versions exist. Expected: **empty set** |
-| **B** | `20260821090000_scp_pilot_security_gate` | Phase 0 proves it is not already applied |
-| **C** | `public_assessment_v2` → `jobs_archive_lifecycle` → `employer_report_decisions` → `report_attempt_scoped_evidence` → `sp_phase11` → legacy retirement → v3.0 contract normalisation | each proven genuinely missing; applied one file at a time |
-
-**No step uses `supabase db push`, `db reset`, or marks a migration applied whose
-SQL has not run.**
+`/mcp` served the authored question bank, dimension model, profession target
+profiles and the matching engine **anonymously**. Now closed unless
+`CQRITYJOB_MCP_ENABLED=true`, with an optional server-side bearer token, and it
+returns 404 rather than 403. The generator plugin is removed from
+`vite.config.ts`, and `scripts/mcp-exposure-check.ts` fails CI if the plugin or
+its banner returns. **[VERIFIED]**
 
 ---
 
-## 9. Product positions this document does not restate
+## 8. Consent
+
+`consent_records` exists, is fully formed, and **has no writer anywhere in the
+application**. `cd_sessions.consent` likewise. There is **no consent control in
+the Career Discovery experience to persist** — a missing interaction, not a
+persistence bug. No record was fabricated.
+
+**Current configured processing basis for Career Discovery: none is represented
+in the system — subject to final GDPR/legal review before external pilot.**
+
+Full pack: [career-discovery-consent-gdpr-owner-pack.md](../technical/career-discovery-consent-gdpr-owner-pack.md). **[VERIFIED]**
+
+---
+
+## 9. Production work awaiting owner execution approval
+
+| Phase | Action | Status |
+|---|---|---|
+| **0** | Preflight: confirm ref, ledger 97, identities, four exposures, fingerprints, restore point | **mandatory first** |
+| **A** | Ledger-only reconciliation for proven applied-but-unrecorded migrations | procedure ready; per-entry list requires the accepted class map |
+| **B** | `scp_pilot_security_gate` — **highest priority** | prepared, 46 assertions green, rollback written |
+| **B2** | Grant hardening | only if the hosted grant diff proves it |
+| **C** | Schema and trust corrections, one file at a time | 11 candidates, each verify-before-include |
+| **D** | Post-repair verification and isolation smoke tests | defined |
+
+Runbook: [phase-0-production-repair-runbook.md](../technical/phase-0-production-repair-runbook.md).
+**No step uses `supabase db push`.**
+
+---
+
+## 10. Product positions recorded elsewhere
 
 Development/workforce-first pilot · recruitment excluded from the first pilot ·
-evidence-over-time model · no percentages or readiness scores · conservative
-Assessment → Passport boundary · human decision final. All are recorded in the
+evidence-over-time · one assessment is not established competence · Väktare only
+for the first pilot · no percentages or readiness scores · conservative
+Assessment → Passport boundary · human decision final. All in the
 [Employer Product Source of Truth v1.1](../employer/employer-product-source-of-truth-v1.md).

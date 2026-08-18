@@ -128,3 +128,47 @@ owner decision in the [Phase 0C report](../technical/phase-0c-canonical-baseline
 One documentation correction: the instrument serves **28 questions with 22
 scored**, not 26 and 20. The code has asserted 28 at import since v3.1; the stale
 figure survives in older prose.
+
+---
+
+## 7. Owner decision recommendation — what must be approved to leave internal test
+
+Recorded as a recommendation. **Nothing here is approved by engineering, and no
+gate is marked cleared.**
+
+### Required, in order — each is an explicit, logged owner decision
+
+| # | Approval | Why it must come first |
+|---|---|---|
+| 1 | **Lawful basis and consent/acknowledgement design** | Career Discovery has *no* configured processing basis and *no* consent control. Administering it externally without one processes personal data with nothing recorded. See the [consent/GDPR owner pack](../technical/career-discovery-consent-gdpr-owner-pack.md) |
+| 2 | **Language review** — native-speaker review of all Swedish; English as an approved adaptation | Wording is the instrument. An unreviewed item measures something nobody chose |
+| 3 | **Accessibility review** — reading level, no colour-only or sensory dependence | Cheap to run, and a failure here invalidates results for the people it excludes |
+| 4 | **Bias review** — cultural neutrality, no protected-characteristic proxies, balanced option desirability | Must precede real candidates, not follow them |
+| 5 | **SME review** — ≥3 independent security professionals from ≥2 environments | Content validity for the 17 dimensions and the profession profiles |
+| 6 | **Pilot-scale data collection** under 1–5 | The only way to obtain item statistics |
+| 7 | **Psychometric review** — construct validity, the ipsative trade-off design, item statistics | The last gate, and the only one that can be evidenced rather than judged |
+
+### The minimum to move from *internal test* to *closed pilot*
+
+**Items 1–4.** With a lawful basis, reviewed language, accessibility and bias
+clearance, the instrument may be administered to a **named, consenting pilot
+group** — with results labelled `design` validation status and used for
+development conversation only, never for selection.
+
+### The minimum to move to *public use*
+
+**All seven.** Public use additionally requires that the result stops being
+described as provisional, which needs item statistics that do not exist yet.
+
+### What must NOT happen at any of these steps
+
+- **Do not rename `v3.1-draft-3`.** It is frozen into every snapshot already issued; renaming it to something that sounds releasable breaks reproducibility and claims a review status that does not exist.
+- **Do not recalibrate.** No weight, loading, threshold, pattern definition or profession changes as part of release governance. Recalibration is a new version with its own gates.
+- **Do not raise `lifecycle_status` as a shortcut.** It answers "is the content ready to administer", not "who may use it". Access is the `cd_internal_testers` gate, and widening access is decision 1 above, not a status flip.
+
+### Engineering's position
+
+The current state is honest and safe: an unreviewed instrument, frozen, reachable
+only by named internal testers, with calibration data now closed to ordinary
+accounts. **The blocker is decision 1** — it is not a code problem, and the code
+change once it is decided is small.
