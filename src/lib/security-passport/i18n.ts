@@ -930,6 +930,26 @@ const sv = {
   "vq.error.evidence": "Dokumentet kunde inte öppnas.",
   "vq.error.decision": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
   "vq.retry": "Försök igen",
+  // A refusal the reviewer can act on. One line each: what happened, and what
+  // to do instead. None of them says "try again" unless trying again is
+  // genuinely the right move.
+  "vq.decline.self_verification":
+    "Det här är din egen ansökan. Du kan inte verifiera dig själv — en annan granskare måste ta beslutet.",
+  "vq.decline.not_authorised": "Du har inte behörighet att besluta i det här ärendet.",
+  "vq.decline.already_decided": "Ärendet är redan avgjort. Ladda om sidan för att se beslutet.",
+  "vq.decline.not_found": "Ärendet finns inte längre.",
+  "vq.decline.method_required": "Ett godkännande måste ange en verifieringsmetod.",
+  "vq.decline.invalid_validity":
+    "Giltighetstiden går inte att spara. Kontrollera att slutdatum ligger efter startdatum, och att ett tidsbegränsat förordnande har ett slutdatum.",
+  "vq.decline.issuer_required":
+    "Den här behörigheten måste ange vilken myndighet som utfärdat den.",
+  "vq.decline.entry_not_active":
+    "Uppgiften har ändrats sedan granskningen öppnades och går inte längre att besluta om. Ladda om sidan.",
+  "vq.decline.unknown": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
+  // The self-review notice, shown before anything is filled in.
+  "vq.selfBadge": "Din egen ansökan",
+  "vq.selfNotice":
+    "Det här är din egen ansökan. Ingen får verifiera sina egna uppgifter, så beslutsformuläret är avstängt här. En annan granskare måste ta beslutet.",
   "cw.detailsTitle": "Uppgifter",
   "cw.shareCredential": "Dela den här behörigheten",
   "cw.creating": "Skapar länk …",
@@ -1898,6 +1918,22 @@ const en: Record<PassportCopyKey, string> = {
   "vq.error.evidence": "This document could not be opened.",
   "vq.error.decision": "The decision could not be saved. Your entries are still here — try again.",
   "vq.retry": "Try again",
+  "vq.decline.self_verification":
+    "This is your own request. You cannot verify yourself — another reviewer has to decide it.",
+  "vq.decline.not_authorised": "You are not authorised to decide this review.",
+  "vq.decline.already_decided":
+    "This review has already been decided. Reload the page to see the decision.",
+  "vq.decline.not_found": "This review no longer exists.",
+  "vq.decline.method_required": "An approval must state a verification method.",
+  "vq.decline.invalid_validity":
+    "That validity period cannot be saved. Check that the end date is after the start date, and that a time-limited appointment has an end date.",
+  "vq.decline.issuer_required": "This credential must name the authority that issued it.",
+  "vq.decline.entry_not_active":
+    "The entry changed after this review was opened and can no longer be decided. Reload the page.",
+  "vq.decline.unknown": "The decision could not be saved. Your entries are still here — try again.",
+  "vq.selfBadge": "Your own request",
+  "vq.selfNotice":
+    "This is your own request. Nobody may verify their own record, so the decision form is switched off here. Another reviewer has to decide it.",
   "cw.detailsTitle": "Details",
   "cw.shareCredential": "Share this credential",
   "cw.creating": "Creating link …",

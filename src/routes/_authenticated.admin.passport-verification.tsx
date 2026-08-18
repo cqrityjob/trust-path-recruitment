@@ -42,6 +42,10 @@ import {
   type VerifierRequestDetail,
 } from "@/lib/security-passport/verification.functions";
 import { getEvidenceViewUrl } from "@/lib/security-passport/evidence.functions";
+import {
+  decisionErrorCodeFrom,
+  type DecisionErrorCode,
+} from "@/lib/security-passport/decision-errors";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
@@ -50,6 +54,21 @@ export const Route = createFileRoute("/_authenticated/admin/passport-verificatio
   ssr: false,
   component: PassportVerificationQueueRoute,
 });
+
+/** One line of copy per refusal the database can give. Kept as a total map so
+ *  adding a code without adding its sentence fails the type check rather than
+ *  silently falling back to "try again". */
+const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
+  self_verification: "vq.decline.self_verification",
+  not_authorised: "vq.decline.not_authorised",
+  already_decided: "vq.decline.already_decided",
+  not_found: "vq.decline.not_found",
+  method_required: "vq.decline.method_required",
+  invalid_validity: "vq.decline.invalid_validity",
+  issuer_required: "vq.decline.issuer_required",
+  entry_not_active: "vq.decline.entry_not_active",
+  unknown: "vq.decline.unknown",
+};
 
 const FILTERS: readonly { value: string | null; labelKey: PassportCopyKey }[] = [
   { value: null, labelKey: "vq.filter.open" },
@@ -182,7 +201,7 @@ function PassportVerificationQueue() {
   async function submitDecision() {
     if (!selected) return;
     if (decision === "approved" && !method) {
-      setDecisionError(pt("vq.methodRequired"));
+      setDecisionError(pt(DECLINE_KEY.method_required));
       return;
     }
 
@@ -220,7 +239,7 @@ function PassportVerificationQueue() {
       // decision note and a holder message, and throwing that away on a
       // transient failure would be worse than the failure.
       console.error("[passport] decision failed", err);
-      setDecisionError(pt("vq.error.decision"));
+      setDecisionError(pt(DECLINE_KEY[decisionErrorCodeFrom(err)]));
     } finally {
       setBusy(false);
     }
@@ -308,9 +327,16 @@ function PassportVerificationQueue() {
                     {item.evidenceCount}
                   </p>
                 </div>
-                <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
-                  {pt(STATUS_KEY[item.status] ?? "ver.status.pending")}
-                </span>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {item.isSelf ? (
+                    <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-foreground">
+                      {pt("vq.selfBadge")}
+                    </span>
+                  ) : null}
+                  <span className="rounded-md border border-border px-2 py-0.5 text-xs font-medium text-foreground">
+                    {pt(STATUS_KEY[item.status] ?? "ver.status.pending")}
+                  </span>
+                </div>
               </div>
 
               <button
@@ -427,155 +453,170 @@ function PassportVerificationQueue() {
                   ) : null}
 
                   {/* ── The decision ─────────────────────────────────── */}
-                  <fieldset className="space-y-3">
-                    <legend className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      {pt("vq.decision")}
-                    </legend>
-
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["approved", "vq.approve"],
-                          ["rejected", "vq.reject"],
-                          ["clarification_requested", "vq.requestClarification"],
-                        ] as const
-                      ).map(([value, labelKey]) => (
-                        <label
-                          key={value}
-                          className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground"
-                        >
-                          <input
-                            type="radio"
-                            name="sp-decision"
-                            value={value}
-                            checked={decision === value}
-                            onChange={() => setDecision(value)}
-                            className="h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          />
-                          {pt(labelKey)}
-                        </label>
-                      ))}
+                  {/* A reviewer may read their own submission — the evidence
+                      and history above are theirs already. What they may not
+                      do is decide it, so the form is not rendered at all
+                      rather than rendered and rejected on submit. */}
+                  {item.isSelf ? (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("vq.decision")}
+                      </p>
+                      <p role="note" className="mt-2 text-sm text-foreground">
+                        {pt("vq.selfNotice")}
+                      </p>
                     </div>
+                  ) : (
+                    <fieldset className="space-y-3">
+                      <legend className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        {pt("vq.decision")}
+                      </legend>
 
-                    {decision === "approved" ? (
-                      <>
-                        <div>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ["approved", "vq.approve"],
+                            ["rejected", "vq.reject"],
+                            ["clarification_requested", "vq.requestClarification"],
+                          ] as const
+                        ).map(([value, labelKey]) => (
                           <label
-                            htmlFor="sp-method"
-                            className="block text-sm font-medium text-foreground"
+                            key={value}
+                            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground"
                           >
-                            {pt("vq.methodLabel")}
+                            <input
+                              type="radio"
+                              name="sp-decision"
+                              value={value}
+                              checked={decision === value}
+                              onChange={() => setDecision(value)}
+                              className="h-4 w-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            />
+                            {pt(labelKey)}
                           </label>
-                          <select
-                            id="sp-method"
-                            value={method}
-                            onChange={(e) => setMethod(e.target.value)}
-                            className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72"
-                          >
-                            <option value="document_review">
-                              {pt("ver.method.document_review")}
-                            </option>
-                            <option value="issuer_confirmation">
-                              {pt("ver.method.issuer_confirmation")}
-                            </option>
-                            <option value="employer_confirmation">
-                              {pt("ver.method.employer_confirmation")}
-                            </option>
-                          </select>
-                        </div>
+                        ))}
+                      </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                      {decision === "approved" ? (
+                        <>
                           <div>
                             <label
-                              htmlFor="sp-valid-from"
+                              htmlFor="sp-method"
                               className="block text-sm font-medium text-foreground"
                             >
-                              {pt("vq.validFrom")}
+                              {pt("vq.methodLabel")}
                             </label>
-                            <input
-                              id="sp-valid-from"
-                              type="date"
-                              value={validFrom}
-                              onChange={(e) => setValidFrom(e.target.value)}
-                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            />
-                          </div>
-                          <div>
-                            <label
-                              htmlFor="sp-valid-until"
-                              className="block text-sm font-medium text-foreground"
+                            <select
+                              id="sp-method"
+                              value={method}
+                              onChange={(e) => setMethod(e.target.value)}
+                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-72"
                             >
-                              {pt("vq.validUntil")}
-                            </label>
-                            <input
-                              id="sp-valid-until"
-                              type="date"
-                              value={validUntil}
-                              onChange={(e) => setValidUntil(e.target.value)}
-                              className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            />
+                              <option value="document_review">
+                                {pt("ver.method.document_review")}
+                              </option>
+                              <option value="issuer_confirmation">
+                                {pt("ver.method.issuer_confirmation")}
+                              </option>
+                              <option value="employer_confirmation">
+                                {pt("ver.method.employer_confirmation")}
+                              </option>
+                            </select>
                           </div>
-                        </div>
-                      </>
-                    ) : null}
 
-                    <div>
-                      <label
-                        htmlFor="sp-internal"
-                        className="block text-sm font-medium text-foreground"
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                htmlFor="sp-valid-from"
+                                className="block text-sm font-medium text-foreground"
+                              >
+                                {pt("vq.validFrom")}
+                              </label>
+                              <input
+                                id="sp-valid-from"
+                                type="date"
+                                value={validFrom}
+                                onChange={(e) => setValidFrom(e.target.value)}
+                                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor="sp-valid-until"
+                                className="block text-sm font-medium text-foreground"
+                              >
+                                {pt("vq.validUntil")}
+                              </label>
+                              <input
+                                id="sp-valid-until"
+                                type="date"
+                                value={validUntil}
+                                onChange={(e) => setValidUntil(e.target.value)}
+                                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      ) : null}
+
+                      <div>
+                        <label
+                          htmlFor="sp-internal"
+                          className="block text-sm font-medium text-foreground"
+                        >
+                          {pt("vq.noteInternal")}
+                        </label>
+                        <textarea
+                          id="sp-internal"
+                          rows={3}
+                          value={decisionNote}
+                          aria-describedby="sp-internal-help"
+                          onChange={(e) => setDecisionNote(e.target.value)}
+                          className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        />
+                        <p id="sp-internal-help" className="mt-1 text-xs text-muted-foreground">
+                          {pt("vq.noteInternalHelp")}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="sp-holder-message"
+                          className="block text-sm font-medium text-foreground"
+                        >
+                          {pt("vq.messageHolder")}
+                        </label>
+                        <textarea
+                          id="sp-holder-message"
+                          rows={3}
+                          value={holderMessage}
+                          aria-describedby="sp-holder-help"
+                          onChange={(e) => setHolderMessage(e.target.value)}
+                          className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        />
+                        <p id="sp-holder-help" className="mt-1 text-xs text-muted-foreground">
+                          {pt("vq.messageHolderHelp")}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
+
+                      {decisionError ? (
+                        <p role="alert" className="text-sm text-destructive">
+                          {decisionError}
+                        </p>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={() => void submitDecision()}
+                        disabled={busy}
+                        className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                       >
-                        {pt("vq.noteInternal")}
-                      </label>
-                      <textarea
-                        id="sp-internal"
-                        rows={3}
-                        value={decisionNote}
-                        aria-describedby="sp-internal-help"
-                        onChange={(e) => setDecisionNote(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      />
-                      <p id="sp-internal-help" className="mt-1 text-xs text-muted-foreground">
-                        {pt("vq.noteInternalHelp")}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="sp-holder-message"
-                        className="block text-sm font-medium text-foreground"
-                      >
-                        {pt("vq.messageHolder")}
-                      </label>
-                      <textarea
-                        id="sp-holder-message"
-                        rows={3}
-                        value={holderMessage}
-                        aria-describedby="sp-holder-help"
-                        onChange={(e) => setHolderMessage(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                      />
-                      <p id="sp-holder-help" className="mt-1 text-xs text-muted-foreground">
-                        {pt("vq.messageHolderHelp")}
-                      </p>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground">{pt("vq.immutableNote")}</p>
-
-                    {decisionError ? (
-                      <p role="alert" className="text-sm text-destructive">
-                        {decisionError}
-                      </p>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={() => void submitDecision()}
-                      disabled={busy}
-                      className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {busy ? pt("vq.deciding") : pt("vq.confirmYes")}
-                    </button>
-                  </fieldset>
+                        {busy ? pt("vq.deciding") : pt("vq.confirmYes")}
+                      </button>
+                    </fieldset>
+                  )}
                 </div>
               ) : null}
             </li>
