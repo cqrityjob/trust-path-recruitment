@@ -806,34 +806,56 @@ for (const pkg of DISCLOSURE_PACKAGES) {
     // The documented thresholds, asserted so they cannot drift silently.
     expect(
       EXPERIENCE_BANDS.map((b) => `${b.band}:${b.fromYears}`).join(",") ===
-        "none:0,early:1,established:3,senior:10",
+        "under1:0,y1to3:1,y3to5:3,y5to10:5,y10plus:10",
       `Experience thresholds changed unexpectedly: ${EXPERIENCE_BANDS.map((b) => b.band + ":" + b.fromYears).join(",")}.`,
     );
 
-    // No verified time is `none`, and it must look unfinished rather than bad.
-    expect(experienceBandForDays(0) === "none", "Zero verified days must band as none.");
+    // Five discrete segments, because that is the approved presentation.
     expect(
-      experienceMarkStyle("none").filled === 0 && experienceMarkStyle("none").outline === "dashed",
-      "The none band must be dashed and empty, not a low score.",
+      EXPERIENCE_BANDS.length === 5,
+      `Verified experience must present as five segments, got ${EXPERIENCE_BANDS.length}.`,
     );
 
-    // Only the top band takes metal, exactly as the recognition emblem does.
-    const accented = (["none", "early", "established", "senior"] as const).filter(
-      (b) => experienceMarkStyle(b).accent,
+    // No verified time must look unfinished rather than bad, and must not be
+    // confusable with "some, but under a year".
+    expect(experienceBandForDays(0) === "under1", "Zero verified days sits in the first interval.");
+    expect(
+      experienceMarkStyle("under1", 0).filled === 0 &&
+        experienceMarkStyle("under1", 0).outline === "dashed",
+      "Nothing verified must be dashed and empty, not a low score.",
     );
     expect(
-      accented.length === 1 && accented[0] === "senior",
-      `Exactly one band may carry the metal accent, got: ${accented.join(",")}.`,
+      experienceMarkStyle("under1", 30).filled === 1 &&
+        experienceMarkStyle("under1", 30).outline === "solid",
+      "A verified month must fill its own segment, not read as zero.",
+    );
+
+    // Only the top interval takes metal, exactly as the recognition emblem does.
+    const accented = (["under1", "y1to3", "y3to5", "y5to10", "y10plus"] as const).filter(
+      (b) => experienceMarkStyle(b, 4000).accent,
+    );
+    expect(
+      accented.length === 1 && accented[0] === "y10plus",
+      `Exactly one interval may carry the metal accent, got: ${accented.join(",")}.`,
+    );
+
+    // Every interval is reachable, or a segment is decorative.
+    const reached = new Set(
+      [0.5, 2, 4, 7, 12].map((y) => experienceBandForDays(y * DAYS_PER_YEAR)),
+    );
+    expect(
+      reached.size === 5,
+      `All five intervals must be reachable, reached: ${[...reached].join(",")}.`,
     );
 
     // Boundaries land on the right side, and never round up.
     expect(
-      experienceBandForDays(3 * DAYS_PER_YEAR - 1) === "early",
-      "One day short of three years must still band as early.",
+      experienceBandForDays(3 * DAYS_PER_YEAR - 1) === "y1to3",
+      "One day short of three years must still sit in the 1–3 interval.",
     );
     expect(
-      experienceBandForDays(3 * DAYS_PER_YEAR) === "established",
-      "Exactly three years must band as established.",
+      experienceBandForDays(3 * DAYS_PER_YEAR) === "y3to5",
+      "Exactly three years must move to the 3–5 interval.",
     );
     expect(
       completedVerifiedYears(3 * DAYS_PER_YEAR - 1) === 2,
@@ -841,10 +863,10 @@ for (const pkg of DISCLOSURE_PACKAGES) {
     );
 
     // The mark is a count of segments, never a percentage or a rank.
-    for (const b of ["none", "early", "established", "senior"] as const) {
-      const style = experienceMarkStyle(b);
+    for (const b of ["under1", "y1to3", "y3to5", "y5to10", "y10plus"] as const) {
+      const style = experienceMarkStyle(b, 4000);
       expect(
-        style.total === 4 && style.filled <= style.total,
+        style.total === 5 && style.filled <= style.total,
         `${b}: the experience mark must be a bounded segment count.`,
       );
     }

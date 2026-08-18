@@ -24,12 +24,19 @@
 //
 // ── WHERE THE NUMBERS COME FROM ────────────────────────────────────────
 //
-// They mirror the recognition ladder already approved and shipped in
-// recognition.ts (1, 3, 5, 10, 15, 20 years), collapsed into four bands. That
-// ladder was chosen for the Swedish security labour market, where a first
-// year is probationary in practice, three years is an experienced Väktare,
-// and ten is a career. Reusing it means the card and the recognition panel
-// cannot tell a reader two different stories about the same person.
+// They are the first five steps of the recognition ladder already approved
+// and shipped in recognition.ts (1, 3, 5, 10, 15, 20 years). That ladder was
+// chosen for the Swedish security labour market, where a first year is
+// probationary in practice, three years is an experienced Väktare, and ten is
+// a career. Reusing it means the card and the recognition panel cannot tell a
+// reader two different stories about the same person.
+//
+// ── WHY THE BANDS ARE NAMED AFTER DURATIONS ────────────────────────────
+//
+// They used to be called none / early / established / senior. Those are words
+// about a PERSON, and the moment one of them reaches a label, a tooltip or an
+// employer-facing string, the mark has become a rank. The identifiers now name
+// only the interval they stand for, so there is nothing to leak.
 //
 // If the owner wants different thresholds, they change HERE, once, and the
 // version below changes with them.
@@ -38,11 +45,10 @@ import { DAYS_PER_YEAR } from "./experience";
 
 /** Bumped whenever a threshold moves, so a stored or screenshotted
  *  presentation can be traced to the policy that produced it. */
-export const EXPERIENCE_POLICY_VERSION = "sp-exp-v1";
+export const EXPERIENCE_POLICY_VERSION = "sp-exp-v2";
 
-/** Four bands, deliberately fewer than the six recognition thresholds: more
- *  bands invite a reading of "rank". The printed duration carries precision. */
-export type ExperienceBand = "none" | "early" | "established" | "senior";
+/** Five intervals. Named for the span they cover and nothing else. */
+export type ExperienceBand = "under1" | "y1to3" | "y3to5" | "y5to10" | "y10plus";
 
 export interface ExperienceBandSpec {
   readonly band: ExperienceBand;
@@ -56,10 +62,11 @@ export interface ExperienceBandSpec {
  * starts and where most holders legitimately are.
  */
 export const EXPERIENCE_BANDS: readonly ExperienceBandSpec[] = [
-  { band: "none", fromYears: 0 },
-  { band: "early", fromYears: 1 },
-  { band: "established", fromYears: 3 },
-  { band: "senior", fromYears: 10 },
+  { band: "under1", fromYears: 0 },
+  { band: "y1to3", fromYears: 1 },
+  { band: "y3to5", fromYears: 3 },
+  { band: "y5to10", fromYears: 5 },
+  { band: "y10plus", fromYears: 10 },
 ] as const;
 
 /**
@@ -71,7 +78,7 @@ export const EXPERIENCE_BANDS: readonly ExperienceBandSpec[] = [
  */
 export function experienceBandForDays(verifiedDays: number): ExperienceBand {
   const years = verifiedDays / DAYS_PER_YEAR;
-  let current: ExperienceBand = "none";
+  let current: ExperienceBand = "under1";
   for (const spec of EXPERIENCE_BANDS) {
     if (years >= spec.fromYears) current = spec.band;
   }
@@ -85,7 +92,7 @@ export function completedVerifiedYears(verifiedDays: number): number {
 }
 
 export interface ExperienceMarkStyle {
-  /** How many of the four segments are filled. Never a percentage. */
+  /** How many of the five segments are filled. Never a percentage. */
   readonly filled: number;
   readonly total: number;
   /** Solid only when there is verified time; dashed while there is none. */
@@ -98,20 +105,26 @@ export interface ExperienceMarkStyle {
 /**
  * The visual weight for a band.
  *
- * Restraint is the point: four segments that fill, one gold accent at the
- * top band, and nothing else. No stars, no percentage, no colour scale from
+ * Restraint is the point: five segments that fill, one gold accent at the top
+ * interval, and nothing else. No stars, no percentage, no colour scale from
  * red to green — those all read as a score of the person rather than a count
  * of their verified time.
+ *
+ * `verifiedDays` is taken as well as the band because zero and "some, but
+ * under a year" share the first interval and must not look identical: nothing
+ * verified is dashed and empty, while a verified month has earned its first
+ * segment.
  */
-export function experienceMarkStyle(band: ExperienceBand): ExperienceMarkStyle {
-  switch (band) {
-    case "none":
-      return { filled: 0, total: 4, outline: "dashed", accent: false };
-    case "early":
-      return { filled: 1, total: 4, outline: "solid", accent: false };
-    case "established":
-      return { filled: 2, total: 4, outline: "solid", accent: false };
-    case "senior":
-      return { filled: 4, total: 4, outline: "solid", accent: true };
+export function experienceMarkStyle(band: ExperienceBand, verifiedDays = 0): ExperienceMarkStyle {
+  const total = EXPERIENCE_BANDS.length;
+  if (verifiedDays <= 0) {
+    return { filled: 0, total, outline: "dashed", accent: false };
   }
+  const index = EXPERIENCE_BANDS.findIndex((b) => b.band === band);
+  return {
+    filled: index + 1,
+    total,
+    outline: "solid",
+    accent: band === "y10plus",
+  };
 }

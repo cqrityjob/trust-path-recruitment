@@ -301,11 +301,11 @@ const sv = {
   "lifecycle.locked": "Underlagsnivå och tillstånd sätts av systemet och kan inte ändras av dig.",
 
   // ── Claims ───────────────────────────────────────────────────────────
-  "claims.type.training": "Utbildning",
+  "claims.type.training": "Kurser",
   "claims.type.certification": "Certifiering",
   "claims.type.licence": "Behörighet",
   "claims.type.specialisation": "Specialisering",
-  "claims.type.education": "Formell utbildning",
+  "claims.type.education": "Utbildning",
   "claims.type.professional_membership": "Yrkesmedlemskap",
   "claims.issuer": "Utfärdare",
   "claims.verifier": "Verifierad av",
@@ -1045,6 +1045,8 @@ const sv = {
   "cred.versions.recordedAt": "Registrerad",
 
   // ── LinkedIn sharing (fallback experience) ───────────────────────────
+  "li.shareText":
+    "Mitt verifierade Security Passport från CQrityjob. Länken visar vad som är granskat och av vem.",
   "li.title": "Dela på LinkedIn",
   "li.lead":
     "Så här ser ditt kort ut i LinkedIns format. Tre steg: ladda ner bilden, kopiera länken, bifoga bilden i ditt inlägg.",
@@ -1330,11 +1332,11 @@ const en: Record<PassportCopyKey, string> = {
   "lifecycle.locked":
     "Evidence level and state are set by the system and cannot be changed by you.",
 
-  "claims.type.training": "Training",
+  "claims.type.training": "Courses",
   "claims.type.certification": "Certification",
   "claims.type.licence": "Authorisation",
   "claims.type.specialisation": "Specialisation",
-  "claims.type.education": "Formal education",
+  "claims.type.education": "Education",
   "claims.type.professional_membership": "Professional membership",
   "claims.issuer": "Issuer",
   "claims.verifier": "Verified by",
@@ -2057,6 +2059,8 @@ const en: Record<PassportCopyKey, string> = {
   "cred.versions.current": "Current",
   "cred.versions.recordedAt": "Recorded",
 
+  "li.shareText":
+    "My verified Security Passport from CQrityjob. The link shows what has been reviewed, and by whom.",
   "li.title": "Share on LinkedIn",
   "li.lead":
     "This is your card in LinkedIn's format. Three steps: download the image, copy the link, attach the image to your post.",

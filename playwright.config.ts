@@ -25,5 +25,29 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    // Real viewports, not a resized desktop window. The two sizes are the
+    // ones the brief names: iPhone 13 mini / SE-class at 375x812 and the
+    // iPhone 14-class at 390x844. Anything that overflows horizontally at
+    // 375 is broken for a large share of the people this product is for.
+    // Chromium rather than the presets' WebKit: the device metrics that
+    // matter here — viewport, DPR, touch and the mobile user agent — are
+    // emulated identically, and pinning to the one engine the repository
+    // already installs keeps this runnable in CI without a second download.
+    {
+      name: "mobile-375",
+      use: {
+        ...devices["iPhone 13 mini"],
+        browserName: "chromium",
+        viewport: { width: 375, height: 812 },
+      },
+    },
+    {
+      name: "mobile-390",
+      use: {
+        ...devices["iPhone 14"],
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+      },
+    },
   ],
 });

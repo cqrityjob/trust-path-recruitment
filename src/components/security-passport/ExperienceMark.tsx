@@ -2,8 +2,9 @@
 //
 // ── IT COUNTS TIME, IT DOES NOT RATE A PERSON ──────────────────────────
 //
-// Four segments that fill as verified time accumulates, one metal accent at
-// the top band, and the exact duration printed beside it — always. The
+// Five segments — under a year, 1–3, 3–5, 5–10, 10 or more — that fill as
+// verified time accumulates, one metal accent at the top interval, and the
+// exact duration printed beside it, always. The
 // number is the point; the mark is a glance. A reader never has to decode
 // the symbol, because the thing it stands for is written next to it.
 //
@@ -40,7 +41,7 @@ export function ExperienceMark({
 }) {
   const { pt, lang } = usePassportCopy();
   const band = experienceBandForDays(verifiedDays);
-  const style = experienceMarkStyle(band);
+  const style = experienceMarkStyle(band, verifiedDays);
 
   const ink = onNavy ? TRUST_PALETTE.ink : undefined;
   const muted = onNavy ? TRUST_PALETTE.inkMuted : undefined;
