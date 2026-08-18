@@ -249,8 +249,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
-if [ "$SCP_TABLES" -ne 65 ]; then
-  echo "FAIL: expected 65 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 66 ]; then
+  echo "FAIL: expected 66 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -670,8 +670,8 @@ fi
 
 echo "    ok  ${RAUD_PASSED} report audience assertions passed"
 
-if [ "$RAUD_PASSED" -lt 24 ]; then
-  echo "FAIL: expected at least 24 report audience assertions, only ${RAUD_PASSED} ran." >&2
+if [ "$RAUD_PASSED" -lt 51 ]; then
+  echo "FAIL: expected at least 51 report audience assertions, only ${RAUD_PASSED} ran." >&2
   exit 1
 fi
 

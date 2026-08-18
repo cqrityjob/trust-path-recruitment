@@ -253,7 +253,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
   return (
     <div className="flex min-h-screen bg-muted/10">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-background md:flex">
+      <aside className="no-print hidden w-64 shrink-0 flex-col border-r border-border bg-background md:flex">
         <SidebarHeader employerName={employerName} status={status} role={role} t={t} />
         <nav
           className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4"
@@ -277,7 +277,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
 
       {/* Mobile top bar */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 md:hidden">
+        <header className="no-print flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <button

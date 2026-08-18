@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 65,
-    'pre-rollback: 65 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts)');
+        AND table_name LIKE 'scp\_%') = 66,
+    'pre-rollback: 66 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -171,6 +171,12 @@ DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text) CASCADE;
 -- named. The follow-up prompt catalogue is report content and goes with it.
 DROP FUNCTION IF EXISTS public.scp_display_evidence_state(uuid, uuid, text) CASCADE;
 DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
+-- Part F (20260820120000). The decision table references scp_attempts, so it
+-- has to go before the Phase 2 unwind reaches them.
+DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, text, text, text, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_decisions(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_decision_append_only() CASCADE;
+DROP TABLE    IF EXISTS public.scp_employer_report_decisions CASCADE;
 DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;
 

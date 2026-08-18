@@ -90,11 +90,61 @@ export type CompetencyLine = {
   competencyNameEn: string;
   evidenceState: EvidenceState;
   observations: number;
+  /** Which kinds of task produced the evidence. One entry means one source,
+   *  which is the honest reason a line reads "needs a follow-up". */
+  sourceTypes: string[];
+  /** The observable behaviour the competency is read through — what was
+   *  actually looked at, not just the competency label. */
+  behaviourSv: string | null;
+  behaviourEn: string | null;
   followupSv: string | null;
   followupEn: string | null;
   reflectionSv: string | null;
   reflectionEn: string | null;
   humanReviewed: boolean;
+};
+
+/** Part A, frozen at release.
+ *
+ *  Every field is optional because snapshots released before the context
+ *  existed carry none, and a historical report is never rewritten to add it.
+ *  Surfaces render what is present and omit the rest — role, customer and site
+ *  are absent from the data model entirely today, so they are absent here
+ *  rather than rendered as an empty row on every report.
+ *
+ *  No participant name: identity stays behind the audited
+ *  scp_resolve_participant_identity path, and a name written into an immutable
+ *  snapshot could never be erased. */
+export type ReportContext = {
+  participantRef?: string;
+  personContext?: "employee" | "candidate";
+  organisationName?: string;
+  purposeCode?: string;
+  assessmentSlug?: string;
+  assessmentNameSv?: string;
+  assessmentNameEn?: string;
+  assessmentVersion?: number;
+  language?: string;
+  startedAt?: string;
+  submittedAt?: string;
+  scoredAt?: string;
+  governanceMode?: string;
+  validationStatus?: string;
+  contentStatus?: string;
+  attemptStatus?: string;
+  reviewsTotal?: number;
+  reviewsCompleted?: number;
+  /** Counted at release, not assumed. The sufficiency gate is expressed in
+   *  evidence CONTEXTS, so two sittings against the same form are one context —
+   *  and the coverage paragraph has to say that rather than "two occasions". */
+  evidenceObservations?: number;
+  evidenceContexts?: number;
+  humanReviewOccurred?: boolean;
+  reportKey?: string;
+  reportVersion?: number;
+  evidenceStateVersion?: string;
+  thresholdVersion?: string;
+  scoringModelVersion?: string;
 };
 
 export type ReportSnapshot = {
@@ -103,6 +153,7 @@ export type ReportSnapshot = {
   subjectId: string;
   audience: "participant" | "employer";
   releasedAt: string;
+  context: ReportContext | null;
   lines: CompetencyLine[];
   safetyFlags: { severity: string | null; observedAt: string }[];
   limitationsSv: string[];
@@ -373,6 +424,151 @@ export const scheduleAcademyReassessment = createServerFn({ method: "POST" })
     return { attemptId: String(r.attempt_id) };
   });
 
+/** Part F — the employer's own decision, recorded beside the report.
+ *
+ *  Never part of a report snapshot: the snapshot is immutable and the decision
+ *  happens later and can be revised. The two are composed by the surface with
+ *  both timestamps visible, so nobody has to guess which came first.
+ *
+ *  The vocabulary carries no "hire", "reject", "suitable" or "unsuitable". The
+ *  product does not produce an employment verdict, and offering one as a
+ *  controlled option would put that verdict in its mouth. */
+export type EmployerDecisionAction =
+  | "follow_up_conversation"
+  | "assign_development"
+  | "gather_more_evidence"
+  | "safety_follow_up"
+  | "no_action_needed";
+
+export type EmployerDecisionReason =
+  | "evidence_thin"
+  | "safety_observation"
+  | "competency_gap"
+  | "meets_expectation"
+  | "other";
+
+export type EmployerDecision = {
+  id: string;
+  decidedAt: string;
+  decidedByEmail: string;
+  action: EmployerDecisionAction;
+  reasonCode: EmployerDecisionReason;
+  reasonNote: string | null;
+  nextStep: string | null;
+  nextStepOwner: string | null;
+  supersedesId: string | null;
+  /** Nothing supersedes it. Superseded rows are still returned — the history
+   *  is the point of an append-only record. */
+  isCurrent: boolean;
+};
+
+export const listEmployerDecisions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<EmployerDecision[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_decisions", {
+      _attempt_id: data.attemptId,
+    });
+    if (error) throw fail(error.message, "decisions_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      id: String(r.id),
+      decidedAt: String(r.decided_at),
+      decidedByEmail: String(r.decided_by_email ?? ""),
+      action: r.action as EmployerDecisionAction,
+      reasonCode: r.reason_code as EmployerDecisionReason,
+      reasonNote: r.reason_note ? String(r.reason_note) : null,
+      nextStep: r.next_step ? String(r.next_step) : null,
+      nextStepOwner: r.next_step_owner ? String(r.next_step_owner) : null,
+      supersedesId: r.supersedes_id ? String(r.supersedes_id) : null,
+      isCurrent: Boolean(r.is_current),
+    }));
+  });
+
+export const recordEmployerDecision = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        action: z.enum([
+          "follow_up_conversation",
+          "assign_development",
+          "gather_more_evidence",
+          "safety_follow_up",
+          "no_action_needed",
+        ]),
+        reasonCode: z.enum([
+          "evidence_thin",
+          "safety_observation",
+          "competency_gap",
+          "meets_expectation",
+          "other",
+        ]),
+        // Bounded here as well as in the CHECK: free text about a person is the
+        // riskiest field on the form, and the limit should be visible to whoever
+        // reads this file rather than only to the database.
+        reasonNote: z.string().max(500).nullable().default(null),
+        nextStep: z.string().max(300).nullable().default(null),
+        nextStepOwner: z.string().max(120).nullable().default(null),
+        supersedesId: z.string().uuid().nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ decisionId: string }> => {
+    const ctx = context as Ctx;
+    const { data: id, error } = await ctx.supabase.rpc("scp_record_employer_decision", {
+      _attempt_id: data.attemptId,
+      _action: data.action,
+      _reason_code: data.reasonCode,
+      _reason_note: data.reasonNote,
+      _next_step: data.nextStep,
+      _next_step_owner: data.nextStepOwner,
+      _supersedes_id: data.supersedesId,
+    });
+    if (error) throw fail(error.message, "decision_failed");
+    return { decisionId: String(id) };
+  });
+
+/** snake_case jsonb to the camelCase the surfaces read.
+ *
+ *  Undefined rather than null for every absent key, so `ctx.assessmentVersion &&`
+ *  in a component means "we have this" rather than "this is falsy". */
+function mapContext(c: RpcRow | null): ReportContext | null {
+  if (!c) return null;
+  const str = (k: string) => (c[k] == null ? undefined : String(c[k]));
+  const num = (k: string) => (c[k] == null ? undefined : Number(c[k]));
+  return {
+    participantRef: str("participant_ref"),
+    personContext: str("person_context") as ReportContext["personContext"],
+    organisationName: str("organisation_name"),
+    purposeCode: str("purpose_code"),
+    assessmentSlug: str("assessment_slug"),
+    assessmentNameSv: str("assessment_name_sv"),
+    assessmentNameEn: str("assessment_name_en"),
+    assessmentVersion: num("assessment_version"),
+    language: str("language"),
+    startedAt: str("started_at"),
+    submittedAt: str("submitted_at"),
+    scoredAt: str("scored_at"),
+    governanceMode: str("governance_mode"),
+    validationStatus: str("validation_status"),
+    contentStatus: str("content_status"),
+    attemptStatus: str("attempt_status"),
+    reviewsTotal: num("reviews_total"),
+    reviewsCompleted: num("reviews_completed"),
+    evidenceObservations: num("evidence_observations"),
+    evidenceContexts: num("evidence_contexts"),
+    humanReviewOccurred:
+      c.human_review_occurred == null ? undefined : Boolean(c.human_review_occurred),
+    reportKey: str("report_key"),
+    reportVersion: num("report_version"),
+    evidenceStateVersion: str("evidence_state_version"),
+    thresholdVersion: str("threshold_version"),
+    scoringModelVersion: str("scoring_model_version"),
+  };
+}
+
 /**
  * A released report.
  *
@@ -398,7 +594,7 @@ export const getAcademyReport = createServerFn({ method: "GET" })
         // derivation_input is deliberately NOT selected. It holds the internal
         // maturity the state was derived from, and it exists for reproducibility,
         // not for a reader.
-        "id, attempt_id, subject_id, audience, released_at, payload, safety_flags, " +
+        "id, attempt_id, subject_id, audience, released_at, payload, safety_flags, context, " +
           "scp_report_versions(limitations_sv, limitations_en)",
       )
       .eq("attempt_id", data.attemptId)
@@ -417,12 +613,16 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       subjectId: String(row.subject_id),
       audience: row.audience,
       releasedAt: String(row.released_at),
+      context: mapContext(row.context as RpcRow | null),
       lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
         competencyCode: String(x.competency_code),
         competencyNameSv: String(x.competency_name_sv),
         competencyNameEn: String(x.competency_name_en),
         evidenceState: x.evidence_state as CompetencyLine["evidenceState"],
         observations: Number(x.observations ?? 0),
+        sourceTypes: Array.isArray(x.source_types) ? (x.source_types as string[]) : [],
+        behaviourSv: x.behaviour_sv ? String(x.behaviour_sv) : null,
+        behaviourEn: x.behaviour_en ? String(x.behaviour_en) : null,
         followupSv: x.followup_sv ? String(x.followup_sv) : null,
         followupEn: x.followup_en ? String(x.followup_en) : null,
         reflectionSv: x.reflection_sv ? String(x.reflection_sv) : null,

@@ -112,7 +112,7 @@ export function AcademyTabs({ employerSlug }: { employerSlug: string }) {
   return (
     <nav
       aria-label={t("academy.nav.aria")}
-      className="mb-8 -mx-1 overflow-x-auto border-b border-border"
+      className="no-print mb-8 -mx-1 overflow-x-auto border-b border-border"
     >
       <ul className="flex min-w-max gap-1 px-1">
         {TABS.map((tab) => {

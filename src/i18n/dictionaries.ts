@@ -2343,9 +2343,101 @@ export const dictionaries = {
     "academy.state.notYetShown": "Ännu inte visat",
     "academy.state.criticalFollowUp": "Kritisk följdfråga",
     "academy.state.humanReviewed": "läst av en granskare",
+    "academy.report.contextTitle": "Om den här bedömningen",
+    "academy.report.personContext": "Sammanhang",
+    "academy.report.personEmployee": "Medarbetare",
+    "academy.report.personCandidate": "Kandidat",
+    "academy.report.purposeReassessment": "Omprövning",
+    "academy.report.version": "Version",
+    "academy.report.versionShort": "v",
+    "academy.report.completed": "Genomförd",
+    "academy.report.started": "Påbörjad",
+    "academy.report.closedTestBanner":
+      "Stängt test. Innehållet är ännu inte validerat och rapporten får inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
+    "academy.report.lineageToggle": "Visa spårbarhet och versioner",
+    "academy.report.instrument": "Instrument",
+    "academy.report.governance": "Governance",
+    "academy.report.validation": "Valideringsstatus",
+    "academy.report.contentStatus": "Innehållsstatus",
+    "academy.report.attemptStatus": "Försöksstatus",
+    "academy.report.reviewStatus": "Granskningar klara",
+    "academy.report.language": "Språk",
+    "academy.report.reportVersion": "Rapportmall",
+    "academy.report.derivation": "Härledning",
+    "academy.report.threshold": "Tröskelversion",
+    "academy.report.scoringModel": "Bedömningsmodell",
+    "academy.report.summaryTitle": "Vad rapporten kan användas till",
+    "academy.report.canSupport": "Kan stödja:",
+    "academy.report.canSupportBody":
+      "ett strukturerat samtal om arbetssätt, val av utvecklingsinsats och vilka frågor som är värda att följa upp.",
+    "academy.report.cannotSupport": "Kan inte stödja:",
+    "academy.report.cannotSupportBody":
+      "ett beslut på egen hand, en jämförelse mellan personer eller ett omdöme om personens lämplighet. Underlaget är ett bedömningstillfälle.",
+    "academy.report.needsCritical": "Kräver mänsklig uppföljning:",
+    "academy.report.needsFollowUp": "Behöver följdfråga:",
+    "academy.report.evidenced": "Visat i underlaget:",
+    "academy.report.notYet": "Ännu inte visat:",
+    "academy.report.safetyCounted":
+      "svar rör säkerhetskritisk bedömning och har lästs av en granskare.",
+    "academy.report.reviewsOutstanding":
+      "Alla granskningar är inte klara. Underlaget kan komma att kompletteras.",
+    "academy.report.employerDecides":
+      "Arbetsgivaren fattar beslutet. Rapporten är ett underlag, inte ett besked.",
+    "academy.report.myContextTitle": "Om den här bedömningen",
+    "academy.report.whyTitle": "Varför gjordes bedömningen?",
+    "academy.report.whyBody":
+      "Din arbetsgivare har bett dig genomföra en bedömning för kompetensutveckling. Den används för att välja rätt stöd och för samtal om arbetssätt — inte som prov och inte som besked om anställning.",
+    "academy.report.humanDecides":
+      "En människa fattar arbetsgivarens beslut. Ingen automatisk bedömning avgör något om dig.",
+    "academy.report.notInability":
+      '"Behöver följdfråga" och "Ännu inte visat" beskriver underlagets omfattning. De betyder inte att du saknar förmågan.',
+    "academy.report.humanReviewOccurred":
+      "Ett eller flera av dina svar rörde säkerhetskritisk bedömning och har lästs av en granskare.",
+    "academy.report.rightsTitle": "Dina uppgifter och dina rättigheter",
+    "academy.report.rightsBody":
+      "Du kan begära rättelse av en faktauppgift, fråga hur underlaget används och begära utdrag eller radering av dina personuppgifter.",
+    "academy.decision.title": "Arbetsgivarens beslut",
+    "academy.decision.lede":
+      "Beslutet fattas av arbetsgivaren efter att rapporten frisläppts och registreras separat från bedömningen. Tidigare beslut ligger kvar — en rättelse ersätter inte historiken.",
+    "academy.decision.none": "Inget beslut är registrerat ännu.",
+    "academy.decision.record": "Registrera beslut",
+    "academy.decision.correct": "Registrera rättelse",
+    "academy.decision.correctionNote":
+      "Det här registreras som en rättelse. Det tidigare beslutet ligger kvar och markeras som ersatt.",
+    "academy.decision.current": "Gällande",
+    "academy.decision.superseded": "Ersatt",
+    "academy.decision.action": "Vald åtgärd",
+    "academy.decision.reason": "Skäl",
+    "academy.decision.note": "Kort saklig notering",
+    "academy.decision.noteHint":
+      "Frivillig. Håll den saklig och kort — det här är en arbetsanteckning om åtgärden, inte ett omdöme om personen.",
+    "academy.decision.nextStep": "Nästa steg",
+    "academy.decision.nextStepOwner": "Ansvarig",
+    "academy.decision.save": "Spara beslut",
+    "academy.decision.saving": "Sparar …",
+    "academy.decision.cancel": "Avbryt",
+    "academy.decision.blocked": "Välj åtgärd och skäl för att kunna spara.",
+    "academy.decision.failed": "Beslutet kunde inte sparas.",
+    "academy.decision.notAuthorised": "Du har inte behörighet att registrera beslut.",
+    "academy.decision.beforeRelease":
+      "Ett beslut kan registreras först när rapporten är frisläppt.",
+    "academy.decision.actionConversation": "Uppföljande samtal",
+    "academy.decision.actionDevelopment": "Tilldela utvecklingsinsats",
+    "academy.decision.actionMoreEvidence": "Komplettera underlaget",
+    "academy.decision.actionSafety": "Säkerhetsuppföljning",
+    "academy.decision.actionNone": "Ingen åtgärd behövs nu",
+    "academy.decision.reasonThin": "Tunt underlag",
+    "academy.decision.reasonSafety": "Säkerhetskritisk notering",
+    "academy.decision.reasonGap": "Identifierat utvecklingsbehov",
+    "academy.decision.reasonMeets": "Motsvarar förväntan",
+    "academy.decision.reasonOther": "Annat",
+    "academy.report.rightsContact":
+      "Kontakta din arbetsgivares kontaktperson, eller CQrityjob via kontaktsidan.",
     "academy.coverage.title": "Vad underlaget omfattar",
-    "academy.coverage.basis":
-      "Underlaget bygger på {observations} observationer från {contexts} bedömningstillfälle.",
+    "academy.coverage.basisOne":
+      "Underlaget bygger på {observations} observationer från en enda informationskälla.",
+    "academy.coverage.basisMany":
+      "Underlaget bygger på {observations} observationer från {contexts} informationskällor.",
     "academy.coverage.employerBody":
       'Ett bedömningstillfälle är en informationskälla. Flera kompetenser landar därför på "Behöver följdfråga" — det betyder att underlaget inte räcker för att uttala sig, inte att personen presterat dåligt. Följdfrågorna nedan är till för samtalet. Ytterligare underlag, till exempel ett praktiskt moment eller ett scenario i skarpt läge, gör bilden starkare.',
     "academy.coverage.participantBody":
@@ -4746,9 +4838,101 @@ export const dictionaries = {
     "academy.state.notYetShown": "Not yet shown",
     "academy.state.criticalFollowUp": "Critical follow-up",
     "academy.state.humanReviewed": "read by a reviewer",
+    "academy.report.contextTitle": "About this assessment",
+    "academy.report.personContext": "Context",
+    "academy.report.personEmployee": "Employee",
+    "academy.report.personCandidate": "Candidate",
+    "academy.report.purposeReassessment": "Reassessment",
+    "academy.report.version": "Version",
+    "academy.report.versionShort": "v",
+    "academy.report.completed": "Completed",
+    "academy.report.started": "Started",
+    "academy.report.closedTestBanner":
+      "Closed test. This content is not yet validated, and this report must not on its own inform an employment or placement decision.",
+    "academy.report.lineageToggle": "Show lineage and versions",
+    "academy.report.instrument": "Instrument",
+    "academy.report.governance": "Governance",
+    "academy.report.validation": "Validation status",
+    "academy.report.contentStatus": "Content status",
+    "academy.report.attemptStatus": "Attempt status",
+    "academy.report.reviewStatus": "Reviews complete",
+    "academy.report.language": "Language",
+    "academy.report.reportVersion": "Report template",
+    "academy.report.derivation": "Derivation",
+    "academy.report.threshold": "Threshold version",
+    "academy.report.scoringModel": "Scoring model",
+    "academy.report.summaryTitle": "What this report can be used for",
+    "academy.report.canSupport": "Can support:",
+    "academy.report.canSupportBody":
+      "a structured conversation about ways of working, choosing a development activity, and deciding what is worth following up.",
+    "academy.report.cannotSupport": "Cannot support:",
+    "academy.report.cannotSupportBody":
+      "a decision on its own, a comparison between people, or a judgement about someone's suitability. The evidence is one assessment occasion.",
+    "academy.report.needsCritical": "Needs human follow-up:",
+    "academy.report.needsFollowUp": "Needs a follow-up:",
+    "academy.report.evidenced": "Shown in this evidence:",
+    "academy.report.notYet": "Not yet shown:",
+    "academy.report.safetyCounted":
+      "answers involved safety-critical judgement and were read by a reviewer.",
+    "academy.report.reviewsOutstanding":
+      "Not every review is complete. The evidence may still be added to.",
+    "academy.report.employerDecides":
+      "The employer makes the decision. This report is a basis for it, not a verdict.",
+    "academy.report.myContextTitle": "About this assessment",
+    "academy.report.whyTitle": "Why was this assessment done?",
+    "academy.report.whyBody":
+      "Your employer asked you to complete an assessment for competence development. It is used to choose the right support and to structure a conversation about ways of working — not as an exam, and not as a decision about employment.",
+    "academy.report.humanDecides":
+      "A person makes the employer's decision. No automated assessment decides anything about you.",
+    "academy.report.notInability":
+      '"Needs a follow-up" and "Not yet shown" describe how much evidence there is. They do not mean you lack the ability.',
+    "academy.report.humanReviewOccurred":
+      "One or more of your answers involved safety-critical judgement and was read by a reviewer.",
+    "academy.report.rightsTitle": "Your data and your rights",
+    "academy.report.rightsBody":
+      "You can ask for a factual detail to be corrected, ask how the evidence is used, and request a copy or erasure of your personal data.",
+    "academy.decision.title": "Employer decision",
+    "academy.decision.lede":
+      "The employer decides after the report is released, and it is recorded separately from the assessment. Earlier decisions remain — a correction does not replace the history.",
+    "academy.decision.none": "No decision has been recorded yet.",
+    "academy.decision.record": "Record decision",
+    "academy.decision.correct": "Record a correction",
+    "academy.decision.correctionNote":
+      "This is recorded as a correction. The earlier decision remains and is marked as superseded.",
+    "academy.decision.current": "Current",
+    "academy.decision.superseded": "Superseded",
+    "academy.decision.action": "Chosen action",
+    "academy.decision.reason": "Reason",
+    "academy.decision.note": "Short factual note",
+    "academy.decision.noteHint":
+      "Optional. Keep it factual and brief — this is a working note about the action, not a judgement about the person.",
+    "academy.decision.nextStep": "Next step",
+    "academy.decision.nextStepOwner": "Owner",
+    "academy.decision.save": "Save decision",
+    "academy.decision.saving": "Saving …",
+    "academy.decision.cancel": "Cancel",
+    "academy.decision.blocked": "Choose an action and a reason to save.",
+    "academy.decision.failed": "The decision could not be saved.",
+    "academy.decision.notAuthorised": "You do not have permission to record decisions.",
+    "academy.decision.beforeRelease":
+      "A decision can only be recorded once the report is released.",
+    "academy.decision.actionConversation": "Follow-up conversation",
+    "academy.decision.actionDevelopment": "Assign development activity",
+    "academy.decision.actionMoreEvidence": "Gather more evidence",
+    "academy.decision.actionSafety": "Safety follow-up",
+    "academy.decision.actionNone": "No action needed now",
+    "academy.decision.reasonThin": "Thin evidence",
+    "academy.decision.reasonSafety": "Safety-critical observation",
+    "academy.decision.reasonGap": "Identified development need",
+    "academy.decision.reasonMeets": "Meets expectation",
+    "academy.decision.reasonOther": "Other",
+    "academy.report.rightsContact":
+      "Contact your employer's named contact, or CQrityjob via the contact page.",
     "academy.coverage.title": "What this evidence covers",
-    "academy.coverage.basis":
-      "This rests on {observations} observations from {contexts} assessment occasion.",
+    "academy.coverage.basisOne":
+      "This rests on {observations} observations from a single source of evidence.",
+    "academy.coverage.basisMany":
+      "This rests on {observations} observations from {contexts} sources of evidence.",
     "academy.coverage.employerBody":
       'One assessment occasion is one source. Several competencies therefore read "Needs a follow-up" — that means the evidence is not sufficient to draw a conclusion, not that the person performed poorly. The questions below are there for the conversation. Further evidence, such as a practical check or a live scenario, strengthens the picture.',
     "academy.coverage.participantBody":

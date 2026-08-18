@@ -213,7 +213,7 @@ export function EvidenceCoverage({
         {t("academy.coverage.title")}
       </h2>
       <p className="mt-2 max-w-[72ch] text-[13px] leading-relaxed text-muted-foreground">
-        {t("academy.coverage.basis")
+        {t(contexts === 1 ? "academy.coverage.basisOne" : "academy.coverage.basisMany")
           .replace("{observations}", String(observations))
           .replace("{contexts}", String(contexts))}
       </p>

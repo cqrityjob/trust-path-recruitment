@@ -14,6 +14,7 @@ import {
   AssessmentShell,
   AssessmentPanel,
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
   EvidenceCoverage,
   evidenceStateLabelKey,
@@ -109,6 +110,34 @@ function ParticipantReport() {
         {t("academy.report.whatThisIs")}
       </p>
 
+      {/* Why this happened, in the participant's own terms and before anything
+          is said about them. The employer report opens with lineage; this one
+          opens with a reason, because those are the two audiences' first
+          questions and they are not the same question. */}
+      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.whyTitle")}</h2>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.whyBody")}
+        </p>
+        <p className="mt-3 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
+          {t("academy.report.humanDecides")}
+        </p>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.notInability")}
+        </p>
+        {r.context?.humanReviewOccurred && (
+          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("academy.report.humanReviewOccurred")}
+          </p>
+        )}
+      </section>
+
+      {/* Same component as the employer surface, fed the participant's own
+          frozen context -- which carries no lifecycle status, no review counts
+          and no scoring model version, because the database never put them
+          there. */}
+      <ReportContextPanel context={r.context} />
+
       {/* The participant snapshot carries no severity-bearing flags by design,
           so this renders nothing here. It stays because the component is the
           one place that decides how a safety notice looks, and a future
@@ -116,8 +145,10 @@ function ParticipantReport() {
       <SafetyFlagNotice count={r.safetyFlags.length} />
 
       <EvidenceCoverage
-        observations={r.lines.reduce((n, l) => n + l.observations, 0)}
-        contexts={1}
+        observations={
+          r.context?.evidenceObservations ?? r.lines.reduce((n, l) => n + l.observations, 0)
+        }
+        contexts={r.context?.evidenceContexts ?? 1}
         bodyKey="academy.coverage.participantBody"
       />
 
@@ -190,6 +221,16 @@ function ParticipantReport() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+        <h2 className="text-sm font-semibold text-foreground">{t("academy.report.rightsTitle")}</h2>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.rightsBody")}
+        </p>
+        <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.report.rightsContact")}
+        </p>
       </section>
 
       <ReportLimitations items={limitations} />

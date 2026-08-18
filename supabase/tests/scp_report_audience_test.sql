@@ -167,7 +167,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 CREATE TEMP TABLE snaps AS
 SELECT audience, payload, safety_flags, evidence_state_version, derivation_input,
-       report_version_id
+       report_version_id, context
   FROM public.scp_report_snapshots
  WHERE attempt_id = (SELECT attempt_id FROM run);
 
@@ -371,5 +371,179 @@ SELECT pg_temp.must_fail(format(
   (SELECT attempt_id FROM run)),
   'SCP_SNAPSHOT_IMMUTABLE',
   'RA7.2 a released payload cannot be edited afterwards');
+
+
+DO $$ BEGIN RAISE NOTICE 'GROUP RA8 — Part A: the report says what it is about'; END $$;
+
+-- =========================================================================
+-- Group RA8 — context and integrity
+-- =========================================================================
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(context IS NOT NULL) FROM snaps),
+  'RA8.1 both snapshots freeze a context at release');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(
+     context ? 'organisation_name' AND context ? 'purpose_code' AND
+     context ? 'assessment_name_sv' AND context ? 'assessment_version' AND
+     context ? 'governance_mode' AND context ? 'validation_status')
+     FROM snaps),
+  'RA8.2 both carry organisation, purpose, assessment, version and governance');
+
+SELECT pg_temp.ok(
+  (SELECT context ? 'attempt_status' AND context ? 'reviews_total'
+      AND context ? 'scoring_model_version' AND context ? 'participant_ref'
+     FROM snaps WHERE audience = 'employer'),
+  'RA8.3 the employer context carries lifecycle, review counts and lineage');
+
+-- The participant is told what concerns them, not how the machine ran.
+SELECT pg_temp.ok(
+  (SELECT NOT (context ? 'attempt_status') AND NOT (context ? 'reviews_total')
+      AND NOT (context ? 'scoring_model_version')
+     FROM snaps WHERE audience = 'participant'),
+  'RA8.4 the participant context carries NO lifecycle, review counts or scoring model');
+
+-- A name in an immutable row could never be erased, and identity resolution is
+-- an audited act rather than an ambient one.
+SELECT pg_temp.ok(
+  (SELECT bool_and(context::text NOT ILIKE '%@%')
+     FROM snaps),
+  'RA8.5 no participant email or name is frozen into either context');
+
+-- Role, customer and site do not exist in the data model yet, so they are
+-- omitted rather than emitted as an empty field on every report.
+SELECT pg_temp.ok(
+  (SELECT bool_and(NOT (context ? 'role_title') AND NOT (context ? 'site_name'))
+     FROM snaps),
+  'RA8.6 absent role and site are omitted, not fabricated as "not provided"');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP RA9 — Part C: each line carries its own evidence description'; END $$;
+
+-- =========================================================================
+-- Group RA9 — competency evidence detail
+-- =========================================================================
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(x ? 'behaviour_sv') FROM snaps s, jsonb_array_elements(s.payload) x),
+  'RA9.1 every line states the observable behaviour it was read through');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(x ? 'source_types')
+     FROM snaps s, jsonb_array_elements(s.payload) x WHERE s.audience = 'employer'),
+  'RA9.2 the employer line states which kinds of task contributed');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(coalesce(x->>'followup_sv','') <> '')
+     FROM snaps s, jsonb_array_elements(s.payload) x WHERE s.audience = 'employer'),
+  'RA9.3 every employer line carries a curated follow-up question');
+
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT x->>'followup_sv') > 1
+     FROM snaps s, jsonb_array_elements(s.payload) x WHERE s.audience = 'employer'),
+  'RA9.4 the questions are competency-specific, not one repeated string');
+
+-- Deterministic and versioned: the same prompt row backs every release.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_followup_prompts
+    WHERE content_status = 'published' AND audience = 'employer') >= 12,
+  'RA9.5 the prompt catalogue is curated and versioned, not generated');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP RA10 — Part F: the employer decision is separate and append-only'; END $$;
+
+-- =========================================================================
+-- Group RA10 — employer decision addendum
+-- =========================================================================
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE dec1 AS
+SELECT public.scp_record_employer_decision(
+  (SELECT attempt_id FROM run), 'assign_development', 'evidence_thin',
+  'Underlaget bygger på en källa.', 'Boka praktiskt moment', 'Driftchef', NULL) AS id;
+RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON dec1 TO authenticated;
+
+SELECT pg_temp.ok((SELECT count(*) FROM dec1) = 1,
+  'RA10.1 an owner can record a decision once the report is released');
+
+-- The decision is NOT in the report. That separation is the whole design.
+SELECT pg_temp.ok(
+  (SELECT bool_and(payload::text NOT ILIKE '%assign_development%'
+               AND payload::text NOT ILIKE '%Driftchef%') FROM snaps),
+  'RA10.2 the decision does not enter any report payload');
+
+SELECT pg_temp.must_fail(format(
+  'UPDATE public.scp_employer_report_decisions SET action = ''no_action_needed'' WHERE id = %L::uuid',
+  (SELECT id FROM dec1)),
+  'SCP_DECISION_APPEND_ONLY',
+  'RA10.3 a recorded decision cannot be edited');
+
+SELECT pg_temp.must_fail(format(
+  'DELETE FROM public.scp_employer_report_decisions WHERE id = %L::uuid',
+  (SELECT id FROM dec1)),
+  'SCP_DECISION_APPEND_ONLY',
+  'RA10.4 a recorded decision cannot be deleted');
+
+-- Correction is a new row that points at the old one.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE dec2 AS
+SELECT public.scp_record_employer_decision(
+  (SELECT attempt_id FROM run), 'follow_up_conversation', 'competency_gap',
+  'Rättelse: samtal först.', 'Utvecklingssamtal', 'Driftchef',
+  (SELECT id FROM dec1)) AS id;
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_report_decisions
+    WHERE attempt_id = (SELECT attempt_id FROM run)) = 2,
+  'RA10.5 a correction adds a record rather than replacing one');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000002';
+SELECT pg_temp.ok(
+  (SELECT count(*) FILTER (WHERE is_current) = 1
+      AND count(*) = 2
+     FROM public.scp_employer_decisions((SELECT attempt_id FROM run))),
+  'RA10.6 exactly one decision is current and the superseded one stays visible');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Authorisation: the same bar as releasing.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000003';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_record_employer_decision(%L::uuid, ''no_action_needed'', ''other'')',
+  (SELECT attempt_id FROM run)),
+  'SCP_NOT_AUTHORISED_TO_DECIDE',
+  'RA10.7 the participant cannot record a decision about themselves');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_decisions((SELECT attempt_id FROM run))) = 0,
+  'RA10.8 the participant cannot read the employer decision history');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ff000000-0000-0000-0000-000000000005';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_record_employer_decision(%L::uuid, ''no_action_needed'', ''other'')',
+  (SELECT attempt_id FROM run)),
+  'SCP_NOT_AUTHORISED_TO_DECIDE',
+  'RA10.9 a second employer cannot decide on the first employer''s attempt');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_decisions((SELECT attempt_id FROM run))) = 0,
+  'RA10.10 a second employer reads none of the first employer''s decisions');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The vocabulary carries no employment verdict.
+SELECT pg_temp.ok(
+  (SELECT pg_get_constraintdef(oid) NOT ILIKE '%hire%'
+      AND pg_get_constraintdef(oid) NOT ILIKE '%reject%'
+      AND pg_get_constraintdef(oid) NOT ILIKE '%suitab%'
+     FROM pg_constraint
+    WHERE conrelid = 'public.scp_employer_report_decisions'::regclass
+      AND conname LIKE '%action%'),
+  'RA10.11 the action vocabulary offers no hire, reject or suitability verdict');
 
 ROLLBACK;
