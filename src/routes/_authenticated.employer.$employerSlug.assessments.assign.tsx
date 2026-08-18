@@ -39,6 +39,7 @@ const ERROR_CODE_KEY: Record<string, TranslationKey> = {
   APPLICATION_NOT_FOUND: "assignment.form.error.generic",
   EMPLOYEE_NOT_FOUND: "assignment.form.error.generic",
   ACCESS_NOT_AVAILABLE: "assignment.form.error.generic",
+  NOT_AUTHORISED_TO_ASSIGN: "assignment.form.error.notAuthorised",
   ASSIGNMENT_CREATE_FAILED: "assignment.form.error.generic",
   ASSIGNMENT_ALREADY_ACTIVE: "assignment.form.error.alreadyActive",
   PERSON_CONTEXT_MISMATCH: "assignment.form.error.personContextMismatch",

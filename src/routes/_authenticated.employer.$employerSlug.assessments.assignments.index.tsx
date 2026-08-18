@@ -91,6 +91,11 @@ function AssignmentsList({
   const [filter, setFilter] = useState<FilterKey>("all");
   const listFn = useServerFn(listAssignmentsForEmployer);
   const cancelFn = useServerFn(cancelAssessmentAssignment);
+  // Phase 8.5A narrowed the legacy assignment table to owner and admin, the
+  // same boundary the SCP library has always drawn. A member keeps the full
+  // list -- reading it is a normal member activity -- but is no longer offered
+  // two controls the database will refuse.
+  const canWrite = role === "owner" || role === "admin";
 
   const query = useQuery({
     queryKey: ["employer", employerId, "assignments", filter],
@@ -120,14 +125,16 @@ function AssignmentsList({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("assignment.list.subheading")}</p>
         </div>
-        <Link
-          to="/employer/$employerSlug/assessments/assign"
-          params={{ employerSlug }}
-          search={{ assessmentId: "security-guard-foundation" }}
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          {t("assignment.action.assign")}
-        </Link>
+        {canWrite && (
+          <Link
+            to="/employer/$employerSlug/assessments/assign"
+            params={{ employerSlug }}
+            search={{ assessmentId: "security-guard-foundation" }}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            {t("assignment.action.assign")}
+          </Link>
+        )}
       </div>
 
       <div className="mt-6 inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/20 p-1">
@@ -213,7 +220,7 @@ function AssignmentsList({
                         {t("assignment.action.viewResult")}
                       </Link>
                     )}
-                    {cancellable && (
+                    {cancellable && canWrite && (
                       <button
                         type="button"
                         disabled={cancelMutation.isPending}
