@@ -197,6 +197,7 @@ DROP TABLE    IF EXISTS public.scp_employer_report_decisions CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_one_open_assignment() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_mark_assignment_open() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_clear_assignment_open() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_sync_assignment_terminal_status() CASCADE;
 ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_open;
 DROP TABLE    IF EXISTS public.scp_test_grants CASCADE;
 DROP TYPE     IF EXISTS public.scp_governance_mode CASCADE;

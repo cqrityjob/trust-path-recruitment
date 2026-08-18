@@ -772,8 +772,8 @@ fi
 
 echo "    ok  ${GATE_PASSED} pilot security-gate assertions passed"
 
-if [ "$GATE_PASSED" -lt 38 ]; then
-  echo "FAIL: expected at least 38 pilot security-gate assertions, only ${GATE_PASSED} ran." >&2
+if [ "$GATE_PASSED" -lt 46 ]; then
+  echo "FAIL: expected at least 46 pilot security-gate assertions, only ${GATE_PASSED} ran." >&2
   exit 1
 fi
 

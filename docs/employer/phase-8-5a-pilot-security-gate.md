@@ -18,7 +18,7 @@ to find every place it is still load-bearing.
 | 1 | `scp_attempts`, `scp_candidate_responses`, `scp_competency_evidence` and `scp_human_reviews` carried `FOR ALL` author policies, so any editor/reviewer/publisher could write them directly through PostgREST | the four policies are now `FOR SELECT`; every write path is a `SECURITY DEFINER` function owned by `postgres` and is unaffected | SG2.1–SG2.10 |
 | 2 | `assignments_employer_insert` / `_update` accepted **any** active membership, while `scp_employer_assign` requires owner or admin | both policies name `owner` and `admin` through the existing `has_employer_role` helper; `SELECT` untouched | SG1.1–SG1.7 |
 | 3 | `scp_compute_maturity` was granted to `authenticated` — a competence judgement about any subject id, callable by any signed-in account | `EXECUTE` revoked from `anon`, `authenticated`, `service_role` and `PUBLIC`, together with the three Phase 8 derivation helpers | SG4.1–SG4.6 |
-| 4 | `assessment_assignments_active_unique_idx` keys on `assessment_id`, which the single-lineage CHECK forces to `NULL` on every SCP row | new `scp_open` lifecycle flag + partial unique index on `(employer_id, scp_assessment_version_id, recipient_user_id, use_case)`, and a trigger that raises `SCP_ASSIGNMENT_ALREADY_OPEN` | SG5.1–SG5.9 |
+| 4 | `assessment_assignments_active_unique_idx` keys on `assessment_id`, which the single-lineage CHECK forces to `NULL` on every SCP row | trigger-owned `scp_open` lifecycle flag + partial unique index on `(employer_id, scp_assessment_version_id, recipient_user_id, use_case)`, cancellation/attempt synchronization, and a trigger that raises `SCP_ASSIGNMENT_ALREADY_OPEN` | SG5.1–SG5.17 |
 
 ### Why finding 4 is a flag rather than a status predicate
 
@@ -29,10 +29,17 @@ attempts are `released`. A status-keyed index would have failed to build against
 the existing data, and had it built, it would have blocked every reassessment
 forever.
 
-`scp_open` states the lifecycle instead of inferring it. It defaults to `false`,
-so the four historical rows are correct without a single `UPDATE`, which is
-truthful because every one of their attempts is finished. It is set on insert for
-SCP lineage and cleared when the attempt leaves `in_progress`.
+`scp_open` states the lifecycle instead of inferring it. It defaults to `false`
+and is backfilled from exact attempt lineage before the index is built, so a
+hosted database with an in-progress attempt is handled safely rather than being
+assumed to match a local fixture. It is set on insert for SCP lineage and cleared
+when the attempt leaves `in_progress`.
+
+The flag is not client-writeable: authenticated owners/admins retain column-level
+UPDATE only for `status` and `cancelled_at`. Cancelling or expiring an open SCP
+assignment atomically abandons the linked in-progress attempt; submitted,
+scored or released work cannot be relabelled as cancelled. Responses and reports
+are never deleted by cancellation.
 
 ---
 
@@ -69,7 +76,7 @@ replaces it. Until then it remains live in:
   (asserted as SG1.8).
 - No legacy route, table or function was deleted.
 - No assertion floor was lowered. The DB suite floor rose from 1,393 assertions
-  across 26 suites to 1,433 across 27.
+  across 26 suites to at least 1,441 across 27.
 - No authentication configuration was touched.
 - Phases 9–12 were not started.
 

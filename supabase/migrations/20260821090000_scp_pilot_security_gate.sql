@@ -1,8 +1,10 @@
 -- Phase 8.5A — the four pre-pilot security findings, closed.
 --
--- Additive only. No existing migration is edited, no row is deleted or
--- rewritten, and nothing about scoring, thresholds, report meaning or released
--- snapshots changes. Every change here is about WHO MAY DO WHAT.
+-- Additive only. No previously applied migration is edited, no domain or
+-- historical row is deleted, and nothing about scoring, thresholds, report
+-- meaning or released snapshots changes. The only backfill writes the new
+-- derived lifecycle flag from exact attempt lineage. Every change here is about
+-- WHO MAY DO WHAT.
 --
 -- ═══════════════════════════════════════════════════════════════════════════
 -- FINDING 1 — direct PostgREST writes to attempts, responses and evidence
@@ -163,16 +165,24 @@ REVOKE EXECUTE ON FUNCTION public.scp_attempt_evidence_state(uuid, uuid, text)
 -- lineage, not status, so it is recorded as lineage: a column set when the
 -- assignment is created and cleared when its attempt finishes.
 --
--- The column is added with DEFAULT false, so every existing row takes the value
--- without an UPDATE -- and false is the TRUTHFUL value for all of them, because
--- all four existing attempts are released and zero attempts are in_progress.
--- Nothing is rewritten and nothing is repaired.
+-- The column is added with DEFAULT false, then derived from the attempt that is
+-- actually open. This is deliberately a lifecycle backfill, not an assumption
+-- about whichever database happened to be inspected while the migration was
+-- authored. Released history remains false; any genuinely in-progress attempt
+-- becomes true before the unique index is built.
 
 ALTER TABLE public.assessment_assignments
   ADD COLUMN IF NOT EXISTS scp_open boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN public.assessment_assignments.scp_open IS
   'SCP lineage only: true while this assignment''s attempt is still open. Maintained by trigger, never by a client. Backs the SCP duplicate-protection index, because assessment_assignments.status is not advanced by the SCP path.';
+
+-- The owner/admin UPDATE policy must not make the derived lifecycle bit a
+-- client-writeable escape hatch. The employer product only updates these two
+-- columns directly (cancellation); all other assignment mutations use trusted
+-- service-role or SECURITY DEFINER paths.
+REVOKE UPDATE ON TABLE public.assessment_assignments FROM authenticated;
+GRANT UPDATE (status, cancelled_at) ON public.assessment_assignments TO authenticated;
 
 -- Set on the way in, by lineage rather than by whoever inserted the row, so any
 -- present or future insert path is covered without each having to remember.
@@ -192,6 +202,9 @@ DROP TRIGGER IF EXISTS assessment_assignments_scp_open_set ON public.assessment_
 CREATE TRIGGER assessment_assignments_scp_open_set
   BEFORE INSERT ON public.assessment_assignments
   FOR EACH ROW EXECUTE FUNCTION public.scp_mark_assignment_open();
+
+REVOKE ALL ON FUNCTION public.scp_mark_assignment_open()
+  FROM PUBLIC, anon, authenticated, service_role;
 
 -- Cleared when the attempt stops being open. Submit, score and release all move
 -- the attempt out of 'in_progress', and abandonment does too, so one condition
@@ -218,6 +231,20 @@ DROP TRIGGER IF EXISTS scp_attempts_clear_assignment_open ON public.scp_attempts
 CREATE TRIGGER scp_attempts_clear_assignment_open
   AFTER UPDATE OF status ON public.scp_attempts
   FOR EACH ROW EXECUTE FUNCTION public.scp_clear_assignment_open();
+
+REVOKE ALL ON FUNCTION public.scp_clear_assignment_open()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- Existing installations are not assumed to have the same fixture state as
+-- the author's local database. Derive the flag from exact lineage before the
+-- index is created. This changes no attempt, response, evidence or snapshot.
+UPDATE public.assessment_assignments aa
+   SET scp_open = true
+  FROM public.scp_attempts a
+ WHERE a.assignment_id = aa.id
+   AND a.status = 'in_progress'
+   AND aa.scp_assessment_version_id IS NOT NULL
+   AND NOT aa.scp_open;
 
 -- The invariant. recipient_user_id rather than recipient_email because the SCP
 -- path resolves the address to an account before it assigns anything, and the
@@ -270,6 +297,70 @@ CREATE TRIGGER assessment_assignments_one_open
   BEFORE INSERT ON public.assessment_assignments
   FOR EACH ROW EXECUTE FUNCTION public.scp_guard_one_open_assignment();
 
+REVOKE ALL ON FUNCTION public.scp_guard_one_open_assignment()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+-- The legacy table owns the employer-facing cancellation status, while the SCP
+-- attempt owns the real lifecycle. Keep them atomic: cancelling or expiring an
+-- open SCP assignment abandons its in-progress attempt, whose status trigger in
+-- turn clears scp_open. A submitted/scored/released attempt is historical work
+-- and may not be cosmetically cancelled through the legacy screen.
+CREATE OR REPLACE FUNCTION public.scp_sync_assignment_terminal_status()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  _attempt_status text;
+BEGIN
+  IF NEW.scp_assessment_version_id IS NULL
+     OR NEW.status IS NOT DISTINCT FROM OLD.status THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.status NOT IN ('cancelled', 'expired') THEN
+    RAISE EXCEPTION
+      'SCP_ASSIGNMENT_STATUS_MANAGED: SCP assignment status follows its attempt; '
+      'only cancellation or expiry may end an open assignment here.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  SELECT a.status INTO _attempt_status
+    FROM public.scp_attempts a
+   WHERE a.assignment_id = NEW.id
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION
+      'SCP_ASSIGNMENT_LINEAGE_MISSING: SCP assignment % has no attempt.', NEW.id
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _attempt_status IS DISTINCT FROM 'in_progress' THEN
+    RAISE EXCEPTION
+      'SCP_ASSIGNMENT_NOT_CANCELLABLE: attempt is already %.', _attempt_status
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE public.scp_attempts
+     SET status = 'abandoned'
+   WHERE assignment_id = NEW.id
+     AND status = 'in_progress';
+
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS assessment_assignments_scp_terminal_sync
+  ON public.assessment_assignments;
+CREATE TRIGGER assessment_assignments_scp_terminal_sync
+  AFTER UPDATE OF status ON public.assessment_assignments
+  FOR EACH ROW EXECUTE FUNCTION public.scp_sync_assignment_terminal_status();
+
+REVOKE ALL ON FUNCTION public.scp_sync_assignment_terminal_status()
+  FROM PUBLIC, anon, authenticated, service_role;
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Prove the seeded state rather than assume it
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -297,8 +388,13 @@ BEGIN
     RAISE EXCEPTION 'SCP_SECURITY_GATE: scp_compute_maturity is still executable by authenticated';
   END IF;
 
-  -- Existing rows keep their history: nothing is open, because nothing is
-  -- unfinished.
+  IF has_column_privilege('authenticated', 'public.assessment_assignments',
+       'scp_open', 'UPDATE') THEN
+    RAISE EXCEPTION 'SCP_SECURITY_GATE: authenticated may still update scp_open';
+  END IF;
+
+  -- The backfill must exactly reflect every unfinished attempt, regardless of
+  -- whether this installation contains the author's local fixture rows.
   SELECT count(*) INTO _n FROM public.assessment_assignments aa
     JOIN public.scp_attempts a ON a.assignment_id = aa.id
    WHERE a.status = 'in_progress' AND NOT aa.scp_open;

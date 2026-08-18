@@ -535,4 +535,98 @@ SELECT pg_temp.ok(
   AND (SELECT count(*) FROM public.scp_candidate_responses WHERE attempt_id = (SELECT id FROM att)) = 18,
   'SG5.9 the completed attempt, its responses and its reports are intact');
 
+-- The lifecycle flag is trigger-owned. Owner/admin retain the two columns the
+-- employer cancellation action needs, but cannot lower the uniqueness guard.
+SELECT pg_temp.ok(
+  has_column_privilege('authenticated', 'public.assessment_assignments',
+    'status', 'UPDATE')
+  AND NOT has_column_privilege('authenticated', 'public.assessment_assignments',
+    'scp_open', 'UPDATE'),
+  'SG5.10 authenticated may cancel, but cannot write the derived scp_open flag');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_not_change(format(
+  'UPDATE public.assessment_assignments SET scp_open = false WHERE id = %L::uuid',
+  (SELECT assignment_id FROM run2)),
+  format('SELECT count(*) FROM public.assessment_assignments WHERE id = %L::uuid AND scp_open',
+         (SELECT assignment_id FROM run2)),
+  1,
+  'SG5.11 an owner cannot forge an assignment closed to evade duplicate protection');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- A released result is history, not something the legacy screen may relabel as
+-- cancelled merely because its assignment row still says invited.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail(format(
+  'UPDATE public.assessment_assignments SET status = ''cancelled'', cancelled_at = now() '
+  'WHERE id = %L::uuid', (SELECT assignment_id FROM run)),
+  'SCP_ASSIGNMENT_NOT_CANCELLABLE',
+  'SG5.12 a completed SCP attempt cannot be cosmetically cancelled');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Put one real response on the open reassessment before cancellation. The
+-- cancellation must abandon the attempt, never erase participant work.
+DO $$
+DECLARE
+  _attempt_id uuid := (SELECT attempt_id FROM run2);
+  _item_version_id uuid;
+BEGIN
+  SELECT iv.id INTO _item_version_id
+    FROM public.scp_form_items fi
+    JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    JOIN public.scp_attempts a ON a.form_id = fi.form_id
+   WHERE a.id = _attempt_id
+     AND iv.item_format = 'constructed_response'
+   ORDER BY fi.display_order
+   LIMIT 1;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub',
+    'ac000000-0000-0000-0000-000000000003', true);
+  PERFORM public.scp_save_response(
+    _attempt_id, _item_version_id, NULL, NULL, NULL, 'Svar före avbrott.');
+  RESET ROLE;
+END $$;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_candidate_responses
+    WHERE attempt_id = (SELECT attempt_id FROM run2)) = 1,
+  'SG5.13 the open reassessment contains real participant work before cancellation');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
+UPDATE public.assessment_assignments
+   SET status = 'cancelled', cancelled_at = now()
+ WHERE id = (SELECT assignment_id FROM run2);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT status = 'cancelled' AND NOT scp_open
+     FROM public.assessment_assignments
+    WHERE id = (SELECT assignment_id FROM run2)),
+  'SG5.14 cancelling an open SCP assignment atomically releases the uniqueness key');
+
+SELECT pg_temp.ok(
+  (SELECT status = 'abandoned' FROM public.scp_attempts
+    WHERE id = (SELECT attempt_id FROM run2)),
+  'SG5.15 cancellation moves the linked in-progress attempt to abandoned');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_candidate_responses
+    WHERE attempt_id = (SELECT attempt_id FROM run2)) = 1,
+  'SG5.16 cancellation preserves the participant response');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE run3 AS
+SELECT * FROM public.scp_employer_assign(
+  (SELECT employer FROM sg), (SELECT version_id FROM sgv),
+  'participant@gate.test', NULL, 'sv', 'workforce', NULL, NULL);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok((SELECT count(*) FROM run3) = 1,
+  'SG5.17 reassignment succeeds after an explicit cancellation');
+
 ROLLBACK;
