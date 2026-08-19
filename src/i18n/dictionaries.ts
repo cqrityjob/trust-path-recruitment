@@ -2172,7 +2172,7 @@ export const dictionaries = {
     "academy.nav.reviews": "Granskningar",
     "academy.nav.programmes": "Utvecklingsprogram",
     "academy.cancel": "Avbryt",
-    "academy.overview.competenceTitle": "Kompetensutveckling",
+    "academy.overview.competenceTitle": "Kompetensunderlag",
     "academy.overview.competenceLede":
       "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
@@ -2239,6 +2239,28 @@ export const dictionaries = {
       "Kan inte tilldelas ännu — under utveckling och ännu inte validerad.",
     "academy.library.reason.training_delivery_pending":
       "Utbildningsleverans är ännu inte aktiverad.",
+    "training.nav.programmes": "Program",
+    "training.overview.title": "Kompetensutveckling",
+    "training.overview.lede":
+      "Utvecklingsprogram som din organisation har tilldelat, och hur långt deltagarna har kommit. Genomförd utbildning registreras som utvecklingsaktivitet — den ändrar inte uppmätt kompetensmognad.",
+    "training.overview.stat.active": "Pågående",
+    "training.overview.stat.completed": "Slutförda",
+    "training.overview.stat.available": "Program att tilldela",
+    "training.overview.openProgrammes": "Öppna program",
+    "training.overview.openParticipants": "Visa deltagare",
+    "training.overview.boundaryTitle": "Utbildning styrker inte kompetens",
+    "training.overview.boundaryBody":
+      "Ett genomfört utvecklingsprogram visar att en person har gjort arbetet. Det fastställer inte yrkeskompetens och höjer aldrig en mognadsnivå — det gör bara en ny bedömning.",
+    "training.programmes.title": "Utvecklingsprogram",
+    "training.programmes.lede":
+      "Program som kan tilldelas, och program som fortfarande är under utveckling. Vad ett program inte fastställer står lika tydligt som vad det ger.",
+    "training.participants.title": "Deltagare i utbildning",
+    "training.participants.lede":
+      "Tilldelade utvecklingsprogram och hur långt deltagarna har kommit. Svaren i en utbildningsaktivitet är deltagarens egna och visas inte här.",
+    "employer.overview.card.development.stat.active": "Pågående",
+    "employer.overview.card.development.stat.completed": "Slutförda",
+    "employer.overview.card.development.action.programmes": "Program",
+    "employer.overview.card.development.action.participants": "Deltagare",
     "academy.home.assessmentHeading": "Kompetensbedömning",
     "academy.home.assessmentLede":
       "Bedömningar som ger underlag om din kompetens. Resultatet släpps av din arbetsgivare.",
@@ -4815,7 +4837,7 @@ export const dictionaries = {
     "academy.nav.reviews": "Reviews",
     "academy.nav.programmes": "Development programmes",
     "academy.cancel": "Cancel",
-    "academy.overview.competenceTitle": "Competence development",
+    "academy.overview.competenceTitle": "Competence evidence",
     "academy.overview.competenceLede":
       "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
@@ -4882,6 +4904,28 @@ export const dictionaries = {
     "academy.library.reason.not_permitted":
       "Not assignable yet — in development and not yet validated.",
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
+    "training.nav.programmes": "Programmes",
+    "training.overview.title": "Competence development",
+    "training.overview.lede":
+      "Development programmes your organisation has assigned, and how far each participant has got. Completed training is recorded as development activity — it does not change measured competence maturity.",
+    "training.overview.stat.active": "In progress",
+    "training.overview.stat.completed": "Completed",
+    "training.overview.stat.available": "Programmes to assign",
+    "training.overview.openProgrammes": "Open programmes",
+    "training.overview.openParticipants": "View participants",
+    "training.overview.boundaryTitle": "Training does not verify competence",
+    "training.overview.boundaryBody":
+      "A completed development programme shows that somebody did the work. It does not establish professional competence and never raises a maturity level — only a new assessment does that.",
+    "training.programmes.title": "Development programmes",
+    "training.programmes.lede":
+      "Programmes that can be assigned, and programmes still in development. What a programme does not establish is stated as plainly as what it provides.",
+    "training.participants.title": "Training participants",
+    "training.participants.lede":
+      "Assigned development programmes and how far each participant has got. Answers given in a training activity belong to the participant and are not shown here.",
+    "employer.overview.card.development.stat.active": "In progress",
+    "employer.overview.card.development.stat.completed": "Completed",
+    "employer.overview.card.development.action.programmes": "Programmes",
+    "employer.overview.card.development.action.participants": "Participants",
     "academy.home.assessmentHeading": "Competence assessment",
     "academy.home.assessmentLede":
       "Assessments that generate evidence about your competence. Results are released by your employer.",
