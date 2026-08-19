@@ -159,10 +159,38 @@ function AssignmentCard({ row, lang }: { row: MyAssignment; lang: string }) {
             {t("academy.home.openReport")}
           </Link>
         )}
+        {/* Between submitting and the report arriving, the participant used to
+            get one line and no explanation. That gap is where a person decides
+            whether something has gone wrong — so the steps are named, in order,
+            including the ones that are not theirs to do.
+
+            No timeframe is promised, because none exists: release is an
+            employer action and human review takes as long as it takes.
+            Inventing "within a few days" would be a commitment the product
+            cannot keep. */}
         {done && !row.releasedAt && (
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            {t("academy.home.awaitingRelease")}
-          </p>
+          <div className="w-full rounded-[10px] bg-[color:var(--surface-subtle)] p-3">
+            <p className="text-[13px] font-medium text-foreground">
+              {t("academy.home.awaitingRelease")}
+            </p>
+            <ol className="mt-2 space-y-1.5">
+              {(
+                [
+                  "academy.home.nextReview",
+                  "academy.home.nextRelease",
+                  "academy.home.nextReport",
+                ] as const
+              ).map((k) => (
+                <li
+                  key={k}
+                  className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
+                >
+                  <span aria-hidden="true">·</span>
+                  <span>{t(k)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
       </div>
     </AssessmentPanel>

@@ -14,12 +14,13 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarClock, Eye, FileText, Send } from "lucide-react";
+import { Ban, CalendarClock, Eye, FileText, Send } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
+  cancelAcademyAssignment,
   listAcademyParticipants,
   releaseAcademyReport,
   resolveParticipantIdentity,
@@ -136,8 +137,10 @@ function ParticipantCard({
     staleTime: 5 * 60 * 1000,
   });
   const reassessmentAvailable = (purposes.data ?? []).includes("reassessment");
+  const cancelAssignment = useServerFn(cancelAcademyAssignment);
   const [identity, setIdentity] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const programme = (lang === "en" ? row.programmeNameEn : row.programmeNameSv) ?? "—";
 
@@ -155,6 +158,33 @@ function ParticipantCard({
         code === "SCP_RELEASE_BEFORE_SCORED"
           ? t("academy.participants.releaseBlocked")
           : t("academy.participants.releaseFailed"),
+      );
+    },
+  });
+
+  // Withdrawing an assignment nobody has finished.
+  //
+  // Offered only while the attempt is still in progress, which is the same
+  // condition scp_sync_assignment_terminal_status enforces — a submitted,
+  // scored or released attempt is completed work and the database refuses to
+  // let it be cancelled. Showing the control there and letting the refusal
+  // arrive after the click would read as a bug rather than as a rule.
+  const cancelM = useMutation({
+    mutationFn: () =>
+      cancelAssignment({ data: { employerId, assignmentId: row.assignmentId as string } }),
+    onSuccess: () => {
+      setConfirmCancel(false);
+      setNotice(t("academy.participants.cancelDone"));
+      void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+      void qc.invalidateQueries({ queryKey: ["academy", "review-pressure"] });
+    },
+    onError: (e: unknown) => {
+      setConfirmCancel(false);
+      const code = (e as { code?: string }).code ?? "";
+      setNotice(
+        code === "SCP_ASSIGNMENT_NOT_CANCELLABLE"
+          ? t("academy.participants.cancelNotAllowed")
+          : t("academy.participants.cancelFailed"),
       );
     },
   });
@@ -277,12 +307,61 @@ function ParticipantCard({
             {t("academy.participants.reassess")}
           </button>
         )}
+        {canManage && row.attemptStatus === "in_progress" && row.assignmentId && !confirmCancel && (
+          <button
+            type="button"
+            onClick={() => {
+              setNotice(null);
+              setConfirmCancel(true);
+            }}
+            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Ban className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.cancel")}
+          </button>
+        )}
+
         {canManage && row.releasedAt && !reassessmentAvailable && (
           <p className="w-full text-[12px] leading-relaxed text-muted-foreground">
             {t("academy.participants.reassessmentPurposePending")}
           </p>
         )}
       </div>
+
+      {/* Withdrawing an assignment is not destructive, but it does take work
+          away from somebody who may already be part-way through it. The
+          confirmation says what actually happens to what they have written,
+          because "cancel" on its own does not tell an employer whether they are
+          about to erase somebody's answers. */}
+      {confirmCancel && (
+        <div className="mt-4 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-4">
+          <p className="text-[13px] font-semibold text-foreground">
+            {t("academy.participants.cancelConfirmTitle")}
+          </p>
+          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("academy.participants.cancelConfirmBody")}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => cancelM.mutate()}
+              disabled={cancelM.isPending}
+              className="inline-flex h-10 items-center rounded-[10px] border border-destructive/50 px-3.5 text-[13px] font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {cancelM.isPending
+                ? t("academy.participants.cancelling")
+                : t("academy.participants.cancelConfirmAction")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmCancel(false)}
+              className="inline-flex h-10 items-center rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.participants.cancelKeep")}
+            </button>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
