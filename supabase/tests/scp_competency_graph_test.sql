@@ -368,12 +368,12 @@ SELECT pg_temp.ok(
 INSERT INTO public.scp_competency_evidence
   (subject_id, behaviour_version_id, source_type, source_ref, contribution, confidence,
    provenance_type, jurisdiction_id, purpose_version_id, context_type, context_ref,
-   is_safety_critical, safety_severity, requires_human_review, review_status, observed_at)
+   is_safety_critical, safety_severity, safety_finding, requires_human_review, review_status, observed_at)
 SELECT subject_id, behaviour_version_id, 'assessment_response', gen_random_uuid(),
        0.950, 1.000, 'human_review',
        (SELECT id FROM public.scp_jurisdictions WHERE code = 'SE'),
        purpose_version_id, 'scenario', gen_random_uuid(),
-       true, 'high', true, 'pending', now()
+       true, 'high', 'high', true, 'pending', now()
   FROM g;
 
 SELECT pg_temp.ok(

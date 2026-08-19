@@ -22,6 +22,20 @@ BEGIN
   RAISE NOTICE 'ok  %', label;
 END $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.fixture_rubric_levels(_ivid uuid, _fmt text)
+RETURNS jsonb LANGUAGE sql AS $fn$
+  -- Every construct-bearing dimension at 4, every style dimension at 0. The
+  -- derived contribution is therefore 1.000 if and only if writing quality is
+  -- excluded, which is the property worth pinning in a fixture too.
+  SELECT CASE WHEN _fmt <> 'constructed_response' THEN NULL ELSE (
+    SELECT jsonb_object_agg(d.dimension_key,
+             CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
+      FROM public.scp_rubric_dimensions d
+      JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+     WHERE rv.item_version_id = _ivid) END;
+$fn$;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.must_fail(stmt text, needle text, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE _msg text;
@@ -144,15 +158,25 @@ DECLARE _att uuid; _rv record;
 BEGIN
   SELECT attempt_id INTO _att FROM run;
   FOR _rv IN
-    SELECT hr.id, iv.is_safety_critical
+    SELECT hr.id, iv.is_safety_critical, iv.id AS item_version_id, iv.item_format,
+           i.slug
       FROM public.scp_human_reviews hr
       JOIN public.scp_candidate_responses r ON r.id = hr.response_id
       JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+      JOIN public.scp_items i ON i.id = iv.item_id
      WHERE r.attempt_id = _att AND hr.review_status = 'pending'
   LOOP
+    -- One genuine finding, the rest cleared. Before the governed evidence
+    -- model every safety-critical item produced a graded severity whether or
+    -- not the response deserved one, so RA3.1 passed on twelve manufactured
+    -- flags. It now passes on the single real one, and RA3.1b asserts the
+    -- eleven cleared items produced none.
     PERFORM public.scp_complete_human_review(_rv.id, 'upheld',
       'Inom mandatet, prioriterar säkerhet, dokumenterar åtgärden.',
-      0.5, CASE WHEN _rv.is_safety_critical THEN 'low' ELSE NULL END);
+      CASE WHEN NOT _rv.is_safety_critical THEN NULL
+           WHEN _rv.slug = 'sg-b-10' THEN 'high'
+           ELSE 'no_concern' END,
+      pg_temp.fixture_rubric_levels(_rv.item_version_id, _rv.item_format));
   END LOOP;
 END $$;
 RESET ROLE; RESET request.jwt.claim.sub;
@@ -185,8 +209,13 @@ SELECT pg_temp.ok(
   (SELECT count(DISTINCT md5(payload::text)) FROM snaps) = 2,
   'RA1.2 the two payloads are not the same bytes');
 
+-- des-v2 since 20260823090000: the display state stopped keying on the item's
+-- safety-critical CLASSIFICATION and started keying on the reviewer's FINDING,
+-- which is a different derivation and therefore a different version. Bumping
+-- the constant without updating this assertion is the mistake it exists to
+-- catch, so it stays pinned to an exact value.
 SELECT pg_temp.ok(
-  (SELECT bool_and(evidence_state_version = 'des-v1') FROM snaps),
+  (SELECT bool_and(evidence_state_version = 'des-v2') FROM snaps),
   'RA1.3 both snapshots record which derivation produced them');
 
 SELECT pg_temp.ok(
@@ -226,8 +255,15 @@ DO $$ BEGIN RAISE NOTICE 'GROUP RA3 — severity and reviewer judgement never re
 -- =========================================================================
 
 SELECT pg_temp.ok(
-  (SELECT jsonb_array_length(safety_flags) > 0 FROM snaps WHERE audience='employer'),
-  'RA3.1 the employer receives the safety observations');
+  (SELECT jsonb_array_length(safety_flags) = 1 FROM snaps WHERE audience='employer'),
+  'RA3.1 the employer receives the safety observation a reviewer actually made');
+
+-- The other side of the same rule. Twelve items are classified safety-critical
+-- and eleven were cleared; an employer report that flagged all twelve would be
+-- telling the reader nothing they could act on.
+SELECT pg_temp.ok(
+  (SELECT safety_flags->0->>'finding' FROM snaps WHERE audience='employer') = 'high',
+  'RA3.1b a cleared safety-critical item produces no flag at all');
 
 SELECT pg_temp.ok(
   (SELECT jsonb_array_length(safety_flags) = 0 FROM snaps WHERE audience='participant'),
@@ -293,18 +329,28 @@ SELECT pg_temp.ok(
 
 -- One assessment is one evidence context, and consistent_evidence needs two.
 -- So nothing from a single run can read as "shown", and the report has to say
--- why rather than implying the person fell short.
-SELECT pg_temp.ok(
-  (SELECT bool_and(x->>'evidence_state' = 'follow_up')
-     FROM snaps s, jsonb_array_elements(s.payload) x
-    WHERE s.audience = 'employer'),
-  'RA5.3 a single-context run yields follow_up throughout — the threshold model, stated honestly');
-
--- The safety route is a human judgement, never a low score.
+-- why rather than implying the person fell short. This is the load-bearing half
+-- and it is asserted as an absence, which no finding can accidentally satisfy.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM snaps s, jsonb_array_elements(s.payload) x
-    WHERE x->>'evidence_state' = 'critical_follow_up') = 0,
-  'RA5.4 severity "low" on every observation produces no critical follow-up');
+    WHERE s.audience = 'employer'
+      AND x->>'evidence_state' IN ('shown','strongly_shown')) = 0,
+  'RA5.3 nothing from a single-context run can read as shown — the threshold model, stated honestly');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(x->>'evidence_state' IN ('follow_up','critical_follow_up'))
+     FROM snaps s, jsonb_array_elements(s.payload) x
+    WHERE s.audience = 'employer'),
+  'RA5.3b and every line is a follow-up of one kind or the other');
+
+-- The safety route is a human judgement about the RESPONSE, never the item's
+-- category and never a low score. Eleven safety-critical items were cleared and
+-- one carried a real finding, so exactly one competency escalates.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM snaps s, jsonb_array_elements(s.payload) x
+    WHERE s.audience = 'employer'
+      AND x->>'evidence_state' = 'critical_follow_up') = 1,
+  'RA5.4 only the competency a reviewer actually flagged becomes a critical follow-up');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP RA6 — who may read which document'; END $$;
 

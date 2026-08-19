@@ -25,6 +25,20 @@ BEGIN
   RAISE NOTICE 'ok  %', label;
 END $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.fixture_rubric_levels(_ivid uuid, _fmt text)
+RETURNS jsonb LANGUAGE sql AS $fn$
+  -- Every construct-bearing dimension at 4, every style dimension at 0. The
+  -- derived contribution is therefore 1.000 if and only if writing quality is
+  -- excluded, which is the property worth pinning in a fixture too.
+  SELECT CASE WHEN _fmt <> 'constructed_response' THEN NULL ELSE (
+    SELECT jsonb_object_agg(d.dimension_key,
+             CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
+      FROM public.scp_rubric_dimensions d
+      JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+     WHERE rv.item_version_id = _ivid) END;
+$fn$;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.must_fail(stmt text, needle text, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE _msg text;
@@ -114,14 +128,24 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', 'ab000000-0000-0000-0000-000000000004', true);
   FOR _rv IN
-    SELECT hr.id, iv.is_safety_critical
+    SELECT hr.id, iv.is_safety_critical, iv.id AS item_version_id, iv.item_format,
+           i.slug
       FROM public.scp_human_reviews hr
       JOIN public.scp_candidate_responses r ON r.id = hr.response_id
       JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+      JOIN public.scp_items i ON i.id = iv.item_id
      WHERE r.attempt_id = _att AND hr.review_status = 'pending'
   LOOP
+    -- One real finding per attempt, the rest cleared, so the attempt-scoping
+    -- assertions below still compare a non-zero number. Under the governed
+    -- evidence model a report flags what a reviewer FOUND, so a run where every
+    -- response was fine produces no flags at all -- correct, but it would make
+    -- AS2.5 and AS2.6 compare zero with zero and prove nothing.
     PERFORM public.scp_complete_human_review(_rv.id, 'upheld', 'Inom mandatet.',
-      0.5, CASE WHEN _rv.is_safety_critical THEN 'low' ELSE NULL END);
+      CASE WHEN NOT _rv.is_safety_critical THEN NULL
+           WHEN _rv.slug = 'sg-b-10' THEN 'high'
+           ELSE 'no_concern' END,
+      pg_temp.fixture_rubric_levels(_rv.item_version_id, _rv.item_format));
   END LOOP;
 
   PERFORM set_config('request.jwt.claim.sub', 'ab000000-0000-0000-0000-000000000002', true);
@@ -192,10 +216,21 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT jsonb_array_length(safety_flags) FROM snap2 WHERE audience='employer')
   = (SELECT count(*) FROM public.scp_competency_evidence e
-      WHERE e.is_safety_critical AND e.superseded_by IS NULL
+      WHERE e.safety_finding IN ('low','medium','high','critical')
+        AND e.superseded_by IS NULL
         AND e.source_ref IN (SELECT r.id FROM public.scp_candidate_responses r
                               WHERE r.attempt_id = (SELECT id FROM att2))),
   'AS2.6 every safety flag in the report traces to a response of THIS attempt');
+
+-- And the count is the reviewer's findings, not the item bank's classifications:
+-- twelve items are classified safety-critical and one flag is reported.
+SELECT pg_temp.ok(
+  (SELECT jsonb_array_length(safety_flags) FROM snap2 WHERE audience='employer') = 1
+  AND (SELECT count(*) FROM public.scp_competency_evidence e
+        WHERE e.is_safety_critical AND e.superseded_by IS NULL
+          AND e.source_ref IN (SELECT r.id FROM public.scp_candidate_responses r
+                                WHERE r.attempt_id = (SELECT id FROM att2))) = 12,
+  'AS2.6b twelve classified items, one reported flag');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP AS3 — a later attempt does not rewrite an earlier report'; END $$;
 

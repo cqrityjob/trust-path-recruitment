@@ -40,6 +40,7 @@ import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import {
   completeReview,
   listReviewQueue,
+  type RubricDimension,
 } from "@/lib/security-competency/academy-employer.functions";
 
 export type ReviewQueueRow = {
@@ -58,8 +59,9 @@ export type ReviewQueueRow = {
   itemScenario: string | null;
   itemPrompt: string | null;
   isSafetyCritical: boolean;
-  severityRequired: boolean;
+  findingRequired: boolean;
   itemFormat: string | null;
+  rubric: RubricDimension[] | null;
   responseText: string | null;
   chosenLabel: string | null;
   chosenBestLabel: string | null;
@@ -112,7 +114,13 @@ const OUTCOME_LABEL: Record<"upheld" | "adjusted" | "overturned", TranslationKey
   overturned: "academy.reviews.outcomeOverturned",
 };
 
-const SEVERITY_LABEL: Record<"low" | "medium" | "high" | "critical", TranslationKey> = {
+// A safety-critical ITEM does not make a response a safety concern. Twelve of
+// the eighteen items are classified safety-critical, so without `no_concern`
+// every participant who answered well still generated twelve graded severities
+// somebody had to invent -- and a flag that fires for everyone hides the one
+// that matters.
+const FINDING_LABEL: Record<Finding, TranslationKey> = {
+  no_concern: "academy.reviews.findingNoConcern",
   low: "academy.reviews.severityLow",
   medium: "academy.reviews.severityMedium",
   high: "academy.reviews.severityHigh",
@@ -125,7 +133,7 @@ const PURPOSE_LABEL: Record<string, TranslationKey> = {
 };
 
 type Outcome = "upheld" | "adjusted" | "overturned";
-type Severity = "low" | "medium" | "high" | "critical";
+type Finding = "no_concern" | "low" | "medium" | "high" | "critical";
 
 /** One labelled fact in the context strip. */
 function Fact({ label, value }: { label: string; value: string }) {
@@ -246,14 +254,19 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
   const complete = useServerFn(completeReview);
   const [rationale, setRationale] = useState("");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [severity, setSeverity] = useState<Severity | null>(null);
+  const [finding, setFinding] = useState<Finding | null>(null);
+  const [levels, setLevels] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
-  // The same rule scp_complete_human_review enforces, stated once here so the
-  // button can be honest about it instead of letting the database refuse after
-  // the reviewer has already written their reasoning.
-  const missingSeverity = review.severityRequired && severity === null;
-  const incomplete = outcome === null || rationale.trim() === "" || missingSeverity;
+  const rubric = review.rubric ?? [];
+  const needsRubric = review.itemFormat === "constructed_response" && rubric.length > 0;
+
+  // The same rules scp_complete_human_review enforces, stated once here so the
+  // button can be honest about them instead of letting the database refuse
+  // after the reviewer has already written their reasoning.
+  const missingFinding = review.findingRequired && finding === null;
+  const missingLevels = needsRubric && rubric.some((d) => levels[d.dimension_key] === undefined);
+  const incomplete = outcome === null || rationale.trim() === "" || missingFinding || missingLevels;
 
   const m = useMutation({
     mutationFn: () =>
@@ -262,10 +275,12 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
           reviewId: review.reviewId,
           outcome: outcome as Outcome,
           rationale,
-          contribution: 0.5,
-          // Null for anything that is not safety-critical: the same function
-          // refuses a severity that was never asked for.
-          safetySeverity: review.severityRequired ? severity : null,
+          // No contribution. The reviewer states a judgement; the number is
+          // derived server-side from the item's own governed scoring, or from
+          // the rubric levels below. scp_complete_human_review no longer has a
+          // parameter to pass one to.
+          safetyFinding: review.findingRequired ? finding : null,
+          rubricLevels: needsRubric ? levels : null,
         },
       }),
     onSuccess: () => {
@@ -279,9 +294,13 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
           ? t("academy.reviews.notAuthorised")
           : code === "SCP_REVIEW_WITHOUT_RATIONALE"
             ? t("academy.reviews.needRationale")
-            : code === "SCP_SAFETY_SEVERITY_REQUIRED"
-              ? t("academy.reviews.needSeverity")
-              : t("academy.reviews.failed"),
+            : code === "SCP_SAFETY_FINDING_REQUIRED"
+              ? t("academy.reviews.needFinding")
+              : code === "SCP_RUBRIC_LEVELS_REQUIRED" || code === "SCP_RUBRIC_DIMENSION_MISSING"
+                ? t("academy.reviews.needRubric")
+                : code === "SCP_REVIEW_NOT_PENDING"
+                  ? t("academy.reviews.alreadyCompleted")
+                  : t("academy.reviews.failed"),
       );
     },
   });
@@ -384,16 +403,56 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
           {t("academy.reviews.judgementHeading")}
         </h3>
 
-        {review.severityRequired && (
-          <ChoiceGroup<Severity>
-            legend={t("academy.reviews.severity")}
-            hint={t("academy.reviews.severityHint")}
-            name={`severity-${review.reviewId}`}
-            value={severity}
-            onChange={setSeverity}
-            options={(["low", "medium", "high", "critical"] as const).map((s) => ({
-              value: s,
-              label: t(SEVERITY_LABEL[s]),
+        {needsRubric && (
+          <fieldset className="space-y-3 rounded-[10px] border border-border p-4">
+            <legend className="px-1 text-xs font-medium text-foreground">
+              {t("academy.reviews.rubricLegend")}
+            </legend>
+            <p className="text-[12px] leading-relaxed text-muted-foreground">
+              {t("academy.reviews.rubricHint")}
+            </p>
+            {rubric.map((d) => (
+              <div key={d.dimension_key} className="border-t border-border pt-3 first:border-t-0">
+                <p className="text-[13px] font-medium text-foreground">
+                  {d.name ?? d.dimension_key}
+                  {d.style_only && (
+                    <span className="ml-2 rounded-[6px] bg-[color:var(--surface-subtle)] px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">
+                      {t("academy.reviews.rubricStyleOnly")}
+                    </span>
+                  )}
+                </p>
+                {d.criterion && (
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                    {d.criterion}
+                  </p>
+                )}
+                <ChoiceGroup<string>
+                  legend={t("academy.reviews.rubricLevel")}
+                  name={`rubric-${review.reviewId}-${d.dimension_key}`}
+                  value={
+                    levels[d.dimension_key] === undefined ? null : String(levels[d.dimension_key])
+                  }
+                  onChange={(v) => setLevels((prev) => ({ ...prev, [d.dimension_key]: Number(v) }))}
+                  options={(d.levels ?? []).map((l) => ({
+                    value: String(l.level),
+                    label: `${l.level} — ${l.descriptor ?? ""}`,
+                  }))}
+                />
+              </div>
+            ))}
+          </fieldset>
+        )}
+
+        {review.findingRequired && (
+          <ChoiceGroup<Finding>
+            legend={t("academy.reviews.finding")}
+            hint={t("academy.reviews.findingHint")}
+            name={`finding-${review.reviewId}`}
+            value={finding}
+            onChange={setFinding}
+            options={(["no_concern", "low", "medium", "high", "critical"] as const).map((f) => ({
+              value: f,
+              label: t(FINDING_LABEL[f]),
             }))}
           />
         )}

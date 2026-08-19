@@ -430,10 +430,14 @@ SELECT pg_temp.ok(
       AND e.is_safety_critical) = 0,
   'VJ6.5 no safety-critical evidence was fabricated at submission');
 
+-- Rewritten for the governed evidence model. Demanding a SEVERITY on every
+-- safety-critical row is exactly what forced reviewers to grade a correct
+-- answer. What must hold is that a classified item never produces evidence
+-- without a reviewer's CONCLUSION -- and 'no_concern' is one.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence
-    WHERE is_safety_critical AND safety_severity IS NULL) = 0,
-  'VJ6.5b no safety-critical evidence anywhere lacks a severity');
+    WHERE is_safety_critical AND safety_finding IS NULL) = 0,
+  'VJ6.5b no safety-critical evidence anywhere lacks a reviewer finding');
 
 -- Retry safety. A double-tap, two tabs, or a resubmit after a timeout.
 SELECT pg_temp.must_fail(format(
@@ -509,9 +513,12 @@ DO $$ BEGIN RAISE NOTICE 'GROUP VJ9 — who may judge a safety observation'; END
 -- =========================================================================
 
 CREATE TEMP TABLE vjr AS
-SELECT hr.id AS review_id, hr.trigger_reason
+SELECT hr.id AS review_id, hr.trigger_reason, r.id AS response_id,
+       iv.id AS item_version_id, iv.item_format, iv.is_safety_critical, i.slug
   FROM public.scp_human_reviews hr
   JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+  JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+  JOIN public.scp_items i ON i.id = iv.item_id
  WHERE r.attempt_id = (SELECT attempt_id FROM vja)
    AND hr.review_status = 'pending';
 GRANT SELECT ON vjr TO authenticated;
@@ -520,7 +527,7 @@ GRANT SELECT ON vjr TO authenticated;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000003';
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''mine'', 0.5, ''low'')',
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''mine'', ''low'')',
   (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
   'SCP_NOT_A_REVIEWER',
   'VJ9.1 the candidate cannot set the severity of their own observation');
@@ -532,7 +539,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ours'', 0.5, ''high'')',
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ours'', ''high'')',
   (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
   'SCP_NOT_A_REVIEWER',
   'VJ9.2 the commissioning employer cannot set the severity either');
@@ -551,42 +558,100 @@ SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
 -- Severity is never inferred. Omitting it on a safety-critical observation is
 -- refused by name, not by a raw constraint violation.
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, NULL)',
-  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
-  'SCP_SAFETY_SEVERITY_REQUIRED',
-  'VJ9.3 a reviewer cannot complete a safety review without stating a severity');
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', NULL)',
+  (SELECT review_id FROM vjr WHERE is_safety_critical LIMIT 1)),
+  'SCP_SAFETY_FINDING_REQUIRED',
+  'VJ9.3 a reviewer cannot complete a safety review without stating a finding');
 
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, ''catastrophic'')',
-  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
-  'SCP_BAD_SAFETY_SEVERITY',
-  'VJ9.4 an invented severity value is refused');
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', ''catastrophic'')',
+  (SELECT review_id FROM vjr WHERE is_safety_critical LIMIT 1)),
+  'SCP_BAD_SAFETY_FINDING',
+  'VJ9.4 an invented finding value is refused');
 
 -- And a NON-safety observation may not carry one.
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', 0.5, ''low'')',
-  (SELECT review_id FROM vjr WHERE trigger_reason <> 'safety_critical_detected' LIMIT 1)),
-  'SCP_SEVERITY_ON_NON_SAFETY_ITEM',
-  'VJ9.5 a non-safety observation refuses to carry a severity');
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', ''low'')',
+  (SELECT review_id FROM vjr WHERE NOT is_safety_critical LIMIT 1)),
+  'SCP_FINDING_ON_NON_SAFETY_ITEM',
+  'VJ9.5 a non-safety observation refuses to carry a finding');
 
--- A rationale is always required: a severity with no reasoning is not a review.
+-- A rationale is always required: a finding with no reasoning is not a review.
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''  '', 0.5, ''medium'')',
-  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''  '', ''medium'')',
+  (SELECT review_id FROM vjr WHERE is_safety_critical LIMIT 1)),
   'SCP_REVIEW_WITHOUT_RATIONALE',
   'VJ9.6 a review decision must state its reasons');
 
--- Now do the work: every outstanding review, with a severity on each
--- safety-critical one.
+-- ── The two properties owner decision A and B exist to guarantee ─────────
+--
+-- There is no parameter to pass a contribution to any more. Proven against the
+-- catalogue rather than against a call, so it cannot be satisfied by a caller
+-- that merely stopped passing one.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'scp_complete_human_review'
+      AND pg_get_function_identity_arguments(p.oid) LIKE '%numeric%') = 0,
+  'VJ9.3b no overload of scp_complete_human_review accepts a client contribution');
+
+-- A constructed response cannot be completed without its rubric, and cannot be
+-- completed with only part of it. A missing dimension is a judgement the
+-- reviewer did not make.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', ''no_concern'')',
+  (SELECT review_id FROM vjr WHERE item_format = 'constructed_response'
+     AND is_safety_critical LIMIT 1)),
+  'SCP_RUBRIC_LEVELS_REQUIRED',
+  'VJ9.3c a constructed response cannot be scored without its rubric');
+
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ok'', ''no_concern'', %L::jsonb)',
+  (SELECT review_id FROM vjr WHERE item_format = 'constructed_response'
+     AND is_safety_critical LIMIT 1),
+  (SELECT jsonb_build_object(min(d.dimension_key), 3)::text
+     FROM public.scp_rubric_dimensions d
+     JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+    WHERE rv.item_version_id = (SELECT item_version_id FROM vjr
+                                 WHERE item_format = 'constructed_response'
+                                   AND is_safety_critical LIMIT 1))),
+  'SCP_RUBRIC_DIMENSION_MISSING',
+  'VJ9.3d a partial rubric is refused rather than averaged');
+
+-- Now do the work. Three deliberately different reviewer decisions, chosen by
+-- item slug so the run is deterministic:
+--
+--   sg-b-10  a real safety concern      -> upheld, finding 'high'
+--   sg-b-17  the reading is disputed    -> overturned, no evidence written
+--   everything else                     -> upheld, and for a classified item
+--                                          the finding a good answer deserves:
+--                                          'no_concern'
+--
+-- Constructed responses carry rubric levels, with the STYLE dimension set to 0
+-- and every construct-bearing one to 4. If writing quality were allowed to
+-- contribute, the derived value would be 0.750 rather than 1.000, so the
+-- assertion below distinguishes the two rather than merely accepting a number.
 DO $$
-DECLARE _r record;
+DECLARE _r record; _levels jsonb;
 BEGIN
-  FOR _r IN SELECT * FROM vjr LOOP
+  FOR _r IN SELECT * FROM vjr ORDER BY slug LOOP
+    _levels := NULL;
+    IF _r.item_format = 'constructed_response' THEN
+      SELECT jsonb_object_agg(d.dimension_key,
+               CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
+        INTO _levels
+        FROM public.scp_rubric_dimensions d
+        JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+       WHERE rv.item_version_id = _r.item_version_id;
+    END IF;
+
     PERFORM public.scp_complete_human_review(
-      _r.review_id, 'upheld',
+      _r.review_id,
+      CASE WHEN _r.slug = 'sg-b-17' THEN 'overturned' ELSE 'upheld' END,
       'Bedömd mot observerbart beteende i scenariot.',
-      0.5,
-      CASE WHEN _r.trigger_reason = 'safety_critical_detected' THEN 'medium' END);
+      CASE WHEN _r.is_safety_critical THEN
+             CASE WHEN _r.slug = 'sg-b-10' THEN 'high' ELSE 'no_concern' END
+      END,
+      _levels);
   END LOOP;
 END $$;
 
@@ -606,16 +671,119 @@ SELECT pg_temp.ok(
         WHERE id = (SELECT attempt_id FROM vja)) IS NOT NULL,
   'VJ9.8 the attempt becomes scored only once no review remains');
 
--- Provenance: reviewed safety evidence names its reviewer and its severity.
+-- Provenance: every reviewed safety observation names its reviewer and carries
+-- the reviewer's finding. Eleven of the twelve are 'no_concern' -- which is the
+-- point. Before this model they would have been twelve invented severities.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence e
      JOIN public.scp_candidate_responses r ON r.id = e.source_ref
     WHERE r.attempt_id = (SELECT attempt_id FROM vja)
       AND e.is_safety_critical
-      AND e.safety_severity = 'medium'
       AND e.provenance_type = 'human_review'
       AND e.assessor_actor_id = 'dd000000-0000-0000-0000-000000000004') = 12,
-  'VJ9.9 all twelve safety observations carry a severity and a named reviewer');
+  'VJ9.9 all twelve safety observations name their reviewer');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.safety_finding = 'no_concern' AND e.safety_severity IS NULL) = 11,
+  'VJ9.9b eleven safety-critical items were cleared, and carry no severity');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.safety_finding = 'high' AND e.safety_severity = 'high') = 1,
+  'VJ9.9c the one real concern is recorded as a concern, severity and all');
+
+-- ── The contribution is derived, and the reviewer never chose it ─────────
+--
+-- Recomputed here from the item bank, independently of the function, so this
+-- asserts the DERIVATION rather than a remembered number.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.provenance_type = 'human_review'
+      AND iv.item_format = 'sjt_best_response'
+      AND e.contribution <> round(
+            COALESCE((SELECT o.score_value FROM public.scp_item_options o
+                       WHERE o.id = r.selected_option_id), 0)
+            / NULLIF((SELECT max(o2.score_value) FROM public.scp_item_options o2
+                       WHERE o2.item_version_id = iv.id), 0), 3)) = 0,
+  'VJ9.10 every reviewed SJT contribution equals the governed item score');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.provenance_type = 'human_review'
+      AND iv.item_format = 'sjt_best_worst'
+      AND e.contribution <> round((
+            COALESCE((SELECT CASE WHEN o.is_best_key THEN 1 ELSE 0 END
+                        FROM public.scp_item_options o WHERE o.id = r.best_option_id), 0)
+          + COALESCE((SELECT CASE WHEN o.is_worst_key THEN 1 ELSE 0 END
+                        FROM public.scp_item_options o WHERE o.id = r.worst_option_id), 0)
+            ) / 2.0, 3)) = 0,
+  'VJ9.11 every reviewed best/worst contribution equals the governed keys');
+
+-- Style scored 0, construct dimensions scored 4. 1.000 proves the style
+-- dimension was excluded; 0.750 would prove it was not.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND iv.item_format = 'constructed_response'
+      AND e.contribution = 1.000) = 2,
+  'VJ9.12 constructed-response contributions come from the rubric, and writing style does not count');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_review_rubric_scores rs
+     JOIN public.scp_human_reviews hr ON hr.id = rs.review_id
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)) = 12,
+  'VJ9.13 every rubric level the reviewer chose is persisted (3 items x 4 dimensions)');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja)
+      AND e.provenance_type = 'human_review'
+      AND e.derivation_basis IS NULL) = 0,
+  'VJ9.14 every reviewed row records how its number was produced');
+
+-- ── A disputed reading writes nothing, and hides nothing ────────────────
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja) AND i.slug = 'sg-b-17') = 0,
+  'VJ9.15 an overturned reading writes no competency contribution at all');
+
+SELECT pg_temp.ok(
+  (SELECT outcome FROM public.scp_human_reviews hr
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE r.attempt_id = (SELECT attempt_id FROM vja) AND i.slug = 'sg-b-17')
+    = 'overturned'
+  AND (SELECT reviewer_rationale IS NOT NULL FROM public.scp_human_reviews hr
+         JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+         JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+         JOIN public.scp_items i ON i.id = iv.item_id
+        WHERE r.attempt_id = (SELECT attempt_id FROM vja) AND i.slug = 'sg-b-17'),
+  'VJ9.16 the disputed review, its outcome and its reasoning are all preserved');
+
+-- A recorded rubric level is not editable afterwards.
+SELECT pg_temp.must_fail(
+  'UPDATE public.scp_review_rubric_scores SET level = 0',
+  'SCP_RUBRIC_SCORE_APPEND_ONLY',
+  'VJ9.17 a recorded rubric level cannot be rewritten');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP VJ10 — release, and what each side sees'; END $$;
 
@@ -656,14 +824,82 @@ SELECT pg_temp.ok(
     IS NOT NULL,
   'VJ10.3 the attempt records when it was released');
 
--- Severity survives release. A released report must still be able to state the
--- basis of a safety observation.
+-- The finding survives release: a released report must still be able to state
+-- the basis of every safety-critical observation, including the cleared ones.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence e
      JOIN public.scp_candidate_responses r ON r.id = e.source_ref
     WHERE r.attempt_id = (SELECT attempt_id FROM vja)
-      AND e.is_safety_critical AND e.safety_severity IS NOT NULL) = 12,
-  'VJ10.4 severity persists after release');
+      AND e.is_safety_critical AND e.safety_finding IS NOT NULL) = 12,
+  'VJ10.4 every safety-critical finding persists after release');
+
+-- ── The alert an employer sees is a finding, not a category ─────────────
+--
+-- Twelve items were classified safety-critical; one reviewer found something.
+-- Before this model the employer report carried twelve flags on every run,
+-- which is the same as carrying none.
+SELECT pg_temp.ok(
+  (SELECT jsonb_array_length(safety_flags) FROM public.scp_report_snapshots
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 1,
+  'VJ10.7 the employer report flags the one real concern, not the twelve items');
+
+SELECT pg_temp.ok(
+  (SELECT safety_flags->0->>'finding' FROM public.scp_report_snapshots
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 'high',
+  'VJ10.8 and the flag it carries is the reviewer''s actual finding');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_report_snapshots
+    WHERE attempt_id = (SELECT attempt_id FROM vja)
+      AND audience = 'participant'
+      AND jsonb_array_length(safety_flags) > 0) = 0,
+  'VJ10.9 the participant snapshot still carries no severity-bearing flag');
+
+-- The participant is told a review happened -- true for everybody -- and the
+-- concern count is the number of real findings, so a clean run cannot produce
+-- a sentence saying the participant raised one.
+SELECT pg_temp.ok(
+  (SELECT (context->>'safety_concerns')::int FROM public.scp_report_snapshots
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 1
+  AND (SELECT (context->>'safety_concern_present')::boolean
+         FROM public.scp_report_snapshots
+        WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'participant'),
+  'VJ10.10 the report counts findings, not safety-critical items');
+
+-- A competency whose only review was overturned still appears, as a follow-up,
+-- rather than disappearing from the report because no evidence was written.
+SELECT pg_temp.ok(
+  EXISTS (
+    SELECT 1 FROM public.scp_report_snapshots sn,
+                  jsonb_array_elements(sn.payload) line
+     WHERE sn.attempt_id = (SELECT attempt_id FROM vja) AND sn.audience = 'employer'
+       AND line->>'competency_code' = 'SCC-06'
+       AND line->>'evidence_state' IN ('follow_up','critical_follow_up')),
+  'VJ10.11 the disputed competency is still reported, as a follow-up');
+
+-- ── The corrected competency mappings, as the report actually renders ───
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.scp_report_snapshots sn,
+                  jsonb_array_elements(sn.payload) line
+     WHERE sn.attempt_id = (SELECT attempt_id FROM vja)
+       AND line->>'competency_code' = 'SCC-05'),
+  'VJ10.12 no report line claims Emotionell självreglering, which the programme says it does not measure');
+
+SELECT pg_temp.ok(
+  EXISTS (
+    SELECT 1 FROM public.scp_report_snapshots sn,
+                  jsonb_array_elements(sn.payload) line
+     WHERE sn.attempt_id = (SELECT attempt_id FROM vja)
+       AND line->>'competency_code' = 'SCC-07'),
+  'VJ10.13 de-escalation evidence is reported under SCC-07 instead');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_report_snapshots sn,
+                        jsonb_array_elements(sn.payload) line
+    WHERE sn.attempt_id = (SELECT attempt_id FROM vja) AND sn.audience = 'employer'
+      AND (line->>'followup_sv' IS NULL OR line->>'followup_en' IS NULL)) = 0,
+  'VJ10.14 every reported competency still reaches a follow-up prompt in both languages');
 
 -- Releasing twice is refused; snapshots are immutable.
 SET LOCAL ROLE authenticated;
@@ -679,8 +915,8 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
 SELECT pg_temp.must_fail(format(
-  'SELECT public.scp_complete_human_review(%L::uuid, ''overturned'', ''second thoughts'', 0.9, ''low'')',
-  (SELECT review_id FROM vjr WHERE trigger_reason = 'safety_critical_detected' LIMIT 1)),
+  'SELECT public.scp_complete_human_review(%L::uuid, ''overturned'', ''second thoughts'', ''low'')',
+  (SELECT review_id FROM vjr WHERE is_safety_critical LIMIT 1)),
   'SCP_REVIEW_NOT_PENDING',
   'VJ10.6 a completed review cannot be re-decided, so history is not overwritten');
 RESET ROLE; RESET request.jwt.claim.sub;
@@ -714,6 +950,111 @@ SELECT pg_temp.ok(
   AND (SELECT a.test_grant_id FROM public.scp_attempts a
         WHERE a.id = (SELECT attempt_id FROM vja)) IS NOT NULL,
   'VJ8.2 revocation does not rewrite the basis of the run already taken');
+
+DO $$ BEGIN RAISE NOTICE 'GROUP VJ11 — the v1 content and governance corrections'; END $$;
+
+-- =========================================================================
+-- Group VJ11 — what 20260823100000 fixed, asserted against stored data
+-- =========================================================================
+--
+-- These hold independently of the run above. They exist here rather than in a
+-- new suite because they are properties of the same programme, and a suite
+-- that shares the fixture cannot drift from it.
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM (VALUES
+      ('de_escalation','SCC-07'), ('factual_reporting','SCC-06'),
+      ('proportional_decision_making','SCC-11'),
+      ('situational_judgement','SCC-03'), ('mandate_and_escalation','SCC-09'),
+      ('operational_communication','SCC-06'), ('operational_coordination','SCC-08'),
+      ('integrity_and_information_handling','SCC-01')
+    ) AS v(behaviour_slug, competency_code)
+    JOIN public.scp_observable_behaviours b ON b.slug = v.behaviour_slug
+    JOIN public.scp_behaviour_versions bv ON bv.behaviour_id = b.id AND bv.version_number = 1
+    JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id
+    JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+    JOIN public.scp_competencies c ON c.id = cv.competency_id AND c.code = v.competency_code) = 8,
+  'VJ11.1 all eight behaviours map to the competency the owner decided on');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+    WHERE iv.primary_behaviour_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM public.scp_behaviour_competency_map m
+          JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+         WHERE m.behaviour_version_id = iv.primary_behaviour_id
+           AND cv.competency_id = iv.competency_id)) = 0,
+  'VJ11.2 no item claims a competency its behaviour cannot reach');
+
+-- The best is never presented first, and the three items do not share a
+-- pattern -- so noticing the shape of one teaches nothing about the next.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_options o
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND o.is_best_key AND o.display_order = 1) = 0,
+  'VJ11.3 no SG best/worst item presents its best option first');
+
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT pattern) FROM (
+     SELECT max(o.display_order) FILTER (WHERE o.is_best_key) * 10
+          + max(o.display_order) FILTER (WHERE o.is_worst_key) AS pattern
+       FROM public.scp_item_options o
+       JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+       JOIN public.scp_items i ON i.id = iv.item_id
+      WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      GROUP BY o.item_version_id) p) = 3,
+  'VJ11.4 the three best/worst items show three different presentation patterns');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_option_texts t
+     JOIN public.scp_item_options o ON o.id = t.item_option_id
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug = 'sg-b-03' AND o.option_key = 'A'
+      AND (t.label ILIKE '%vård%' OR t.label ILIKE '%medical help%')) = 2,
+  'VJ11.5 sg-b-03 option A names the care assessment in both languages');
+
+SELECT pg_temp.ok(
+  (SELECT av.language_scope @> ARRAY['sv-SE','en-GB']
+     FROM public.scp_assessment_versions av
+     JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+    WHERE d.slug = 'sg-operational-baseline' AND av.version_number = 1),
+  'VJ11.6 the version declares both languages it actually delivers');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_texts t
+     JOIN public.scp_item_versions iv ON iv.id = t.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug LIKE 'sg-b-%' AND t.adaptation_status <> 'adaptation_pending') = 0,
+  'VJ11.7 and declaring the scope did not clear the adaptation gate');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_items i
+     JOIN public.scp_item_versions iv ON iv.item_id = i.id
+    WHERE i.slug IN ('sg-b-02','sg-b-04','sg-b-05','sg-b-06','sg-b-15','sg-b-18')
+      AND iv.legal_basis_required AND iv.legal_review_status = 'pending') = 6,
+  'VJ11.8 all six legal subjects are consistently required and pending');
+
+-- The assertion that matters most in a governance change: nothing was approved.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug LIKE 'sg-b-%'
+      AND (iv.sme_review_status = 'approved' OR iv.bias_review_status = 'approved'
+        OR iv.cognitive_review_status = 'passed' OR iv.language_review_status = 'passed'
+        OR iv.accessibility_review_status = 'passed'
+        OR iv.legal_review_status = 'approved')) = 0,
+  'VJ11.9 not one review gate was cleared by any of this');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_review_requirements WHERE status <> 'outstanding') = 0,
+  'VJ11.10 every review requirement is still outstanding');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_test_grants WHERE purpose = 'recruitment') = 0,
+  'VJ11.11 no recruitment grant exists, and the CHECK makes one unstorable');
 
 DO $$ BEGIN RAISE NOTICE 'employer_vaktare_journey_test: ALL ASSERTIONS PASSED'; END $$;
 

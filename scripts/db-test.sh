@@ -286,8 +286,9 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # ledger, the maturity thresholds and the read-model contract.
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
-if [ "$SCP_TABLES" -ne 66 ]; then
-  echo "FAIL: expected 66 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions), found $SCP_TABLES" >&2
+# + scp_review_rubric_scores from the governed evidence model (20260823090000).
+if [ "$SCP_TABLES" -ne 67 ]; then
+  echo "FAIL: expected 67 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"

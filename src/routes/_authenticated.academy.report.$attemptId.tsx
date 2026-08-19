@@ -125,9 +125,18 @@ function ParticipantReport() {
         <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
           {t("academy.report.notInability")}
         </p>
+        {/* Two different facts, and conflating them was the defect. A review
+            happening is routine — twelve of the eighteen items are classified
+            safety-critical, so it happens to everybody. A reviewer actually
+            FINDING something is not routine, and only that gets said. */}
         {r.context?.humanReviewOccurred && (
           <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
             {t("academy.report.humanReviewOccurred")}
+          </p>
+        )}
+        {r.context?.safetyConcernPresent && (
+          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-foreground">
+            {t("academy.report.safetyConcernNoted")}
           </p>
         )}
       </section>

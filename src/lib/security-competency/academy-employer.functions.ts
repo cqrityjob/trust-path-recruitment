@@ -115,6 +115,20 @@ export type CompetencyLine = {
  *  No participant name: identity stays behind the audited
  *  scp_resolve_participant_identity path, and a name written into an immutable
  *  snapshot could never be erased. */
+/** One rubric dimension as a reviewer sees it.
+ *
+ *  Carries the criterion and all five level descriptors so the reviewer scores
+ *  against the governed rubric rather than an impression of it, and
+ *  `styleOnly` so the surface can say which dimension does not move the number.
+ *  There is deliberately no score, key or rationale in this shape. */
+export type RubricDimension = {
+  dimension_key: string;
+  name: string | null;
+  criterion: string | null;
+  style_only: boolean;
+  levels: { level: number; descriptor: string | null }[] | null;
+};
+
 export type ReportContext = {
   participantRef?: string;
   personContext?: "employee" | "candidate";
@@ -140,6 +154,12 @@ export type ReportContext = {
   evidenceObservations?: number;
   evidenceContexts?: number;
   humanReviewOccurred?: boolean;
+  /** Whether any reviewer actually FOUND a safety concern in this attempt.
+   *  Distinct from humanReviewOccurred, and from the item having been
+   *  classified safety-critical: with twelve safety-critical items, review
+   *  happens for everybody, and telling every participant they raised a concern
+   *  would make the one that matters invisible. */
+  safetyConcernPresent?: boolean;
   reportKey?: string;
   reportVersion?: number;
   evidenceStateVersion?: string;
@@ -749,6 +769,8 @@ function mapContext(c: RpcRow | null): ReportContext | null {
     evidenceContexts: num("evidence_contexts"),
     humanReviewOccurred:
       c.human_review_occurred == null ? undefined : Boolean(c.human_review_occurred),
+    safetyConcernPresent:
+      c.safety_concern_present == null ? undefined : Boolean(c.safety_concern_present),
     reportKey: str("report_key"),
     reportVersion: num("report_version"),
     evidenceStateVersion: str("evidence_state_version"),
@@ -917,8 +939,11 @@ export const listReviewQueue = createServerFn({ method: "GET" })
       itemScenario: r.item_scenario ? String(r.item_scenario) : null,
       itemPrompt: r.item_prompt ? String(r.item_prompt) : null,
       isSafetyCritical: Boolean(r.is_safety_critical),
-      severityRequired: Boolean(r.severity_required),
+      findingRequired: Boolean(r.finding_required),
       itemFormat: r.item_format ? String(r.item_format) : null,
+      // Present only for a constructed response, and carrying dimensions,
+      // criteria and level descriptors — never a score, a key or a rationale.
+      rubric: (r.rubric ?? null) as RubricDimension[] | null,
       responseText: r.response_text ?? null,
       // Labels, not keys. See the migration header for why this distinction is
       // enforced in the function's return type rather than here.
@@ -929,6 +954,28 @@ export const listReviewQueue = createServerFn({ method: "GET" })
     }));
   });
 
+/**
+ * Complete a human review.
+ *
+ * ── THERE IS NO CONTRIBUTION HERE, AND THERE MUST NEVER BE ONE ──────────
+ *
+ * This input used to carry `contribution: z.number().default(0.5)`, and
+ * ReviewQueue passed the literal 0.5. Thirteen of the eighteen Security Guard
+ * items route to human review, so a constant was being written as the evidence
+ * for most of a run, identically whether the reviewer upheld or overturned the
+ * reading.
+ *
+ * The number is now derived server-side inside scp_complete_human_review from
+ * the item's own governed scoring — and the parameter is gone from that
+ * function's signature, so this cannot regress by someone re-adding a field
+ * here. Deriving it there also keeps score_value and the best/worst keys out of
+ * any reviewer payload.
+ *
+ * `evidenceId` is null when the outcome is adjusted or overturned: the reviewer
+ * disputes the governed reading and there is no governed alternative, so the
+ * review, its rationale and the response are kept and no contribution is
+ * invented.
+ */
 export const completeReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -937,24 +984,31 @@ export const completeReview = createServerFn({ method: "POST" })
         reviewId: z.string().uuid(),
         outcome: z.enum(["upheld", "adjusted", "overturned"]),
         rationale: z.string().min(1),
-        contribution: z.number().min(0).max(1).default(0.5),
-        // A safety-critical observation carries a severity, and only the
-        // reviewer can supply it — scp_complete_human_review refuses without
-        // one. Null for every other observation, where the same function
-        // refuses a severity that was never asked for.
-        safetySeverity: z.enum(["low", "medium", "high", "critical"]).nullable().default(null),
+        // What the reviewer found in THIS response — not what category the item
+        // was in. `no_concern` is a legitimate conclusion on a safety-critical
+        // item, and is the expected one for a good answer. Null for an item
+        // that is not safety-critical, where the same function refuses a
+        // finding that was never asked for.
+        safetyFinding: z
+          .enum(["no_concern", "low", "medium", "high", "critical"])
+          .nullable()
+          .default(null),
+        // One level 0-4 per rubric dimension, for a constructed response only.
+        // The function refuses a partial set: a missing dimension is a
+        // judgement the reviewer did not make.
+        rubricLevels: z.record(z.string(), z.number().int().min(0).max(4)).nullable().default(null),
       })
       .parse(d),
   )
-  .handler(async ({ data, context }): Promise<{ evidenceId: string }> => {
+  .handler(async ({ data, context }): Promise<{ evidenceId: string | null }> => {
     const ctx = context as Ctx;
     const { data: id, error } = await ctx.supabase.rpc("scp_complete_human_review", {
       _review_id: data.reviewId,
       _outcome: data.outcome,
       _rationale: data.rationale,
-      _contribution: data.contribution,
-      _safety_severity: data.safetySeverity,
+      _safety_finding: data.safetyFinding,
+      _rubric_levels: data.rubricLevels,
     });
     if (error) throw fail(error.message, "review_failed");
-    return { evidenceId: String(id) };
+    return { evidenceId: id == null ? null : String(id) };
   });
