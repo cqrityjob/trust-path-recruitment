@@ -6,7 +6,7 @@
  * not: it fails the build when the repository's migration set drifts from the
  * policy recorded in supabase/migrations-policy.json.
  *
- * It deliberately does NOT try to be a migration framework. It answers five
+ * It deliberately does NOT try to be a migration framework. It answers six
  * questions and nothing else:
  *
  *   1. Does any numeric version appear twice in the active path?
@@ -14,6 +14,8 @@
  *   3. Does every parked / never-replay file still exist where policy says?
  *   4. Has a never-replay file been edited since it was pinned?
  *   5. Does every active file have a well-formed, ordered version prefix?
+ *   6. For a migration already applied in production through Lovable: is the
+ *      canonical file still present, and is Lovable’s generated duplicate gone?
  *
  * Run: bun run migrations:check
  */
@@ -31,6 +33,14 @@ type Policy = {
   neverReplay: NeverReplay[];
   approvedDuplicateVersions: { version: string; pairedWith: string; reason: string }[];
   hostedLedgerOverrides: { file: string; hostedVersion: string; reason: string }[];
+  appliedThroughLovable?: {
+    canonicalFile: string;
+    canonicalVersion: string;
+    hostedVersion: string;
+    hostedName: string;
+    generatedFileOnMain?: string;
+    doNotReExecute?: boolean;
+  }[];
 };
 
 const ROOT = process.cwd();
@@ -106,7 +116,9 @@ for (const entry of policy.neverReplay) {
   }
   const sha = createHash("sha256").update(readFileSync(path)).digest("hex");
   if (!entry.sha256) {
-    notes.push(`  pin  ${entry.file}\n       sha256 ${sha}  (record this in migrations-policy.json)`);
+    notes.push(
+      `  pin  ${entry.file}\n       sha256 ${sha}  (record this in migrations-policy.json)`,
+    );
   } else if (entry.sha256 !== sha) {
     fail(
       `never-replay migration was EDITED: ${entry.file}\n` +
@@ -126,11 +138,45 @@ for (const entry of policy.hostedLedgerOverrides) {
   }
 }
 
+// --- 6. Migrations already applied in production through Lovable -----------
+//
+// Lovable executes canonical SQL but records its OWN version and a UUID name,
+// then commits a generated duplicate of the migration back to main. Two things
+// must stay true for every such entry, and neither is self-enforcing:
+//
+//   * the canonical file must still be present — it is the reviewed artefact
+//     and the only readable record of what production actually ran;
+//   * the generated duplicate must be ABSENT from the active path — leaving it
+//     recreates exactly the duplicate-ordering defect this repair removed, and
+//     a clean replay would run the same SQL twice.
+for (const entry of policy.appliedThroughLovable ?? []) {
+  if (!existsSync(join(activeDir, entry.canonicalFile))) {
+    fail(
+      `appliedThroughLovable: canonical file is missing: ${entry.canonicalFile}\n` +
+        `      Already applied in production as ${entry.hostedVersion} (${entry.hostedName}).\n` +
+        `      That file is the reviewed record of what ran and must not be deleted.`,
+    );
+  }
+  if (entry.generatedFileOnMain) {
+    const generated = entry.generatedFileOnMain.replace(/^supabase\/migrations\//, "");
+    if (existsSync(join(activeDir, generated))) {
+      fail(
+        `appliedThroughLovable: Lovable's generated duplicate is back in the active path: ${generated}\n` +
+          `      Same SQL as ${entry.canonicalFile}, already applied as ${entry.hostedVersion}.\n` +
+          `      Keeping both means a clean replay applies it twice. Remove the generated file.`,
+      );
+    }
+  }
+}
+
 // --- Report ----------------------------------------------------------------
 console.log(`migration-safety-check: ${activeFiles.length} active migrations`);
 console.log(`  parked:       ${policy.parked.length}`);
 console.log(`  never-replay: ${policy.neverReplay.length}`);
 console.log(`  approved dup: ${policy.approvedDuplicateVersions.length}`);
+console.log(
+  `  applied via Lovable (non-re-executable): ${(policy.appliedThroughLovable ?? []).length}`,
+);
 if (notes.length) console.log(notes.join("\n"));
 
 if (failures.length) {
