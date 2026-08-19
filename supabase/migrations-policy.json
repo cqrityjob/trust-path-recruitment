@@ -70,13 +70,28 @@
       "reason": "Phase B. Closed all four pre-pilot security exposures. Re-executing would be a second application; the canonical file stays as the reviewed artefact and the Lovable-generated duplicate on main must be removed before merge.",
       "rollbackArtefact": "docs/technical/production-fingerprints/pre-phase-b-rollback.sql",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819065241';"
+    },
+    {
+      "canonicalFile": "20260820120000_scp_employer_report_decisions.sql",
+      "canonicalVersion": "20260820120000",
+      "hostedVersion": "20260819071312",
+      "hostedName": "e1402c2b-e0c6-496a-a178-efb208d07a64",
+      "appliedAt": "2026-08-19T07:13:12Z",
+      "mechanism": "Lovable supabase--migration (tracked).",
+      "generatedFileOnMain": "supabase/migrations/20260819071312_e1402c2b-e0c6-496a-a178-efb208d07a64.sql",
+      "sqlEquivalence": "Verified: comment-stripped diff against the canonical file's executable body differs only by whitespace and a trailing newline.",
+      "doNotReExecute": true,
+      "reason": "C1. Purely additive: employer decision table, two indexes, one read policy, append-only guard trigger, three functions. Modifies no existing table, policy, grant or row.",
+      "rollbackArtefact": "docs/technical/production-fingerprints/pre-c1-rollback.sql",
+      "rollbackPrecondition": "Permitted ONLY while scp_employer_report_decisions is empty. The rollback script checks the row count itself and refuses otherwise.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819071312';"
     }
   ],
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
     "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": 99,
-    "ledgerSnapshotNote": "97 before C2; 98 after C2; 99 after Phase B. Both applied through Lovable on 2026-08-19.",
+    "ledgerRowsAtSnapshot": 100,
+    "ledgerSnapshotNote": "97 before repair; 98 after C2; 99 after Phase B; 100 after C1. All three applied through Lovable on 2026-08-19.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
   }
 }

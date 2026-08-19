@@ -15,7 +15,7 @@ this document records what is *actually true of the systems*.
 |---|---|
 | **Lovable project** | `9ec625ef-34a1-4b4b-8cbb-712cae168579` |
 | **Canonical hosted Supabase** | **`zrahptwsnjcdyzfywbeh`** |
-| Ledger rows | **99** (97 → 98 C2 → 99 Phase B, both 2026-08-19) |
+| Ledger rows | **100** (97 → 98 C2 → 99 Phase B → 100 C1, all 2026-08-19) |
 | `cd_sessions` / `cd_report_snapshots` / `jobs` | **40 / 22 / 15** |
 
 ### Formally invalidated
@@ -44,7 +44,7 @@ reported a 172-row ledger. That analysis, and all five claims below, are
 
 | Fact | Value | Tag |
 |---|---|---|
-| Hosted ledger rows | **99** | **[VERIFIED]** — read directly via Lovable MCP |
+| Hosted ledger rows | **100** | **[VERIFIED]** — read directly via Lovable MCP |
 | Repository files, `origin/main` @ `7ae642a` | 184 | **[VERIFIED]** |
 | Repository files, after repair | **176** active + 1 parked | **[VERIFIED]** |
 | Duplicate numeric versions after repair | **0** | **[VERIFIED]** |
@@ -336,3 +336,55 @@ snapshots 2 · cd_sessions 40 · cd_report_snapshots 22 · jobs 15 · applicatio
 passport profiles 2 · ledger 99. Assignment `661030e9` is still
 `invited / scp_open=true`. A/B/C/D remain closed; C2 functions intact and still
 wired into `scp_release_attempt_report`.
+
+### C1 — applied 2026-08-19 **[VERIFIED]**
+
+| | |
+|---|---|
+| Canonical file | `20260820120000_scp_employer_report_decisions.sql` |
+| Hosted version | **`20260819071312`** |
+| Hosted name | **`e1402c2b-e0c6-496a-a178-efb208d07a64`** |
+| Ledger | **99 → 100** |
+| Rollback used | **NO** |
+
+Created: `scp_employer_report_decisions` (0 rows) · indexes `_attempt_idx` and
+`_supersedes_once` (plus pkey) · RLS enabled with exactly one policy,
+`scp_employer_decisions_member_read` (SELECT, authenticated) · trigger
+`scp_employer_decisions_append_only` on **UPDATE and DELETE** · functions
+`scp_guard_decision_append_only`, `scp_record_employer_decision`,
+`scp_employer_decisions`. `anon` cannot record; `authenticated` can.
+
+**There is deliberately no INSERT, UPDATE or DELETE policy.** Every write goes
+through `scp_record_employer_decision`, which is where the owner/admin check
+lives — a member may read a decision and may not make one.
+
+#### Append-only proven at runtime, then rolled back
+
+| Step | Result |
+|---|---|
+| Record via the real RPC | **SUCCESS** |
+| `UPDATE` the decision | **REFUSED** — `SCP_DECISION_APPEND_ONLY` |
+| `DELETE` the decision | **REFUSED** — `SCP_DECISION_APPEND_ONLY` |
+| Record a correction that supersedes it | **SUCCESS** |
+| Supersede the same decision twice | **REFUSED** — `scp_employer_report_decisions_supersedes_once` |
+| History | 2 rows, exactly 1 current |
+
+The UPDATE and DELETE were attempted **as the table owner**, who bypasses RLS —
+so the refusal comes from the trigger, not from a policy. That is the structural
+guarantee: an employer's recorded decision about a person cannot be quietly
+rewritten by anyone, including infrastructure roles.
+
+Both decision rows were discarded by the transaction abort: the table is back to
+**0 rows**, and the report-snapshot fingerprint is unchanged
+(`c4a1336ccc441f5bd9e4415774cb6dd0`).
+
+#### Phase 0 production repair — complete
+
+| Step | Canonical | Hosted version | Ledger |
+|---|---|---|---|
+| C2 | `20260820130000_scp_report_attempt_scoped_evidence` | `20260819064230` | 97 → 98 |
+| Phase B | `20260821090000_scp_pilot_security_gate` | `20260819065241` | 98 → 99 |
+| C1 | `20260820120000_scp_employer_report_decisions` | `20260819071312` | 99 → 100 |
+
+Three generated duplicate files now sit on `main` and must be removed before the
+repair branch merges. Phase A remains **recommended skip**.
