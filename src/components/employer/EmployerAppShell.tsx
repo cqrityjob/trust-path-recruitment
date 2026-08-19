@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   FileCheck2,
   GraduationCap,
+  Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -40,9 +41,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 // Employer OS Phase 1 — the employer workspace's own application shell:
-// a persistent sidebar of the twelve Employer OS modules on desktop, a
-// slide-in Sheet drawer on mobile, replacing the earlier horizontal tab
-// bar (EmployerWorkspaceChrome). Deliberately does NOT wrap in the public
+// a persistent sidebar on desktop, a slide-in Sheet drawer on mobile,
+// replacing the earlier horizontal tab bar (EmployerWorkspaceChrome).
+//
+// The sidebar is grouped by what a manager comes here to do -- recruit,
+// manage their people, test people, develop people, then administer the
+// organisation -- rather than listing the underlying product modules
+// flat. Fråga CQrity sits apart at the bottom: it is a utility, not one
+// of the daily workflows. Deliberately does NOT wrap in the public
 // SiteLayout (marketing header/footer) — the brief's own instruction is
 // that the authenticated workspace "must feel like its own enterprise
 // product" and that public site navigation stays outside the workspace,
@@ -57,7 +63,7 @@ export type EmployerRole = "owner" | "admin" | "member";
 export type EmployerStatus = "draft" | "pending" | "active" | "rejected" | "suspended" | "archived";
 
 export type EmployerNavSection =
-  | "command-center"
+  | "overview"
   | "jobs"
   | "applications"
   | "workforce"
@@ -102,117 +108,151 @@ const STATUS_LABEL_KEY: Record<EmployerStatus, TranslationKey> = {
   archived: "employer.status.archived.badge",
 };
 
-type NavLeaf = {
+type NavTarget =
+  | "/employer/$employerSlug"
+  | "/employer/$employerSlug/jobs"
+  | "/employer/$employerSlug/applications"
+  | "/employer/$employerSlug/workforce"
+  | "/employer/$employerSlug/assessments"
+  | "/employer/$employerSlug/competencies"
+  | "/employer/$employerSlug/training"
+  | "/employer/$employerSlug/sites"
+  | "/employer/$employerSlug/reports"
+  | "/employer/$employerSlug/analytics"
+  | "/employer/$employerSlug/ask-cqrity"
+  | "/employer/$employerSlug/settings"
+  | "/employer/$employerSlug/preferences";
+
+type NavItem = {
   key: EmployerNavSection;
   labelKey: TranslationKey;
   icon: React.ComponentType<{ className?: string }>;
-  to:
-    | "/employer/$employerSlug"
-    | "/employer/$employerSlug/jobs"
-    | "/employer/$employerSlug/applications"
-    | "/employer/$employerSlug/workforce"
-    | "/employer/$employerSlug/assessments"
-    | "/employer/$employerSlug/competencies"
-    | "/employer/$employerSlug/training"
-    | "/employer/$employerSlug/sites"
-    | "/employer/$employerSlug/reports"
-    | "/employer/$employerSlug/analytics"
-    | "/employer/$employerSlug/ask-cqrity"
-    | "/employer/$employerSlug/settings"
-    | "/employer/$employerSlug/preferences";
-  children?: NavLeaf[];
+  to: NavTarget;
 };
 
-function useNavItems(): NavLeaf[] {
-  return [
-    {
-      key: "command-center",
-      labelKey: "employer.nav.commandCenter",
-      icon: LayoutDashboard,
-      to: "/employer/$employerSlug",
-    },
-    {
-      key: "jobs",
-      labelKey: "employer.nav.recruitment",
-      icon: Briefcase,
-      to: "/employer/$employerSlug/jobs",
-      children: [
-        {
-          key: "jobs",
-          labelKey: "employer.nav.jobs",
-          icon: Briefcase,
-          to: "/employer/$employerSlug/jobs",
-        },
-        {
-          key: "applications",
-          labelKey: "employer.nav.applications",
-          icon: Briefcase,
-          to: "/employer/$employerSlug/applications",
-        },
-      ],
-    },
-    {
-      key: "workforce",
-      labelKey: "employer.nav.workforce",
-      icon: Users,
-      to: "/employer/$employerSlug/workforce",
-    },
-    {
-      key: "assessments",
-      labelKey: "employer.nav.assessments",
-      icon: ClipboardCheck,
-      to: "/employer/$employerSlug/assessments",
-    },
-    {
-      key: "competencies",
-      labelKey: "employer.nav.competencies",
-      icon: BadgeCheck,
-      to: "/employer/$employerSlug/competencies",
-    },
-    {
-      key: "training",
-      labelKey: "employer.nav.training",
-      icon: GraduationCap,
-      to: "/employer/$employerSlug/training",
-    },
-    {
-      key: "sites",
-      labelKey: "employer.nav.sites",
-      icon: MapPin,
-      to: "/employer/$employerSlug/sites",
-    },
-    {
-      key: "reports",
-      labelKey: "employer.nav.reports",
-      icon: FileCheck2,
-      to: "/employer/$employerSlug/reports",
-    },
-    {
-      key: "analytics",
-      labelKey: "employer.nav.analytics",
-      icon: BarChart3,
-      to: "/employer/$employerSlug/analytics",
-    },
-    {
-      key: "ask-cqrity",
-      labelKey: "employer.nav.askCqrity",
-      icon: Sparkles,
-      to: "/employer/$employerSlug/ask-cqrity",
-    },
-    {
-      key: "organisation",
-      labelKey: "employer.nav.organisation",
-      icon: Building2,
-      to: "/employer/$employerSlug/settings",
-    },
-    {
-      key: "settings",
-      labelKey: "employer.nav.settings",
-      icon: Settings2,
-      to: "/employer/$employerSlug/preferences",
-    },
-  ];
-}
+type NavGroup = {
+  key: string;
+  /** Every group is labelled except the first: a heading reading
+   *  "Översikt" directly above a single item reading "Översikt" is pure
+   *  noise, so the landing page is simply pinned to the top instead. */
+  labelKey?: TranslationKey;
+  items: NavItem[];
+};
+
+// Routes and permissions are unchanged from the flat version of this
+// navigation -- only the grouping and the labels differ.
+const NAV_GROUPS: NavGroup[] = [
+  {
+    key: "overview",
+    items: [
+      {
+        key: "overview",
+        labelKey: "employer.nav.overview",
+        icon: LayoutDashboard,
+        to: "/employer/$employerSlug",
+      },
+    ],
+  },
+  {
+    key: "recruitment",
+    labelKey: "employer.nav.group.recruitment",
+    items: [
+      {
+        key: "jobs",
+        labelKey: "employer.nav.jobs",
+        icon: Briefcase,
+        to: "/employer/$employerSlug/jobs",
+      },
+      {
+        key: "applications",
+        labelKey: "employer.nav.applications",
+        icon: Inbox,
+        to: "/employer/$employerSlug/applications",
+      },
+    ],
+  },
+  {
+    key: "people",
+    labelKey: "employer.nav.group.people",
+    items: [
+      {
+        key: "workforce",
+        labelKey: "employer.nav.workforce",
+        icon: Users,
+        to: "/employer/$employerSlug/workforce",
+      },
+      {
+        key: "competencies",
+        labelKey: "employer.nav.competencies",
+        icon: BadgeCheck,
+        to: "/employer/$employerSlug/competencies",
+      },
+    ],
+  },
+  {
+    key: "development",
+    labelKey: "employer.nav.group.development",
+    items: [
+      {
+        key: "assessments",
+        labelKey: "employer.nav.assessments",
+        icon: ClipboardCheck,
+        to: "/employer/$employerSlug/assessments",
+      },
+      {
+        key: "training",
+        labelKey: "employer.nav.training",
+        icon: GraduationCap,
+        to: "/employer/$employerSlug/training",
+      },
+    ],
+  },
+  {
+    key: "organisation",
+    labelKey: "employer.nav.group.organisation",
+    items: [
+      {
+        key: "sites",
+        labelKey: "employer.nav.sites",
+        icon: MapPin,
+        to: "/employer/$employerSlug/sites",
+      },
+      {
+        key: "reports",
+        labelKey: "employer.nav.reports",
+        icon: FileCheck2,
+        to: "/employer/$employerSlug/reports",
+      },
+      {
+        key: "analytics",
+        labelKey: "employer.nav.analytics",
+        icon: BarChart3,
+        to: "/employer/$employerSlug/analytics",
+      },
+      {
+        key: "organisation",
+        labelKey: "employer.nav.organisation",
+        icon: Building2,
+        to: "/employer/$employerSlug/settings",
+      },
+      {
+        key: "settings",
+        labelKey: "employer.nav.settings",
+        icon: Settings2,
+        to: "/employer/$employerSlug/preferences",
+      },
+    ],
+  },
+];
+
+// Kept out of the groups on purpose: a help/utility capability, not one
+// of the four daily workflows, so it sits alone at the foot of the list.
+const ASK_CQRITY_ITEM: NavItem = {
+  key: "ask-cqrity",
+  labelKey: "employer.nav.askCqrity",
+  icon: Sparkles,
+  to: "/employer/$employerSlug/ask-cqrity",
+};
 
 export function EmployerAppShell(props: EmployerAppShellProps) {
   const {
@@ -228,7 +268,6 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navItems = useNavItems();
 
   useEffect(() => {
     let alive = true;
@@ -245,27 +284,16 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
     navigate({ to: "/candidate/login", replace: true });
   }
 
-  function isActive(item: NavLeaf): boolean {
-    if (item.key === activeSection) return true;
-    return item.children?.some((c) => c.key === activeSection) ?? false;
-  }
-
   return (
     <div className="flex min-h-screen bg-muted/10">
       {/* Desktop sidebar */}
       <aside className="no-print hidden w-64 shrink-0 flex-col border-r border-border bg-background md:flex">
         <SidebarHeader employerName={employerName} status={status} role={role} t={t} />
         <nav
-          className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4"
+          className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4"
           aria-label={t("employer.nav.ariaLabel")}
         >
-          <NavList
-            items={navItems}
-            employerSlug={employerSlug}
-            activeSection={activeSection}
-            isActive={isActive}
-            t={t}
-          />
+          <NavGroups employerSlug={employerSlug} activeSection={activeSection} t={t} />
         </nav>
         <SidebarFooter
           email={email}
@@ -294,14 +322,12 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
               <div className="flex h-full flex-col">
                 <SidebarHeader employerName={employerName} status={status} role={role} t={t} />
                 <nav
-                  className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4"
+                  className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4"
                   aria-label={t("employer.nav.ariaLabel")}
                 >
-                  <NavList
-                    items={navItems}
+                  <NavGroups
                     employerSlug={employerSlug}
                     activeSection={activeSection}
-                    isActive={isActive}
                     t={t}
                     onNavigate={() => setMobileOpen(false)}
                   />
@@ -357,74 +383,94 @@ function SidebarHeader({
   );
 }
 
-function NavList({
-  items,
+function NavGroups({
   employerSlug,
   activeSection,
-  isActive,
   t,
   onNavigate,
 }: {
-  items: NavLeaf[];
   employerSlug: string;
   activeSection: EmployerNavSection;
-  isActive: (item: NavLeaf) => boolean;
   t: (key: TranslationKey) => string;
   onNavigate?: () => void;
 }) {
   return (
-    <ul className="space-y-0.5">
-      {items.map((item) => {
-        const Icon = item.icon;
-        const active = isActive(item);
-        return (
-          <li key={item.key}>
-            <Link
-              to={item.to}
-              params={{ employerSlug }}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-accent/10 text-accent"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {/* `truncate` is visual only — the full label is still in the DOM
-                  for screen readers, but a sighted user reading
-                  "Kompetenser och certif…" has no way to finish the sentence.
-                  A native title costs no layout and works in both languages,
-                  where the Swedish labels are the longer ones. */}
-              <span className="min-w-0 truncate" title={t(item.labelKey)}>
-                {t(item.labelKey)}
-              </span>
-            </Link>
-            {item.children && (
-              <ul className="ml-6 mt-0.5 space-y-0.5 border-l border-border pl-3">
-                {item.children.map((child) => (
-                  <li key={child.key}>
-                    <Link
-                      to={child.to}
-                      params={{ employerSlug }}
-                      onClick={onNavigate}
-                      className={cn(
-                        "block truncate rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors",
-                        child.key === activeSection
-                          ? "text-accent"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <span title={t(child.labelKey)}>{t(child.labelKey)}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+    <>
+      {NAV_GROUPS.map((group) => (
+        <div key={group.key}>
+          {group.labelKey && (
+            <p className="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+              {t(group.labelKey)}
+            </p>
+          )}
+          <ul className="space-y-0.5">
+            {group.items.map((item) => (
+              <li key={item.key}>
+                <NavLink
+                  item={item}
+                  employerSlug={employerSlug}
+                  active={item.key === activeSection}
+                  t={t}
+                  onNavigate={onNavigate}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <div className="mt-auto border-t border-border pt-3">
+        <ul>
+          <li>
+            <NavLink
+              item={ASK_CQRITY_ITEM}
+              employerSlug={employerSlug}
+              active={ASK_CQRITY_ITEM.key === activeSection}
+              t={t}
+              onNavigate={onNavigate}
+            />
           </li>
-        );
-      })}
-    </ul>
+        </ul>
+      </div>
+    </>
+  );
+}
+
+function NavLink({
+  item,
+  employerSlug,
+  active,
+  t,
+  onNavigate,
+}: {
+  item: NavItem;
+  employerSlug: string;
+  active: boolean;
+  t: (key: TranslationKey) => string;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      params={{ employerSlug }}
+      onClick={onNavigate}
+      className={cn(
+        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+        active
+          ? "bg-accent/10 text-accent"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {/* `truncate` is visual only — the full label is still in the DOM
+          for screen readers, but a sighted user reading
+          "Kompetenser & certif…" has no way to finish the sentence.
+          A native title costs no layout and works in both languages,
+          where the Swedish labels are the longer ones. */}
+      <span className="min-w-0 truncate" title={t(item.labelKey)}>
+        {t(item.labelKey)}
+      </span>
+    </Link>
   );
 }
 

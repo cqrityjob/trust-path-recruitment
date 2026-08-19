@@ -1069,10 +1069,10 @@ export const dictionaries = {
     "employer.jobs.form.error.duplicateJobFailed": "Jobbannonsen kunde inte dupliceras.",
 
     "employer.nav.overview": "Översikt",
-    "employer.nav.jobs": "Jobbannonser",
+    "employer.nav.jobs": "Mina annonser",
     "employer.nav.applications": "Ansökningar",
-    "employer.nav.assessments": "Assessment Center",
-    "employer.nav.settings": "Organisationsinställningar",
+    "employer.nav.assessments": "Tester",
+    "employer.nav.settings": "Inställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
     "employer.status.active.badge": "Företagskonto aktivt",
@@ -1149,24 +1149,31 @@ export const dictionaries = {
     "employer.assessments.tab.custom": "Företagsspecifika tester",
     "employer.assessments.tab.ai": "AI-genererade tester",
 
-    "employer.nav.commandCenter": "Command Center",
-    "employer.nav.recruitment": "Rekrytering",
-    "employer.nav.workforce": "Personal",
-    "employer.nav.competencies": "Kompetenser och certifikat",
-    "employer.nav.training": "Utbildning",
-    "employer.nav.sites": "Platser och risk",
-    "employer.nav.reports": "Rapporter och regelefterlevnad",
+    "employer.nav.workforce": "Medarbetare",
+    "employer.nav.competencies": "Kompetenser & certifikat",
+    "employer.nav.training": "Kompetensutveckling",
+    "employer.nav.sites": "Platser & risk",
+    "employer.nav.reports": "Rapporter & regelefterlevnad",
     "employer.nav.analytics": "Analys",
     "employer.nav.askCqrity": "Fråga CQrity",
     "employer.nav.organisation": "Organisation",
     "employer.nav.openMenu": "Öppna meny",
+
+    // Left-navigation group headings. The manager mental model the
+    // Product Owner approved -- recruit / manage people / test / develop,
+    // with organisation administration deliberately last -- rather than
+    // one flat list of the underlying product modules.
+    "employer.nav.group.recruitment": "Rekrytering",
+    "employer.nav.group.people": "Personal",
+    "employer.nav.group.development": "Utveckling",
+    "employer.nav.group.organisation": "Organisation",
 
     "employer.module.comingSoon.badge": "Kommer snart",
     "employer.module.comingSoon.purpose": "Syfte",
     "employer.module.comingSoon.value": "Värde för arbetsgivaren",
     "employer.module.comingSoon.milestone": "Nästa milstolpe",
 
-    "employer.competencies.heading": "Kompetenser och certifikat",
+    "employer.competencies.heading": "Kompetenser & certifikat",
     "employer.competencies.purpose":
       "Ett gemensamt kompetensramverk som beskriver vad varje roll kräver, och ett register över personalens certifikat och deras giltighetstid.",
     "employer.competencies.value":
@@ -1174,14 +1181,14 @@ export const dictionaries = {
     "employer.competencies.milestone":
       "Kompetensramverk kopplat till Assessment Center och personalregistret.",
 
-    "employer.training.heading": "Utbildning",
+    "employer.training.heading": "Kompetensutveckling",
     "employer.training.purpose":
       "Rekommendera och följa upp riktad utbildning utifrån identifierade kompetensluckor hos befintlig personal.",
     "employer.training.value":
       "Stäng kompetensluckor systematiskt istället för ad hoc, och dokumentera genomförd utbildning per medarbetare.",
     "employer.training.milestone": "Kopplas till kompetensramverket när det finns på plats.",
 
-    "employer.sites.heading": "Platser och risk",
+    "employer.sites.heading": "Platser & risk",
     "employer.sites.purpose":
       "Ett register över era platser och verksamhetsställen, med kommande riskindikatorer kopplade till bemanning och kompetens.",
     "employer.sites.value":
@@ -1189,7 +1196,7 @@ export const dictionaries = {
     "employer.sites.milestone":
       "Fullständigt platsregister. Under tiden visar Personal-modulen platser/team som redan angetts där.",
 
-    "employer.reports.heading": "Rapporter och regelefterlevnad",
+    "employer.reports.heading": "Rapporter & regelefterlevnad",
     "employer.reports.purpose":
       "Granskningsklara rapporter som visar personalens kompetens- och certifikatsstatus vid en given tidpunkt.",
     "employer.reports.value":
@@ -1243,13 +1250,39 @@ export const dictionaries = {
     "employer.workforce.form.save": "Spara",
     "employer.workforce.form.cancel": "Avbryt",
 
-    "employer.commandCenter.heading": "Command Center",
-    "employer.commandCenter.subheading":
-      "Er samlade vy över rekrytering och personal hos CQrityjob.",
-    "employer.commandCenter.action.createJob": "Skapa jobbannons",
-    "employer.commandCenter.action.viewApplications": "Visa ansökningar",
-    "employer.commandCenter.action.viewAssessments": "Visa tester",
-    "employer.commandCenter.action.addEmployee": "Lägg till medarbetare",
+    "employer.overview.heading": "Översikt",
+    "employer.overview.subheading":
+      "Hantera rekrytering, personal, tester och kompetensutveckling på ett ställe.",
+
+    "employer.overview.card.jobs.title": "Mina annonser",
+    "employer.overview.card.jobs.body":
+      "Publicerade annonser, utkast och inkomna ansökningar — hela rekryteringen på ett ställe.",
+    "employer.overview.card.jobs.stat.active": "Aktiva",
+    "employer.overview.card.jobs.stat.drafts": "Utkast",
+    "employer.overview.card.jobs.stat.applications": "Ansökningar",
+    "employer.overview.card.jobs.action.create": "Skapa jobbannons",
+    "employer.overview.card.jobs.action.applications": "Visa ansökningar",
+
+    "employer.overview.card.people.title": "Min personal",
+    "employer.overview.card.people.body":
+      "Era medarbetare med roller och platser. Lägg till nya medarbetare och håll kompetenser och certifikat aktuella.",
+    "employer.overview.card.people.stat.employees": "Medarbetare",
+    "employer.overview.card.people.stat.roles": "Roller",
+    "employer.overview.card.people.stat.sites": "Platser/team",
+    "employer.overview.card.people.action.competencies": "Kompetenser & certifikat",
+
+    "employer.overview.card.tests.title": "Tester",
+    "employer.overview.card.tests.body":
+      "Tilldela tester, följ pågående tester och använd resultaten som beslutsunderlag.",
+    "employer.overview.card.tests.stat.invited": "Inbjudna",
+    "employer.overview.card.tests.stat.inProgress": "Pågående",
+    "employer.overview.card.tests.stat.completed": "Genomförda",
+    "employer.overview.card.tests.action.assign": "Tilldela test",
+    "employer.overview.card.tests.action.activity": "Pågående tilldelningar",
+
+    "employer.overview.card.development.title": "Kompetensutveckling",
+    "employer.overview.card.development.body":
+      "Riktad utveckling utifrån identifierade kompetensluckor. Genomförd utbildning dokumenterar deltagande — den är inte ett bevis på kompetens.",
 
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
@@ -1268,46 +1301,19 @@ export const dictionaries = {
     "employer.attention.jobsNoApplications":
       "publicerade jobbannonser har ännu inte fått några ansökningar",
     "employer.attention.draftJobs": "jobbannonser sparade som utkast",
-    "employer.attention.assessmentsAvailable": "tester tillgängliga i Assessment Center",
+    "employer.attention.assessmentsAvailable": "tester tillgängliga att tilldela",
     "employer.attention.workforceEmpty":
-      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
+      "Lägg till era medarbetare för att börja bygga en verifierad kompetensbild.",
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
     "employer.attention.source.applications": "Källa: Ansökningar",
-    "employer.attention.source.jobs": "Källa: Jobbannonser",
-    "employer.attention.source.assessments": "Källa: Assessment Center",
-    "employer.attention.source.workforce": "Källa: Personalregister",
+    "employer.attention.source.jobs": "Källa: Mina annonser",
+    "employer.attention.source.assessments": "Källa: Tester",
+    "employer.attention.source.workforce": "Källa: Medarbetare",
     "employer.attention.action.viewOrganisation": "Visa organisation",
     "employer.attention.action.reviewApplications": "Granska ansökningar",
     "employer.attention.action.manageJobs": "Hantera annonser",
     "employer.attention.action.viewAssessments": "Visa tester",
-    "employer.attention.action.openWorkforce": "Öppna Personal",
-
-    "employer.lane.recruitment.heading": "Rekrytering",
-    "employer.lane.recruitment.awaitingReview": "Väntar på granskning",
-    "employer.lane.recruitment.reviewApplications": "Granska ansökningar",
-    "employer.lane.workforce.heading": "Personal",
-    "employer.lane.workforce.empty":
-      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
-    "employer.lane.workforce.activeEmployees": "Aktiva medarbetare",
-    "employer.lane.workforce.roles": "Roller",
-    "employer.lane.workforce.sites": "Platser/team",
-    "employer.lane.workforce.open": "Öppna Personal",
-
-    "employer.assessmentActivity.heading": "Testaktivitet",
-    "employer.assessmentActivity.viewCenter": "Öppna Assessment Center",
-
-    "employer.sitesFoundation.heading": "Platser och risk",
-    "employer.sitesFoundation.bodyWithData":
-      "{n} plats(er)/team registrerade via Personal. Ett fullständigt platsregister med riskindikatorer är under utveckling.",
-    "employer.sitesFoundation.bodyEmpty":
-      "Inga platser registrerade ännu. Ett fullständigt platsregister med riskindikatorer är under utveckling.",
-    "employer.sitesFoundation.open": "Öppna Platser och risk",
-
-    "employer.assessmentActivity.invited": "Inbjudna",
-    "employer.assessmentActivity.inProgress": "Pågående",
-    "employer.assessmentActivity.completed": "Genomförda",
-    "employer.assessmentActivity.empty": "Inga tilldelade tester ännu.",
-    "employer.assessmentActivity.viewActivity": "Visa testaktivitet",
+    "employer.attention.action.openWorkforce": "Öppna Medarbetare",
 
     "assessment.disclaimer.decisionSupport":
       "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
@@ -3619,10 +3625,10 @@ export const dictionaries = {
     "employer.jobs.form.error.duplicateJobFailed": "This job could not be duplicated.",
 
     "employer.nav.overview": "Overview",
-    "employer.nav.jobs": "Job advertisements",
+    "employer.nav.jobs": "My job ads",
     "employer.nav.applications": "Applications",
-    "employer.nav.assessments": "Assessments",
-    "employer.nav.settings": "Organisation settings",
+    "employer.nav.assessments": "Tests",
+    "employer.nav.settings": "Settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
     "employer.status.active.badge": "Company account active",
@@ -3699,24 +3705,27 @@ export const dictionaries = {
     "employer.assessments.tab.custom": "Custom company assessments",
     "employer.assessments.tab.ai": "AI-generated assessments",
 
-    "employer.nav.commandCenter": "Command Center",
-    "employer.nav.recruitment": "Recruitment",
-    "employer.nav.workforce": "Workforce",
-    "employer.nav.competencies": "Competencies & Certificates",
-    "employer.nav.training": "Training",
-    "employer.nav.sites": "Sites & Risk",
-    "employer.nav.reports": "Reports & Compliance",
+    "employer.nav.workforce": "Employees",
+    "employer.nav.competencies": "Competencies & certificates",
+    "employer.nav.training": "Skills development",
+    "employer.nav.sites": "Sites & risk",
+    "employer.nav.reports": "Reports & compliance",
     "employer.nav.analytics": "Analytics",
     "employer.nav.askCqrity": "Ask CQrity",
     "employer.nav.organisation": "Organisation",
     "employer.nav.openMenu": "Open menu",
+
+    "employer.nav.group.recruitment": "Recruitment",
+    "employer.nav.group.people": "People",
+    "employer.nav.group.development": "Development",
+    "employer.nav.group.organisation": "Organisation",
 
     "employer.module.comingSoon.badge": "Coming soon",
     "employer.module.comingSoon.purpose": "Purpose",
     "employer.module.comingSoon.value": "Employer value",
     "employer.module.comingSoon.milestone": "Next milestone",
 
-    "employer.competencies.heading": "Competencies & Certificates",
+    "employer.competencies.heading": "Competencies & certificates",
     "employer.competencies.purpose":
       "A shared competency framework describing what each role requires, and a register of employee certificates and their validity periods.",
     "employer.competencies.value":
@@ -3724,14 +3733,14 @@ export const dictionaries = {
     "employer.competencies.milestone":
       "Competency framework connected to the Assessment Center and the employee directory.",
 
-    "employer.training.heading": "Training",
+    "employer.training.heading": "Skills development",
     "employer.training.purpose":
       "Recommend and track targeted training based on identified competence gaps in the existing workforce.",
     "employer.training.value":
       "Close competence gaps systematically instead of ad hoc, with documented training completion per employee.",
     "employer.training.milestone": "Connects to the competency framework once it exists.",
 
-    "employer.sites.heading": "Sites & Risk",
+    "employer.sites.heading": "Sites & risk",
     "employer.sites.purpose":
       "A register of your sites and locations, with future risk indicators tied to staffing and competence.",
     "employer.sites.value":
@@ -3739,7 +3748,7 @@ export const dictionaries = {
     "employer.sites.milestone":
       "A full site register. In the meantime, the Workforce module shows the sites/teams already recorded there.",
 
-    "employer.reports.heading": "Reports & Compliance",
+    "employer.reports.heading": "Reports & compliance",
     "employer.reports.purpose":
       "Audit-ready reports showing workforce competence and certificate status at a given point in time.",
     "employer.reports.value":
@@ -3791,13 +3800,39 @@ export const dictionaries = {
     "employer.workforce.form.save": "Save",
     "employer.workforce.form.cancel": "Cancel",
 
-    "employer.commandCenter.heading": "Command Center",
-    "employer.commandCenter.subheading":
-      "Your combined view of recruitment and workforce in CQrityjob.",
-    "employer.commandCenter.action.createJob": "Create job",
-    "employer.commandCenter.action.viewApplications": "View applications",
-    "employer.commandCenter.action.viewAssessments": "View assessments",
-    "employer.commandCenter.action.addEmployee": "Add employee",
+    "employer.overview.heading": "Overview",
+    "employer.overview.subheading":
+      "Manage recruitment, people, tests and skills development in one place.",
+
+    "employer.overview.card.jobs.title": "My job ads",
+    "employer.overview.card.jobs.body":
+      "Published ads, drafts and incoming applications — your whole recruitment in one place.",
+    "employer.overview.card.jobs.stat.active": "Active",
+    "employer.overview.card.jobs.stat.drafts": "Drafts",
+    "employer.overview.card.jobs.stat.applications": "Applications",
+    "employer.overview.card.jobs.action.create": "Create job ad",
+    "employer.overview.card.jobs.action.applications": "View applications",
+
+    "employer.overview.card.people.title": "My people",
+    "employer.overview.card.people.body":
+      "Your employees with their roles and sites. Add new employees and keep competencies and certificates up to date.",
+    "employer.overview.card.people.stat.employees": "Employees",
+    "employer.overview.card.people.stat.roles": "Roles",
+    "employer.overview.card.people.stat.sites": "Sites/teams",
+    "employer.overview.card.people.action.competencies": "Competencies & certificates",
+
+    "employer.overview.card.tests.title": "Tests",
+    "employer.overview.card.tests.body":
+      "Assign tests, follow tests in progress and use the results as decision support.",
+    "employer.overview.card.tests.stat.invited": "Invited",
+    "employer.overview.card.tests.stat.inProgress": "In progress",
+    "employer.overview.card.tests.stat.completed": "Completed",
+    "employer.overview.card.tests.action.assign": "Assign test",
+    "employer.overview.card.tests.action.activity": "Assignments in progress",
+
+    "employer.overview.card.development.title": "Skills development",
+    "employer.overview.card.development.body":
+      "Targeted development based on identified competency gaps. Completed training documents participation — it is not proof of competence.",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
@@ -3815,48 +3850,21 @@ export const dictionaries = {
       "Your organisation profile is missing a description and website.",
     "employer.attention.applicationsAwaiting": "applications awaiting review",
     "employer.attention.jobsNoApplications":
-      "published job postings have not yet received any applications",
-    "employer.attention.draftJobs": "job postings saved as drafts",
-    "employer.attention.assessmentsAvailable": "assessments available in the Assessment Center",
+      "published job ads have not yet received any applications",
+    "employer.attention.draftJobs": "job ads saved as drafts",
+    "employer.attention.assessmentsAvailable": "tests available to assign",
     "employer.attention.workforceEmpty":
-      "Add your workforce to begin building a verified competency picture.",
+      "Add your employees to begin building a verified competency picture.",
     "employer.attention.source.organisation": "Source: Organisation status",
     "employer.attention.source.applications": "Source: Applications",
-    "employer.attention.source.jobs": "Source: Job postings",
-    "employer.attention.source.assessments": "Source: Assessment Center",
-    "employer.attention.source.workforce": "Source: Employee directory",
+    "employer.attention.source.jobs": "Source: My job ads",
+    "employer.attention.source.assessments": "Source: Tests",
+    "employer.attention.source.workforce": "Source: Employees",
     "employer.attention.action.viewOrganisation": "View organisation",
     "employer.attention.action.reviewApplications": "Review applications",
-    "employer.attention.action.manageJobs": "Manage jobs",
+    "employer.attention.action.manageJobs": "Manage job ads",
     "employer.attention.action.viewAssessments": "View assessments",
-    "employer.attention.action.openWorkforce": "Open Workforce",
-
-    "employer.lane.recruitment.heading": "Recruitment",
-    "employer.lane.recruitment.awaitingReview": "Awaiting review",
-    "employer.lane.recruitment.reviewApplications": "Review applications",
-    "employer.lane.workforce.heading": "Workforce",
-    "employer.lane.workforce.empty":
-      "Add your workforce to begin building a verified competency picture.",
-    "employer.lane.workforce.activeEmployees": "Active employees",
-    "employer.lane.workforce.roles": "Roles",
-    "employer.lane.workforce.sites": "Sites/teams",
-    "employer.lane.workforce.open": "Open Workforce",
-
-    "employer.assessmentActivity.heading": "Assessment activity",
-    "employer.assessmentActivity.viewCenter": "Open Assessment Center",
-
-    "employer.sitesFoundation.heading": "Sites & Risk",
-    "employer.sitesFoundation.bodyWithData":
-      "{n} site(s)/team(s) recorded via Workforce. A full site register with risk indicators is under development.",
-    "employer.sitesFoundation.bodyEmpty":
-      "No sites recorded yet. A full site register with risk indicators is under development.",
-    "employer.sitesFoundation.open": "Open Sites & Risk",
-
-    "employer.assessmentActivity.invited": "Invited",
-    "employer.assessmentActivity.inProgress": "In progress",
-    "employer.assessmentActivity.completed": "Completed",
-    "employer.assessmentActivity.empty": "No assessments assigned yet.",
-    "employer.assessmentActivity.viewActivity": "View assessment activity",
+    "employer.attention.action.openWorkforce": "Open Employees",
 
     "assessment.disclaimer.decisionSupport":
       "The result is decision support. The employer always remains responsible for the final decision.",
