@@ -510,6 +510,86 @@ SELECT pg_temp.ok(
                    WHERE fi2.form_id = fi.form_id AND iv2.mode = 'assessment')) = 0,
   'F6.15b no Learning Mode item sits on a form that serves assessment items');
 
+DO $$ BEGIN RAISE NOTICE 'GROUP F7 — the best/worst label invariants, keyed on something that exists'; END $$;
+
+-- ── WHY THIS GROUP EXISTS ────────────────────────────────────────────────
+--
+-- 20260819110000_sg_sjt_option_labels.sql ends with a DO block that asserts the
+-- five review gates did not move and that the best/worst scoring key is intact.
+-- It selects those item versions by hardcoded uuid:
+--
+--     WHERE iv.id IN ('5b846576-…','58ed9d0c-…','1ce82514-…')
+--
+-- scp_item_versions.id is gen_random_uuid(), so those ids exist only in the one
+-- database the content contract was extracted from. Everywhere else — including
+-- production, where this was confirmed against live rows — the predicate matches
+-- ZERO rows and both assertions pass vacuously. The file's own header explains
+-- why hardcoding option uuids was wrong and then does it to item versions.
+--
+-- The applied migration is NOT edited. Rewriting an already-applied canonical
+-- migration would change history for every replay without changing any live
+-- row, and the label rows it wrote are correct — only its guard was inert. The
+-- invariant is restated here instead, keyed on item slug and version, which are
+-- authored and stable in every database.
+--
+-- F7.0 is the assertion the original was missing: prove the subject set is
+-- non-empty BEFORE asserting anything about it. Without it, every check below
+-- degrades into the same silent pass.
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND iv.version_number = 1
+      AND iv.item_format = 'sjt_best_worst') = 3,
+  'F7.0 the three best/worst item versions resolve by slug (the guard has a subject)');
+
+-- Authoring the missing labels was not a review. Every gate must still be open.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND iv.version_number = 1
+      AND (iv.sme_review_status <> 'pending'
+        OR iv.bias_review_status <> 'pending'
+        OR iv.cognitive_review_status <> 'pending'
+        OR iv.language_review_status <> 'pending'
+        OR iv.accessibility_review_status <> 'pending')) = 0,
+  'F7.1 all five review gates on the best/worst items are still pending');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND iv.version_number = 1
+      AND (iv.content_status <> 'draft' OR iv.validation_status <> 'design')) = 0,
+  'F7.2 the best/worst items are still draft/design');
+
+-- The scoring key is exactly as authored: four options, one best, one worst.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND iv.version_number = 1
+      AND ((SELECT count(*) FROM public.scp_item_options o
+             WHERE o.item_version_id = iv.id) <> 4
+        OR (SELECT count(*) FROM public.scp_item_options o
+             WHERE o.item_version_id = iv.id AND o.is_best_key) <> 1
+        OR (SELECT count(*) FROM public.scp_item_options o
+             WHERE o.item_version_id = iv.id AND o.is_worst_key) <> 1)) = 0,
+  'F7.3 each best/worst item still has four options, one best key and one worst key');
+
+-- The defect that migration existed to close: 24 rows, 12 options x 2 languages.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_option_texts t
+     JOIN public.scp_item_options o ON o.id = t.item_option_id
+     JOIN public.scp_item_versions iv ON iv.id = o.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-14','sg-b-15')
+      AND iv.version_number = 1
+      AND btrim(coalesce(t.label,'')) <> '') = 24,
+  'F7.4 the best/worst items carry 24 non-empty labels (12 options x 2 languages)');
+
 DO $$ BEGIN RAISE NOTICE 'scp_content_phase1f_test: ALL ASSERTIONS PASSED'; END $$;
 
 ROLLBACK;
