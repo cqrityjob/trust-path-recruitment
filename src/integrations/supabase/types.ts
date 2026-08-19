@@ -9050,6 +9050,22 @@ export type Database = {
           run_id: string
         }[]
       }
+      scp_assign_training: {
+        Args: {
+          _due_at?: string
+          _employer_id: string
+          _language?: string
+          _message?: string
+          _program_version_id: string
+          _recipient_email: string
+          _source_decision_id?: string
+        }
+        Returns: {
+          assignment_id: string
+          modules_seeded: number
+          subject_id: string
+        }[]
+      }
       scp_attempt_evidence_state: {
         Args: {
           _attempt_id: string
@@ -9087,6 +9103,14 @@ export type Database = {
       }
       scp_complete_learning_module: {
         Args: { _attempt_id: string }
+        Returns: number
+      }
+      scp_complete_training_module: {
+        Args: { _assignment_id: string; _module_version_id: string }
+        Returns: boolean
+      }
+      scp_complete_training_programme: {
+        Args: { _assignment_id: string }
         Returns: number
       }
       scp_compute_maturity: {
@@ -9238,6 +9262,25 @@ export type Database = {
           awaiting_review: number
         }[]
       }
+      scp_employer_training_status: {
+        Args: { _employer_id: string }
+        Returns: {
+          assigned_at: string
+          assignment_id: string
+          completed_at: string
+          due_at: string
+          identity_resolvable: boolean
+          language: string
+          modules_completed: number
+          modules_total: number
+          programme_name_en: string
+          programme_name_sv: string
+          started_at: string
+          status: string
+          subject_id: string
+          version_number: number
+        }[]
+      }
       scp_get_attempt_items: {
         Args: { _attempt_id: string; _language?: string }
         Returns: {
@@ -9314,6 +9357,67 @@ export type Database = {
           purpose_sv: string
           released_at: string
           total_items: number
+        }[]
+      }
+      scp_my_academy_work: {
+        Args: never
+        Returns: {
+          assigned_at: string
+          deadline: string
+          employer_name: string
+          progress_done: number
+          progress_total: number
+          purpose_en: string
+          purpose_sv: string
+          released_at: string
+          status: string
+          title_en: string
+          title_sv: string
+          work_id: string
+          work_kind: string
+        }[]
+      }
+      scp_my_training_modules: {
+        Args: { _assignment_id: string }
+        Returns: {
+          answered: number
+          attempt_id: string
+          completed_at: string
+          display_order: number
+          estimated_minutes: number
+          has_activity: boolean
+          module_version_id: string
+          name_en: string
+          name_sv: string
+          started_at: string
+          status: string
+          summary_en: string
+          summary_sv: string
+          total_items: number
+        }[]
+      }
+      scp_my_training_programme: {
+        Args: { _assignment_id: string }
+        Returns: {
+          assigned_at: string
+          assignment_id: string
+          completed_at: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          due_at: string
+          employer_name: string
+          estimated_minutes: number
+          language: string
+          modules_completed: number
+          modules_total: number
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          purpose_en: string
+          purpose_sv: string
+          started_at: string
+          status: string
+          version_number: number
         }[]
       }
       scp_record_employer_decision: {
@@ -9395,6 +9499,10 @@ export type Database = {
       }
       scp_start_learning_attempt: {
         Args: { _form_id: string }
+        Returns: string
+      }
+      scp_start_training_module: {
+        Args: { _assignment_id: string; _module_version_id: string }
         Returns: string
       }
       scp_subject_progress: {
