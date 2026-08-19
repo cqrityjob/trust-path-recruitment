@@ -17,8 +17,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, GraduationCap, Lightbulb } from "lucide-react";
+import { CheckCircle2, GraduationCap } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { LearningFeedbackPanel } from "@/components/academy/LearningFeedbackPanel";
 import {
   AssessmentShell,
   AssessmentPanel,
@@ -213,7 +214,7 @@ function LearningRoute() {
             ))}
           </fieldset>
 
-          {hasFeedback && <FeedbackPanel options={feedback!} />}
+          {hasFeedback && <LearningFeedbackPanel options={feedback!} />}
         </div>
 
         <AssessmentNavigation
@@ -235,46 +236,5 @@ function LearningRoute() {
         />
       </AssessmentCard>
     </AssessmentShell>
-  );
-}
-
-/** Every option, with the reasoning. The learner's own choice is marked, and
- *  the preferred one is marked, and they are allowed to be the same. */
-function FeedbackPanel({ options }: { options: LearningFeedbackOption[] }) {
-  const { t } = useT();
-
-  return (
-    <section
-      aria-live="polite"
-      className="mt-6 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-5"
-    >
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Lightbulb className="h-4 w-4 text-accent" aria-hidden="true" />
-        {t("academy.learning.feedbackTitle")}
-      </h3>
-
-      <ul className="mt-4 space-y-4">
-        {options.map((o) => (
-          <li key={o.optionId} className="rounded-[10px] border border-border bg-card p-4">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <p className="text-[13px] font-semibold text-foreground">{o.label}</p>
-              {o.isPreferred && (
-                <span className="rounded-full border border-accent px-2 py-0.5 text-[11px] font-medium text-foreground">
-                  {t("academy.learning.preferred")}
-                </span>
-              )}
-              {o.chosen && (
-                <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  {t("academy.learning.yourChoice")}
-                </span>
-              )}
-            </div>
-            {o.feedback && (
-              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{o.feedback}</p>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
