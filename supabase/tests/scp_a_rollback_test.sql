@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 66,
-    'pre-rollback: 66 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions)');
+        AND table_name LIKE 'scp\_%') = 67,
+    'pre-rollback: 67 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -218,6 +218,9 @@ DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, text, jsonb) CASCADE;
+-- The deprecated transition overload, which exists alongside the governed one
+-- until the maintenance migration removes it.
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
 -- Phase 2e: the remaining Assessment Center operations.
@@ -290,6 +293,7 @@ DELETE FROM public.scp_item_texts t USING public.scp_item_versions iv
  WHERE t.item_version_id = iv.id AND iv.mode IS NOT NULL;
 DELETE FROM public.scp_item_options o USING public.scp_item_versions iv
  WHERE o.item_version_id = iv.id AND iv.mode IS NOT NULL;
+DROP FUNCTION IF EXISTS public.scp_guard_rubric_score_append_only() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_learning_counterpart() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_best_worst_keys()      CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_construct_honesty()    CASCADE;
@@ -299,6 +303,9 @@ ALTER TABLE public.assessment_assignments DROP CONSTRAINT IF EXISTS assessment_a
 ALTER TABLE public.assessment_assignments DROP COLUMN IF EXISTS scp_assessment_version_id;
 DROP TABLE IF EXISTS public.scp_ai_scoring_dimensions   CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_scoring_runs         CASCADE;
+-- Dropped explicitly rather than left to CASCADE from scp_human_reviews, so
+-- the documented rollback-forward for 20260823090000 is actually exercised.
+DROP TABLE IF EXISTS public.scp_review_rubric_scores    CASCADE;
 DROP TABLE IF EXISTS public.scp_human_reviews           CASCADE;
 DROP TABLE IF EXISTS public.scp_prompt_versions         CASCADE;
 DROP TABLE IF EXISTS public.scp_ai_providers            CASCADE;

@@ -2316,15 +2316,24 @@ export const dictionaries = {
     "academy.reviews.evidenceHeading": "Deltagarens underlag",
     "academy.reviews.itemLabel": "Fråga",
     "academy.reviews.judgementHeading": "Din bedömning",
-    "academy.reviews.severity": "Allvarlighetsgrad",
-    "academy.reviews.severityHint":
-      "Ange hur allvarlig observationen är. Den kan inte härledas ur svaret automatiskt och följer med underlaget som din bedömning.",
+    "academy.reviews.finding": "Vad visar svaret?",
+    "academy.reviews.findingHint":
+      "Frågan är säkerhetskritisk. Svaret behöver inte vara det. Bedöm den här personens svar — \u0022ingen avvikelse\u0022 är ett fullgott och vanligt utfall.",
+    "academy.reviews.findingNoConcern": "Ingen säkerhetsavvikelse",
     "academy.reviews.severityLow": "Låg",
     "academy.reviews.severityMedium": "Måttlig",
     "academy.reviews.severityHigh": "Hög",
     "academy.reviews.severityCritical": "Kritisk",
-    "academy.reviews.needSeverity":
-      "Det här är en säkerhetskritisk observation. Ange allvarlighetsgrad innan du slutför.",
+    "academy.reviews.needFinding":
+      "Frågan är säkerhetskritisk. Ange vad du ser i svaret innan du slutför — ingen avvikelse, låg, måttlig, hög eller kritisk.",
+    "academy.reviews.needRubric": "Ge en nivå 0–4 för varje bedömningsdimension innan du slutför.",
+    "academy.reviews.alreadyCompleted":
+      "Granskningen är redan slutförd, sannolikt av en kollega. Uppdatera kön.",
+    "academy.reviews.rubricLegend": "Bedömningsmatris",
+    "academy.reviews.rubricHint":
+      "Sätt en nivå per dimension. Poängen räknas fram ur dina nivåer — du anger aldrig ett slutbetyg själv.",
+    "academy.reviews.rubricLevel": "Nivå",
+    "academy.reviews.rubricStyleOnly": "påverkar inte poängen",
     "academy.reviews.rationalePrivate":
       "Motiveringen är intern och visas för granskare. Den ingår inte i deltagarens rapport.",
     "academy.reviews.nextRemaining":
@@ -2426,7 +2435,9 @@ export const dictionaries = {
     "academy.report.notInability":
       '"Behöver följdfråga" och "Ännu inte visat" beskriver underlagets omfattning. De betyder inte att du saknar förmågan.',
     "academy.report.humanReviewOccurred":
-      "Ett eller flera av dina svar rörde säkerhetskritisk bedömning och har lästs av en granskare.",
+      "Ett eller flera av dina svar har lästs av en granskare innan rapporten frisläpptes. Det sker rutinmässigt för vissa frågor och säger i sig ingenting om hur du svarade.",
+    "academy.report.safetyConcernNoted":
+      "En granskare har noterat en säkerhetsrelaterad iakttagelse i ett av dina svar. Den följs upp i samtalet med din arbetsgivare.",
     "academy.report.rightsTitle": "Dina uppgifter och dina rättigheter",
     "academy.report.rightsBody":
       "Du kan begära rättelse av en faktauppgift, fråga hur underlaget används och begära utdrag eller radering av dina personuppgifter.",
@@ -4848,15 +4859,25 @@ export const dictionaries = {
     "academy.reviews.evidenceHeading": "Participant evidence",
     "academy.reviews.itemLabel": "Question",
     "academy.reviews.judgementHeading": "Your judgement",
-    "academy.reviews.severity": "Severity",
-    "academy.reviews.severityHint":
-      "State how serious the observation is. It cannot be inferred from the answer, and it travels with the evidence as your judgement.",
+    "academy.reviews.finding": "What does this response show?",
+    "academy.reviews.findingHint":
+      "The item is safety-critical. The response need not be. Judge this person\u2019s answer — \u0022no safety concern\u0022 is a full and common outcome.",
+    "academy.reviews.findingNoConcern": "No safety concern",
     "academy.reviews.severityLow": "Low",
     "academy.reviews.severityMedium": "Moderate",
     "academy.reviews.severityHigh": "High",
     "academy.reviews.severityCritical": "Critical",
-    "academy.reviews.needSeverity":
-      "This is a safety-critical observation. State a severity before completing it.",
+    "academy.reviews.needFinding":
+      "The item is safety-critical. State what you see in the response before completing it — no concern, low, moderate, high or critical.",
+    "academy.reviews.needRubric":
+      "Give a level 0–4 for every rubric dimension before completing it.",
+    "academy.reviews.alreadyCompleted":
+      "This review is already completed, most likely by a colleague. Refresh the queue.",
+    "academy.reviews.rubricLegend": "Rubric",
+    "academy.reviews.rubricHint":
+      "Set one level per dimension. The score is derived from your levels — you never enter a final number yourself.",
+    "academy.reviews.rubricLevel": "Level",
+    "academy.reviews.rubricStyleOnly": "does not affect the score",
     "academy.reviews.rationalePrivate":
       "Your reasons are internal and shown to reviewers. They are not part of the participant's report.",
     "academy.reviews.nextRemaining":
@@ -4958,7 +4979,9 @@ export const dictionaries = {
     "academy.report.notInability":
       '"Needs a follow-up" and "Not yet shown" describe how much evidence there is. They do not mean you lack the ability.',
     "academy.report.humanReviewOccurred":
-      "One or more of your answers involved safety-critical judgement and was read by a reviewer.",
+      "One or more of your answers were read by a reviewer before this report was released. That happens routinely for certain questions and says nothing in itself about how you answered.",
+    "academy.report.safetyConcernNoted":
+      "A reviewer noted a safety-related observation in one of your answers. It is followed up in the conversation with your employer.",
     "academy.report.rightsTitle": "Your data and your rights",
     "academy.report.rightsBody":
       "You can ask for a factual detail to be corrected, ask how the evidence is used, and request a copy or erasure of your personal data.",

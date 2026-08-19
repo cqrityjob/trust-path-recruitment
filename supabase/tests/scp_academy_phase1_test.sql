@@ -399,7 +399,17 @@ DO $$
 DECLARE _e uuid; _sv uuid;
 BEGIN
   _e := 'a9a9a9a9-0000-0000-0000-000000000002';
-  SELECT id INTO _sv FROM public.scp_assessment_versions LIMIT 1;
+  -- Explicitly a DRAFT version, which is what A9.8 claims to be testing.
+  -- `LIMIT 1` with no ORDER BY returned whatever row happened to be physically
+  -- first, so any UPDATE anywhere in scp_assessment_versions could silently
+  -- swap in a PUBLISHED version and turn this assertion into its opposite --
+  -- which is exactly what happened when 20260823100000 rewrote language_scope.
+  SELECT av.id INTO _sv
+    FROM public.scp_assessment_versions av
+    JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+   WHERE av.content_status = 'draft' AND d.slug = 'sg-operational-baseline'
+   ORDER BY av.version_number
+   LIMIT 1;
   IF _e IS NULL OR _sv IS NULL THEN RETURN; END IF;
 
   PERFORM pg_temp.must_fail(

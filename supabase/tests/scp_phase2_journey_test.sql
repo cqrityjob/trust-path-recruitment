@@ -22,6 +22,17 @@ BEGIN
   RAISE NOTICE 'ok  %', label;
 END $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.fixture_rubric_levels(_ivid uuid, _fmt text)
+RETURNS jsonb LANGUAGE sql AS $fn$
+  SELECT CASE WHEN _fmt <> 'constructed_response' THEN NULL ELSE (
+    SELECT jsonb_object_agg(d.dimension_key,
+             CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
+      FROM public.scp_rubric_dimensions d
+      JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+     WHERE rv.item_version_id = _ivid) END;
+$fn$;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.must_fail(stmt text, needle text, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE _msg text;
@@ -370,12 +381,30 @@ SELECT pg_temp.must_fail(
 RESET ROLE; RESET request.jwt.claim.sub;
 
 -- The reviewer completes it.
+--
+-- Upheld rather than adjusted since the governed evidence model: an adjusted or
+-- overturned reading deliberately writes NO competency contribution, so keeping
+-- 'adjusted' here would have turned J4.5 into an assertion that the old,
+-- corrected behaviour still happens. The disputed-outcome path has its own
+-- dedicated coverage in employer_vaktare_journey_test (VJ9.15/VJ9.16), where
+-- the whole flow is under the suite's control.
+--
+-- No contribution is passed. There is no parameter to pass one to.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'c3000000-0000-0000-0000-000000000002';
 CREATE TEMP TABLE rev_ev AS
 SELECT public.scp_complete_human_review(
-  :'rid'::uuid, 'adjusted',
-  'Svaret beskriver vad som ska dokumenteras men inte varfor.', 0.6) AS evidence_id;
+  :'rid'::uuid, 'upheld',
+  'Svaret beskriver vad som ska dokumenteras men inte varfor.',
+  NULL,
+  pg_temp.fixture_rubric_levels(
+    (SELECT r.item_version_id FROM public.scp_human_reviews hr
+       JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+      WHERE hr.id = :'rid'::uuid),
+    (SELECT iv.item_format FROM public.scp_human_reviews hr
+       JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+       JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+      WHERE hr.id = :'rid'::uuid))) AS evidence_id;
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok(

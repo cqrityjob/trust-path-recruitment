@@ -20,6 +20,20 @@ BEGIN
   RAISE NOTICE 'ok  %', label;
 END $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.fixture_rubric_levels(_ivid uuid, _fmt text)
+RETURNS jsonb LANGUAGE sql AS $fn$
+  -- Every construct-bearing dimension at 4, every style dimension at 0. The
+  -- derived contribution is therefore 1.000 if and only if writing quality is
+  -- excluded, which is the property worth pinning in a fixture too.
+  SELECT CASE WHEN _fmt <> 'constructed_response' THEN NULL ELSE (
+    SELECT jsonb_object_agg(d.dimension_key,
+             CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
+      FROM public.scp_rubric_dimensions d
+      JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
+     WHERE rv.item_version_id = _ivid) END;
+$fn$;
+
+
 CREATE OR REPLACE FUNCTION pg_temp.must_fail(stmt text, needle text, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE _msg text;
@@ -385,14 +399,15 @@ DO $$
 DECLARE _rv record;
 BEGIN
   FOR _rv IN
-    SELECT hr.id, iv.is_safety_critical
+    SELECT hr.id, iv.is_safety_critical, iv.id AS item_version_id, iv.item_format
       FROM public.scp_human_reviews hr
       JOIN public.scp_candidate_responses r ON r.id = hr.response_id
       JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
      WHERE r.attempt_id = (SELECT id FROM att) AND hr.review_status = 'pending'
   LOOP
     PERFORM public.scp_complete_human_review(_rv.id, 'upheld', 'Inom mandatet.',
-      0.5, CASE WHEN _rv.is_safety_critical THEN 'low' ELSE NULL END);
+      CASE WHEN _rv.is_safety_critical THEN 'no_concern' ELSE NULL END,
+      pg_temp.fixture_rubric_levels(_rv.item_version_id, _rv.item_format));
   END LOOP;
 END $$;
 RESET ROLE; RESET request.jwt.claim.sub;
