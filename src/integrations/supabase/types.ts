@@ -5276,6 +5276,80 @@ export type Database = {
         }
         Relationships: []
       }
+      scp_employer_report_decisions: {
+        Row: {
+          action: string
+          attempt_id: string
+          created_at: string
+          decided_at: string
+          decided_by: string
+          employer_id: string
+          id: string
+          next_step: string | null
+          next_step_owner: string | null
+          reason_code: string
+          reason_note: string | null
+          supersedes_id: string | null
+        }
+        Insert: {
+          action: string
+          attempt_id: string
+          created_at?: string
+          decided_at?: string
+          decided_by: string
+          employer_id: string
+          id?: string
+          next_step?: string | null
+          next_step_owner?: string | null
+          reason_code: string
+          reason_note?: string | null
+          supersedes_id?: string | null
+        }
+        Update: {
+          action?: string
+          attempt_id?: string
+          created_at?: string
+          decided_at?: string
+          decided_by?: string
+          employer_id?: string
+          id?: string
+          next_step?: string | null
+          next_step_owner?: string | null
+          reason_code?: string
+          reason_note?: string | null
+          supersedes_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_employer_report_decisions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_employer_report_decisions_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "scp_employer_report_decisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_evidence_source_types: {
         Row: {
           code: string
@@ -8774,6 +8848,21 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_employer_decisions: {
+        Args: { _attempt_id: string }
+        Returns: {
+          action: string
+          decided_at: string
+          decided_by_email: string
+          id: string
+          is_current: boolean
+          next_step: string
+          next_step_owner: string
+          reason_code: string
+          reason_note: string
+          supersedes_id: string
+        }[]
+      }
       scp_employer_library: {
         Args: { _employer_id: string }
         Returns: {
@@ -8891,6 +8980,18 @@ export type Database = {
           released_at: string
           total_items: number
         }[]
+      }
+      scp_record_employer_decision: {
+        Args: {
+          _action: string
+          _attempt_id: string
+          _next_step?: string
+          _next_step_owner?: string
+          _reason_code: string
+          _reason_note?: string
+          _supersedes_id?: string
+        }
+        Returns: string
       }
       scp_release_attempt_report: {
         Args: { _attempt_id: string }
