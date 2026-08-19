@@ -174,6 +174,16 @@ DROP FUNCTION IF EXISTS public.scp_display_evidence_state(uuid, uuid, text) CASC
 -- signatures, so the governance-enum cascade does not reach them.
 DROP FUNCTION IF EXISTS public.scp_attempt_maturity(uuid, uuid, text, timestamptz) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASCADE;
+-- #47 (20260825092000): the content library read model and its lifecycle
+-- helper. scp_lifecycle_state takes text/timestamptz/boolean and returns text,
+-- so the governance-enum cascade never reaches it and it has to be named --
+-- the same reasoning as scp_required_purpose_code above. The library function
+-- is named explicitly too rather than relying on its scp_governance_mode
+-- output column to carry it away: a returned column is a weaker dependency to
+-- depend on than an argument type, and this assertion is the only thing that
+-- would notice if it stopped working.
+DROP FUNCTION IF EXISTS public.scp_employer_content_library(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_lifecycle_state(text, timestamptz, boolean) CASCADE;
 DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it
 -- has to go before the Phase 2 unwind reaches them.

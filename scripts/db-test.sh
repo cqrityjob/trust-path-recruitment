@@ -808,6 +808,41 @@ if [ "$GATE_PASSED" -lt 46 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-e. The durable Assessment & Training Library (#47)
+#
+# Tenancy, lifecycle normalisation, library eligibility, versioning, grants --
+# and the locked Product Owner rule that training completion never moves
+# measured maturity. That last group asserts the BEFORE/AFTER identity on the
+# real function AND proves the counterfactual, so removing the exclusion turns
+# the suite red rather than making it vacuously pass.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine, which the
+# rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running content library and maturity-isolation assertions"
+set +e
+LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"
+LIB_RC=$?
+set -e
+
+echo "$LIB_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+LIB_PASSED="$(echo "$LIB_OUT" | grep -c "ok  " || true)"
+
+if [ "$LIB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the content library suite exited with code ${LIB_RC}." >&2
+  echo "$LIB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${LIB_PASSED} content library assertions passed"
+
+if [ "$LIB_PASSED" -lt 40 ]; then
+  echo "FAIL: expected at least 40 content library assertions, only ${LIB_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -1143,6 +1178,7 @@ echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
+echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
