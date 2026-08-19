@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 67,
-    'pre-rollback: 67 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores)');
+        AND table_name LIKE 'scp\_%') = 69,
+    'pre-rollback: 69 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -182,6 +182,24 @@ DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASC
 -- output column to carry it away: a returned column is a weaker dependency to
 -- depend on than an argument type, and this assertion is the only thing that
 -- would notice if it stopped working.
+-- #47 training delivery (20260826090000, 20260826091000). The two tables go
+-- first so the guard functions have nothing depending on them, then the RPCs.
+-- Every one of these takes uuid/text arguments only, so the
+-- scp_governance_mode cascade never reaches them and they must be named.
+DROP TABLE    IF EXISTS public.scp_training_module_progress CASCADE;
+DROP TABLE    IF EXISTS public.scp_training_assignments CASCADE;
+DROP FUNCTION IF EXISTS public.scp_assign_training(uuid, uuid, text, text, timestamptz, text, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_academy_work() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_training_programme(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_training_modules(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_start_training_module(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_training_module(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_complete_training_programme(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_training_status(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_module_form_is_learning() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_training_target_assignable() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_training_progress_in_programme() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_touch_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_content_library(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_lifecycle_state(text, timestamptz, boolean) CASCADE;
 DROP TABLE    IF EXISTS public.scp_followup_prompts CASCADE;
