@@ -300,3 +300,39 @@ overload, callable by `authenticated`.
 Unchanged: assignments 6 · attempts 2 (1 released, 1 in_progress) · responses 7 ·
 human reviews 1 · evidence 4 · report snapshots 2 · cd_sessions 40 ·
 cd_report_snapshots 22 · jobs 15 · applications 1 · passport profiles 2.
+
+### Phase B — product acceptance, 2026-08-19 **[VERIFIED]**
+
+Run against production through the real RPC (`scp_employer_assign`) and the real
+RLS policies, with `auth.uid()` impersonated per test, inside **one transaction
+deliberately aborted by a final `RAISE`**. Nothing persisted: the postcheck
+confirms every synthetic row rolled back.
+
+| Test | Result | Evidence |
+|---|---|---|
+| 1 — owner/admin can assign | **SUCCESS** | assignment + attempt created, `governance=development`, `status=invited`, **`scp_open=t`** set by trigger |
+| 2 — ordinary member cannot | **DENIED** | `SCP_NOT_AUTHORISED_TO_ASSIGN: assigning requires owner or admin.` |
+| 3 — duplicate open refused | **REFUSED** | `SCP_ASSIGNMENT_ALREADY_OPEN` — fired against the genuine pre-existing open assignment, and again against one created in-test |
+| 4 — owner cancellation works | **SUCCESS** | `status=cancelled`, `cancelled_at` set, **`scp_open` cleared to `f` automatically** |
+| 4b — `scp_open` not client-writable | **BLOCKED** | `permission denied for table assessment_assignments` |
+
+**Programme substitution, stated openly.** The brief named
+`sg-operational-baseline`. That programme is `draft/design` and the only grant in
+production is `purpose='development'`, which covers fixtures rather than
+unvalidated real content, so `scp_employer_assign` refuses it with
+`SCP_NO_GOVERNANCE_BASIS`. That refusal is the closed-test governance gate
+working correctly and is **unrelated to Phase B** — assigning it would require an
+owner-issued `closed_test` grant that does not exist. The tests therefore ran
+against `fixture-delivery-e2e` (`published/pilot`), which has a real governance
+basis and exercises the identical Phase B code paths.
+
+`fixture-learning-e2e` was tried first and refused with
+`SCP_ATTEMPT_MODE_MISMATCH` — a learning form cannot be served as an assessment
+attempt. Also correct, also unrelated to Phase B.
+
+**Post-test integrity:** assignments 6 · memberships 4 (0 with role `member`) ·
+attempts 2 (1 released, 1 in_progress) · responses 7 · evidence 4 · reviews 1 ·
+snapshots 2 · cd_sessions 40 · cd_report_snapshots 22 · jobs 15 · applications 1 ·
+passport profiles 2 · ledger 99. Assignment `661030e9` is still
+`invited / scp_open=true`. A/B/C/D remain closed; C2 functions intact and still
+wired into `scp_release_attempt_report`.
