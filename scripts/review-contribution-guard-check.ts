@@ -76,60 +76,41 @@ console.log(`review-contribution:check — scanned ${scanned} file(s) under ${RO
 
 // ── The SQL side of the same invariant ──────────────────────────────────
 //
-// The forbidden thing is CLIENT CONTROL of the number, not the existence of a
-// deprecated argument. 20260823090000 keeps the old five-argument signature
-// alive for one deploy window so the currently deployed application does not
-// break — and that overload must accept `_contribution` and never read it.
+// The forbidden thing is CLIENT CONTROL of the number. 20260823090000 kept the
+// old five-argument signature alive for one deploy window; 20260824090000
+// removed it once the new build was live, because a stale tab calling it could
+// not express 'no_concern' and would silently record `low` on a correct answer.
 //
-// "Never read it" is checked the same way the migration checks it: outside
-// comments, the identifier may appear on exactly one line, the parameter
-// declaration. A second executable mention is the value being used.
-const MIGRATION = join(ROOT, "supabase/migrations/20260823090000_scp_governed_evidence_model.sql");
+// So the check flipped: the deprecated overload must now be ABSENT, and the
+// governed one must still declare no contribution parameter. Its body may
+// mention `_contribution` — that is the local variable holding the value it
+// DERIVES, which is the whole point.
+const MAINT = join(
+  ROOT,
+  "supabase/migrations/20260824090000_scp_review_concurrency_and_legacy_removal.sql",
+);
 const sqlProblems: string[] = [];
 
-if (existsSync(MIGRATION)) {
-  const sql = readFileSync(MIGRATION, "utf8");
-  const start = sql.indexOf(
-    "CREATE OR REPLACE FUNCTION public.scp_complete_human_review(\n  _review_id      uuid,\n  _outcome        text,\n  _rationale      text,\n  _contribution   numeric,",
-  );
-  if (start === -1) {
-    sqlProblems.push(
-      "the deprecated compatibility overload is missing — the deployed application would break on migrate",
-    );
-  } else {
-    // The function body alone, for the line count: the COMMENT ON below it
-    // quotes the parameter name on purpose, and a doc string explaining that
-    // the value is ignored must not read as the value being used.
-    const bodyEnd = sql.indexOf("END; $function$;", start);
-    const body = sql.slice(start, bodyEnd === -1 ? sql.length : bodyEnd);
-    // The declaration plus its COMMENT ON, for the deprecation marker.
-    const declEnd = sql.indexOf(
-      "REVOKE ALL     ON FUNCTION public.scp_complete_human_review(uuid, text, text, numeric, text)",
-      start,
-    );
-    const declared = sql.slice(start, declEnd === -1 ? sql.length : declEnd);
-
-    const executable = body
-      .split("\n")
-      .filter((l) => l.includes("_contribution") && !l.trim().startsWith("--"));
-    if (executable.length !== 1) {
-      sqlProblems.push(
-        `the compatibility overload references _contribution on ${executable.length} executable line(s); ` +
-          "it must accept the argument and never read it",
-      );
-    }
-    if (!declared.includes("DEPRECATED")) {
-      sqlProblems.push("the compatibility overload is not marked DEPRECATED");
-    }
-    if (!body.includes("SCP_LEGACY_CLIENT_CANNOT_SCORE_RUBRIC")) {
-      sqlProblems.push(
-        "the compatibility overload does not refuse constructed responses — an old client could fabricate a rubric score",
-      );
-    }
+if (existsSync(MAINT)) {
+  const sql = readFileSync(MAINT, "utf8");
+  if (
+    !sql.includes(
+      "DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text)",
+    )
+  ) {
+    sqlProblems.push("the maintenance migration no longer drops the deprecated overload");
+  }
+  if (!sql.includes("FOR UPDATE OF hr")) {
+    sqlProblems.push("the review lookup no longer locks the review row (F1 regression)");
+  }
+  if (!sql.includes("AND review_status = 'pending'")) {
+    sqlProblems.push("the completion UPDATE is no longer guarded by pending (F1 regression)");
   }
   console.log(
-    `review-contribution:check — checked the deprecated RPC overload in ${relative(ROOT, MIGRATION)}`,
+    `review-contribution:check — checked the maintenance migration in ${relative(ROOT, MAINT)}`,
   );
+} else {
+  sqlProblems.push("the F1/F2 maintenance migration is missing");
 }
 
 if (offenders.length || sqlProblems.length) {
