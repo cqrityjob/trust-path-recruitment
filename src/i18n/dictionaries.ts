@@ -1249,16 +1249,6 @@ export const dictionaries = {
     "employer.commandCenter.action.viewAssessments": "Visa tester",
     "employer.commandCenter.action.addEmployee": "Lägg till medarbetare",
 
-    "employer.readiness.eyebrow": "Beredskap",
-    "employer.readiness.heading": "Beredskapsbild byggs upp",
-    "employer.readiness.body":
-      "En samlad beredskapspoäng kräver mer verifierad data. Den kommer att byggas av testtäckning, kompetenstäckning, certifikat samt personal- och platsdata.",
-    "employer.readiness.progress": "{n} av {total} datakällor kopplade",
-    "employer.readiness.source.assessments": "Testtäckning",
-    "employer.readiness.source.workforce": "Personaldata",
-    "employer.readiness.source.competencies": "Kompetensdata",
-    "employer.readiness.source.certificates": "Certifikatsdata",
-
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
     "employer.attention.severity.critical": "Kritiskt",
@@ -3755,16 +3745,6 @@ export const dictionaries = {
     "employer.commandCenter.action.viewApplications": "View applications",
     "employer.commandCenter.action.viewAssessments": "View assessments",
     "employer.commandCenter.action.addEmployee": "Add employee",
-
-    "employer.readiness.eyebrow": "Readiness",
-    "employer.readiness.heading": "Readiness profile is being established",
-    "employer.readiness.body":
-      "A combined readiness score needs more verified data. It will be built from assessment coverage, competency coverage, certificates, and workforce/site data.",
-    "employer.readiness.progress": "{n} of {total} data sources connected",
-    "employer.readiness.source.assessments": "Assessment coverage",
-    "employer.readiness.source.workforce": "Workforce data",
-    "employer.readiness.source.competencies": "Competency data",
-    "employer.readiness.source.certificates": "Certificate data",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
