@@ -4919,6 +4919,7 @@ export type Database = {
           contribution: number
           created_at: string
           created_by_service: string | null
+          derivation_basis: Json | null
           disclosure_class: string
           id: string
           is_safety_critical: boolean
@@ -4931,6 +4932,7 @@ export type Database = {
           requires_human_review: boolean
           review_status: string
           role_version_id: string | null
+          safety_finding: string | null
           safety_severity: string | null
           scoring_model_version: string | null
           source_ref: string
@@ -4952,6 +4954,7 @@ export type Database = {
           contribution: number
           created_at?: string
           created_by_service?: string | null
+          derivation_basis?: Json | null
           disclosure_class?: string
           id?: string
           is_safety_critical?: boolean
@@ -4964,6 +4967,7 @@ export type Database = {
           requires_human_review?: boolean
           review_status?: string
           role_version_id?: string | null
+          safety_finding?: string | null
           safety_severity?: string | null
           scoring_model_version?: string | null
           source_ref: string
@@ -4985,6 +4989,7 @@ export type Database = {
           contribution?: number
           created_at?: string
           created_by_service?: string | null
+          derivation_basis?: Json | null
           disclosure_class?: string
           id?: string
           is_safety_critical?: boolean
@@ -4997,6 +5002,7 @@ export type Database = {
           requires_human_review?: boolean
           review_status?: string
           role_version_id?: string | null
+          safety_finding?: string | null
           safety_severity?: string | null
           scoring_model_version?: string | null
           source_ref?: string
@@ -6797,6 +6803,55 @@ export type Database = {
             columns: ["item_version_id"]
             isOneToOne: false
             referencedRelation: "scp_item_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_review_rubric_scores: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          review_id: string
+          rubric_dimension_id: string
+          scored_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: number
+          review_id: string
+          rubric_dimension_id: string
+          scored_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          review_id?: string
+          rubric_dimension_id?: string
+          scored_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_review_rubric_scores_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "scp_human_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_review_rubric_scores_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_review_queue"
+            referencedColumns: ["review_id"]
+          },
+          {
+            foreignKeyName: "scp_review_rubric_scores_rubric_dimension_id_fkey"
+            columns: ["rubric_dimension_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rubric_dimensions"
             referencedColumns: ["id"]
           },
         ]
@@ -8797,16 +8852,27 @@ export type Database = {
         }[]
       }
       scp_can_author: { Args: { _user_id: string }; Returns: boolean }
-      scp_complete_human_review: {
-        Args: {
-          _contribution?: number
-          _outcome: string
-          _rationale: string
-          _review_id: string
-          _safety_severity?: string
-        }
-        Returns: string
-      }
+      scp_complete_human_review:
+        | {
+            Args: {
+              _contribution: number
+              _outcome: string
+              _rationale: string
+              _review_id: string
+              _safety_severity?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _outcome: string
+              _rationale: string
+              _review_id: string
+              _rubric_levels?: Json
+              _safety_finding?: string
+            }
+            Returns: string
+          }
       scp_complete_learning_module: {
         Args: { _attempt_id: string }
         Returns: number
@@ -9033,6 +9099,7 @@ export type Database = {
           chosen_best_label: string
           chosen_label: string
           chosen_worst_label: string
+          finding_required: boolean
           governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
           is_safety_critical: boolean
           item_display_order: number
@@ -9046,6 +9113,7 @@ export type Database = {
           purpose_code: string
           response_text: string
           review_id: string
+          rubric: Json
           severity_required: boolean
           trigger_reason: string
           validation_status_at_assignment: string
