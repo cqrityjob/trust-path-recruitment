@@ -6528,6 +6528,7 @@ export type Database = {
           display_name_en: string | null
           display_name_sv: string | null
           id: string
+          is_test_fixture: boolean
           owner_employer_id: string | null
           role_id: string | null
           slug: string
@@ -6537,6 +6538,7 @@ export type Database = {
           display_name_en?: string | null
           display_name_sv?: string | null
           id?: string
+          is_test_fixture?: boolean
           owner_employer_id?: string | null
           role_id?: string | null
           slug: string
@@ -6546,6 +6548,7 @@ export type Database = {
           display_name_en?: string | null
           display_name_sv?: string | null
           id?: string
+          is_test_fixture?: boolean
           owner_employer_id?: string | null
           role_id?: string | null
           slug?: string
