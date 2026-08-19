@@ -124,6 +124,19 @@
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file's executable body is empty.",
       "reason": "Applied to hosted on owner approval 2026-08-19. Creates cd_profession_bands_for_matching(text[]) and closes the direct table and view paths to cd_profession_profiles. This also ended a live production break: src/lib/career-discovery/v31-public.functions.ts already called this RPC, which did not exist hosted, so the call returned PGRST202 and the error was discarded -- Career Discovery matching was scoring against zero bands, silently.",
       "verify": "SELECT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='cd_profession_bands_for_matching') AS fn, has_function_privilege('anon','public.cd_profession_bands_for_matching(text[])','EXECUTE') AS anon_exec, has_table_privilege('authenticated','public.cd_profession_profiles','SELECT') AS auth_cpp; -- expect 1 f f"
+    },
+    {
+      "canonicalFile": "20260823090000_scp_governed_evidence_model.sql",
+      "canonicalVersion": "20260823090000",
+      "hostedVersion": "20260819120503",
+      "hostedName": "f9543597-f3fb-4bb8-8a7a-d80f49bc165a",
+      "generatedFileOnMain": "supabase/migrations/20260819120503_f9543597-f3fb-4bb8-8a7a-d80f49bc165a.sql",
+      "appliedAt": "2026-08-19T12:05:03Z",
+      "doNotReExecute": true,
+      "mechanism": "Lovable supabase--migration (tracked). The canonical file was uploaded to the agent byte-exact rather than pasted, so no transcription step existed between the reviewed artefact and what ran.",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff between the canonical file and Lovable's generated duplicate is empty.",
+      "reason": "The governed evidence model, applied to hosted on owner approval 2026-08-19. Removes client control of the competency contribution, separates safety-critical ITEM classification from safety concern IN A RESPONSE, adds append-only reviewer rubric scores, and keeps a DEPRECATED five-argument RPC overload plus a severity_required queue alias so the deployed application survives the deploy window. Twenty-two hosted postconditions verified after apply.",
+      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='scp_complete_human_review'; -- expect 2 (governed + deprecated compatibility overload)"
     }
   ],
   "canonicalProject": {
