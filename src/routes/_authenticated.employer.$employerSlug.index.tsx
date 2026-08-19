@@ -374,22 +374,6 @@ function CommandCenter({
 
   items.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 
-  const dataSources = [
-    {
-      key: "assessments",
-      label: t("employer.readiness.source.assessments"),
-      connected: catalog.length > 0,
-    },
-    {
-      key: "workforce",
-      label: t("employer.readiness.source.workforce"),
-      connected: workforce.activeEmployees > 0,
-    },
-    { key: "competencies", label: t("employer.readiness.source.competencies"), connected: false },
-    { key: "certificates", label: t("employer.readiness.source.certificates"), connected: false },
-  ];
-  const connectedCount = dataSources.filter((s) => s.connected).length;
-
   const currentPeriod = new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
     year: "numeric",
     month: "long",
@@ -445,48 +429,6 @@ function CommandCenter({
           linkProps={{ to: "/employer/$employerSlug/workforce", params: { employerSlug } }}
         />
       </div>
-
-      {/* B. Readiness foundation */}
-      <section className="mt-10 rounded-xl border border-border bg-background p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("employer.readiness.eyebrow")}
-            </p>
-            <h2 className="mt-1 text-lg font-semibold text-foreground">
-              {t("employer.readiness.heading")}
-            </h2>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              {t("employer.readiness.body")}
-            </p>
-          </div>
-          <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
-            {t("employer.readiness.progress")
-              .replace("{n}", String(connectedCount))
-              .replace("{total}", "4")}
-          </span>
-        </div>
-        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {dataSources.map((s) => (
-            <li key={s.key} className="flex items-center gap-2 text-sm">
-              {s.connected ? (
-                <CheckCircle2
-                  className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                  aria-hidden="true"
-                />
-              ) : (
-                <span
-                  className="inline-block h-4 w-4 shrink-0 rounded-full border border-dashed border-border"
-                  aria-hidden="true"
-                />
-              )}
-              <span className={s.connected ? "text-foreground" : "text-muted-foreground"}>
-                {s.label}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       {/* C. Needs your attention */}
       <section className="mt-10">

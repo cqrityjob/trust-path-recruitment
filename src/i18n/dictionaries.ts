@@ -1196,7 +1196,7 @@ export const dictionaries = {
 
     "employer.analytics.heading": "Analys",
     "employer.analytics.purpose":
-      "Trender över tid för rekrytering, bedömningar och personalens beredskap, samt jämförelser mellan platser och team.",
+      "Trender över tid för rekrytering, bedömningar och kompetensutveckling, samt jämförelser mellan platser och team.",
     "employer.analytics.value":
       "Fatta beslut baserat på utveckling över tid, inte enstaka ögonblicksbilder.",
     "employer.analytics.milestone": "Kräver historisk data från flera moduler.",
@@ -1220,7 +1220,7 @@ export const dictionaries = {
 
     "employer.workforce.heading": "Personal",
     "employer.workforce.subheading":
-      "Ert register över befintlig personal — grunden för framtida kompetens- och beredskapsbild.",
+      "Ert register över befintlig personal — grunden för en framtida kompetensbild.",
     "employer.workforce.action.add": "Lägg till medarbetare",
     "employer.workforce.action.edit": "Redigera",
     "employer.workforce.action.deactivate": "Inaktivera",
@@ -1229,7 +1229,7 @@ export const dictionaries = {
     "employer.workforce.error.load": "Kunde inte läsa in personalregistret.",
     "employer.workforce.empty.heading": "Inga medarbetare ännu",
     "employer.workforce.empty.body":
-      "Lägg till er personal för att börja bygga en verifierad bild av beredskap och kompetens.",
+      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
     "employer.workforce.status.active": "Aktiv",
     "employer.workforce.status.inactive": "Inaktiv",
     "employer.workforce.form.firstName": "Förnamn",
@@ -1243,21 +1243,11 @@ export const dictionaries = {
 
     "employer.commandCenter.heading": "Command Center",
     "employer.commandCenter.subheading":
-      "Er samlade vy över rekrytering och personalberedskap hos CQrityjob.",
+      "Er samlade vy över rekrytering och personal hos CQrityjob.",
     "employer.commandCenter.action.createJob": "Skapa jobbannons",
     "employer.commandCenter.action.viewApplications": "Visa ansökningar",
     "employer.commandCenter.action.viewAssessments": "Visa tester",
     "employer.commandCenter.action.addEmployee": "Lägg till medarbetare",
-
-    "employer.readiness.eyebrow": "Beredskap",
-    "employer.readiness.heading": "Beredskapsbild byggs upp",
-    "employer.readiness.body":
-      "En samlad beredskapspoäng kräver mer verifierad data. Den kommer att byggas av testtäckning, kompetenstäckning, certifikat samt personal- och platsdata.",
-    "employer.readiness.progress": "{n} av {total} datakällor kopplade",
-    "employer.readiness.source.assessments": "Testtäckning",
-    "employer.readiness.source.workforce": "Personaldata",
-    "employer.readiness.source.competencies": "Kompetensdata",
-    "employer.readiness.source.certificates": "Certifikatsdata",
 
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
@@ -1278,7 +1268,7 @@ export const dictionaries = {
     "employer.attention.draftJobs": "jobbannonser sparade som utkast",
     "employer.attention.assessmentsAvailable": "tester tillgängliga i Assessment Center",
     "employer.attention.workforceEmpty":
-      "Lägg till er personal för att börja bygga en verifierad beredskaps- och kompetensbild.",
+      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
     "employer.attention.source.applications": "Källa: Ansökningar",
     "employer.attention.source.jobs": "Källa: Jobbannonser",
@@ -1295,7 +1285,7 @@ export const dictionaries = {
     "employer.lane.recruitment.reviewApplications": "Granska ansökningar",
     "employer.lane.workforce.heading": "Personal",
     "employer.lane.workforce.empty":
-      "Lägg till er personal för att börja bygga en verifierad beredskaps- och kompetensbild.",
+      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
     "employer.lane.workforce.activeEmployees": "Aktiva medarbetare",
     "employer.lane.workforce.roles": "Roller",
     "employer.lane.workforce.sites": "Platser/team",
@@ -3705,7 +3695,7 @@ export const dictionaries = {
 
     "employer.analytics.heading": "Analytics",
     "employer.analytics.purpose":
-      "Trends over time for recruitment, assessments and workforce readiness, plus comparisons across sites and teams.",
+      "Trends over time for recruitment, assessments and competency development, plus comparisons across sites and teams.",
     "employer.analytics.value": "Decide based on trends over time, not single snapshots.",
     "employer.analytics.milestone": "Requires historical data across several modules.",
 
@@ -3727,7 +3717,7 @@ export const dictionaries = {
 
     "employer.workforce.heading": "Workforce",
     "employer.workforce.subheading":
-      "Your directory of existing employees — the foundation for a future competency and readiness picture.",
+      "Your directory of existing employees — the foundation for a future competency picture.",
     "employer.workforce.action.add": "Add employee",
     "employer.workforce.action.edit": "Edit",
     "employer.workforce.action.deactivate": "Deactivate",
@@ -3736,7 +3726,7 @@ export const dictionaries = {
     "employer.workforce.error.load": "Could not load the employee directory.",
     "employer.workforce.empty.heading": "No employees yet",
     "employer.workforce.empty.body":
-      "Add your workforce to begin building a verified readiness and competency picture.",
+      "Add your workforce to begin building a verified competency picture.",
     "employer.workforce.status.active": "Active",
     "employer.workforce.status.inactive": "Inactive",
     "employer.workforce.form.firstName": "First name",
@@ -3750,21 +3740,11 @@ export const dictionaries = {
 
     "employer.commandCenter.heading": "Command Center",
     "employer.commandCenter.subheading":
-      "Your combined view of recruitment and workforce readiness in CQrityjob.",
+      "Your combined view of recruitment and workforce in CQrityjob.",
     "employer.commandCenter.action.createJob": "Create job",
     "employer.commandCenter.action.viewApplications": "View applications",
     "employer.commandCenter.action.viewAssessments": "View assessments",
     "employer.commandCenter.action.addEmployee": "Add employee",
-
-    "employer.readiness.eyebrow": "Readiness",
-    "employer.readiness.heading": "Readiness profile is being established",
-    "employer.readiness.body":
-      "A combined readiness score needs more verified data. It will be built from assessment coverage, competency coverage, certificates, and workforce/site data.",
-    "employer.readiness.progress": "{n} of {total} data sources connected",
-    "employer.readiness.source.assessments": "Assessment coverage",
-    "employer.readiness.source.workforce": "Workforce data",
-    "employer.readiness.source.competencies": "Competency data",
-    "employer.readiness.source.certificates": "Certificate data",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
@@ -3786,7 +3766,7 @@ export const dictionaries = {
     "employer.attention.draftJobs": "job postings saved as drafts",
     "employer.attention.assessmentsAvailable": "assessments available in the Assessment Center",
     "employer.attention.workforceEmpty":
-      "Add your workforce to begin building a verified readiness and competency picture.",
+      "Add your workforce to begin building a verified competency picture.",
     "employer.attention.source.organisation": "Source: Organisation status",
     "employer.attention.source.applications": "Source: Applications",
     "employer.attention.source.jobs": "Source: Job postings",
@@ -3803,7 +3783,7 @@ export const dictionaries = {
     "employer.lane.recruitment.reviewApplications": "Review applications",
     "employer.lane.workforce.heading": "Workforce",
     "employer.lane.workforce.empty":
-      "Add your workforce to begin building a verified readiness and competency picture.",
+      "Add your workforce to begin building a verified competency picture.",
     "employer.lane.workforce.activeEmployees": "Active employees",
     "employer.lane.workforce.roles": "Roles",
     "employer.lane.workforce.sites": "Sites/teams",
