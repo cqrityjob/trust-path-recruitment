@@ -136,7 +136,8 @@
       "mechanism": "Lovable supabase--migration (tracked). The canonical file was uploaded to the agent byte-exact rather than pasted, so no transcription step existed between the reviewed artefact and what ran.",
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff between the canonical file and Lovable's generated duplicate is empty.",
       "reason": "The governed evidence model, applied to hosted on owner approval 2026-08-19. Removes client control of the competency contribution, separates safety-critical ITEM classification from safety concern IN A RESPONSE, adds append-only reviewer rubric scores, and keeps a DEPRECATED five-argument RPC overload plus a severity_required queue alias so the deployed application survives the deploy window. Twenty-two hosted postconditions verified after apply.",
-      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='scp_complete_human_review'; -- expect 2 (governed + deprecated compatibility overload)"
+      "supersededBy": "20260824090000_scp_review_concurrency_and_legacy_removal.sql dropped the deprecated overload and the severity_required alias once the new build was live, so the overload count is now 1, not 2. The entry below carries the current expectation.",
+      "verify": "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='scp_complete_human_review'; -- expected 2 at apply time (governed + deprecated compatibility overload); expect 1 from 20260819154918 onwards"
     },
     {
       "canonicalFile": "20260823100000_scp_sg_v1_content_governance_corrections.sql",
@@ -150,6 +151,19 @@
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff between the canonical file (SHA-256 374114a3dc6d554e7cee10faa92a869b16a86b0b439fffcb7f72c84350b8e60b) and Lovable's generated duplicate is empty.",
       "reason": "SG v1 content and governance corrections, applied to hosted on owner approval 2026-08-19. Version-safe: proportional_decision_making v1 (six published fixture items, four evidence rows) untouched on SCC-04; new draft v2 -> SCC-11 carries the SG programme's draft items. de_escalation -> SCC-07 and factual_reporting -> SCC-06 remapped in place (all their items draft). Plus sg-b-03 label, best/worst display order, language_scope, legal register. 21 hosted postconditions verified after apply; zero gates cleared, zero closed_test grants.",
       "verify": "SELECT count(*) FROM public.scp_behaviour_versions bv JOIN public.scp_observable_behaviours b ON b.id=bv.behaviour_id WHERE b.slug='proportional_decision_making'; -- expect 2"
+    },
+    {
+      "canonicalFile": "20260824090000_scp_review_concurrency_and_legacy_removal.sql",
+      "canonicalVersion": "20260824090000",
+      "hostedVersion": "20260819154918",
+      "hostedName": "6f8a6e1b-c532-4a1c-85f8-43158d12b9ac",
+      "generatedFileOnMain": "supabase/migrations/20260819154918_6f8a6e1b-c532-4a1c-85f8-43158d12b9ac.sql",
+      "appliedAt": "2026-08-19T15:49:18Z",
+      "doNotReExecute": true,
+      "mechanism": "Lovable supabase--migration (tracked). Canonical file uploaded byte-exact rather than pasted. Self-verifying DO block passed.",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff between the canonical file (SHA-256 88c5092452428ba51b20477e1bc94a53565489e1729adbeaf73a85ed34c41aa6) and Lovable's generated duplicate is empty -- 419 normalised lines on both sides. The raw files differ only in the duplicate's missing trailing newline.",
+      "reason": "F1 and F2 from the pre-pilot red-team review, applied to hosted on owner approval 2026-08-19. F1: scp_complete_human_review now locks the review row FOR UPDATE in its opening lookup and guards the completion UPDATE with review_status = 'pending', so a concurrent second reviewer fails with the named SCP_REVIEW_NOT_PENDING before anything is written. F2: drops the deprecated five-argument overload and the severity_required queue alias, which existed only for the #45 deploy window. A defence-in-depth UNIQUE index on human-review evidence was evaluated and REJECTED: supersession legitimately inserts a second evidence row sharing source_ref and provenance_type. Postconditions verified hosted: one overload, no severity_required, lock and guard present, anon holds no EXECUTE, zero closed_test grants.",
+      "verify": "SELECT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='scp_complete_human_review') AS overloads, has_function_privilege('anon','public.scp_review_queue(text)','EXECUTE') AS anon_queue, (SELECT count(*) FROM public.scp_test_grants WHERE purpose='closed_test') AS closed_test; -- expect 1 f 0"
     }
   ],
   "canonicalProject": {
