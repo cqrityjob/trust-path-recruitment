@@ -8852,27 +8852,16 @@ export type Database = {
         }[]
       }
       scp_can_author: { Args: { _user_id: string }; Returns: boolean }
-      scp_complete_human_review:
-        | {
-            Args: {
-              _contribution: number
-              _outcome: string
-              _rationale: string
-              _review_id: string
-              _safety_severity?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _outcome: string
-              _rationale: string
-              _review_id: string
-              _rubric_levels?: Json
-              _safety_finding?: string
-            }
-            Returns: string
-          }
+      scp_complete_human_review: {
+        Args: {
+          _outcome: string
+          _rationale: string
+          _review_id: string
+          _rubric_levels?: Json
+          _safety_finding?: string
+        }
+        Returns: string
+      }
       scp_complete_learning_module: {
         Args: { _attempt_id: string }
         Returns: number
@@ -9114,7 +9103,6 @@ export type Database = {
           response_text: string
           review_id: string
           rubric: Json
-          severity_required: boolean
           trigger_reason: string
           validation_status_at_assignment: string
         }[]
