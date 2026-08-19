@@ -585,15 +585,24 @@ SELECT pg_temp.must_fail(format(
 
 -- ── The two properties owner decision A and B exist to guarantee ─────────
 --
--- The governed overload has no contribution parameter at all. Proven against
--- the catalogue rather than against a call, so it cannot be satisfied by a
--- caller that merely stopped passing one.
+-- The governed overload declares no contribution PARAMETER. Asserted on the
+-- parameter list, not the body: the body legitimately contains a local
+-- `_contribution` variable holding the value it DERIVES, so a body test would
+-- fail on correct code.
+--
+-- The earlier form of this assertion compared
+-- `pg_get_function_identity_arguments(oid)` against 'uuid, text, text, text,
+-- jsonb'. That function returns parameter NAMES as well as types
+-- ('_review_id uuid, _outcome text, ...'), so the predicate matched zero rows
+-- and the assertion passed vacuously -- the same defect this suite's F7 group
+-- was written to correct in 20260819110000. Found by verifying the hosted
+-- result after the migration was applied. The regprocedure cast below raises if
+-- the function is absent, so it cannot silently match nothing.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'scp_complete_human_review'
-      AND pg_get_function_identity_arguments(p.oid) = 'uuid, text, text, text, jsonb'
-      AND pg_get_functiondef(p.oid) LIKE '%_contribution%') = 0,
-  'VJ9.3b the governed overload accepts no client contribution');
+  pg_get_function_identity_arguments(
+    'public.scp_complete_human_review(uuid,text,text,text,jsonb)'::regprocedure)
+    NOT LIKE '%_contribution%',
+  'VJ9.3b the governed overload declares no contribution parameter');
 
 -- The deprecated overload DOES accept one, for transport compatibility, and
 -- must never read it. Outside comments the identifier may appear on exactly one
