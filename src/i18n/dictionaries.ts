@@ -2469,13 +2469,13 @@ export const dictionaries = {
       "Kontakta din arbetsgivares kontaktperson, eller CQrityjob via kontaktsidan.",
     "academy.coverage.title": "Vad underlaget omfattar",
     "academy.coverage.basisOne":
-      "Underlaget bygger på {observations} observationer från en enda informationskälla.",
+      "Underlaget bygger på {observations} observationer från en enda informationskälla. Antalet beskriver hur mycket underlag som finns — det är varken ett resultat, ett betyg eller ett mått på kvalitet.",
     "academy.coverage.basisMany":
-      "Underlaget bygger på {observations} observationer från {contexts} informationskällor.",
+      "Underlaget bygger på {observations} observationer från {contexts} informationskällor. Antalet beskriver hur mycket underlag som finns — det är varken ett resultat, ett betyg eller ett mått på kvalitet.",
     "academy.coverage.employerBody":
-      'Ett bedömningstillfälle är en informationskälla. Flera kompetenser landar därför på "Behöver följdfråga" — det betyder att underlaget inte räcker för att uttala sig, inte att personen presterat dåligt. Följdfrågorna nedan är till för samtalet. Ytterligare underlag, till exempel ett praktiskt moment eller ett scenario i skarpt läge, gör bilden starkare.',
+      'Ett bedömningstillfälle är en enda informationskälla. Därför kan ingen kompetens i den här rapporten nå "Visat" eller "Starkt visat" — samtliga rader landar på "Behöver följdfråga". Det är avsiktligt och preliminärt: underlaget räcker ännu inte för att uttala sig, och säger ingenting om att personen skulle ha presterat dåligt. Följdfrågorna nedan är till för samtalet. Bilden kan kompletteras senare med underlag från en annan källa, till exempel ett praktiskt moment eller observation i tjänst. Genomförd utbildning är i sig inget bevis på kompetens.',
     "academy.coverage.participantBody":
-      'Det här är ett bedömningstillfälle, alltså en informationskälla. Att något står som "Behöver följdfråga" betyder att underlaget inte räcker för att säga hur du arbetar — inte att du gjort fel. Frågorna nedan är till för din egen reflektion och för samtalet med din chef.',
+      'Det här är ett bedömningstillfälle, alltså en enda informationskälla. Därför står varje kompetens som "Behöver följdfråga" — alla rader, oavsett hur du svarade. Det betyder att underlaget ännu inte räcker för att beskriva hur du arbetar. Det är inte ett dåligt resultat och inte ett besked om att du gjort fel. Frågorna nedan är till för din egen reflektion och för samtalet med din chef. Underlag från fler källor, till exempel ett praktiskt moment, kan fylla på bilden senare.',
     "academy.safety.title": "Säkerhetskritisk uppföljning",
     "academy.safety.bodyOne": "Ett svar rör säkerhetskritisk bedömning och behöver följas upp.",
     "academy.safety.bodyMany": "svar rör säkerhetskritisk bedömning och behöver följas upp.",
@@ -5001,13 +5001,13 @@ export const dictionaries = {
       "Contact your employer's named contact, or CQrityjob via the contact page.",
     "academy.coverage.title": "What this evidence covers",
     "academy.coverage.basisOne":
-      "This rests on {observations} observations from a single source of evidence.",
+      "This rests on {observations} observations from a single source of evidence. The number describes how much evidence there is — it is not a result, a grade or a measure of quality.",
     "academy.coverage.basisMany":
-      "This rests on {observations} observations from {contexts} sources of evidence.",
+      "This rests on {observations} observations from {contexts} sources of evidence. The number describes how much evidence there is — it is not a result, a grade or a measure of quality.",
     "academy.coverage.employerBody":
-      'One assessment occasion is one source. Several competencies therefore read "Needs a follow-up" — that means the evidence is not sufficient to draw a conclusion, not that the person performed poorly. The questions below are there for the conversation. Further evidence, such as a practical check or a live scenario, strengthens the picture.',
+      'One assessment occasion is a single source of evidence. No competency in this report can therefore reach "Shown" or "Strongly shown" — every line reads "Needs a follow-up". That is deliberate and preliminary: the evidence is not yet sufficient to draw a conclusion, and it says nothing about the person having performed poorly. The questions below are there for the conversation. The picture can be completed later with evidence from another source, such as a practical check or observation on duty. Completing training is not in itself proof of competence.',
     "academy.coverage.participantBody":
-      'This is one assessment occasion, which is one source. Something reading "Needs a follow-up" means the evidence is not enough to describe how you work — not that you did anything wrong. The prompts below are for your own reflection and for the conversation with your manager.',
+      'This is one assessment occasion, which is a single source of evidence. Every competency therefore reads "Needs a follow-up" — all of them, whatever you answered. It means the evidence is not yet enough to describe how you work. It is not a poor result and not a statement that you did anything wrong. The prompts below are for your own reflection and for the conversation with your manager. Evidence from more sources, such as a practical check, can add to the picture later.',
     "academy.safety.title": "Safety-critical follow-up",
     "academy.safety.bodyOne":
       "One answer involves safety-critical judgement and needs following up.",
