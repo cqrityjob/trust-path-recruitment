@@ -1020,13 +1020,18 @@ SELECT pg_temp.ok(
 
 -- The specific defect: the fixture must not display the real Security Guard
 -- programme's boundary statements.
+--
+-- Keyed on scp_programs.is_test_fixture rather than a 'fixture-%' slug prefix
+-- (#47). A synthetic programme named anything else was previously counted as
+-- REAL here, which made the assertion fire on scaffolding showing its own
+-- purpose -- the opposite of the defect it exists to catch.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM lib2 l
     WHERE l.is_test_fixture
       AND EXISTS (
         SELECT 1 FROM public.scp_program_versions pv
           JOIN public.scp_programs p ON p.id = pv.program_id
-         WHERE p.slug NOT LIKE 'fixture-%' AND p.slug <> 'decoy-programme-j9'
+         WHERE NOT p.is_test_fixture AND p.slug <> 'decoy-programme-j9'
            AND pv.purpose_sv = l.programme_purpose_sv)) = 0,
   'J9.11 a fixture never shows the REAL programme''s purpose — the original defect');
 

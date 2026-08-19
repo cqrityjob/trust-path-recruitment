@@ -229,6 +229,115 @@ function fail(message: string, fallback: string): AcademyEmployerError {
 
 const employerInput = z.object({ employerId: z.string().uuid() });
 
+/** The five states the product presents, normalised in the database from the
+ *  two governed content_status vocabularies (assessment versions use one,
+ *  programme and module versions another). Storage keeps the precision —
+ *  `legal_review` and `cognitive_review` are different gates with different
+ *  owners — and this is only what an employer is shown. */
+export type LifecycleState =
+  | "draft"
+  | "internal_testing"
+  | "under_review"
+  | "published"
+  | "retired";
+
+/** One row of the durable Assessment & Training Library.
+ *
+ *  Deliberately ONE shape across both product types. `libraryKind` discriminates,
+ *  and everything else is common, so the surface renders a single filterable
+ *  list rather than two products that drift apart. */
+export type ContentLibraryEntry = {
+  libraryKind: "assessment" | "training";
+  /** Assessment version id, or programme version id. The thing an assignment
+   *  would pin, never the definition — history has to stay reproducible. */
+  itemId: string;
+  parentId: string;
+  slug: string;
+  nameSv: string;
+  nameEn: string;
+  summarySv: string | null;
+  summaryEn: string | null;
+  lifecycleState: LifecycleState;
+  contentStatus: string;
+  validationStatus: string;
+  versionNumber: number;
+  isTestFixture: boolean;
+  ownerEmployerId: string | null;
+  ownership: "cqrityjob" | "employer";
+  assignable: boolean;
+  /** Why not, when `assignable` is false. `training_delivery_pending` is honest
+   *  rather than apologetic: the carrier does not exist yet, so the surface
+   *  must not render a control that cannot work. */
+  unassignableReason: string | null;
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
+  itemCount: number;
+  moduleCount: number;
+  minutesMin: number | null;
+  minutesMax: number | null;
+  languages: string[];
+  requiresHumanReview: boolean;
+  targetRoleSv: string | null;
+  targetRoleEn: string | null;
+  competenciesSv: string[];
+  competenciesEn: string[];
+  doesNotMeasureSv: string[];
+  doesNotMeasureEn: string[];
+  publishedAt: string | null;
+  updatedAt: string | null;
+};
+
+/** The durable content library for one organisation, across assessments and
+ *  training alike.
+ *
+ *  Assignability is NOT decided here and is not decided in the client. The RPC
+ *  asks scp_grant_permits_assignment — the same question scp_employer_assign
+ *  asks — so the library can never advertise something the assign path would
+ *  refuse. */
+export const listContentLibrary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<ContentLibraryEntry[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_content_library", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "content_library_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      libraryKind: String(r.library_kind) as ContentLibraryEntry["libraryKind"],
+      itemId: String(r.item_id),
+      parentId: String(r.parent_id),
+      slug: String(r.slug),
+      nameSv: String(r.name_sv),
+      nameEn: String(r.name_en),
+      summarySv: r.summary_sv ?? null,
+      summaryEn: r.summary_en ?? null,
+      lifecycleState: String(r.lifecycle_state) as LifecycleState,
+      contentStatus: String(r.content_status),
+      validationStatus: String(r.validation_status),
+      versionNumber: Number(r.version_number ?? 1),
+      isTestFixture: Boolean(r.is_test_fixture),
+      ownerEmployerId: r.owner_employer_id ?? null,
+      ownership: String(r.ownership) as ContentLibraryEntry["ownership"],
+      assignable: Boolean(r.assignable),
+      unassignableReason: r.unassignable_reason ?? null,
+      governanceMode: (r.governance_mode ?? null) as ContentLibraryEntry["governanceMode"],
+      itemCount: Number(r.item_count ?? 0),
+      moduleCount: Number(r.module_count ?? 0),
+      minutesMin: r.minutes_min ?? null,
+      minutesMax: r.minutes_max ?? null,
+      languages: r.languages ?? [],
+      requiresHumanReview: Boolean(r.requires_human_review),
+      targetRoleSv: r.target_role_sv ?? null,
+      targetRoleEn: r.target_role_en ?? null,
+      competenciesSv: r.competencies_sv ?? [],
+      competenciesEn: r.competencies_en ?? [],
+      doesNotMeasureSv: r.does_not_measure_sv ?? [],
+      doesNotMeasureEn: r.does_not_measure_en ?? [],
+      publishedAt: r.published_at ?? null,
+      updatedAt: r.updated_at ?? null,
+    }));
+  });
+
 export const listAcademyLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => employerInput.parse(d))
@@ -380,6 +489,99 @@ async function notifyParticipant(
     return "failed";
   }
 }
+
+export type TrainingStatusRow = {
+  assignmentId: string;
+  subjectId: string;
+  programmeNameSv: string;
+  programmeNameEn: string;
+  versionNumber: number;
+  status: "assigned" | "in_progress" | "completed" | "cancelled";
+  modulesTotal: number;
+  modulesCompleted: number;
+  assignedAt: string | null;
+  dueAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  language: string;
+  identityResolvable: boolean;
+};
+
+/** Assign one governed programme VERSION to one person.
+ *
+ *  The RPC resolves the processing purpose itself through
+ *  scp_required_purpose_code, so this file never names a purpose and cannot
+ *  select an unapproved one. Owner/admin, tenancy and published-target are all
+ *  re-checked server-side. */
+export const assignTrainingProgramme = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        programVersionId: z.string().uuid(),
+        recipientEmail: z.string().email(),
+        deadline: z.string().nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+        message: z.string().max(2000).nullable().default(null),
+        sourceDecisionId: z.string().uuid().nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ assignmentId: string; subjectId: string; modulesSeeded: number }> => {
+      const ctx = context as Ctx;
+      const { data: rows, error } = await ctx.supabase.rpc("scp_assign_training", {
+        _employer_id: data.employerId,
+        _program_version_id: data.programVersionId,
+        _recipient_email: data.recipientEmail,
+        _language: data.language,
+        _due_at: data.deadline,
+        _message: data.message,
+        _source_decision_id: data.sourceDecisionId,
+      });
+      if (error) throw fail(error.message, "assign_training_failed");
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+      return {
+        assignmentId: String(r.assignment_id),
+        subjectId: String(r.subject_id),
+        modulesSeeded: Number(r.modules_seeded ?? 0),
+      };
+    },
+  );
+
+/** Status and progress only. The RPC returns no response, no answer and no
+ *  identity -- `identityResolvable` says whether the employer could ask, not
+ *  who the person is. */
+export const listTrainingStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<TrainingStatusRow[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_training_status", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "training_status_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      assignmentId: String(r.assignment_id),
+      subjectId: String(r.subject_id),
+      programmeNameSv: String(r.programme_name_sv),
+      programmeNameEn: String(r.programme_name_en),
+      versionNumber: Number(r.version_number ?? 1),
+      status: String(r.status) as TrainingStatusRow["status"],
+      modulesTotal: Number(r.modules_total ?? 0),
+      modulesCompleted: Number(r.modules_completed ?? 0),
+      assignedAt: r.assigned_at ?? null,
+      dueAt: r.due_at ?? null,
+      startedAt: r.started_at ?? null,
+      completedAt: r.completed_at ?? null,
+      language: String(r.language ?? "sv"),
+      identityResolvable: Boolean(r.identity_resolvable),
+    }));
+  });
 
 export const assignAcademyProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

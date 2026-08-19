@@ -1,12 +1,27 @@
-// The Assessment Center frame.
+// The frame for both Utveckling areas: Tester and Kompetensutveckling.
 //
-// Every Academy route resolves the workspace the same way the rest of
+// Every route in either area resolves the workspace the same way the rest of
 // /employer/$employerSlug/* does — the slug is a lookup key only, re-verified
-// through listMyEmployerWorkspaces() on every load. Centralised here so that
-// eight routes cannot drift into eight slightly different access checks.
+// through listMyEmployerWorkspaces() on every load. Centralised here so that a
+// dozen routes cannot drift into a dozen slightly different access checks.
 //
-// The sub-navigation is a tab strip INSIDE the existing Assessments section,
-// not a new entry in the global sidebar. Assessment Center stays one module.
+// ── TWO AREAS, ONE RESOLUTION PATH ────────────────────────────────────
+//
+// Tester and Kompetensutveckling are separate top-level destinations in the
+// sidebar, and they answer different questions:
+//
+//   Tester              what structured assessment has this person completed,
+//                       and what evidence did it produce?
+//   Kompetensutveckling what development has this person been assigned,
+//                       started or completed?
+//
+// They share this file because they share an access check, not because they
+// are the same product. Each has its own tab strip and its own activeSection,
+// so the sidebar always shows where you actually are.
+//
+// Utvecklingsprogram used to be the fifth tab under Tester. It rendered
+// learning modules — training functionality living inside the assessment
+// workspace — and it now lives under Kompetensutveckling, once.
 
 import type { ReactNode } from "react";
 import { Link, useMatchRoute } from "@tanstack/react-router";
@@ -33,21 +48,62 @@ export type AcademyWorkspace = {
   hasMultipleWorkspaces: boolean;
 };
 
-const TABS: { to: string; label: TranslationKey }[] = [
+type Tab = { to: string; label: TranslationKey };
+
+const ASSESSMENT_TABS: Tab[] = [
   { to: "/employer/$employerSlug/assessments", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/assessments/library", label: "academy.nav.library" },
   { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.participants" },
   { to: "/employer/$employerSlug/assessments/reviews", label: "academy.nav.reviews" },
-  { to: "/employer/$employerSlug/assessments/programmes", label: "academy.nav.programmes" },
 ];
 
-/** Resolves the workspace, renders the shell and the Assessment Center tabs,
- *  and hands the verified workspace to the page. */
+const TRAINING_TABS: Tab[] = [
+  { to: "/employer/$employerSlug/training", label: "academy.nav.overview" },
+  { to: "/employer/$employerSlug/training/programmes", label: "training.nav.programmes" },
+  { to: "/employer/$employerSlug/training/participants", label: "academy.nav.participants" },
+];
+
+/** Resolves the workspace, renders the shell and the Tester tabs, and hands
+ *  the verified workspace to the page. */
 export function AcademyPage({
   employerSlug,
   children,
 }: {
   employerSlug: string;
+  children: (ws: AcademyWorkspace) => ReactNode;
+}) {
+  return (
+    <WorkspaceFrame employerSlug={employerSlug} section="assessments" tabs={ASSESSMENT_TABS}>
+      {children}
+    </WorkspaceFrame>
+  );
+}
+
+/** The same frame for Kompetensutveckling. Same access check, different tabs,
+ *  and activeSection="training" so the sidebar highlights the right entry. */
+export function TrainingPage({
+  employerSlug,
+  children,
+}: {
+  employerSlug: string;
+  children: (ws: AcademyWorkspace) => ReactNode;
+}) {
+  return (
+    <WorkspaceFrame employerSlug={employerSlug} section="training" tabs={TRAINING_TABS}>
+      {children}
+    </WorkspaceFrame>
+  );
+}
+
+function WorkspaceFrame({
+  employerSlug,
+  section,
+  tabs,
+  children,
+}: {
+  employerSlug: string;
+  section: "assessments" | "training";
+  tabs: Tab[];
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   const { t } = useT();
@@ -97,16 +153,22 @@ export function AcademyPage({
       employerName={workspace.employerName}
       role={workspace.role}
       status={workspace.status}
-      activeSection="assessments"
+      activeSection={section}
       hasMultipleWorkspaces={workspace.hasMultipleWorkspaces}
     >
-      <AcademyTabs employerSlug={workspace.employerSlug} />
+      <AcademyTabs employerSlug={workspace.employerSlug} tabs={tabs} />
       {children(workspace)}
     </EmployerAppShell>
   );
 }
 
-export function AcademyTabs({ employerSlug }: { employerSlug: string }) {
+export function AcademyTabs({
+  employerSlug,
+  tabs = ASSESSMENT_TABS,
+}: {
+  employerSlug: string;
+  tabs?: Tab[];
+}) {
   const { t } = useT();
   const matchRoute = useMatchRoute();
   return (
@@ -115,7 +177,7 @@ export function AcademyTabs({ employerSlug }: { employerSlug: string }) {
       className="no-print mb-8 -mx-1 overflow-x-auto border-b border-border"
     >
       <ul className="flex min-w-max gap-1 px-1">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = Boolean(
             matchRoute({ to: tab.to, params: { employerSlug }, fuzzy: false }),
           );

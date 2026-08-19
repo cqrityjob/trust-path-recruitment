@@ -45,6 +45,10 @@ export function AcademyOverview({
   return (
     <section className="mb-10">
       <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-accent">
+        {/* Deliberately NOT "Kompetensutveckling": that is now a separate
+            top-level area, and reusing its name as a section heading inside
+            Tester is exactly the mixing the two areas were split to end. This
+            section is about the EVIDENCE this workspace produces. */}
         {t("academy.overview.competenceTitle")}
       </h2>
       <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">

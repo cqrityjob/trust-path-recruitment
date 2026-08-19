@@ -63,6 +63,7 @@ import {
 } from "@/lib/job-intelligence/employer-assessment-catalog.functions";
 import { getEmployerWorkforceSummary } from "@/lib/job-intelligence/employer-workforce.functions";
 import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
+import { listTrainingStatus } from "@/lib/security-competency/academy-employer.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
@@ -202,6 +203,7 @@ function EmployerOverview({
   const loadCatalog = useServerFn(listEmployerAssessmentCatalog);
   const loadWorkforce = useServerFn(getEmployerWorkforceSummary);
   const loadAssignments = useServerFn(listAssignmentsForEmployer);
+  const loadTraining = useServerFn(listTrainingStatus);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -231,6 +233,10 @@ function EmployerOverview({
     queryKey: ["employer", employerId, "assignments", "all"],
     queryFn: () => loadAssignments({ data: { employerId, statusFilter: "all" } }),
   });
+  const trainingQuery = useQuery({
+    queryKey: ["academy", "training-status", employerId],
+    queryFn: () => loadTraining({ data: { employerId } }),
+  });
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -248,6 +254,15 @@ function EmployerOverview({
   ).length;
   const inProgressCount = assignments.filter((a) => a.status === "started").length;
   const completedAssignmentsCount = assignments.filter((a) => a.status === "completed").length;
+
+  // Counted from the training read model, never estimated. The card showed a
+  // "coming soon" badge and no numbers because there was nothing to count;
+  // there is now, so it shows what is actually there.
+  const training = trainingQuery.data ?? [];
+  const trainingActiveCount = training.filter(
+    (r) => r.status === "assigned" || r.status === "in_progress",
+  ).length;
+  const trainingCompletedCount = training.filter((r) => r.status === "completed").length;
 
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
   const publishedJobIds = new Set(jobs.filter((j) => j.status === "published").map((j) => j.id));
@@ -510,16 +525,42 @@ function EmployerOverview({
           ]}
         />
 
-        {/* The development module is a controlled future state on this
-            branch -- the card is structurally correct and routes to the
-            real destination, and says plainly that it is not finished
-            rather than implying functionality that does not exist. */}
+        {/* Kompetensutveckling is real now. The "coming soon" badge is gone
+            and the two numbers are counted from the training read model --
+            nothing on this card is invented. */}
         <PrimaryCard
           icon={<GraduationCap className="h-4 w-4" />}
           title={t("employer.overview.card.development.title")}
           body={t("employer.overview.card.development.body")}
           linkProps={{ to: "/employer/$employerSlug/training", params: { employerSlug } }}
-          badge={t("employer.module.comingSoon.badge")}
+          stats={[
+            {
+              label: t("employer.overview.card.development.stat.active"),
+              value: trainingActiveCount,
+              loading: trainingQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.development.stat.completed"),
+              value: trainingCompletedCount,
+              loading: trainingQuery.isLoading,
+            },
+          ]}
+          actions={[
+            {
+              label: t("employer.overview.card.development.action.programmes"),
+              linkProps: {
+                to: "/employer/$employerSlug/training/programmes",
+                params: { employerSlug },
+              },
+            },
+            {
+              label: t("employer.overview.card.development.action.participants"),
+              linkProps: {
+                to: "/employer/$employerSlug/training/participants",
+                params: { employerSlug },
+              },
+            },
+          ]}
         />
       </div>
 

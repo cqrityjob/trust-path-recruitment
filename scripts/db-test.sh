@@ -287,8 +287,13 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # 23 PR-A + 15 Competency Graph (Phase 0) + 22 Academy (Phase 1a/1b/1c).
 # + scp_review_requirements from Phase 1F.
 # + scp_review_rubric_scores from the governed evidence model (20260823090000).
-if [ "$SCP_TABLES" -ne 67 ]; then
-  echo "FAIL: expected 67 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores), found $SCP_TABLES" >&2
+# + scp_training_assignments and scp_training_module_progress from #47 training
+#   delivery (20260826090000). Two tables, both hanging off the existing spine:
+#   an assignment references a governed programme VERSION and a subject, and
+#   progress references that assignment and a module version. No parallel
+#   content, item, form or attempt model was introduced.
+if [ "$SCP_TABLES" -ne 69 ]; then
+  echo "FAIL: expected 69 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -808,6 +813,75 @@ if [ "$GATE_PASSED" -lt 46 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-e. The durable Assessment & Training Library (#47)
+#
+# Tenancy, lifecycle normalisation, library eligibility, versioning, grants --
+# and the locked Product Owner rule that training completion never moves
+# measured maturity. That last group asserts the BEFORE/AFTER identity on the
+# real function AND proves the counterfactual, so removing the exclusion turns
+# the suite red rather than making it vacuously pass.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine, which the
+# rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running content library and maturity-isolation assertions"
+set +e
+LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"
+LIB_RC=$?
+set -e
+
+echo "$LIB_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+LIB_PASSED="$(echo "$LIB_OUT" | grep -c "ok  " || true)"
+
+if [ "$LIB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the content library suite exited with code ${LIB_RC}." >&2
+  echo "$LIB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${LIB_PASSED} content library assertions passed"
+
+if [ "$LIB_PASSED" -lt 40 ]; then
+  echo "FAIL: expected at least 40 content library assertions, only ${LIB_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-f. The training delivery journey (#47)
+#
+# Assign, discover, start, answer, get feedback, LEAVE AND RESUME, complete a
+# module, complete the programme, record history -- and the boundaries around
+# all of it. Group T3 asserts that measured maturity is byte-identical before
+# and after completion, and T3.5 asserts the evidence really was written, so
+# T3.3 cannot pass vacuously by the completion having done nothing.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine.
+# ---------------------------------------------------------------------------
+echo "==> Running training delivery journey assertions"
+set +e
+TRJ_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_training_journey_test.sql 2>&1)"
+TRJ_RC=$?
+set -e
+
+echo "$TRJ_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+TRJ_PASSED="$(echo "$TRJ_OUT" | grep -c "ok  " || true)"
+
+if [ "$TRJ_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the training journey suite exited with code ${TRJ_RC}." >&2
+  echo "$TRJ_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${TRJ_PASSED} training journey assertions passed"
+
+if [ "$TRJ_PASSED" -lt 44 ]; then
+  echo "FAIL: expected at least 44 training journey assertions, only ${TRJ_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
@@ -1143,6 +1217,8 @@ echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
+echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
+echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
