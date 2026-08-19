@@ -490,6 +490,99 @@ async function notifyParticipant(
   }
 }
 
+export type TrainingStatusRow = {
+  assignmentId: string;
+  subjectId: string;
+  programmeNameSv: string;
+  programmeNameEn: string;
+  versionNumber: number;
+  status: "assigned" | "in_progress" | "completed" | "cancelled";
+  modulesTotal: number;
+  modulesCompleted: number;
+  assignedAt: string | null;
+  dueAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  language: string;
+  identityResolvable: boolean;
+};
+
+/** Assign one governed programme VERSION to one person.
+ *
+ *  The RPC resolves the processing purpose itself through
+ *  scp_required_purpose_code, so this file never names a purpose and cannot
+ *  select an unapproved one. Owner/admin, tenancy and published-target are all
+ *  re-checked server-side. */
+export const assignTrainingProgramme = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        programVersionId: z.string().uuid(),
+        recipientEmail: z.string().email(),
+        deadline: z.string().nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+        message: z.string().max(2000).nullable().default(null),
+        sourceDecisionId: z.string().uuid().nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ assignmentId: string; subjectId: string; modulesSeeded: number }> => {
+      const ctx = context as Ctx;
+      const { data: rows, error } = await ctx.supabase.rpc("scp_assign_training", {
+        _employer_id: data.employerId,
+        _program_version_id: data.programVersionId,
+        _recipient_email: data.recipientEmail,
+        _language: data.language,
+        _due_at: data.deadline,
+        _message: data.message,
+        _source_decision_id: data.sourceDecisionId,
+      });
+      if (error) throw fail(error.message, "assign_training_failed");
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+      return {
+        assignmentId: String(r.assignment_id),
+        subjectId: String(r.subject_id),
+        modulesSeeded: Number(r.modules_seeded ?? 0),
+      };
+    },
+  );
+
+/** Status and progress only. The RPC returns no response, no answer and no
+ *  identity -- `identityResolvable` says whether the employer could ask, not
+ *  who the person is. */
+export const listTrainingStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<TrainingStatusRow[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_training_status", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "training_status_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      assignmentId: String(r.assignment_id),
+      subjectId: String(r.subject_id),
+      programmeNameSv: String(r.programme_name_sv),
+      programmeNameEn: String(r.programme_name_en),
+      versionNumber: Number(r.version_number ?? 1),
+      status: String(r.status) as TrainingStatusRow["status"],
+      modulesTotal: Number(r.modules_total ?? 0),
+      modulesCompleted: Number(r.modules_completed ?? 0),
+      assignedAt: r.assigned_at ?? null,
+      dueAt: r.due_at ?? null,
+      startedAt: r.started_at ?? null,
+      completedAt: r.completed_at ?? null,
+      language: String(r.language ?? "sv"),
+      identityResolvable: Boolean(r.identity_resolvable),
+    }));
+  });
+
 export const assignAcademyProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

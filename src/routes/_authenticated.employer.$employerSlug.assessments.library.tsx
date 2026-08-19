@@ -50,6 +50,7 @@ import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspa
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   assignAcademyProgramme,
+  assignTrainingProgramme,
   listContentLibrary,
   type ContentLibraryEntry,
 } from "@/lib/security-competency/academy-employer.functions";
@@ -664,8 +665,12 @@ function AssignForm({
   const { t } = useT();
   const qc = useQueryClient();
   const assign = useServerFn(assignAcademyProgramme);
+  const assignTraining = useServerFn(assignTrainingProgramme);
+  const isTraining = entry.libraryKind === "training";
   // The library pins the VERSION, never the definition, so an assignment stays
-  // reproducible after a v2 is published.
+  // reproducible after a v2 is published. For training that version is a
+  // programme version; for an assessment it is an assessment version. Same
+  // principle, two governed spines.
   const assessmentVersionId = entry.itemId;
   const [email, setEmail] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -681,8 +686,29 @@ function AssignForm({
   } | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () =>
-      assign({
+    mutationFn: async () => {
+      if (isTraining) {
+        await assignTraining({
+          data: {
+            employerId,
+            programVersionId: assessmentVersionId,
+            recipientEmail: email.trim(),
+            deadline: deadline ? new Date(deadline).toISOString() : null,
+            language,
+            message: null,
+            sourceDecisionId: null,
+          },
+        });
+        // Training has no invitation mail yet, so there is no delivery outcome
+        // to report and no token to hand over -- the participant finds it in
+        // their Academy. The link is still shown, because a link the employer
+        // can pass on by hand always works.
+        return {
+          academyUrl: `${window.location.origin}/academy`,
+          notification: "not_configured" as const,
+        };
+      }
+      return assign({
         data: {
           employerId,
           assessmentVersionId,
@@ -690,10 +716,12 @@ function AssignForm({
           deadline: deadline ? new Date(deadline).toISOString() : null,
           language,
         },
-      }),
+      });
+    },
     onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
       void qc.invalidateQueries({ queryKey: ["academy", "my-work-count"] });
+      void qc.invalidateQueries({ queryKey: ["academy", "training-status"] });
       setError(null);
       // Deliberately does NOT close the form. The employer needs the link and
       // the delivery outcome, and closing on success would throw both away at

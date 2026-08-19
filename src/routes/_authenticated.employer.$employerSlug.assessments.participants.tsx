@@ -22,6 +22,8 @@ import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   cancelAcademyAssignment,
   listAcademyParticipants,
+  listTrainingStatus,
+  type TrainingStatusRow,
   releaseAcademyReport,
   resolveParticipantIdentity,
   listAvailablePurposeCodes,
@@ -61,11 +63,16 @@ function Participants({
   employerSlug: string;
   canManage: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const list = useServerFn(listAcademyParticipants);
+  const trainingFn = useServerFn(listTrainingStatus);
   const query = useQuery({
     queryKey: ["academy", "participants", employerId],
     queryFn: () => list({ data: { employerId } }),
+  });
+  const training = useQuery({
+    queryKey: ["academy", "training-status", employerId],
+    queryFn: () => trainingFn({ data: { employerId } }),
   });
 
   return (
@@ -74,6 +81,27 @@ function Participants({
         title={t("academy.participants.title")}
         lede={t("academy.participants.lede")}
       />
+
+      {/* Training progress sits alongside assessment participation rather than
+          on its own page: an employer asking "how is this person doing?" means
+          both, and two separate screens would make them reconcile it by hand.
+          Status and module counts only -- the answers a participant gives in a
+          development activity are theirs. */}
+      {(training.data ?? []).length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("employer.training.statusHeading")}
+          </h2>
+          <p className="mb-3 mt-1 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("employer.training.statusLede")}
+          </p>
+          <ul className="divide-y divide-border overflow-hidden rounded-[14px] border border-border bg-card">
+            {(training.data ?? []).map((r) => (
+              <TrainingStatusItem key={r.assignmentId} row={r} lang={lang} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <AcademyQueryState
         query={query}
@@ -363,6 +391,67 @@ function ParticipantCard({
         </div>
       )}
     </article>
+  );
+}
+
+function TrainingStatusItem({ row, lang }: { row: TrainingStatusRow; lang: string }) {
+  const { t } = useT();
+  const name = lang === "en" ? row.programmeNameEn : row.programmeNameSv;
+  const stateKey =
+    row.status === "completed"
+      ? "academy.state.completed"
+      : row.status === "in_progress"
+        ? "academy.state.inProgress"
+        : "academy.state.notStarted";
+  const locale = lang === "en" ? "en-GB" : "sv-SE";
+
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-4 py-3.5 sm:px-5">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold leading-snug text-foreground">{name}</h3>
+          <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {t(stateKey as never)}
+          </span>
+        </div>
+        {/* The subject reference, not a name. Identity resolution is a separate,
+            governed act and this surface is not it. */}
+        <p className="mt-1 font-mono text-[12px] text-muted-foreground">
+          {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
+        </p>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px] text-muted-foreground">
+          <span className="tabular-nums">
+            {row.modulesCompleted}/{row.modulesTotal} {t("employer.training.modules")}
+          </span>
+          <span>
+            {t("employer.training.assigned")}{" "}
+            {row.assignedAt ? new Date(row.assignedAt).toLocaleDateString(locale) : "—"}
+          </span>
+          {row.completedAt && (
+            <span>
+              {t("employer.training.completed")}{" "}
+              {new Date(row.completedAt).toLocaleDateString(locale)}
+            </span>
+          )}
+        </p>
+      </div>
+      <div className="w-full max-w-[160px] shrink-0">
+        <div
+          className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--surface-subtle)]"
+          role="progressbar"
+          aria-valuenow={row.modulesCompleted}
+          aria-valuemin={0}
+          aria-valuemax={row.modulesTotal}
+        >
+          <div
+            className="h-full rounded-full bg-accent"
+            style={{
+              width: `${row.modulesTotal > 0 ? Math.round((row.modulesCompleted / row.modulesTotal) * 100) : 0}%`,
+            }}
+          />
+        </div>
+      </div>
+    </li>
   );
 }
 
