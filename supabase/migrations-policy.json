@@ -43,10 +43,26 @@
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818162445';"
     }
   ],
+  "appliedThroughLovable": [
+    {
+      "canonicalFile": "20260820130000_scp_report_attempt_scoped_evidence.sql",
+      "canonicalVersion": "20260820130000",
+      "hostedVersion": "20260819064230",
+      "hostedName": "b11ca5ba-298d-4d5e-b27e-b90d96390a18",
+      "appliedAt": "2026-08-19T06:42:30Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260819064230_b11ca5ba-298d-4d5e-b27e-b90d96390a18.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty apart from a trailing newline. 321 normalised lines on both sides.",
+      "doNotReExecute": true,
+      "reason": "C2. The canonical file is the reviewed artefact and stays in the repository; the Lovable-generated duplicate on main must be removed before merge. Re-executing the canonical file would be a second application of SQL production already ran.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819064230';"
+    }
+  ],
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
     "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": 97,
+    "ledgerRowsAtSnapshot": 98,
+    "ledgerSnapshotNote": "97 before C2; 98 after C2 was applied through Lovable on 2026-08-19.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
   }
 }

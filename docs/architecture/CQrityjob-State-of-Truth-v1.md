@@ -15,7 +15,7 @@ this document records what is *actually true of the systems*.
 |---|---|
 | **Lovable project** | `9ec625ef-34a1-4b4b-8cbb-712cae168579` |
 | **Canonical hosted Supabase** | **`zrahptwsnjcdyzfywbeh`** |
-| Ledger rows (owner-asserted snapshot) | **97** |
+| Ledger rows | **98** (97 before C2; C2 applied 2026-08-19) |
 | `cd_sessions` / `cd_report_snapshots` / `jobs` | **40 / 22 / 15** |
 
 ### Formally invalidated
@@ -44,7 +44,7 @@ reported a 172-row ledger. That analysis, and all five claims below, are
 
 | Fact | Value | Tag |
 |---|---|---|
-| Hosted ledger rows | **97** | **[OWNER-ASSERTED]** |
+| Hosted ledger rows | **98** | **[VERIFIED]** — read directly via Lovable MCP |
 | Repository files, `origin/main` @ `7ae642a` | 184 | **[VERIFIED]** |
 | Repository files, after repair | **176** active + 1 parked | **[VERIFIED]** |
 | Duplicate numeric versions after repair | **0** | **[VERIFIED]** |
@@ -221,3 +221,41 @@ evidence-over-time · one assessment is not established competence · Väktare o
 for the first pilot · no percentages or readiness scores · conservative
 Assessment → Passport boundary · human decision final. All in the
 [Employer Product Source of Truth v1.1](../employer/employer-product-source-of-truth-v1.md).
+
+---
+
+## 11. Production repair log
+
+### C2 — applied 2026-08-19 **[VERIFIED]**
+
+| | |
+|---|---|
+| Canonical file | `20260820130000_scp_report_attempt_scoped_evidence.sql` |
+| Hosted version | **`20260819064230`** |
+| Hosted name | **`b11ca5ba-298d-4d5e-b27e-b90d96390a18`** |
+| Mechanism | Lovable `supabase--migration` (tracked) |
+| Ledger | **97 → 98** |
+| SQL equivalence | comment-stripped diff against the canonical file is empty apart from a trailing newline |
+| Generated file on `main` | `20260819064230_b11ca5ba-…sql` — remove before merging the repair branch |
+| Rollback used | **NO** |
+
+Objects created: `scp_report_snapshots.evidence_scope_version`, `scp_attempt_maturity`,
+`scp_attempt_evidence_state`. `scp_release_attempt_report` replaced — it no longer
+contains `e.subject_id = _a.subject_id`, so cumulative cross-attempt evidence can
+no longer reach a single-attempt report.
+
+Unchanged and verified: 2 report snapshots (both still `evidence_scope_version IS
+NULL`, so neither was rewritten) · 4 evidence rows, 4/4 still resolving to their
+originating attempt · `cd_sessions` 40 · `cd_report_snapshots` 22 · `jobs` 15 ·
+`scp_compute_maturity` intact · `anon` cannot execute either new function.
+
+**The Lovable mechanism cannot record canonical versions.** Every future
+production migration therefore adds a row to `appliedThroughLovable` in
+`supabase/migrations-policy.json`, which is the canonical ↔ hosted registry and
+the reason no canonical file is ever executed twice.
+
+### Still open
+
+Phase B (`20260821090000_scp_pilot_security_gate`) — all four exposures remain
+OPEN. C1 (`20260820120000_scp_employer_report_decisions`) — absent. Phase A —
+recommended **skip**.
