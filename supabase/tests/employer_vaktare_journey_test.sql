@@ -585,14 +585,28 @@ SELECT pg_temp.must_fail(format(
 
 -- ── The two properties owner decision A and B exist to guarantee ─────────
 --
--- There is no parameter to pass a contribution to any more. Proven against the
--- catalogue rather than against a call, so it cannot be satisfied by a caller
--- that merely stopped passing one.
+-- The governed overload has no contribution parameter at all. Proven against
+-- the catalogue rather than against a call, so it cannot be satisfied by a
+-- caller that merely stopped passing one.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname = 'scp_complete_human_review'
-      AND pg_get_function_identity_arguments(p.oid) LIKE '%numeric%') = 0,
-  'VJ9.3b no overload of scp_complete_human_review accepts a client contribution');
+      AND pg_get_function_identity_arguments(p.oid) = 'uuid, text, text, text, jsonb'
+      AND pg_get_functiondef(p.oid) LIKE '%_contribution%') = 0,
+  'VJ9.3b the governed overload accepts no client contribution');
+
+-- The deprecated overload DOES accept one, for transport compatibility, and
+-- must never read it. Outside comments the identifier may appear on exactly one
+-- line: the parameter declaration. The forbidden thing was always client
+-- control of the number, never the existence of an argument thrown away.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM (
+     SELECT l FROM regexp_split_to_table(
+       pg_get_functiondef(
+         'public.scp_complete_human_review(uuid,text,text,numeric,text)'::regprocedure),
+       E'\n') AS l
+      WHERE l LIKE '%_contribution%' AND btrim(l) NOT LIKE '--%') x) = 1,
+  'VJ9.3b2 the deprecated overload accepts a contribution and never reads it');
 
 -- A constructed response cannot be completed without its rubric, and cannot be
 -- completed with only part of it. A missing dimension is a judgement the
@@ -617,6 +631,142 @@ SELECT pg_temp.must_fail(format(
   'SCP_RUBRIC_DIMENSION_MISSING',
   'VJ9.3d a partial rubric is refused rather than averaged');
 
+DO $$ BEGIN RAISE NOTICE 'GROUP VJ12 — the deprecated RPC, for the deploy window'; END $$;
+
+-- =========================================================================
+-- Group VJ12 — DEPRECATED — TRANSITION COMPATIBILITY ONLY
+-- =========================================================================
+--
+-- A migration and a deploy are not atomic with respect to each other, so the
+-- five-argument signature the currently deployed application calls stays
+-- resolvable for one window. It accepts `_contribution` and throws it away.
+--
+-- The pair below is chosen so the proof is deterministic rather than
+-- coincidental. The participant answered every item by taking the FIRST and
+-- LAST option they were served, and after the presentation reorder that means:
+--
+--   sg-b-13   first = D (the worst key), last = C   -> 0 + 0, contribution 0.000
+--   sg-b-15   first = B, last = A (the best key)    -> 0 + 0, contribution 0.000
+--
+-- Two responses with the same governed value. One is completed through the
+-- legacy signature with _contribution => 1.0 and the other with 0.0. If the
+-- supplied number had any effect at all the two rows would differ.
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
+
+-- An old client cannot say 'no_concern' -- that vocabulary did not exist -- so
+-- it sends the old severity, which passes through as the same finding. A
+-- reviewer who said 'low' meant 'low'.
+SELECT public.scp_complete_human_review(
+  (SELECT review_id FROM vjr WHERE slug = 'sg-b-13'),
+  'upheld', 'Gammal granskningsvy.', 1.0, 'low');
+
+SELECT public.scp_complete_human_review(
+  (SELECT review_id FROM vjr WHERE slug = 'sg-b-15'),
+  'upheld', 'Gammal granskningsvy.', 0.0, 'low');
+
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_human_reviews hr
+    WHERE hr.id IN (SELECT review_id FROM vjr WHERE slug IN ('sg-b-13','sg-b-15'))
+      AND hr.review_status = 'completed') = 2,
+  'VJ12.1 the legacy five-argument signature is still callable by a reviewer');
+
+-- THE assertion. 1.0 and 0.0 went in; the same governed 0.000 came out of both.
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT e.contribution) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-15')) = 1
+  AND (SELECT DISTINCT e.contribution FROM public.scp_competency_evidence e
+         JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+         JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+         JOIN public.scp_items i ON i.id = iv.item_id
+        WHERE i.slug IN ('sg-b-13','sg-b-15')) = 0.000,
+  'VJ12.2 legacy contribution 1.0 and 0.0 produce identical governed evidence');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-15')
+      AND e.derivation_basis->>'method' = 'governed_best_worst_keys') = 2,
+  'VJ12.3 the legacy path derives through the governed method like any other');
+
+-- The supplied number reaches no part of the record.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-15')
+      AND (e.derivation_basis::text LIKE '%1.0%'
+        OR e.derivation_basis::text ILIKE '%contribution%'
+        OR e.derivation_basis::text ILIKE '%legacy%')) = 0,
+  'VJ12.4 no derivation_basis carries the supplied legacy contribution');
+
+-- An old client has no rubric controls, so it must be refused rather than
+-- allowed to fabricate a constructed-response score.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''Gammal vy.'', 0.5, NULL)',
+  (SELECT review_id FROM vjr WHERE slug = 'sg-b-17')),
+  'SCP_LEGACY_CLIENT_CANNOT_SCORE_RUBRIC',
+  'VJ12.5 an old client cannot score a constructed response');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- And the refusal left the review exactly as it found it: still open, still
+-- reviewable from the new workspace, with nothing written anywhere.
+SELECT pg_temp.ok(
+  (SELECT review_status FROM public.scp_human_reviews
+    WHERE id = (SELECT review_id FROM vjr WHERE slug = 'sg-b-17')) = 'pending'
+  AND (SELECT count(*) FROM public.scp_competency_evidence e
+         JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+         JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+         JOIN public.scp_items i ON i.id = iv.item_id
+        WHERE i.slug = 'sg-b-17') = 0
+  AND (SELECT count(*) FROM public.scp_review_rubric_scores rs
+        WHERE rs.review_id = (SELECT review_id FROM vjr WHERE slug = 'sg-b-17')) = 0,
+  'VJ12.6 the refused review is untouched — pending, no evidence, no rubric rows');
+
+-- Both signatures are closed to anon, and the legacy one is no easier a door
+-- than the new one.
+SELECT pg_temp.ok(
+  NOT has_function_privilege('anon',
+    'public.scp_complete_human_review(uuid, text, text, numeric, text)', 'EXECUTE')
+  AND NOT has_function_privilege('anon',
+    'public.scp_complete_human_review(uuid, text, text, text, jsonb)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.scp_review_queue(text)', 'EXECUTE'),
+  'VJ12.7 anon can call neither RPC signature');
+
+-- Reviewer/employer separation holds on the legacy signature too.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_complete_human_review(%L::uuid, ''upheld'', ''ours'', 0.5, ''low'')',
+  (SELECT review_id FROM vjr WHERE slug = 'sg-b-16')),
+  'SCP_NOT_A_REVIEWER',
+  'VJ12.8 the commissioning employer cannot use the legacy signature either');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The queue still answers the question the deployed client asks it.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM information_schema.routines r
+     JOIN information_schema.parameters p ON p.specific_name = r.specific_name
+    WHERE r.routine_schema = 'public' AND r.routine_name = 'scp_review_queue'
+      AND p.parameter_name IN ('severity_required','finding_required')) = 2,
+  'VJ12.9 scp_review_queue returns both severity_required and finding_required');
+
+-- VJ12 above resets the session identity when it finishes, so the reviewer is
+-- re-established here rather than inherited.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';
+
 -- Now do the work. Three deliberately different reviewer decisions, chosen by
 -- item slug so the run is deterministic:
 --
@@ -633,7 +783,13 @@ SELECT pg_temp.must_fail(format(
 DO $$
 DECLARE _r record; _levels jsonb;
 BEGIN
-  FOR _r IN SELECT * FROM vjr ORDER BY slug LOOP
+  -- Skips the two VJ12 already completed through the legacy signature.
+  FOR _r IN
+    SELECT v.* FROM vjr v
+      JOIN public.scp_human_reviews hr ON hr.id = v.review_id
+     WHERE hr.review_status = 'pending'
+     ORDER BY v.slug
+  LOOP
     _levels := NULL;
     IF _r.item_format = 'constructed_response' THEN
       SELECT jsonb_object_agg(d.dimension_key,
@@ -683,12 +839,26 @@ SELECT pg_temp.ok(
       AND e.assessor_actor_id = 'dd000000-0000-0000-0000-000000000004') = 12,
   'VJ9.9 all twelve safety observations name their reviewer');
 
+-- Nine of the twelve cleared: twelve safety-critical items, minus sg-b-10's
+-- real finding, minus the two VJ12 completed through the legacy signature —
+-- which cannot express 'no_concern' at all, and so records 'low'. That gap is
+-- the honest cost of the compatibility window and one more reason to keep it
+-- short.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence e
      JOIN public.scp_candidate_responses r ON r.id = e.source_ref
     WHERE r.attempt_id = (SELECT attempt_id FROM vja)
-      AND e.safety_finding = 'no_concern' AND e.safety_severity IS NULL) = 11,
-  'VJ9.9b eleven safety-critical items were cleared, and carry no severity');
+      AND e.safety_finding = 'no_concern' AND e.safety_severity IS NULL) = 9,
+  'VJ9.9b nine safety-critical items were cleared, and carry no severity');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_competency_evidence e
+     JOIN public.scp_candidate_responses r ON r.id = e.source_ref
+     JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+     JOIN public.scp_items i ON i.id = iv.item_id
+    WHERE i.slug IN ('sg-b-13','sg-b-15')
+      AND e.safety_finding = 'low' AND e.safety_severity = 'low') = 2,
+  'VJ9.9b2 the legacy path records the severity the old reviewer chose, unchanged');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence e
@@ -838,15 +1008,22 @@ SELECT pg_temp.ok(
 -- Twelve items were classified safety-critical; one reviewer found something.
 -- Before this model the employer report carried twelve flags on every run,
 -- which is the same as carrying none.
+-- Three findings, not twelve classified items: one 'high' and the two 'low'
+-- the legacy clients recorded. Before this model it was twelve on every run.
 SELECT pg_temp.ok(
   (SELECT jsonb_array_length(safety_flags) FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 1,
-  'VJ10.7 the employer report flags the one real concern, not the twelve items');
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 3,
+  'VJ10.7 the employer report flags the three real findings, not the twelve items');
 
 SELECT pg_temp.ok(
-  (SELECT safety_flags->0->>'finding' FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 'high',
-  'VJ10.8 and the flag it carries is the reviewer''s actual finding');
+  (SELECT safety_flags @> '[{"finding":"high"}]'::jsonb
+     FROM public.scp_report_snapshots
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer')
+  AND (SELECT count(*) FROM public.scp_report_snapshots sn,
+                            jsonb_array_elements(sn.safety_flags) f
+        WHERE sn.attempt_id = (SELECT attempt_id FROM vja) AND sn.audience = 'employer'
+          AND f->>'finding' = 'no_concern') = 0,
+  'VJ10.8 the flags carry the reviewers'' actual findings, and no cleared item among them');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_report_snapshots
@@ -860,7 +1037,7 @@ SELECT pg_temp.ok(
 -- a sentence saying the participant raised one.
 SELECT pg_temp.ok(
   (SELECT (context->>'safety_concerns')::int FROM public.scp_report_snapshots
-    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 1
+    WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'employer') = 3
   AND (SELECT (context->>'safety_concern_present')::boolean
          FROM public.scp_report_snapshots
         WHERE attempt_id = (SELECT attempt_id FROM vja) AND audience = 'participant'),

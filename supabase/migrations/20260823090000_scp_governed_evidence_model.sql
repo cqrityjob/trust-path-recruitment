@@ -314,8 +314,12 @@ ON CONFLICT (rubric_dimension_id, level) DO NOTHING;
 -- SECTION 3 — The review function: no client number, no invented severity
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- The old overload is dropped rather than left callable. A signature that still
--- accepts a contribution is a signature something will eventually pass one to.
+-- Dropped so the replacement is a clean definition rather than a body swap.
+-- SECTION 3b then RE-creates this exact signature as a deprecated, delegating
+-- compatibility wrapper that ignores the contribution, so the currently
+-- deployed application keeps working across the deploy window. Both live in
+-- this one migration on purpose: splitting them would leave a moment where the
+-- signature the running application calls does not exist.
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text);
 
 CREATE OR REPLACE FUNCTION public.scp_complete_human_review(
@@ -603,6 +607,134 @@ COMMENT ON FUNCTION public.scp_complete_human_review(uuid, text, text, text, jso
 REVOKE ALL     ON FUNCTION public.scp_complete_human_review(uuid, text, text, text, jsonb)
   FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION public.scp_complete_human_review(uuid, text, text, text, jsonb)
+  TO authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SECTION 3b — DEPRECATED — TRANSITION COMPATIBILITY ONLY
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ── WHY THIS EXISTS ─────────────────────────────────────────────────────
+--
+-- A database migration and an application deploy are not atomic with respect
+-- to each other, and either order breaks something without this:
+--
+--   database first     the deployed application still calls the five-argument
+--                      signature with `_contribution`, PostgREST finds no such
+--                      function, and every review fails until the new build is
+--                      out.
+--   application first  the new build calls `_safety_finding` / `_rubric_levels`
+--                      against a database that has neither.
+--
+-- So the old signature stays resolvable for one deployment window. PostgREST
+-- resolves an RPC overload by ARGUMENT NAME, which is why the parameter names
+-- here are exactly the ones the currently deployed client sends. Renaming even
+-- one of them would defeat the entire purpose of this function.
+--
+-- ── WHAT IT DOES NOT DO ─────────────────────────────────────────────────
+--
+-- `_contribution` is accepted and IGNORED. Completely. It is never read, never
+-- passed on, never stored, and it reaches no evidence row, no scoring, no
+-- maturity computation, no report and no derivation_basis. The parameter exists
+-- so an HTTP call from the old build still resolves -- that is transport
+-- compatibility, not client control. The number this function actually writes
+-- is derived by the governed path below, exactly as it is for a new client.
+--
+-- The distinction matters and is worth stating plainly: the forbidden thing was
+-- never the existence of an argument. It was a client deciding what somebody's
+-- competence record says.
+--
+-- No scoring key, governed score or preference reaches the caller either. This
+-- function returns what the new one returns: an evidence id, or NULL.
+--
+-- ── CONSTRUCTED RESPONSES ARE REFUSED, DELIBERATELY ─────────────────────
+--
+-- The old build has no rubric controls, so it cannot send rubric levels, and
+-- there is no governed way to score a constructed response without them. The
+-- options were to invent a number or to refuse. This refuses.
+--
+-- It refuses BEFORE anything is written, so the review stays pending, its row
+-- is untouched, no evidence is created and nothing is corrupted -- the reviewer
+-- can complete the same review from the updated workspace a moment later. What
+-- is lost is the text still sitting in the old browser form, which the error
+-- message tells the reviewer to copy before reloading. Storing that text onto a
+-- still-pending review row was considered and rejected: a half-completed review
+-- is a new state for every queue and report reader to get right, in exchange
+-- for a convenience that lasts one deploy.
+--
+-- SJT reviews -- 12 of the 13 in a Security Guard run -- keep working
+-- throughout, because their governed score derives from the stored response
+-- and needs nothing from the client.
+--
+-- ── REMOVAL ─────────────────────────────────────────────────────────────
+--
+-- Removed by a separate forward maintenance migration AFTER the hosted
+-- migration is applied, the new application is deployed, and live smoke tests
+-- confirm the new contract. Not here.
+
+CREATE OR REPLACE FUNCTION public.scp_complete_human_review(
+  _review_id      uuid,
+  _outcome        text,
+  _rationale      text,
+  _contribution   numeric,
+  _safety_severity text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE _fmt text;
+BEGIN
+  -- DEPRECATED — TRANSITION COMPATIBILITY ONLY.
+  -- `_contribution` is not read anywhere in this body. That is the point of it.
+
+  -- Capability FIRST, before anything is looked up. Duplicated with the
+  -- function this delegates to, deliberately: without it, an employer or the
+  -- candidate themselves could call this and learn from the error message
+  -- whether a review they may not see is a constructed response. Caught by
+  -- VJ12.8, which asked for SCP_NOT_A_REVIEWER and got the item format instead.
+  IF NOT public.scp_can_author(auth.uid()) THEN
+    RAISE EXCEPTION 'SCP_NOT_A_REVIEWER: completing a review requires the '
+      'content-review capability.' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT iv.item_format INTO _fmt
+    FROM public.scp_human_reviews hr
+    JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
+   WHERE hr.id = _review_id AND hr.review_status = 'pending';
+
+  IF _fmt = 'constructed_response' THEN
+    RAISE EXCEPTION
+      'SCP_LEGACY_CLIENT_CANNOT_SCORE_RUBRIC: this reviewer workspace is from '
+      'before rubric scoring and cannot score a constructed response. Nothing '
+      'has been saved and the review is still open. Copy your reasoning, '
+      'reload the workspace, and complete it there.'
+      USING ERRCODE = 'feature_not_supported';
+  END IF;
+
+  -- Straight through to the one governed derivation path. The old vocabulary
+  -- maps onto the new one unchanged: a reviewer who said 'low' meant 'low'.
+  -- An old client cannot express 'no_concern', so it keeps the old
+  -- over-triggering behaviour for the length of the window -- which is one more
+  -- reason for the window to be short.
+  RETURN public.scp_complete_human_review(
+    _review_id, _outcome, _rationale, _safety_severity::text, NULL::jsonb);
+END; $function$;
+
+COMMENT ON FUNCTION public.scp_complete_human_review(uuid, text, text, numeric, text) IS
+  'DEPRECATED -- TRANSITION COMPATIBILITY ONLY. Exists so the previously '
+  'deployed application keeps working across the deploy window. _contribution '
+  'is accepted and IGNORED: it never reaches evidence, scoring, maturity, a '
+  'report or derivation_basis. The contribution is derived server-side by the '
+  '(uuid,text,text,text,jsonb) overload, which this delegates to. Constructed '
+  'responses are refused rather than scored without rubric levels. Remove in a '
+  'separate forward migration once the new application is deployed and smoke '
+  'tested.';
+
+REVOKE ALL     ON FUNCTION public.scp_complete_human_review(uuid, text, text, numeric, text)
+  FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION public.scp_complete_human_review(uuid, text, text, numeric, text)
   TO authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -901,10 +1033,13 @@ GROUP BY e.subject_id, m.competency_version_id, cv.competency_id, cv.name_sv, cv
 -- Return type changes, so this is a drop and recreate rather than a replace,
 -- and the ACL has to be restated afterwards.
 --
--- `severity_required` becomes `finding_required`: the reviewer is asked what
--- they found, and 'no concern' is one of the answers. Keeping the old name
--- would leave the control and the function disagreeing about what is being
--- collected, which is how the original defect read to everyone who saw it.
+-- `finding_required` replaces `severity_required` as the name the new build
+-- reads: the reviewer is asked what they FOUND, and 'no concern' is one of the
+-- answers. Keeping only the old name would leave the control and the function
+-- disagreeing about what is being collected, which is how the original defect
+-- read to everyone who saw it. `severity_required` is retained beside it as a
+-- deprecated alias so the currently deployed build keeps working across the
+-- deploy window — see the column comment below.
 --
 -- `rubric` is NULL for every format except constructed_response. It carries the
 -- dimension, its criterion, its five level descriptors and whether it is
@@ -931,6 +1066,13 @@ RETURNS TABLE(
   item_prompt text,
   is_safety_critical boolean,
   finding_required boolean,
+  -- DEPRECATED — TRANSITION COMPATIBILITY ONLY. Same value as finding_required.
+  -- The previously deployed reviewer workspace reads `severity_required`, and
+  -- a rename alone would have made it render no safety control at all, submit a
+  -- NULL finding, and be refused on 12 of the 13 reviews in a Security Guard
+  -- run. Additive, so both builds work; removed with the deprecated RPC
+  -- overload in the same maintenance migration.
+  severity_required boolean,
   item_format text,
   response_text text,
   chosen_label text,
@@ -968,7 +1110,8 @@ BEGIN
     coalesce(itx.scenario, itx_any.scenario),
     coalesce(itx.prompt, itx_any.prompt),
     iv.is_safety_critical,
-    iv.is_safety_critical,
+    iv.is_safety_critical,   -- finding_required
+    iv.is_safety_critical,   -- severity_required (deprecated alias)
     iv.item_format,
     r.response_text,
     chosen.label,
@@ -1328,14 +1471,44 @@ $function$;
 DO $$
 DECLARE _def text; _n int;
 BEGIN
-  -- The constant is gone from the signature, not merely from the callers.
+  -- The governed overload accepts no contribution at all.
   IF EXISTS (
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.proname = 'scp_complete_human_review'
-       AND pg_get_function_identity_arguments(p.oid) LIKE '%numeric%')
+       AND pg_get_function_identity_arguments(p.oid) = 'uuid, text, text, text, jsonb'
+       AND pg_get_functiondef(p.oid) LIKE '%_contribution%')
   THEN
-    RAISE EXCEPTION 'SCP_GEM_CONTRIBUTION_STILL_ACCEPTED: a contribution '
-      'parameter survives on scp_complete_human_review';
+    RAISE EXCEPTION 'SCP_GEM_CONTRIBUTION_STILL_ACCEPTED: the governed overload '
+      'still mentions a contribution parameter';
+  END IF;
+
+  -- The deprecated overload exists for transport compatibility and MUST ignore
+  -- the value. Asserted as a property of the body, not of the signature: the
+  -- forbidden thing is a client controlling the number, not the existence of a
+  -- parameter the function throws away.
+  _def := pg_get_functiondef(
+    'public.scp_complete_human_review(uuid,text,text,numeric,text)'::regprocedure);
+  IF _def NOT LIKE '%DEPRECATED%'
+     OR coalesce(obj_description(
+          'public.scp_complete_human_review(uuid,text,text,numeric,text)'::regprocedure,
+          'pg_proc'), '') NOT LIKE '%DEPRECATED%' THEN
+    RAISE EXCEPTION 'SCP_GEM_COMPAT_UNMARKED: the compatibility overload is not '
+      'marked deprecated in its body and its COMMENT';
+  END IF;
+  -- Outside comments, `_contribution` may appear on exactly one line: the
+  -- parameter declaration. A second executable mention is the value being read,
+  -- which is the whole thing this overload must not do.
+  SELECT count(*) INTO _n FROM (
+    SELECT l FROM regexp_split_to_table(_def, E'\n') AS l
+     WHERE l LIKE '%_contribution%' AND btrim(l) NOT LIKE '--%') x;
+  IF _n <> 1 THEN
+    RAISE EXCEPTION 'SCP_GEM_COMPAT_USES_CONTRIBUTION: the deprecated overload '
+      'references _contribution on % executable line(s); it must accept the '
+      'argument and never read it', _n;
+  END IF;
+  IF _def NOT LIKE '%SCP_LEGACY_CLIENT_CANNOT_SCORE_RUBRIC%' THEN
+    RAISE EXCEPTION 'SCP_GEM_COMPAT_FABRICATES_CR: the deprecated overload does '
+      'not refuse constructed responses';
   END IF;
 
   _def := pg_get_functiondef('public.scp_complete_human_review(uuid,text,text,text,jsonb)'::regprocedure);
@@ -1398,6 +1571,8 @@ BEGIN
   -- The recreated ones must not be anon-callable.
   IF has_function_privilege('anon',
        'public.scp_complete_human_review(uuid, text, text, text, jsonb)', 'EXECUTE')
+     OR has_function_privilege('anon',
+       'public.scp_complete_human_review(uuid, text, text, numeric, text)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.scp_review_queue(text)', 'EXECUTE')
   THEN
     RAISE EXCEPTION 'SCP_GEM_ANON_EXECUTE: a recreated function is anon-callable';

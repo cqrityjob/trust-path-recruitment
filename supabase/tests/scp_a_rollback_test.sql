@@ -219,6 +219,9 @@ DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, text, jsonb) CASCADE;
+-- The deprecated transition overload, which exists alongside the governed one
+-- until the maintenance migration removes it.
+DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, numeric, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_release_attempt_report(uuid) CASCADE;
 -- Phase 2e: the remaining Assessment Center operations.
 DROP FUNCTION IF EXISTS public.scp_employer_library(uuid) CASCADE;

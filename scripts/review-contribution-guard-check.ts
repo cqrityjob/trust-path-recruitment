@@ -23,7 +23,7 @@
  * Run: bun run review-contribution:check
  */
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const ROOT = process.cwd();
@@ -74,15 +74,75 @@ for (const r of ROOTS) {
 
 console.log(`review-contribution:check — scanned ${scanned} file(s) under ${ROOTS.join(", ")}`);
 
-if (offenders.length) {
-  console.error("\nFAIL: a competency contribution is being supplied by the client.");
+// ── The SQL side of the same invariant ──────────────────────────────────
+//
+// The forbidden thing is CLIENT CONTROL of the number, not the existence of a
+// deprecated argument. 20260823090000 keeps the old five-argument signature
+// alive for one deploy window so the currently deployed application does not
+// break — and that overload must accept `_contribution` and never read it.
+//
+// "Never read it" is checked the same way the migration checks it: outside
+// comments, the identifier may appear on exactly one line, the parameter
+// declaration. A second executable mention is the value being used.
+const MIGRATION = join(ROOT, "supabase/migrations/20260823090000_scp_governed_evidence_model.sql");
+const sqlProblems: string[] = [];
+
+if (existsSync(MIGRATION)) {
+  const sql = readFileSync(MIGRATION, "utf8");
+  const start = sql.indexOf(
+    "CREATE OR REPLACE FUNCTION public.scp_complete_human_review(\n  _review_id      uuid,\n  _outcome        text,\n  _rationale      text,\n  _contribution   numeric,",
+  );
+  if (start === -1) {
+    sqlProblems.push(
+      "the deprecated compatibility overload is missing — the deployed application would break on migrate",
+    );
+  } else {
+    // The function body alone, for the line count: the COMMENT ON below it
+    // quotes the parameter name on purpose, and a doc string explaining that
+    // the value is ignored must not read as the value being used.
+    const bodyEnd = sql.indexOf("END; $function$;", start);
+    const body = sql.slice(start, bodyEnd === -1 ? sql.length : bodyEnd);
+    // The declaration plus its COMMENT ON, for the deprecation marker.
+    const declEnd = sql.indexOf(
+      "REVOKE ALL     ON FUNCTION public.scp_complete_human_review(uuid, text, text, numeric, text)",
+      start,
+    );
+    const declared = sql.slice(start, declEnd === -1 ? sql.length : declEnd);
+
+    const executable = body
+      .split("\n")
+      .filter((l) => l.includes("_contribution") && !l.trim().startsWith("--"));
+    if (executable.length !== 1) {
+      sqlProblems.push(
+        `the compatibility overload references _contribution on ${executable.length} executable line(s); ` +
+          "it must accept the argument and never read it",
+      );
+    }
+    if (!declared.includes("DEPRECATED")) {
+      sqlProblems.push("the compatibility overload is not marked DEPRECATED");
+    }
+    if (!body.includes("SCP_LEGACY_CLIENT_CANNOT_SCORE_RUBRIC")) {
+      sqlProblems.push(
+        "the compatibility overload does not refuse constructed responses — an old client could fabricate a rubric score",
+      );
+    }
+  }
+  console.log(
+    `review-contribution:check — checked the deprecated RPC overload in ${relative(ROOT, MIGRATION)}`,
+  );
+}
+
+if (offenders.length || sqlProblems.length) {
+  console.error("\nFAIL: a competency contribution is under client control.");
   console.error(
     "The number is derived server-side in scp_complete_human_review from the\n" +
       "item's governed scoring, or from the reviewer's rubric levels. A client\n" +
-      "that supplies one is writing a value nobody measured.\n",
+      "that supplies one is writing a value nobody measured. A deprecated\n" +
+      "argument that is accepted and thrown away is fine; one that is read is not.\n",
   );
   for (const o of offenders) console.error("  - " + o);
+  for (const p of sqlProblems) console.error("  - " + p);
   process.exit(1);
 }
 
-console.log("review-contribution:check: PASS (no client-supplied contribution)");
+console.log("review-contribution:check: PASS (no client-controlled contribution)");
