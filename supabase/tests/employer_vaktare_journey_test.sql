@@ -1147,10 +1147,14 @@ DO $$ BEGIN RAISE NOTICE 'GROUP VJ11 — the v1 content and governance correctio
 -- new suite because they are properties of the same programme, and a suite
 -- that shares the fixture cannot drift from it.
 
+-- Version 1 of all eight. proportional_decision_making stays on SCC-04 here:
+-- six PUBLISHED fixture item versions share that version, and moving it was
+-- refused by scp_guard_published_immutable -- correctly. The SG programme uses
+-- version 2 instead, asserted in VJ11.1b.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM (VALUES
       ('de_escalation','SCC-07'), ('factual_reporting','SCC-06'),
-      ('proportional_decision_making','SCC-11'),
+      ('proportional_decision_making','SCC-04'),
       ('situational_judgement','SCC-03'), ('mandate_and_escalation','SCC-09'),
       ('operational_communication','SCC-06'), ('operational_coordination','SCC-08'),
       ('integrity_and_information_handling','SCC-01')
@@ -1160,7 +1164,27 @@ SELECT pg_temp.ok(
     JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id
     JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
     JOIN public.scp_competencies c ON c.id = cv.competency_id AND c.code = v.competency_code) = 8,
-  'VJ11.1 all eight behaviours map to the competency the owner decided on');
+  'VJ11.1 version 1 of all eight behaviours maps where the owner decided');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_item_versions iv
+     JOIN public.scp_items i ON i.id = iv.item_id
+     JOIN public.scp_behaviour_versions bv ON bv.id = iv.primary_behaviour_id
+     JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+     JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id
+     JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+     JOIN public.scp_competencies c ON c.id = cv.competency_id
+    WHERE i.slug IN ('sg-b-03','sg-b-04','sg-b-13')
+      AND b.slug = 'proportional_decision_making'
+      AND bv.version_number = 2 AND c.code = 'SCC-11') = 3,
+  'VJ11.1b sg-b-03/04/13 resolve to SCC-11 through behaviour version 2');
+
+-- Every behaviour version reaches exactly one competency: no ambiguity, no orphan.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_behaviour_versions bv
+    WHERE (SELECT count(*) FROM public.scp_behaviour_competency_map m
+            WHERE m.behaviour_version_id = bv.id) <> 1) = 0,
+  'VJ11.1c every behaviour version maps to exactly one competency');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_item_versions iv

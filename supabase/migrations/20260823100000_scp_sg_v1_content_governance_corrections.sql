@@ -37,12 +37,32 @@
 --     twice. SCC-11 is about choosing a proportionate action within mandate,
 --     which reporting is not.
 --
---   proportional_decision_making -> SCC-11, not SCC-04.
+--   proportional_decision_making -> SCC-11, not SCC-04, FOR THE SG PROGRAMME
+--   ONLY, via a new behaviour VERSION.
 --     SCC-11 is literally "Professionellt omdöme och PROPORTIONALITET", and is
 --     defined as weighing facts, rules, risk, rights and consequences to choose
 --     a reasonable and proportionate action within mandate. SCC-04 is about
 --     deciding when time, information or room for action is LIMITED, and none of
 --     sg-b-03/04/13 puts the participant under time pressure.
+--
+--     This one CANNOT be remapped globally, and the first attempt to do so was
+--     correctly refused by the database. Six PUBLISHED fixture item versions --
+--     fixture-e2e-01..04 and fixture-learn-01..02 -- share behaviour version 1
+--     of proportional_decision_making, and scp_guard_published_immutable forbids
+--     changing competency_id on published content. The whole migration aborted
+--     and rolled back, which is the guard doing its job.
+--
+--     Local replay could not have caught it: 20260808100000 and 20260809100000,
+--     which create those fixtures, are on the replay known-failure allowlist, so
+--     the published fixture items do not exist in a clean local database at all.
+--
+--     The fix uses the versioning the platform already has rather than a new
+--     taxonomy. Behaviour version 1 stays exactly as it is, still mapped to
+--     SCC-04, still carrying the six published fixture items and their four
+--     evidence rows. A NEW version 2 of the same behaviour is created, mapped to
+--     SCC-11, and only the SG programme's own DRAFT items and module links are
+--     moved onto it. Published fixture semantics are untouched by construction:
+--     nothing published is in the update's scope.
 --
 -- SCC-04 and SCC-05 therefore end up unmeasured by this assessment. That is
 -- accepted: a role competency does not have to be measured by every
@@ -109,14 +129,19 @@
 -- SECTION 1 — Competency mappings
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- 1a. The two behaviours no published content touches: remapped in place.
+--
+-- Verified before writing this: de_escalation carries 6 item versions and
+-- factual_reporting 4, and every one of them is content_status = 'draft'. No
+-- published row is in scope, so scp_guard_published_immutable has nothing to
+-- refuse and version 1 can simply move.
 UPDATE public.scp_behaviour_competency_map m
    SET competency_version_id = target.cv_id
   FROM (
     SELECT bv.id AS behaviour_version_id, cv.id AS cv_id
       FROM (VALUES
-        ('de_escalation',                'SCC-07'),
-        ('factual_reporting',            'SCC-06'),
-        ('proportional_decision_making', 'SCC-11')
+        ('de_escalation',     'SCC-07'),
+        ('factual_reporting', 'SCC-06')
       ) AS v(behaviour_slug, competency_code)
       JOIN public.scp_observable_behaviours b ON b.slug = v.behaviour_slug
       JOIN public.scp_behaviour_versions bv ON bv.behaviour_id = b.id AND bv.version_number = 1
@@ -125,18 +150,13 @@ UPDATE public.scp_behaviour_competency_map m
   ) AS target
  WHERE m.behaviour_version_id = target.behaviour_version_id;
 
--- Now the items, which the agreement guard will re-check against the map above.
--- Scoped by behaviour rather than by slug on purpose: assessment items, their
--- Learning Mode counterparts and any fixture item that claims one of these
--- behaviours must all move together, or the graph and the item bank disagree.
 UPDATE public.scp_item_versions iv
    SET competency_id = target.competency_id
   FROM (
     SELECT bv.id AS behaviour_version_id, c.id AS competency_id
       FROM (VALUES
-        ('de_escalation',                'SCC-07'),
-        ('factual_reporting',            'SCC-06'),
-        ('proportional_decision_making', 'SCC-11')
+        ('de_escalation',     'SCC-07'),
+        ('factual_reporting', 'SCC-06')
       ) AS v(behaviour_slug, competency_code)
       JOIN public.scp_observable_behaviours b ON b.slug = v.behaviour_slug
       JOIN public.scp_behaviour_versions bv ON bv.behaviour_id = b.id AND bv.version_number = 1
@@ -144,6 +164,75 @@ UPDATE public.scp_item_versions iv
   ) AS target
  WHERE iv.primary_behaviour_id = target.behaviour_version_id
    AND iv.competency_id IS DISTINCT FROM target.competency_id;
+
+-- 1b. proportional_decision_making: a new VERSION, not a moved mapping.
+--
+-- Version 1 is shared with six PUBLISHED fixture item versions and their four
+-- evidence rows. It is left completely alone -- same row, same SCC-04 mapping,
+-- same items, same evidence. Version 2 is the SG programme's reading of the
+-- same behaviour, and it is the only thing that maps to SCC-11.
+--
+-- Copied field-for-field from version 1 rather than re-authored: the behaviour
+-- STATEMENT has not changed and should not drift. What changed is which
+-- construct the SG programme attaches it to.
+INSERT INTO public.scp_behaviour_versions
+  (behaviour_id, version_number, content_status, statement_sv, statement_en,
+   positive_indicators_sv, contraindications_sv, is_safety_critical)
+SELECT bv.behaviour_id, 2, 'draft', bv.statement_sv, bv.statement_en,
+       bv.positive_indicators_sv, bv.contraindications_sv, bv.is_safety_critical
+  FROM public.scp_behaviour_versions bv
+  JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+ WHERE b.slug = 'proportional_decision_making' AND bv.version_number = 1
+ON CONFLICT (behaviour_id, version_number) DO NOTHING;
+
+-- The map row for version 2. Version 1's row is untouched and still says
+-- SCC-04, so no behaviour version has two competencies and nothing is ambiguous.
+INSERT INTO public.scp_behaviour_competency_map
+  (behaviour_version_id, competency_version_id, weight, is_primary)
+SELECT bv.id, cv.id, 1.000, true
+  FROM public.scp_observable_behaviours b
+  JOIN public.scp_behaviour_versions bv ON bv.behaviour_id = b.id AND bv.version_number = 2
+  JOIN public.scp_competencies c ON c.code = 'SCC-11'
+  JOIN public.scp_competency_versions cv ON cv.competency_id = c.id AND cv.version_number = 1
+ WHERE b.slug = 'proportional_decision_making'
+ON CONFLICT (behaviour_version_id, competency_version_id) DO NOTHING;
+
+-- Only the SG programme's own DRAFT items move. `i.slug LIKE 'sg-%'` excludes
+-- every fixture by construction, and `content_status = 'draft'` is a second,
+-- independent guard against touching published content -- belt and braces on
+-- the exact thing that aborted the first attempt.
+--
+-- primary_behaviour_id and competency_id move together in ONE statement, so
+-- scp_guard_item_behaviour_agrees sees a consistent NEW row: version 2 reaches
+-- SCC-11, which is what the item now claims.
+UPDATE public.scp_item_versions iv
+   SET primary_behaviour_id = v2.id,
+       competency_id        = c11.id
+  FROM public.scp_observable_behaviours b
+  JOIN public.scp_behaviour_versions v1 ON v1.behaviour_id = b.id AND v1.version_number = 1
+  JOIN public.scp_behaviour_versions v2 ON v2.behaviour_id = b.id AND v2.version_number = 2
+  CROSS JOIN public.scp_competencies c11
+ WHERE b.slug = 'proportional_decision_making'
+   AND c11.code = 'SCC-11'
+   AND iv.primary_behaviour_id = v1.id
+   AND iv.content_status = 'draft'
+   -- The slug test is a correlated EXISTS rather than a join: an UPDATE ... FROM
+   -- may not reference its own target inside a FROM-list JOIN condition.
+   AND EXISTS (SELECT 1 FROM public.scp_items i
+                WHERE i.id = iv.item_id AND i.slug LIKE 'sg-%');
+
+-- The SG module links follow their items. The fixture module link
+-- (fixture-module-documentation, published) stays on version 1.
+UPDATE public.scp_module_behaviour_map mb
+   SET behaviour_version_id = v2.id
+  FROM public.scp_observable_behaviours b
+  JOIN public.scp_behaviour_versions v1 ON v1.behaviour_id = b.id AND v1.version_number = 1
+  JOIN public.scp_behaviour_versions v2 ON v2.behaviour_id = b.id AND v2.version_number = 2
+ WHERE b.slug = 'proportional_decision_making'
+   AND mb.behaviour_version_id = v1.id
+   AND EXISTS (SELECT 1 FROM public.scp_module_versions mv
+                 JOIN public.scp_modules m ON m.id = mv.module_id
+                WHERE mv.id = mb.module_version_id AND m.slug LIKE 'sg-%');
 
 -- SCC-07 joins the väktare role's competency map. SCC-04 and SCC-05 stay: they
 -- are part of the role even though this instrument no longer evidences them.
@@ -247,11 +336,13 @@ UPDATE public.scp_item_versions iv
 DO $$
 DECLARE _n int; _pattern int;
 BEGIN
-  -- The three mappings, and the four that must not have moved.
+  -- Version 1 of all eight behaviours. proportional_decision_making STAYS on
+  -- SCC-04 here: that is the version the published fixtures use, and leaving it
+  -- alone is the entire point of the version-safe fix.
   SELECT count(*) INTO _n
     FROM (VALUES
       ('de_escalation','SCC-07'), ('factual_reporting','SCC-06'),
-      ('proportional_decision_making','SCC-11'),
+      ('proportional_decision_making','SCC-04'),
       ('situational_judgement','SCC-03'), ('mandate_and_escalation','SCC-09'),
       ('operational_communication','SCC-06'), ('operational_coordination','SCC-08'),
       ('integrity_and_information_handling','SCC-01')
@@ -262,7 +353,113 @@ BEGIN
     JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
     JOIN public.scp_competencies c ON c.id = cv.competency_id AND c.code = v.competency_code;
   IF _n <> 8 THEN
-    RAISE EXCEPTION 'SCP_SGC_MAPPINGS: expected all 8 behaviour mappings, found %', _n;
+    RAISE EXCEPTION 'SCP_SGC_MAPPINGS: expected all 8 version-1 mappings, found %', _n;
+  END IF;
+
+  -- Version 2 exists, is draft, and is the only thing reaching SCC-11 for this
+  -- behaviour.
+  SELECT count(*) INTO _n
+    FROM public.scp_observable_behaviours b
+    JOIN public.scp_behaviour_versions bv ON bv.behaviour_id = b.id AND bv.version_number = 2
+    JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id
+    JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+    JOIN public.scp_competencies c ON c.id = cv.competency_id
+   WHERE b.slug = 'proportional_decision_making' AND c.code = 'SCC-11'
+     AND bv.content_status = 'draft';
+  IF _n <> 1 THEN
+    RAISE EXCEPTION 'SCP_SGC_V2_MAPPING: expected one draft version-2 mapping to SCC-11, found %', _n;
+  END IF;
+
+  -- THE INVARIANT THE FIRST ATTEMPT VIOLATED.
+  --
+  -- Stated as an ABSENCE, not as a count. Hosted has six published fixture item
+  -- versions on this behaviour; a clean local replay has none, because the two
+  -- migrations that create those fixtures are on the replay known-failure
+  -- allowlist. An exact count would be an assertion about the environment and
+  -- would abort the migration in whichever environment it was not written for.
+  -- What must hold in BOTH is that no published item on this behaviour moved off
+  -- version 1 or off SCC-04.
+  SELECT count(*) INTO _n
+    FROM public.scp_item_versions iv
+    JOIN public.scp_behaviour_versions bv ON bv.id = iv.primary_behaviour_id
+    JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+    JOIN public.scp_competencies c ON c.id = iv.competency_id
+   WHERE b.slug = 'proportional_decision_making'
+     AND iv.content_status = 'published'
+     AND (bv.version_number <> 1 OR c.code <> 'SCC-04');
+  IF _n > 0 THEN
+    RAISE EXCEPTION 'SCP_SGC_FIXTURE_MOVED: % published item(s) left version 1 / '
+      'SCC-04; published content must not move', _n;
+  END IF;
+
+  -- Nothing published sits on the new version at all.
+  IF EXISTS (
+    SELECT 1 FROM public.scp_item_versions iv
+      JOIN public.scp_behaviour_versions bv ON bv.id = iv.primary_behaviour_id
+      JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+     WHERE b.slug = 'proportional_decision_making'
+       AND bv.version_number = 2 AND iv.content_status <> 'draft')
+  THEN
+    RAISE EXCEPTION 'SCP_SGC_PUBLISHED_ON_V2: only draft SG content may use the '
+      'new behaviour version';
+  END IF;
+
+  -- And no published item version anywhere claims a competency its behaviour
+  -- version does not reach -- i.e. nothing published was quietly rewritten.
+  IF EXISTS (
+    SELECT 1 FROM public.scp_item_versions iv
+     WHERE iv.content_status = 'published'
+       AND iv.primary_behaviour_id IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM public.scp_behaviour_competency_map m
+           JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+          WHERE m.behaviour_version_id = iv.primary_behaviour_id
+            AND cv.competency_id = iv.competency_id))
+  THEN
+    RAISE EXCEPTION 'SCP_SGC_PUBLISHED_GRAPH_BROKEN: a published item no longer '
+      'agrees with its behaviour version';
+  END IF;
+
+  -- The three SG items the owner named resolve through version 2 to SCC-11.
+  SELECT count(*) INTO _n
+    FROM public.scp_item_versions iv
+    JOIN public.scp_items i ON i.id = iv.item_id
+    JOIN public.scp_behaviour_versions bv ON bv.id = iv.primary_behaviour_id
+    JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+    JOIN public.scp_behaviour_competency_map m ON m.behaviour_version_id = bv.id
+    JOIN public.scp_competency_versions cv ON cv.id = m.competency_version_id
+    JOIN public.scp_competencies c ON c.id = cv.competency_id
+   WHERE i.slug IN ('sg-b-03','sg-b-04','sg-b-13')
+     AND b.slug = 'proportional_decision_making'
+     AND bv.version_number = 2 AND c.code = 'SCC-11';
+  IF _n <> 3 THEN
+    RAISE EXCEPTION 'SCP_SGC_SG_NOT_ON_V2: expected sg-b-03/04/13 on version 2 -> '
+      'SCC-11, found %', _n;
+  END IF;
+
+  -- No orphan: every behaviour version reaches exactly one competency, so there
+  -- is no ambiguity and nothing unreadable.
+  SELECT count(*) INTO _n FROM public.scp_behaviour_versions bv
+   WHERE (SELECT count(*) FROM public.scp_behaviour_competency_map m
+           WHERE m.behaviour_version_id = bv.id) <> 1;
+  IF _n > 0 THEN
+    RAISE EXCEPTION 'SCP_SGC_AMBIGUOUS_OR_ORPHAN: % behaviour version(s) map to '
+      'other than exactly one competency', _n;
+  END IF;
+
+  -- Existing evidence is not rewritten. This migration issues no UPDATE against
+  -- scp_competency_evidence at all, and the append-only guard would refuse one;
+  -- what is asserted here is the observable consequence -- nothing has been
+  -- moved onto the new version, so every existing row still resolves exactly
+  -- where it did. Again an absence, so it holds with four evidence rows hosted
+  -- or none locally.
+  IF EXISTS (SELECT 1 FROM public.scp_competency_evidence e
+               JOIN public.scp_behaviour_versions bv ON bv.id = e.behaviour_version_id
+               JOIN public.scp_observable_behaviours b ON b.id = bv.behaviour_id
+              WHERE b.slug = 'proportional_decision_making' AND bv.version_number = 2)
+  THEN
+    RAISE EXCEPTION 'SCP_SGC_EVIDENCE_ON_V2: no existing evidence may have been '
+      'moved onto the new behaviour version';
   END IF;
 
   -- Nothing in this programme reaches SCC-05 any more, which is the whole point:
@@ -493,13 +690,17 @@ END $$;
 INSERT INTO public.scp_content_events (subject_type, subject_ref, action, reason, metadata)
 VALUES (
   'assessment_version', 'scp-sg-v1-content-governance-corrections', 'updated',
-  'Security Guard v1 corrections, applied before any pilot evidence exists. Three behaviours were attached to the wrong SCC construct and were moved without editing the canon: de_escalation to SCC-07 (the items assess treatment of another person, not the guard''s own impulse control, and the old mapping contradicted the programme''s own does_not_measure statement about emotional stability), factual_reporting to SCC-06 (whose definition is the behaviour statement verbatim), and proportional_decision_making to SCC-11 (which is named for proportionality, where SCC-04 is about time pressure the scenarios do not contain). SCC-04 and SCC-05 are consequently not evidenced by this instrument, which is accepted; both remain on the role and SCC-07 joins it. sg-b-03 option A now names the care assessment its rationale already rewarded. The three best/worst items no longer share one BEST-first/WORST-last presentation. language_scope declares the two languages actually delivered, with adaptation_status untouched. All six legally sensitive items are consistently marked legal review required and pending. No review gate was cleared and no legal conclusion recorded.',
+  'Security Guard v1 corrections, applied before any pilot evidence exists. Three behaviours were attached to the wrong SCC construct and were moved without editing the canon: de_escalation to SCC-07 (the items assess treatment of another person, not the guard''s own impulse control, and the old mapping contradicted the programme''s own does_not_measure statement about emotional stability), factual_reporting to SCC-06 (whose definition is the behaviour statement verbatim), and proportional_decision_making onto a NEW behaviour version 2 mapped to SCC-11 (which is named for proportionality, where SCC-04 is about time pressure the scenarios do not contain). That last one could not be remapped in place: version 1 is shared with six PUBLISHED fixture item versions and scp_guard_published_immutable correctly refused the first attempt, aborting the whole migration. Version 1 and its four evidence rows are left exactly as they were on SCC-04; only the SG programme''s own draft items and module links move to version 2. SCC-04 and SCC-05 are consequently not evidenced by this instrument, which is accepted; both remain on the role and SCC-07 joins it. sg-b-03 option A now names the care assessment its rationale already rewarded. The three best/worst items no longer share one BEST-first/WORST-last presentation. language_scope declares the two languages actually delivered, with adaptation_status untouched. All six legally sensitive items are consistently marked legal review required and pending. No review gate was cleared and no legal conclusion recorded.',
   jsonb_build_object(
     'migration', '20260823100000_scp_sg_v1_content_governance_corrections',
     'behaviour_remaps', jsonb_build_object(
-      'de_escalation', 'SCC-05->SCC-07',
-      'factual_reporting', 'SCC-11->SCC-06',
-      'proportional_decision_making', 'SCC-04->SCC-11'),
+      'de_escalation', 'v1 remapped SCC-05->SCC-07',
+      'factual_reporting', 'v1 remapped SCC-11->SCC-06',
+      'proportional_decision_making',
+        'v1 unchanged on SCC-04 for six published fixture items; new v2 -> SCC-11 '
+        'carries the SG programme''s draft items and module links'),
+    'published_content_modified', false,
+    'evidence_rows_modified', 0,
     'gates_cleared', 0,
     'legal_review_pending_items', 6,
     'content_status', 'draft',
