@@ -116,22 +116,17 @@ async function fetchApprovedProfessionCatalog(
   const rows = (professions ?? []) as ProfessionRow[];
   if (rows.length === 0) return { catalog: [] };
 
-  // cd_profession_profiles_current, not the raw table — see that view's
-  // migration comment: cd_profession_profiles keeps every historical
-  // calibration_version batch for audit purposes, and reading it unfiltered
-  // combines two coexisting batches' bands into one profession's scoring
-  // input (found during the Release Completion mandate's real-data
-  // verification). The view exposes exactly one row per (profession_id,
-  // dimension_id): the most recently authored.
-  const { data: profiles } = await supabase
-    .from("cd_profession_profiles_current")
-    .select(
-      "profession_id, calibration_version, dimension_id, band_low, band_high, weight, centrality",
-    )
-    .in(
-      "profession_id",
-      rows.map((p) => p.profession_id),
-    );
+  // cd_profession_bands_for_matching, not the base table and not the view.
+  // The base table keeps every historical calibration_version batch for audit,
+  // and reading it unfiltered combines two coexisting batches' bands into one
+  // profession's scoring input (found during the Release Completion mandate's
+  // real-data verification). The accessor returns exactly one row per
+  // (profession_id, dimension_id) -- the most recently authored -- and only the
+  // seven columns matching consumes. Direct SELECT on the table and the view is
+  // revoked from authenticated; see 20260822092000.
+  const { data: profiles } = await supabase.rpc("cd_profession_bands_for_matching", {
+    _profession_ids: rows.map((p) => p.profession_id),
+  });
 
   const bandsByProfession = new Map<string, ProfessionDimensionBand[]>();
   let calibrationVersion: string | undefined;

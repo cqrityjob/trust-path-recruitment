@@ -77,6 +77,9 @@ echo "==> Target: $PGUSER@$PGHOST:$PGPORT/$TEST_DB"
 # ---------------------------------------------------------------------------
 # 1. Clean database
 # ---------------------------------------------------------------------------
+echo "==> Migration safety policy"
+bun run scripts/migration-safety-check.ts
+
 echo "==> Creating a clean test database"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB};" >/dev/null
@@ -501,6 +504,32 @@ else
   if [ "$PL_PASSED" -lt 24 ]; then
     echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
     suite_failed "v3.1 personal layer (assertion shortfall: floor 24)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 5b-bis. Career Discovery calibration access boundary
+#
+# Proves the scoring-IP decision: candidates and employers cannot enumerate the
+# calibration tables, the narrow accessor is DEFINER and search_path-pinned, the
+# internal path still works, and stored reports stay reproducible.
+# ---------------------------------------------------------------------------
+echo "==> Running Career Discovery calibration access assertions"
+set +e
+CAL_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_calibration_access_test.sql 2>&1)"
+CAL_RC=$?
+set -e
+echo "$CAL_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CAL_PASSED="$(echo "$CAL_OUT" | grep -c "ok  " || true)"
+if [ "$CAL_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the CD calibration access suite exited with code ${CAL_RC}." >&2
+  echo "$CAL_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "CD calibration access"
+else
+  echo "    ok  ${CAL_PASSED} CD calibration access assertions passed"
+  if [ "$CAL_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 CD calibration access assertions, only ${CAL_PASSED} ran." >&2
+    suite_failed "CD calibration access (assertion shortfall: floor 18)"
   fi
 fi
 
@@ -1074,7 +1103,11 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
-psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
+if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
+  echo "==> Keeping ${TEST_DB} (KEEP_TEST_DB=1)"
+else
+  psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
+fi
 
 # ---------------------------------------------------------------------------
 # 8. Aggregate verdict

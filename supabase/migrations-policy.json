@@ -1,0 +1,97 @@
+{
+  "$comment": "Canonical migration policy. Enforced by scripts/migration-safety-check.ts, which runs in CI and in scripts/db-test.sh. Edit this file deliberately: every entry is an owner-level decision, not a convenience.",
+  "policyVersion": 1,
+  "activeDirectory": "supabase/migrations",
+  "parkedDirectory": "supabase/archive/parked-migrations",
+  "parked": [
+    {
+      "version": "20260720180000",
+      "file": "20260720180000_h4_1_assessment_blueprint_engine_phase1.sql",
+      "reason": "Blueprint Engine Phase 1 (26 tables, 33 functions). Parked by owner decision F, Phase 0C: not applied to hosted production and the product does not depend on it. Physically outside supabase/migrations so no db push, CLI or replay can reach it. Its one load-bearing object, public.assessment_run_reports, was extracted to 20260720180001_assessment_run_reports_canonical_home.sql.",
+      "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
+    }
+  ],
+  "neverReplay": [
+    {
+      "version": "20260730110000",
+      "file": "20260730110000_career_discovery_v3_1_completion.sql",
+      "reason": "Owner decision I, Phase 0C. Re-executing this file would restore the broken global ranking guard, can strip security_invoker from the stored-report view, and would create a candidate-data exposure. It is already recorded in the hosted ledger, so supabase db push will not re-run it; the residual risk is a manual psql -f or a hand-written repair. It STAYS in the active path because later migrations correct it in sequence and a linear replay needs it.",
+      "protection": "content-pinned",
+      "sha256": "1734b25531fdb69f5eb4d332aba259f9debe873e9ea82228bdcccba4f571ac8e",
+      "manualExecution": "forbidden",
+      "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
+    }
+  ],
+  "approvedDuplicateVersions": [
+    {
+      "version": "20260813090000",
+      "pairedWith": "20260814054617",
+      "reason": "Both versions are already recorded in hosted production. Consolidating an already-applied pair is a separate owner-reviewed history operation, not a repository repair. Retained deliberately."
+    }
+  ],
+  "hostedLedgerOverrides": [
+    {
+      "file": "20260818090000_sp_phase10_self_review_and_decision_events.sql",
+      "hostedVersion": "20260818090000",
+      "reason": "Hosted production records Passport Phase 10 at 20260818090000. Canonical replay identity and hosted ledger identity agree. A Phase 0C rename to 20260818090001 was WRONG and has been backed out: 20260818090001 does not exist in production.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818090000';"
+    },
+    {
+      "file": "20260818162445_scp_closed_test_governance.sql",
+      "hostedVersion": "20260818162445",
+      "reason": "Production applied closed-test governance through Lovable under the generated UUID version 20260818162445, not under the authored version 20260818090000. The repository file now carries the hosted ledger identity so canonical replay identity and hosted ledger identity agree, and so the 20260818090000 collision with Passport Phase 10 is resolved without inventing a version.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260818162445';"
+    }
+  ],
+  "appliedThroughLovable": [
+    {
+      "canonicalFile": "20260820130000_scp_report_attempt_scoped_evidence.sql",
+      "canonicalVersion": "20260820130000",
+      "hostedVersion": "20260819064230",
+      "hostedName": "b11ca5ba-298d-4d5e-b27e-b90d96390a18",
+      "appliedAt": "2026-08-19T06:42:30Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260819064230_b11ca5ba-298d-4d5e-b27e-b90d96390a18.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty apart from a trailing newline. 321 normalised lines on both sides.",
+      "doNotReExecute": true,
+      "reason": "C2. The canonical file is the reviewed artefact and stays in the repository; the Lovable-generated duplicate on main must be removed before merge. Re-executing the canonical file would be a second application of SQL production already ran.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819064230';"
+    },
+    {
+      "canonicalFile": "20260821090000_scp_pilot_security_gate.sql",
+      "canonicalVersion": "20260821090000",
+      "hostedVersion": "20260819065241",
+      "hostedName": "c75dc2bf-317c-41af-b63a-1a6cd678f32a",
+      "appliedAt": "2026-08-19T06:52:41Z",
+      "mechanism": "Lovable supabase--migration (tracked). Self-verifying DO block passed.",
+      "generatedFileOnMain": "supabase/migrations/20260819065241_c75dc2bf-317c-41af-b63a-1a6cd678f32a.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file's executable body is empty apart from a trailing newline. 208 normalised lines.",
+      "doNotReExecute": true,
+      "reason": "Phase B. Closed all four pre-pilot security exposures. Re-executing would be a second application; the canonical file stays as the reviewed artefact and the Lovable-generated duplicate on main must be removed before merge.",
+      "rollbackArtefact": "docs/technical/production-fingerprints/pre-phase-b-rollback.sql",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819065241';"
+    },
+    {
+      "canonicalFile": "20260820120000_scp_employer_report_decisions.sql",
+      "canonicalVersion": "20260820120000",
+      "hostedVersion": "20260819071312",
+      "hostedName": "e1402c2b-e0c6-496a-a178-efb208d07a64",
+      "appliedAt": "2026-08-19T07:13:12Z",
+      "mechanism": "Lovable supabase--migration (tracked).",
+      "generatedFileOnMain": "supabase/migrations/20260819071312_e1402c2b-e0c6-496a-a178-efb208d07a64.sql",
+      "sqlEquivalence": "Verified: comment-stripped diff against the canonical file's executable body differs only by whitespace and a trailing newline.",
+      "doNotReExecute": true,
+      "reason": "C1. Purely additive: employer decision table, two indexes, one read policy, append-only guard trigger, three functions. Modifies no existing table, policy, grant or row.",
+      "rollbackArtefact": "docs/technical/production-fingerprints/pre-c1-rollback.sql",
+      "rollbackPrecondition": "Permitted ONLY while scp_employer_report_decisions is empty. The rollback script checks the row count itself and refuses otherwise.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819071312';"
+    }
+  ],
+  "canonicalProject": {
+    "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
+    "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
+    "ledgerRowsAtSnapshot": 100,
+    "ledgerSnapshotNote": "97 before repair; 98 after C2; 99 after Phase B; 100 after C1. All three applied through Lovable on 2026-08-19.",
+    "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
+  }
+}
