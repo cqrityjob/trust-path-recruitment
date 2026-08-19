@@ -56,13 +56,27 @@
       "doNotReExecute": true,
       "reason": "C2. The canonical file is the reviewed artefact and stays in the repository; the Lovable-generated duplicate on main must be removed before merge. Re-executing the canonical file would be a second application of SQL production already ran.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819064230';"
+    },
+    {
+      "canonicalFile": "20260821090000_scp_pilot_security_gate.sql",
+      "canonicalVersion": "20260821090000",
+      "hostedVersion": "20260819065241",
+      "hostedName": "c75dc2bf-317c-41af-b63a-1a6cd678f32a",
+      "appliedAt": "2026-08-19T06:52:41Z",
+      "mechanism": "Lovable supabase--migration (tracked). Self-verifying DO block passed.",
+      "generatedFileOnMain": "supabase/migrations/20260819065241_c75dc2bf-317c-41af-b63a-1a6cd678f32a.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file's executable body is empty apart from a trailing newline. 208 normalised lines.",
+      "doNotReExecute": true,
+      "reason": "Phase B. Closed all four pre-pilot security exposures. Re-executing would be a second application; the canonical file stays as the reviewed artefact and the Lovable-generated duplicate on main must be removed before merge.",
+      "rollbackArtefact": "docs/technical/production-fingerprints/pre-phase-b-rollback.sql",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819065241';"
     }
   ],
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
     "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": 98,
-    "ledgerSnapshotNote": "97 before C2; 98 after C2 was applied through Lovable on 2026-08-19.",
+    "ledgerRowsAtSnapshot": 99,
+    "ledgerSnapshotNote": "97 before C2; 98 after C2; 99 after Phase B. Both applied through Lovable on 2026-08-19.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
   }
 }

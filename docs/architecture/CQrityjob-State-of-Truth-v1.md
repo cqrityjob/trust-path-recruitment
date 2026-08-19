@@ -15,7 +15,7 @@ this document records what is *actually true of the systems*.
 |---|---|
 | **Lovable project** | `9ec625ef-34a1-4b4b-8cbb-712cae168579` |
 | **Canonical hosted Supabase** | **`zrahptwsnjcdyzfywbeh`** |
-| Ledger rows | **98** (97 before C2; C2 applied 2026-08-19) |
+| Ledger rows | **99** (97 → 98 C2 → 99 Phase B, both 2026-08-19) |
 | `cd_sessions` / `cd_report_snapshots` / `jobs` | **40 / 22 / 15** |
 
 ### Formally invalidated
@@ -44,7 +44,7 @@ reported a 172-row ledger. That analysis, and all five claims below, are
 
 | Fact | Value | Tag |
 |---|---|---|
-| Hosted ledger rows | **98** | **[VERIFIED]** — read directly via Lovable MCP |
+| Hosted ledger rows | **99** | **[VERIFIED]** — read directly via Lovable MCP |
 | Repository files, `origin/main` @ `7ae642a` | 184 | **[VERIFIED]** |
 | Repository files, after repair | **176** active + 1 parked | **[VERIFIED]** |
 | Duplicate numeric versions after repair | **0** | **[VERIFIED]** |
@@ -108,7 +108,7 @@ Rescued into `20260720180001_assessment_run_reports_canonical_home.sql`.
 
 ---
 
-## 3. Security gate — ALL FOUR EXPOSURES OPEN IN PRODUCTION
+## 3. Security gate — ALL FOUR EXPOSURES CLOSED IN PRODUCTION (2026-08-19)
 
 | # | Exposure | Production | Repository |
 |---|---|---|---|
@@ -259,3 +259,44 @@ the reason no canonical file is ever executed twice.
 Phase B (`20260821090000_scp_pilot_security_gate`) — all four exposures remain
 OPEN. C1 (`20260820120000_scp_employer_report_decisions`) — absent. Phase A —
 recommended **skip**.
+
+### Phase B — applied 2026-08-19 **[VERIFIED]**
+
+| | |
+|---|---|
+| Canonical file | `20260821090000_scp_pilot_security_gate.sql` |
+| Hosted version | **`20260819065241`** |
+| Hosted name | **`c75dc2bf-317c-41af-b63a-1a6cd678f32a`** |
+| Ledger | **98 → 99** |
+| Self-verifying `DO` block | passed |
+| Rollback used | **NO** |
+
+**All four exposures closed, verified independently:**
+
+| | Before | After |
+|---|---|---|
+| **A** `FOR ALL` author policies | 4 | **0** — all seven policies on those tables are now `SELECT` |
+| **B** `NULL::text[]` assignment policies | 2 | **0** — 2 policies now name `owner`/`admin` |
+| **C** `authenticated` EXECUTE on the four derivation functions | all true | **all false** |
+| **D** `scp_open` column / index / backfill | absent | column ✅, `scp_assignments_one_open_per_subject_idx` ✅, **backfill = 1** |
+
+Backfill is exactly right: 1 assignment open, matching the 1 in-progress attempt;
+0 assignments wrongly open.
+
+Column-level grant is precise: `authenticated` may update `status` and
+`cancelled_at`, and may **not** update `scp_open` or `employer_id`.
+
+Lifecycle objects present: 3 new triggers on `assessment_assignments`
+(`_one_open`, `_scp_open_set`, `_scp_terminal_sync`), 1 on `scp_attempts`
+(`scp_attempts_clear_assignment_open`), 4 functions, **none executable by
+`authenticated`**. `SCP_ASSIGNMENT_ALREADY_OPEN` is present in the guard.
+
+**C2 survived Phase B**, which was the specific risk: `scp_attempt_maturity` and
+`scp_attempt_evidence_state` still exist (their EXECUTE grant was revoked, which
+is intended), and `scp_release_attempt_report` is still `SECURITY DEFINER` and
+still calls them. `scp_employer_assign` remains a single `SECURITY DEFINER`
+overload, callable by `authenticated`.
+
+Unchanged: assignments 6 · attempts 2 (1 released, 1 in_progress) · responses 7 ·
+human reviews 1 · evidence 4 · report snapshots 2 · cd_sessions 40 ·
+cd_report_snapshots 22 · jobs 15 · applications 1 · passport profiles 2.
