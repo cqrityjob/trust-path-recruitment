@@ -388,3 +388,75 @@ Both decision rows were discarded by the transaction abort: the table is back to
 
 Three generated duplicate files now sit on `main` and must be removed before the
 repair branch merges. Phase A remains **recommended skip**.
+
+---
+
+## 12. Phase 0 closeout — final state
+
+### Production **[VERIFIED read-only, 2026-08-19]**
+
+| | |
+|---|---|
+| Canonical DB | **`zrahptwsnjcdyzfywbeh`** |
+| Hosted ledger | **100** |
+| C2 | complete — `evidence_scope_version` present, both attempt-scoped functions present, release path attempt-scoped and free of the `subject_id` cumulative leak |
+| Phase B | complete — A=0 `ALL` policies · B=0 `NULL::text[]` · C=no authenticated EXECUTE · D=`scp_open` 1 open, 0 inconsistent |
+| Phase B product acceptance | complete — owner assign SUCCESS · member DENIED · duplicate REFUSED · cancel SUCCESS · tamper BLOCKED |
+| C1 | complete — decision table present, **0 rows**, append-only trigger intact |
+| Rollbacks used | **zero** |
+| Persistent synthetic acceptance rows | **zero** |
+
+Production counts unchanged throughout: attempts 2 · snapshots 2 · evidence 4 ·
+assignments 6 · cd_sessions 40 · cd_report_snapshots 22 · jobs 15.
+
+### Migration execution model
+
+Lovable's tracked mechanism is `supabase--migration`. It executes the SQL it is
+given, records `supabase_migrations.schema_migrations` under **its own generated
+version and a UUID name**, and commits a generated duplicate of the migration to
+`main`. It cannot record a canonical version. Documented in §1.
+
+Three new canonical ↔ hosted mappings are recorded in
+`supabase/migrations-policy.json` → `appliedThroughLovable`, and the safety guard
+now **enforces** them: the canonical file must exist and the generated duplicate
+must not. All three generated duplicates were removed before merge.
+
+**The direct Supabase CLI has no management access to `zrahptwsnjcdyzfywbeh`.**
+`supabase link --project-ref zrahptwsnjcdyzfywbeh` is refused for insufficient
+privileges, and `supabase projects list` shows a different organisation. Lovable
+MCP is the only working execution channel today.
+
+**Migration execution model debt remains OPEN.**
+
+### Canonical / hosted divergence — mechanically calculated
+
+| Measure | Value |
+|---|---|
+| Hosted ledger rows | **100** |
+| Repository active migrations | **176** |
+| Matched repo ↔ hosted | **90** |
+| Repo migrations with no ledger row | **86** |
+| Ledger rows with no repo file | **10** — the Lovable re-issues whose canonical twins exist under canonical versions |
+
+These numbers are derived from the live ledger and the final repository, not
+assumed. **No hard-coded target (22, 89, 122, 125) is a closeout gate.**
+
+### Phase A — **DEFERRED, NOT CANCELLED**
+
+The divergence above is real migration-safety debt. It is not repaired now
+because the execution model must be settled first: any ledger reconciliation done
+today would be undone by the next Lovable migration, which will again stamp its
+own version. Sequence: fix the mechanism → recalculate divergence mechanically →
+return a separate Phase A proposal for owner approval.
+
+### Product / governance — unchanged by closeout
+
+- `sg-operational-baseline` remains **`draft/design`**
+- **No `closed_test` grant exists** (`closed_test` grants = 0). Assigning it refuses with `SCP_NO_GOVERNANCE_BASIS` — correct behaviour
+- Neither was changed during Phase 0 closeout, deliberately
+
+### Legal / privacy
+
+- Career Discovery consent / lawful-basis decision remains **OPEN**
+- `consent_records` = **0 rows**
+- This is a **pre-external-pilot gate**
