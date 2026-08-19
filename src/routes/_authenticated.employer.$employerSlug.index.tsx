@@ -1,13 +1,19 @@
-// Employer OS Phase 1 — Command Center.
+// Employer OS — the employer landing page, "Översikt".
 //
-// Replaces the previous job-board-shaped "Overview" (stat cards + quick
-// actions) with the real Command Center described in the product vision:
-// what needs attention, what changed, recruitment performance, assessment
-// activity, and the foundations of workforce/sites/AI — all built from
-// data that genuinely exists today. Nothing here is a placeholder metric:
-// every number is either a direct read (dashboard stats, jobs,
-// applications, assessment catalog, workforce summary) or an explicit,
-// labelled "not yet available" state.
+// Replaces the earlier "Command Center", which read as a technical admin
+// console: a header CTA, three competing quick actions, and five stacked
+// module lanes. A responsible manager should instead land on the four
+// areas they actually work in -- recruitment, their people, testing,
+// development -- at equal weight, with everything that needs their
+// judgement immediately below.
+//
+// Nothing here is a placeholder metric: every number is a direct read
+// (dashboard stats, workforce summary, assessment assignments). The
+// entry points that used to be top-level quick actions now sit inside
+// the area they belong to -- applications under Mina annonser, adding an
+// employee under Min personal -- and nothing has been removed from the
+// workspace: sites, reports, analytics and Fråga CQrity are reached from
+// the left navigation.
 //
 // Access-resolution pattern unchanged from every other
 // /employer/$employerSlug/* route: the slug is a lookup key only,
@@ -23,10 +29,8 @@ import {
   Briefcase,
   CheckCircle2,
   ClipboardCheck,
-  Inbox,
+  GraduationCap,
   Info,
-  MapPin,
-  PlusCircle,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -125,7 +129,7 @@ function EmployerWorkspaceShell() {
   }
 
   return (
-    <CommandCenter
+    <EmployerOverview
       employerId={workspace.employerId}
       employerSlug={workspace.employerSlug}
       employerName={workspace.employerName}
@@ -174,7 +178,7 @@ const SEVERITY_STYLE: Record<Severity, { badge: string; icon: ReactNode }> = {
   },
 };
 
-function CommandCenter({
+function EmployerOverview({
   employerId,
   employerSlug,
   employerName,
@@ -238,9 +242,6 @@ function CommandCenter({
   const jobs: EmployerJobRow[] = jobsQuery.data ?? [];
   const applications: EmployerApplicationRow[] = applicationsQuery.data ?? [];
   const catalog: EmployerAssessmentCatalogEntry[] = catalogQuery.data ?? [];
-  const operationalCount = catalog.filter((c) => c.roleCategory === "operational").length;
-  const strategicCount = catalog.filter((c) => c.roleCategory === "strategic").length;
-  const sgf = catalog.find((c) => c.id === "security-guard-foundation");
   const assignments = assignmentsQuery.data ?? [];
   const invitedCount = assignments.filter(
     (a) => a.status === "invited" || a.status === "opened",
@@ -386,47 +387,139 @@ function CommandCenter({
       employerName={employerName}
       role={role}
       status={status}
-      activeSection="command-center"
+      activeSection="overview"
       hasMultipleWorkspaces={hasMultipleWorkspaces}
     >
       {/* A. Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {currentPeriod}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {t("employer.commandCenter.heading")}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {t("employer.commandCenter.subheading")}
-          </p>
-        </div>
-        <Link
-          to="/employer/$employerSlug/jobs/new"
-          params={{ employerSlug }}
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <PlusCircle className="h-4 w-4" aria-hidden="true" />
-          {t("employer.commandCenter.action.createJob")}
-        </Link>
+      <div className="max-w-2xl">
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          {currentPeriod}
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {t("employer.overview.heading")}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {t("employer.overview.subheading")}
+        </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <QuickActionLink
-          icon={<Inbox className="h-4 w-4" />}
-          label={t("employer.commandCenter.action.viewApplications")}
-          linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
+      {/* B. The four working areas, at equal weight. */}
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <PrimaryCard
+          icon={<Briefcase className="h-4 w-4" />}
+          title={t("employer.overview.card.jobs.title")}
+          body={t("employer.overview.card.jobs.body")}
+          linkProps={{ to: "/employer/$employerSlug/jobs", params: { employerSlug } }}
+          stats={[
+            {
+              label: t("employer.overview.card.jobs.stat.active"),
+              value: data.activeJobs,
+              loading: stats.isLoading,
+            },
+            {
+              label: t("employer.overview.card.jobs.stat.drafts"),
+              value: data.draftJobs,
+              loading: stats.isLoading,
+            },
+            {
+              label: t("employer.overview.card.jobs.stat.applications"),
+              value: data.applications,
+              loading: stats.isLoading,
+            },
+          ]}
+          actions={[
+            {
+              label: t("employer.overview.card.jobs.action.create"),
+              linkProps: { to: "/employer/$employerSlug/jobs/new", params: { employerSlug } },
+            },
+            {
+              label: t("employer.overview.card.jobs.action.applications"),
+              linkProps: { to: "/employer/$employerSlug/applications", params: { employerSlug } },
+            },
+          ]}
         />
-        <QuickActionLink
-          icon={<ClipboardCheck className="h-4 w-4" />}
-          label={t("employer.commandCenter.action.viewAssessments")}
-          linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
-        />
-        <QuickActionLink
+
+        <PrimaryCard
           icon={<Users className="h-4 w-4" />}
-          label={t("employer.commandCenter.action.addEmployee")}
+          title={t("employer.overview.card.people.title")}
+          body={t("employer.overview.card.people.body")}
           linkProps={{ to: "/employer/$employerSlug/workforce", params: { employerSlug } }}
+          stats={[
+            {
+              label: t("employer.overview.card.people.stat.employees"),
+              value: workforce.activeEmployees,
+              loading: workforceQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.people.stat.roles"),
+              value: workforce.rolesRepresented,
+              loading: workforceQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.people.stat.sites"),
+              value: workforce.sitesRepresented,
+              loading: workforceQuery.isLoading,
+            },
+          ]}
+          actions={[
+            {
+              label: t("employer.overview.card.people.action.competencies"),
+              linkProps: { to: "/employer/$employerSlug/competencies", params: { employerSlug } },
+            },
+          ]}
+        />
+
+        <PrimaryCard
+          icon={<ClipboardCheck className="h-4 w-4" />}
+          title={t("employer.overview.card.tests.title")}
+          body={t("employer.overview.card.tests.body")}
+          linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
+          stats={[
+            {
+              label: t("employer.overview.card.tests.stat.invited"),
+              value: invitedCount,
+              loading: assignmentsQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.tests.stat.inProgress"),
+              value: inProgressCount,
+              loading: assignmentsQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.tests.stat.completed"),
+              value: completedAssignmentsCount,
+              loading: assignmentsQuery.isLoading,
+            },
+          ]}
+          actions={[
+            {
+              label: t("employer.overview.card.tests.action.assign"),
+              linkProps: {
+                to: "/employer/$employerSlug/assessments/assign",
+                params: { employerSlug },
+                search: { assessmentId: "security-guard-foundation" },
+              },
+            },
+            {
+              label: t("employer.overview.card.tests.action.activity"),
+              linkProps: {
+                to: "/employer/$employerSlug/assessments/assignments",
+                params: { employerSlug },
+              },
+            },
+          ]}
+        />
+
+        {/* The development module is a controlled future state on this
+            branch -- the card is structurally correct and routes to the
+            real destination, and says plainly that it is not finished
+            rather than implying functionality that does not exist. */}
+        <PrimaryCard
+          icon={<GraduationCap className="h-4 w-4" />}
+          title={t("employer.overview.card.development.title")}
+          body={t("employer.overview.card.development.body")}
+          linkProps={{ to: "/employer/$employerSlug/training", params: { employerSlug } }}
+          badge={t("employer.module.comingSoon.badge")}
         />
       </div>
 
@@ -472,286 +565,89 @@ function CommandCenter({
           </ul>
         )}
       </section>
+    </EmployerAppShell>
+  );
+}
 
-      {/* D + E. Recruitment / Workforce lanes */}
-      <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-background p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("employer.lane.recruitment.heading")}
-            </h2>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <MiniStat
-              label={t("employer.dashboard.card.activeJobs")}
-              value={data.activeJobs}
-              loading={stats.isLoading}
-            />
-            <MiniStat
-              label={t("employer.dashboard.card.draftJobs")}
-              value={data.draftJobs}
-              loading={stats.isLoading}
-            />
-            <MiniStat
-              label={t("employer.dashboard.card.applications")}
-              value={data.applications}
-              loading={stats.isLoading}
-            />
-            <MiniStat
-              label={t("employer.lane.recruitment.awaitingReview")}
-              value={awaitingReviewCount}
-              loading={applicationsQuery.isLoading}
-            />
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <LaneAction
-              label={t("employer.commandCenter.action.createJob")}
-              linkProps={{ to: "/employer/$employerSlug/jobs/new", params: { employerSlug } }}
-            />
-            <LaneAction
-              label={t("employer.dashboard.action.manageJobs")}
-              linkProps={{ to: "/employer/$employerSlug/jobs", params: { employerSlug } }}
-            />
-            <LaneAction
-              label={t("employer.lane.recruitment.reviewApplications")}
-              linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-border bg-background p-5 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("employer.lane.workforce.heading")}
-            </h2>
-          </div>
-          {workforceQuery.isSuccess && workforce.activeEmployees === 0 ? (
-            <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-              {t("employer.lane.workforce.empty")}
-            </div>
-          ) : (
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <MiniStat
-                label={t("employer.lane.workforce.activeEmployees")}
-                value={workforce.activeEmployees}
-                loading={workforceQuery.isLoading}
-              />
-              <MiniStat
-                label={t("employer.lane.workforce.roles")}
-                value={workforce.rolesRepresented}
-                loading={workforceQuery.isLoading}
-              />
-              <MiniStat
-                label={t("employer.lane.workforce.sites")}
-                value={workforce.sitesRepresented}
-                loading={workforceQuery.isLoading}
-              />
-            </div>
-          )}
-          <div className="mt-4">
-            <LaneAction
-              label={t("employer.lane.workforce.open")}
-              linkProps={{ to: "/employer/$employerSlug/workforce", params: { employerSlug } }}
-            />
-          </div>
-        </section>
-      </div>
-
-      {/* F. Assessment activity */}
-      <section className="mt-6 rounded-xl border border-border bg-background p-5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("employer.assessmentActivity.heading")}
-          </h2>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <MiniStat
-            label={t("employer.assessments.tab.operational")}
-            value={operationalCount}
-            loading={catalogQuery.isLoading}
-          />
-          <MiniStat
-            label={t("employer.assessments.tab.strategic")}
-            value={strategicCount}
-            loading={catalogQuery.isLoading}
-          />
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <MiniStat
-            label={t("employer.assessmentActivity.invited")}
-            value={invitedCount}
-            loading={assignmentsQuery.isLoading}
-          />
-          <MiniStat
-            label={t("employer.assessmentActivity.inProgress")}
-            value={inProgressCount}
-            loading={assignmentsQuery.isLoading}
-          />
-          <MiniStat
-            label={t("employer.assessmentActivity.completed")}
-            value={completedAssignmentsCount}
-            loading={assignmentsQuery.isLoading}
-          />
-        </div>
-        {assignmentsQuery.isSuccess && assignments.length === 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t("employer.assessmentActivity.empty")}
-          </p>
-        )}
-        {sgf && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 p-3">
-            <p className="text-sm text-foreground">{lang === "sv" ? sgf.name.sv : sgf.name.en}</p>
-            <Link
-              to="/employer/$employerSlug/assessments/$assessmentSlug"
-              params={{ employerSlug, assessmentSlug: sgf.id }}
-              className="text-xs font-medium text-accent hover:underline"
-            >
-              {t("employer.assessments.card.viewDetails")}
-            </Link>
-          </div>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <LaneAction
-            label={t("employer.assessments.action.assign")}
-            linkProps={{
-              to: "/employer/$employerSlug/assessments/assign",
-              params: { employerSlug },
-              search: { assessmentId: "security-guard-foundation" },
-            }}
-          />
-          <LaneAction
-            label={t("employer.assessmentActivity.viewActivity")}
-            linkProps={{
-              to: "/employer/$employerSlug/assessments/assignments",
-              params: { employerSlug },
-            }}
-          />
-          <LaneAction
-            label={t("employer.assessmentActivity.viewCenter")}
-            linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
-          />
-        </div>
-      </section>
-
-      {/* G. Sites & risk foundation */}
-      <section className="mt-6 rounded-xl border border-border bg-background p-5 shadow-sm">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {t("employer.sitesFoundation.heading")}
-          </h2>
-        </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {workforce.sitesRepresented > 0
-            ? t("employer.sitesFoundation.bodyWithData").replace(
-                "{n}",
-                String(workforce.sitesRepresented),
-              )
-            : t("employer.sitesFoundation.bodyEmpty")}
-        </p>
-        <div className="mt-4">
-          <LaneAction
-            label={t("employer.sitesFoundation.open")}
-            linkProps={{ to: "/employer/$employerSlug/sites", params: { employerSlug } }}
-          />
-        </div>
-      </section>
-
-      {/* H. Ask CQrity foundation */}
-      <section className="mt-6 rounded-xl border border-border bg-gradient-to-br from-accent/5 via-background to-background p-5 shadow-sm">
+/** One of the four working areas. The header row is the link to the area
+ *  itself; the small actions below are the shortcuts that used to compete
+ *  with it as separate top-level quick actions. */
+function PrimaryCard({
+  icon,
+  title,
+  body,
+  linkProps,
+  stats,
+  actions,
+  badge,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  linkProps: LinkComponentProps;
+  stats?: { label: string; value: number; loading: boolean }[];
+  actions?: { label: string; linkProps: LinkComponentProps }[];
+  badge?: string;
+}) {
+  return (
+    <section className="flex h-full flex-col rounded-xl border border-border bg-background p-5 shadow-sm transition-colors hover:border-accent/60">
+      <Link {...linkProps} className="group block rounded-md">
         <div className="flex items-start gap-3">
           <span
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent"
             aria-hidden="true"
           >
-            <Sparkles className="h-4 w-4" />
+            {icon}
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold text-foreground">
-                {t("employer.askCqrity.heading")}
+              <h2 className="text-base font-semibold text-foreground transition-colors group-hover:text-accent">
+                {title}
               </h2>
-              <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {t("employer.module.comingSoon.badge")}
-              </span>
+              {badge && (
+                <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {badge}
+                </span>
+              )}
+              <ArrowRight
+                className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-accent"
+                aria-hidden="true"
+              />
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{t("employer.askCqrity.body")}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
           </div>
         </div>
+      </Link>
+
+      {stats && (
+        <dl className="mt-4 grid grid-cols-3 gap-3">
+          {stats.map((stat) => (
+            <div key={stat.label} className="min-w-0">
+              <dt className="truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {stat.label}
+              </dt>
+              <dd className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+                {stat.loading ? "—" : stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {actions && (
         <div className="mt-4 flex flex-wrap gap-2">
-          <LaneAction
-            label={t("employer.askCqrity.query.applications")}
-            linkProps={{ to: "/employer/$employerSlug/applications", params: { employerSlug } }}
-          />
-          <LaneAction
-            label={t("employer.askCqrity.query.assessments")}
-            linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
-          />
-          <LaneAction
-            label={t("employer.askCqrity.heading")}
-            linkProps={{ to: "/employer/$employerSlug/ask-cqrity", params: { employerSlug } }}
-          />
+          {actions.map((action) => (
+            <Link
+              key={action.label}
+              {...action.linkProps}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:border-accent/60 hover:bg-muted/40"
+            >
+              {action.label}
+              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          ))}
         </div>
-      </section>
-    </EmployerAppShell>
-  );
-}
-
-function QuickActionLink({
-  icon,
-  label,
-  linkProps,
-}: {
-  icon: ReactNode;
-  label: string;
-  linkProps: LinkComponentProps;
-}) {
-  return (
-    <Link
-      {...linkProps}
-      className="group flex items-center justify-between rounded-xl border border-border bg-background p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
-    >
-      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <span
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-accent"
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-        {label}
-      </span>
-      <ArrowRight
-        className="h-4 w-4 text-muted-foreground/60 transition-colors group-hover:text-foreground"
-        aria-hidden="true"
-      />
-    </Link>
-  );
-}
-
-function MiniStat({ label, value, loading }: { label: string; value: number; loading: boolean }) {
-  return (
-    <div>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-        {loading ? "—" : value}
-      </p>
-    </div>
-  );
-}
-
-function LaneAction({ label, linkProps }: { label: string; linkProps: LinkComponentProps }) {
-  return (
-    <Link
-      {...linkProps}
-      className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:border-accent/60 hover:bg-muted/40"
-    >
-      {label}
-      <ArrowRight className="h-3 w-3" aria-hidden="true" />
-    </Link>
+      )}
+    </section>
   );
 }
