@@ -89,6 +89,37 @@ export const listMyAcademyWork = createServerFn({ method: "GET" })
     }));
   });
 
+/** How much assessment work this person actually has, split by whether it still
+ *  needs them.
+ *
+ *  The site header needs to decide whether to show a way in, and to say
+ *  something useful when it does. It does not need programme names, employer
+ *  names, purpose text or deadlines, so this returns two numbers and the full
+ *  rows stay on the server.
+ *
+ *  Learning attempts are excluded on purpose: practice is self-directed and is
+ *  not something an employer asked of anyone, so it must not produce a badge
+ *  that reads as an outstanding obligation.
+ *
+ *  Never throws. A participant's navigation must not break because an Academy
+ *  read failed — the entry simply does not appear. */
+export const countMyAcademyWork = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ total: number; actionable: number }> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_my_academy_assignments");
+    if (error) return { total: 0, actionable: 0 };
+    const assessments = (rows ?? []).filter((r: RpcRow) => r.mode === "assessment");
+    return {
+      total: assessments.length,
+      // Still open, so there is something for the person to go and do. A
+      // submitted run awaiting review is deliberately not actionable: nothing
+      // is being asked of them and a badge would imply otherwise.
+      actionable: assessments.filter((r: RpcRow) => String(r.attempt_status) === "in_progress")
+        .length,
+    };
+  });
+
 /** The published learning forms available to practise on. */
 export const listLearningModules = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

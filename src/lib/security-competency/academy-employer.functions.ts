@@ -269,6 +269,98 @@ export const listAvailablePurposeCodes = createServerFn({ method: "GET" })
     return [...codes];
   });
 
+/** What became of the invitation mail. Never an error: the assignment stands
+ *  regardless, and the employer is given a link to pass on either way.
+ *
+ *  `not_configured` is the honest state on a deployment with no mail provider
+ *  set, and it is deliberately NOT reported as a failure — nothing broke, the
+ *  copy-link is simply the delivery mechanism there. */
+export type NotificationOutcome = "sent" | "not_configured" | "failed";
+
+/** Where a governed assignment sends the participant.
+ *
+ *  /academy, not /invite/<token>. The governed path resolves the address to an
+ *  existing account before it assigns anything (SCP_RECIPIENT_HAS_NO_ACCOUNT),
+ *  so the person already has a way in and a token would only be a second,
+ *  weaker credential for a door they can already open. Nothing about the
+ *  assessment travels in the URL. */
+async function academyDestination(): Promise<{ siteOrigin: string; academyUrl: string }> {
+  const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+  const siteOrigin = process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+  return { siteOrigin, academyUrl: `${siteOrigin}/academy` };
+}
+
+/** Best-effort invitation mail for a governed assignment.
+ *
+ *  Reuses send-invitation-email.server.ts unchanged. That module is inert
+ *  without RESEND_API_KEY/RESEND_FROM_EMAIL, so on an unconfigured deployment
+ *  this costs one branch and no network call.
+ *
+ *  Employer and programme names are read back from the database rather than
+ *  taken from the caller. They are rendered into mail sent to a third party,
+ *  and an employer-supplied string would be an easy way to put arbitrary words
+ *  in front of a participant under CQrityjob's name.
+ *
+ *  Delivery status is NOT persisted. The legacy path records it on the
+ *  assignment row through the service-role client; doing that here would mean
+ *  introducing service-role use into the governed path for a status the
+ *  employer is about to read on screen anyway. */
+async function notifyParticipant(
+  ctx: Ctx,
+  p: {
+    employerId: string;
+    assessmentVersionId: string;
+    assignmentId: string;
+    recipientEmail: string;
+    language: "sv" | "en";
+    siteOrigin: string;
+    academyUrl: string;
+  },
+): Promise<NotificationOutcome> {
+  try {
+    const [{ data: employer }, { data: assignment }, { data: library }] = await Promise.all([
+      ctx.supabase.from("employers").select("name").eq("id", p.employerId).maybeSingle(),
+      ctx.supabase
+        .from("assessment_assignments")
+        .select("expires_at")
+        .eq("id", p.assignmentId)
+        .maybeSingle(),
+      ctx.supabase.rpc("scp_employer_library", { _employer_id: p.employerId }),
+    ]);
+
+    const entry = (library ?? []).find(
+      (row: RpcRow) => String(row.assessment_version_id) === p.assessmentVersionId,
+    ) as RpcRow | undefined;
+
+    // If any of the three is missing the mail would carry a blank where a name
+    // belongs. Sending that is worse than not sending: the employer still has
+    // the link, and an unexplained message from an unnamed company is exactly
+    // what a participant should ignore.
+    if (!employer?.name || !entry) return "failed";
+
+    const { sendInvitationEmail } = await import("@/lib/email/send-invitation-email.server");
+    const result = await sendInvitationEmail({
+      recipientEmail: p.recipientEmail,
+      language: p.language,
+      employerName: String(employer.name),
+      assessmentNameSv: String(entry.name_sv),
+      assessmentNameEn: String(entry.name_en),
+      siteOrigin: p.siteOrigin,
+      invitationUrl: p.academyUrl,
+      expiresAt: String(assignment?.expires_at ?? ""),
+      employerMessage: null,
+    });
+
+    if (result.ok) return "sent";
+    return result.skipped ? "not_configured" : "failed";
+  } catch (err) {
+    // Anything at all — a missing table on a partially migrated environment, a
+    // provider timeout, a bad response shape. The assignment is already made.
+    console.error("[academy-employer] invitation notification failed", err);
+    return "failed";
+  }
+}
+
 export const assignAcademyProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -294,6 +386,10 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
       assignmentId: string;
       attemptId: string;
       governanceMode: "development" | "closed_test" | "recruitment";
+      /** Where the participant goes. Handed back so the employer always has a
+       *  link to pass on by hand, whatever the mail provider did. */
+      academyUrl: string;
+      notification: NotificationOutcome;
     }> => {
       const ctx = context as Ctx;
       const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assign", {
@@ -307,6 +403,21 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
       });
       if (error) throw fail(error.message, "assign_failed");
       const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+
+      // The assignment now exists and is the durable fact. Telling the person
+      // about it is a side effect, and a side effect may not undo it — so
+      // everything below is best-effort and cannot throw.
+      const { siteOrigin, academyUrl } = await academyDestination();
+      const notification = await notifyParticipant(ctx, {
+        employerId: data.employerId,
+        assessmentVersionId: data.assessmentVersionId,
+        assignmentId: String(r.assignment_id),
+        recipientEmail: data.recipientEmail,
+        language: data.language,
+        siteOrigin,
+        academyUrl,
+      });
+
       // The basis is returned so the caller can label the assignment
       // truthfully. A closed-test pilot must never be presented as a
       // validated selection instrument.
@@ -314,9 +425,86 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         assignmentId: String(r.assignment_id),
         attemptId: String(r.attempt_id),
         governanceMode: String(r.governance_mode) as "development" | "closed_test" | "recruitment",
+        academyUrl,
+        notification,
       };
     },
   );
+
+/** Withdraw a governed assignment that nobody has finished.
+ *
+ *  ── WHY THIS IS AN UPDATE AND NOT A DELETE ────────────────────────────
+ *
+ *  Everything that makes cancellation safe is already in the database, added by
+ *  20260821090000. Writing `status = 'cancelled'` on the assignment fires
+ *  scp_sync_assignment_terminal_status, which:
+ *
+ *    * refuses any status other than cancelled/expired on an SCP assignment
+ *      (SCP_ASSIGNMENT_STATUS_MANAGED);
+ *    * refuses when the assignment has no attempt, so a cancellation can never
+ *      leave an orphan (SCP_ASSIGNMENT_LINEAGE_MISSING);
+ *    * refuses when the attempt is anything other than in_progress, which is
+ *      what stops a submitted, scored or released assessment being cosmetically
+ *      withdrawn (SCP_ASSIGNMENT_NOT_CANCELLABLE);
+ *    * otherwise moves the attempt to `abandoned`, whose own trigger clears
+ *      scp_open so the participant may be assigned the programme again.
+ *
+ *  It abandons the attempt. It does not delete responses, evidence, reviews or
+ *  governance lineage, and this function adds nothing that would: the employer
+ *  role holds UPDATE on (status, cancelled_at) alone. What the person answered
+ *  before the assignment was withdrawn remains on the record.
+ *
+ *  The status filter mirrors the legacy screen, but it is not the safeguard —
+ *  an SCP assignment sits at 'invited' for its whole life because the SCP path
+ *  never advances the legacy status column. The trigger is the safeguard, and
+ *  it reads the attempt. */
+export const cancelAcademyAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ employerId: z.string().uuid(), assignmentId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ cancelled: true }> => {
+    const ctx = context as Ctx;
+    // Owner/admin is enforced by assignments_employer_update (Phase 8.5A), not
+    // here. The UI hides the control from a member so the database does not
+    // have to be the one to say no.
+    const { data: updated, error } = await ctx.supabase
+      .from("assessment_assignments")
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("id", data.assignmentId)
+      .eq("employer_id", data.employerId)
+      .in("status", ["invited", "opened", "started"])
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw fail(error.message, "cancel_failed");
+    // No row came back: either RLS refused (not owner/admin, or another
+    // organisation's assignment) or it had already left the cancellable set.
+    // Both are the same message to the employer, and neither is an oracle.
+    if (!updated) throw new AcademyEmployerError("SCP_ASSIGNMENT_NOT_CANCELLABLE", "NO_ROW");
+    return { cancelled: true };
+  });
+
+/** How many reviews are waiting for THIS reviewer, as a number and nothing else.
+ *
+ *  listReviewQueue returns the full queue — item scenarios, prompts and the
+ *  participants' own words. That belongs on the reviewer's workspace and
+ *  nowhere else. The site header needs a count, so this returns a count: the
+ *  rows are read and discarded server-side and never enter the browser's cache
+ *  on every page the reviewer happens to visit.
+ *
+ *  Not gated here. scp_rm_review_queue is security_invoker, so a caller without
+ *  the content-review capability gets zero rows and therefore zero. */
+export const countMyReviewQueue = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<number> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_review_queue", {
+      _language: "sv-SE",
+    });
+    if (error) return 0;
+    return (rows ?? []).length;
+  });
 
 export const listAcademyParticipants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -12,6 +12,8 @@ export const dictionaries = {
     "nav.signin": "Logga in",
     "nav.signin.tooltip": "Kommer snart",
     "nav.my_career": "Min karriär",
+    "nav.myAssessments": "Mina tester",
+    "nav.reviews": "Granskningar",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
@@ -2202,6 +2204,30 @@ export const dictionaries = {
       "Personen har inget CQrityjob-konto ännu. En bedömning knyts till en person, inte till en adress.",
     "academy.assign.notAssignable": "Programmet är inte publicerat och kan inte tilldelas.",
     "academy.assign.failed": "Tilldelningen kunde inte skapas.",
+    "academy.assign.language": "Språk för deltagaren",
+    "academy.assign.languageSv": "Svenska",
+    "academy.assign.languageEn": "Engelska",
+    "academy.assign.purposeHeading": "Syfte med tilldelningen",
+    "academy.assign.purposeDevelopment":
+      "Underlaget samlas in för kompetensutveckling och uppföljning av medarbetare.",
+    "academy.assign.purposeNotSelection":
+      "Det är inte ett urvalsinstrument. Resultatet ger inte godkänt eller underkänt, ingen lämplighetsbedömning och ingen rangordning, och det fattar inga anställningsbeslut.",
+    "academy.assign.purposeBoundary": "Mäter inte:",
+    "academy.assign.purposeConfirm":
+      "Jag bekräftar att tilldelningen sker för detta syfte, och att underlaget inte används som urvals- eller anställningsbeslut.",
+    "academy.assign.purposeBlocked": "Bekräfta syftet ovan för att kunna tilldela.",
+    "academy.assign.doneTitle": "Tilldelningen är skapad",
+    "academy.assign.mailSent": "Ett e-postmeddelande med länk har skickats.",
+    "academy.assign.mailNotConfigured":
+      "E-postutskick är inte aktiverat i den här miljön. Dela länken nedan med deltagaren.",
+    "academy.assign.mailFailed":
+      "E-postmeddelandet kunde inte skickas. Tilldelningen gäller — dela länken nedan med deltagaren.",
+    "academy.assign.linkLabel": "Länk till deltagarens testyta",
+    "academy.assign.linkHint":
+      "Deltagaren loggar in med sitt eget konto. Länken innehåller ingen information om testet.",
+    "academy.assign.copy": "Kopiera",
+    "academy.assign.copied": "Kopierad",
+    "academy.assign.doneAction": "Klar",
     "academy.participants.title": "Deltagare",
     "academy.participants.lede":
       "Varje rad är en pseudonym referens. Vem personen är visas först när du uttryckligen frågar, och först när ett resultat har frisläppts.",
@@ -2220,6 +2246,17 @@ export const dictionaries = {
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
     "academy.participants.reassessmentFailed": "Omprövningen kunde inte bokas.",
+    "academy.participants.cancel": "Återkalla tilldelning",
+    "academy.participants.cancelConfirmTitle": "Återkalla den här tilldelningen?",
+    "academy.participants.cancelConfirmBody":
+      "Testet försvinner från deltagarens lista och kan inte längre genomföras. Svar som redan lämnats sparas i historiken och raderas inte. Programmet kan tilldelas på nytt senare.",
+    "academy.participants.cancelConfirmAction": "Återkalla",
+    "academy.participants.cancelKeep": "Behåll",
+    "academy.participants.cancelling": "Återkallar …",
+    "academy.participants.cancelDone": "Tilldelningen är återkallad.",
+    "academy.participants.cancelNotAllowed":
+      "Tilldelningen kan inte återkallas. Testet är redan inlämnat eller avslutat.",
+    "academy.participants.cancelFailed": "Tilldelningen kunde inte återkallas.",
     "academy.participants.reassessmentPurposePending":
       "Omprövning är inte tillgänglig ännu. Ändamålet för omprövning behöver godkännas innan en ny bedömning får begäras.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
@@ -2458,6 +2495,9 @@ export const dictionaries = {
     "academy.home.noneBody": "När din arbetsgivare tilldelar ett program dyker det upp här.",
     "academy.home.openReport": "Öppna rapport",
     "academy.home.awaitingRelease": "Inlämnad. Rapporten visas när den frisläppts.",
+    "academy.home.nextReview": "Vissa svar granskas av en person hos CQrityjob.",
+    "academy.home.nextRelease": "Din arbetsgivare frisläpper rapporten när granskningen är klar.",
+    "academy.home.nextReport": "Du får då tillgång till din egen rapport här.",
     "academy.home.learning": "Övningsläge",
     "academy.home.learningLede":
       "Öva fritt, med återkoppling efter varje fråga. Övningsfrågorna är andra frågor än de i bedömningen.",
@@ -2511,6 +2551,8 @@ export const dictionaries = {
     "nav.signin": "Sign in",
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My career",
+    "nav.myAssessments": "My assessments",
+    "nav.reviews": "Reviews",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -4695,6 +4737,30 @@ export const dictionaries = {
       "That person does not have a CQrityjob account yet. An assessment attaches to a person, not to an address.",
     "academy.assign.notAssignable": "This programme is not published and cannot be assigned.",
     "academy.assign.failed": "The assignment could not be created.",
+    "academy.assign.language": "Participant's language",
+    "academy.assign.languageSv": "Swedish",
+    "academy.assign.languageEn": "English",
+    "academy.assign.purposeHeading": "Purpose of this assignment",
+    "academy.assign.purposeDevelopment":
+      "This evidence is collected for competency development and employee follow-up.",
+    "academy.assign.purposeNotSelection":
+      "It is not a selection instrument. The result carries no pass or fail, no suitability judgement and no ranking, and it makes no employment decision.",
+    "academy.assign.purposeBoundary": "Does not measure:",
+    "academy.assign.purposeConfirm":
+      "I confirm this assignment is made for that purpose, and that the evidence will not be used as a selection or employment decision.",
+    "academy.assign.purposeBlocked": "Confirm the purpose above to assign.",
+    "academy.assign.doneTitle": "Assignment created",
+    "academy.assign.mailSent": "An email with the link has been sent.",
+    "academy.assign.mailNotConfigured":
+      "Email delivery is not enabled in this environment. Share the link below with the participant.",
+    "academy.assign.mailFailed":
+      "The email could not be sent. The assignment stands — share the link below with the participant.",
+    "academy.assign.linkLabel": "Link to the participant's assessment area",
+    "academy.assign.linkHint":
+      "The participant signs in with their own account. The link carries no information about the assessment.",
+    "academy.assign.copy": "Copy",
+    "academy.assign.copied": "Copied",
+    "academy.assign.doneAction": "Done",
     "academy.participants.title": "Participants",
     "academy.participants.lede":
       "Every row is a pseudonymous reference. Who somebody is appears only when you explicitly ask, and only once a result has been released.",
@@ -4713,6 +4779,17 @@ export const dictionaries = {
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",
     "academy.participants.reassessmentFailed": "The reassessment could not be scheduled.",
+    "academy.participants.cancel": "Withdraw assignment",
+    "academy.participants.cancelConfirmTitle": "Withdraw this assignment?",
+    "academy.participants.cancelConfirmBody":
+      "The assessment leaves the participant's list and can no longer be completed. Answers already given are kept in the record and are not deleted. The programme can be assigned again later.",
+    "academy.participants.cancelConfirmAction": "Withdraw",
+    "academy.participants.cancelKeep": "Keep",
+    "academy.participants.cancelling": "Withdrawing …",
+    "academy.participants.cancelDone": "The assignment has been withdrawn.",
+    "academy.participants.cancelNotAllowed":
+      "This assignment cannot be withdrawn. The assessment has already been submitted or completed.",
+    "academy.participants.cancelFailed": "The assignment could not be withdrawn.",
     "academy.participants.reassessmentPurposePending":
       "Reassessment is not available yet. Its processing purpose has to be approved before a new assessment can be requested.",
     "academy.participants.emptyTitle": "No participants yet",
@@ -4951,6 +5028,9 @@ export const dictionaries = {
     "academy.home.noneBody": "When your employer assigns a programme it will appear here.",
     "academy.home.openReport": "Open report",
     "academy.home.awaitingRelease": "Submitted. Your report appears once it has been released.",
+    "academy.home.nextReview": "Some answers are reviewed by a person at CQrityjob.",
+    "academy.home.nextRelease": "Your employer releases the report once the review is complete.",
+    "academy.home.nextReport": "You will then be able to open your own report here.",
     "academy.home.learning": "Learning Mode",
     "academy.home.learningLede":
       "Practise freely, with feedback after every question. The practice questions are different questions from the assessment ones.",

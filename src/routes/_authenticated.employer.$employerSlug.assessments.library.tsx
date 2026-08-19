@@ -16,7 +16,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, FlaskConical, Hammer } from "lucide-react";
+import { Check, CheckCircle2, Copy, FlaskConical, Hammer } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
@@ -155,7 +155,8 @@ function ProgrammeCard({
         open ? (
           <AssignForm
             employerId={employerId}
-            assessmentVersionId={entry.assessmentVersionId}
+            entry={entry}
+            lang={lang}
             onDone={() => setOpen(false)}
           />
         ) : (
@@ -196,21 +197,107 @@ function StatusChip({ entry }: { entry: LibraryEntry }) {
   );
 }
 
+/** What the employer is told, and must affirm, before Assign will run.
+ *
+ *  ── WHY AN AFFIRMATION AND NOT A PICKER ──────────────────────────────
+ *
+ *  There is exactly one purpose an employer may assign under today, and
+ *  scp_required_purpose_code resolves it from the person context rather than
+ *  from anything chosen here. A dropdown with one option would imply a choice
+ *  that does not exist, and a second option would imply a lawful basis nobody
+ *  has approved — recruitment fails closed in the database for exactly that
+ *  reason.
+ *
+ *  So this is a statement plus a confirmation. It says what the programme is
+ *  for, repeats the boundary the card already carries, and states plainly that
+ *  the result is not a selection instrument. What it does NOT do is quote a
+ *  lawful basis, an article or a privacy notice version: that text exists in
+ *  the database as configuration, it has not been through legal review, and
+ *  putting it in front of an employer as settled would make a legal claim this
+ *  product is not yet entitled to make. */
+function PurposeAffirmation({
+  entry,
+  lang,
+  confirmed,
+  onConfirm,
+  inputId,
+}: {
+  entry: LibraryEntry;
+  lang: string;
+  confirmed: boolean;
+  onConfirm: (v: boolean) => void;
+  inputId: string;
+}) {
+  const { t } = useT();
+  const purpose = lang === "en" ? entry.purposeEn : entry.purposeSv;
+  const doesNot = lang === "en" ? entry.doesNotMeasureEn : entry.doesNotMeasureSv;
+
+  return (
+    <div className="rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-accent">
+        {t("academy.assign.purposeHeading")}
+      </p>
+
+      {purpose && <p className="mt-2 text-[13px] leading-relaxed text-foreground">{purpose}</p>}
+
+      <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+        {t("academy.assign.purposeDevelopment")}
+      </p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+        {t("academy.assign.purposeNotSelection")}
+      </p>
+
+      {doesNot.length > 0 && (
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">{t("academy.assign.purposeBoundary")}</span>{" "}
+          {doesNot.join(" · ")}
+        </p>
+      )}
+
+      <label
+        htmlFor={inputId}
+        className="mt-4 flex min-h-[44px] cursor-pointer items-start gap-2.5 text-[13px] leading-relaxed text-foreground"
+      >
+        <input
+          id={inputId}
+          type="checkbox"
+          checked={confirmed}
+          onChange={(ev) => onConfirm(ev.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        />
+        <span>{t("academy.assign.purposeConfirm")}</span>
+      </label>
+    </div>
+  );
+}
+
 function AssignForm({
   employerId,
-  assessmentVersionId,
+  entry,
+  lang,
   onDone,
 }: {
   employerId: string;
-  assessmentVersionId: string;
+  entry: LibraryEntry;
+  lang: string;
   onDone: () => void;
 }) {
   const { t } = useT();
   const qc = useQueryClient();
   const assign = useServerFn(assignAcademyProgramme);
+  const assessmentVersionId = entry.assessmentVersionId;
   const [email, setEmail] = useState("");
   const [deadline, setDeadline] = useState("");
+  // The language the participant will be written to and will answer in. It was
+  // hardcoded to Swedish, which was invisible until an invitation email started
+  // being sent — a participant assigned in English would have received Swedish.
+  const [language, setLanguage] = useState<"sv" | "en">(lang === "en" ? "en" : "sv");
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{
+    academyUrl: string;
+    notification: "sent" | "not_configured" | "failed";
+  } | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -220,15 +307,17 @@ function AssignForm({
           assessmentVersionId,
           recipientEmail: email.trim(),
           deadline: deadline ? new Date(deadline).toISOString() : null,
-          language: "sv",
+          language,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
-      setEmail("");
-      setDeadline("");
+      void qc.invalidateQueries({ queryKey: ["academy", "my-work-count"] });
       setError(null);
-      onDone();
+      // Deliberately does NOT close the form. The employer needs the link and
+      // the delivery outcome, and closing on success would throw both away at
+      // the exact moment they matter.
+      setResult({ academyUrl: r.academyUrl, notification: r.notification });
     },
     onError: (e: unknown) => {
       // The database's own identifier, so the message can be specific.
@@ -242,6 +331,22 @@ function AssignForm({
       );
     },
   });
+
+  if (result) {
+    return (
+      <AssignResult
+        result={result}
+        email={email}
+        onDone={() => {
+          setResult(null);
+          setEmail("");
+          setDeadline("");
+          setConfirmed(false);
+          onDone();
+        }}
+      />
+    );
+  }
 
   return (
     <form
@@ -282,6 +387,31 @@ function AssignForm({
           className="h-11 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         />
       </div>
+      <div>
+        <label
+          htmlFor={`language-${assessmentVersionId}`}
+          className="mb-1.5 block text-xs font-medium text-foreground"
+        >
+          {t("academy.assign.language")}
+        </label>
+        <select
+          id={`language-${assessmentVersionId}`}
+          value={language}
+          onChange={(ev) => setLanguage(ev.target.value === "en" ? "en" : "sv")}
+          className="h-11 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option value="sv">{t("academy.assign.languageSv")}</option>
+          <option value="en">{t("academy.assign.languageEn")}</option>
+        </select>
+      </div>
+
+      <PurposeAffirmation
+        entry={entry}
+        lang={lang}
+        confirmed={confirmed}
+        onConfirm={setConfirmed}
+        inputId={`purpose-${assessmentVersionId}`}
+      />
 
       {error && (
         <p role="alert" className="text-[13px] leading-relaxed text-foreground">
@@ -292,7 +422,7 @@ function AssignForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || !confirmed}
           className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {mutation.isPending ? t("academy.assign.sending") : t("academy.assign.confirm")}
@@ -305,6 +435,96 @@ function AssignForm({
           {t("academy.cancel")}
         </button>
       </div>
+
+      {!confirmed && (
+        <p className="text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.assign.purposeBlocked")}
+        </p>
+      )}
     </form>
+  );
+}
+
+/** What the employer sees the moment an assignment exists.
+ *
+ *  The link is shown whatever happened to the mail, and it is shown FIRST.
+ *  Email delivery is best-effort by design — the provider may not be
+ *  configured on this deployment at all — so treating the copy-link as the
+ *  fallback for a failure would bury the one mechanism that always works.
+ *
+ *  Nothing about the assessment travels in this URL: it is /academy, the same
+ *  page the participant would reach by signing in and looking. */
+function AssignResult({
+  result,
+  email,
+  onDone,
+}: {
+  result: { academyUrl: string; notification: "sent" | "not_configured" | "failed" };
+  email: string;
+  onDone: () => void;
+}) {
+  const { t } = useT();
+  const [copied, setCopied] = useState(false);
+
+  const NOTICE = {
+    sent: "academy.assign.mailSent",
+    not_configured: "academy.assign.mailNotConfigured",
+    failed: "academy.assign.mailFailed",
+  } as const;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-[10px] border border-accent/40 bg-[color:var(--surface-subtle)] p-4">
+        <p className="text-sm font-semibold text-foreground">{t("academy.assign.doneTitle")}</p>
+        <p className="mt-1 break-words text-[13px] leading-relaxed text-muted-foreground">
+          {email}
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+          {t(NOTICE[result.notification])}
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-foreground">
+          {t("academy.assign.linkLabel")}
+        </p>
+        <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.assign.linkHint")}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="min-w-0 flex-1 break-all rounded-[8px] border border-border bg-card px-3 py-2 text-[12px] text-foreground">
+            {result.academyUrl}
+          </code>
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard
+                ?.writeText(result.academyUrl)
+                .then(() => setCopied(true))
+                .catch(() => setCopied(false));
+            }}
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {copied ? (
+              <Check className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Copy className="h-4 w-4" aria-hidden="true" />
+            )}
+            {copied ? t("academy.assign.copied") : t("academy.assign.copy")}
+          </button>
+        </div>
+        <p aria-live="polite" className="sr-only">
+          {copied ? t("academy.assign.copied") : ""}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onDone}
+        className="inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {t("academy.assign.doneAction")}
+      </button>
+    </div>
   );
 }
