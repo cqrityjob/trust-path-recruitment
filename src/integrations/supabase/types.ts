@@ -8634,20 +8634,6 @@ export type Database = {
           unexpected: string[]
         }[]
       }
-      cd_profession_bands_for_matching: {
-        Args: {
-          _profession_ids: string[]
-        }
-        Returns: {
-          band_high: number
-          band_low: number
-          calibration_version: string
-          centrality: string
-          dimension_id: string
-          profession_id: string
-          weight: number
-        }[]
-      }
       cd_v31_complete_session: {
         Args: {
           _completed_at: string
