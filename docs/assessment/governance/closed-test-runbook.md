@@ -52,11 +52,11 @@ opens **13 review events** — the twelve safety-critical items plus `sg-b-17`,
 which is a constructed response. Twelve of the thirteen currently require an
 explicit safety severity from the reviewer.
 
-| Participants | Review events | Severity judgements | Reviewer hours @ 4–6 min |
-| --- | --- | --- | --- |
-| **8 (target)** | **104** | 96 | **7–10 h** |
-| 12 | 156 | 144 | 10–16 h |
-| 20 | 260 | 240 | 17–26 h |
+| Participants   | Review events | Severity judgements | Reviewer hours @ 4–6 min |
+| -------------- | ------------- | ------------------- | ------------------------ |
+| **8 (target)** | **104**       | 96                  | **7–10 h**               |
+| 12             | 156           | 144                 | 10–16 h                  |
+| 20             | 260           | 240                 | 17–26 h                  |
 
 The per-review estimate covers reading the scenario and prompt, reading the
 answer, choosing an outcome, choosing a severity and writing a rationale —
