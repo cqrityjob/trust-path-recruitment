@@ -6549,6 +6549,7 @@ export type Database = {
           context: Json | null
           created_at: string
           derivation_input: Json | null
+          evidence_scope_version: string | null
           evidence_state_version: string | null
           id: string
           issuer_organization_id: string | null
@@ -6566,6 +6567,7 @@ export type Database = {
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
+          evidence_scope_version?: string | null
           evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
@@ -6583,6 +6585,7 @@ export type Database = {
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
+          evidence_scope_version?: string | null
           evidence_state_version?: string | null
           id?: string
           issuer_organization_id?: string | null
@@ -8679,6 +8682,23 @@ export type Database = {
           created_new: boolean
           run_id: string
         }[]
+      }
+      scp_attempt_evidence_state: {
+        Args: {
+          _attempt_id: string
+          _competency_version_id: string
+          _maturity: string
+        }
+        Returns: string
+      }
+      scp_attempt_maturity: {
+        Args: {
+          _at?: string
+          _attempt_id: string
+          _competency_version_id: string
+          _threshold_version?: string
+        }
+        Returns: string
       }
       scp_bundle_version_assignability: {
         Args: { _bundle_version_id: string }
