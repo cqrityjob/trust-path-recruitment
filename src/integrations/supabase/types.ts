@@ -8625,6 +8625,18 @@ export type Database = {
         Returns: undefined
       }
       cd_is_internal_tester: { Args: { _user_id: string }; Returns: boolean }
+      cd_profession_bands_for_matching: {
+        Args: { _profession_ids: string[] }
+        Returns: {
+          band_high: number
+          band_low: number
+          calibration_version: string
+          centrality: string
+          dimension_id: string
+          profession_id: string
+          weight: number
+        }[]
+      }
       cd_session_core_completion: {
         Args: { _session_id: string }
         Returns: {
