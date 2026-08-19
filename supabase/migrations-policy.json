@@ -85,6 +85,45 @@
       "rollbackArtefact": "docs/technical/production-fingerprints/pre-c1-rollback.sql",
       "rollbackPrecondition": "Permitted ONLY while scp_employer_report_decisions is empty. The rollback script checks the row count itself and refuses otherwise.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819071312';"
+    },
+    {
+      "canonicalFile": "20260822090000_scp_followup_prompts_explicit_grants.sql",
+      "canonicalVersion": "20260822090000",
+      "hostedVersion": "20260818194409",
+      "hostedName": "d794b35e-4aa5-4bc1-b554-ce6116d01e4d",
+      "generatedFileOnMain": null,
+      "appliedAt": "2026-08-18T19:44:09Z",
+      "doNotReExecute": true,
+      "mechanism": "Lovable supabase--migration (tracked), applied 2026-08-18 as part of the scp_followup_prompts re-issue. Never executed under its canonical version.",
+      "sqlEquivalence": "Verified from the hosted ledger's own stored statements: 20260818194409 contains, verbatim, the three GRANT statements that are the canonical file's entire executable content -- GRANT SELECT; GRANT INSERT, UPDATE, DELETE; GRANT ALL TO service_role. The canonical file exists only to restate them, so it is already functionally applied.",
+      "reason": "Already functionally applied. The canonical file was written BECAUSE this Lovable re-issue carried grants the canonical 20260820100000 omitted. Re-executing it would add no state and would only manufacture ledger history, so it is mapped rather than run. Owner decision, 2026-08-19.",
+      "verify": "SELECT has_table_privilege('authenticated','public.scp_followup_prompts','SELECT') AS sel, has_table_privilege('authenticated','public.scp_followup_prompts','INSERT') AS ins, has_table_privilege('service_role','public.scp_followup_prompts','SELECT') AS svc; -- expect t t t"
+    },
+    {
+      "canonicalFile": "20260822091000_trust_findings_least_privilege.sql",
+      "canonicalVersion": "20260822091000",
+      "hostedVersion": "20260819112607",
+      "hostedName": "59161349-1edf-462d-aaad-6347fbb88a73",
+      "generatedFileOnMain": "supabase/migrations/20260819112607_59161349-1edf-462d-aaad-6347fbb88a73.sql",
+      "appliedAt": "2026-08-19T11:26:07Z",
+      "doNotReExecute": true,
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty.",
+      "reason": "Phase 0C least-privilege, applied to hosted on owner approval 2026-08-19. Closed two standing exposures: authenticated could SELECT all 492 rows of cd_option_loadings, and anon held a table grant on scp_followup_prompts. Postconditions independently verified in-database and through the project's public REST API (anon read went 200 -> 401).",
+      "verify": "SELECT has_table_privilege('anon','public.scp_followup_prompts','SELECT') AS anon_fp, has_table_privilege('authenticated','public.cd_option_loadings','SELECT') AS auth_col, (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='cd_option_loadings' AND policyname='cd_option_loadings_read') AS pol; -- expect f f 0"
+    },
+    {
+      "canonicalFile": "20260822092000_cd_profession_bands_accessor.sql",
+      "canonicalVersion": "20260822092000",
+      "hostedVersion": "20260819112914",
+      "hostedName": "20220374-4507-478e-b09c-770c120e45de",
+      "generatedFileOnMain": "supabase/migrations/20260819112914_20220374-4507-478e-b09c-770c120e45de.sql",
+      "appliedAt": "2026-08-19T11:29:14Z",
+      "doNotReExecute": true,
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file's executable body is empty.",
+      "reason": "Applied to hosted on owner approval 2026-08-19. Creates cd_profession_bands_for_matching(text[]) and closes the direct table and view paths to cd_profession_profiles. This also ended a live production break: src/lib/career-discovery/v31-public.functions.ts already called this RPC, which did not exist hosted, so the call returned PGRST202 and the error was discarded -- Career Discovery matching was scoring against zero bands, silently.",
+      "verify": "SELECT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='cd_profession_bands_for_matching') AS fn, has_function_privilege('anon','public.cd_profession_bands_for_matching(text[])','EXECUTE') AS anon_exec, has_table_privilege('authenticated','public.cd_profession_profiles','SELECT') AS auth_cpp; -- expect 1 f f"
     }
   ],
   "canonicalProject": {
