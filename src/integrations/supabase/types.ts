@@ -4214,11 +4214,14 @@ export type Database = {
       scp_assessment_definitions: {
         Row: {
           created_at: string
+          display_name_en: string | null
+          display_name_sv: string | null
           family_id: string
           id: string
           is_test_fixture: boolean
           name_en: string
           name_sv: string
+          owner_employer_id: string | null
           profession_id: string | null
           purpose: string
           slug: string
@@ -4226,11 +4229,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
           family_id: string
           id?: string
           is_test_fixture?: boolean
           name_en: string
           name_sv: string
+          owner_employer_id?: string | null
           profession_id?: string | null
           purpose: string
           slug: string
@@ -4238,11 +4244,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
           family_id?: string
           id?: string
           is_test_fixture?: boolean
           name_en?: string
           name_sv?: string
+          owner_employer_id?: string | null
           profession_id?: string | null
           purpose?: string
           slug?: string
@@ -4254,6 +4263,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "scp_assessment_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_definitions_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
             referencedColumns: ["id"]
           },
           {
@@ -5359,6 +5375,7 @@ export type Database = {
       scp_evidence_source_types: {
         Row: {
           code: string
+          counts_toward_maturity: boolean
           created_at: string
           has_active_writer: boolean
           name_en: string
@@ -5366,6 +5383,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          counts_toward_maturity?: boolean
           created_at?: string
           has_active_writer?: boolean
           name_en: string
@@ -5373,6 +5391,7 @@ export type Database = {
         }
         Update: {
           code?: string
+          counts_toward_maturity?: boolean
           created_at?: string
           has_active_writer?: boolean
           name_en?: string
@@ -6246,6 +6265,7 @@ export type Database = {
           display_order: number
           estimated_minutes: number | null
           id: string
+          learning_form_id: string | null
           module_id: string
           name_en: string
           name_sv: string
@@ -6263,6 +6283,7 @@ export type Database = {
           display_order: number
           estimated_minutes?: number | null
           id?: string
+          learning_form_id?: string | null
           module_id: string
           name_en: string
           name_sv: string
@@ -6280,6 +6301,7 @@ export type Database = {
           display_order?: number
           estimated_minutes?: number | null
           id?: string
+          learning_form_id?: string | null
           module_id?: string
           name_en?: string
           name_sv?: string
@@ -6292,6 +6314,13 @@ export type Database = {
           version_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "scp_module_versions_learning_form_id_fkey"
+            columns: ["learning_form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scp_module_versions_module_id_fkey"
             columns: ["module_id"]
@@ -6312,19 +6341,30 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          owner_employer_id: string | null
           slug: string
         }
         Insert: {
           created_at?: string
           id?: string
+          owner_employer_id?: string | null
           slug: string
         }
         Update: {
           created_at?: string
           id?: string
+          owner_employer_id?: string | null
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scp_modules_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_observable_behaviours: {
         Row: {
@@ -6485,23 +6525,42 @@ export type Database = {
       scp_programs: {
         Row: {
           created_at: string
+          display_name_en: string | null
+          display_name_sv: string | null
           id: string
+          is_test_fixture: boolean
+          owner_employer_id: string | null
           role_id: string | null
           slug: string
         }
         Insert: {
           created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
           id?: string
+          is_test_fixture?: boolean
+          owner_employer_id?: string | null
           role_id?: string | null
           slug: string
         }
         Update: {
           created_at?: string
+          display_name_en?: string | null
+          display_name_sv?: string | null
           id?: string
+          is_test_fixture?: boolean
+          owner_employer_id?: string | null
           role_id?: string | null
           slug?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "scp_programs_owner_employer_id_fkey"
+            columns: ["owner_employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scp_programs_role_id_fkey"
             columns: ["role_id"]
@@ -7475,6 +7534,173 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_training_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          employer_id: string
+          employer_message: string | null
+          id: string
+          language: string
+          program_version_id: string
+          purpose_version_id: string
+          source_decision_id: string | null
+          started_at: string | null
+          status: string
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          employer_id: string
+          employer_message?: string | null
+          id?: string
+          language: string
+          program_version_id: string
+          purpose_version_id: string
+          source_decision_id?: string | null
+          started_at?: string | null
+          status?: string
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          employer_id?: string
+          employer_message?: string | null
+          id?: string
+          language?: string
+          program_version_id?: string
+          purpose_version_id?: string
+          source_decision_id?: string | null
+          started_at?: string | null
+          status?: string
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_training_assignments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_assignments_program_version_id_fkey"
+            columns: ["program_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_program_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_assignments_purpose_version_id_fkey"
+            columns: ["purpose_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_purpose_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_assignments_source_decision_id_fkey"
+            columns: ["source_decision_id"]
+            isOneToOne: false
+            referencedRelation: "scp_employer_report_decisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_assignments_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_training_module_progress: {
+        Row: {
+          assignment_id: string
+          attempt_id: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          module_version_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          attempt_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          module_version_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          attempt_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          module_version_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_training_module_progress_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_training_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_module_progress_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_training_module_progress_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_training_module_progress_module_version_id_fkey"
+            columns: ["module_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_module_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -8827,6 +9053,22 @@ export type Database = {
           run_id: string
         }[]
       }
+      scp_assign_training: {
+        Args: {
+          _due_at?: string
+          _employer_id: string
+          _language?: string
+          _message?: string
+          _program_version_id: string
+          _recipient_email: string
+          _source_decision_id?: string
+        }
+        Returns: {
+          assignment_id: string
+          modules_seeded: number
+          subject_id: string
+        }[]
+      }
       scp_attempt_evidence_state: {
         Args: {
           _attempt_id: string
@@ -8864,6 +9106,14 @@ export type Database = {
       }
       scp_complete_learning_module: {
         Args: { _attempt_id: string }
+        Returns: number
+      }
+      scp_complete_training_module: {
+        Args: { _assignment_id: string; _module_version_id: string }
+        Returns: boolean
+      }
+      scp_complete_training_programme: {
+        Args: { _assignment_id: string }
         Returns: number
       }
       scp_compute_maturity: {
@@ -8913,6 +9163,43 @@ export type Database = {
           attempt_id: string
           governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
           subject_id: string
+        }[]
+      }
+      scp_employer_content_library: {
+        Args: { _employer_id: string }
+        Returns: {
+          assignable: boolean
+          competencies_en: string[]
+          competencies_sv: string[]
+          content_status: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          is_test_fixture: boolean
+          item_count: number
+          item_id: string
+          languages: string[]
+          library_kind: string
+          lifecycle_state: string
+          minutes_max: number
+          minutes_min: number
+          module_count: number
+          name_en: string
+          name_sv: string
+          owner_employer_id: string
+          ownership: string
+          parent_id: string
+          published_at: string
+          requires_human_review: boolean
+          slug: string
+          summary_en: string
+          summary_sv: string
+          target_role_en: string
+          target_role_sv: string
+          unassignable_reason: string
+          updated_at: string
+          validation_status: string
+          version_number: number
         }[]
       }
       scp_employer_decisions: {
@@ -8978,6 +9265,25 @@ export type Database = {
           awaiting_review: number
         }[]
       }
+      scp_employer_training_status: {
+        Args: { _employer_id: string }
+        Returns: {
+          assigned_at: string
+          assignment_id: string
+          completed_at: string
+          due_at: string
+          identity_resolvable: boolean
+          language: string
+          modules_completed: number
+          modules_total: number
+          programme_name_en: string
+          programme_name_sv: string
+          started_at: string
+          status: string
+          subject_id: string
+          version_number: number
+        }[]
+      }
       scp_get_attempt_items: {
         Args: { _attempt_id: string; _language?: string }
         Returns: {
@@ -9031,6 +9337,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      scp_lifecycle_state: {
+        Args: {
+          _content_status: string
+          _is_test_fixture: boolean
+          _retired_at: string
+        }
+        Returns: string
+      }
       scp_my_academy_assignments: {
         Args: never
         Returns: {
@@ -9046,6 +9360,67 @@ export type Database = {
           purpose_sv: string
           released_at: string
           total_items: number
+        }[]
+      }
+      scp_my_academy_work: {
+        Args: never
+        Returns: {
+          assigned_at: string
+          deadline: string
+          employer_name: string
+          progress_done: number
+          progress_total: number
+          purpose_en: string
+          purpose_sv: string
+          released_at: string
+          status: string
+          title_en: string
+          title_sv: string
+          work_id: string
+          work_kind: string
+        }[]
+      }
+      scp_my_training_modules: {
+        Args: { _assignment_id: string }
+        Returns: {
+          answered: number
+          attempt_id: string
+          completed_at: string
+          display_order: number
+          estimated_minutes: number
+          has_activity: boolean
+          module_version_id: string
+          name_en: string
+          name_sv: string
+          started_at: string
+          status: string
+          summary_en: string
+          summary_sv: string
+          total_items: number
+        }[]
+      }
+      scp_my_training_programme: {
+        Args: { _assignment_id: string }
+        Returns: {
+          assigned_at: string
+          assignment_id: string
+          completed_at: string
+          does_not_measure_en: string[]
+          does_not_measure_sv: string[]
+          due_at: string
+          employer_name: string
+          estimated_minutes: number
+          language: string
+          modules_completed: number
+          modules_total: number
+          name_en: string
+          name_sv: string
+          program_version_id: string
+          purpose_en: string
+          purpose_sv: string
+          started_at: string
+          status: string
+          version_number: number
         }[]
       }
       scp_record_employer_decision: {
@@ -9127,6 +9502,10 @@ export type Database = {
       }
       scp_start_learning_attempt: {
         Args: { _form_id: string }
+        Returns: string
+      }
+      scp_start_training_module: {
+        Args: { _assignment_id: string; _module_version_id: string }
         Returns: string
       }
       scp_subject_progress: {
