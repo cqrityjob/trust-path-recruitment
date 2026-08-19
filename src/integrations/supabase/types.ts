@@ -46,6 +46,7 @@ export type Database = {
           recipient_email: string
           recipient_user_id: string | null
           scp_assessment_version_id: string | null
+          scp_open: boolean
           started_at: string | null
           status: string
           updated_at: string
@@ -82,6 +83,7 @@ export type Database = {
           recipient_email: string
           recipient_user_id?: string | null
           scp_assessment_version_id?: string | null
+          scp_open?: boolean
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -118,6 +120,7 @@ export type Database = {
           recipient_email?: string
           recipient_user_id?: string | null
           scp_assessment_version_id?: string | null
+          scp_open?: boolean
           started_at?: string | null
           status?: string
           updated_at?: string
