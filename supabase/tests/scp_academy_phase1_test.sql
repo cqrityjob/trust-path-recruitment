@@ -232,14 +232,19 @@ SELECT pg_temp.ok(
      JOIN public.scp_items i ON i.id = iv.item_id
     WHERE i.slug LIKE 'sg-b-%' AND iv.content_status <> 'draft') = 0,
   'A7.1 every baseline item is draft');
--- Scoped to the REAL programme. Phase 2f publishes a fixture development
--- track so Learning Mode and development recommendations have something to
--- run against; the Security Guard programme itself stays draft, which is what
--- this assertion is actually about.
+-- Scoped to the REAL programme. Synthetic development tracks are published so
+-- Learning Mode, training delivery and development recommendations have
+-- something to run against; the Security Guard programme itself stays draft,
+-- which is what this assertion is actually about.
+--
+-- Keyed on scp_programs.is_test_fixture rather than on a 'fixture-%' slug
+-- prefix. The prefix was a naming convention standing in for a property, and a
+-- synthetic programme named anything else would have slipped past it. #47 made
+-- the property explicit, so the assertion now tests the thing it means.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_program_versions pv
      JOIN public.scp_programs p ON p.id = pv.program_id
-    WHERE p.slug NOT LIKE 'fixture-%' AND pv.content_status <> 'draft') = 0,
+    WHERE NOT p.is_test_fixture AND pv.content_status <> 'draft') = 0,
   'A7.2 the REAL programme is draft');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.assessments WHERE employer_visible) = 0,
