@@ -25,10 +25,15 @@ import type { Ctx, RpcRow } from "./rpc-types";
 export type AcademyItem = {
   itemVersionId: string;
   displayOrder: number;
+  /** Which declared section of the form this item belongs to. `default` on
+   *  forms that declare no sections, which is every form authored before
+   *  20260830091000. */
+  blockKey: string;
   itemFormat:
     | "sjt_best_response"
     | "sjt_best_worst"
     | "sjt_rate_effectiveness"
+    | "biq_frequency"
     | "constructed_response";
   scenario: string;
   prompt: string;
@@ -126,6 +131,7 @@ export const getAcademyAttemptItems = createServerFn({ method: "GET" })
       (r: RpcRow): AcademyItem => ({
         itemVersionId: String(r.item_version_id),
         displayOrder: Number(r.display_order),
+        blockKey: String(r.block_key ?? "default"),
         itemFormat: r.item_format as AcademyItem["itemFormat"],
         scenario: String(r.scenario),
         prompt: String(r.prompt),
@@ -237,3 +243,48 @@ export const submitAcademyAttempt = createServerFn({ method: "POST" })
       };
     },
   );
+
+/** One declared section of a form, as the participant is told about it.
+ *
+ *  `asks` is the honest part. A scenario section and a work-behaviour section
+ *  are read completely differently afterwards — one becomes observed evidence,
+ *  the other never does — so the person answering is told which they are in
+ *  before they answer, not afterwards in a report they may never see.
+ *
+ *  Carries no score, no weight and nothing about any other participant: those
+ *  columns are absent from scp_get_attempt_blocks' return type. */
+export type AcademyBlock = {
+  blockKey: string;
+  displayOrder: number;
+  name: string;
+  intro: string;
+  asks: "what_you_would_do" | "how_you_usually_work" | "your_own_experience";
+  itemCount: number;
+  answered: number;
+};
+
+export const getAcademyAttemptBlocks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ attemptId: z.string().uuid(), locale: z.enum(["sv", "en"]) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<AcademyBlock[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_get_attempt_blocks", {
+      _attempt_id: data.attemptId,
+      _language: LANGUAGE[data.locale],
+    });
+    // An empty list is the honest answer for a form that declares no sections,
+    // and also for an attempt that is not the caller's. The RPC does not
+    // distinguish those, and neither does this.
+    if (error) throw classify(error.message ?? "", "load_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      blockKey: String(r.block_key),
+      displayOrder: Number(r.display_order),
+      name: String(r.name),
+      intro: String(r.intro),
+      asks: r.asks as AcademyBlock["asks"],
+      itemCount: Number(r.item_count ?? 0),
+      answered: Number(r.answered ?? 0),
+    }));
+  });

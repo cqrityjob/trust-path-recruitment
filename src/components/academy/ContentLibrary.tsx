@@ -47,6 +47,7 @@ import {
   GraduationCap,
   Hammer,
   ShieldCheck,
+  UserSearch,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { AcademyHeading } from "@/components/academy/AcademyWorkspace";
@@ -309,6 +310,7 @@ function LibraryRow({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="text-[15px] font-semibold leading-snug text-foreground">{name}</h3>
             <KindChip kind={entry.libraryKind} />
+            <RecruitmentChip entry={entry} />
             <StateChip entry={entry} />
           </div>
 
@@ -401,6 +403,29 @@ function KindChip({ kind }: { kind: ContentLibraryEntry["libraryKind"] }) {
     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[color:var(--surface-subtle)] px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
       <Icon className="h-3 w-3 text-accent" aria-hidden="true" />
       {t(`academy.library.kind.${kind}` as never)}
+    </span>
+  );
+}
+
+/** What the content was WRITTEN for, next to what the organisation may DO with
+ *  it — never instead of it.
+ *
+ *  The two chips sit side by side because they are answers to different
+ *  questions and the flagship assessment is currently a live example of them
+ *  disagreeing: designed for recruitment, assignable only as a closed test.
+ *  Rendering only the first would read as permission; rendering only the second
+ *  would hide what the assessment is. The title attribute spells the
+ *  distinction out for anyone who stops on it. */
+function RecruitmentChip({ entry }: { entry: ContentLibraryEntry }) {
+  const { t } = useT();
+  if (entry.designedFor !== "recruitment_support") return null;
+  return (
+    <span
+      title={t("library.tag.recruitmentTitle")}
+      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-[color:var(--surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-foreground"
+    >
+      <UserSearch className="h-3 w-3 text-accent" aria-hidden="true" />
+      {t("library.tag.recruitment")}
     </span>
   );
 }

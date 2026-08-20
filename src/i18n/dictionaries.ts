@@ -1445,7 +1445,8 @@ export const dictionaries = {
     "academy.overview.readyToRelease": "Klara att frisläppa",
     "academy.overview.attemptsAwaitingReview": "Väntar på granskning",
     "academy.history.heading": "Tester & bedömningar",
-    "academy.history.lede": "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
+    "academy.history.lede":
+      "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
     "academy.history.viewResult": "Visa mitt resultat",
     "employer.person.backToWorkforce": "Tillbaka till Medarbetare",
     "employer.person.unknown": "Okänd person",
@@ -1453,7 +1454,8 @@ export const dictionaries = {
     "employer.person.site": "Plats",
     "employer.person.status": "Anställningsstatus",
     "employer.person.assessments.heading": "Tester & bedömningar",
-    "employer.person.assessments.lede": "Pågående och avslutade bedömningar som den här organisationen har tilldelat. Historiken följer personen, inte e-postadressen.",
+    "employer.person.assessments.lede":
+      "Pågående och avslutade bedömningar som den här organisationen har tilldelat. Historiken följer personen, inte e-postadressen.",
     "employer.person.assessments.assign": "Tilldela test",
     "employer.person.assessments.empty": "Inga tester har tilldelats den här personen ännu.",
     "employer.person.assessments.loadError": "Bedömningarna kunde inte hämtas.",
@@ -1462,10 +1464,12 @@ export const dictionaries = {
     "employer.person.assessments.reviewsOpen": "Kvar att granska:",
     "employer.person.assessments.openReport": "Visa rapport",
     "employer.person.development.heading": "Kompetensutveckling",
-    "employer.person.development.lede": "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
+    "employer.person.development.lede":
+      "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
     "employer.person.development.open": "Öppna deltagare i Kompetensutveckling",
     "employer.person.credentials.heading": "Kompetenser & certifikat",
-    "employer.person.credentials.lede": "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
+    "employer.person.credentials.lede":
+      "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
     "lifecycle.employer.invited": "Inbjuden",
     "lifecycle.employer.in_progress": "Pågår",
     "lifecycle.employer.under_review": "Under granskning",
@@ -1487,11 +1491,14 @@ export const dictionaries = {
     "lifecycle.purpose.workforce": "Kompetensutveckling",
     "lifecycle.purpose.recruitment": "Rekrytering",
     "employer.team.heading": "Team och granskningsbehörighet",
-    "employer.team.lede": "Vilka som tillhör organisationen, och vilka av dem som får granska deltagarnas svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
-    "employer.team.separationNotice": "Den som tilldelade ett test får aldrig granska samma test, och deltagaren granskar aldrig sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
+    "employer.team.lede":
+      "Vilka som tillhör organisationen, och vilka av dem som får granska deltagarnas svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
+    "employer.team.separationNotice":
+      "Den som tilldelade ett test får aldrig granska samma test, och deltagaren granskar aldrig sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
     "employer.team.loadError": "Teamet kunde inte hämtas.",
     "employer.team.empty": "Inga medlemmar hittades i organisationen.",
-    "employer.team.noReviewerWarning": "Ingen i organisationen har granskningsbehörighet. Tester som kräver mänsklig granskning kan då inte bli klara och inga resultat kan frisläppas.",
+    "employer.team.noReviewerWarning":
+      "Ingen i organisationen har granskningsbehörighet. Tester som kräver mänsklig granskning kan då inte bli klara och inga resultat kan frisläppas.",
     "employer.team.col.person": "Person",
     "employer.team.col.role": "Roll",
     "employer.team.col.reviewer": "Granskare",
@@ -2273,7 +2280,8 @@ export const dictionaries = {
     "academy.library.sections.internalLede":
       "Syntetiskt material för sluten testning. Aldrig kundinnehåll.",
     "academy.library.sections.development": "Under utveckling",
-    "academy.library.sections.developmentLede": "Innehåll som ännu inte är validerat. Kan tilldelas som sluten testning om organisationen har ett pilotmedgivande.",
+    "academy.library.sections.developmentLede":
+      "Innehåll som ännu inte är validerat. Kan tilldelas som sluten testning om organisationen har ett pilotmedgivande.",
     "academy.library.filter.all": "Alla",
     "academy.library.kind.assessment": "Bedömning",
     "academy.library.kind.training": "Utbildning",
@@ -2744,6 +2752,108 @@ export const dictionaries = {
     "academy.reviews.adminEmptyTitle": "Inget väntar på granskning",
     "academy.reviews.adminEmptyBody":
       "Antingen finns inget att granska just nu, eller så saknar ditt konto granskningsbehörighet.",
+
+    // ── Flagship recruitment assessment ─────────────────────────────────
+    // Participant: sections, and what each one asks.
+    "academy.section.eyebrow": "Del",
+    "academy.section.questions": "frågor",
+    "academy.section.continue": "Fortsätt",
+    "academy.asks.what_you_would_do":
+      "Här väljer du vad du skulle göra. Ditt val är något vi faktiskt observerar och redovisar som iakttaget.",
+    "academy.asks.how_you_usually_work":
+      "Här beskriver du hur du själv brukar arbeta. Det du svarar redovisas för arbetsgivaren som din egen beskrivning — aldrig som något vi har observerat. Det finns inget facit.",
+    "academy.asks.your_own_experience":
+      "Här berättar du om något du varit med om, med egna ord. En människa läser svaret — ingen modell bedömer det.",
+    "academy.selfReportBadge": "Din egen beskrivning — inte något vi observerar",
+
+    // Employer: the Candidate Assessment Brief.
+    "brief.title": "Kandidatunderlag",
+    "brief.lede":
+      "Underlag inför intervjun: vad som observerats, vad kandidaten själv beskriver, och vad som är värt att utforska. CQrityjob ger strukturerat beslutsstöd. Arbetsgivaren fattar anställningsbeslutet.",
+    "brief.notADecision":
+      "CQrityjob ger strukturerat beslutsstöd. Arbetsgivaren fattar anställningsbeslutet.",
+    "brief.none":
+      "Det här resultatet släpptes innan kandidatunderlaget fanns, och räknas aldrig om i efterhand.",
+    "brief.modules": "Genomförda delar",
+    "brief.strengths": "Styrkor i den här bedömningen",
+    "brief.strengthsLede":
+      "Områden där svaren höll ihop över flera uppgifter. Gäller den här bedömningen — inte personens förmåga i allmänhet.",
+    "brief.development": "Utvecklings- och uppföljningsområden",
+    "brief.developmentLede":
+      "Områden där svaren var ojämna eller svagare. Ett utvecklingsområde är inte ett underkännande.",
+    "brief.limited": "För lite underlag",
+    "brief.limitedLede":
+      "Bedömningen berörde de här områdena för lite för att säga något. Tolka det inte som en svaghet.",
+    "brief.selfReported": "Självrapporterat arbetsbeteende",
+    "brief.selfReportedLede":
+      "Det kandidaten själv beskriver om sitt arbetssätt. Det här är inte observerat och ska inte läsas som visad kompetens.",
+    "brief.observedByDomain": "Observerat underlag per område",
+    "brief.interviewGuide": "Strukturerad intervjuguide",
+    "brief.interviewGuideLede":
+      "Frågorna är valda utifrån just den här kandidatens svar. Varje fråga säger varför den valts. Det som står under \u201dLyssna efter\u201d är stöd för dig som intervjuar — inte ett facit, och inget som poängsätts.",
+    "brief.why": "Varför det här området",
+    "brief.question": "Intervjufråga",
+    "brief.followup": "Följdfråga",
+    "brief.listenFor": "Lyssna efter",
+    "brief.coverage": "Omfattning",
+    "brief.coverageBody":
+      "{observed} observerade svar och {self} självrapporterade svar från ett bedömningstillfälle. Ett tillfälle är en kontext — det räcker för att beskriva hur någon svarade här, men inte för att fastställa ett varaktigt mönster.",
+    "brief.pace": "Svarstakt",
+    "brief.paceBody":
+      "{n} svar registrerades inom tre sekunder efter föregående svar. Det är en iakttagelse om genomförandet, inte om personen — och kan lika gärna bero på en genomläsning eller ett återupptaget pass.",
+    "brief.evidenceType": "Underlagstyp",
+    "brief.evidenceType.observed": "Observerat",
+    "brief.evidenceType.self_reported": "Självrapporterat",
+    "brief.signal.strong": "Starkt underlag",
+    "brief.signal.consistent": "Sammanhängande underlag",
+    "brief.signal.mixed": "Blandat underlag",
+    "brief.signal.developing": "Utvecklingsområde",
+    "brief.signal.limited": "Begränsat underlag",
+    "brief.pattern.consistently_described": "Beskriver genomgående",
+    "brief.pattern.mostly_described": "Beskriver för det mesta",
+    "brief.pattern.rarely_described": "Beskriver sällan",
+    "brief.pattern.not_described": "Inte beskrivet",
+    "brief.consistency.varied": "Varierande svar — utforska i intervju",
+    "brief.consistency.consistent": "Jämna svar",
+    "brief.focus.explore_development": "Utforska",
+    "brief.focus.explore_self_report": "Be om ett exempel",
+    "brief.focus.explore_limited_evidence": "För lite underlag — fråga",
+    "brief.focus.confirm_strength": "Pröva djupet",
+    "brief.tasks": "uppgifter",
+    "brief.questionsAnswered": "frågor",
+    "brief.breadthNote":
+      "Ett bedömningstillfälle. Underlagets bredd är därför begränsad oavsett hur svaren såg ut.",
+
+    // Employer: interview evidence recorded afterwards.
+    "brief.notes": "Intervjuunderlag",
+    "brief.notesLede":
+      "Vad intervjun faktiskt gav, per område. Noteringarna sparas som de skrevs och räknas aldrig om till ett omdöme — inget här skrivs in i kandidatens kompetensunderlag.",
+    "brief.notes.area": "Område",
+    "brief.notes.outcome": "Utfall",
+    "brief.notes.note": "Anteckning",
+    "brief.notes.add": "Spara intervjuunderlag",
+    "brief.notes.saving": "Sparar…",
+    "brief.notes.empty": "Inget intervjuunderlag har registrerats ännu.",
+    "brief.notes.evidence_confirmed": "Bekräftat i intervju",
+    "brief.notes.evidence_not_confirmed": "Inte bekräftat i intervju",
+    "brief.notes.additional_context": "Ytterligare sammanhang",
+    "brief.notes.failed": "Det gick inte att spara. Försök igen.",
+    "brief.notes.notPermitted":
+      "Att registrera intervjuunderlag kräver behörigheten ägare eller administratör.",
+
+    // Library.
+    "library.tag.recruitment": "Rekrytering",
+    "library.tag.recruitmentTitle":
+      "Framtaget som underlag för rekrytering. Ger ingen behörighet att använda testet i urval — det avgörs av innehållets status och organisationens grund.",
+
+    // Participant report additions.
+    "report.selfReported": "Det du själv beskrev",
+    "report.selfReportedLede":
+      "Så här beskrev du ditt eget arbetssätt. Det redovisas för arbetsgivaren som din beskrivning, tydligt skilt från det som bedömningen faktiskt observerade.",
+    "report.modulesDone": "Delar du genomförde",
+    "report.observedVsSelf": "Observerat och självrapporterat",
+    "report.observedVsSelfBody":
+      "Bedömningen samlade två slags underlag. Det du gjorde i situationsuppgifterna är observerat. Det du beskrev om ditt eget arbetssätt är självrapporterat och redovisas aldrig som visad kompetens. Bedömningen är en informationskälla i en rekryteringsprocess och avgör inte anställning, behörighet eller framtida arbetsprestation.",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -4185,7 +4295,8 @@ export const dictionaries = {
     "academy.overview.readyToRelease": "Ready to release",
     "academy.overview.attemptsAwaitingReview": "Awaiting review",
     "academy.history.heading": "Assessments",
-    "academy.history.lede": "Your assessment history, whichever organisation assigned it. A result appears once it has been released.",
+    "academy.history.lede":
+      "Your assessment history, whichever organisation assigned it. A result appears once it has been released.",
     "academy.history.viewResult": "View my result",
     "employer.person.backToWorkforce": "Back to Employees",
     "employer.person.unknown": "Unknown person",
@@ -4193,7 +4304,8 @@ export const dictionaries = {
     "employer.person.site": "Site",
     "employer.person.status": "Employment status",
     "employer.person.assessments.heading": "Assessments",
-    "employer.person.assessments.lede": "Current and completed assessments this organisation has assigned. History follows the person, not the email address.",
+    "employer.person.assessments.lede":
+      "Current and completed assessments this organisation has assigned. History follows the person, not the email address.",
     "employer.person.assessments.assign": "Assign assessment",
     "employer.person.assessments.empty": "No assessments have been assigned to this person yet.",
     "employer.person.assessments.loadError": "The assessments could not be loaded.",
@@ -4202,10 +4314,12 @@ export const dictionaries = {
     "employer.person.assessments.reviewsOpen": "Reviews outstanding:",
     "employer.person.assessments.openReport": "View report",
     "employer.person.development.heading": "Competence development",
-    "employer.person.development.lede": "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
+    "employer.person.development.lede":
+      "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
     "employer.person.development.open": "Open participants in Competence development",
     "employer.person.credentials.heading": "Competencies & certificates",
-    "employer.person.credentials.lede": "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
+    "employer.person.credentials.lede":
+      "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
     "lifecycle.employer.invited": "Invited",
     "lifecycle.employer.in_progress": "In progress",
     "lifecycle.employer.under_review": "Under review",
@@ -4227,11 +4341,14 @@ export const dictionaries = {
     "lifecycle.purpose.workforce": "Competence development",
     "lifecycle.purpose.recruitment": "Recruitment",
     "employer.team.heading": "Team and review authorisation",
-    "employer.team.lede": "Who belongs to the organisation, and which of them may review participants' responses. Review authorisation grants access to free-text answers and is granted per person.",
-    "employer.team.separationNotice": "Whoever assigned an assessment may never review that same assessment, and a participant never reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
+    "employer.team.lede":
+      "Who belongs to the organisation, and which of them may review participants' responses. Review authorisation grants access to free-text answers and is granted per person.",
+    "employer.team.separationNotice":
+      "Whoever assigned an assessment may never review that same assessment, and a participant never reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
     "employer.team.loadError": "The team could not be loaded.",
     "employer.team.empty": "No members were found in this organisation.",
-    "employer.team.noReviewerWarning": "Nobody in this organisation holds review authorisation. Assessments requiring human review cannot be completed, and no results can be released.",
+    "employer.team.noReviewerWarning":
+      "Nobody in this organisation holds review authorisation. Assessments requiring human review cannot be completed, and no results can be released.",
     "employer.team.col.person": "Person",
     "employer.team.col.role": "Role",
     "employer.team.col.reviewer": "Reviewer",
@@ -5008,7 +5125,8 @@ export const dictionaries = {
     "academy.library.sections.internalLede":
       "Synthetic closed-test material. Never customer content.",
     "academy.library.sections.development": "Under development",
-    "academy.library.sections.developmentLede": "Content that is not yet validated. It can be assigned as a closed test where the organisation holds a pilot grant.",
+    "academy.library.sections.developmentLede":
+      "Content that is not yet validated. It can be assigned as a closed test where the organisation holds a pilot grant.",
     "academy.library.filter.all": "All",
     "academy.library.kind.assessment": "Assessment",
     "academy.library.kind.training": "Training",
@@ -5480,6 +5598,102 @@ export const dictionaries = {
     "academy.reviews.adminEmptyTitle": "Nothing is awaiting review",
     "academy.reviews.adminEmptyBody":
       "Either there is nothing to review right now, or your account does not hold the review capability.",
+
+    // ── Flagship recruitment assessment ─────────────────────────────────
+    "academy.section.eyebrow": "Part",
+    "academy.section.questions": "questions",
+    "academy.section.continue": "Continue",
+    "academy.asks.what_you_would_do":
+      "Here you choose what you would do. Your choice is something we actually observe, and it is reported as observed.",
+    "academy.asks.how_you_usually_work":
+      "Here you describe how you usually work. What you answer is reported to the employer as your own description — never as something we observed. There is no answer key.",
+    "academy.asks.your_own_experience":
+      "Here you describe something you have been through, in your own words. A person reads your answer — no model judges it.",
+    "academy.selfReportBadge": "Your own description — not something we observe",
+
+    "brief.title": "Candidate assessment brief",
+    "brief.lede":
+      "Preparation for the interview: what was observed, what the candidate describes about themselves, and what is worth exploring. CQrityjob provides structured decision support. The employer makes the employment decision.",
+    "brief.notADecision":
+      "CQrityjob provides structured decision support. The employer makes the employment decision.",
+    "brief.none":
+      "This result was released before the candidate brief existed, and is never recomputed after the fact.",
+    "brief.modules": "Parts completed",
+    "brief.strengths": "Strengths in this assessment",
+    "brief.strengthsLede":
+      "Areas where the answers held together across several tasks. This concerns this assessment — not the person's ability in general.",
+    "brief.development": "Development and follow-up areas",
+    "brief.developmentLede":
+      "Areas where the answers were uneven or weaker. A development area is not a failure.",
+    "brief.limited": "Too little evidence",
+    "brief.limitedLede":
+      "The assessment touched these areas too little to say anything. Do not read this as a weakness.",
+    "brief.selfReported": "Self-reported work behaviour",
+    "brief.selfReportedLede":
+      "What the candidate says about their own way of working. This is not observed and must not be read as demonstrated competence.",
+    "brief.observedByDomain": "Observed evidence by area",
+    "brief.interviewGuide": "Structured interview guide",
+    "brief.interviewGuideLede":
+      "The questions are selected from this candidate's own answers, and each one says why it was chosen. \u201cWhat to listen for\u201d is guidance for you as the interviewer — not an answer key, and nothing here is scored.",
+    "brief.why": "Why this area",
+    "brief.question": "Interview question",
+    "brief.followup": "Follow-up",
+    "brief.listenFor": "What to listen for",
+    "brief.coverage": "Coverage",
+    "brief.coverageBody":
+      "{observed} observed answers and {self} self-reported answers from one assessment occasion. One occasion is one context — enough to describe how somebody answered here, not enough to establish a durable pattern.",
+    "brief.pace": "Answering pace",
+    "brief.paceBody":
+      "{n} answers were recorded within three seconds of the previous one. That is an observation about the run, not about the person — and it is as likely to be a re-read pass or a resumed session as anything else.",
+    "brief.evidenceType": "Evidence type",
+    "brief.evidenceType.observed": "Observed",
+    "brief.evidenceType.self_reported": "Self-reported",
+    "brief.signal.strong": "Strong evidence",
+    "brief.signal.consistent": "Consistent evidence",
+    "brief.signal.mixed": "Mixed evidence",
+    "brief.signal.developing": "Development area",
+    "brief.signal.limited": "Limited evidence",
+    "brief.pattern.consistently_described": "Consistently describes",
+    "brief.pattern.mostly_described": "Mostly describes",
+    "brief.pattern.rarely_described": "Rarely describes",
+    "brief.pattern.not_described": "Not described",
+    "brief.consistency.varied": "Varied answers — explore in interview",
+    "brief.consistency.consistent": "Consistent answers",
+    "brief.focus.explore_development": "Explore",
+    "brief.focus.explore_self_report": "Ask for an example",
+    "brief.focus.explore_limited_evidence": "Too little evidence — ask",
+    "brief.focus.confirm_strength": "Test the depth",
+    "brief.tasks": "tasks",
+    "brief.questionsAnswered": "questions",
+    "brief.breadthNote":
+      "One assessment occasion. The breadth of the evidence is therefore limited, whatever the answers looked like.",
+
+    "brief.notes": "Interview evidence",
+    "brief.notesLede":
+      "What the interview actually established, by area. Notes are kept as written and are never converted into a verdict — nothing here is written into the candidate's competency record.",
+    "brief.notes.area": "Area",
+    "brief.notes.outcome": "Outcome",
+    "brief.notes.note": "Note",
+    "brief.notes.add": "Save interview evidence",
+    "brief.notes.saving": "Saving…",
+    "brief.notes.empty": "No interview evidence has been recorded yet.",
+    "brief.notes.evidence_confirmed": "Confirmed in interview",
+    "brief.notes.evidence_not_confirmed": "Not confirmed in interview",
+    "brief.notes.additional_context": "Additional context",
+    "brief.notes.failed": "That could not be saved. Try again.",
+    "brief.notes.notPermitted": "Recording interview evidence requires the owner or admin role.",
+
+    "library.tag.recruitment": "Recruitment",
+    "library.tag.recruitmentTitle":
+      "Written as preparation for recruitment. It confers no permission to use the assessment in selection — that is decided by the content's status and the organisation's basis.",
+
+    "report.selfReported": "What you described about yourself",
+    "report.selfReportedLede":
+      "This is how you described your own way of working. It is reported to the employer as your description, kept clearly separate from what the assessment actually observed.",
+    "report.modulesDone": "Parts you completed",
+    "report.observedVsSelf": "Observed and self-reported",
+    "report.observedVsSelfBody":
+      "The assessment gathered two kinds of evidence. What you did in the situational tasks is observed. What you described about your own way of working is self-reported, and is never presented as demonstrated competence. The assessment is one source of information in a recruitment process and does not determine employment, authorisation or future job performance.",
   },
 } as const;
 

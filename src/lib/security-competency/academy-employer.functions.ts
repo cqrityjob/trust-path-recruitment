@@ -153,6 +153,9 @@ export type ReportContext = {
    *  and the coverage paragraph has to say that rather than "two occasions". */
   evidenceObservations?: number;
   evidenceContexts?: number;
+  /** Counted separately from evidenceObservations, and reported separately,
+   *  because a self-description is not an observation. */
+  selfReportObservations?: number;
   humanReviewOccurred?: boolean;
   /** Whether any reviewer actually FOUND a safety concern in this attempt.
    *  Distinct from humanReviewOccurred, and from the item having been
@@ -167,6 +170,123 @@ export type ReportContext = {
   scoringModelVersion?: string;
 };
 
+/** How a person answered THIS assessment, on one competency.
+ *
+ *  A third axis, and the one a recruiter is actually asking about. It is not
+ *  maturity (how much evidence exists across occasions) and it is not the
+ *  evidence state (what may be claimed about a way of working); it is a
+ *  description of the answers in one sitting, and every surface renders it
+ *  labelled that way.
+ *
+ *  `limited` means too few tasks touched the area to say anything — never that
+ *  the person lacks the ability. `mixed` is checked BEFORE the good bands in
+ *  the derivation, so answers that differ sharply across comparable tasks read
+ *  as mixed even when the average is high. */
+export type AssessmentSignal = "strong" | "consistent" | "mixed" | "developing" | "limited";
+
+/** What the person SAID about how they usually work. Never an observation.
+ *
+ *  `consistency: "varied"` means related answers pointed different ways. That
+ *  is a prompt to ask about it in interview and nothing else: it is never a
+ *  statement that anybody was untruthful, and the product has no vocabulary
+ *  for that claim anywhere. */
+export type SelfReportPattern =
+  | "consistently_described"
+  | "mostly_described"
+  | "rarely_described"
+  | "not_described";
+
+export type BriefModule = {
+  blockKey: string;
+  nameSv: string;
+  nameEn: string;
+  asks: "what_you_would_do" | "how_you_usually_work" | "your_own_experience";
+  items: number;
+  answered: number;
+};
+
+export type ObservedArea = {
+  areaCode: string;
+  areaSv: string;
+  areaEn: string;
+  evidenceType: "observed";
+  signal: AssessmentSignal;
+  items: number;
+  /** Kept so a surface can order strengths by how strongly they were shown.
+   *  Never rendered as a number: it is not a score and there is no scale a
+   *  reader could put it on. */
+  mean: number;
+  spread: number;
+  evidenceState: EvidenceState;
+  behaviourSv: string | null;
+  behaviourEn: string | null;
+  whySv: string;
+  whyEn: string;
+};
+
+export type SelfReportedArea = {
+  domainKey: string;
+  domainSv: string;
+  domainEn: string;
+  areaCode: string;
+  evidenceType: "self_reported";
+  pattern: SelfReportPattern;
+  consistency: "consistent" | "varied";
+  items: number;
+  mean?: number;
+  spread?: number;
+  whySv?: string;
+  whyEn?: string;
+};
+
+export type InterviewGuideEntry = {
+  areaCode: string;
+  areaSv: string;
+  areaEn: string;
+  focus:
+    | "explore_development"
+    | "explore_self_report"
+    | "explore_limited_evidence"
+    | "confirm_strength";
+  evidenceType: "observed" | "self_reported";
+  whySv: string;
+  whyEn: string;
+  questionSv: string;
+  questionEn: string;
+  followupSv: string;
+  followupEn: string;
+  /** Guidance for the interviewer, and deliberately not a key: it carries no
+   *  score and no preferred answer, and nothing reads an interview note back
+   *  into the evidence ledger. */
+  listenForSv: string[];
+  listenForEn: string[];
+};
+
+/** The frozen brief. Employer briefs carry everything; participant briefs carry
+ *  modules, what the person said about themselves, and coverage — and that is
+ *  a genuine subset rather than a softened rewrite. */
+export type ReportBrief = {
+  briefVersion: string;
+  signalVersion: string;
+  audience: "employer" | "participant";
+  modules: BriefModule[];
+  observed: ObservedArea[];
+  selfReported: SelfReportedArea[];
+  interviewGuide: InterviewGuideEntry[];
+  coverage: {
+    observedObservations: number;
+    selfReportObservations: number;
+    evidenceContexts: number;
+    reviewsTotal?: number;
+    reviewsCompleted?: number;
+  };
+  /** Present only when answers were recorded in unusually quick succession. A
+   *  fact about the RUN, never a finding about the person — fast answering has
+   *  many innocent explanations and the product must not turn a timestamp into
+   *  a character claim. */
+  pace: { rapidAnswers: number } | null;
+};
+
 export type ReportSnapshot = {
   id: string;
   attemptId: string;
@@ -174,6 +294,7 @@ export type ReportSnapshot = {
   audience: "participant" | "employer";
   releasedAt: string;
   context: ReportContext | null;
+  brief: ReportBrief | null;
   lines: CompetencyLine[];
   safetyFlags: { severity: string | null; observedAt: string }[];
   limitationsSv: string[];
@@ -284,6 +405,11 @@ export type ContentLibraryEntry = {
   doesNotMeasureEn: string[];
   publishedAt: string | null;
   updatedAt: string | null;
+  /** PRODUCT DESIGN INTENT, never a governance basis. An assessment can be
+   *  designed for recruitment support and still be assignable only as a closed
+   *  test — which is exactly the flagship's state — so a surface must render
+   *  this BESIDE `governanceMode`, never instead of it. */
+  designedFor: "competence_development" | "recruitment_support";
 };
 
 /** The durable content library for one organisation, across assessments and
@@ -335,6 +461,8 @@ export const listContentLibrary = createServerFn({ method: "GET" })
       doesNotMeasureEn: r.does_not_measure_en ?? [],
       publishedAt: r.published_at ?? null,
       updatedAt: r.updated_at ?? null,
+      designedFor: (r.designed_for ??
+        "competence_development") as ContentLibraryEntry["designedFor"],
     }));
   });
 
@@ -970,6 +1098,7 @@ function mapContext(c: RpcRow | null): ReportContext | null {
     reviewsCompleted: num("reviews_completed"),
     evidenceObservations: num("evidence_observations"),
     evidenceContexts: num("evidence_contexts"),
+    selfReportObservations: num("self_report_observations"),
     humanReviewOccurred:
       c.human_review_occurred == null ? undefined : Boolean(c.human_review_occurred),
     safetyConcernPresent:
@@ -979,6 +1108,87 @@ function mapContext(c: RpcRow | null): ReportContext | null {
     evidenceStateVersion: str("evidence_state_version"),
     thresholdVersion: str("threshold_version"),
     scoringModelVersion: str("scoring_model_version"),
+  };
+}
+
+/** snake_case jsonb to the camelCase the surfaces read, for the brief.
+ *
+ *  Returns null rather than an empty shell for a snapshot released before the
+ *  brief existed. A surface that renders `brief === null` differently from
+ *  `brief.observed.length === 0` is telling the truth about a historical
+ *  report; one that cannot tell them apart would invent an empty brief for
+ *  every report issued before this feature shipped. */
+function mapBrief(b: RpcRow | null): ReportBrief | null {
+  if (!b) return null;
+  const arr = (k: string): RpcRow[] => (Array.isArray(b[k]) ? (b[k] as RpcRow[]) : []);
+  const cov = (b.coverage ?? {}) as RpcRow;
+  const pace = b.pace as RpcRow | null;
+  return {
+    briefVersion: String(b.brief_version ?? ""),
+    signalVersion: String(b.signal_version ?? ""),
+    audience: b.audience as ReportBrief["audience"],
+    modules: arr("modules").map((m) => ({
+      blockKey: String(m.block_key),
+      nameSv: String(m.name_sv),
+      nameEn: String(m.name_en),
+      asks: m.asks as BriefModule["asks"],
+      items: Number(m.items ?? 0),
+      answered: Number(m.answered ?? 0),
+    })),
+    observed: arr("observed").map((o) => ({
+      areaCode: String(o.area_code),
+      areaSv: String(o.area_sv),
+      areaEn: String(o.area_en),
+      evidenceType: "observed",
+      signal: o.signal as AssessmentSignal,
+      items: Number(o.items ?? 0),
+      mean: Number(o.mean ?? 0),
+      spread: Number(o.spread ?? 0),
+      evidenceState: o.evidence_state as EvidenceState,
+      behaviourSv: o.behaviour_sv ? String(o.behaviour_sv) : null,
+      behaviourEn: o.behaviour_en ? String(o.behaviour_en) : null,
+      whySv: String(o.why_sv ?? ""),
+      whyEn: String(o.why_en ?? ""),
+    })),
+    selfReported: arr("self_reported").map((r) => ({
+      domainKey: String(r.domain_key),
+      domainSv: String(r.domain_sv),
+      domainEn: String(r.domain_en),
+      areaCode: String(r.area_code),
+      evidenceType: "self_reported",
+      pattern: r.pattern as SelfReportPattern,
+      consistency: r.consistency as SelfReportedArea["consistency"],
+      items: Number(r.items ?? 0),
+      // Absent from the participant brief by construction, so undefined here
+      // rather than 0 — the surface renders what is present and omits the rest.
+      mean: r.mean == null ? undefined : Number(r.mean),
+      spread: r.spread == null ? undefined : Number(r.spread),
+      whySv: r.why_sv == null ? undefined : String(r.why_sv),
+      whyEn: r.why_en == null ? undefined : String(r.why_en),
+    })),
+    interviewGuide: arr("interview_guide").map((g) => ({
+      areaCode: String(g.area_code),
+      areaSv: String(g.area_sv),
+      areaEn: String(g.area_en),
+      focus: g.focus as InterviewGuideEntry["focus"],
+      evidenceType: g.evidence_type as InterviewGuideEntry["evidenceType"],
+      whySv: String(g.why_sv ?? ""),
+      whyEn: String(g.why_en ?? ""),
+      questionSv: String(g.question_sv ?? ""),
+      questionEn: String(g.question_en ?? ""),
+      followupSv: String(g.followup_sv ?? ""),
+      followupEn: String(g.followup_en ?? ""),
+      listenForSv: Array.isArray(g.listen_for_sv) ? (g.listen_for_sv as string[]) : [],
+      listenForEn: Array.isArray(g.listen_for_en) ? (g.listen_for_en as string[]) : [],
+    })),
+    coverage: {
+      observedObservations: Number(cov.observed_observations ?? 0),
+      selfReportObservations: Number(cov.self_report_observations ?? 0),
+      evidenceContexts: Number(cov.evidence_contexts ?? 0),
+      reviewsTotal: cov.reviews_total == null ? undefined : Number(cov.reviews_total),
+      reviewsCompleted: cov.reviews_completed == null ? undefined : Number(cov.reviews_completed),
+    },
+    pace: pace ? { rapidAnswers: Number(pace.rapid_answers ?? 0) } : null,
   };
 }
 
@@ -1007,7 +1217,7 @@ export const getAcademyReport = createServerFn({ method: "GET" })
         // derivation_input is deliberately NOT selected. It holds the internal
         // maturity the state was derived from, and it exists for reproducibility,
         // not for a reader.
-        "id, attempt_id, subject_id, audience, released_at, payload, safety_flags, context, " +
+        "id, attempt_id, subject_id, audience, released_at, payload, brief, safety_flags, context, " +
           "scp_report_versions(limitations_sv, limitations_en)",
       )
       .eq("attempt_id", data.attemptId)
@@ -1027,6 +1237,7 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       audience: row.audience,
       releasedAt: String(row.released_at),
       context: mapContext(row.context as RpcRow | null),
+      brief: mapBrief(row.brief as RpcRow | null),
       lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
         competencyCode: String(x.competency_code),
         competencyNameSv: String(x.competency_name_sv),
@@ -1215,4 +1426,75 @@ export const completeReview = createServerFn({ method: "POST" })
     });
     if (error) throw fail(error.message, "review_failed");
     return { evidenceId: id == null ? null : String(id) };
+  });
+
+/** What an interview established about one area of the brief.
+ *
+ *  Deliberately inert. Nothing here is aggregated, no outcome carries a weight,
+ *  and no note is ever written into public.scp_competency_evidence — so a
+ *  recruiter's reading of a conversation can never become platform-visible
+ *  "competence" that follows the person to the next employer. It is a record of
+ *  what was said, and it is not the employment decision: that stays in
+ *  recordEmployerDecision, where a human makes it and signs it. */
+export type InterviewNoteOutcome =
+  | "evidence_confirmed"
+  | "evidence_not_confirmed"
+  | "additional_context";
+
+export type InterviewNote = {
+  id: string;
+  areaCode: string;
+  outcome: InterviewNoteOutcome;
+  note: string | null;
+  recordedByEmail: string;
+  recordedAt: string;
+};
+
+export const listInterviewNotes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InterviewNote[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_interview_notes", {
+      _attempt_id: data.attemptId,
+    });
+    if (error) throw fail(error.message, "interview_notes_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      id: String(r.id),
+      areaCode: String(r.area_code),
+      outcome: r.outcome as InterviewNoteOutcome,
+      note: r.note ? String(r.note) : null,
+      recordedByEmail: String(r.recorded_by_email ?? ""),
+      recordedAt: String(r.recorded_at),
+    }));
+  });
+
+export const recordInterviewNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        // Not a uuid: the brief is a frozen rendering, and an area code in it
+        // has to stay resolvable even if the competency catalogue is later
+        // reorganised. Bounded because it is written into an append-only row.
+        areaCode: z.string().min(1).max(64),
+        outcome: z.enum(["evidence_confirmed", "evidence_not_confirmed", "additional_context"]),
+        // Bounded here as well as in the CHECK: free text about a person is the
+        // riskiest field on the form, and the limit should be visible to
+        // whoever reads this file rather than only to the database.
+        note: z.string().max(1000).nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ noteId: string }> => {
+    const ctx = context as Ctx;
+    const { data: id, error } = await ctx.supabase.rpc("scp_record_interview_note", {
+      _attempt_id: data.attemptId,
+      _area_code: data.areaCode,
+      _outcome: data.outcome,
+      _note: data.note ?? undefined,
+    });
+    if (error) throw fail(error.message, "interview_note_failed");
+    return { noteId: String(id) };
   });
