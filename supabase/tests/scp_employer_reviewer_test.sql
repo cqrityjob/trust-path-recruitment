@@ -376,4 +376,44 @@ SELECT pg_temp.ok(
   'R8.2 Alpha''s owner gets nothing back for Beta''s pressure');
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- ── W. The count and the cards must be the same thing ─────────────────────
+--
+-- This is the assertion that would have caught the "0 väntar" banner sitting
+-- above a full queue: it compares the number to the rows rather than checking
+-- each in isolation.
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
+SELECT pg_temp.ok(
+  (SELECT responses_waiting FROM public.scp_my_review_workload())
+  = (SELECT count(*) FROM public.scp_review_queue('sv-SE')),
+  'W1 the reviewer count equals the number of cards in that reviewer''s queue');
+-- By this point Alpha's reviewer has completed their only non-conflicted item,
+-- so an empty workload is the correct answer. The property worth pinning is
+-- that the workload NEVER reaches beyond the organisations that authorised
+-- them -- not that it happens to be non-empty right now.
+SELECT pg_temp.ok(
+  (SELECT employers_covered FROM public.scp_my_review_workload()) <= 1,
+  'W2 the workload never spans more organisations than have authorised them');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-000000000011';
+SELECT pg_temp.ok(
+  coalesce((SELECT responses_waiting FROM public.scp_my_review_workload()), 0) = 0,
+  'W3 a content-role holder with no employer authorisation has no review workload');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The employer metric and the reviewer metric are different questions, and the
+-- fixture is built so they genuinely differ: Alpha's owner has work blocked but
+-- is not an authorised reviewer, so their own workload is zero.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000a';
+SELECT pg_temp.ok(
+  (SELECT awaiting_review FROM public.scp_employer_review_pressure(
+     'e1000000-1111-0000-0000-00000000000a'::uuid)) > 0
+  AND coalesce((SELECT responses_waiting FROM public.scp_my_review_workload()), 0) = 0,
+  'W4 an organisation can have blocked work while a given member has none to do');
+RESET ROLE; RESET request.jwt.claim.sub;
+
 ROLLBACK;

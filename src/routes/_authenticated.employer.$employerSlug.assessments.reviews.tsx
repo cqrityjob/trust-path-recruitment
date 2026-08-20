@@ -25,6 +25,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { getAcademyReviewPressure } from "@/lib/security-competency/academy-employer.functions";
+import { getMyReviewWorkload } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { ReviewQueue } from "@/components/academy/ReviewQueue";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/reviews")({
@@ -45,6 +46,16 @@ function ReviewsRoute() {
 function Reviews({ employerId }: { employerId: string }) {
   const { t } = useT();
   const pressureFn = useServerFn(getAcademyReviewPressure);
+  const workloadFn = useServerFn(getMyReviewWorkload);
+
+  // Two different questions, deliberately kept apart. The first two metrics are
+  // about the ORGANISATION -- how much of its work is blocked. The third is
+  // about ME -- how much of it I am actually authorised to act on. Reading one
+  // as the other is what produced "0 väntar" above a full queue.
+  const workload = useQuery({
+    queryKey: ["academy", "my-review-workload"],
+    queryFn: () => workloadFn(),
+  });
 
   const pressure = useQuery({
     queryKey: ["academy", "review-pressure", employerId],
@@ -55,7 +66,7 @@ function Reviews({ employerId }: { employerId: string }) {
     <>
       <AcademyHeading title={t("academy.reviews.title")} lede={t("academy.reviews.lede")} />
 
-      <section className="mb-8 grid gap-4 sm:grid-cols-2">
+      <section className="mb-8 grid gap-4 sm:grid-cols-3">
         <Metric
           icon={Clock}
           label={t("academy.reviews.awaiting")}
@@ -65,6 +76,11 @@ function Reviews({ employerId }: { employerId: string }) {
           icon={UserCheck}
           label={t("academy.reviews.blocked")}
           value={pressure.data?.attemptsBlocked ?? 0}
+        />
+        <Metric
+          icon={Clock}
+          label={t("academy.reviews.myTasks")}
+          value={workload.data?.responsesWaiting ?? 0}
         />
       </section>
 

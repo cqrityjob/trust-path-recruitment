@@ -1438,6 +1438,10 @@ export const dictionaries = {
 
     "employer.settings.heading": "Organisationsinställningar",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
+    "employer.overview.card.tests.stat.active": "Aktiva",
+    "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
+    "employer.overview.card.tests.stat.readyToRelease": "Klara att frisläppa",
+    "academy.reviews.myTasks": "Mina granskningsuppgifter",
     "academy.overview.readyToRelease": "Klara att frisläppa",
     "academy.overview.attemptsAwaitingReview": "Väntar på granskning",
     "academy.history.heading": "Tester & bedömningar",
@@ -4173,6 +4177,10 @@ export const dictionaries = {
 
     "employer.settings.heading": "Organisation settings",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
+    "employer.overview.card.tests.stat.active": "Active",
+    "employer.overview.card.tests.stat.awaitingReview": "Awaiting review",
+    "employer.overview.card.tests.stat.readyToRelease": "Ready to release",
+    "academy.reviews.myTasks": "My review tasks",
     "academy.overview.readyToRelease": "Ready to release",
     "academy.overview.attemptsAwaitingReview": "Awaiting review",
     "academy.history.heading": "Assessments",

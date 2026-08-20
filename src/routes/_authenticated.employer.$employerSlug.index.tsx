@@ -21,6 +21,7 @@
 
 import { createFileRoute, Link, type LinkComponentProps } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, type ReactNode } from "react";
 import {
@@ -204,6 +205,7 @@ function EmployerOverview({
   const loadWorkforce = useServerFn(getEmployerWorkforceSummary);
   const loadAssignments = useServerFn(listAssignmentsForEmployer);
   const loadTraining = useServerFn(listTrainingStatus);
+  const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -237,6 +239,12 @@ function EmployerOverview({
     queryKey: ["academy", "training-status", employerId],
     queryFn: () => loadTraining({ data: { employerId } }),
   });
+  // Shared cache key with the Tester workspace: one fetch, one set of numbers,
+  // and the card can never show a total the workspace disagrees with.
+  const pipelineQuery = useQuery({
+    queryKey: ["academy", "participants", employerId],
+    queryFn: () => loadPipeline({ data: { employerId } }),
+  });
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -249,11 +257,20 @@ function EmployerOverview({
   const applications: EmployerApplicationRow[] = applicationsQuery.data ?? [];
   const catalog: EmployerAssessmentCatalogEntry[] = catalogQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
-  const invitedCount = assignments.filter(
-    (a) => a.status === "invited" || a.status === "opened",
+  // Tester metrics come from the governed pipeline -- the same rows, the same
+  // lifecycle derivation, as the workspace this card links into. Counting
+  // assignment.status here would be a second status vocabulary on the
+  // dashboard, and the two would drift.
+  const pipeline = pipelineQuery.data ?? [];
+  const testsActiveCount = pipeline.filter(
+    (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
   ).length;
-  const inProgressCount = assignments.filter((a) => a.status === "started").length;
-  const completedAssignmentsCount = assignments.filter((a) => a.status === "completed").length;
+  const testsAwaitingReviewCount = pipeline.filter(
+    (r) => r.lifecycleState === "under_review",
+  ).length;
+  const testsReadyToReleaseCount = pipeline.filter(
+    (r) => r.lifecycleState === "ready_to_release",
+  ).length;
 
   // Counted from the training read model, never estimated. The card showed a
   // "coming soon" badge and no numbers because there was nothing to count;
@@ -491,19 +508,19 @@ function EmployerOverview({
           linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
           stats={[
             {
-              label: t("employer.overview.card.tests.stat.invited"),
-              value: invitedCount,
-              loading: assignmentsQuery.isLoading,
+              label: t("employer.overview.card.tests.stat.active"),
+              value: testsActiveCount,
+              loading: pipelineQuery.isLoading,
             },
             {
-              label: t("employer.overview.card.tests.stat.inProgress"),
-              value: inProgressCount,
-              loading: assignmentsQuery.isLoading,
+              label: t("employer.overview.card.tests.stat.awaitingReview"),
+              value: testsAwaitingReviewCount,
+              loading: pipelineQuery.isLoading,
             },
             {
-              label: t("employer.overview.card.tests.stat.completed"),
-              value: completedAssignmentsCount,
-              loading: assignmentsQuery.isLoading,
+              label: t("employer.overview.card.tests.stat.readyToRelease"),
+              value: testsReadyToReleaseCount,
+              loading: pipelineQuery.isLoading,
             },
           ]}
           actions={[

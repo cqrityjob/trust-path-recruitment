@@ -255,6 +255,7 @@ DROP FUNCTION IF EXISTS public.scp_employer_person_assessments(uuid, uuid) CASCA
 DROP FUNCTION IF EXISTS public.scp_employer_team(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_grant_employer_reviewer(uuid, uuid, text[]) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_revoke_employer_reviewer(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_my_review_workload() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_can_review_for(uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_review_conflict(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_review_authorisation(uuid, uuid) CASCADE;

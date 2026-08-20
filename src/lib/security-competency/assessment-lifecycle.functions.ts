@@ -198,3 +198,27 @@ export const getMyAssessmentHistory = createServerFn({ method: "GET" })
       participantSnapshotId: (r.participant_snapshot_id as string | null) ?? null,
     }));
   });
+
+/** How much review work THIS caller is authorised to do, scoped identically to
+ *  the queue they will see. Deliberately separate from the employer's
+ *  "our work is blocked" metric: an organisation can have twelve responses
+ *  awaiting review while a given member has none to do. */
+export type MyReviewWorkload = {
+  responsesWaiting: number;
+  attemptsWaiting: number;
+  employersCovered: number;
+};
+
+export const getMyReviewWorkload = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<MyReviewWorkload> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_my_review_workload");
+    if (error) throw new Error("Could not load your review workload.");
+    const r = (rows ?? [])[0] ?? {};
+    return {
+      responsesWaiting: Number(r.responses_waiting ?? 0),
+      attemptsWaiting: Number(r.attempts_waiting ?? 0),
+      employersCovered: Number(r.employers_covered ?? 0),
+    };
+  });
