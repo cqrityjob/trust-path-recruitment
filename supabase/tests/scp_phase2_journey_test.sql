@@ -115,10 +115,19 @@ WITH u AS (
   VALUES ('c3000000-1111-0000-0000-000000000001', 'closed test fixture journey')
   RETURNING employer_id
 ), cr AS (
-  -- The reviewer is an authoring principal, NOT anyone in the employer.
+  -- #51. Content authoring and participant-response review are now different
+  -- capabilities. This principal keeps the content role (it governs content),
+  -- but that alone no longer opens a customer's responses.
   INSERT INTO public.scp_content_roles (user_id, role)
   VALUES ('c3000000-0000-0000-0000-000000000002','reviewer')
   RETURNING id
+), rm AS (
+  -- The response reviewer is a member of the commissioning organisation, and
+  -- is NOT the owner who assigns the work -- separation of duties.
+  INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+  VALUES ('c3000000-1111-0000-0000-000000000001','c3000000-0000-0000-0000-000000000002','member','active')
+  RETURNING id
+
 ), s AS (
   INSERT INTO public.scp_subjects DEFAULT VALUES RETURNING id
 ), s2 AS (
@@ -172,6 +181,14 @@ SELECT (SELECT id FROM s) AS subject_id, (SELECT id FROM s2) AS stranger_id,
 
 SELECT subject_id AS sid, stranger_id AS xid, attempt_id AS aid,
        form_id AS fid, assignment_id AS gid FROM jfx \gset
+
+-- #51. The employer authorises its own response reviewer. Separate statement:
+-- the membership guard reads employer_memberships, and a data-modifying CTE is
+-- not visible to its siblings.
+INSERT INTO public.scp_employer_reviewers
+  (employer_id, user_id, allowed_use_cases, granted_by)
+VALUES ('c3000000-1111-0000-0000-000000000001','c3000000-0000-0000-0000-000000000002',
+        ARRAY['workforce','recruitment']::text[],'c3000000-0000-0000-0000-000000000001');
 
 -- ── Delivery ───────────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;

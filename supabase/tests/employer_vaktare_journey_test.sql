@@ -545,12 +545,21 @@ SELECT pg_temp.must_fail(format(
   'VJ9.2 the commissioning employer cannot set the severity either');
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- A real reviewer holds the content-review capability.
+-- #51. A response reviewer is authorised by the employer, and is a member of
+-- it. The content role is kept to prove the two capabilities are now separate:
+-- holding it is neither sufficient (authorisation is required) nor implied by
+-- being an employer member.
 INSERT INTO auth.users (id, email)
 VALUES ('dd000000-0000-0000-0000-000000000004', 'reviewer@sakerhet-vj.test');
 INSERT INTO public.scp_content_roles (user_id, role, granted_by)
 VALUES ('dd000000-0000-0000-0000-000000000004', 'reviewer',
         'dd000000-0000-0000-0000-000000000002');
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+SELECT employer, 'dd000000-0000-0000-0000-000000000004', 'member', 'active' FROM vj;
+INSERT INTO public.scp_employer_reviewers
+  (employer_id, user_id, allowed_use_cases, granted_by)
+SELECT employer, 'dd000000-0000-0000-0000-000000000004',
+       ARRAY['workforce','recruitment']::text[], owner_user FROM vj;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000004';

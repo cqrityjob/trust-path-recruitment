@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 69,
-    'pre-rollback: 69 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery)');
+        AND table_name LIKE 'scp\_%') = 70,
+    'pre-rollback: 70 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -186,6 +186,7 @@ DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASC
 -- first so the guard functions have nothing depending on them, then the RPCs.
 -- Every one of these takes uuid/text arguments only, so the
 -- scp_governance_mode cascade never reaches them and they must be named.
+DROP TABLE    IF EXISTS public.scp_employer_reviewers CASCADE;
 DROP TABLE    IF EXISTS public.scp_training_module_progress CASCADE;
 DROP TABLE    IF EXISTS public.scp_training_assignments CASCADE;
 DROP FUNCTION IF EXISTS public.scp_assign_training(uuid, uuid, text, text, timestamptz, text, uuid) CASCADE;
@@ -246,6 +247,10 @@ DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_can_review_for(uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_review_conflict(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_review_authorisation(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_reviewer_is_member() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, text, jsonb) CASCADE;
 -- The deprecated transition overload, which exists alongside the governed one
 -- until the maintenance migration removes it.

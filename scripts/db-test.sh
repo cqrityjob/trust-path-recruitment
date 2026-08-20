@@ -292,8 +292,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   an assignment references a governed programme VERSION and a subject, and
 #   progress references that assignment and a module version. No parallel
 #   content, item, form or attempt model was introduced.
-if [ "$SCP_TABLES" -ne 69 ]; then
-  echo "FAIL: expected 69 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 70 ]; then
+  echo "FAIL: expected 70 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -813,6 +813,35 @@ if [ "$GATE_PASSED" -lt 46 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# #51 -- response review as an employer capability, proven across two tenants.
+# The old model gated review on scp_can_author, a global content-governance
+# capability, so this suite exists to keep the two apart and to keep the
+# cross-tenant boundary honest with a second organisation in the fixture.
+# ---------------------------------------------------------------------------
+echo "==> Running employer response-reviewer assertions"
+set +e
+REV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_employer_reviewer_test.sql 2>&1)"
+REV_RC=$?
+set -e
+
+echo "$REV_OUT" | grep -E "ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+REV_PASSED="$(echo "$REV_OUT" | grep -c "ok  " || true)"
+
+if [ "$REV_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer response-reviewer suite exited with code ${REV_RC}." >&2
+  echo "$REV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${REV_PASSED} employer response-reviewer assertions passed"
+
+if [ "$REV_PASSED" -lt 24 ]; then
+  echo "FAIL: expected at least 24 employer response-reviewer assertions, only ${REV_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5l-e. The durable Assessment & Training Library (#47)
 #
 # Tenancy, lifecycle normalisation, library eligibility, versioning, grants --
@@ -1217,6 +1246,7 @@ echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
+echo "              ${REV_PASSED} employer response-reviewer assertions,"
 echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"

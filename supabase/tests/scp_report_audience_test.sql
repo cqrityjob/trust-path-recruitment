@@ -85,6 +85,16 @@ SELECT other_employer, other_owner, 'owner', 'active' FROM ra;
 INSERT INTO public.scp_content_roles (user_id, role, granted_by)
 SELECT reviewer_user, 'reviewer', owner_user FROM ra;
 
+-- #51. Response review is authorised by the employer, not by the content role.
+-- The content role above is retained deliberately: it must NOT be sufficient.
+-- Authorisation is granted for the commissioning employer ONLY -- never for any
+-- second organisation in this fixture, so cross-tenant assertions keep force.
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+SELECT employer, reviewer_user, 'member', 'active' FROM ra;
+INSERT INTO public.scp_employer_reviewers
+  (employer_id, user_id, allowed_use_cases, granted_by)
+SELECT employer, reviewer_user, ARRAY['workforce','recruitment']::text[], owner_user FROM ra;
+
 CREATE TEMP TABLE rav AS
 SELECT av.id AS version_id, av.definition_id
   FROM public.scp_assessment_versions av
