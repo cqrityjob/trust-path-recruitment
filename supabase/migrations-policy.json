@@ -443,8 +443,8 @@
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
     "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": null,
-    "ledgerSnapshotNote": "97 before repair; 98 after C2; 99 after Phase B; 100 after C1. All three applied through Lovable on 2026-08-19.",
+    "ledgerRowsAtSnapshot": 108,
+    "ledgerSnapshotNote": "100 after C1; 108 after the eight PR #51 migrations were applied through Lovable.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
   }
 }
