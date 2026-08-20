@@ -41,6 +41,7 @@ export type LifecycleState =
 export type PipelineRow = {
   attemptId: string;
   assignmentId: string | null;
+  subjectId: string;
   employeeId: string | null;
   participantRef: string;
   participantName: string | null;
@@ -56,14 +57,20 @@ export type PipelineRow = {
   submittedAt: string | null;
   scoredAt: string | null;
   releasedAt: string | null;
+  deadline: string | null;
+  answered: number;
+  totalItems: number;
   reviewsTotal: number;
   reviewsOpen: number;
+  /** Identity may only be resolved once the result has been released. */
+  identityResolvable: boolean;
   canRelease: boolean;
 };
 
 const mapPipeline = (r: Record<string, unknown>): PipelineRow => ({
   attemptId: r.attempt_id as string,
   assignmentId: (r.assignment_id as string | null) ?? null,
+  subjectId: r.subject_id as string,
   employeeId: (r.employee_id as string | null) ?? null,
   participantRef: r.participant_ref as string,
   participantName: (r.participant_name as string | null) ?? null,
@@ -79,8 +86,12 @@ const mapPipeline = (r: Record<string, unknown>): PipelineRow => ({
   submittedAt: (r.submitted_at as string | null) ?? null,
   scoredAt: (r.scored_at as string | null) ?? null,
   releasedAt: (r.released_at as string | null) ?? null,
+  deadline: (r.deadline as string | null) ?? null,
+  answered: Number(r.answered ?? 0),
+  totalItems: Number(r.total_items ?? 0),
   reviewsTotal: Number(r.reviews_total ?? 0),
   reviewsOpen: Number(r.reviews_open ?? 0),
+  identityResolvable: Boolean(r.identity_resolvable),
   canRelease: Boolean(r.can_release),
 });
 

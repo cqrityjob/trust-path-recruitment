@@ -1438,6 +1438,8 @@ export const dictionaries = {
 
     "employer.settings.heading": "Organisationsinställningar",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
+    "academy.overview.readyToRelease": "Klara att frisläppa",
+    "academy.overview.attemptsAwaitingReview": "Väntar på granskning",
     "academy.history.heading": "Tester & bedömningar",
     "academy.history.lede": "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
     "academy.history.viewResult": "Visa mitt resultat",
@@ -4171,6 +4173,8 @@ export const dictionaries = {
 
     "employer.settings.heading": "Organisation settings",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
+    "academy.overview.readyToRelease": "Ready to release",
+    "academy.overview.attemptsAwaitingReview": "Awaiting review",
     "academy.history.heading": "Assessments",
     "academy.history.lede": "Your assessment history, whichever organisation assigned it. A result appears once it has been released.",
     "academy.history.viewResult": "View my result",

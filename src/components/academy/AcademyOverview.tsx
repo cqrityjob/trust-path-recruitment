@@ -10,12 +10,12 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ClipboardCheck, Lock, Users } from "lucide-react";
+import { ClipboardCheck, Lock, Users , Send, Hourglass } from "lucide-react";
 import { useT } from "@/i18n/context";
 import {
   getAcademyReviewPressure,
-  listAcademyParticipants,
 } from "@/lib/security-competency/academy-employer.functions";
+import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 
 export function AcademyOverview({
   employerId,
@@ -25,7 +25,7 @@ export function AcademyOverview({
   employerSlug: string;
 }) {
   const { t } = useT();
-  const participantsFn = useServerFn(listAcademyParticipants);
+  const participantsFn = useServerFn(getEmployerAssessmentPipeline);
   const pressureFn = useServerFn(getAcademyReviewPressure);
 
   const participants = useQuery({
@@ -38,8 +38,16 @@ export function AcademyOverview({
   });
 
   const rows = participants.data ?? [];
-  const active = rows.filter((r) => r.attemptStatus === "in_progress").length;
-  const released = rows.filter((r) => r.releasedAt).length;
+  const active = rows.filter(
+    (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
+  ).length;
+  // Two different measures, deliberately named apart: how many ATTEMPTS are
+  // waiting on a human, and how many individual RESPONSES that amounts to.
+  // Both come from the same employer scope, so they can no longer contradict
+  // each other the way the old counter did.
+  const attemptsAwaitingReview = rows.filter((r) => r.lifecycleState === "under_review").length;
+  const readyToRelease = rows.filter((r) => r.lifecycleState === "ready_to_release").length;
+  const released = rows.filter((r) => r.lifecycleState === "result_available").length;
   const awaitingReview = pressure.data?.awaitingReview ?? 0;
 
   return (
@@ -57,7 +65,20 @@ export function AcademyOverview({
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
         <Stat icon={Users} label={t("academy.overview.active")} value={active} />
+        {/* "Ready to release" is the one state where the EMPLOYER is the party
+            being waited on, so it is surfaced next to the others rather than
+            left for them to discover by scrolling the list. */}
+        <Stat
+          icon={Send}
+          label={t("academy.overview.readyToRelease")}
+          value={readyToRelease}
+        />
         <Stat icon={ClipboardCheck} label={t("academy.overview.released")} value={released} />
+        <Stat
+          icon={Hourglass}
+          label={t("academy.overview.attemptsAwaitingReview")}
+          value={attemptsAwaitingReview}
+        />
         {/* The tab strip already navigates to Reviews, so this is not a second
             way in — it is the difference between reporting a number and
             letting someone act on it. A non-zero "awaiting review" is work

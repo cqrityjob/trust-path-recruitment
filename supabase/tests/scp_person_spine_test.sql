@@ -310,4 +310,61 @@ SELECT pg_temp.ok(
   (SELECT bool_and(NOT can_release) FROM proj_pipeline),
   'P1.9 nothing is releasable before it is scored');
 
+-- ── PR. The pipeline must not become a bulk identity reveal ───────────────
+--
+-- The workspace shows a NAME only where the employer's own employment record
+-- supplies one. Everyone else stays a pseudonymous reference, and who a
+-- participant is stays resolvable only after their result is released.
+
+-- An attempt with no employment record behind it.
+INSERT INTO public.assessment_assignments
+  (id, employer_id, use_case, recipient_email, assigned_by, invitation_token_hash,
+   expires_at, scp_assessment_version_id, status)
+VALUES ('f2000000-5555-0000-0000-00000000000a','f2000000-1111-0000-0000-00000000000a',
+        'workforce','person@spine.test','f2000000-0000-0000-0000-00000000000a',
+        'hashNoEmp', now()+interval '30 days', :'avid'::uuid, 'started');
+INSERT INTO public.scp_attempts
+  (id, subject_id, issuer_organization_id, assignment_id, mode, form_id,
+   assessment_version_id, status)
+SELECT 'f2000000-6666-0000-0000-00000000000a',
+       (SELECT subject_id FROM aA),
+       'f2000000-1111-0000-0000-00000000000a','f2000000-5555-0000-0000-00000000000a',
+       'assessment', f.id, :'avid'::uuid, 'in_progress'
+  FROM public.scp_forms f WHERE f.assessment_version_id = :'avid'::uuid LIMIT 1;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'f2000000-0000-0000-0000-00000000000a';
+CREATE TEMP TABLE priv AS
+SELECT * FROM public.scp_employer_assessment_pipeline('f2000000-1111-0000-0000-00000000000a'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT participant_name IS NULL FROM priv
+    WHERE attempt_id='f2000000-6666-0000-0000-00000000000a'),
+  'PR1 an attempt with no employment record exposes NO name');
+
+SELECT pg_temp.ok(
+  (SELECT participant_ref IS NOT NULL AND length(participant_ref) = 6 FROM priv
+    WHERE attempt_id='f2000000-6666-0000-0000-00000000000a'),
+  'PR2 it is still identifiable operationally by a pseudonymous reference');
+
+SELECT pg_temp.ok(
+  (SELECT participant_name = 'Test Person' FROM priv
+    WHERE attempt_id = (SELECT attempt_id FROM aA)),
+  'PR3 a row backed by the employer''s own employment record may show that name');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(NOT identity_resolvable) FROM priv),
+  'PR4 nobody''s identity is resolvable before their result is released');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM priv pr JOIN public.scp_attempts at ON at.id = pr.attempt_id
+               WHERE at.mode <> 'assessment'),
+  'PR5 the Tester pipeline never mixes in training attempts');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM priv WHERE participant_name IS NOT NULL)
+  <= (SELECT count(*) FROM priv WHERE employee_id IS NOT NULL),
+  'PR6 no name appears for more rows than have an employment record');
+
 ROLLBACK;
