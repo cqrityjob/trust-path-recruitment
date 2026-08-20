@@ -65,6 +65,7 @@ import { LIVE_PACKAGES, type DisclosurePackageCode } from "@/lib/security-passpo
 import { buildSocialCard } from "@/lib/security-passport/social";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import { buildPassportCard } from "@/lib/security-passport/card";
+import { publicShareUrl } from "@/lib/security-passport/public-origin";
 import { DirectionC } from "@/components/security-passport/card/DirectionC";
 import { SocialFrame } from "@/components/security-passport/social/SocialFrame";
 import { SharePanel } from "@/components/security-passport/live/SharePanel";
@@ -141,10 +142,11 @@ function PassportShareRoute() {
     void refresh();
   }, [refresh]);
 
-  const shareUrl = useMemo(
-    () => (token && typeof window !== "undefined" ? `${window.location.origin}/p/${token}` : null),
-    [token],
-  );
+  // The canonical public origin, never the current browser location: this
+  // link is pasted into LinkedIn and opened by a stranger weeks later, and a
+  // preview host would hand the recipient an address that dies with the
+  // deployment. See src/lib/security-passport/public-origin.ts.
+  const shareUrl = useMemo(() => (token ? publicShareUrl(token) : null), [token]);
   const qrDataUrl = useQrDataUrl(shareUrl ?? "");
 
   const card = useMemo(

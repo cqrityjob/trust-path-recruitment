@@ -22,6 +22,10 @@
 // reachable URL, which means a personalised artifact that survives
 // revocation — the exact failure this page exists to avoid. The holder gets
 // their personalised image from the sharing centre, to attach deliberately.
+//
+// `noindex, nofollow` stays. A share link is private correspondence, and
+// keeping it out of search indexes is a governance decision, not a tuning
+// knob to trade away for a nicer preview.
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
@@ -37,16 +41,12 @@ import { CredentialSymbol } from "@/components/security-passport/CredentialSymbo
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { RecipientPassportCard } from "@/components/security-passport/live/RecipientPassportCard";
 import { CredentialVerificationPage } from "@/components/security-passport/live/CredentialVerificationPage";
+import { publicShareOrigin } from "@/lib/security-passport/public-origin";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-
-/** Canonical public origin, matching src/routes/sitemap[.]xml.ts. Only ever
- *  used to make the GENERIC preview image absolute — never to build a link
- *  that carries a share token. */
-const PUBLIC_ORIGIN = "https://trust-path-recruitment.lovable.app";
 
 export const Route = createFileRoute("/p/$token")({
   ssr: false,
-  head: () => ({
+  head: ({ params }) => ({
     meta: [
       { title: "Security Passport — CQrityjob" },
       { name: "robots", content: "noindex, nofollow" },
@@ -60,6 +60,12 @@ export const Route = createFileRoute("/p/$token")({
           "Verifierade yrkesuppgifter, delade av innehavaren. / Verified professional records, shared by the holder.",
       },
       { property: "og:type", content: "website" },
+      // The canonical address of THIS page, and the one piece of the Open
+      // Graph set that was missing. It is built on the configured public
+      // origin rather than the request's own host, so a preview deployment
+      // cannot publish its own ephemeral hostname into a shared post even
+      // when the page is reached through one.
+      { property: "og:url", content: `${publicShareOrigin()}/p/${params.token}` },
       // A real branded card rather than no image at all — but GENERIC, and
       // identical for every share. A crawler caches what it fetches and
       // cannot be told to forget it, so a personalised preview would be a
@@ -68,7 +74,7 @@ export const Route = createFileRoute("/p/$token")({
       // that a particular share exists, and revocation costs it nothing.
       // Absolute: crawlers resolve og:image poorly or not at all when it is
       // relative. Same canonical origin the sitemap route already uses.
-      { property: "og:image", content: `${PUBLIC_ORIGIN}/og-security-passport.png` },
+      { property: "og:image", content: `${publicShareOrigin()}/og-security-passport.png` },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       {

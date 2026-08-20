@@ -17,6 +17,7 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { publicShareUrl } from "@/lib/security-passport/public-origin";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
   getEvidenceViewUrl,
@@ -399,7 +400,7 @@ function PassportEntryRoute() {
               },
             })
               .then((r) => {
-                setCredentialShareUrl(`${window.location.origin}/p/${r.token}`);
+                setCredentialShareUrl(publicShareUrl(r.token));
               })
               .catch((err: unknown) => {
                 console.error("[passport] credential share failed", err);
