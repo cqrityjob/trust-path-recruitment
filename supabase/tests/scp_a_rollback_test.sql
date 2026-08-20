@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 70,
-    'pre-rollback: 70 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers)');
+        AND table_name LIKE 'scp\_%') = 73,
+    'pre-rollback: 73 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -210,6 +210,23 @@ DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, te
 DROP FUNCTION IF EXISTS public.scp_employer_decisions(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_decision_append_only() CASCADE;
 DROP TABLE    IF EXISTS public.scp_employer_report_decisions CASCADE;
+-- The flagship recruitment assessment (20260830090000-094000). Four functions
+-- with uuid/text signatures, so the governance-enum cascade below does not
+-- reach any of them and each has to be named. scp_interview_notes references
+-- scp_attempts and employers, so like the decision table it comes off before
+-- the Phase 2 unwind; scp_form_blocks would cascade from scp_forms but is
+-- dropped explicitly so the documented rollback is actually exercised.
+DROP FUNCTION IF EXISTS public.scp_record_interview_note(uuid, text, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_interview_notes(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_interview_notes_append_only() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_attempt_assessment_signal(uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_attempt_self_report_pattern(uuid, uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_get_attempt_blocks(uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_block_asks_agrees() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_honesty() CASCADE;
+DROP TABLE    IF EXISTS public.scp_interview_notes CASCADE;
+DROP TABLE    IF EXISTS public.scp_interview_guide_prompts CASCADE;
+DROP TABLE    IF EXISTS public.scp_form_blocks CASCADE;
 -- Phase 8.5A (20260821090000). The SCP duplicate protection lives ON the
 -- pre-existing assessment_assignments table, so it cannot ride out on a
 -- DROP TABLE the way the rest of the domain does. The three trigger functions
