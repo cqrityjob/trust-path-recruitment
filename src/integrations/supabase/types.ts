@@ -3001,6 +3001,7 @@ export type Database = {
           role_title: string | null
           site_name: string | null
           start_date: string | null
+          subject_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3015,6 +3016,7 @@ export type Database = {
           role_title?: string | null
           site_name?: string | null
           start_date?: string | null
+          subject_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3029,6 +3031,7 @@ export type Database = {
           role_title?: string | null
           site_name?: string | null
           start_date?: string | null
+          subject_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3037,6 +3040,13 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -5372,6 +5382,47 @@ export type Database = {
           },
         ]
       }
+      scp_employer_reviewers: {
+        Row: {
+          allowed_use_cases: string[]
+          employer_id: string
+          granted_at: string
+          granted_by: string | null
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          allowed_use_cases?: string[]
+          employer_id: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          allowed_use_cases?: string[]
+          employer_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_employer_reviewers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_evidence_source_types: {
         Row: {
           code: string
@@ -5573,6 +5624,7 @@ export type Database = {
           outcome: string | null
           response_id: string
           review_status: string
+          reviewed_under_break_glass: boolean
           reviewer_actor_id: string | null
           reviewer_rationale: string | null
           scoring_run_id: string | null
@@ -5586,6 +5638,7 @@ export type Database = {
           outcome?: string | null
           response_id: string
           review_status?: string
+          reviewed_under_break_glass?: boolean
           reviewer_actor_id?: string | null
           reviewer_rationale?: string | null
           scoring_run_id?: string | null
@@ -5599,6 +5652,7 @@ export type Database = {
           outcome?: string | null
           response_id?: string
           review_status?: string
+          reviewed_under_break_glass?: boolean
           reviewer_actor_id?: string | null
           reviewer_rationale?: string | null
           scoring_run_id?: string | null
@@ -9077,6 +9131,17 @@ export type Database = {
         }
         Returns: string
       }
+      scp_attempt_lifecycle_state: {
+        Args: {
+          _attempt_status: string
+          _released_at: string
+          _reviews_open?: number
+          _scored_at: string
+          _started_at: string
+          _submitted_at: string
+        }
+        Returns: string
+      }
       scp_attempt_maturity: {
         Args: {
           _at?: string
@@ -9084,6 +9149,10 @@ export type Database = {
           _competency_version_id: string
           _threshold_version?: string
         }
+        Returns: string
+      }
+      scp_bind_employee_subject: {
+        Args: { _employee_id: string; _user_id: string }
         Returns: string
       }
       scp_bundle_version_assignability: {
@@ -9094,6 +9163,10 @@ export type Database = {
         }[]
       }
       scp_can_author: { Args: { _user_id: string }; Returns: boolean }
+      scp_can_review_for: {
+        Args: { _employer_id: string; _use_case?: string; _user_id: string }
+        Returns: boolean
+      }
       scp_complete_human_review: {
         Args: {
           _outcome: string
@@ -9146,6 +9219,36 @@ export type Database = {
           _subject_id: string
         }
         Returns: string
+      }
+      scp_employer_assessment_pipeline: {
+        Args: { _employer_id: string }
+        Returns: {
+          answered: number
+          assessment_name_en: string
+          assessment_name_sv: string
+          assessment_slug: string
+          assignment_id: string
+          attempt_id: string
+          can_release: boolean
+          deadline: string
+          employee_id: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          identity_resolvable: boolean
+          invited_at: string
+          lifecycle_state: string
+          participant_name: string
+          participant_ref: string
+          purpose_code: string
+          released_at: string
+          reviews_open: number
+          reviews_total: number
+          scored_at: string
+          started_at: string
+          subject_id: string
+          submitted_at: string
+          total_items: number
+          use_case: string
+        }[]
       }
       scp_employer_assign: {
         Args: {
@@ -9258,11 +9361,45 @@ export type Database = {
           total_items: number
         }[]
       }
+      scp_employer_person_assessments: {
+        Args: { _employee_id: string; _employer_id: string }
+        Returns: {
+          assessment_name_en: string
+          assessment_name_sv: string
+          assessment_slug: string
+          assigned_at: string
+          attempt_id: string
+          employer_snapshot_id: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          lifecycle_state: string
+          purpose_code: string
+          released_at: string
+          reviews_open: number
+          reviews_total: number
+          scored_at: string
+          started_at: string
+          submitted_at: string
+          use_case: string
+        }[]
+      }
       scp_employer_review_pressure: {
         Args: { _employer_id: string }
         Returns: {
           attempts_blocked: number
           awaiting_review: number
+        }[]
+      }
+      scp_employer_team: {
+        Args: { _employer_id: string }
+        Returns: {
+          display_name: string
+          employer_role: string
+          is_reviewer: boolean
+          is_self: boolean
+          membership_status: string
+          reviewer_granted_at: string
+          reviewer_use_cases: string[]
+          user_id: string
         }[]
       }
       scp_employer_training_status: {
@@ -9314,6 +9451,10 @@ export type Database = {
           label: string
           option_id: string
         }[]
+      }
+      scp_grant_employer_reviewer: {
+        Args: { _employer_id: string; _use_cases?: string[]; _user_id: string }
+        Returns: string
       }
       scp_grant_permits_assignment: {
         Args: {
@@ -9378,6 +9519,32 @@ export type Database = {
           title_sv: string
           work_id: string
           work_kind: string
+        }[]
+      }
+      scp_my_assessment_history: {
+        Args: never
+        Returns: {
+          assessment_name_en: string
+          assessment_name_sv: string
+          assessment_slug: string
+          attempt_id: string
+          invited_at: string
+          issuer_name: string
+          lifecycle_state: string
+          participant_snapshot_id: string
+          purpose_code: string
+          released_at: string
+          started_at: string
+          submitted_at: string
+          use_case: string
+        }[]
+      }
+      scp_my_review_workload: {
+        Args: never
+        Returns: {
+          attempts_waiting: number
+          employers_covered: number
+          responses_waiting: number
         }[]
       }
       scp_my_training_modules: {
@@ -9446,6 +9613,10 @@ export type Database = {
         Args: { _purpose_intent?: string; _use_case: string }
         Returns: string
       }
+      scp_resolve_employment_for_assignment: {
+        Args: { _email: string; _employer_id: string; _subject_id: string }
+        Returns: string
+      }
       scp_resolve_participant_identity: {
         Args: { _employer_id: string; _subject_id: string }
         Returns: {
@@ -9453,6 +9624,14 @@ export type Database = {
           released: boolean
           subject_id: string
         }[]
+      }
+      scp_review_authorisation: {
+        Args: { _attempt_id: string; _user_id: string }
+        Returns: string
+      }
+      scp_review_conflict: {
+        Args: { _attempt_id: string; _user_id: string }
+        Returns: string
       }
       scp_review_queue: {
         Args: { _language?: string }
@@ -9481,6 +9660,10 @@ export type Database = {
           trigger_reason: string
           validation_status_at_assignment: string
         }[]
+      }
+      scp_revoke_employer_reviewer: {
+        Args: { _employer_id: string; _user_id: string }
+        Returns: boolean
       }
       scp_save_response: {
         Args: {
