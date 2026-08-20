@@ -243,7 +243,11 @@ export function CandidateBrief({
             .replace("{self}", String(brief.coverage.selfReportObservations))}
         </p>
 
-        {brief.pace && (
+        {/* `answered > 0` is not defensive noise: briefs frozen before the
+            signal carried its own denominator have a count and no total, and
+            rendering "49 of 0" would be worse than saying nothing. A historical
+            snapshot is never recomputed, so the surface degrades instead. */}
+        {brief.pace && brief.pace.answered > 0 && (
           <p className="mt-3 flex max-w-[74ch] items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
             <Timer className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>
