@@ -67,6 +67,14 @@ SELECT employer_a, owner_a,  'owner',  'active' FROM tf
 UNION ALL SELECT employer_a, member_a, 'member', 'active' FROM tf
 UNION ALL SELECT employer_b, owner_b,  'owner',  'active' FROM tf;
 
+-- Employer A runs the internal exercise, which is scaffolding. Since #50,
+-- training assignability asks scp_training_permits_assignment, and scaffolding
+-- requires deliberate fixture access exactly as it does on the assessment side.
+-- Without this row the fixture is correctly refused -- which is the point, and
+-- is asserted separately as T1.9 below.
+INSERT INTO public.scp_fixture_access (employer_id, reason, granted_by)
+SELECT employer_a, 'Training journey suite', owner_a FROM tf;
+
 CREATE TEMP TABLE tp AS
 SELECT pv.id AS program_version_id, p.id AS program_id
   FROM public.scp_program_versions pv
@@ -145,6 +153,15 @@ SELECT pg_temp.must_fail(
   'SELECT public.scp_required_purpose_code(''workforce'', ''training_follow_up'')',
   'SCP_UNKNOWN_PURPOSE_MAPPING',
   'T1.8 an inactive purpose cannot be requested through the intent parameter');
+
+-- Employer B has no fixture access, so the same scaffolding is refused for it.
+-- This is the assertion that stops #50's closed-test route becoming a way to
+-- run internal material in an organisation that was never granted it.
+SELECT pg_temp.must_fail(format(
+  'SELECT public.scp_assign_training(%L, %L, %L)',
+  (SELECT employer_b FROM tf), (SELECT program_version_id FROM tp), 'learner@training.test'),
+  'SCP_NOT_AUTHORISED_TO_ASSIGN',
+  'T1.9 an organisation without fixture access cannot assign internal material');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP T2 — the journey'; END $$;
 
@@ -449,7 +466,11 @@ SELECT pg_temp.ok(
 SELECT pg_temp.must_fail(format(
   'SELECT public.scp_assign_training(%L, %L, %L)',
   (SELECT employer_a FROM tf), (SELECT program_version_id FROM tpriv), 'learner@training.test'),
-  'SCP_TRAINING_NOT_ASSIGNABLE',
+  -- Since #50 the guard checks tenancy BEFORE assignability, so the refusal is
+  -- the specific one rather than the generic "not assignable". That is the
+  -- better error: it says why, and it says so without leaking whether the other
+  -- organisation's content would otherwise have been runnable.
+  'SCP_TRAINING_CROSS_TENANT',
   'T6.3 employer A cannot assign employer B''s private programme');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP T7 — grants'; END $$;
