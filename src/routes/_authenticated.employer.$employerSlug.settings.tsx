@@ -25,6 +25,7 @@ import {
   getEmployerOrganisation,
   updateEmployerOrganisation,
 } from "@/lib/job-intelligence/employer-settings.functions";
+import { EmployerTeamPanel } from "@/components/employer/EmployerTeamPanel";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/settings")({
   ssr: false,
@@ -262,6 +263,11 @@ function SettingsForm({
           )}
         </form>
       )}
+
+      {/* Team and review authorisation. It lives here rather than in a new
+          navigation entry because the employer navigation is locked, and
+          "who belongs to this account" is an organisation question. */}
+      <EmployerTeamPanel employerId={employerId} canManage={canEdit} />
     </EmployerAppShell>
   );
 }
