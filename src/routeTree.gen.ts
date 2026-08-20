@@ -120,6 +120,7 @@ import { Route as AuthenticatedEmployerEmployerSlugJobsIndexRouteImport } from '
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.index'
 import { Route as AuthenticatedAcademyTrainingAssignmentIdIndexRouteImport } from './routes/_authenticated.academy.training.$assignmentId.index'
 import { Route as AuthenticatedPassportEntryKindEntryIdRouteImport } from './routes/_authenticated.passport.entry.$kind.$entryId'
+import { Route as AuthenticatedEmployerEmployerSlugWorkforcePersonIdRouteImport } from './routes/_authenticated.employer.$employerSlug.workforce.$personId'
 import { Route as AuthenticatedEmployerEmployerSlugTrainingProgrammesRouteImport } from './routes/_authenticated.employer.$employerSlug.training.programmes'
 import { Route as AuthenticatedEmployerEmployerSlugTrainingParticipantsRouteImport } from './routes/_authenticated.employer.$employerSlug.training.participants'
 import { Route as AuthenticatedEmployerEmployerSlugJobsNewRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.new'
@@ -761,6 +762,12 @@ const AuthenticatedPassportEntryKindEntryIdRoute =
     path: '/entry/$kind/$entryId',
     getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute =
+  AuthenticatedEmployerEmployerSlugWorkforcePersonIdRouteImport.update({
+    id: '/workforce/$personId',
+    path: '/workforce/$personId',
+    getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
+  } as any)
 const AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute =
   AuthenticatedEmployerEmployerSlugTrainingProgrammesRouteImport.update({
     id: '/training/programmes',
@@ -960,6 +967,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/training/participants': typeof AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute
   '/employer/$employerSlug/training/programmes': typeof AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute
+  '/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/academy/training/$assignmentId/': typeof AuthenticatedAcademyTrainingAssignmentIdIndexRoute
   '/employer/$employerSlug/assessments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
@@ -1070,6 +1078,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/employer/$employerSlug/training/participants': typeof AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute
   '/employer/$employerSlug/training/programmes': typeof AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute
+  '/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/academy/training/$assignmentId': typeof AuthenticatedAcademyTrainingAssignmentIdIndexRoute
   '/employer/$employerSlug/assessments': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
@@ -1197,6 +1206,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/jobs/new': typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   '/_authenticated/employer/$employerSlug/training/participants': typeof AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute
   '/_authenticated/employer/$employerSlug/training/programmes': typeof AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute
+  '/_authenticated/employer/$employerSlug/workforce/$personId': typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   '/_authenticated/passport/entry/$kind/$entryId': typeof AuthenticatedPassportEntryKindEntryIdRoute
   '/_authenticated/academy/training/$assignmentId/': typeof AuthenticatedAcademyTrainingAssignmentIdIndexRoute
   '/_authenticated/employer/$employerSlug/assessments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
@@ -1324,6 +1334,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/training/participants'
     | '/employer/$employerSlug/training/programmes'
+    | '/employer/$employerSlug/workforce/$personId'
     | '/passport/entry/$kind/$entryId'
     | '/academy/training/$assignmentId/'
     | '/employer/$employerSlug/assessments/'
@@ -1434,6 +1445,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs/new'
     | '/employer/$employerSlug/training/participants'
     | '/employer/$employerSlug/training/programmes'
+    | '/employer/$employerSlug/workforce/$personId'
     | '/passport/entry/$kind/$entryId'
     | '/academy/training/$assignmentId'
     | '/employer/$employerSlug/assessments'
@@ -1560,6 +1572,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/jobs/new'
     | '/_authenticated/employer/$employerSlug/training/participants'
     | '/_authenticated/employer/$employerSlug/training/programmes'
+    | '/_authenticated/employer/$employerSlug/workforce/$personId'
     | '/_authenticated/passport/entry/$kind/$entryId'
     | '/_authenticated/academy/training/$assignmentId/'
     | '/_authenticated/employer/$employerSlug/assessments/'
@@ -2382,6 +2395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPassportEntryKindEntryIdRouteImport
       parentRoute: typeof AuthenticatedPassportRoute
     }
+    '/_authenticated/employer/$employerSlug/workforce/$personId': {
+      id: '/_authenticated/employer/$employerSlug/workforce/$personId'
+      path: '/workforce/$personId'
+      fullPath: '/employer/$employerSlug/workforce/$personId'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
+    }
     '/_authenticated/employer/$employerSlug/training/programmes': {
       id: '/_authenticated/employer/$employerSlug/training/programmes'
       path: '/training/programmes'
@@ -2676,6 +2696,7 @@ interface AuthenticatedEmployerEmployerSlugRouteChildren {
   AuthenticatedEmployerEmployerSlugJobsNewRoute: typeof AuthenticatedEmployerEmployerSlugJobsNewRoute
   AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute: typeof AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute
   AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute: typeof AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute
+  AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute: typeof AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute
   AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute
   AuthenticatedEmployerEmployerSlugJobsIndexRoute: typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   AuthenticatedEmployerEmployerSlugTrainingIndexRoute: typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
@@ -2722,6 +2743,8 @@ const AuthenticatedEmployerEmployerSlugRouteChildren: AuthenticatedEmployerEmplo
       AuthenticatedEmployerEmployerSlugTrainingParticipantsRoute,
     AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute:
       AuthenticatedEmployerEmployerSlugTrainingProgrammesRoute,
+    AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute:
+      AuthenticatedEmployerEmployerSlugWorkforcePersonIdRoute,
     AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute:
       AuthenticatedEmployerEmployerSlugAssessmentsIndexRoute,
     AuthenticatedEmployerEmployerSlugJobsIndexRoute:
