@@ -94,8 +94,8 @@ BEGIN
 
   INSERT INTO public.scp_item_texts
     (item_version_id, language, adaptation_status, scenario, prompt)
-  VALUES (_iv, 'sv-SE', 'source',   _scenario_sv, _prompt_sv),
-         (_iv, 'en-GB', 'approved', _scenario_en, _prompt_en);
+  VALUES (_iv, 'sv-SE', 'adaptation_pending', _scenario_sv, _prompt_sv),
+         (_iv, 'en-GB', 'adaptation_pending', _scenario_en, _prompt_en);
 
   FOR _o IN SELECT * FROM jsonb_array_elements(_opts) LOOP
     _n := _n + 1;
