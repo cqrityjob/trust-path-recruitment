@@ -196,10 +196,10 @@
       "hostedVersion": "20260819210611", 
       "hostedName": "30f93b7c-add1-4a15-b340-26e42c473345", 
       "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.", 
-      "generatedFileOnMain": "supabase/migrations/20260819210611_30f93b7c-add1-4a15-b340-26e42c473345.sql (REMOVED from the active path by #50 -- it sorted before the canonical file and broke clean replay)", 
+      "generatedFileOnMain": "supabase/migrations/20260819210611_30f93b7c-add1-4a15-b340-26e42c473345.sql and supabase/migrations/20260820054649_6559b589-ae29-4214-8d31-c74e6e3758b8.sql (BOTH REMOVED from the active path by #50 -- each sorted before the canonical file and broke clean replay)", 
       "doNotReExecute": true, 
       "reason": "display_name columns, scp_lifecycle_state, scp_employer_content_library, and the filtered scp_development_recommendations.", 
-      "redundantSecondApplication": "20260820054649 is a REDUNDANT second application of this same file, made in error. Idempotent; the second run changed nothing. Lovable did not commit a generated file for it, so nothing needs removing from the active path.", 
+      "redundantSecondApplication": "20260820054649 is a REDUNDANT second application of this same file, made in error while reconciling. Idempotent; the second run changed nothing. Its generated duplicate arrived on main after the first cleanup pass and is removed too.", 
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260819210611';"
     }, 
     {
