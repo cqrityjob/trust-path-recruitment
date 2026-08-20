@@ -6,8 +6,10 @@
 // packages to choose between, a purpose field, a recipient label, an expiry
 // selector, a QR code, three image formats and a three-step LinkedIn
 // walkthrough — all before a holder had shared anything. The product decision
-// was that the default is a card preview, one button, and afterwards exactly
-// three actions; everything else moves behind "Avancerade alternativ".
+// was that the default is a card preview and one button; everything else moves
+// behind "Avancerade alternativ". The 2026 restructure then fixed what follows
+// the button: verify → share to feed → add to LinkedIn profile, with the image
+// exports kept but demoted.
 //
 // That is a UX invariant, and UX invariants rot. A browser test cannot defend
 // it here — /passport/share needs a Supabase session and there is no local
@@ -28,6 +30,9 @@ function expect(condition: boolean, message: string): void {
 const root = path.resolve(import.meta.dir, "..");
 const routePath = "src/routes/_authenticated.passport.share.tsx";
 const code = readFileSync(path.join(root, routePath), "utf8");
+
+const panelPath = "src/components/security-passport/live/SharePanel.tsx";
+const panel = readFileSync(path.join(root, panelPath), "utf8");
 
 // ---------------------------------------------------------------------------
 // 1. The default is chosen for the holder, not asked of them
@@ -89,14 +94,69 @@ for (const { needle, what } of advancedOnly) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. After sharing: three actions, and the token is not the hero
+// 3. After sharing: three blocks, in order, and the token is not the hero
 // ---------------------------------------------------------------------------
-for (const key of ["share2.share", "share2.copy", "share2.view"]) {
-  expect(code.includes(key), `The post-share view must offer ${key}.`);
+// The 2026 restructure replaced the post-share button row ("Länken är klar" +
+// Dela / Kopiera / Visa) with three named blocks. The invariant is the same
+// one the row used to carry — a holder is handing over a professional record,
+// not managing a URL — so it is still checked, just against the new shape.
+expect(
+  code.includes("<SharePanel"),
+  "The share route must render SharePanel after a link exists; the post-share " +
+    "UI is not assembled inline.",
+);
+
+const blockOrder: readonly { key: string; what: string }[] = [
+  { key: "sp.verify", what: "VERIFIERA PASSPORT, the trust anchor" },
+  { key: "sp.feed", what: '"Dela i flöde", the channel list' },
+  { key: "__LINKEDIN_PROFILE__", what: '"Lägg till i LinkedIn-profil"' },
+  { key: "sp.more", what: '"Fler delningsalternativ", the demoted image exports' },
+];
+let previous = -1;
+for (const { key, what } of blockOrder) {
+  const at =
+    key === "__LINKEDIN_PROFILE__"
+      ? panel.indexOf("<LinkedInProfileSection")
+      : panel.indexOf(`pt("${key}")`);
+  expect(at !== -1, `The share panel must render ${what}.`);
+  if (at === -1) continue;
+  expect(at > previous, `${what} is out of order in the share panel.`);
+  previous = at;
 }
+
+// LinkedIn is first in the feed list, and Instagram never claims to publish.
+const channelsPath = "src/lib/security-passport/share-channels.ts";
+const channels = readFileSync(path.join(root, channelsPath), "utf8");
+expect(
+  /FEED_CHANNELS[\s\S]*?\{\s*id:\s*"linkedin"/.test(channels),
+  "LinkedIn must be the first channel in the feed list.",
+);
+expect(
+  !/case "instagram":/.test(channels),
+  "Instagram must have no web intent URL — there is no web publishing path, " +
+    "and the honest action is the downloadable Story image.",
+);
+
+// Every image format survives the demotion. Removing one is a regression,
+// not a simplification.
+expect(
+  /SHARE_FORMATS\.map/.test(panel),
+  "All four share image formats must still be offered, from SHARE_FORMATS.",
+);
+
+// The raw link is available but is not the hero: it lives inside a
+// disclosure, in monospace, wrapped.
 expect(
   !/\{shareUrl\}\s*</.test(code) || /break-all|truncate|sr-only/.test(code),
   "The raw token must not be rendered as unstyled body text; it is not the hero.",
+);
+// The monospace block is the only place the URL itself is printed, and it
+// must sit after the first <details> — i.e. inside a disclosure.
+const rawAt = panel.indexOf("font-mono");
+const panelDetails = panel.indexOf("<details");
+expect(
+  rawAt === -1 || (panelDetails !== -1 && rawAt > panelDetails),
+  "The raw share URL must sit inside a collapsed disclosure in the panel.",
 );
 
 // ---------------------------------------------------------------------------
@@ -122,6 +182,7 @@ if (errors.length > 0) {
 console.log(
   "passport-share-default:check OK " +
     "(narrowest package and 30 days chosen by default; packages, purpose, QR and the " +
-    "LinkedIn walkthrough all inside a collapsed advanced section; three actions after " +
-    "sharing; no client-side payload assembly)",
+    "LinkedIn post walkthrough all inside a collapsed advanced section; verify → feed → " +
+    "LinkedIn profile → more options in that order; all four image formats kept; " +
+    "no client-side payload assembly)",
 );

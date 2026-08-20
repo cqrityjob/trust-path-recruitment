@@ -32,11 +32,27 @@
 //
 // The link is what gets shared, so the actions that share it are prominent
 // and the 64-character string itself sits in a copyable field under details.
+//
+// ── WHAT FOLLOWS THE BUTTON (2026 RESTRUCTURE) ─────────────────────────
+//
+// The screen used to answer "you made a link" — "Länken är klar", then Dela /
+// Kopiera / Visa, then a row of social buttons and four image downloads. That
+// is a URL-management answer to a question nobody asked. A holder here is
+// handing a professional record to someone who has to believe it.
+//
+// So SharePanel now answers "you have something worth showing", in three
+// blocks: VERIFIERA PASSPORT (open the live read-only page), Dela i flöde
+// (channels, LinkedIn first), Lägg till i LinkedIn-profil (a permanent
+// profile entry, not a post). The image exports, the platform-retention
+// caveat and the raw link are all still there, one disclosure down.
+//
+// Nothing below the UI moved: same createDisclosure, same public_card
+// package, same 30 days, same revocation, same /p/<token> page.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronDown, Copy, Eye, Link2, Share2, ShieldCheck } from "lucide-react";
+import { ChevronDown, Link2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
@@ -51,10 +67,8 @@ import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import { buildPassportCard } from "@/lib/security-passport/card";
 import { DirectionC } from "@/components/security-passport/card/DirectionC";
 import { SocialFrame } from "@/components/security-passport/social/SocialFrame";
-import { LiveShareActions } from "@/components/security-passport/live/LiveShareActions";
+import { SharePanel } from "@/components/security-passport/live/SharePanel";
 import { LinkedInShareSection } from "@/components/security-passport/live/LinkedInShareSection";
-import { buildSocialSvg, svgToPngBlob } from "@/lib/security-passport/social-export";
-import { shareFormat } from "@/lib/security-passport/design/trust-system";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
@@ -100,7 +114,6 @@ function PassportShareRoute() {
   const [shares, setShares] = useState<readonly DisclosureRecord[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -184,84 +197,6 @@ function PassportShareRoute() {
     }
   }
 
-  /** The card image, rendered from the SAME safe social model the recipient
-   *  page uses. It carries no credential reference, no document, no employer
-   *  history, no contact detail and no internal note — buildSocialCard decides
-   *  that, and the fixture check proves it across every persona and privacy
-   *  mode. Nothing here can widen it. */
-  async function cardImageFile(): Promise<File | null> {
-    if (!socialModel || !shareUrl) return null;
-    try {
-      const spec = shareFormat("og");
-      const svg = buildSocialSvg(
-        socialModel,
-        "og",
-        lang,
-        {
-          brand: pt("card.brand"),
-          professionLine: `${lang === "sv" ? socialModel.professionTitleSv : socialModel.professionTitleEn} · ${socialModel.jurisdictionCode}`,
-          verifiedLabel: pt("assertion.verified"),
-          yearsLabel: pt("recognition.years"),
-          verifyAtSource: pt("card.verifyAtSource"),
-          noVerifiedYet:
-            socialModel.verifiedCredentials.length > 0
-              ? pt("card.noVerifiedExperience")
-              : pt("card.noVerifiedYet"),
-          staleWarning: socialModel.staleWarning ? pt("card.shareExpired") : null,
-        },
-        qrDataUrl,
-      );
-      const blob = await svgToPngBlob(svg, spec.width, spec.height);
-      return new File([blob], "cqrityjob-passport.png", { type: "image/png" });
-    } catch (err) {
-      // A failed render must not block sharing the link, which is the part
-      // that actually verifies. The image is the nicety.
-      console.error("[passport] card image render failed", err);
-      return null;
-    }
-  }
-
-  async function onShare() {
-    if (!shareUrl) return;
-    // Three tiers, best first:
-    //
-    //   1. the card IMAGE plus the link, where the browser supports sharing
-    //      files — this is what makes a post look like a Passport rather than
-    //      a bare URL;
-    //   2. the link alone through the native sheet;
-    //   3. a copy, because a button that silently does nothing is worse than
-    //      one that tells you what it did.
-    try {
-      const file = await cardImageFile();
-      if (file && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: pt("rec.title"),
-          text: pt("li.shareText"),
-          url: shareUrl,
-          files: [file],
-        });
-        return;
-      }
-      if (navigator.share) {
-        await navigator.share({ title: pt("rec.title"), url: shareUrl });
-        return;
-      }
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      console.error("[passport] share failed", err);
-    }
-  }
-
-  async function onCopy() {
-    if (!shareUrl) return;
-    await navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
-
   async function onRevoke(id: string) {
     if (!window.confirm(pt("sc.revokeConfirm"))) return;
     setBusy(true);
@@ -333,63 +268,17 @@ function PassportShareRoute() {
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{pt("share2.terms")}</p>
         </section>
-      ) : (
-        <section className="rounded-xl border border-accent/40 bg-secondary/40 p-5">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-            <ShieldCheck aria-hidden="true" className="h-4 w-4" />
-            {pt("share2.ready")}
-          </h2>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void onShare()}
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Share2 aria-hidden="true" className="h-4 w-4" />
-              {pt("share2.share")}
-            </button>
-            <button
-              type="button"
-              onClick={() => void onCopy()}
-              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              {copied ? (
-                <Check aria-hidden="true" className="h-4 w-4" />
-              ) : (
-                <Copy aria-hidden="true" className="h-4 w-4" />
-              )}
-              {copied ? pt("share2.copied") : pt("share2.copy")}
-            </button>
-            {/* The third and last primary action: see it as the recipient
-                sees it. A holder who cannot check what they just handed over
-                has to trust us about it, which is the opposite of the point.
-                A plain link, not a button, because it navigates. */}
-            <a
-              href={shareUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Eye aria-hidden="true" className="h-4 w-4" />
-              {pt("share2.view")}
-            </a>
-          </div>
-
-          {/* One sentence, once. Not the same warning three times. */}
-          <p className="mt-3 text-sm text-muted-foreground">{pt("share2.terms")}</p>
-
-          {/* The token is available, but it is not the hero. */}
-          <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              {pt("sc.onceOnly")}
-            </summary>
-            <p className="mt-2 break-all rounded-md border border-border bg-background p-3 font-mono text-xs text-foreground">
-              {shareUrl}
-            </p>
-          </details>
-        </section>
-      )}
+      ) : socialModel ? (
+        /* The restructured panel: verify, share to feed, add to LinkedIn
+           profile — with the image exports and the security facts kept, and
+           moved underneath. Nothing about the disclosure itself changes. */
+        <SharePanel
+          shareUrl={shareUrl}
+          model={socialModel}
+          holder={snapshot.holder}
+          qrDataUrl={qrDataUrl}
+        />
+      ) : null}
 
       {/* ── Everything else, collapsed ──────────────────────────────── */}
       <details
@@ -518,7 +407,11 @@ function PassportShareRoute() {
                 {pt("share2.cacheNote")}
               </p>
 
-              <LiveShareActions shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
+              {/* The post walkthrough — download the 1200×630 card, copy the
+                  link, attach it by hand. Distinct from "Lägg till i
+                  LinkedIn-profil" above, which writes a profile entry rather
+                  than a post, and kept here because it is the deeper of the
+                  two. */}
               <LinkedInShareSection shareUrl={shareUrl} model={socialModel} qrDataUrl={qrDataUrl} />
             </>
           ) : null}
