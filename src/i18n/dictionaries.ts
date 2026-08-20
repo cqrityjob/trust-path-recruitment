@@ -2800,7 +2800,7 @@ export const dictionaries = {
       "{observed} observerade svar och {self} självrapporterade svar från ett bedömningstillfälle. Ett tillfälle är en kontext — det räcker för att beskriva hur någon svarade här, men inte för att fastställa ett varaktigt mönster.",
     "brief.pace": "Svarstakt",
     "brief.paceBody":
-      "{n} svar registrerades inom tre sekunder efter föregående svar. Det är en iakttagelse om genomförandet, inte om personen — och kan lika gärna bero på en genomläsning eller ett återupptaget pass.",
+      "{n} av {total} svar registrerades inom tre sekunder efter föregående svar. Det är en iakttagelse om genomförandet, inte om personen — och kan lika gärna bero på en genomläsning eller ett återupptaget pass.",
     "brief.evidenceType": "Underlagstyp",
     "brief.evidenceType.observed": "Observerat",
     "brief.evidenceType.self_reported": "Självrapporterat",
@@ -5644,7 +5644,7 @@ export const dictionaries = {
       "{observed} observed answers and {self} self-reported answers from one assessment occasion. One occasion is one context — enough to describe how somebody answered here, not enough to establish a durable pattern.",
     "brief.pace": "Answering pace",
     "brief.paceBody":
-      "{n} answers were recorded within three seconds of the previous one. That is an observation about the run, not about the person — and it is as likely to be a re-read pass or a resumed session as anything else.",
+      "{n} of {total} answers were recorded within three seconds of the previous one. That is an observation about the run, not about the person — and it is as likely to be a re-read pass or a resumed session as anything else.",
     "brief.evidenceType": "Evidence type",
     "brief.evidenceType.observed": "Observed",
     "brief.evidenceType.self_reported": "Self-reported",

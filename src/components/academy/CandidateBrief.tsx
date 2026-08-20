@@ -246,7 +246,11 @@ export function CandidateBrief({
         {brief.pace && (
           <p className="mt-3 flex max-w-[74ch] items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
             <Timer className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{t("brief.paceBody").replace("{n}", String(brief.pace.rapidAnswers))}</span>
+            <span>
+              {t("brief.paceBody")
+                .replace("{n}", String(brief.pace.rapidAnswers))
+                .replace("{total}", String(brief.pace.answered))}
+            </span>
           </p>
         )}
       </Section>

@@ -787,26 +787,24 @@ BEGIN
      AND e.safety_finding IN ('low','medium','high','critical');
 
   -- A pace observation, and nothing more than that. Counts answers recorded
-  -- within three seconds of the previous one. It is reported as a fact about
-  -- the RUN, never as a finding about the person: fast answering has many
-  -- innocent explanations (a re-read pass, a resumed session, a confident
-  -- reader) and the product must not turn a timestamp into a character claim.
-  SELECT count(*), count(*) INTO _quick, _answered
+  -- within three seconds of the previous one, and is reported as a fact about
+  -- the RUN rather than a finding about the person: fast answering has many
+  -- innocent explanations -- a re-read pass, a resumed session, a confident
+  -- reader -- and the product must not turn a timestamp into a character claim.
+  --
+  -- Reported PROPORTIONALLY, and only above a quarter of the run. A raw count
+  -- is unreadable ("11 rapid answers" out of what?) and a signal that fires on
+  -- two quick clicks is noise that trains the reader to skip the section. Both
+  -- numbers are carried so the surface can state the denominator.
+  SELECT count(*) FILTER (WHERE g.gap IS NOT NULL AND g.gap < interval '3 seconds'),
+         count(*)
+    INTO _quick, _answered
     FROM (SELECT r.responded_at
                  - lag(r.responded_at) OVER (ORDER BY fi.display_order) AS gap
             FROM public.scp_candidate_responses r
             JOIN public.scp_form_items fi
               ON fi.item_version_id = r.item_version_id AND fi.form_id = _a.form_id
-           WHERE r.attempt_id = _attempt_id) g
-   WHERE true;
-  SELECT count(*) INTO _quick
-    FROM (SELECT r.responded_at
-                 - lag(r.responded_at) OVER (ORDER BY fi.display_order) AS gap
-            FROM public.scp_candidate_responses r
-            JOIN public.scp_form_items fi
-              ON fi.item_version_id = r.item_version_id AND fi.form_id = _a.form_id
-           WHERE r.attempt_id = _attempt_id) g
-   WHERE g.gap IS NOT NULL AND g.gap < interval '3 seconds';
+           WHERE r.attempt_id = _attempt_id) g;
 
   WITH scope_comp AS (
     -- Competencies this attempt produced OBSERVED evidence for. Self-report is
@@ -1089,7 +1087,8 @@ BEGIN
       'reviews_total',            _rev_total,
       'reviews_completed',        _rev_done),
     'pace', CASE
-      WHEN _quick > 0 THEN jsonb_build_object('rapid_answers', _quick)
+      WHEN _answered > 0 AND _quick::numeric / _answered >= 0.25
+        THEN jsonb_build_object('rapid_answers', _quick, 'answered', _answered)
       ELSE NULL END);
 
   -- The participant's brief. Deliberately a SUBSET, not a softened version:

@@ -280,11 +280,12 @@ export type ReportBrief = {
     reviewsTotal?: number;
     reviewsCompleted?: number;
   };
-  /** Present only when answers were recorded in unusually quick succession. A
-   *  fact about the RUN, never a finding about the person — fast answering has
-   *  many innocent explanations and the product must not turn a timestamp into
-   *  a character claim. */
-  pace: { rapidAnswers: number } | null;
+  /** Present only when at least a quarter of the run was answered in quick
+   *  succession. A fact about the RUN, never a finding about the person — fast
+   *  answering has many innocent explanations and the product must not turn a
+   *  timestamp into a character claim. Carries its own denominator, because a
+   *  bare count is unreadable. */
+  pace: { rapidAnswers: number; answered: number } | null;
 };
 
 export type ReportSnapshot = {
@@ -1188,7 +1189,9 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
       reviewsTotal: cov.reviews_total == null ? undefined : Number(cov.reviews_total),
       reviewsCompleted: cov.reviews_completed == null ? undefined : Number(cov.reviews_completed),
     },
-    pace: pace ? { rapidAnswers: Number(pace.rapid_answers ?? 0) } : null,
+    pace: pace
+      ? { rapidAnswers: Number(pace.rapid_answers ?? 0), answered: Number(pace.answered ?? 0) }
+      : null,
   };
 }
 
