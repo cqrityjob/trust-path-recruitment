@@ -842,6 +842,34 @@ if [ "$REV_PASSED" -lt 24 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# #51 -- one human, one professional identity. The decisive assertion is that
+# assessment history survives an email change, which is exactly what the old
+# email-string join could not do.
+# ---------------------------------------------------------------------------
+echo "==> Running person identity spine assertions"
+set +e
+SPINE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_person_spine_test.sql 2>&1)"
+SPINE_RC=$?
+set -e
+
+echo "$SPINE_OUT" | grep -E "ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPINE_PASSED="$(echo "$SPINE_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPINE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the person identity spine suite exited with code ${SPINE_RC}." >&2
+  echo "$SPINE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${SPINE_PASSED} person identity spine assertions passed"
+
+if [ "$SPINE_PASSED" -lt 15 ]; then
+  echo "FAIL: expected at least 15 person identity spine assertions, only ${SPINE_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5l-e. The durable Assessment & Training Library (#47)
 #
 # Tenancy, lifecycle normalisation, library eligibility, versioning, grants --
@@ -1247,6 +1275,7 @@ echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
 echo "              ${REV_PASSED} employer response-reviewer assertions,"
+echo "              ${SPINE_PASSED} person identity spine assertions,"
 echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"

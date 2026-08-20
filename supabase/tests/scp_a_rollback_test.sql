@@ -247,6 +247,8 @@ DROP FUNCTION IF EXISTS public.scp_guard_snapshot_immutable() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_get_attempt_items(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_save_response(uuid, uuid, uuid, uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_bind_employee_subject(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_person_assessments(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_team(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_grant_employer_reviewer(uuid, uuid, text[]) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_revoke_employer_reviewer(uuid, uuid) CASCADE;
