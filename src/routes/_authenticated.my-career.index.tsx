@@ -319,8 +319,9 @@ function MyCareerPage() {
             no assignment, so a career dashboard never shows a dead entry. */}
         <MyAcademyWorkCard />
 
-        {/* Renders only for an account holding the content-review capability --
-            the RLS-gated queue is the gate, not a client-side role check. */}
+        {/* Renders only for an account an employer has authorised to review
+            responses (#51) -- the scoped queue is the gate, not a client-side
+            role check. */}
         <MyReviewQueueCard />
 
         {/* Security Passport — a separate Trust product under the same

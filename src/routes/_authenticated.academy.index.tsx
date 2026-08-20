@@ -25,6 +25,7 @@ import {
 } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { getLearningFormForModule } from "@/lib/security-competency/academy-learning.functions";
+import { ParticipantAssessmentHistory } from "@/components/academy/ParticipantAssessmentHistory";
 import {
   listAcademyWork,
   type AcademyWorkItem,
@@ -103,6 +104,11 @@ function AcademyHome() {
           </>
         )}
       </AcademyQueryState>
+
+      {/* Durable history, independent of whether anything is currently due.
+          This is where a completed assessment goes, rather than vanishing from
+          the active list on submit. */}
+      <ParticipantAssessmentHistory lang={lang} />
 
       {/* Practice is only offered to somebody who actually has a competence
           profile. Learning Mode requires a subject identity, and this link used

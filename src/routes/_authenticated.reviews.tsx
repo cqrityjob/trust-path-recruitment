@@ -9,13 +9,14 @@
 //     reviewer is deliberately NOT a member of any employer, because that
 //     separation is what stops an employer adjudicating its own candidate. They
 //     got "Åtkomst ej tillgänglig".
-//   * Under /admin — gated on platform admin. A reviewer holds the
-//     content-review capability, which is not the same privilege and should not
-//     have to be. They got "Åtkomst nekad".
+//   * Under /admin — gated on platform admin. A response reviewer is authorised
+//     by an employer (#51), which is not the same privilege and should not have
+//     to be. They got "Åtkomst nekad".
 //
 // So this route gates on nothing at all, and that is deliberate. The queue is
-// scp_rm_review_queue, a security_invoker view: without the capability it
-// returns zero rows, and the page shows an empty state. Completing a review is
+// scoped in the database to the employers that have authorised this caller:
+// without an authorisation it returns zero rows, and the page shows an empty
+// state. Completing a review is
 // enforced by scp_complete_human_review, which checks scp_can_author() itself.
 //
 // Reaching this URL therefore grants nothing. The authorisation lives where it

@@ -21,13 +21,16 @@ import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspa
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   cancelAcademyAssignment,
-  listAcademyParticipants,
   releaseAcademyReport,
   resolveParticipantIdentity,
   listAvailablePurposeCodes,
   scheduleAcademyReassessment,
-  type ParticipantRow,
 } from "@/lib/security-competency/academy-employer.functions";
+import {
+  getEmployerAssessmentPipeline,
+  type PipelineRow,
+} from "@/lib/security-competency/assessment-lifecycle.functions";
+import { LifecycleChip, nextActionLabel } from "@/components/academy/LifecycleChip";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/assessments/participants",
@@ -62,7 +65,7 @@ function Participants({
   canManage: boolean;
 }) {
   const { t } = useT();
-  const list = useServerFn(listAcademyParticipants);
+  const list = useServerFn(getEmployerAssessmentPipeline);
   const query = useQuery({
     queryKey: ["academy", "participants", employerId],
     queryFn: () => list({ data: { employerId } }),
@@ -117,7 +120,7 @@ function ParticipantCard({
   employerSlug,
   canManage,
 }: {
-  row: ParticipantRow;
+  row: PipelineRow;
   employerId: string;
   employerSlug: string;
   canManage: boolean;
@@ -142,7 +145,7 @@ function ParticipantCard({
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const programme = (lang === "en" ? row.programmeNameEn : row.programmeNameSv) ?? "—";
+  const programme = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
 
   const identityM = useMutation({
     mutationFn: () => resolve({ data: { employerId, subjectId: row.subjectId } }),
@@ -213,11 +216,30 @@ function ParticipantCard({
           {/* The pseudonymous reference is shown deliberately: it is what the
               employer actually holds, and naming it makes the model visible
               rather than pretending a person is missing. */}
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
-          </p>
+          {/* A NAME only where this employer's own employment record supplies
+              one -- its data about its own staff, and the way into that
+              person's profile. Everyone else stays the pseudonymous reference
+              the architecture deliberately shows. */}
+          {row.participantName && row.employeeId ? (
+            <Link
+              to="/employer/$employerSlug/workforce/$personId"
+              params={{ employerSlug, personId: row.employeeId }}
+              className="mt-1 inline-block text-xs text-foreground underline-offset-2 hover:underline"
+            >
+              {row.participantName}
+            </Link>
+          ) : (
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
+              {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
+            </p>
+          )}
         </div>
-        <StatusPill status={row.attemptStatus} />
+        <div className="flex flex-col items-end gap-1">
+          <LifecycleChip state={row.lifecycleState} />
+          <span className="text-[11px] text-muted-foreground">
+            {nextActionLabel(t, row.lifecycleState)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-4">
@@ -227,7 +249,7 @@ function ParticipantCard({
           </span>
         </Fact>
         <Fact label={t("academy.participants.awaitingReview")}>
-          <span className="tabular-nums">{row.reviewsOutstanding}</span>
+          <span className="tabular-nums">{row.reviewsOpen}</span>
         </Fact>
         <Fact label={t("academy.participants.deadline")}>
           {row.deadline
@@ -276,14 +298,11 @@ function ParticipantCard({
           </button>
         )}
 
-        {canManage && !row.releasedAt && (
+        {row.canRelease && (
           <button
             type="button"
             onClick={() => releaseM.mutate()}
-            disabled={releaseM.isPending || row.attemptStatus !== "scored"}
-            title={
-              row.attemptStatus !== "scored" ? t("academy.participants.releaseBlocked") : undefined
-            }
+            disabled={releaseM.isPending}
             className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
@@ -307,7 +326,10 @@ function ParticipantCard({
             {t("academy.participants.reassess")}
           </button>
         )}
-        {canManage && row.attemptStatus === "in_progress" && row.assignmentId && !confirmCancel && (
+        {canManage &&
+          (row.lifecycleState === "invited" || row.lifecycleState === "in_progress") &&
+          row.assignmentId &&
+          !confirmCancel && (
           <button
             type="button"
             onClick={() => {
@@ -375,21 +397,3 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  const { t } = useT();
-  const key =
-    status === "in_progress"
-      ? "academy.attempt.inProgress"
-      : status === "submitted"
-        ? "academy.attempt.submitted"
-        : status === "scored"
-          ? "academy.attempt.scored"
-          : status === "released"
-            ? "academy.attempt.released"
-            : "academy.attempt.other";
-  return (
-    <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-      {t(key)}
-    </span>
-  );
-}

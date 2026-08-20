@@ -315,9 +315,15 @@ function WorkforceDirectory({
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
+                      {/* The roster and the person page are the same objects
+                          seen at two depths, so the name is the way in. */}
+                      <Link
+                        to="/employer/$employerSlug/workforce/$personId"
+                        params={{ employerSlug, personId: row.id }}
+                        className="text-sm font-semibold text-foreground underline-offset-2 hover:underline"
+                      >
                         {row.firstName} {row.lastName}
-                      </p>
+                      </Link>
                       <span
                         className={
                           "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest " +

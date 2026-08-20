@@ -286,6 +286,11 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["academy", "review-queue"] });
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+      // The counters answer the same question as the cards, so they have to be
+      // refetched together. Leaving them stale reproduces "N waiting" above an
+      // empty queue -- the defect in mirror image.
+      void qc.invalidateQueries({ queryKey: ["academy", "my-review-workload"] });
+      void qc.invalidateQueries({ queryKey: ["academy", "review-pressure"] });
     },
     onError: (e: unknown) => {
       const code = (e as { code?: string }).code ?? "";

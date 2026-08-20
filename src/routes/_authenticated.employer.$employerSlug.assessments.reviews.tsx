@@ -2,10 +2,11 @@
 //
 // ── WHY AN EMPLOYER USUALLY SEES A NUMBER HERE, NOT A QUEUE ───────────
 //
-// Completing a review requires the content-review capability, because an
-// employer must never adjudicate its own candidate's evidence. That is enforced
-// by scp_complete_human_review, and the queue itself is a security_invoker view
-// an employer cannot read.
+// Completing a review requires an authorisation the EMPLOYER grants (#51), and
+// separation of duties then excludes the participant, whoever assigned the
+// attempt, and -- for recruitment -- anyone in that candidate's hiring chain.
+// Both are enforced by scp_complete_human_review, and the queue applies the
+// same predicate, so a member without an authorisation reads nothing.
 //
 // So this page has two honest faces. A reviewer works the queue. An employer
 // without the capability sees how many responses are waiting and how many
@@ -25,6 +26,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { getAcademyReviewPressure } from "@/lib/security-competency/academy-employer.functions";
+import { getMyReviewWorkload } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { ReviewQueue } from "@/components/academy/ReviewQueue";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/reviews")({
@@ -45,6 +47,16 @@ function ReviewsRoute() {
 function Reviews({ employerId }: { employerId: string }) {
   const { t } = useT();
   const pressureFn = useServerFn(getAcademyReviewPressure);
+  const workloadFn = useServerFn(getMyReviewWorkload);
+
+  // Two different questions, deliberately kept apart. The first two metrics are
+  // about the ORGANISATION -- how much of its work is blocked. The third is
+  // about ME -- how much of it I am actually authorised to act on. Reading one
+  // as the other is what produced "0 väntar" above a full queue.
+  const workload = useQuery({
+    queryKey: ["academy", "my-review-workload"],
+    queryFn: () => workloadFn(),
+  });
 
   const pressure = useQuery({
     queryKey: ["academy", "review-pressure", employerId],
@@ -55,7 +67,7 @@ function Reviews({ employerId }: { employerId: string }) {
     <>
       <AcademyHeading title={t("academy.reviews.title")} lede={t("academy.reviews.lede")} />
 
-      <section className="mb-8 grid gap-4 sm:grid-cols-2">
+      <section className="mb-8 grid gap-4 sm:grid-cols-3">
         <Metric
           icon={Clock}
           label={t("academy.reviews.awaiting")}
@@ -66,11 +78,16 @@ function Reviews({ employerId }: { employerId: string }) {
           label={t("academy.reviews.blocked")}
           value={pressure.data?.attemptsBlocked ?? 0}
         />
+        <Metric
+          icon={Clock}
+          label={t("academy.reviews.myTasks")}
+          value={workload.data?.responsesWaiting ?? 0}
+        />
       </section>
 
-      {/* Same component the admin surface mounts. An employer without the
-          content-review capability sees the empty state because RLS returns
-          no rows — not because this page filters them out. */}
+      {/* Same component the admin surface mounts. A member with no review
+          authorisation sees the empty state because the queue returns no rows
+          — not because this page filters them out. */}
       <ReviewQueue
         emptyTitle={t("academy.reviews.notReviewerTitle")}
         emptyBody={t("academy.reviews.notReviewerBody")}
