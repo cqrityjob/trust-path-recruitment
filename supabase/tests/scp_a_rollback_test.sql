@@ -250,6 +250,7 @@ DROP FUNCTION IF EXISTS public.scp_submit_attempt(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_attempt_lifecycle_state(text, timestamptz, timestamptz, timestamptz, timestamptz, integer) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_assessment_pipeline(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_my_assessment_history() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_resolve_employment_for_assignment(uuid, text, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_bind_employee_subject(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_person_assessments(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_team(uuid) CASCADE;

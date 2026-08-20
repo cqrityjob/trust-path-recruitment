@@ -367,4 +367,67 @@ SELECT pg_temp.ok(
   <= (SELECT count(*) FROM priv WHERE employee_id IS NOT NULL),
   'PR6 no name appears for more rows than have an employment record');
 
+-- ── RE. Assigning by email alone must still reach the person profile ──────
+--
+-- Found in acceptance testing: the library assign form sends an email and no
+-- employment record, so the result never appeared under Medarbetare > Person.
+-- Email is a resolution hint used once to fill a blank, never the durable join.
+
+INSERT INTO public.employees (id, employer_id, first_name, last_name, email, employment_status, created_by)
+VALUES ('f2000000-3333-0000-0000-00000000000d','f2000000-1111-0000-0000-00000000000b',
+        'Email','Only','emailonly@spine.test','active','f2000000-0000-0000-0000-00000000000b');
+INSERT INTO auth.users (id, email) VALUES
+  ('f2000000-0000-0000-0000-00000000000e','emailonly@spine.test');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'f2000000-0000-0000-0000-00000000000b';
+CREATE TEMP TABLE byemail AS
+SELECT * FROM public.scp_employer_assign(
+  'f2000000-1111-0000-0000-00000000000b'::uuid, :'avid'::uuid,
+  'emailonly@spine.test', NULL, 'sv', 'workforce',
+  NULL, NULL);   -- no employee id, exactly as the library form sends it
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT subject_id FROM public.employees WHERE id='f2000000-3333-0000-0000-00000000000d')
+  = (SELECT subject_id FROM byemail),
+  'RE1 assigning by email alone still binds the employment record to the person');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'f2000000-0000-0000-0000-00000000000b';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_person_assessments(
+     'f2000000-1111-0000-0000-00000000000b'::uuid,
+     'f2000000-3333-0000-0000-00000000000d'::uuid)) = 1,
+  'RE2 and the assessment is therefore visible on that person''s profile');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Ambiguity must never be guessed at.
+INSERT INTO public.employees (id, employer_id, first_name, last_name, email, employment_status, created_by)
+VALUES ('f2000000-3333-0000-0000-00000000000e','f2000000-1111-0000-0000-00000000000a',
+        'Twin','One','twin@spine.test','active','f2000000-0000-0000-0000-00000000000a'),
+       ('f2000000-3333-0000-0000-00000000000f','f2000000-1111-0000-0000-00000000000a',
+        'Twin','Two','twin@spine.test','active','f2000000-0000-0000-0000-00000000000a');
+INSERT INTO auth.users (id, email) VALUES
+  ('f2000000-0000-0000-0000-000000000010','twin@spine.test');
+
+-- A subject with no employment record here, so the ambiguity branch is the one
+-- actually under test. (Passing a subject that already has a record would
+-- correctly return THAT record, which is a different rule.)
+INSERT INTO public.scp_subjects (id) VALUES ('f2000000-2222-0000-0000-00000000000c');
+INSERT INTO public.scp_subject_identities (subject_id, user_id)
+VALUES ('f2000000-2222-0000-0000-00000000000c','f2000000-0000-0000-0000-000000000010');
+
+SELECT pg_temp.ok(
+  public.scp_resolve_employment_for_assignment(
+    'f2000000-1111-0000-0000-00000000000a'::uuid, 'twin@spine.test',
+    'f2000000-2222-0000-0000-00000000000c'::uuid) IS NULL,
+  'RE3 two employment records sharing an address resolve to nobody, not to a guess');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.employees
+    WHERE id IN ('f2000000-3333-0000-0000-00000000000e','f2000000-3333-0000-0000-00000000000f')
+      AND subject_id IS NOT NULL) = 0,
+  'RE4 and neither ambiguous record was bound');
+
 ROLLBACK;

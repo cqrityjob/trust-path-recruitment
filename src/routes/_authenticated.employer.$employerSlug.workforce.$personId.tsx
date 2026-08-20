@@ -108,6 +108,18 @@ function PersonDetail({
           {t("employer.person.assessments.lede")}
         </p>
 
+        {/* Assigning belongs in the person's context: an employer looking at
+            somebody is exactly where they decide to assess them. The assign
+            step needs an assessment chosen first, so this leads to the library
+            rather than inventing a second assignment flow. */}
+        <Link
+          to="/employer/$employerSlug/assessments/library"
+          params={{ employerSlug }}
+          className="mt-4 inline-flex rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+        >
+          {t("employer.person.assessments.assign")}
+        </Link>
+
         {assessments.isLoading ? (
           <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : assessments.isError ? (
