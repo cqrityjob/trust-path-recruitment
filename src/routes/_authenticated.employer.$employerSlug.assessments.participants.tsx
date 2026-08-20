@@ -216,9 +216,23 @@ function ParticipantCard({
           {/* The pseudonymous reference is shown deliberately: it is what the
               employer actually holds, and naming it makes the model visible
               rather than pretending a person is missing. */}
-          <p className="mt-1 font-mono text-xs text-muted-foreground">
-            {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
-          </p>
+          {/* A NAME only where this employer's own employment record supplies
+              one -- its data about its own staff, and the way into that
+              person's profile. Everyone else stays the pseudonymous reference
+              the architecture deliberately shows. */}
+          {row.participantName && row.employeeId ? (
+            <Link
+              to="/employer/$employerSlug/workforce/$personId"
+              params={{ employerSlug, personId: row.employeeId }}
+              className="mt-1 inline-block text-xs text-foreground underline-offset-2 hover:underline"
+            >
+              {row.participantName}
+            </Link>
+          ) : (
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
+              {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1">
           <LifecycleChip state={row.lifecycleState} />
