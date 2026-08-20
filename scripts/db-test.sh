@@ -864,8 +864,8 @@ fi
 
 echo "    ok  ${SPINE_PASSED} person identity spine assertions passed"
 
-if [ "$SPINE_PASSED" -lt 15 ]; then
-  echo "FAIL: expected at least 15 person identity spine assertions, only ${SPINE_PASSED} ran." >&2
+if [ "$SPINE_PASSED" -lt 26 ]; then
+  echo "FAIL: expected at least 26 person identity spine assertions, only ${SPINE_PASSED} ran." >&2
   exit 1
 fi
 

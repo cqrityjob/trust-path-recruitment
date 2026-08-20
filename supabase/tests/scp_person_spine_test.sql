@@ -241,4 +241,73 @@ SELECT pg_temp.must_fail(
   'S4.3 another organisation''s owner cannot bind Alpha''s employment record');
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- ── P. Three projections, one lifecycle ───────────────────────────────────
+--
+-- The point of the shared derivation is that these surfaces cannot disagree.
+-- Asserting equality between them is the only way that stays true as they grow.
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'f2000000-0000-0000-0000-00000000000a';
+CREATE TEMP TABLE proj_pipeline AS
+SELECT * FROM public.scp_employer_assessment_pipeline('f2000000-1111-0000-0000-00000000000a'::uuid);
+CREATE TEMP TABLE proj_person AS
+SELECT * FROM public.scp_employer_person_assessments(
+  'f2000000-1111-0000-0000-00000000000a'::uuid,
+  'f2000000-3333-0000-0000-00000000000a'::uuid);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'f2000000-0000-0000-0000-00000000000c';
+CREATE TEMP TABLE proj_participant AS
+SELECT * FROM public.scp_my_assessment_history();
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM proj_pipeline) = 2,
+  'P1.1 the employer pipeline lists both of this organisation''s attempts');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM proj_person pp JOIN proj_pipeline pl ON pl.attempt_id = pp.attempt_id
+     WHERE pp.lifecycle_state IS DISTINCT FROM pl.lifecycle_state),
+  'P1.2 the person page and the pipeline never disagree about the same attempt');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM proj_participant pa JOIN proj_pipeline pl ON pl.attempt_id = pa.attempt_id
+     WHERE pa.lifecycle_state IS DISTINCT FROM pl.lifecycle_state),
+  'P1.3 the participant sees the same lifecycle state the employer sees');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM proj_participant) = 3,
+  'P1.4 the participant sees all three of their attempts, across BOTH employers');
+
+SELECT pg_temp.ok(
+  (SELECT count(DISTINCT issuer_name) FROM proj_participant) = 2,
+  'P1.5 and each carries the organisation that issued it');
+
+-- Audiences must not cross. The participant projection must never hand back an
+-- employer snapshot, and the employer projection never a participant one.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM proj_participant pa
+      JOIN public.scp_report_snapshots rs ON rs.id = pa.participant_snapshot_id
+     WHERE rs.audience <> 'participant'),
+  'P1.6 participant history only ever returns the participant report');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM proj_person pp
+      JOIN public.scp_report_snapshots rs ON rs.id = pp.employer_snapshot_id
+     WHERE rs.audience <> 'employer'),
+  'P1.7 the employer person view only ever returns the employer report');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(lifecycle_state = 'invited') FROM proj_pipeline),
+  'P1.8 a freshly assigned attempt reads as "invited", not as a raw engine status');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(NOT can_release) FROM proj_pipeline),
+  'P1.9 nothing is releasable before it is scored');
+
 ROLLBACK;
