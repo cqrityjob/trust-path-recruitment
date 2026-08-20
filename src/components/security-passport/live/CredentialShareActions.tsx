@@ -28,6 +28,7 @@ import { useState } from "react";
 import { Copy, Check, ExternalLink, Link2, Share2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+import { certificationAddUrl } from "@/lib/security-passport/linkedin-profile";
 
 export interface CredentialShareSubject {
   readonly title: string;
@@ -44,32 +45,6 @@ function monthYear(iso: string | null): { month: string; year: string } | null {
   const [year, month] = iso.split("-");
   if (!year || !month) return null;
   return { month: String(Number(month)), year };
-}
-
-/**
- * LinkedIn's documented static "Add to Profile" entry point for licences and
- * certifications. Parameters are passed as a convenience for the versions of
- * the flow that still read them; the panel above never promises they will be
- * applied.
- */
-function addToProfileUrl(subject: CredentialShareSubject, credentialUrl: string): string {
-  const issued = monthYear(subject.issuedOn);
-  const expires = monthYear(subject.validUntil);
-  const params = new URLSearchParams({
-    startTask: "CERTIFICATION_NAME",
-    name: subject.title,
-    organizationName: subject.issuer ?? "CQrityjob",
-    certUrl: credentialUrl,
-  });
-  if (issued) {
-    params.set("issueYear", issued.year);
-    params.set("issueMonth", issued.month);
-  }
-  if (expires) {
-    params.set("expirationYear", expires.year);
-    params.set("expirationMonth", expires.month);
-  }
-  return `https://www.linkedin.com/profile/add?${params.toString()}`;
 }
 
 export function CredentialShareActions({
@@ -213,7 +188,14 @@ export function CredentialShareActions({
                 {copiedDetails ? pt("cw.copied") : pt("cw.copyDetails")}
               </button>
               <a
-                href={addToProfileUrl(subject, shareUrl)}
+                href={certificationAddUrl({
+                  name: subject.title,
+                  organisation: subject.issuer ?? "CQrityjob",
+                  issuedOn: subject.issuedOn,
+                  validUntil: subject.validUntil,
+                  credentialUrl: shareUrl,
+                  credentialId: credentialId || undefined,
+                })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

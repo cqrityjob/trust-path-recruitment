@@ -35,6 +35,7 @@ import { CardStudio } from "./CardStudio";
 import { CredentialFormFixture } from "./CredentialFormFixture";
 import { CredentialHistoryFixture } from "./CredentialHistoryFixture";
 import { LinkedInShareSection } from "./live/LinkedInShareSection";
+import { SharePanel } from "./live/SharePanel";
 import { RecipientCardFixture } from "./RecipientCardFixture";
 import { EntryFixture } from "./EntryFixture";
 import { buildSocialCard } from "@/lib/security-passport/social";
@@ -63,6 +64,7 @@ type ScreenId =
   | "recipientCard"
   | "entries"
   | "share"
+  | "sharePanel"
   | "shareHistory"
   | "recipient"
   | "privacy";
@@ -82,6 +84,7 @@ const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "entries", labelKey: "screen.entries" },
   { id: "card", labelKey: "screen.card" },
   { id: "share", labelKey: "screen.share" },
+  { id: "sharePanel", labelKey: "screen.sharePanel" },
   { id: "shareHistory", labelKey: "screen.shareHistory" },
   { id: "recipient", labelKey: "screen.recipient" },
   { id: "privacy", labelKey: "screen.privacy" },
@@ -349,6 +352,24 @@ export function PrototypeShell() {
             evaluationOn={FIXTURE_EVALUATION_DATE}
             viewingJurisdiction={viewingJurisdiction}
           />
+        ) : null}
+
+        {/* The live share panel, on fixture data. It is the same component
+            /passport/share renders; only the URL is fictional, which is what
+            makes the restructured layout reviewable without a session. */}
+        {screen === "sharePanel" ? (
+          <div className="mx-auto w-full max-w-2xl">
+            <SharePanel
+              shareUrl={`https://cqrityjob.example/p/${personaId}`}
+              holder={holder}
+              model={buildSocialCard(holder, FIXTURE_EVALUATION_DATE, {
+                privacyMode: "full_name",
+                anonymousLabel: pt("share.anonymousLabel"),
+                verifyUrl: `cqrityjob.example/p/fixture-${personaId}`,
+              })}
+              qrDataUrl={null}
+            />
+          </div>
         ) : null}
 
         {screen === "shareHistory" ? (

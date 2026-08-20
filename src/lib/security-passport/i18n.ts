@@ -44,6 +44,7 @@ const sv = {
   "screen.timeline": "Erfarenhetslinje",
   "screen.card": "Passport Card",
   "screen.share": "Dela",
+  "screen.sharePanel": "Delningspanel (live)",
   "screen.shareHistory": "Delningshistorik",
   "screen.recipient": "Mottagarens vy",
   "screen.privacy": "Integritet",
@@ -1073,6 +1074,38 @@ const sv = {
     "Länkens automatiska förhandsvisning på LinkedIn visar CQrityjobs allmänna kort — inte ditt personliga. Ditt kort syns när du själv bifogar bilden. Länken är alltid källan: sidan bakom den visar aktuellt läge och kan återkallas.",
   "sc.retentionNote":
     "Sociala plattformar kan behålla bilder som redan publicerats eller cachats — även efter att du återkallat länken. Det du återkallar är sidan bakom länken, inte kopior av bilden.",
+
+  // ── Share panel (restructured /passport/share) ───────────────────────
+  "sp.verify": "Verifiera Passport",
+  "sp.verifyHint": "Öppnar den levande sidan som mottagaren ser.",
+  "sp.feed": "Dela i flöde",
+  "sp.deviceShare": "Dela på enheten",
+  "sp.more": "Fler delningsalternativ",
+  "sp.imagesTitle": "Bilder för sociala medier",
+  "sp.securityDetails": "Om länken och säkerheten",
+  "share.channel.instagram": "Instagram",
+  "share.channel.copyUrl": "Kopiera URL",
+  "share.channel.instagramHint": "Ladda ned Story-bilden och lägg upp den i appen.",
+
+  // ── Lägg till i LinkedIn-profil ──────────────────────────────────────
+  "lip.title": "Lägg till i LinkedIn-profil",
+  "lip.lead":
+    "Lägg en verifierad merit på din profil, inte bara i ett flöde. Länken som följer med är din levande verifieringssida.",
+  "lip.addCert": "Lägg till Certifikat",
+  "lip.addEdu": "Lägg till Utbildning",
+  "lip.certGroup": "Certifikat och behörigheter",
+  "lip.eduGroup": "Utbildningar",
+  "lip.noneCert": "Du har ingen verifierad behörighet att lägga till ännu.",
+  "lip.noneEdu": "Du har ingen verifierad utbildning att lägga till ännu.",
+  "lip.fieldsTitle": "Uppgifterna LinkedIn frågar efter",
+  "lip.copyFields": "Kopiera uppgifterna",
+  "lip.copied": "Uppgifterna är kopierade",
+  "lip.openLinkedIn": "Öppna LinkedIn",
+  "lip.prefillNote":
+    "LinkedIn fyller inte alltid i fälten åt dig. Kopiera uppgifterna först — då har du dem redo när formuläret öppnas.",
+  "lip.fieldCourse": "Utbildning",
+  "lip.fieldProvider": "Utbildningsanordnare",
+  "lip.fieldCompleted": "Avslutad",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -1096,6 +1129,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.timeline": "Experience timeline",
   "screen.card": "Passport Card",
   "screen.share": "Share",
+  "screen.sharePanel": "Share panel (live)",
   "screen.shareHistory": "Sharing history",
   "screen.recipient": "Recipient view",
   "screen.privacy": "Privacy",
@@ -2100,6 +2134,38 @@ const en: Record<PassportCopyKey, string> = {
     "The link's automatic preview on LinkedIn shows CQrityjob's generic card — not your personal one. Your card appears when you attach the image yourself. The link is always the source: the page behind it shows the current position and can be revoked.",
   "sc.retentionNote":
     "Social platforms may keep images that have already been published or cached — even after you withdraw the link. What you revoke is the page behind the link, not copies of the image.",
+
+  // ── Share panel (restructured /passport/share) ───────────────────────
+  "sp.verify": "Verify Passport",
+  "sp.verifyHint": "Opens the live page your recipient sees.",
+  "sp.feed": "Share to feed",
+  "sp.deviceShare": "Share on device",
+  "sp.more": "More sharing options",
+  "sp.imagesTitle": "Social media images",
+  "sp.securityDetails": "About the link and its security",
+  "share.channel.instagram": "Instagram",
+  "share.channel.copyUrl": "Copy URL",
+  "share.channel.instagramHint": "Download the Story image and post it from the app.",
+
+  // ── Add to LinkedIn profile ──────────────────────────────────────────
+  "lip.title": "Add to LinkedIn profile",
+  "lip.lead":
+    "Put a verified record on your profile, not just in a feed. The link that travels with it is your live verification page.",
+  "lip.addCert": "Add Certificate",
+  "lip.addEdu": "Add Training",
+  "lip.certGroup": "Certificates and licences",
+  "lip.eduGroup": "Training",
+  "lip.noneCert": "You have no verified credential to add yet.",
+  "lip.noneEdu": "You have no verified training to add yet.",
+  "lip.fieldsTitle": "The details LinkedIn asks for",
+  "lip.copyFields": "Copy the details",
+  "lip.copied": "Details copied",
+  "lip.openLinkedIn": "Open LinkedIn",
+  "lip.prefillNote":
+    "LinkedIn does not always fill the fields in for you. Copy the details first, and you have them ready when the form opens.",
+  "lip.fieldCourse": "Course",
+  "lip.fieldProvider": "Provider",
+  "lip.fieldCompleted": "Completed",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {
