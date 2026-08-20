@@ -9529,6 +9529,15 @@ export type Database = {
           reviews_opened: number
         }[]
       }
+      scp_training_permits_assignment: {
+        Args: {
+          _content_status: string
+          _employer_id: string
+          _is_test_fixture: boolean
+          _validation_status: string
+        }
+        Returns: Database["public"]["Enums"]["scp_governance_mode"]
+      }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
         Returns: {
