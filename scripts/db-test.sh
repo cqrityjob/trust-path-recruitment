@@ -876,8 +876,8 @@ fi
 
 echo "    ok  ${TRJ_PASSED} training journey assertions passed"
 
-if [ "$TRJ_PASSED" -lt 44 ]; then
-  echo "FAIL: expected at least 44 training journey assertions, only ${TRJ_PASSED} ran." >&2
+if [ "$TRJ_PASSED" -lt 45 ]; then
+  echo "FAIL: expected at least 45 training journey assertions, only ${TRJ_PASSED} ran." >&2
   exit 1
 fi
 
