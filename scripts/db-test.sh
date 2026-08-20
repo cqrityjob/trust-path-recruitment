@@ -870,6 +870,34 @@ if [ "$SPINE_PASSED" -lt 26 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# #51 -- the employer self-service workforce lifecycle, end to end. Every
+# transition runs through the governed function the product calls; nothing sets
+# a status by hand after setup.
+# ---------------------------------------------------------------------------
+echo "==> Running workforce lifecycle E2E assertions"
+set +e
+E2E_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_workforce_e2e_test.sql 2>&1)"
+E2E_RC=$?
+set -e
+
+echo "$E2E_OUT" | grep -E "ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+E2E_PASSED="$(echo "$E2E_OUT" | grep -c "ok  " || true)"
+
+if [ "$E2E_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the workforce lifecycle E2E exited with code ${E2E_RC}." >&2
+  echo "$E2E_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${E2E_PASSED} workforce lifecycle E2E assertions passed"
+
+if [ "$E2E_PASSED" -lt 36 ]; then
+  echo "FAIL: expected at least 36 workforce lifecycle E2E assertions, only ${E2E_PASSED} ran." >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
 # 5l-e. The durable Assessment & Training Library (#47)
 #
 # Tenancy, lifecycle normalisation, library eligibility, versioning, grants --
@@ -1276,6 +1304,7 @@ echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
 echo "              ${REV_PASSED} employer response-reviewer assertions,"
 echo "              ${SPINE_PASSED} person identity spine assertions,"
+echo "              ${E2E_PASSED} workforce lifecycle E2E assertions,"
 echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
