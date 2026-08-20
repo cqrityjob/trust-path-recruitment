@@ -2462,12 +2462,12 @@ export const dictionaries = {
     "academy.attempt.other": "Annan status",
     "academy.reviews.title": "Granskningar",
     "academy.reviews.lede":
-      "Fritextsvar bedöms av en människa. En arbetsgivare kan aldrig granska sin egen deltagares svar.",
+      "Fritextsvar bedöms av en människa. Granskaren utses av organisationen, och den som tilldelade testet får aldrig granska det själv.",
     "academy.reviews.awaiting": "Svar som väntar",
     "academy.reviews.blocked": "Resultat som blockeras",
-    "academy.reviews.notReviewerTitle": "Granskning görs av CQrityjob",
+    "academy.reviews.notReviewerTitle": "Du har ingen granskningsbehörighet",
     "academy.reviews.notReviewerBody":
-      "Du ser hur mycket som väntar, men inte materialet. Att granska sin egen deltagares svar skulle göra bedömningen till en partsinlaga.",
+      "Du ser hur mycket som väntar, men inte materialet. En ägare eller administratör kan ge en kollega granskningsbehörighet under Organisation. Den som tilldelade testet får aldrig granska det själv.",
     "academy.reviews.triggerNoProvider": "Ingen automatisk bedömning tillgänglig",
     "academy.reviews.triggerSafety": "Säkerhetskritiskt svar",
     "academy.reviews.triggerRequested": "Deltagaren har begärt granskning",
@@ -5194,12 +5194,12 @@ export const dictionaries = {
     "academy.attempt.other": "Other status",
     "academy.reviews.title": "Reviews",
     "academy.reviews.lede":
-      "Written answers are judged by a person. An employer can never review its own participant's answer.",
+      "Written answers are judged by a person. The reviewer is appointed by the organisation, and whoever assigned an assessment may never review it themselves.",
     "academy.reviews.awaiting": "Answers waiting",
     "academy.reviews.blocked": "Results blocked",
-    "academy.reviews.notReviewerTitle": "Review is carried out by CQrityjob",
+    "academy.reviews.notReviewerTitle": "You have no review authorisation",
     "academy.reviews.notReviewerBody":
-      "You can see how much is waiting, but not the material. Reviewing your own participant's answer would turn the judgement into an interested party's opinion.",
+      "You can see how much is waiting, but not the material. An owner or administrator can authorise a colleague to review under Organisation. Whoever assigned an assessment may never review it themselves.",
     "academy.reviews.triggerNoProvider": "No automated scoring available",
     "academy.reviews.triggerSafety": "Safety-critical answer",
     "academy.reviews.triggerRequested": "Participant requested a review",
