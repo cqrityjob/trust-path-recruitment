@@ -715,8 +715,9 @@ export const cancelAcademyAssignment = createServerFn({ method: "POST" })
  *  rows are read and discarded server-side and never enter the browser's cache
  *  on every page the reviewer happens to visit.
  *
- *  Not gated here. scp_rm_review_queue is security_invoker, so a caller without
- *  the content-review capability gets zero rows and therefore zero. */
+ *  Not gated here. The queue is scoped in the database to the employers that
+ *  have authorised this caller to review responses (#51), so somebody with no
+ *  authorisation gets zero rows and therefore zero. */
 export const countMyReviewQueue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<number> => {
@@ -1099,10 +1100,11 @@ export const getSubjectProgress = createServerFn({ method: "GET" })
 
 /** The reviewer's queue, with the context needed to actually judge an answer.
  *
- *  Reads scp_review_queue, a SECURITY DEFINER function that opens with the
- *  same capability check the old security_invoker view relied on: without the
- *  content-review capability it returns zero rows, and that is still an
- *  authorisation boundary doing it rather than this file filtering.
+ *  Reads scp_review_queue, a SECURITY DEFINER function scoped to the employers
+ *  that have authorised this caller to review responses, minus any attempt a
+ *  separation-of-duties rule disqualifies them from (#51). Without an
+ *  authorisation it returns zero rows -- an authorisation boundary doing it,
+ *  rather than this file filtering.
  *
  *  It replaced the view because the reviewer needs the ORGANISATION, and a
  *  reviewer is deliberately not a member of any employer -- so the employer row

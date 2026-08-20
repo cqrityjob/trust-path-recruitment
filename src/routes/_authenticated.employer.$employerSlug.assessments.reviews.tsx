@@ -2,10 +2,11 @@
 //
 // ── WHY AN EMPLOYER USUALLY SEES A NUMBER HERE, NOT A QUEUE ───────────
 //
-// Completing a review requires the content-review capability, because an
-// employer must never adjudicate its own candidate's evidence. That is enforced
-// by scp_complete_human_review, and the queue itself is a security_invoker view
-// an employer cannot read.
+// Completing a review requires an authorisation the EMPLOYER grants (#51), and
+// separation of duties then excludes the participant, whoever assigned the
+// attempt, and -- for recruitment -- anyone in that candidate's hiring chain.
+// Both are enforced by scp_complete_human_review, and the queue applies the
+// same predicate, so a member without an authorisation reads nothing.
 //
 // So this page has two honest faces. A reviewer works the queue. An employer
 // without the capability sees how many responses are waiting and how many
@@ -84,9 +85,9 @@ function Reviews({ employerId }: { employerId: string }) {
         />
       </section>
 
-      {/* Same component the admin surface mounts. An employer without the
-          content-review capability sees the empty state because RLS returns
-          no rows — not because this page filters them out. */}
+      {/* Same component the admin surface mounts. A member with no review
+          authorisation sees the empty state because the queue returns no rows
+          — not because this page filters them out. */}
       <ReviewQueue
         emptyTitle={t("academy.reviews.notReviewerTitle")}
         emptyBody={t("academy.reviews.notReviewerBody")}
