@@ -5774,6 +5774,127 @@ export type Database = {
           },
         ]
       }
+      scp_interview_guide_prompts: {
+        Row: {
+          authored_by_ai: boolean
+          competency_id: string
+          content_status: string
+          created_at: string
+          facet_id: string | null
+          focus: string
+          followup_en: string
+          followup_sv: string
+          id: string
+          listen_for_en: string[]
+          listen_for_sv: string[]
+          question_en: string
+          question_sv: string
+          version_number: number
+        }
+        Insert: {
+          authored_by_ai?: boolean
+          competency_id: string
+          content_status?: string
+          created_at?: string
+          facet_id?: string | null
+          focus: string
+          followup_en: string
+          followup_sv: string
+          id?: string
+          listen_for_en: string[]
+          listen_for_sv: string[]
+          question_en: string
+          question_sv: string
+          version_number?: number
+        }
+        Update: {
+          authored_by_ai?: boolean
+          competency_id?: string
+          content_status?: string
+          created_at?: string
+          facet_id?: string | null
+          focus?: string
+          followup_en?: string
+          followup_sv?: string
+          id?: string
+          listen_for_en?: string[]
+          listen_for_sv?: string[]
+          question_en?: string
+          question_sv?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_guide_prompts_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_guide_prompts_facet_id_fkey"
+            columns: ["facet_id"]
+            isOneToOne: false
+            referencedRelation: "scp_competency_facets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_notes: {
+        Row: {
+          area_code: string
+          attempt_id: string
+          employer_id: string
+          id: string
+          note: string | null
+          outcome: string
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          area_code: string
+          attempt_id: string
+          employer_id: string
+          id?: string
+          note?: string | null
+          outcome: string
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          area_code?: string
+          attempt_id?: string
+          employer_id?: string
+          id?: string
+          note?: string | null
+          outcome?: string
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_notes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_notes_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["attempt_id"]
+          },
+          {
+            foreignKeyName: "scp_interview_notes_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_item_exposure: {
         Row: {
           attempt_id: string | null
@@ -6802,6 +6923,7 @@ export type Database = {
         Row: {
           attempt_id: string
           audience: string
+          brief: Json | null
           context: Json | null
           created_at: string
           derivation_input: Json | null
@@ -6820,6 +6942,7 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
+          brief?: Json | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -6838,6 +6961,7 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
+          brief?: Json | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -9183,6 +9307,19 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_attempt_assessment_signal: {
+        Args: {
+          _attempt_id: string
+          _competency_version_id: string
+          _signal_version?: string
+        }
+        Returns: {
+          mean: number
+          observations: number
+          signal: string
+          spread: number
+        }[]
+      }
       scp_attempt_evidence_state: {
         Args: {
           _attempt_id: string
@@ -9210,6 +9347,20 @@ export type Database = {
           _threshold_version?: string
         }
         Returns: string
+      }
+      scp_attempt_self_report_pattern: {
+        Args: {
+          _attempt_id: string
+          _facet_id: string
+          _signal_version?: string
+        }
+        Returns: {
+          consistency: string
+          items: number
+          mean: number
+          pattern: string
+          spread: number
+        }[]
       }
       scp_bind_employee_subject: {
         Args: { _employee_id: string; _user_id: string }
@@ -9552,6 +9703,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      scp_interview_notes: {
+        Args: { _attempt_id: string }
+        Returns: {
+          area_code: string
+          id: string
+          note: string
+          outcome: string
+          recorded_at: string
+          recorded_by_email: string
+        }[]
+      }
       scp_lifecycle_state: {
         Args: {
           _content_status: string
@@ -9673,6 +9835,15 @@ export type Database = {
           _reason_code: string
           _reason_note?: string
           _supersedes_id?: string
+        }
+        Returns: string
+      }
+      scp_record_interview_note: {
+        Args: {
+          _area_code: string
+          _attempt_id: string
+          _note?: string
+          _outcome: string
         }
         Returns: string
       }
