@@ -403,12 +403,8 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
       throw new Error("Could not complete your company registration.");
     }
 
-    const row = (rows as any[] | null)?.[0];
+    const row = (rows as { employer_id: string; employer_slug: string }[] | null)?.[0];
     if (!row) throw new Error("Could not complete your company registration.");
 
-    return {
-      created: true,
-      employerId: row.employer_id as string,
-      employerSlug: row.employer_slug as string,
-    };
+    return { created: true, employerId: row.employer_id, employerSlug: row.employer_slug };
   });
