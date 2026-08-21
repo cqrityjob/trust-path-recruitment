@@ -27,6 +27,7 @@ import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { getLearningFormForModule } from "@/lib/security-competency/academy-learning.functions";
 import { ParticipantAssessmentHistory } from "@/components/academy/ParticipantAssessmentHistory";
 import {
+  claimAssessmentInvitations,
   listAcademyWork,
   type AcademyWorkItem,
 } from "@/lib/security-competency/academy-training.functions";
@@ -39,9 +40,26 @@ export const Route = createFileRoute("/_authenticated/academy/")({
 function AcademyHome() {
   const { t, lang } = useT();
   const listWork = useServerFn(listAcademyWork);
+  const claimFn = useServerFn(claimAssessmentInvitations);
   const formFn = useServerFn(getLearningFormForModule);
 
-  const work = useQuery({ queryKey: ["academy", "work"], queryFn: () => listWork() });
+  // Claim first, then list. Somebody who was invited before they had an
+  // account arrives here for the first time with the invitation still pending;
+  // running the claim ahead of the list is what makes the assessment appear on
+  // this visit rather than the next one. It never throws and it is idempotent,
+  // so a person who has nothing to claim pays one cheap call and sees nothing.
+  const claim = useQuery({
+    queryKey: ["academy", "claim-invitations"],
+    queryFn: () => claimFn(),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const work = useQuery({
+    queryKey: ["academy", "work"],
+    queryFn: () => listWork(),
+    enabled: !claim.isLoading,
+  });
   const learningForm = useQuery({
     queryKey: ["academy", "learning-form"],
     queryFn: () => formFn(),
@@ -189,6 +207,17 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
           {row.employerName && (
             <p className="mt-1 text-[13px] text-muted-foreground">
               {t("academy.home.requestedBy")} {row.employerName}
+            </p>
+          )}
+          {/* Why this arrived. An assessment that turns up unexplained in
+              somebody's account is alarming; one that names the job they
+              applied for is a step in a process they started. */}
+          {row.useCase === "recruitment" && (row.jobTitleSv || row.jobTitleEn) && (
+            <p className="mt-1 text-[13px] text-foreground">
+              {t("academy.work.forJob")}{" "}
+              <span className="font-medium">
+                {(lang === "en" ? row.jobTitleEn : row.jobTitleSv) ?? ""}
+              </span>
             </p>
           )}
         </div>

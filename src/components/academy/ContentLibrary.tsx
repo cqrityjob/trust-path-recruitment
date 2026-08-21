@@ -50,6 +50,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { InviteParticipantPanel } from "@/components/academy/InviteParticipantPanel";
 import { AcademyHeading } from "@/components/academy/AcademyWorkspace";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
@@ -592,6 +593,13 @@ function ProgrammeDetail({
           </p>
         )}
       </div>
+
+      {/* Inviting somebody who has no account yet. Only for content this
+          organisation may actually run: offering it otherwise would be
+          offering a control the invite path would refuse. */}
+      {entry.libraryKind === "assessment" && entry.assignable && (
+        <InviteParticipantPanel employerId={employerId} entry={entry} canInvite={canAssign} />
+      )}
     </div>
   );
 }

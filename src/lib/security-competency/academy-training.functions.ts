@@ -57,6 +57,12 @@ export type AcademyWorkItem = {
   releasedAt: string | null;
   purposeSv: string | null;
   purposeEn: string | null;
+  /** Why this arrived. A recruitment assessment that turns up unexplained in
+   *  somebody's account is alarming; one that says which job it relates to is
+   *  a step in a process they started. */
+  useCase: "workforce" | "recruitment";
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
 };
 
 export type TrainingProgramme = {
@@ -132,7 +138,35 @@ export const listAcademyWork = createServerFn({ method: "GET" })
       releasedAt: (r.released_at as string) ?? null,
       purposeSv: (r.purpose_sv as string) ?? null,
       purposeEn: (r.purpose_en as string) ?? null,
+      useCase: String(r.use_case ?? "workforce") as AcademyWorkItem["useCase"],
+      jobTitleSv: (r.job_title_sv as string) ?? null,
+      jobTitleEn: (r.job_title_en as string) ?? null,
     }));
+  });
+
+/** Bind every invitation waiting on this person's own confirmed address.
+ *
+ *  Safe to call on arrival and safe to call repeatedly: the RPC takes no
+ *  argument, resolves the caller's own address, and an invitation leaves
+ *  'pending' the moment it binds. It returns what it did so a surface can say
+ *  "you have a new assessment" rather than silently growing a list. */
+export const claimAssessmentInvitations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ bound: number; expired: number }> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_claim_assessment_invitations");
+    // Never throws to the participant. Claiming is an enrichment of their own
+    // page, and a failure here must not stop them seeing the work they already
+    // have — which is what an unhandled error on page load would do.
+    if (error) {
+      console.error("[academy] invitation claim failed", error.message);
+      return { bound: 0, expired: 0 };
+    }
+    const list = (rows ?? []) as RpcRow[];
+    return {
+      bound: list.filter((r) => r.outcome === "bound").length,
+      expired: list.filter((r) => r.outcome === "expired").length,
+    };
   });
 
 export const getTrainingProgramme = createServerFn({ method: "GET" })

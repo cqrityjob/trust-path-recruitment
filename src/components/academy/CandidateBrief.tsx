@@ -222,6 +222,17 @@ export function CandidateBrief({
   return (
     <>
       <Section title={t("brief.title")} lede={t("brief.lede")}>
+        {/* The paragraph a recruiter reads in fifteen seconds, before deciding
+            how to spend the next forty minutes. Set larger than the body around
+            it because it is the thing this page exists to say first. Absent on
+            briefs frozen before it existed, and the page simply starts at the
+            modules instead. */}
+        {brief.executiveSummary && (
+          <p className="mt-4 max-w-[70ch] border-l-2 border-accent pl-4 text-[15px] leading-relaxed text-foreground">
+            {sv ? brief.executiveSummary.sv : brief.executiveSummary.en}
+          </p>
+        )}
+
         <ul className="mt-4 flex flex-wrap gap-2">
           {brief.modules.map((m) => (
             <li

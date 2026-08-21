@@ -2854,6 +2854,60 @@ export const dictionaries = {
     "report.observedVsSelf": "Observerat och självrapporterat",
     "report.observedVsSelfBody":
       "Bedömningen samlade två slags underlag. Det du gjorde i situationsuppgifterna är observerat. Det du beskrev om ditt eget arbetssätt är självrapporterat och redovisas aldrig som visad kompetens. Bedömningen är en informationskälla i en rekryteringsprocess och avgör inte anställning, behörighet eller framtida arbetsprestation.",
+
+    // ── Recruitment journey ─────────────────────────────────────────────
+    "journey.assessment": "Bedömning",
+    "journey.noAssessmentYet": "Ingen bedömning har skickats för den här ansökan.",
+    "journey.sendAssessment": "Skicka bedömning",
+    "journey.sending": "Skickar…",
+    "journey.assignFailed":
+      "Bedömningen kunde inte skickas. Kontrollera att organisationen har ett giltigt medgivande för innehållet.",
+    "journey.openBrief": "Öppna kandidatunderlag",
+    "journey.closedTest": "Sluten testning",
+    "journey.closedTestNotForSelection": "Sluten testning – ej för operativt urvalsbeslut",
+    "journey.stage.invited": "Inbjuden",
+    "journey.stage.started": "Påbörjad",
+    "journey.stage.under_review": "Under granskning",
+    "journey.stage.ready_to_release": "Klar att frisläppas",
+    "journey.stage.report_available": "Resultat tillgängligt",
+    "journey.person.title": "Person",
+    "journey.person.applications": "Ansökningar",
+    "journey.person.assessments": "Bedömningar",
+    "journey.person.interview": "Intervjuunderlag",
+    "journey.person.empty": "Ingen aktivitet i den här organisationen ännu.",
+
+    // Direct invitation.
+    "invite.title": "Bjud in deltagare",
+    "invite.lede":
+      "Bjud in någon till en bedömning, oavsett om personen redan har ett CQrityjob-konto. Har hen ett konto tilldelas bedömningen direkt. Annars sparas inbjudan och kopplas till personen när hen skapar sitt konto.",
+    "invite.email": "E-post",
+    "invite.name": "Namn (valfritt)",
+    "invite.context": "Sammanhang",
+    "invite.context.recruitment": "Rekrytering – kandidat",
+    "invite.context.workforce": "Kompetensutveckling – medarbetare",
+    "invite.send": "Skicka inbjudan",
+    "invite.sending": "Skickar…",
+    "invite.outcome.assigned": "Bedömningen är tilldelad. Personen ser den i sitt konto.",
+    "invite.outcome.invited":
+      "Inbjudan är sparad. Den kopplas automatiskt till personen när hen skapar sitt konto och bekräftar e-postadressen.",
+    "invite.failed": "Inbjudan kunde inte skickas.",
+    "invite.pending": "Väntande inbjudningar",
+    "invite.pendingLede":
+      "Inbjudningar till personer som ännu inte har ett konto. Ingen bedömning har startats — inbjudan kopplas när personen själv bekräftar sin adress.",
+    "invite.pendingEmpty": "Inga väntande inbjudningar.",
+    "invite.cancel": "Avbryt inbjudan",
+    "invite.status.pending": "Väntar",
+    "invite.status.bound": "Kopplad",
+    "invite.status.cancelled": "Avbruten",
+    "invite.status.expired": "Ej längre giltig",
+    "invite.reason.governance_basis_withdrawn": "Medgivandet återkallades",
+    "invite.reason.programme_retired": "Programmet är avvecklat",
+    "invite.reason.invitation_expired": "Inbjudan hann gå ut",
+    "invite.reason.purpose_not_available": "Ändamålet är inte godkänt",
+
+    // Candidate-side job context.
+    "academy.work.forJob": "Gäller ansökan:",
+    "academy.work.recruitmentContext": "Rekrytering",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -5694,6 +5748,58 @@ export const dictionaries = {
     "report.observedVsSelf": "Observed and self-reported",
     "report.observedVsSelfBody":
       "The assessment gathered two kinds of evidence. What you did in the situational tasks is observed. What you described about your own way of working is self-reported, and is never presented as demonstrated competence. The assessment is one source of information in a recruitment process and does not determine employment, authorisation or future job performance.",
+
+    // ── Recruitment journey ─────────────────────────────────────────────
+    "journey.assessment": "Assessment",
+    "journey.noAssessmentYet": "No assessment has been sent for this application.",
+    "journey.sendAssessment": "Send assessment",
+    "journey.sending": "Sending…",
+    "journey.assignFailed":
+      "The assessment could not be sent. Check that the organisation holds a valid grant for this content.",
+    "journey.openBrief": "Open candidate brief",
+    "journey.closedTest": "Closed test",
+    "journey.closedTestNotForSelection": "Closed test – not for operational selection decisions",
+    "journey.stage.invited": "Invited",
+    "journey.stage.started": "Started",
+    "journey.stage.under_review": "Under review",
+    "journey.stage.ready_to_release": "Ready to release",
+    "journey.stage.report_available": "Result available",
+    "journey.person.title": "Person",
+    "journey.person.applications": "Applications",
+    "journey.person.assessments": "Assessments",
+    "journey.person.interview": "Interview evidence",
+    "journey.person.empty": "No activity in this organisation yet.",
+
+    "invite.title": "Invite a participant",
+    "invite.lede":
+      "Invite somebody to an assessment whether or not they already have a CQrityjob account. If they do, it is assigned immediately. If they do not, the invitation is kept and binds to them when they create their account.",
+    "invite.email": "Email",
+    "invite.name": "Name (optional)",
+    "invite.context": "Context",
+    "invite.context.recruitment": "Recruitment – candidate",
+    "invite.context.workforce": "Competence development – employee",
+    "invite.send": "Send invitation",
+    "invite.sending": "Sending…",
+    "invite.outcome.assigned": "The assessment is assigned. They will see it in their account.",
+    "invite.outcome.invited":
+      "The invitation is saved. It binds automatically once they create an account and confirm the address.",
+    "invite.failed": "The invitation could not be sent.",
+    "invite.pending": "Pending invitations",
+    "invite.pendingLede":
+      "Invitations to people who do not have an account yet. No assessment has started — the invitation binds when the person confirms their own address.",
+    "invite.pendingEmpty": "No pending invitations.",
+    "invite.cancel": "Cancel invitation",
+    "invite.status.pending": "Waiting",
+    "invite.status.bound": "Bound",
+    "invite.status.cancelled": "Cancelled",
+    "invite.status.expired": "No longer valid",
+    "invite.reason.governance_basis_withdrawn": "The grant was withdrawn",
+    "invite.reason.programme_retired": "The programme was retired",
+    "invite.reason.invitation_expired": "The invitation expired",
+    "invite.reason.purpose_not_available": "The processing purpose is not approved",
+
+    "academy.work.forJob": "Relates to your application for:",
+    "academy.work.recruitmentContext": "Recruitment",
   },
 } as const;
 

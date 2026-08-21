@@ -228,6 +228,7 @@ DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_honesty() CASCADE;
 -- uuid/text signatures that the governance-enum cascade does not reach.
 -- scp_assessment_invitations references employers, jobs, job_applications and
 -- assessment_assignments, so it comes off before the Phase 2 unwind.
+DROP FUNCTION IF EXISTS public.scp_assign_from_application(uuid, uuid, uuid, timestamptz, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_invite_participant(uuid, uuid, text, text, text, text, timestamptz, uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_claim_assessment_invitations() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_cancel_assessment_invitation(uuid, text) CASCADE;

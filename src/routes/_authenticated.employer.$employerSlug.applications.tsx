@@ -15,6 +15,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
+import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -303,6 +304,17 @@ function ApplicationsList({
                       );
                     })()}
                   </div>
+
+                  {/* The recruitment assessment step, in the application it
+                      belongs to. It resolves the candidate from the
+                      application, so nobody retypes an address — and it is
+                      also the way back to the released brief. */}
+                  <ApplicationAssessmentPanel
+                    employerId={employerId}
+                    employerSlug={employerSlug}
+                    applicationId={r.id}
+                    canAssign={role === "owner" || role === "admin"}
+                  />
                 </li>
               );
             })}

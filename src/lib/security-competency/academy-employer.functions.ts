@@ -269,6 +269,11 @@ export type ReportBrief = {
   briefVersion: string;
   signalVersion: string;
   audience: "employer" | "participant";
+  /** A paragraph about THIS candidate, derived deterministically from the
+   *  arrays below and frozen with them. Employer briefs only: it is written
+   *  for somebody preparing to interview the person, and handing it to the
+   *  person themselves would be handing them a recruiter's working note. */
+  executiveSummary: { sv: string; en: string } | null;
   modules: BriefModule[];
   observed: ObservedArea[];
   selfReported: SelfReportedArea[];
@@ -726,6 +731,11 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         // Defaults to workforce, which is what the Academy has always meant.
         useCase: z.enum(["workforce", "recruitment"]).default("workforce"),
         employeeId: z.string().uuid().nullable().default(null),
+        // The hiring pipeline this assignment came from, when it came from
+        // one. The database verifies both belong to this employer AND that the
+        // applicant is the person being assessed — nothing here is trusted.
+        applicationId: z.string().uuid().nullable().default(null),
+        jobId: z.string().uuid().nullable().default(null),
       })
       .parse(d),
   )
@@ -751,6 +761,8 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         _language: data.language,
         _use_case: data.useCase,
         _employee_id: data.employeeId,
+        _application_id: data.applicationId,
+        _job_id: data.jobId,
       });
       if (error) throw fail(error.message, "assign_failed");
       const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
@@ -1124,10 +1136,14 @@ function mapBrief(b: RpcRow | null): ReportBrief | null {
   const arr = (k: string): RpcRow[] => (Array.isArray(b[k]) ? (b[k] as RpcRow[]) : []);
   const cov = (b.coverage ?? {}) as RpcRow;
   const pace = b.pace as RpcRow | null;
+  const summary = b.executive_summary as RpcRow | null;
   return {
     briefVersion: String(b.brief_version ?? ""),
     signalVersion: String(b.signal_version ?? ""),
     audience: b.audience as ReportBrief["audience"],
+    executiveSummary: summary
+      ? { sv: String(summary.sv ?? ""), en: String(summary.en ?? "") }
+      : null,
     modules: arr("modules").map((m) => ({
       blockKey: String(m.block_key),
       nameSv: String(m.name_sv),
@@ -1501,3 +1517,297 @@ export const recordInterviewNote = createServerFn({ method: "POST" })
     if (error) throw fail(error.message, "interview_note_failed");
     return { noteId: String(id) };
   });
+
+// ── The recruitment journey ────────────────────────────────────────────────
+//
+// One human from job application to released report. Everything below reads or
+// writes through a definer RPC that re-verifies membership for itself, so the
+// employer id arriving from a route is a CLAIM here exactly as it is elsewhere
+// in this file.
+
+/** Inviting somebody, whether or not the platform knows them yet.
+ *
+ *  `assigned` means the address resolved to an account and the governed assign
+ *  path ran. `invited` means it did not, and a pending invitation is waiting
+ *  for that person to create an account and confirm the address — at which
+ *  point it binds to their own subject. Two outcomes, one control, because the
+ *  employer is doing one thing and should not have to know which case they are
+ *  in. */
+export type InviteOutcome = "assigned" | "invited";
+
+export type InviteResult = {
+  outcome: InviteOutcome;
+  invitationId: string | null;
+  assignmentId: string | null;
+  attemptId: string | null;
+  subjectId: string | null;
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
+};
+
+export const inviteParticipant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        assessmentVersionId: z.string().uuid(),
+        email: z.string().email(),
+        useCase: z.enum(["workforce", "recruitment"]).default("recruitment"),
+        invitedName: z.string().max(160).nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+        deadline: z.string().nullable().default(null),
+        applicationId: z.string().uuid().nullable().default(null),
+        jobId: z.string().uuid().nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<InviteResult> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_invite_participant", {
+      _employer_id: data.employerId,
+      _assessment_version_id: data.assessmentVersionId,
+      _email: data.email,
+      _use_case: data.useCase,
+      _invited_name: data.invitedName ?? undefined,
+      _language: data.language,
+      _deadline: data.deadline ?? undefined,
+      _application_id: data.applicationId ?? undefined,
+      _job_id: data.jobId ?? undefined,
+    });
+    if (error) throw fail(error.message, "invite_failed");
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+    return {
+      outcome: String(r?.outcome ?? "invited") as InviteOutcome,
+      invitationId: r?.invitation_id ? String(r.invitation_id) : null,
+      assignmentId: r?.assignment_id ? String(r.assignment_id) : null,
+      attemptId: r?.attempt_id ? String(r.attempt_id) : null,
+      subjectId: r?.subject_id ? String(r.subject_id) : null,
+      governanceMode: (r?.governance_mode ?? null) as InviteResult["governanceMode"],
+    };
+  });
+
+export type PendingInvitation = {
+  invitationId: string;
+  email: string;
+  invitedName: string | null;
+  nameSv: string;
+  nameEn: string;
+  useCase: string;
+  applicationId: string | null;
+  jobId: string | null;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  status: "pending" | "bound" | "cancelled" | "expired";
+  /** Why it stopped being claimable. "the grant expired" and "the employer
+   *  cancelled it" look identical from outside and mean different things to
+   *  the person who was invited, so the reason is carried rather than inferred. */
+  closedReason: string | null;
+  invitedAt: string;
+  expiresAt: string;
+  boundAssignmentId: string | null;
+  boundAt: string | null;
+};
+
+export const listEmployerInvitations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<PendingInvitation[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_invitations", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "invitations_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      invitationId: String(r.invitation_id),
+      email: String(r.email),
+      invitedName: r.invited_name ? String(r.invited_name) : null,
+      nameSv: String(r.name_sv ?? ""),
+      nameEn: String(r.name_en ?? ""),
+      useCase: String(r.use_case),
+      applicationId: r.application_id ? String(r.application_id) : null,
+      jobId: r.job_id ? String(r.job_id) : null,
+      jobTitleSv: r.job_title_sv ? String(r.job_title_sv) : null,
+      jobTitleEn: r.job_title_en ? String(r.job_title_en) : null,
+      status: String(r.status) as PendingInvitation["status"],
+      closedReason: r.closed_reason ? String(r.closed_reason) : null,
+      invitedAt: String(r.invited_at),
+      expiresAt: String(r.expires_at),
+      boundAssignmentId: r.bound_assignment_id ? String(r.bound_assignment_id) : null,
+      boundAt: r.bound_at ? String(r.bound_at) : null,
+    }));
+  });
+
+export const cancelInvitation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        invitationId: z.string().uuid(),
+        reason: z.string().max(200).nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<void> => {
+    const ctx = context as Ctx;
+    const { error } = await ctx.supabase.rpc("scp_cancel_assessment_invitation", {
+      _invitation_id: data.invitationId,
+      _reason: data.reason ?? undefined,
+    });
+    if (error) throw fail(error.message, "cancel_invitation_failed");
+  });
+
+/** The assessments on one job application — the Application → Assessment →
+ *  Report step of the chain. Status and lineage only: the return type carries
+ *  no response, no option, no score and no reviewer material. */
+export type ApplicationAssessment = {
+  assignmentId: string;
+  attemptId: string;
+  subjectId: string;
+  assessmentSlug: string;
+  nameSv: string;
+  nameEn: string;
+  designedFor: string;
+  useCase: string;
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
+  attemptStatus: string;
+  answered: number;
+  totalItems: number;
+  reviewsOutstanding: number;
+  invitedAt: string;
+  deadline: string | null;
+  submittedAt: string | null;
+  scoredAt: string | null;
+  releasedAt: string | null;
+  reportAvailable: boolean;
+};
+
+export const listApplicationAssessments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ApplicationAssessment[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_application_assessments", {
+      _application_id: data.applicationId,
+    });
+    if (error) throw fail(error.message, "application_assessments_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      assignmentId: String(r.assignment_id),
+      attemptId: String(r.attempt_id),
+      subjectId: String(r.subject_id),
+      assessmentSlug: String(r.assessment_slug ?? ""),
+      nameSv: String(r.name_sv ?? ""),
+      nameEn: String(r.name_en ?? ""),
+      designedFor: String(r.designed_for ?? "competence_development"),
+      useCase: String(r.use_case ?? ""),
+      governanceMode: (r.governance_mode ?? null) as ApplicationAssessment["governanceMode"],
+      attemptStatus: String(r.attempt_status),
+      answered: Number(r.answered ?? 0),
+      totalItems: Number(r.total_items ?? 0),
+      reviewsOutstanding: Number(r.reviews_outstanding ?? 0),
+      invitedAt: String(r.invited_at),
+      deadline: r.deadline ? String(r.deadline) : null,
+      submittedAt: r.submitted_at ? String(r.submitted_at) : null,
+      scoredAt: r.scored_at ? String(r.scored_at) : null,
+      releasedAt: r.released_at ? String(r.released_at) : null,
+      reportAvailable: Boolean(r.report_available),
+    }));
+  });
+
+/** One person, as ONE organisation knows them. Scoped to both subject and
+ *  employer, so somebody who is a candidate at three companies never leaks one
+ *  company's activity to another. */
+export type PersonOverviewRow = {
+  rowKind: "application" | "assessment" | "interview_note";
+  rowId: string;
+  titleSv: string | null;
+  titleEn: string | null;
+  status: string | null;
+  useCase: string | null;
+  applicationId: string | null;
+  jobId: string | null;
+  attemptId: string | null;
+  releasedAt: string | null;
+  reportAvailable: boolean;
+  occurredAt: string;
+};
+
+export const getPersonOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ employerId: z.string().uuid(), subjectId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<PersonOverviewRow[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_person_overview", {
+      _employer_id: data.employerId,
+      _subject_id: data.subjectId,
+    });
+    if (error) throw fail(error.message, "person_overview_failed");
+    const mapped: PersonOverviewRow[] = (rows ?? []).map((r: RpcRow) => ({
+      rowKind: String(r.row_kind) as PersonOverviewRow["rowKind"],
+      rowId: String(r.row_id),
+      titleSv: r.title_sv ? String(r.title_sv) : null,
+      titleEn: r.title_en ? String(r.title_en) : null,
+      status: r.status ? String(r.status) : null,
+      useCase: r.use_case ? String(r.use_case) : null,
+      applicationId: r.application_id ? String(r.application_id) : null,
+      jobId: r.job_id ? String(r.job_id) : null,
+      attemptId: r.attempt_id ? String(r.attempt_id) : null,
+      releasedAt: r.released_at ? String(r.released_at) : null,
+      reportAvailable: Boolean(r.report_available),
+      occurredAt: String(r.occurred_at),
+    }));
+    // Newest first, across all three kinds — the person's timeline with this
+    // organisation, not three separate lists the reader has to interleave.
+    return mapped.sort((x, y) => y.occurredAt.localeCompare(x.occurredAt));
+  });
+
+/** Assign from an application, without the employer surface ever holding the
+ *  candidate's address.
+ *
+ *  The database resolves the applicant from the application. That is not a
+ *  convenience: prefilling an address here would mean the applications list had
+ *  to carry it, which is a disclosure it deliberately does not make — and a
+ *  retyped address is how a typo creates a second person and the result
+ *  attaches to nobody. */
+export const assignFromApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        assessmentVersionId: z.string().uuid(),
+        deadline: z.string().nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      assignmentId: string;
+      attemptId: string;
+      subjectId: string;
+      governanceMode: "development" | "closed_test" | "recruitment";
+    }> => {
+      const ctx = context as Ctx;
+      const { data: rows, error } = await ctx.supabase.rpc("scp_assign_from_application", {
+        _employer_id: data.employerId,
+        _application_id: data.applicationId,
+        _assessment_version_id: data.assessmentVersionId,
+        _deadline: data.deadline,
+        _language: data.language,
+      });
+      if (error) throw fail(error.message, "assign_failed");
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+      return {
+        assignmentId: String(r.assignment_id),
+        attemptId: String(r.attempt_id),
+        subjectId: String(r.subject_id),
+        governanceMode: r.governance_mode as "development" | "closed_test" | "recruitment",
+      };
+    },
+  );
