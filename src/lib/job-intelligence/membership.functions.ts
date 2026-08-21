@@ -160,6 +160,10 @@ export type MyEmployerWorkspace = {
   employerName: string;
   employerLogoUrl: string | null;
   employerStatus: EmployerOrgStatus;
+  /** When the organisation was registered. Carried so the review page can
+   *  state the real date instead of inventing one -- it previously rendered
+   *  `new Date()`, which showed today every time the page was opened. */
+  employerCreatedAt: string | null;
   role: EmployerRole;
 };
 
@@ -169,6 +173,7 @@ type EmployerWorkspaceEmbed = {
   name: string;
   logo_url: string | null;
   status: EmployerOrgStatus;
+  created_at: string | null;
 };
 
 type EmployerWorkspaceRow = {
@@ -191,7 +196,7 @@ export const listMyEmployerWorkspaces = createServerFn({ method: "GET" })
     // employers_member_select already permitted reading this column.
     const { data, error } = await ctx.supabase
       .from("employer_memberships")
-      .select("role, employers(id, slug, name, logo_url, status)")
+      .select("role, employers(id, slug, name, logo_url, status, created_at)")
       .eq("user_id", ctx.userId)
       .eq("status", "active")
       .order("created_at", { ascending: false });
@@ -219,6 +224,7 @@ export const listMyEmployerWorkspaces = createServerFn({ method: "GET" })
         employerName: employer.name,
         employerLogoUrl: employer.logo_url,
         employerStatus: employer.status,
+        employerCreatedAt: employer.created_at ?? null,
         role: row.role,
       });
     }

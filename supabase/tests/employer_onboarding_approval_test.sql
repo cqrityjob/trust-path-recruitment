@@ -270,6 +270,30 @@ SELECT pg_temp.ok(
   'neither applicant gained access to an unrelated organisation');
 
 -- ---------------------------------------------------------------------------
+-- 9b. Every non-active status withholds access, not just the ones a
+--     registration passes through. `archived` is here because the first
+--     version of the workspace gate let it through -- an organisation that has
+--     been closed is the last one that should open a dashboard.
+-- ---------------------------------------------------------------------------
+UPDATE public.employers SET status = 'suspended' WHERE id = (SELECT employer_id FROM t_a);
+SELECT pg_temp.ok(
+  public.employer_is_active_status((SELECT employer_id FROM t_a)) = false,
+  'a suspended organisation cannot act');
+
+UPDATE public.employers SET status = 'archived' WHERE id = (SELECT employer_id FROM t_a);
+SELECT pg_temp.ok(
+  public.employer_is_active_status((SELECT employer_id FROM t_a)) = false,
+  'an archived organisation cannot act');
+
+UPDATE public.employers SET status = 'draft' WHERE id = (SELECT employer_id FROM t_a);
+SELECT pg_temp.ok(
+  public.employer_is_active_status((SELECT employer_id FROM t_a)) = false,
+  'a draft organisation cannot act');
+
+-- Restore, so the closing assertions read the state the decision left.
+UPDATE public.employers SET status = 'active' WHERE id = (SELECT employer_id FROM t_a);
+
+-- ---------------------------------------------------------------------------
 -- 10. Employers that were already trading are untouched.
 -- ---------------------------------------------------------------------------
 SELECT pg_temp.ok(

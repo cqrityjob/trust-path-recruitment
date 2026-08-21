@@ -49,20 +49,25 @@ function EmployerWorkspaceGate() {
     enabled: employerPortalEnabled(),
   });
 
+  // Only `active` opens the workspace.
+  //
+  // This first read excluded `archived` from the redirect, which let an
+  // archived organisation render the full dashboard -- the one status that is
+  // most certainly not open for business. There is no tier of "not quite
+  // active but close enough": pending, draft, rejected, suspended and archived
+  // all mean the workspace does not open, and each gets an honest account of
+  // why on the status page.
   const workspace = (query.data ?? []).find((w) => w.employerSlug === employerSlug);
-  const underReview =
-    workspace !== undefined &&
-    workspace.employerStatus !== "active" &&
-    workspace.employerStatus !== "archived";
+  const blocked = workspace !== undefined && workspace.employerStatus !== "active";
 
   useEffect(() => {
-    if (underReview) navigate({ to: "/employer/pending", replace: true });
-  }, [underReview, navigate]);
+    if (blocked) navigate({ to: "/employer/pending", replace: true });
+  }, [blocked, navigate]);
 
   // A slug this person has no membership for falls through to the child page,
   // which renders the existing access-denied surface. Redirecting here would
   // tell a stranger which slugs exist.
-  if (underReview) {
+  if (blocked) {
     return (
       <div className="mx-auto max-w-xl px-4 py-16">
         <p className="text-sm text-muted-foreground">{t("employer.pending.checking")}</p>

@@ -440,6 +440,12 @@ export const dictionaries = {
       "Vi kan tyvärr inte aktivera ett arbetsgivarkonto för den här organisationen.",
     "employer.rejected.contact":
       "Hör av dig till oss om du tror att det här är ett misstag.",
+    "employer.unavailable.heading":
+      "Arbetsgivarytan är inte tillgänglig",
+    "employer.unavailable.body":
+      "Företagets tillgång till arbetsgivarytan är för närvarande avstängd.",
+    "employer.pending.checkStatus":
+      "Kontrollera status",
     "employer.pending.checking":
       "Kontrollerar din registrering …",
     "auth.intro":
@@ -3377,6 +3383,12 @@ export const dictionaries = {
       "We are not able to activate an employer account for this organisation.",
     "employer.rejected.contact":
       "Please contact us if you believe this is a mistake.",
+    "employer.unavailable.heading":
+      "The employer workspace is not available",
+    "employer.unavailable.body":
+      "This organisation's access to the employer workspace is currently closed.",
+    "employer.pending.checkStatus":
+      "Check status",
     "employer.pending.checking":
       "Checking your registration …",
     "auth.intro":

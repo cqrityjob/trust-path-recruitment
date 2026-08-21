@@ -15,7 +15,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
-import { Clock, ShieldX } from "lucide-react";
+import { Clock, RefreshCw, ShieldX } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -32,15 +32,28 @@ function EmployerPendingPage() {
   const navigate = useNavigate();
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
 
+  // Approval happens somewhere else, in someone else's browser. Without a
+  // poll, the person sitting on this page would keep reading that they are
+  // waiting for as long as they left the tab open -- and would only discover
+  // otherwise by signing out and back in. Twelve seconds is frequent enough to
+  // feel immediate and cheap enough to leave running; it stops the moment an
+  // active workspace appears, which is also the moment this page redirects.
   const query = useQuery({
     queryKey: ["employer", "my-workspaces"],
     queryFn: () => listWorkspaces(),
+    refetchInterval: (q) =>
+      (q.state.data ?? []).some((w) => w.employerStatus === "active") ? false : 12_000,
+    refetchOnWindowFocus: true,
   });
 
   const workspaces = query.data ?? [];
   const active = workspaces.find((w) => w.employerStatus === "active");
-  const rejected = workspaces.find(
-    (w) => w.employerStatus === "rejected" || w.employerStatus === "suspended",
+  const rejected = workspaces.find((w) => w.employerStatus === "rejected");
+  // Suspended and archived are not refusals of a registration -- the
+  // organisation was approved once and is closed now. Saying "your
+  // registration was not approved" would be untrue.
+  const unavailable = workspaces.find(
+    (w) => w.employerStatus === "suspended" || w.employerStatus === "archived",
   );
   const waiting = workspaces.find(
     (w) => w.employerStatus === "pending" || w.employerStatus === "draft",
@@ -66,8 +79,12 @@ function EmployerPendingPage() {
     );
   }
 
-  const org = rejected ?? waiting ?? null;
-  const isRejected = Boolean(rejected);
+  const org = rejected ?? unavailable ?? waiting ?? null;
+  const state: "rejected" | "unavailable" | "waiting" = rejected
+    ? "rejected"
+    : unavailable
+      ? "unavailable"
+      : "waiting";
 
   return (
     <div className="mx-auto max-w-xl px-4 py-16">
@@ -75,17 +92,32 @@ function EmployerPendingPage() {
         className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground"
         aria-hidden="true"
       >
-        {isRejected ? <ShieldX className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+        {state === "waiting" ? <Clock className="h-5 w-5" /> : <ShieldX className="h-5 w-5" />}
       </span>
 
       <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-        {t(isRejected ? "employer.rejected.heading" : "employer.pending.heading")}
+        {t(
+          state === "rejected"
+            ? "employer.rejected.heading"
+            : state === "unavailable"
+              ? "employer.unavailable.heading"
+              : "employer.pending.heading",
+        )}
       </h1>
 
-      {isRejected ? (
+      {state === "rejected" ? (
         <>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {t("employer.rejected.body")}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {t("employer.rejected.contact")}
+          </p>
+        </>
+      ) : state === "unavailable" ? (
+        <>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {t("employer.unavailable.body")}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {t("employer.rejected.contact")}
@@ -121,21 +153,41 @@ function EmployerPendingPage() {
               {t("employer.pending.registered")}
             </dt>
             <dd className="mt-0.5 font-medium text-foreground">
-              {new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "sv-SE").format(new Date())}
+              {org.employerCreatedAt
+                ? new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "sv-SE").format(
+                    new Date(org.employerCreatedAt),
+                  )
+                : "—"}
             </dd>
           </div>
         </dl>
       )}
 
-      <button
-        type="button"
-        onClick={() => {
-          void supabase.auth.signOut().then(() => navigate({ to: "/employer/login" }));
-        }}
-        className="mt-8 inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50"
-      >
-        {t("employer.pending.signOut")}
-      </button>
+      <div className="mt-8 flex flex-wrap gap-2">
+        {state === "waiting" && (
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+          >
+            <RefreshCw
+              className={"h-3.5 w-3.5" + (query.isFetching ? " animate-spin" : "")}
+              aria-hidden="true"
+            />
+            {t("employer.pending.checkStatus")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            void supabase.auth.signOut().then(() => navigate({ to: "/employer/login" }));
+          }}
+          className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50"
+        >
+          {t("employer.pending.signOut")}
+        </button>
+      </div>
     </div>
   );
 }

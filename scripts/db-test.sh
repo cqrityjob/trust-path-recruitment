@@ -1090,8 +1090,8 @@ fi
 
 echo "    ok  ${ONB_PASSED} employer onboarding assertions passed"
 
-if [ "$ONB_PASSED" -lt 23 ]; then
-  echo "FAIL: expected at least 23 employer onboarding assertions, only ${ONB_PASSED} ran." >&2
+if [ "$ONB_PASSED" -lt 26 ]; then
+  echo "FAIL: expected at least 26 employer onboarding assertions, only ${ONB_PASSED} ran." >&2
   exit 1
 fi
 
