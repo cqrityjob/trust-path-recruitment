@@ -136,162 +136,177 @@ function AssessmentCatalog({
       activeSection="assessments"
       hasMultipleWorkspaces={hasMultipleWorkspaces}
     >
-      {/* Assessment Center sub-navigation and the Academy overview. Added in
-          Phase 2: the legacy catalogue below is unchanged, so historical
-          assessments and their reports still open exactly as before. */}
       <AcademyTabs employerSlug={employerSlug} />
       <AcademyOverview employerId={employerId} employerSlug={employerSlug} />
 
-      <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-        {t("employer.assessments.heading")}
-      </h1>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        {t("employer.assessments.subheading")}
-      </p>
+      {/* The older Assessment Center catalogue.
+       *
+       *  Every row of it is employer_visible = false today, so for a customer
+       *  this section was a heading, a subheading, two use-case cards, two
+       *  category tabs and an empty list -- stacked underneath the overview
+       *  that actually works, and repeating its title. It is now rendered only
+       *  when this organisation genuinely has catalogue entries, and when it
+       *  does it reads as a section of the page rather than a second page
+       *  glued to the bottom of the first.
+       *
+       *  The catalogue's own routes stay mounted either way: assessments
+       *  released through the older engine still open from their own links. */}
+      {entries.length > 0 && (
+        <>
+          <h2 className="mt-10 text-lg font-semibold text-foreground">
+            {t("employer.assessments.catalogueHeading")}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {t("employer.assessments.subheading")}
+          </p>
 
-      {/* Use-case explanation */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <p className="text-sm font-semibold text-foreground">
-            {t("employer.assessments.useCase.recruitment.title")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("employer.assessments.useCase.recruitment.body")}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <p className="text-sm font-semibold text-foreground">
-            {t("employer.assessments.useCase.development.title")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("employer.assessments.useCase.development.body")}
-          </p>
-        </div>
-      </div>
+          {/* Use-case explanation */}
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-border bg-muted/20 p-4">
+              <p className="text-sm font-semibold text-foreground">
+                {t("employer.assessments.useCase.recruitment.title")}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("employer.assessments.useCase.recruitment.body")}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4">
+              <p className="text-sm font-semibold text-foreground">
+                {t("employer.assessments.useCase.development.title")}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("employer.assessments.useCase.development.body")}
+              </p>
+            </div>
+          </div>
 
-      {/* Primary category navigation */}
-      <div
-        className="mt-8 flex flex-wrap gap-1 rounded-lg border border-border bg-muted/20 p-1"
-        role="tablist"
-        aria-label={t("employer.assessments.categoryNav.ariaLabel")}
-      >
-        {(["operational", "strategic"] as const).map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="tab"
-            aria-selected={category === c}
-            onClick={() => setCategory(c)}
-            className={
-              category === c
-                ? "rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm"
-                : "rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-            }
+          {/* Primary category navigation */}
+          <div
+            className="mt-8 flex flex-wrap gap-1 rounded-lg border border-border bg-muted/20 p-1"
+            role="tablist"
+            aria-label={t("employer.assessments.categoryNav.ariaLabel")}
           >
-            {t(
-              c === "operational"
-                ? "employer.assessments.tab.operational"
-                : "employer.assessments.tab.strategic",
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6">
-        {query.isLoading ? (
-          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        ) : query.isError ? (
-          <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-6 text-sm">
-            <p className="text-destructive">{t("employer.assessments.error.load")}</p>
-            <button
-              type="button"
-              onClick={() => query.refetch()}
-              className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40"
-            >
-              {t("employer.assessments.error.retry")}
-            </button>
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            {category === "strategic"
-              ? t("employer.assessments.strategic.empty")
-              : t("employer.assessments.operational.empty")}
-          </div>
-        ) : (
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {visible.map((entry) => (
-              <li key={entry.id} className="rounded-lg border border-border bg-background p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="text-base font-semibold text-foreground">
-                    {lang === "sv" ? entry.name.sv : entry.name.en}
-                  </h2>
-                  <span className="inline-flex flex-none rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {t(
-                      entry.publicationStatus === "published"
-                        ? "employer.assessments.status.published"
-                        : "employer.assessments.status.unpublished",
-                    )}
-                  </span>
-                </div>
-                {DESCRIPTION_KEY[entry.id] && (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {t(DESCRIPTION_KEY[entry.id])}
-                  </p>
+            {(["operational", "strategic"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="tab"
+                aria-selected={category === c}
+                onClick={() => setCategory(c)}
+                className={
+                  category === c
+                    ? "rounded-md bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm"
+                    : "rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                }
+              >
+                {t(
+                  c === "operational"
+                    ? "employer.assessments.tab.operational"
+                    : "employer.assessments.tab.strategic",
                 )}
-                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                  <div>
-                    <dt className="text-muted-foreground">
-                      {t("employer.assessments.card.questionCount")}
-                    </dt>
-                    <dd className="font-medium text-foreground">{entry.questionCount}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">
-                      {t("employer.assessments.card.duration")}
-                    </dt>
-                    <dd className="font-medium text-foreground">~{entry.estimatedMinutes} min</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">
-                      {t("employer.assessments.card.roleCategory")}
-                    </dt>
-                    <dd className="font-medium text-foreground">
-                      {t(
-                        entry.roleCategory === "operational"
-                          ? "employer.assessments.tab.operational"
-                          : "employer.assessments.tab.strategic",
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">
-                      {t("employer.assessments.card.lastUpdated")}
-                    </dt>
-                    <dd className="font-medium text-foreground">
-                      {entry.lastUpdated
-                        ? new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          }).format(new Date(entry.lastUpdated))
-                        : "—"}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="mt-4">
-                  <Link
-                    to="/employer/$employerSlug/assessments/$assessmentSlug"
-                    params={{ employerSlug, assessmentSlug: entry.id }}
-                    className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40"
-                  >
-                    {t("employer.assessments.card.viewDetails")}
-                  </Link>
-                </div>
-              </li>
+              </button>
             ))}
-          </ul>
-        )}
-      </div>
+          </div>
+
+          <div className="mt-6">
+            {query.isLoading ? (
+              <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+            ) : query.isError ? (
+              <div className="rounded-lg border border-dashed border-destructive/40 bg-destructive/5 p-6 text-sm">
+                <p className="text-destructive">{t("employer.assessments.error.load")}</p>
+                <button
+                  type="button"
+                  onClick={() => query.refetch()}
+                  className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40"
+                >
+                  {t("employer.assessments.error.retry")}
+                </button>
+              </div>
+            ) : visible.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
+                {category === "strategic"
+                  ? t("employer.assessments.strategic.empty")
+                  : t("employer.assessments.operational.empty")}
+              </div>
+            ) : (
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {visible.map((entry) => (
+                  <li key={entry.id} className="rounded-lg border border-border bg-background p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="text-base font-semibold text-foreground">
+                        {lang === "sv" ? entry.name.sv : entry.name.en}
+                      </h2>
+                      <span className="inline-flex flex-none rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {t(
+                          entry.publicationStatus === "published"
+                            ? "employer.assessments.status.published"
+                            : "employer.assessments.status.unpublished",
+                        )}
+                      </span>
+                    </div>
+                    {DESCRIPTION_KEY[entry.id] && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {t(DESCRIPTION_KEY[entry.id])}
+                      </p>
+                    )}
+                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">
+                          {t("employer.assessments.card.questionCount")}
+                        </dt>
+                        <dd className="font-medium text-foreground">{entry.questionCount}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">
+                          {t("employer.assessments.card.duration")}
+                        </dt>
+                        <dd className="font-medium text-foreground">
+                          ~{entry.estimatedMinutes} min
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">
+                          {t("employer.assessments.card.roleCategory")}
+                        </dt>
+                        <dd className="font-medium text-foreground">
+                          {t(
+                            entry.roleCategory === "operational"
+                              ? "employer.assessments.tab.operational"
+                              : "employer.assessments.tab.strategic",
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">
+                          {t("employer.assessments.card.lastUpdated")}
+                        </dt>
+                        <dd className="font-medium text-foreground">
+                          {entry.lastUpdated
+                            ? new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }).format(new Date(entry.lastUpdated))
+                            : "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4">
+                      <Link
+                        to="/employer/$employerSlug/assessments/$assessmentSlug"
+                        params={{ employerSlug, assessmentSlug: entry.id }}
+                        className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent/60 hover:bg-muted/40"
+                      >
+                        {t("employer.assessments.card.viewDetails")}
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </EmployerAppShell>
   );
 }

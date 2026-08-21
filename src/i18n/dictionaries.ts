@@ -1095,6 +1095,7 @@ export const dictionaries = {
     "employer.comingSoonShort": "Kommer snart",
 
     "employer.assessments.heading": "Bedömningar",
+    "employer.assessments.catalogueHeading": "Standardbedömningar",
     "employer.assessments.subheading":
       "Använd strukturerade bedömningar för att stödja rekrytering, rollmatchning och kompetensutveckling inom säkerhetsverksamhet.",
     "employer.assessments.categoryNav.ariaLabel": "Kategorival",
@@ -4032,6 +4033,7 @@ export const dictionaries = {
     "employer.comingSoonShort": "Coming soon",
 
     "employer.assessments.heading": "Assessments",
+    "employer.assessments.catalogueHeading": "Standard assessments",
     "employer.assessments.subheading":
       "Use structured assessments to support recruitment, role matching and competence development within security operations.",
     "employer.assessments.categoryNav.ariaLabel": "Category selection",
