@@ -924,8 +924,6 @@ export const dictionaries = {
     "employer.dashboard.action.inviteAssessment": "Bjud in kandidat till bedömning",
     "employer.dashboard.action.orgSettings": "Organisationsinställningar",
     "employer.dashboard.action.viewAssessments": "Visa bedömningar",
-    "employer.dashboard.assessmentCenter.available":
-      "Bedömningscentret är nu tillgängligt. Inbjudan av kandidater kommer i en senare fas.",
     "employer.dashboard.action.open": "Öppna",
     "employer.dashboard.action.hideInfo": "Dölj",
     "employer.dashboard.comingNext":
@@ -946,7 +944,6 @@ export const dictionaries = {
     "employer.dashboard.section.company": "Organisation",
     "employer.dashboard.section.company.desc":
       "Uppdatera företagsinformation, kontaktuppgifter och medlemmar.",
-    "employer.dashboard.section.assessment": "Bedömningscenter",
     "employer.dashboard.section.assessment.desc":
       "Strukturerade professionella bedömningar av kandidater och medarbetare.",
     "employer.dashboard.action.createJob.desc":
@@ -957,7 +954,6 @@ export const dictionaries = {
     "employer.dashboard.action.applications.desc": "Granska kandidater som har sökt era annonser.",
     "employer.dashboard.action.orgSettings.desc":
       "Hantera företagsprofil, kontaktuppgifter och synlighet.",
-    "employer.dashboard.assessmentCenter.heading": "Bedömningscenter",
     "employer.dashboard.assessmentCenter.body":
       "Bedöm kandidater och medarbetare med strukturerade, professionella bedömningar. Lanseras snart.",
     "employer.dashboard.assessmentCenter.badge": "Lanseras snart",
@@ -2188,10 +2184,10 @@ export const dictionaries = {
     "academy.error.title": "Det gick inte att öppna bedömningen",
     "academy.error.unavailableTitle": "Den här delen är inte tillgänglig ännu",
     "academy.error.unavailableBody":
-      "Assessment Center är på väg att aktiveras och databasen är inte helt uppdaterad än. Det är inget fel på ditt konto och inga uppgifter har gått förlorade. Försök igen om en stund, eller hör av dig till oss om det kvarstår.",
+      "Den här delen av Bedömningar är inte påslagen för er organisation ännu. Det är inget fel på ditt konto och inga uppgifter har gått förlorade. Försök igen om en stund, eller hör av dig till oss om det kvarstår.",
     "academy.error.deniedTitle": "Du har inte behörighet till den här vyn",
     "academy.error.deniedBody":
-      "Ditt konto saknar behörighet för den här delen av Assessment Center. Kontakta din organisations administratör om du tror att det är fel.",
+      "Ditt konto saknar behörighet för den här delen av Bedömningar. Kontakta din organisations administratör om du tror att det är fel.",
     "academy.error.failedTitle": "Informationen kunde inte hämtas",
     "academy.error.failedBody":
       "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
@@ -2211,7 +2207,7 @@ export const dictionaries = {
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
     // ── Assessment Center (Academy) — employer + participant ────────────
-    "academy.nav.aria": "Assessment Center",
+    "academy.nav.aria": "Bedömningar",
     "academy.nav.overview": "Översikt",
     "academy.nav.library": "Bedömningsbibliotek",
     "academy.nav.participants": "Deltagare",
@@ -2270,6 +2266,12 @@ export const dictionaries = {
     "academy.library.close": "Stäng",
     "academy.library.detailHeading": "Om programmet",
     "academy.library.provides": "Vad detta ger underlag om",
+    "academy.library.areas":
+      "Områden",
+    "academy.library.youReceive":
+      "Det här får ni tillbaka",
+    "academy.library.youReceiveBody":
+      "Ett kandidatunderlag inför intervjun: vad kandidaten visade i uppgifterna, vad kandidaten själv beskriver om sitt arbetssätt, områden värda att följa upp, och en strukturerad intervjuguide med frågor valda utifrån just de här svaren. Inget omdöme om lämplighet, ingen poäng och ingen rekommendation — beslutet är ert.",
     "academy.library.notEstablished": "Vad detta inte fastställer",
     "academy.library.notEstablishedBody":
       "Detta är inte ett intyg, ingen laglig behörighet och inget anställningsbeslut. Det finns inget godkänt eller underkänt.",
@@ -3837,8 +3839,6 @@ export const dictionaries = {
     "employer.dashboard.action.inviteAssessment": "Invite candidate to assessment",
     "employer.dashboard.action.orgSettings": "Organisation settings",
     "employer.dashboard.action.viewAssessments": "View assessments",
-    "employer.dashboard.assessmentCenter.available":
-      "The Assessment Center is now available. Inviting candidates is coming in a later phase.",
     "employer.dashboard.action.open": "Open",
     "employer.dashboard.action.hideInfo": "Hide",
     "employer.dashboard.comingNext":
@@ -3857,7 +3857,6 @@ export const dictionaries = {
     "employer.dashboard.section.company": "Organisation",
     "employer.dashboard.section.company.desc":
       "Update company information, contact details, and members.",
-    "employer.dashboard.section.assessment": "Assessment Center",
     "employer.dashboard.section.assessment.desc":
       "Structured, professional assessments of candidates and employees.",
     "employer.dashboard.action.createJob.desc": "Draft and submit a new job posting for review.",
@@ -3868,7 +3867,6 @@ export const dictionaries = {
       "Review candidates who have applied to your jobs.",
     "employer.dashboard.action.orgSettings.desc":
       "Manage company profile, contact details, and visibility.",
-    "employer.dashboard.assessmentCenter.heading": "Assessment Center",
     "employer.dashboard.assessmentCenter.body":
       "Assess candidates and employees using structured professional assessments. Launching soon.",
     "employer.dashboard.assessmentCenter.badge": "Launching soon",
@@ -5089,10 +5087,10 @@ export const dictionaries = {
     "academy.error.title": "This assessment could not be opened",
     "academy.error.unavailableTitle": "This area is not available yet",
     "academy.error.unavailableBody":
-      "The Assessment Center is still being switched on and the database is not fully up to date. There is nothing wrong with your account and no data has been lost. Try again shortly, or contact us if it persists.",
+      "This part of Assessments is not switched on for your organisation yet. There is nothing wrong with your account and no data has been lost. Try again shortly, or contact us if it persists.",
     "academy.error.deniedTitle": "You do not have access to this view",
     "academy.error.deniedBody":
-      "Your account does not have permission for this part of the Assessment Center. Contact your organisation's administrator if you believe this is wrong.",
+      "Your account does not have permission for this part of Assessments. Contact your organisation's administrator if you believe this is wrong.",
     "academy.error.failedTitle": "The information could not be loaded",
     "academy.error.failedBody":
       "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
@@ -5112,7 +5110,7 @@ export const dictionaries = {
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
     // ── Assessment Center (Academy) — employer + participant ────────────
-    "academy.nav.aria": "Assessment Center",
+    "academy.nav.aria": "Assessments",
     "academy.nav.overview": "Overview",
     "academy.nav.library": "Assessment library",
     "academy.nav.participants": "Participants",
@@ -5172,6 +5170,12 @@ export const dictionaries = {
     "academy.library.close": "Close",
     "academy.library.detailHeading": "About this programme",
     "academy.library.provides": "What this provides evidence about",
+    "academy.library.areas":
+      "Areas",
+    "academy.library.youReceive":
+      "What you get back",
+    "academy.library.youReceiveBody":
+      "A candidate brief to work from before the interview: what the candidate demonstrated in the tasks, what they say about their own way of working, areas worth following up, and a structured interview guide whose questions are chosen from these particular answers. No verdict on suitability, no score and no recommendation — the decision is yours.",
     "academy.library.notEstablished": "What this does not establish",
     "academy.library.notEstablishedBody":
       "This is not a certification, not a legal authorisation and not a hiring decision. There is no pass or fail.",

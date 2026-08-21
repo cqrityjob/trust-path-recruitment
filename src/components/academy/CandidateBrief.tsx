@@ -373,17 +373,6 @@ export function CandidateBrief({
         </Section>
       )}
 
-      <InterviewNotesPanel
-        attemptId={attemptId}
-        canRecord={canRecord}
-        areas={[
-          ...brief.observed.map((o) => ({
-            code: o.areaCode,
-            label: sv ? o.areaSv : o.areaEn,
-          })),
-        ]}
-      />
-
       <p className="mt-6 flex items-start gap-2 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-foreground">
         <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
         <span>{t("brief.notADecision")}</span>
@@ -396,8 +385,13 @@ export function CandidateBrief({
  *
  *  Append-only in the database and append-only here: there is no edit control,
  *  because there is nothing to edit. A later reading is a further note, which
- *  is how a record of a conversation should behave. */
-function InterviewNotesPanel({
+ *  is how a record of a conversation should behave.
+ *
+ *  Rendered by the report page rather than inside the brief: a recruiter reads
+ *  the brief, then the detailed evidence, and only then writes down what the
+ *  conversation gave. Sitting inside the brief, the form asked them to record
+ *  an outcome before they had seen the evidence under it. */
+export function InterviewNotesPanel({
   attemptId,
   canRecord,
   areas,

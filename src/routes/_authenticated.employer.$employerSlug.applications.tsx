@@ -6,6 +6,24 @@
 // lookup key only, re-verified independently via
 // listMyEmployerWorkspaces() on every load.
 //
+// The assessment step on this page is the governed ApplicationAssessmentPanel
+// under each row, and only that.
+//
+// Each row used to carry its own assessment controls, cross-referenced from
+// assessment_assignments: a "Tilldela bedomning" link into the legacy assign
+// form with assessmentId=security-guard-foundation hardcoded, a link into the
+// legacy EngineResultV1 report, and a status chip. All three are removed.
+//
+// The assign link was the worst of the three -- that catalogue row is
+// employer_visible = false, so a recruiter could open the form, fill it in,
+// and only then be refused. The other two were a second, competing account of
+// assessment state on the same row, and the report link would open the older
+// engine's view even for an attempt that ran through the governed path.
+//
+// The panel resolves the candidate from the application itself, offers only
+// assessments written for recruitment that this organisation may actually run,
+// and sends through scp_assign_from_application. One path, governed end to end.
+//
 // H3.4A — extended with the full status-control model (reviewing /
 // interview / rejected / hired), backed by the database-validated,
 // atomically-audited set_application_status() RPC (via
@@ -38,7 +56,6 @@ import {
   type EmployerApplicationRow,
   type ApplicationStatus,
 } from "@/lib/job-intelligence/applications.functions";
-import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/applications")({
   ssr: false,
@@ -141,25 +158,12 @@ function ApplicationsList({
   const listFn = useServerFn(listApplicationsForEmployer);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
-  const listAssignmentsFn = useServerFn(listAssignmentsForEmployer);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["employer", employerId, "applications"],
     queryFn: () => listFn({ data: { employerId } }),
   });
-
-  // Cross-referenced client-side against the same employer's assignments —
-  // no new "assignments by application" server function needed.
-  const assignmentsQuery = useQuery({
-    queryKey: ["employer", employerId, "assignments", "all"],
-    queryFn: () => listAssignmentsFn({ data: { employerId, statusFilter: "all" } }),
-  });
-  const assignmentByApplication = new Map(
-    (assignmentsQuery.data ?? [])
-      .filter((a) => a.applicationId)
-      .map((a) => [a.applicationId as string, a]),
-  );
 
   const setStatus = useMutation({
     mutationFn: (vars: { applicationId: string; newStatus: EmployerSettableStatus }) =>
@@ -269,40 +273,6 @@ function ApplicationsList({
                         {t("employer.applications.action.downloadCv")}
                       </button>
                     )}
-                    {(() => {
-                      const assignment = assignmentByApplication.get(r.id);
-                      if (!assignment) {
-                        return (
-                          <Link
-                            to="/employer/$employerSlug/assessments/assign"
-                            params={{ employerSlug }}
-                            search={{
-                              assessmentId: "security-guard-foundation",
-                              applicationId: r.id,
-                            }}
-                            className="rounded-md border border-accent/50 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10"
-                          >
-                            {t("assignment.action.assign")}
-                          </Link>
-                        );
-                      }
-                      if (assignment.status === "completed") {
-                        return (
-                          <Link
-                            to="/employer/$employerSlug/assessments/assignments/$assignmentId"
-                            params={{ employerSlug, assignmentId: assignment.id }}
-                            className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                          >
-                            {t("assignment.action.viewResult")}
-                          </Link>
-                        );
-                      }
-                      return (
-                        <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                          {t(`assignment.status.${assignment.status}` as TranslationKey)}
-                        </span>
-                      );
-                    })()}
                   </div>
 
                   {/* The recruitment assessment step, in the application it

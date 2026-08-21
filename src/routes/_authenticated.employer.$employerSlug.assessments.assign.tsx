@@ -7,7 +7,7 @@
 // specific.
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -58,8 +58,15 @@ function translateAssignmentError(
   return t(embedded ? ERROR_CODE_KEY[embedded] : "assignment.form.error.generic");
 }
 
+// No default assessment.
+//
+// This used to fall back to "security-guard-foundation" whenever the parameter
+// was absent, which meant a bare visit to /assessments/assign quietly loaded a
+// definition retired in July 2026 -- a form that could be filled in and never
+// sent. Which assessment to run is a choice made in the library, so a visit
+// without one goes there instead of guessing.
 const searchSchema = z.object({
-  assessmentId: z.string().default("security-guard-foundation"),
+  assessmentId: z.string().optional(),
   applicationId: z.string().uuid().optional(),
   employeeId: z.string().uuid().optional(),
 });
@@ -98,6 +105,18 @@ function EmployerAssignAssessmentPage() {
   }
   if (ws.isError || !ws.workspace) {
     return <EmployerAccessDenied workspaces={ws.workspaces} />;
+  }
+
+  // Arriving here without naming an assessment used to load a retired one.
+  // The library is where that choice belongs.
+  if (!search.assessmentId) {
+    return (
+      <Navigate
+        to="/employer/$employerSlug/assessments/library"
+        params={{ employerSlug: ws.workspace.employerSlug }}
+        replace
+      />
+    );
   }
 
   return (

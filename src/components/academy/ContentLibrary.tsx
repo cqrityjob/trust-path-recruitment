@@ -304,6 +304,14 @@ function LibraryRow({
       ? `${entry.moduleCount} ${t("academy.library.modules").toLowerCase()}`
       : `${entry.itemCount} ${t("academy.library.items").toLowerCase()}`;
 
+  // How many areas an assessment covers. Zero until 20260902090000 counts the
+  // form blocks, and an assessment genuinely built as one block reports zero
+  // too -- either way the line simply omits it rather than claiming "0 areas".
+  const areas =
+    entry.libraryKind === "assessment" && entry.moduleCount > 0
+      ? `${entry.moduleCount} ${t("academy.library.areas").toLowerCase()}`
+      : null;
+
   return (
     <li className="px-4 py-3.5 sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -321,6 +329,8 @@ function LibraryRow({
             {role && <span>{role}</span>}
             {role && <Dot />}
             <span className="tabular-nums">{size}</span>
+            {areas && <Dot />}
+            {areas && <span className="tabular-nums">{areas}</span>}
             {duration && <Dot />}
             {duration && <span className="tabular-nums">{duration}</span>}
             <Dot />
@@ -544,6 +554,20 @@ function ProgrammeDetail({
                 ? `${t("academy.library.notEstablishedBody")} ${doesNot.join(" · ")}`
                 : t("academy.library.notEstablishedBody")
             }
+          />
+        </div>
+      )}
+
+      {/* What the employer actually gets back. An assessment catalogue that
+          describes only the input leaves the buyer to guess at the output, and
+          the output is the reason to run it. Stated for recruitment content
+          specifically, because a recruitment brief is a different document
+          from a development report. */}
+      {entry.libraryKind === "assessment" && entry.designedFor === "recruitment_support" && (
+        <div className="mt-3">
+          <Boundary
+            title={t("academy.library.youReceive")}
+            body={t("academy.library.youReceiveBody")}
           />
         </div>
       )}

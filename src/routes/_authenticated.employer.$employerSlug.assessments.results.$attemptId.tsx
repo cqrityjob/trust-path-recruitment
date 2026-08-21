@@ -18,7 +18,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import { EmployerDecisionPanel } from "@/components/academy/EmployerDecisionPanel";
-import { CandidateBrief } from "@/components/academy/CandidateBrief";
+import { CandidateBrief, InterviewNotesPanel } from "@/components/academy/CandidateBrief";
 import { DecisionSummary, ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
   EvidenceCoverage,
@@ -275,6 +275,20 @@ function Report({
             <ProgressTable rows={progress.data ?? []} />
           )}
         </section>
+      )}
+
+      {/* Interview evidence last, after the brief and the detailed evidence:
+          what the conversation gave is recorded once the recruiter has read
+          everything the assessment gave. */}
+      {r.brief && (
+        <InterviewNotesPanel
+          attemptId={attemptId}
+          canRecord={canDecide}
+          areas={r.brief.observed.map((o) => ({
+            code: o.areaCode,
+            label: lang === "en" ? o.areaEn : o.areaSv,
+          }))}
+        />
       )}
 
       <EmployerDecisionPanel attemptId={attemptId} canDecide={canDecide} />
