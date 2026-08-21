@@ -814,4 +814,83 @@ BEGIN
   RAISE NOTICE 'ok  RJ7.26 and accepts every one of the six that are the lifecycle';
 END $$;
 
+DO $$ BEGIN RAISE NOTICE 'GROUP RJ8 — an application is not Passport consent'; END $$;
+
+-- =========================================================================
+-- Group RJ8 — the candidate applied; the employer still has no Passport
+--
+-- Candidate overview carries a Security Passport SECTION, whose entire content
+-- is a sentence saying nothing has been shared. That is a product statement,
+-- and a product statement is worth exactly as much as the boundary underneath
+-- it -- so the boundary is asserted here, against a real Passport belonging to
+-- the very person whose application the employer is looking at.
+--
+-- Anna has a Passport. She applied. The employer is an active member of the
+-- organisation that received the application, and has already been permitted
+-- to assess her, to read her attempt's lineage and to open her released
+-- report. None of that reaches one row of her Passport.
+-- =========================================================================
+
+INSERT INTO public.sp_passport_profiles (holder_user_id, display_name)
+SELECT anna, 'Anna Kandidat' FROM rj;
+
+INSERT INTO public.sp_claims (holder_user_id, claim_type, title)
+SELECT anna, 'training', 'Väktarutbildning grund' FROM rj;
+
+CREATE TEMP TABLE rj_pp AS
+SELECT (SELECT count(*) FROM public.sp_passport_profiles) AS profiles,
+       (SELECT count(*) FROM public.sp_claims)            AS claims;
+GRANT SELECT ON rj_pp TO authenticated;
+
+SELECT pg_temp.ok(
+  (SELECT profiles FROM rj_pp) = 1 AND (SELECT claims FROM rj_pp) = 1,
+  'RJ8.1 the applicant really does hold a Passport (so the denials below mean something)');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+
+-- The employer who received her application, and who may assess her.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_passport_profiles) = 0,
+  'RJ8.2 the employer reads no Passport profile, having received her application');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_claims) = 0,
+  'RJ8.3 nor any claim on it');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_disclosures) = 0,
+  'RJ8.4 nor any disclosure she has made to anybody else');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_evidence) = 0
+  AND (SELECT count(*) FROM public.sp_experience_periods) = 0
+  AND (SELECT count(*) FROM public.sp_verification_requests) = 0,
+  'RJ8.5 nor her evidence, her experience or her verification requests');
+
+-- The candidate read model is the thing that resolved her identity, so it is
+-- the most tempting place for a Passport column to be added later. Its return
+-- type is checked for one, permanently.
+DO $$
+DECLARE _sig text;
+BEGIN
+  _sig := pg_get_function_result('public.scp_application_candidate(uuid)'::regprocedure);
+  IF _sig ILIKE '%passport%' OR _sig ILIKE '%disclosure%' OR _sig ILIKE '%sp\_%' THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: RJ8.6 scp_application_candidate exposes Passport data';
+  END IF;
+  RAISE NOTICE 'ok  RJ8.6 and the candidate read model has no Passport column to grow into';
+END $$;
+
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The holder still has her own Passport: the denials above are a boundary,
+-- not an empty fixture.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000002';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_passport_profiles) = 1
+  AND (SELECT count(*) FROM public.sp_claims) = 1,
+  'RJ8.7 while Anna herself still reads her own Passport in full');
+RESET ROLE; RESET request.jwt.claim.sub;
+
 ROLLBACK;

@@ -138,7 +138,7 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Candidate 360 — the application opened as the person who made it.
+// Candidate overview — the application opened as the person who made it.
 // ---------------------------------------------------------------------------
 //
 // Same live-backend gate as the flow above, and for the same reason: there is
@@ -160,7 +160,7 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 // strongly in supabase/tests/scp_recruitment_journey_test.sql (group RJ7),
 // against a real Postgres with RLS in force. A browser cannot prove a
 // boundary; it can only prove the surface behaves.
-test.describe("Candidate 360", () => {
+test.describe("Candidate overview", () => {
   test.skip(
     !READY,
     "Set E2E_RUN_LIVE=1 and the E2E_* fixture env vars to run this against a real backend.",
@@ -182,15 +182,47 @@ test.describe("Candidate 360", () => {
     await expect(page).toHaveURL(/\/applications\/[0-9a-f-]{36}$/);
 
     // The four sections that make it a candidate view rather than a row.
+    // The page is named for what it actually contains. "Candidate overview",
+    // never a "360 profile": the employer holds no authorised access to a
+    // professional profile, and a heading promising one would describe data
+    // that is not there.
+    await expect(page.getByText("Candidate overview").first()).toBeVisible();
+    await expect(page.getByText(/\b360\b/)).toHaveCount(0);
+
     await expect(page.getByRole("heading", { name: "Application" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Interview" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Next step" })).toBeVisible();
 
-    // Applying for a job is not consent to disclose a Passport. The word must
-    // not appear on this page in either language, and no link may lead to one.
-    await expect(page.getByText(/passport|passet/i)).toHaveCount(0);
+    // Applying for a job is not consent to disclose a Passport. The section
+    // exists to SAY that, and to show nothing: the heading is present, the
+    // statement is the "nothing shared" one, and there is no way through to a
+    // Passport from here.
+    await expect(page.getByRole("heading", { name: "Security Passport" })).toBeVisible();
+    await expect(
+      page.getByText(
+        "No Security Passport information has been shared with your organisation for this application.",
+      ),
+    ).toBeVisible();
+
+    // No link out, in either direction: /p/$token is the recipient boundary
+    // and /passport is the holder's own product.
     await expect(page.locator("a[href*='/passport'], a[href^='/p/']")).toHaveCount(0);
+
+    // And no Passport DATA. The section is a sentence; anything that looked
+    // like a credential, a claim, an issuer or a validity date would mean the
+    // employer had been given something.
+    const passportSection = page.locator("section", {
+      has: page.getByRole("heading", { name: "Security Passport" }),
+    });
+    await expect(passportSection.locator("a, button, img, table, ul, ol")).toHaveCount(0);
+
+    // The statement is about what the EMPLOYER was given, never about what the
+    // candidate holds -- a page that said "none found" would disclose exactly
+    // the fact the candidate never consented to.
+    await expect(
+      page.getByText(/no security passport (found|available|on file|registered)/i),
+    ).toHaveCount(0);
 
     // The decision is offered as named human actions, and never as a verdict.
     await expect(page.getByText(/recommend|suitab|ranking|score|match/i)).toHaveCount(0);
@@ -216,6 +248,16 @@ test.describe("Candidate 360", () => {
     await expect(page.getByRole("heading", { name: "Bedömning" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Nästa steg" })).toBeVisible();
     await expect(page.getByText(/employer\.candidate\./)).toHaveCount(0);
+
+    // The page names itself for what it holds, in Swedish.
+    await expect(page.getByText("Kandidatöversikt").first()).toBeVisible();
+
+    // Same Passport statement, same absence of anything behind it.
+    await expect(page.getByRole("heading", { name: "Security Passport" })).toBeVisible();
+    await expect(
+      page.getByText("Ingen Security Passport-information har delats med er för den här ansökan."),
+    ).toBeVisible();
+    await expect(page.locator("a[href*='/passport'], a[href^='/p/']")).toHaveCount(0);
   });
 
   test("the candidate page does not scroll sideways on a phone", async ({ page }) => {

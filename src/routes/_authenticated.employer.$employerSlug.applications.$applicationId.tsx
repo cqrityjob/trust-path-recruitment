@@ -206,8 +206,16 @@ function Candidate360({
 
       {/* ── Who, and for what ───────────────────────────────────────── */}
       <header className="mt-4">
+        {/* The page is named for what it actually contains: this application,
+            and what this organisation has done about it. Not a professional
+            profile -- the employer holds no authorised access to one, and a
+            heading that promised one would be describing data that is not
+            there. */}
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          {t("employer.candidate.overview")}
+        </p>
         <h1
-          className="text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-3xl"
+          className="mt-1 text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-3xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {name}
@@ -352,6 +360,37 @@ function Candidate360({
             ))}
           </ul>
         )}
+      </section>
+
+      {/* ── Security Passport ───────────────────────────────────────── */}
+      {/*  Informational, and ONLY informational.
+       *
+       *  A recruiter looking at a candidate will reasonably wonder where the
+       *  Security Passport fits, and silence is the worst answer: it invites
+       *  the assumption that the platform is withholding something, or that a
+       *  Passport can be obtained by asking support. So the product says where
+       *  it fits, in one sentence, and shows nothing.
+       *
+       *  This block reads NOTHING. It calls no function, holds no token,
+       *  performs no existence check, and renders the same sentence for every
+       *  candidate on the platform -- which is the point. Whether this person
+       *  holds a Passport is not a fact an employer is entitled to, and a
+       *  section that appeared only for holders would disclose exactly that
+       *  fact while appearing to disclose nothing.
+       *
+       *  Applying for a job remains not consent. If holder-authorised,
+       *  application-scoped disclosure is designed later, it replaces this
+       *  copy and arrives with its own reviewed consent model. */}
+      <section className="mt-10" aria-labelledby="candidate-passport">
+        <h2 id="candidate-passport" className="text-lg font-semibold text-foreground">
+          {t("employer.candidate.passport.heading")}
+        </h2>
+        <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+          {t("employer.candidate.passport.none")}
+        </p>
+        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+          {t("employer.candidate.passport.lede")}
+        </p>
       </section>
 
       {/* ── The decision, which stays a person's ────────────────────── */}

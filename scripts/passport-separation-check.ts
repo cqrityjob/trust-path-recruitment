@@ -292,9 +292,16 @@ for (const dir of OTHER_DOMAIN_DIRS) {
 // assembled a payload from Passport modules would make job-application consent
 // into Passport consent by implementation, whatever the copy said.
 //
-// So the rule for these files is absolute and easy to check: they may not
-// name the Passport at all. If in-platform, holder-authorised disclosure to a
-// named employer is built later, it arrives as its own reviewed integration
+// The rule is therefore about ACCESS, not about vocabulary. Candidate overview
+// carries a short, customer-facing Security Passport section that exists
+// precisely to say that nothing has been shared -- naming the product in order
+// to explain that the employer has none of it. Banning the word would ban the
+// privacy statement along with the breach, so what is banned instead is every
+// route by which a byte of Passport data could arrive: the modules, the
+// tables, the functions, the disclosure boundary, the tokens and the links.
+//
+// If in-platform, holder-authorised, application-scoped disclosure is designed
+// later, it replaces that copy and arrives as its own reviewed integration --
 // and this list is what has to be revisited deliberately.
 const RECRUITMENT_SURFACES = [
   "src/routes/_authenticated.employer.$employerSlug.applications.tsx",
@@ -320,11 +327,29 @@ const RECRUITMENT_SURFACES = [
   }
 }
 
-const PASSPORT_REFERENCES: readonly { pattern: RegExp; why: string }[] = [
+// Every route by which Passport DATA could reach an employer surface.
+const PASSPORT_ACCESS: readonly { pattern: RegExp; why: string }[] = [
   { pattern: /security-passport/, why: "a Security Passport module" },
   { pattern: /\bsp_[a-z_]+/, why: "a Passport table or function" },
   { pattern: /getPublicDisclosure|sp_get_disclosure/, why: "the disclosure boundary" },
-  { pattern: /\bpassport\b/i, why: "the Passport by name" },
+  { pattern: /\bDisclosurePackage|\bdisclosure\b/i, why: "a disclosure payload" },
+  { pattern: /shareToken|disclosureToken|passportToken/i, why: "a share token" },
+  // A link is access too: /p/$token is the recipient boundary, and /passport
+  // is the holder's own product. Neither belongs on an employer surface.
+  { pattern: /to=["'`]\/p\/|href=["'`]\/p\//, why: "a link to the recipient boundary" },
+  { pattern: /to=["'`]\/passport|href=["'`]\/passport/, why: "a link to the holder's Passport" },
+];
+
+// The word "passport" may appear ONLY as customer-facing copy and as the
+// section's own anchor id. Anywhere else it is an identifier -- a variable, a
+// query, an import, a prop -- and an identifier means code, which means the
+// surface is doing something with a Passport rather than describing one.
+//
+// This is what makes the copy safe to allow: the section can say the product's
+// name, and cannot acquire a single line of behaviour without failing here.
+const PASSPORT_COPY_ALLOWLIST: readonly RegExp[] = [
+  /^employer\.candidate\.passport\.(heading|none|lede)$/,
+  /^candidate-passport$/,
 ];
 
 for (const relPath of RECRUITMENT_SURFACES) {
@@ -333,15 +358,81 @@ for (const relPath of RECRUITMENT_SURFACES) {
     expect(false, `${relPath}: named in RECRUITMENT_SURFACES but does not exist.`);
     continue;
   }
-  // Comments are stripped: Candidate 360's own header explains, at length, why
-  // no Passport appears on it, and a check that failed on that explanation
-  // would be deleted rather than obeyed.
+  // Comments are stripped: Candidate overview's own header explains, at
+  // length, why no Passport data appears on it, and a check that failed on its
+  // own documentation would be deleted rather than obeyed.
   const src = stripComments(read(full));
-  for (const { pattern, why } of PASSPORT_REFERENCES) {
+
+  for (const { pattern, why } of PASSPORT_ACCESS) {
     expect(
       !pattern.test(src),
       `${relPath}: an employer recruitment surface must not reference ${why}. ` +
         `Applying for a job is not consent to disclose a Security Passport.`,
+    );
+  }
+
+  // Every remaining mention of the word must be one of the allowed literals.
+  for (const match of src.matchAll(/["'`]([^"'`\n]*passport[^"'`\n]*)["'`]/gi)) {
+    const literal = match[1];
+    expect(
+      PASSPORT_COPY_ALLOWLIST.some((allowed) => allowed.test(literal)),
+      `${relPath}: "${literal}" is not an approved Passport copy key. An employer ` +
+        `recruitment surface may name the Passport only through ` +
+        `employer.candidate.passport.* and the section's anchor id -- anything ` +
+        `else is code, and code means access.`,
+    );
+  }
+  // A bare identifier (no quotes) is never copy.
+  const identifiers = stripComments(read(full))
+    .replace(/["'`][^"'`\n]*["'`]/g, "")
+    .match(/[\w$]*passport[\w$]*/gi);
+  expect(
+    identifiers === null,
+    `${relPath}: Passport appears as an identifier (${identifiers?.join(", ")}), ` +
+      `which means this surface holds Passport state or behaviour rather than copy.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 3c. The privacy statement itself must keep saying what it says
+// ---------------------------------------------------------------------------
+// The section is only worth allowing because of what it asserts. Copy that
+// drifted into "no Passport found", or that appeared only for holders, would
+// disclose whether this person holds one -- which is the very fact an employer
+// is not entitled to. So the sentence is pinned in both languages.
+{
+  const dict = read(path.join(root, "src/i18n/dictionaries.ts"));
+  const required: readonly { key: string; text: string }[] = [
+    {
+      key: "employer.candidate.passport.none (sv)",
+      text: "Ingen Security Passport-information har delats med er för den här ansökan.",
+    },
+    {
+      key: "employer.candidate.passport.none (en)",
+      text:
+        "No Security Passport information has been shared with your organisation " +
+        "for this application.",
+    },
+  ];
+  for (const { key, text } of required) {
+    expect(
+      dict.includes(text),
+      `${key} must read exactly "${text}". The statement is about what the ` +
+        `EMPLOYER has been given, never about what the candidate holds.`,
+    );
+  }
+
+  // Wording that would turn an absence of sharing into a claim about the person.
+  const FORBIDDEN_IMPLICATIONS: readonly RegExp[] = [
+    /No Security Passport (found|available|on file|registered)/i,
+    /(saknar|har ingen) Security Passport/i,
+    /Security Passport (not found|does not exist|saknas)/i,
+  ];
+  for (const pattern of FORBIDDEN_IMPLICATIONS) {
+    expect(
+      !pattern.test(dict),
+      `Passport copy must never imply whether a candidate HOLDS a Passport ` +
+        `(matched ${pattern}). Only what has been shared with the employer may be stated.`,
     );
   }
 }
@@ -603,6 +694,7 @@ console.log(
     `/passport is _authenticated-only; /p/$token is noindex and reads only ` +
     `through the throttled server boundary; the service role is confined to ` +
     `that one file; internal reviewer notes never reach a card or a holder; ` +
-    `${RECRUITMENT_SURFACES.length} employer recruitment surfaces name the ` +
-    `Passport nowhere)`,
+    `${RECRUITMENT_SURFACES.length} employer recruitment surfaces reach no ` +
+    `Passport module, table, function, token or link, and name it only as ` +
+    `pinned privacy copy)`,
 );
