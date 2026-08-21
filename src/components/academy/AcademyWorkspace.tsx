@@ -31,6 +31,7 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   EmployerAppShell,
+  type EmployerNavSection,
   type EmployerRole,
   type EmployerStatus,
 } from "@/components/employer/EmployerAppShell";
@@ -100,6 +101,27 @@ export function WorkforcePage({
   );
 }
 
+/** The same frame for one candidate under Ansokningar.
+ *
+ *  Candidate 360 is reached from the applications list and is about a person,
+ *  so it keeps the Applications section highlighted and shows no tab bar --
+ *  exactly as Medarbetare > [Person] does. It borrows this frame for the
+ *  access check and nothing else: the slug is re-verified through
+ *  listMyEmployerWorkspaces() here as on every other employer route. */
+export function RecruitmentPage({
+  employerSlug,
+  children,
+}: {
+  employerSlug: string;
+  children: (ws: AcademyWorkspace) => ReactNode;
+}) {
+  return (
+    <WorkspaceFrame employerSlug={employerSlug} section="applications" tabs={[]}>
+      {children}
+    </WorkspaceFrame>
+  );
+}
+
 /** The same frame for Kompetensutveckling. Same access check, different tabs,
  *  and activeSection="training" so the sidebar highlights the right entry. */
 export function TrainingPage({
@@ -123,7 +145,7 @@ function WorkspaceFrame({
   children,
 }: {
   employerSlug: string;
-  section: "assessments" | "training" | "workforce";
+  section: EmployerNavSection;
   tabs: Tab[];
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {

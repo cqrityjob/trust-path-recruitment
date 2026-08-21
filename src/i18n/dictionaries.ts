@@ -1423,6 +1423,51 @@ export const dictionaries = {
     "employer.applications.error.statusUpdate": "Kunde inte uppdatera ansökans status.",
     "employer.applications.error.cvDownload": "Kunde inte hämta CV.",
 
+    // Candidate 360 — the application opened as the person who made it.
+    "employer.candidate.openAction": "Öppna kandidatöversikt",
+    "employer.candidate.overview": "Kandidatöversikt",
+    "employer.candidate.backToApplications": "Tillbaka till ansökningar",
+    "employer.candidate.error.load": "Kunde inte hämta kandidaten.",
+    "employer.candidate.notFound": "Kandidaten är inte tillgänglig",
+    "employer.candidate.notFoundBody":
+      "Ansökan finns inte i er organisation, eller har tagits bort. Gå tillbaka till ansökningar för att se aktuella kandidater.",
+    "employer.candidate.noJob": "Tjänsten är inte längre tillgänglig",
+    "employer.candidate.appliedOn": "Ansökte",
+    "employer.candidate.openJob": "Visa jobbannonser",
+    "employer.candidate.application.heading": "Ansökan",
+    "employer.candidate.fact.status": "Status",
+    "employer.candidate.fact.applied": "Ansökningsdatum",
+    "employer.candidate.fact.updated": "Senast uppdaterad",
+    "employer.candidate.fact.phone": "Telefon",
+    "employer.candidate.coverNote": "Personligt brev",
+    "employer.candidate.assessment.heading": "Bedömning",
+    "employer.candidate.assessment.lede":
+      "Skicka en bedömning som hör till den här ansökan och följ hur den fortskrider. Kandidaten hämtas från ansökan – ni behöver aldrig ange någon e-postadress.",
+    "employer.candidate.interview.heading": "Intervju",
+    "employer.candidate.interview.lede":
+      "Anteckningar från intervjun förs in i kandidatunderlaget och samlas här.",
+    "employer.candidate.interview.empty": "Inga intervjuanteckningar har förts in ännu.",
+    "employer.candidate.interview.open": "Öppna kandidatunderlag",
+    "employer.candidate.interview.outcome.confirmed": "Bekräftat i intervju",
+    "employer.candidate.interview.outcome.notConfirmed": "Inte bekräftat i intervju",
+    "employer.candidate.interview.outcome.context": "Kompletterande information",
+    "employer.candidate.decision.heading": "Nästa steg",
+    "employer.candidate.decision.lede":
+      "Ni avgör hur ansökan går vidare. Plattformen rangordnar inte kandidater och rekommenderar inte anställning.",
+    "employer.candidate.decision.closed": "Ansökan är avslutad och har inga fler steg.",
+    "employer.candidate.history.heading": "Tidigare ansökningar",
+    "employer.candidate.history.lede":
+      "Andra ansökningar som samma person har skickat till er organisation.",
+    // Security Passport, on an employer surface: a statement of where it fits
+    // and nothing else. The same sentence renders for every candidate --
+    // whether somebody holds a Passport is not a fact an employer is entitled
+    // to, so this copy must never become conditional on one existing.
+    "employer.candidate.passport.heading": "Security Passport",
+    "employer.candidate.passport.none":
+      "Ingen Security Passport-information har delats med er för den här ansökan.",
+    "employer.candidate.passport.lede":
+      "Security Passport tillhör kandidaten. Endast innehavaren kan välja att dela den, och en jobbansökan innebär inte ett sådant samtycke.",
+
     "employer.settings.heading": "Organisationsinställningar",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
     "employer.overview.card.tests.stat.active": "Aktiva",
@@ -4348,6 +4393,51 @@ export const dictionaries = {
     "employer.applications.error.load": "Could not load applications.",
     "employer.applications.error.statusUpdate": "Could not update the application status.",
     "employer.applications.error.cvDownload": "Could not retrieve the CV.",
+
+    // Candidate 360 — the application opened as the person who made it.
+    "employer.candidate.openAction": "Open candidate overview",
+    "employer.candidate.overview": "Candidate overview",
+    "employer.candidate.backToApplications": "Back to applications",
+    "employer.candidate.error.load": "Could not load the candidate.",
+    "employer.candidate.notFound": "This candidate is not available",
+    "employer.candidate.notFoundBody":
+      "The application is not part of your organisation, or it has been removed. Go back to applications to see your current candidates.",
+    "employer.candidate.noJob": "The role is no longer available",
+    "employer.candidate.appliedOn": "Applied",
+    "employer.candidate.openJob": "View job advertisements",
+    "employer.candidate.application.heading": "Application",
+    "employer.candidate.fact.status": "Status",
+    "employer.candidate.fact.applied": "Application date",
+    "employer.candidate.fact.updated": "Last updated",
+    "employer.candidate.fact.phone": "Phone",
+    "employer.candidate.coverNote": "Cover note",
+    "employer.candidate.assessment.heading": "Assessment",
+    "employer.candidate.assessment.lede":
+      "Send an assessment that belongs to this application and follow how it progresses. The candidate is resolved from the application, so you never enter an email address.",
+    "employer.candidate.interview.heading": "Interview",
+    "employer.candidate.interview.lede":
+      "Notes from the interview are recorded in the candidate brief and collected here.",
+    "employer.candidate.interview.empty": "No interview notes have been recorded yet.",
+    "employer.candidate.interview.open": "Open candidate brief",
+    "employer.candidate.interview.outcome.confirmed": "Confirmed in interview",
+    "employer.candidate.interview.outcome.notConfirmed": "Not confirmed in interview",
+    "employer.candidate.interview.outcome.context": "Additional context",
+    "employer.candidate.decision.heading": "Next step",
+    "employer.candidate.decision.lede":
+      "You decide how the application proceeds. The platform does not rank candidates and does not recommend hiring.",
+    "employer.candidate.decision.closed": "This application is closed and has no further steps.",
+    "employer.candidate.history.heading": "Earlier applications",
+    "employer.candidate.history.lede":
+      "Other applications the same person has sent to your organisation.",
+    // Security Passport, on an employer surface: a statement of where it fits
+    // and nothing else. The same sentence renders for every candidate --
+    // whether somebody holds a Passport is not a fact an employer is entitled
+    // to, so this copy must never become conditional on one existing.
+    "employer.candidate.passport.heading": "Security Passport",
+    "employer.candidate.passport.none":
+      "No Security Passport information has been shared with your organisation for this application.",
+    "employer.candidate.passport.lede":
+      "A Security Passport belongs to the candidate. Only its holder can choose to share it, and a job application is not that consent.",
 
     "employer.settings.heading": "Organisation settings",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
