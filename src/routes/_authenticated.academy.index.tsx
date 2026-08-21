@@ -14,6 +14,7 @@
 // professional judgement is entitled to know who asked and why, at the moment
 // they decide whether to begin.
 
+import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -43,11 +44,17 @@ function AcademyHome() {
   const claimFn = useServerFn(claimAssessmentInvitations);
   const formFn = useServerFn(getLearningFormForModule);
 
-  // Claim first, then list. Somebody who was invited before they had an
-  // account arrives here for the first time with the invitation still pending;
-  // running the claim ahead of the list is what makes the assessment appear on
-  // this visit rather than the next one. It never throws and it is idempotent,
-  // so a person who has nothing to claim pays one cheap call and sees nothing.
+  // Both start immediately, and the list is deliberately NOT gated on the
+  // claim. Gating it left the query disabled on first render, which is
+  // indistinguishable from `data === undefined` — and AcademyQueryState reads
+  // that as a failure, so every visit flashed an error panel before recovering.
+  //
+  // Instead the claim runs alongside, and the list is refetched only if it
+  // actually bound something. Somebody who was invited before they had an
+  // account still sees the assessment on THIS visit; everybody else pays one
+  // cheap call and never notices.
+  const work = useQuery({ queryKey: ["academy", "work"], queryFn: () => listWork() });
+
   const claim = useQuery({
     queryKey: ["academy", "claim-invitations"],
     queryFn: () => claimFn(),
@@ -55,11 +62,11 @@ function AcademyHome() {
     retry: false,
   });
 
-  const work = useQuery({
-    queryKey: ["academy", "work"],
-    queryFn: () => listWork(),
-    enabled: !claim.isLoading,
-  });
+  const bound = claim.data?.bound ?? 0;
+  const refetchWork = work.refetch;
+  useEffect(() => {
+    if (bound > 0) void refetchWork();
+  }, [bound, refetchWork]);
   const learningForm = useQuery({
     queryKey: ["academy", "learning-form"],
     queryFn: () => formFn(),
