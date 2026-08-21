@@ -18,6 +18,13 @@
 --   * one organisation sees none of another's people, applications,
 --     assessments, reports or interview evidence.
 --
+-- Group RJ7 adds the step in front of all of it: opening an application AS a
+-- candidate. scp_application_candidate is what turns an application id into
+-- the person who made it, and it is asserted both for what it returns (the
+-- same stable subject the attempt already belongs to) and for what it must
+-- never return: an auth id, an address, a CV path, or one word of another
+-- organisation's data.
+--
 -- One transaction, ends in ROLLBACK.
 
 \set ON_ERROR_STOP on
@@ -512,5 +519,299 @@ SELECT pg_temp.ok(
   'RJ6.4 and none of anybody else''s');
 
 RESET ROLE; RESET request.jwt.claim.sub;
+
+DO $$ BEGIN RAISE NOTICE 'GROUP RJ7 — Candidate 360: the application opens a person'; END $$;
+
+-- =========================================================================
+-- Group RJ7 — application -> candidate, and what that read must not carry
+-- =========================================================================
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+
+CREATE TEMP TABLE rj_c360 AS
+SELECT * FROM public.scp_application_candidate((SELECT application FROM rj));
+RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON rj_c360 TO authenticated;
+
+SELECT pg_temp.ok((SELECT count(*) FROM rj_c360) = 1,
+  'RJ7.1 an application opens exactly one candidate, not a list');
+
+-- The whole point of the identity spine: the person the employer opens from an
+-- APPLICATION is the same person the ASSESSMENT already belongs to. If these
+-- two ever diverged, every downstream surface would be about somebody else
+-- while looking entirely correct.
+SELECT pg_temp.ok(
+  (SELECT subject_id FROM rj_c360) = (SELECT subject_id FROM rj_anna),
+  'RJ7.2 the candidate is the SAME stable subject the attempt belongs to');
+
+SELECT pg_temp.ok(
+  (SELECT subject_id FROM rj_c360)
+  = (SELECT si.subject_id FROM public.scp_subject_identities si
+      WHERE si.user_id = (SELECT anna FROM rj)),
+  'RJ7.3 resolved through scp_subject_identities, not by matching an address');
+
+-- The job and application context the page renders.
+SELECT pg_temp.ok(
+  (SELECT c.employer_id = (SELECT employer FROM rj)
+      AND c.job_id = (SELECT job FROM rj)
+      AND c.job_title_sv = 'Väktare, Stockholm'
+      AND c.application_status = 'submitted'
+      AND c.applied_at IS NOT NULL
+     FROM rj_c360 c),
+  'RJ7.4 employer, job, job title, status and application date all come back');
+
+-- has_cv is a fact ABOUT the file, never the path to it: the download stays a
+-- short-lived signed URL issued server-side.
+SELECT pg_temp.ok(
+  (SELECT has_cv FROM rj_c360) = false,
+  'RJ7.5 CV presence is reported as a boolean (this fixture attached none)');
+
+UPDATE public.job_applications
+   SET cv_storage_path = 'ea000000/cv.pdf', cover_note = 'Jag har fem års erfarenhet.'
+ WHERE id = (SELECT application FROM rj);
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+SELECT pg_temp.ok(
+  (SELECT c.has_cv = true AND c.cover_note = 'Jag har fem års erfarenhet.'
+     FROM public.scp_application_candidate((SELECT application FROM rj)) c),
+  'RJ7.6 an attached CV is reported as present, and the cover note comes back');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The absences. Each of these is a column somebody would add in good faith to
+-- "make the page more useful", and each would hand an employer surface an
+-- identity it has no use for.
+DO $$
+DECLARE _sig text; _bad text;
+BEGIN
+  _sig := pg_get_function_result('public.scp_application_candidate(uuid)'::regprocedure);
+  FOREACH _bad IN ARRAY ARRAY['applicant_user_id','user_id','email','cv_storage_path'] LOOP
+    IF _sig ILIKE '%' || _bad || '%' THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: RJ7.7 scp_application_candidate exposes "%"', _bad;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'ok  RJ7.7 the candidate read carries no auth id, no address and no CV path';
+END $$;
+
+DO $$
+DECLARE _sig text; _bad text;
+BEGIN
+  _sig := pg_get_function_result('public.scp_application_candidate(uuid)'::regprocedure);
+  FOREACH _bad IN ARRAY ARRAY[
+    'response_text','selected_option','score_value','is_preferred',
+    'scoring_rationale','rubric','option_key'] LOOP
+    IF _sig ILIKE '%' || _bad || '%' THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: RJ7.8 scp_application_candidate exposes "%"', _bad;
+    END IF;
+  END LOOP;
+  RAISE NOTICE 'ok  RJ7.8 and no raw assessment material of any kind';
+END $$;
+
+-- Tenancy, on the read that starts the journey. RJ5 proved it for the three
+-- read models that follow; a candidate lookup that leaked would make all three
+-- reachable, because it is the thing that hands over the subject id.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000009';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_application_candidate((SELECT application FROM rj))) = 0,
+  'RJ7.9 another organisation opens no candidate from this one''s application');
+
+-- And having been refused the subject, it cannot reach the person view either
+-- -- proven with the REAL subject id, so this is the boundary and not a bad
+-- guess at an identifier.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_person_overview(
+     (SELECT other_employer FROM rj), (SELECT subject_id FROM rj_anna))) = 0,
+  'RJ7.10 nor this person''s history, even under its OWN employer id');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- A member with no role beyond membership still reads the candidate: viewing
+-- is not assigning. Assigning is owner/admin only, which RJ1 covers.
+INSERT INTO auth.users (id, email, email_confirmed_at)
+VALUES ('ea000000-0000-0000-0000-00000000000b', 'member@journey.test', now());
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+SELECT employer, 'ea000000-0000-0000-0000-00000000000b', 'member', 'active' FROM rj;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-00000000000b';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_application_candidate((SELECT application FROM rj))) = 1,
+  'RJ7.11 an ordinary member of the owning organisation reads the candidate');
+
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.scp_assign_from_application(%L::uuid, %L::uuid, %L::uuid)',
+  (SELECT employer FROM rj), (SELECT application FROM rj), (SELECT version_id FROM rjv)),
+  'SCP_NOT_AUTHORISED_TO_ASSIGN',
+  'RJ7.12 but cannot assign from it — that stays owner or admin');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- A suspended member keeps nothing. Membership is checked as ACTIVE, so
+-- removing somebody from the organisation removes the candidate with it.
+UPDATE public.employer_memberships SET status = 'suspended'
+ WHERE user_id = 'ea000000-0000-0000-0000-00000000000b';
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-00000000000b';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_application_candidate((SELECT application FROM rj))) = 0,
+  'RJ7.13 a suspended member reads no candidate at all');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Somebody who has applied but has never been assessed has NO subject yet, and
+-- the read says so rather than minting one. Creating a person as a side effect
+-- of opening a page is exactly the duplicate-person failure the spine exists
+-- to prevent.
+INSERT INTO auth.users (id, email, email_confirmed_at)
+VALUES ('ea000000-0000-0000-0000-00000000000c', 'dagny@journey.test', now());
+INSERT INTO public.job_applications (id, job_id, employer_id, applicant_user_id,
+                                     status, consent_given_at)
+SELECT 'ea000000-3333-0000-0000-000000000002', job, employer,
+       'ea000000-0000-0000-0000-00000000000c', 'submitted', now() FROM rj;
+
+CREATE TEMP TABLE rj_subjects_before AS
+SELECT count(*) AS n FROM public.scp_subjects;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+CREATE TEMP TABLE rj_dagny AS
+SELECT * FROM public.scp_application_candidate('ea000000-3333-0000-0000-000000000002');
+RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON rj_dagny, rj_subjects_before TO authenticated;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM rj_dagny) = 1 AND (SELECT subject_id FROM rj_dagny) IS NULL,
+  'RJ7.14 a candidate who has never been assessed opens, with no subject yet');
+
+SELECT pg_temp.ok(
+  (SELECT n FROM rj_subjects_before) = (SELECT count(*) FROM public.scp_subjects),
+  'RJ7.15 and reading them minted no person — a read must never create one');
+
+-- The other direction of identity continuity: two applications by the SAME
+-- person to the same employer resolve to the same subject, never to two.
+INSERT INTO public.job_applications (id, job_id, employer_id, applicant_user_id,
+                                     status, consent_given_at)
+SELECT 'ea000000-3333-0000-0000-000000000003', job, employer, anna, 'withdrawn', now() FROM rj;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+SELECT pg_temp.ok(
+  (SELECT c.subject_id FROM public.scp_application_candidate(
+     'ea000000-3333-0000-0000-000000000003') c) = (SELECT subject_id FROM rj_anna),
+  'RJ7.16 a second application by the same person opens the SAME subject');
+
+-- Which is what makes the person view a history rather than a fragment.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_person_overview(
+     (SELECT employer FROM rj), (SELECT subject_id FROM rj_anna))
+    WHERE row_kind = 'application') = 2,
+  'RJ7.17 and both applications appear on that one person''s timeline');
+
+-- ── The employer has no direct write path to this column at all ──────────
+--
+-- There is no UPDATE policy (and no table grant) for `authenticated` on
+-- job_applications beyond the platform-admin one, so a raw write by an
+-- employer either raises outright or matches zero rows. Both are the same
+-- invariant -- the write does not land -- and which one it is depends on
+-- whether the grant or the policy refuses first, so the assertion is about
+-- the OUTCOME rather than about the error.
+--
+-- This is also why the CHECK constraint cannot be exercised from here: a
+-- statement that never reaches the row can never trip it, and a test that
+-- "passed" because permission was refused would prove nothing about the
+-- column. It is therefore run below, as the owner, where a write really can
+-- reach the column and the constraint is the only thing left to stop it.
+DO $$
+BEGIN
+  BEGIN
+    EXECUTE 'UPDATE public.job_applications SET status = ''hired'' WHERE id = '
+         || quote_literal('ea000000-3333-0000-0000-000000000001');
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END $$;
+
+SELECT pg_temp.ok(
+  (SELECT a.status FROM public.job_applications a
+    WHERE a.id = (SELECT application FROM rj)) = 'submitted',
+  'RJ7.18 an employer has no direct UPDATE path: a raw write leaves the status alone');
+
+-- ── The decision is a person's, taken through the governed RPC ───────────
+--
+-- No score, no ranking and no recommendation reaches this: the employer walks
+-- the application through its own lifecycle, one human transition at a time,
+-- and the allow-list in set_application_status is what decides which are
+-- available. 'hired' is reachable only from 'interview'.
+SELECT pg_temp.must_fail(format(
+  'SELECT * FROM public.set_application_status(%L::uuid, ''hired'', NULL)',
+  (SELECT application FROM rj)),
+  'not allowed',
+  'RJ7.19 an application cannot jump straight to hired');
+
+SELECT public.set_application_status((SELECT application FROM rj), 'reviewing', NULL);
+SELECT public.set_application_status((SELECT application FROM rj), 'interview', NULL);
+CREATE TEMP TABLE rj_hired AS
+SELECT * FROM public.set_application_status((SELECT application FROM rj), 'hired', NULL);
+RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON rj_hired TO authenticated;
+
+SELECT pg_temp.ok(
+  (SELECT new_status FROM rj_hired) = 'hired'
+  AND (SELECT previous_status FROM rj_hired) = 'interview',
+  'RJ7.20 and reaches hired through the lifecycle, one human step at a time');
+
+-- The point of the whole spine, at the moment it matters most. Hiring must not
+-- fork the person: the subject behind the application is the SAME one
+-- afterwards, which is what lets an employment relation be created later
+-- against the identity that already carries their assessment history.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-000000000001';
+SELECT pg_temp.ok(
+  (SELECT c.subject_id FROM public.scp_application_candidate(
+     (SELECT application FROM rj)) c) = (SELECT subject_id FROM rj_anna),
+  'RJ7.21 hiring preserves the subject -- the same person, now an employee-to-be');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_subject_identities si
+    WHERE si.user_id = (SELECT anna FROM rj)) = 1,
+  'RJ7.22 and still exactly one professional identity for her -- no second person');
+
+-- And no employment record was invented on the way. Recruitment ends at a
+-- decision; creating the employee is a separate, deliberate act.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.employees e
+    WHERE e.employer_id = (SELECT employer FROM rj)) = 0,
+  'RJ7.23 hiring built no employee record as a side effect');
+
+-- ── The column itself, exercised where a write can actually reach it ─────
+--
+-- The persisted lifecycle is the one the employer already had. Nothing in this
+-- work added an assessment state to job_applications.status, and nothing may:
+-- assessment progress is a separate lifecycle that the UI composes alongside
+-- this one, never merges into it.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.job_applications a
+     WHERE a.status NOT IN ('submitted','reviewing','interview','rejected','hired','withdrawn')),
+  'RJ7.24 no application carries a status outside the persisted lifecycle');
+
+SELECT pg_temp.must_fail(
+  'UPDATE public.job_applications SET status = ''assessment_in_progress'' WHERE id = '
+  || quote_literal('ea000000-3333-0000-0000-000000000002'),
+  'job_applications_status_check',
+  'RJ7.25 and the column refuses an assessment state even to the owner');
+
+-- The mirror, so RJ7.25 is about the VALUE and not about a frozen column:
+-- every status that IS the lifecycle still writes.
+DO $$
+DECLARE _s text;
+BEGIN
+  FOREACH _s IN ARRAY ARRAY['submitted','reviewing','interview','rejected','hired','withdrawn'] LOOP
+    UPDATE public.job_applications SET status = _s
+     WHERE id = 'ea000000-3333-0000-0000-000000000002';
+  END LOOP;
+  RAISE NOTICE 'ok  RJ7.26 and accepts every one of the six that are the lifecycle';
+END $$;
 
 ROLLBACK;

@@ -136,3 +136,105 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
     await expect(page.getByText("Reviewing").first()).toBeVisible({ timeout: 15_000 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Candidate 360 — the application opened as the person who made it.
+// ---------------------------------------------------------------------------
+//
+// Same live-backend gate as the flow above, and for the same reason: there is
+// no local Supabase stack, so the only backend a browser session can reach is
+// the shared Lovable Cloud project. Both specs skip themselves unless the
+// E2E_* fixture variables are set explicitly.
+//
+// This one starts from an application that already exists (the flow above
+// creates one), navigates the way a recruiter actually would -- by clicking
+// the person -- and then asserts the three things that are properties of the
+// PAGE rather than of the database:
+//
+//   * the journey is reachable by clicking a name, not by knowing a URL;
+//   * no Security Passport appears merely because somebody applied;
+//   * it works at 375px, which is where a large share of this product's
+//     users are.
+//
+// Everything about identity, tenancy and disclosure is proven far more
+// strongly in supabase/tests/scp_recruitment_journey_test.sql (group RJ7),
+// against a real Postgres with RLS in force. A browser cannot prove a
+// boundary; it can only prove the surface behaves.
+test.describe("Candidate 360", () => {
+  test.skip(
+    !READY,
+    "Set E2E_RUN_LIVE=1 and the E2E_* fixture env vars to run this against a real backend.",
+  );
+
+  test("an application opens the candidate, and shows no Passport", async ({ page }) => {
+    await forceEnglish(page);
+    await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
+    await page.waitForURL(/\/employer/);
+
+    await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
+
+    // The candidate's name is the way in. Clicking the row's heading link is
+    // the assertion: a page reachable only by typing a URL is not a journey.
+    const firstCandidate = page.locator("main a[href*='/applications/']").first();
+    await expect(firstCandidate).toBeVisible({ timeout: 15_000 });
+    await firstCandidate.click();
+
+    await expect(page).toHaveURL(/\/applications\/[0-9a-f-]{36}$/);
+
+    // The four sections that make it a candidate view rather than a row.
+    await expect(page.getByRole("heading", { name: "Application" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Interview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Next step" })).toBeVisible();
+
+    // Applying for a job is not consent to disclose a Passport. The word must
+    // not appear on this page in either language, and no link may lead to one.
+    await expect(page.getByText(/passport|passet/i)).toHaveCount(0);
+    await expect(page.locator("a[href*='/passport'], a[href^='/p/']")).toHaveCount(0);
+
+    // The decision is offered as named human actions, and never as a verdict.
+    await expect(page.getByText(/recommend|suitab|ranking|score|match/i)).toHaveCount(0);
+
+    // Back the way we came.
+    await page.getByRole("link", { name: "Back to applications" }).click();
+    await expect(page).toHaveURL(new RegExp(`/employer/${EMPLOYER_SLUG}/applications$`));
+  });
+
+  test("the candidate page works in Swedish", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("cqrityjob.lang", "sv"));
+    await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
+    await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
+
+    const firstCandidate = page.locator("main a[href*='/applications/']").first();
+    await expect(firstCandidate).toBeVisible({ timeout: 15_000 });
+    await firstCandidate.click();
+
+    // Swedish copy, and no raw translation keys leaking through -- a missing
+    // key renders as "employer.candidate.something", which t() returns
+    // verbatim rather than throwing.
+    await expect(page.getByRole("heading", { name: "Ansökan" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bedömning" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Nästa steg" })).toBeVisible();
+    await expect(page.getByText(/employer\.candidate\./)).toHaveCount(0);
+  });
+
+  test("the candidate page does not scroll sideways on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await forceEnglish(page);
+    await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
+    await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
+
+    const firstCandidate = page.locator("main a[href*='/applications/']").first();
+    await expect(firstCandidate).toBeVisible({ timeout: 15_000 });
+    await firstCandidate.click();
+    await expect(page.getByRole("heading", { name: "Application" })).toBeVisible();
+
+    // Horizontal overflow at 375 is the failure this catches: a cover note,
+    // a long job title or the status buttons pushing the page wider than the
+    // screen. One pixel of tolerance for sub-pixel layout rounding.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+});

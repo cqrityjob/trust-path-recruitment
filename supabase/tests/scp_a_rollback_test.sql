@@ -233,6 +233,7 @@ DROP FUNCTION IF EXISTS public.scp_invite_participant(uuid, uuid, text, text, te
 DROP FUNCTION IF EXISTS public.scp_claim_assessment_invitations() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_cancel_assessment_invitation(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_application_assessments(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_application_candidate(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_person_overview(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_invitations(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_closed_test_purpose_agrees() CASCADE;

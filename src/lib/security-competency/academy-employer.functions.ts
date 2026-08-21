@@ -1731,6 +1731,29 @@ export type PersonOverviewRow = {
   occurredAt: string;
 };
 
+function personOverviewRow(r: RpcRow): PersonOverviewRow {
+  return {
+    rowKind: String(r.row_kind) as PersonOverviewRow["rowKind"],
+    rowId: String(r.row_id),
+    titleSv: r.title_sv ? String(r.title_sv) : null,
+    titleEn: r.title_en ? String(r.title_en) : null,
+    status: r.status ? String(r.status) : null,
+    useCase: r.use_case ? String(r.use_case) : null,
+    applicationId: r.application_id ? String(r.application_id) : null,
+    jobId: r.job_id ? String(r.job_id) : null,
+    attemptId: r.attempt_id ? String(r.attempt_id) : null,
+    releasedAt: r.released_at ? String(r.released_at) : null,
+    reportAvailable: Boolean(r.report_available),
+    occurredAt: String(r.occurred_at),
+  };
+}
+
+/** Newest first, across all three kinds — the person's timeline with this
+ *  organisation, not three separate lists the reader has to interleave. */
+function newestFirst(rows: PersonOverviewRow[]): PersonOverviewRow[] {
+  return [...rows].sort((x, y) => y.occurredAt.localeCompare(x.occurredAt));
+}
+
 export const getPersonOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -1743,23 +1766,101 @@ export const getPersonOverview = createServerFn({ method: "GET" })
       _subject_id: data.subjectId,
     });
     if (error) throw fail(error.message, "person_overview_failed");
-    const mapped: PersonOverviewRow[] = (rows ?? []).map((r: RpcRow) => ({
-      rowKind: String(r.row_kind) as PersonOverviewRow["rowKind"],
-      rowId: String(r.row_id),
-      titleSv: r.title_sv ? String(r.title_sv) : null,
-      titleEn: r.title_en ? String(r.title_en) : null,
-      status: r.status ? String(r.status) : null,
-      useCase: r.use_case ? String(r.use_case) : null,
-      applicationId: r.application_id ? String(r.application_id) : null,
+    return newestFirst((rows ?? []).map(personOverviewRow));
+  });
+
+/** Candidate 360: one application, the person who made it, and everything this
+ *  organisation already knows about them.
+ *
+ *  ── WHY THIS IS ONE CALL AND NOT THREE ────────────────────────────────
+ *
+ *  The employer opens an application. Turning that into a candidate needs the
+ *  application, the stable subject behind it, and that subject's history with
+ *  this organisation — and the middle step is an identity resolution
+ *  (application -> applicant -> scp_subject_identities -> subject) that has no
+ *  business happening in a browser. Composing here means the subject id is
+ *  resolved, used and discarded server-side: the page receives a candidate,
+ *  not a set of identifiers to join up itself.
+ *
+ *  Neither read model is reimplemented. scp_application_candidate answers who,
+ *  scp_employer_person_overview answers what happened, and both re-verify
+ *  membership for themselves — so the employer id arriving from a route is a
+ *  CLAIM here exactly as it is everywhere else in this file. */
+export type ApplicationCandidate = {
+  applicationId: string;
+  jobId: string | null;
+  jobSlug: string | null;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  /** The persisted application lifecycle, unchanged. Assessment state is a
+   *  separate lifecycle and is composed alongside it, never merged into it. */
+  applicationStatus: string;
+  appliedAt: string;
+  updatedAt: string;
+  coverNote: string | null;
+  /** Contact details the candidate supplied WITH this application, to this
+   *  employer. Not profile data, and not an address that could be retyped into
+   *  an assignment — assignment resolves the person in the database. */
+  phone: string | null;
+  hasCv: boolean;
+  displayName: string | null;
+  /** This person's history with THIS organisation. Empty until a subject
+   *  exists, which is when they are first assessed — not when they apply. */
+  timeline: PersonOverviewRow[];
+};
+
+export const getApplicationCandidate = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ApplicationCandidate | null> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_application_candidate", {
+      _application_id: data.applicationId,
+    });
+    if (error) throw fail(error.message, "application_candidate_failed");
+
+    // No row means either no such application or not this caller's
+    // organisation, and the function deliberately does not distinguish them.
+    // Null rather than a throw: "no such candidate here" is a page state, not
+    // an error state.
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow | undefined;
+    if (!r) return null;
+
+    const employerId = r.employer_id ? String(r.employer_id) : null;
+    const subjectId = r.subject_id ? String(r.subject_id) : null;
+
+    let timeline: PersonOverviewRow[] = [];
+    if (employerId && subjectId) {
+      const { data: overview, error: overviewErr } = await ctx.supabase.rpc(
+        "scp_employer_person_overview",
+        { _employer_id: employerId, _subject_id: subjectId },
+      );
+      // Best-effort, and deliberately so. The timeline ENRICHES a candidate
+      // page that is already complete and already authorised: the application,
+      // the CV, the status controls and the assessment step all work without
+      // it. Losing the history is a smaller harm than losing the page.
+      if (overviewErr) {
+        console.error("[candidate360] person overview unavailable", overviewErr);
+      } else {
+        timeline = newestFirst((overview ?? []).map(personOverviewRow));
+      }
+    }
+
+    return {
+      applicationId: String(r.application_id),
       jobId: r.job_id ? String(r.job_id) : null,
-      attemptId: r.attempt_id ? String(r.attempt_id) : null,
-      releasedAt: r.released_at ? String(r.released_at) : null,
-      reportAvailable: Boolean(r.report_available),
-      occurredAt: String(r.occurred_at),
-    }));
-    // Newest first, across all three kinds — the person's timeline with this
-    // organisation, not three separate lists the reader has to interleave.
-    return mapped.sort((x, y) => y.occurredAt.localeCompare(x.occurredAt));
+      jobSlug: r.job_slug ? String(r.job_slug) : null,
+      jobTitleSv: r.job_title_sv ? String(r.job_title_sv) : null,
+      jobTitleEn: r.job_title_en ? String(r.job_title_en) : null,
+      applicationStatus: String(r.application_status),
+      appliedAt: String(r.applied_at),
+      updatedAt: String(r.updated_at),
+      coverNote: r.cover_note ? String(r.cover_note) : null,
+      phone: r.phone ? String(r.phone) : null,
+      hasCv: Boolean(r.has_cv),
+      displayName: r.display_name ? String(r.display_name) : null,
+      timeline,
+    };
   });
 
 /** Assign from an application, without the employer surface ever holding the

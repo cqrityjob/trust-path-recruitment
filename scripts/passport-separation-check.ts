@@ -32,7 +32,7 @@
 // Plain TS script run with Bun, matching this repository's scripts/*-check.ts
 // convention (no test runner is configured in this project).
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 const errors: string[] = [];
@@ -275,6 +275,74 @@ for (const dir of OTHER_DOMAIN_DIRS) {
         `${rel(file)}: must not import Security Passport — ${line.trim()}`,
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3b. Applying for a job is not consent to disclose a Passport
+// ---------------------------------------------------------------------------
+// The employer recruitment surfaces — the applications list and Candidate 360
+// — are where the two products come closest: one screen, one named person, and
+// a recruiter who would quite reasonably like to see their Passport. They must
+// not be able to.
+//
+// A Passport reaches somebody only through a disclosure its HOLDER created,
+// read back through sp_get_disclosure at the public recipient boundary. An
+// employer surface that read an sp_* table, called a disclosure function, or
+// assembled a payload from Passport modules would make job-application consent
+// into Passport consent by implementation, whatever the copy said.
+//
+// So the rule for these files is absolute and easy to check: they may not
+// name the Passport at all. If in-platform, holder-authorised disclosure to a
+// named employer is built later, it arrives as its own reviewed integration
+// and this list is what has to be revisited deliberately.
+const RECRUITMENT_SURFACES = [
+  "src/routes/_authenticated.employer.$employerSlug.applications.tsx",
+  "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx",
+  "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx",
+  "src/lib/job-intelligence/application-status.ts",
+  "src/components/academy/ApplicationAssessmentPanel.tsx",
+];
+
+// The list is only a control while it matches reality: a candidate route added
+// tomorrow and not named here would escape every rule below.
+{
+  const routeDir = path.join(root, "src/routes");
+  const recruitmentRoutes = readdirSync(routeDir).filter((f) =>
+    f.startsWith("_authenticated.employer.$employerSlug.applications"),
+  );
+  for (const file of recruitmentRoutes) {
+    expect(
+      RECRUITMENT_SURFACES.includes(`src/routes/${file}`),
+      `src/routes/${file}: a new employer applications surface must be added to ` +
+        `RECRUITMENT_SURFACES in this check, so the Passport boundary is proven for it too.`,
+    );
+  }
+}
+
+const PASSPORT_REFERENCES: readonly { pattern: RegExp; why: string }[] = [
+  { pattern: /security-passport/, why: "a Security Passport module" },
+  { pattern: /\bsp_[a-z_]+/, why: "a Passport table or function" },
+  { pattern: /getPublicDisclosure|sp_get_disclosure/, why: "the disclosure boundary" },
+  { pattern: /\bpassport\b/i, why: "the Passport by name" },
+];
+
+for (const relPath of RECRUITMENT_SURFACES) {
+  const full = path.join(root, relPath);
+  if (!existsSync(full)) {
+    expect(false, `${relPath}: named in RECRUITMENT_SURFACES but does not exist.`);
+    continue;
+  }
+  // Comments are stripped: Candidate 360's own header explains, at length, why
+  // no Passport appears on it, and a check that failed on that explanation
+  // would be deleted rather than obeyed.
+  const src = stripComments(read(full));
+  for (const { pattern, why } of PASSPORT_REFERENCES) {
+    expect(
+      !pattern.test(src),
+      `${relPath}: an employer recruitment surface must not reference ${why}. ` +
+        `Applying for a job is not consent to disclose a Security Passport.`,
+    );
   }
 }
 
@@ -534,5 +602,7 @@ console.log(
     `copy domain-local; no criminal-record concept; dev route fails closed; ` +
     `/passport is _authenticated-only; /p/$token is noindex and reads only ` +
     `through the throttled server boundary; the service role is confined to ` +
-    `that one file; internal reviewer notes never reach a card or a holder)`,
+    `that one file; internal reviewer notes never reach a card or a holder; ` +
+    `${RECRUITMENT_SURFACES.length} employer recruitment surfaces name the ` +
+    `Passport nowhere)`,
 );
