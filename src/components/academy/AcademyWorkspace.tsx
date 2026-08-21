@@ -63,8 +63,8 @@ const TRAINING_TABS: Tab[] = [
   { to: "/employer/$employerSlug/training/participants", label: "academy.nav.participants" },
 ];
 
-/** Resolves the workspace, renders the shell and the Tester tabs, and hands
- *  the verified workspace to the page. */
+/** Resolves the workspace, renders the shell and the assessment tabs, and
+ *  hands the verified workspace to the page. */
 export function AcademyPage({
   employerSlug,
   children,
@@ -74,6 +74,27 @@ export function AcademyPage({
 }) {
   return (
     <WorkspaceFrame employerSlug={employerSlug} section="assessments" tabs={ASSESSMENT_TABS}>
+      {children}
+    </WorkspaceFrame>
+  );
+}
+
+/** The same frame for one person under Min personal.
+ *
+ *  Medarbetare > [Person] used to borrow AcademyPage, which meant clicking a
+ *  colleague from the people list moved the sidebar highlight to Bedomningar
+ *  and put the assessment tab bar above their name. The page is about a
+ *  person, so it keeps the People section and shows no tab bar at all -- the
+ *  way back is the link to the people list, which the page already has. */
+export function WorkforcePage({
+  employerSlug,
+  children,
+}: {
+  employerSlug: string;
+  children: (ws: AcademyWorkspace) => ReactNode;
+}) {
+  return (
+    <WorkspaceFrame employerSlug={employerSlug} section="workforce" tabs={[]}>
       {children}
     </WorkspaceFrame>
   );
@@ -102,7 +123,7 @@ function WorkspaceFrame({
   children,
 }: {
   employerSlug: string;
-  section: "assessments" | "training";
+  section: "assessments" | "training" | "workforce";
   tabs: Tab[];
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
@@ -156,7 +177,7 @@ function WorkspaceFrame({
       activeSection={section}
       hasMultipleWorkspaces={workspace.hasMultipleWorkspaces}
     >
-      <AcademyTabs employerSlug={workspace.employerSlug} tabs={tabs} />
+      {tabs.length > 0 && <AcademyTabs employerSlug={workspace.employerSlug} tabs={tabs} />}
       {children(workspace)}
     </EmployerAppShell>
   );

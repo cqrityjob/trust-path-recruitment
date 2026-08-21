@@ -19,7 +19,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
-import { AcademyPage } from "@/components/academy/AcademyWorkspace";
+import { WorkforcePage } from "@/components/academy/AcademyWorkspace";
 import { LifecycleChip, nextActionLabel } from "@/components/academy/LifecycleChip";
 import {
   getPersonAssessments,
@@ -36,9 +36,9 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/wor
 function PersonRoute() {
   const { employerSlug, personId } = Route.useParams();
   return (
-    <AcademyPage employerSlug={employerSlug}>
+    <WorkforcePage employerSlug={employerSlug}>
       {(ws) => <PersonDetail employerId={ws.employerId} employerSlug={employerSlug} personId={personId} />}
-    </AcademyPage>
+    </WorkforcePage>
   );
 }
 
