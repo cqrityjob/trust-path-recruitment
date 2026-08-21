@@ -133,8 +133,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 73,
-    'pre-rollback: 73 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes)');
+        AND table_name LIKE 'scp\_%') = 74,
+    'pre-rollback: 74 scp_ base tables exist (23 PR-A + 15 graph + 23 Academy + 2 Phase 2 + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations)');
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM public.scp_competency_evidence) = 0,
     'pre-rollback: the evidence ledger is empty, so Phase 0 is safely reversible');
@@ -224,6 +224,22 @@ DROP FUNCTION IF EXISTS public.scp_attempt_self_report_pattern(uuid, uuid, text)
 DROP FUNCTION IF EXISTS public.scp_get_attempt_blocks(uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_block_asks_agrees() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_honesty() CASCADE;
+-- The recruitment journey (20260831090000-092000). Same reasoning as above:
+-- uuid/text signatures that the governance-enum cascade does not reach.
+-- scp_assessment_invitations references employers, jobs, job_applications and
+-- assessment_assignments, so it comes off before the Phase 2 unwind.
+DROP FUNCTION IF EXISTS public.scp_invite_participant(uuid, uuid, text, text, text, text, timestamptz, uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_claim_assessment_invitations() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_cancel_assessment_invitation(uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_application_assessments(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_person_overview(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_invitations(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_guard_closed_test_purpose_agrees() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_brief_executive_summary(jsonb, jsonb, text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_add_brief_executive_summary() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_join_human(text[], text) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_required_purpose_code(text, text, public.scp_governance_mode) CASCADE;
+DROP TABLE    IF EXISTS public.scp_assessment_invitations CASCADE;
 DROP TABLE    IF EXISTS public.scp_interview_notes CASCADE;
 DROP TABLE    IF EXISTS public.scp_interview_guide_prompts CASCADE;
 DROP TABLE    IF EXISTS public.scp_form_blocks CASCADE;

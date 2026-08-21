@@ -141,40 +141,49 @@ SELECT pg_temp.ok(
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'fb000000-0000-0000-0000-000000000002';
 
--- The load-bearing refusal. A recruitment-DESIGNED assessment does not become
--- recruitment-PERMITTED, and a closed-test grant can never confer selection use.
-SELECT pg_temp.must_fail($$
-  SELECT public.scp_employer_assign(
-    (SELECT employer FROM rb), (SELECT version_id FROM rbv),
-    'a@recruit-brief.test', NULL, 'sv', 'recruitment', NULL, NULL)$$,
-  'SCP_NOT_VALID_FOR_RECRUITMENT',
-  'RB0.3 a recruitment-designed assessment is STILL refused in a recruitment context');
-
-RESET ROLE; RESET request.jwt.claim.sub;
-
--- ---------------------------------------------------------------------------
--- Assign to all three, as a closed test.
--- ---------------------------------------------------------------------------
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = 'fb000000-0000-0000-0000-000000000002';
+-- The load-bearing separation. A recruitment-DESIGNED assessment does not
+-- become recruitment-PERMITTED: the closed-test grant carries the CONTEXT
+-- (this person is a candidate) and never the BASIS (a decision may rest on
+-- this). The three candidates below are therefore assigned as recruitment, and
+-- every one of them is recorded as a closed test on its own purpose.
 CREATE TEMP TABLE runs AS
 SELECT 'A'::text AS persona, * FROM public.scp_employer_assign(
   (SELECT employer FROM rb), (SELECT version_id FROM rbv),
-  'a@recruit-brief.test', NULL, 'sv', 'workforce', NULL, NULL)
+  'a@recruit-brief.test', NULL, 'sv', 'recruitment')
 UNION ALL
 SELECT 'B', * FROM public.scp_employer_assign(
   (SELECT employer FROM rb), (SELECT version_id FROM rbv),
-  'b@recruit-brief.test', NULL, 'sv', 'workforce', NULL, NULL)
+  'b@recruit-brief.test', NULL, 'sv', 'recruitment')
 UNION ALL
 SELECT 'C', * FROM public.scp_employer_assign(
   (SELECT employer FROM rb), (SELECT version_id FROM rbv),
-  'c@recruit-brief.test', NULL, 'sv', 'workforce', NULL, NULL);
+  'c@recruit-brief.test', NULL, 'sv', 'recruitment');
 RESET ROLE; RESET request.jwt.claim.sub;
 GRANT SELECT ON runs TO authenticated;
 
 SELECT pg_temp.ok(
   (SELECT bool_and(governance_mode = 'closed_test') FROM runs),
-  'RB0.4 every attempt is stamped closed_test, not recruitment');
+  'RB0.3 every attempt is stamped closed_test, not recruitment');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(pv.purpose_code = 'closed_test_recruitment')
+     FROM runs r
+     JOIN public.scp_attempts a ON a.id = r.attempt_id
+     JOIN public.scp_purpose_versions pv ON pv.id = a.purpose_version_id),
+  'RB0.3b and on the closed-test recruitment purpose, never selection_support');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_purpose_versions
+               WHERE purpose_code = 'selection_support' AND published_at IS NOT NULL),
+  'RB0.3c operational selection remains closed — selection_support is unpublished');
+
+-- TEST 5 / "no fake employee". The whole reason this context exists.
+SELECT pg_temp.ok(
+  (SELECT bool_and(aa.use_case = 'recruitment' AND aa.employee_id IS NULL)
+     FROM runs r JOIN public.assessment_assignments aa ON aa.id = r.assignment_id)
+  AND (SELECT count(*) FROM public.employees e
+        WHERE e.employer_id = (SELECT employer FROM rb)) = 0,
+  'RB0.4 all three are candidates: no employment record was created or bound');
 
 -- ---------------------------------------------------------------------------
 -- The answer key, assembled once by the owning role.
@@ -589,6 +598,40 @@ SELECT pg_temp.ok(
                    AND context->>'validation_status' = 'design')
      FROM briefs WHERE audience = 'employer'),
   'RB5.3 every employer brief states, on its face, that it came from unvalidated closed-test content');
+
+-- The defect this replaced, asserted on the rendered report rather than on the
+-- assignment: a candidate is described as a candidate, on BOTH documents, and
+-- the purpose named is the closed-test one.
+SELECT pg_temp.ok(
+  (SELECT bool_and(context->>'person_context' = 'candidate') FROM briefs),
+  'RB5.4 both documents describe the person as a candidate, not an employee');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(context->>'purpose_code' = 'closed_test_recruitment') FROM briefs),
+  'RB5.5 and name the closed-test recruitment purpose they were actually run under');
+
+-- The executive summary: participant-specific, in both languages, and inside
+-- the vocabulary the product allows.
+SELECT pg_temp.ok(
+  (SELECT bool_and(length(brief->'executive_summary'->>'sv') > 80
+                   AND length(brief->'executive_summary'->>'en') > 80)
+     FROM briefs WHERE audience = 'employer'),
+  'RB5.6 every employer brief opens with an executive summary in both languages');
+
+SELECT pg_temp.ok(
+  (SELECT bool_and(NOT (brief ? 'executive_summary'))
+     FROM briefs WHERE audience = 'participant'),
+  'RB5.7 and the participant brief carries none — it is a recruiter''s working note');
+
+-- Specific to the person, not a template: A and C answered the scenarios
+-- completely differently and must not read the same.
+SELECT pg_temp.ok(
+  (SELECT a.brief->'executive_summary'->>'en'
+     FROM briefs a WHERE a.persona = 'A' AND a.audience = 'employer')
+  IS DISTINCT FROM
+  (SELECT c.brief->'executive_summary'->>'en'
+     FROM briefs c WHERE c.persona = 'C' AND c.audience = 'employer'),
+  'RB5.8 the summary is specific to the candidate — A and C do not share one');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP RB6 — interview evidence: recorded, inert, and not the decision'; END $$;
 

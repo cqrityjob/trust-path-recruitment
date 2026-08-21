@@ -226,15 +226,31 @@ SELECT pg_temp.ok(
   'SG1.7 the member CAN read the assignment list — the denial above is about writing');
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- Governance still fails closed: recruitment has no approved purpose version.
+-- Governance still fails closed for OPERATIONAL selection. A recruitment
+-- context under this employer's closed-test grant is now permitted and is
+-- recorded as a closed test — what stays shut is the path that would justify
+-- deciding about somebody, and that is asserted on the purpose rather than on
+-- the assignment succeeding or failing.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
-SELECT pg_temp.must_fail(format(
-  'SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L, NULL, ''sv'', ''recruitment'')',
-  (SELECT employer FROM sg), (SELECT version_id FROM sgv), 'participant@gate.test'),
-  'SCP_',
-  'SG1.8 recruitment still fails closed — no purpose was activated by this phase');
+CREATE TEMP TABLE sg_rec AS
+SELECT * FROM public.scp_employer_assign(
+  (SELECT employer FROM sg), (SELECT version_id FROM sgv),
+  'participant@gate.test', NULL, 'sv', 'recruitment');
 RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON sg_rec TO authenticated;
+
+SELECT pg_temp.ok(
+  (SELECT governance_mode FROM sg_rec)::text = 'closed_test'
+  AND (SELECT pv.purpose_code FROM public.scp_attempts a
+         JOIN public.scp_purpose_versions pv ON pv.id = a.purpose_version_id
+        WHERE a.id = (SELECT attempt_id FROM sg_rec)) = 'closed_test_recruitment',
+  'SG1.8 a recruitment context runs as a closed test, on its own purpose');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_purpose_versions
+               WHERE purpose_code = 'selection_support' AND published_at IS NOT NULL),
+  'SG1.8b operational selection still fails closed — no selection purpose was activated');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP SG2 — direct writes to attempts, responses and evidence'; END $$;
 
