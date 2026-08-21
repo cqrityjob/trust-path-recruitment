@@ -18,6 +18,7 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import { EmployerDecisionPanel } from "@/components/academy/EmployerDecisionPanel";
+import { CandidateBrief } from "@/components/academy/CandidateBrief";
 import { DecisionSummary, ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
   EvidenceCoverage,
@@ -183,6 +184,12 @@ function Report({
 
       <SafetyFlagNotice count={r.safetyFlags.length} />
 
+      {/* The brief comes FIRST, ahead of the competency lines, because those two
+          sections answer different questions and the recruiter's question is the
+          brief's. Reports released before the brief existed carry none, and the
+          page degrades to exactly what it showed before. */}
+      {r.brief && <CandidateBrief brief={r.brief} attemptId={attemptId} canRecord={canDecide} />}
+
       <EvidenceCoverage
         observations={
           r.context?.evidenceObservations ?? r.lines.reduce((n, l) => n + l.observations, 0)
@@ -191,6 +198,10 @@ function Report({
         bodyKey="academy.coverage.employerBody"
       />
 
+      {/* Detailed evidence. Kept, and kept below: this is the maturity axis —
+          how much evidence exists across occasions — which every single-occasion
+          run answers the same way. It is the honest denominator under the brief,
+          not the thing a recruiter reads first. */}
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">
           {t("academy.results.competencies")}

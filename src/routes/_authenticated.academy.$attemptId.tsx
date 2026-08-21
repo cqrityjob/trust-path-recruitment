@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, ShieldAlert } from "lucide-react";
 import { useT } from "@/i18n/context";
 import {
   AssessmentShell,
@@ -35,11 +35,13 @@ import {
   SelectableAnswer,
 } from "@/components/career-discovery/v31/shell/QuestionCard";
 import {
+  getAcademyAttemptBlocks,
   getAcademyAttemptItems,
   getAcademyAttemptState,
   saveAcademyResponse,
   submitAcademyAttempt,
   type AcademyAttemptState,
+  type AcademyBlock,
   type AcademyItem,
 } from "@/lib/security-competency/academy-delivery.functions";
 
@@ -47,7 +49,7 @@ export const Route = createFileRoute("/_authenticated/academy/$attemptId")({
   component: AcademyAttemptRoute,
 });
 
-type Phase = "loading" | "intro" | "running" | "submitting" | "done" | "error";
+type Phase = "loading" | "intro" | "section" | "running" | "submitting" | "done" | "error";
 
 /** Whether an item already carries a saved answer.
  *
@@ -63,11 +65,18 @@ function AcademyAttemptRoute() {
   const { attemptId } = Route.useParams();
   const { t, lang: uiLang } = useT();
   const loadItems = useServerFn(getAcademyAttemptItems);
+  const loadBlocks = useServerFn(getAcademyAttemptBlocks);
   const loadState = useServerFn(getAcademyAttemptState);
   const saveResponse = useServerFn(saveAcademyResponse);
   const submitAttempt = useServerFn(submitAcademyAttempt);
 
   const [items, setItems] = useState<AcademyItem[]>([]);
+  const [blocks, setBlocks] = useState<AcademyBlock[]>([]);
+  // Which section introductions this sitting has already shown. A section
+  // intro is worth reading once; making somebody click past it every time they
+  // step back through an answer would train them to skip it, which is the
+  // opposite of what it is for.
+  const [introsSeen, setIntrosSeen] = useState<Set<string>>(() => new Set());
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("loading");
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -83,12 +92,14 @@ function AcademyAttemptRoute() {
     let cancelled = false;
     void (async () => {
       try {
-        const [rows, state] = await Promise.all([
+        const [rows, blockRows, state] = await Promise.all([
           loadItems({ data: { attemptId, locale: lang } }),
+          loadBlocks({ data: { attemptId, locale: lang } }),
           loadState({ data: { attemptId } }),
         ]);
         if (cancelled) return;
         setItems(rows);
+        setBlocks(blockRows);
         // A closed run never re-enters the player. Reloading the page after
         // handing in used to offer "continue where you left off" and only
         // refuse at the very end, which reads as though the submission had
@@ -118,10 +129,45 @@ function AcademyAttemptRoute() {
     return () => {
       cancelled = true;
     };
-  }, [attemptId, lang, loadItems, loadState]);
+  }, [attemptId, lang, loadItems, loadBlocks, loadState]);
 
   const current = items[index];
   const answered = useMemo(() => items.filter(isAnswered).length, [items]);
+  const blockOf = useCallback(
+    (key: string | undefined) => blocks.find((b) => b.blockKey === key) ?? null,
+    [blocks],
+  );
+  const currentBlock = blockOf(current?.blockKey);
+  // Where in the item list this section starts, so the counter reads
+  // "Question 3 of 10" within the section rather than "Question 23 of 50" —
+  // fifty is a number that makes people give up at question twelve.
+  const sectionItems = useMemo(
+    () => (currentBlock ? items.filter((i) => i.blockKey === currentBlock.blockKey) : items),
+    [items, currentBlock],
+  );
+  const sectionIndex = currentBlock
+    ? sectionItems.findIndex((i) => i.itemVersionId === current?.itemVersionId)
+    : index;
+
+  /** Move to an item, showing its section introduction first if this sitting
+   *  has not shown it yet. Forward moves only: stepping BACK into a section
+   *  already begun must not re-interrupt. */
+  const goTo = useCallback(
+    (next: number, direction: "forward" | "back") => {
+      const target = items[next];
+      const targetBlock = target ? blockOf(target.blockKey) : null;
+      setIndex(next);
+      if (
+        direction === "forward" &&
+        targetBlock &&
+        targetBlock.blockKey !== current?.blockKey &&
+        !introsSeen.has(targetBlock.blockKey)
+      ) {
+        setPhase("section");
+      }
+    },
+    [items, blockOf, current?.blockKey, introsSeen],
+  );
 
   // Keep the local copy in step with what was saved, so going back shows the
   // answer that is actually on the server rather than one this component
@@ -219,12 +265,78 @@ function AcademyAttemptRoute() {
           <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
             {t("academy.intro.purpose")}
           </p>
+          {/* What the run is made of, before it starts. Fifty questions with no
+              visible structure reads as endless; five named sections reads as
+              a piece of work. */}
+          {blocks.length > 0 && (
+            <ol className="mt-7 space-y-2.5">
+              {blocks.map((b, i) => (
+                <li key={b.blockKey} className="flex gap-3 text-[14px] leading-relaxed">
+                  <span className="mt-[2px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-[11px] font-semibold tabular-nums text-muted-foreground">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="font-medium text-foreground">{b.name}</span>
+                    <span className="text-muted-foreground">
+                      {" · "}
+                      {b.itemCount} {t("academy.section.questions")}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
           <button
             type="button"
-            onClick={() => setPhase("running")}
+            onClick={() => {
+              const startBlock = blockOf(items[index]?.blockKey);
+              setPhase(startBlock && !introsSeen.has(startBlock.blockKey) ? "section" : "running");
+            }}
             className="mt-8 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
             {answered > 0 ? t("academy.resume") : t("academy.start")}
+          </button>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
+  // The section introduction. This is where the participant is told what the
+  // next block of questions ASKS — and, for the work-behaviour block, that
+  // their answers are reported as a self-description and never as something we
+  // observed. Saying that at answering time is the honest place to say it.
+  if (phase === "section" && currentBlock) {
+    const n = blocks.findIndex((b) => b.blockKey === currentBlock.blockKey) + 1;
+    return (
+      <AssessmentShell showExit>
+        <AssessmentPanel>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+            {t("academy.section.eyebrow")} {n} {t("cd.public.of")} {blocks.length}
+          </p>
+          <h1
+            className="mt-3 text-[1.5rem] font-semibold leading-[1.2] tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {currentBlock.name}
+          </h1>
+          <p className="mt-4 max-w-[54ch] text-[15px] leading-relaxed text-muted-foreground">
+            {currentBlock.intro}
+          </p>
+          <p className="mt-4 max-w-[54ch] rounded-[10px] bg-[color:var(--surface-subtle)] p-4 text-[13px] leading-relaxed text-foreground">
+            {t(`academy.asks.${currentBlock.asks}`)}
+          </p>
+          <p className="mt-4 text-[13px] text-muted-foreground">
+            {currentBlock.itemCount} {t("academy.section.questions")}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setIntrosSeen((prev) => new Set(prev).add(currentBlock.blockKey));
+              setPhase("running");
+            }}
+            className="mt-8 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none"
+          >
+            {t("academy.section.continue")}
           </button>
         </AssessmentPanel>
       </AssessmentShell>
@@ -276,13 +388,20 @@ function AcademyAttemptRoute() {
     <AssessmentShell showExit>
       <AssessmentCard>
         <AssessmentProgressBar
-          stageLabel={t("academy.stage")}
-          current={index + 1}
-          total={items.length}
+          stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}
+          current={sectionIndex + 1}
+          total={sectionItems.length}
           answered={answered}
         />
 
         <div className="px-5 py-6 sm:px-8 sm:py-8">
+          {currentBlock?.asks === "how_you_usually_work" && (
+            <p className="mb-4 inline-flex items-center gap-2 rounded-[8px] border border-border bg-[color:var(--surface-subtle)] px-3 py-2 text-xs font-medium text-foreground">
+              <MessageSquare className="h-4 w-4 text-accent" aria-hidden="true" />
+              {t("academy.selfReportBadge")}
+            </p>
+          )}
+
           {current.isSafetyCritical && (
             <p className="mb-4 inline-flex items-center gap-2 rounded-[8px] border border-border bg-[color:var(--surface-subtle)] px-3 py-2 text-xs font-medium text-foreground">
               <ShieldAlert className="h-4 w-4 text-accent" aria-hidden="true" />
@@ -296,8 +415,15 @@ function AcademyAttemptRoute() {
           </h2>
 
           <div className="mt-6">
+            {/* biq_frequency joins the single-choice branch rather than growing
+                a control of its own: it is one list of mutually exclusive
+                labels, which is exactly what SelectableAnswer already is. What
+                differs is what the ANSWER means, and that is said in the
+                section introduction and enforced in the evidence model — not
+                by drawing a different radio button. */}
             {(current.itemFormat === "sjt_best_response" ||
-              current.itemFormat === "sjt_rate_effectiveness") && (
+              current.itemFormat === "sjt_rate_effectiveness" ||
+              current.itemFormat === "biq_frequency") && (
               <fieldset className="space-y-2.5">
                 <legend className="sr-only">{current.prompt}</legend>
                 {current.options.map((o) => (
@@ -387,11 +513,11 @@ function AcademyAttemptRoute() {
         </div>
 
         <AssessmentNavigation
-          onBack={() => setIndex((i) => Math.max(0, i - 1))}
+          onBack={() => goTo(Math.max(0, index - 1), "back")}
           backDisabled={index === 0}
           forward={
             index < items.length - 1
-              ? { label: t("academy.next"), onClick: () => setIndex((i) => i + 1) }
+              ? { label: t("academy.next"), onClick: () => goTo(index + 1, "forward") }
               : { label: t("academy.submit"), onClick: () => void onSubmit() }
           }
         />

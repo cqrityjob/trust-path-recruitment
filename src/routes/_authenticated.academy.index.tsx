@@ -14,6 +14,7 @@
 // professional judgement is entitled to know who asked and why, at the moment
 // they decide whether to begin.
 
+import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,6 +28,7 @@ import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { getLearningFormForModule } from "@/lib/security-competency/academy-learning.functions";
 import { ParticipantAssessmentHistory } from "@/components/academy/ParticipantAssessmentHistory";
 import {
+  claimAssessmentInvitations,
   listAcademyWork,
   type AcademyWorkItem,
 } from "@/lib/security-competency/academy-training.functions";
@@ -39,9 +41,32 @@ export const Route = createFileRoute("/_authenticated/academy/")({
 function AcademyHome() {
   const { t, lang } = useT();
   const listWork = useServerFn(listAcademyWork);
+  const claimFn = useServerFn(claimAssessmentInvitations);
   const formFn = useServerFn(getLearningFormForModule);
 
+  // Both start immediately, and the list is deliberately NOT gated on the
+  // claim. Gating it left the query disabled on first render, which is
+  // indistinguishable from `data === undefined` — and AcademyQueryState reads
+  // that as a failure, so every visit flashed an error panel before recovering.
+  //
+  // Instead the claim runs alongside, and the list is refetched only if it
+  // actually bound something. Somebody who was invited before they had an
+  // account still sees the assessment on THIS visit; everybody else pays one
+  // cheap call and never notices.
   const work = useQuery({ queryKey: ["academy", "work"], queryFn: () => listWork() });
+
+  const claim = useQuery({
+    queryKey: ["academy", "claim-invitations"],
+    queryFn: () => claimFn(),
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const bound = claim.data?.bound ?? 0;
+  const refetchWork = work.refetch;
+  useEffect(() => {
+    if (bound > 0) void refetchWork();
+  }, [bound, refetchWork]);
   const learningForm = useQuery({
     queryKey: ["academy", "learning-form"],
     queryFn: () => formFn(),
@@ -189,6 +214,17 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
           {row.employerName && (
             <p className="mt-1 text-[13px] text-muted-foreground">
               {t("academy.home.requestedBy")} {row.employerName}
+            </p>
+          )}
+          {/* Why this arrived. An assessment that turns up unexplained in
+              somebody's account is alarming; one that names the job they
+              applied for is a step in a process they started. */}
+          {row.useCase === "recruitment" && (row.jobTitleSv || row.jobTitleEn) && (
+            <p className="mt-1 text-[13px] text-foreground">
+              {t("academy.work.forJob")}{" "}
+              <span className="font-medium">
+                {(lang === "en" ? row.jobTitleEn : row.jobTitleSv) ?? ""}
+              </span>
             </p>
           )}
         </div>

@@ -98,6 +98,29 @@ SELECT pg_temp.ok(
   public.scp_required_purpose_code('recruitment') = 'selection_support',
   'PG1.2 a recruitment assignment asks for selection_support');
 
+-- The three-argument form, added when closed-test recruitment became a truthful
+-- context. The OPERATIONAL answer is unchanged and is still what the
+-- two-argument form gives, so anything that has not been taught about closed
+-- testing keeps asking for the purpose that is correctly unavailable.
+SELECT pg_temp.ok(
+  public.scp_required_purpose_code('recruitment', NULL, 'recruitment') = 'selection_support',
+  'PG1.2b operational recruitment still asks for selection_support');
+
+SELECT pg_temp.ok(
+  public.scp_required_purpose_code('recruitment', NULL, 'closed_test') = 'closed_test_recruitment',
+  'PG1.2c a closed test asks for its own recruitment purpose, not selection_support');
+
+SELECT pg_temp.ok(
+  public.scp_required_purpose_code('workforce', NULL, 'closed_test') = 'competence_development',
+  'PG1.2d a workforce assignment is unaffected by the governance mode');
+
+-- Refusing to answer is the point: a caller that never established it was in a
+-- closed test must not be handed the permissive purpose by omission.
+SELECT pg_temp.must_fail(
+  'SELECT public.scp_required_purpose_code(''recruitment'', NULL, NULL::public.scp_governance_mode)',
+  'SCP_PURPOSE_NEEDS_GOVERNANCE_MODE',
+  'PG1.2e the mapping will not name a recruitment purpose without a governance basis');
+
 SELECT pg_temp.ok(
   public.scp_required_purpose_code('workforce', 'reassessment') = 'reassessment',
   'PG1.3 a reassessment asks for the reassessment purpose, not the workforce one');
@@ -168,11 +191,78 @@ DO $$ BEGIN RAISE NOTICE 'GROUP PG3 — recruitment fails closed on the purpose 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ee000000-0000-0000-0000-000000000002';
 
+-- A closed-test grant now carries a RECRUITMENT context, and lands on its own
+-- purpose. This is the case that used to be refused outright, which forced a
+-- recruitment candidate to be assigned as workforce and therefore recorded as
+-- an employee under a competence-development purpose. The refusal was correct
+-- about operational selection and wrong about everything else.
+CREATE TEMP TABLE pg_ct AS
+SELECT * FROM public.scp_employer_assign(
+  (SELECT employer FROM pg_fx), (SELECT version_id FROM pg_ver),
+  'participant@purpose-gov.test', NULL, 'sv', 'recruitment');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT governance_mode FROM pg_ct)::text = 'closed_test',
+  'PG3.1 a recruitment context is permitted under a closed-test grant');
+
+SELECT pg_temp.ok(
+  (SELECT pv.purpose_code FROM public.scp_attempts a
+     JOIN public.scp_purpose_versions pv ON pv.id = a.purpose_version_id
+    WHERE a.id = (SELECT attempt_id FROM pg_ct)) = 'closed_test_recruitment',
+  'PG3.1b and is recorded under closed_test_recruitment, never selection_support');
+
+-- The whole point of the change: this person is a candidate.
+SELECT pg_temp.ok(
+  (SELECT aa.use_case FROM public.assessment_assignments aa
+    WHERE aa.id = (SELECT assignment_id FROM pg_ct)) = 'recruitment'
+  AND (SELECT aa.employee_id FROM public.assessment_assignments aa
+        WHERE aa.id = (SELECT assignment_id FROM pg_ct)) IS NULL,
+  'PG3.1c the candidate is recorded as a candidate, with no employment record');
+
+-- And a development basis is still not a recruitment basis. Proven on FIXTURE
+-- content, because that is the only place a development basis exists:
+-- scp_grant_permits_assignment returns 'development' for a fixture and nothing
+-- else, so a second organisation holding a plain development grant over real
+-- content would be refused for having no basis at all — a true refusal, but
+-- the wrong one to be asserting here.
+INSERT INTO auth.users (id, email)
+VALUES ('ee000000-0000-0000-0000-00000000000d', 'devowner@purpose-gov.test');
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('ee000000-1111-0000-0000-00000000000d', 'Development Only AB', 'dev-only-purpose-gov', 'active');
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('ee000000-1111-0000-0000-00000000000d', 'ee000000-0000-0000-0000-00000000000d', 'owner', 'active');
+
+CREATE TEMP TABLE pg_fix AS
+SELECT av.id AS version_id, av.definition_id
+  FROM public.scp_assessment_versions av
+  JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+ WHERE d.is_test_fixture
+   AND EXISTS (SELECT 1 FROM public.scp_forms f
+                 JOIN public.scp_form_items fi ON fi.form_id = f.id
+                WHERE f.assessment_version_id = av.id)
+ ORDER BY av.version_number DESC LIMIT 1;
+GRANT SELECT ON pg_fix TO authenticated;
+
+INSERT INTO public.scp_test_grants
+  (employer_id, purpose, definition_id, reason, authorised_by, expires_at)
+SELECT 'ee000000-1111-0000-0000-00000000000d', 'development', (SELECT definition_id FROM pg_fix),
+       'Development-only grant', 'ee000000-0000-0000-0000-00000000000d', now() + interval '30 days';
+
+SELECT pg_temp.ok(
+  public.scp_grant_permits_assignment(
+    'ee000000-1111-0000-0000-00000000000d', (SELECT definition_id FROM pg_fix),
+    'published', 'pilot', true)::text = 'development',
+  'PG3.1d the development grant genuinely yields a development basis');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ee000000-0000-0000-0000-00000000000d';
+
 SELECT pg_temp.must_fail(format(
   'SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L, NULL, ''sv'', ''recruitment'')',
-  (SELECT employer FROM pg_fx), (SELECT version_id FROM pg_ver), 'participant@purpose-gov.test'),
+  'ee000000-1111-0000-0000-00000000000d', (SELECT version_id FROM pg_fix), 'participant@purpose-gov.test'),
   'SCP_NOT_VALID_FOR_RECRUITMENT',
-  'PG3.1 unvalidated content is refused for recruitment by the governance gate');
+  'PG3.1e and a development basis is still refused a recruitment context');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -202,15 +292,24 @@ SELECT pg_temp.must_fail(format(
   'SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L, NULL, ''sv'', ''recruitment'')',
   (SELECT employer FROM pg_fx), (SELECT version_id FROM pg_ver), 'participant@purpose-gov.test'),
   'SCP_PURPOSE_NOT_AVAILABLE',
-  'PG3.4 recruitment still refuses — on the purpose, not on the content');
+  'PG3.4 OPERATIONAL recruitment still refuses — on the purpose, not on the content');
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- Nothing was written by the refusal.
+-- The refusal wrote nothing. Exactly one recruitment assignment exists: the
+-- closed-test one from PG3.1.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.assessment_assignments aa
-    WHERE aa.employer_id = (SELECT employer FROM pg_fx) AND aa.use_case = 'recruitment') = 0,
-  'PG3.5 a refused recruitment assignment leaves no assignment row behind');
+    WHERE aa.employer_id = (SELECT employer FROM pg_fx) AND aa.use_case = 'recruitment') = 1,
+  'PG3.5 the refused operational assignment left no assignment row behind');
+
+-- A closed test can never present itself as operational selection, whatever
+-- writes the row.
+SELECT pg_temp.must_fail(format(
+  'UPDATE public.scp_attempts SET governance_mode = ''recruitment'' WHERE id = %L::uuid',
+  (SELECT attempt_id FROM pg_ct)),
+  'SCP_',
+  'PG3.6 an attempt on the closed-test recruitment purpose cannot be relabelled operational');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP PG4 — reassessment asks for its own purpose'; END $$;
 
@@ -246,10 +345,22 @@ SELECT pg_temp.must_fail(format(
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- Two attempts exist for this organisation and both were created deliberately:
+-- the closed-test recruitment one from PG3.1 and the workforce one PG4 set up.
+-- Stated as a count AND as an absence of the reassessment purpose, because the
+-- count alone would start passing for the wrong reason the next time a group
+-- above adds a fixture.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_attempts a
-    WHERE a.issuer_organization_id = (SELECT employer FROM pg_fx)) = 1,
-  'PG4.3 the refused reassessment created no second attempt');
+    WHERE a.issuer_organization_id = (SELECT employer FROM pg_fx)) = 2,
+  'PG4.3 the refused reassessment created no further attempt');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_attempts a
+                JOIN public.scp_purpose_versions pv ON pv.id = a.purpose_version_id
+               WHERE a.issuer_organization_id = (SELECT employer FROM pg_fx)
+                 AND pv.purpose_code = 'reassessment'),
+  'PG4.3b and no attempt anywhere carries the reassessment purpose');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP PG5 — a recorded purpose is frozen'; END $$;
 
@@ -319,20 +430,36 @@ SELECT pg_temp.must_fail(format(
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- Still the same two deliberate attempts from PG3.1 and PG4: nothing was added
+-- by a refusal.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_attempts a
-    WHERE a.issuer_organization_id = (SELECT employer FROM pg_fx)) = 1,
+    WHERE a.issuer_organization_id = (SELECT employer FROM pg_fx)) = 2,
   'PG6.2 the refusal created no attempt');
 
+-- An ALLOWLIST, not a count. Two purposes are published and each was a
+-- deliberate decision: competence_development, and closed_test_recruitment for
+-- running a recruitment assessment inside an explicit closed-test grant.
+-- Anything else appearing here is a purpose somebody published without the
+-- review that publishing a purpose requires.
 DO $$
-DECLARE _n int;
+DECLARE _extra text;
 BEGIN
-  SELECT count(*) INTO _n FROM public.scp_purpose_versions
-   WHERE purpose_code <> 'competence_development' AND published_at IS NOT NULL;
-  IF _n > 0 THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: PG6.3 an unapproved purpose was published';
+  SELECT string_agg(purpose_code, ', ') INTO _extra
+    FROM public.scp_purpose_versions
+   WHERE published_at IS NOT NULL
+     AND purpose_code NOT IN ('competence_development', 'closed_test_recruitment');
+  IF _extra IS NOT NULL THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: PG6.3 an unapproved purpose was published: %', _extra;
   END IF;
-  RAISE NOTICE 'ok  PG6.3 no purpose beyond competence_development is published';
+  RAISE NOTICE 'ok  PG6.3 only competence_development and closed_test_recruitment are published';
 END $$;
+
+-- And the one that would actually justify deciding about somebody is not among
+-- them. Stated separately because it is the load-bearing half.
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_purpose_versions
+               WHERE purpose_code = 'selection_support' AND published_at IS NOT NULL),
+  'PG6.4 selection_support remains unpublished — operational selection is still closed');
 
 ROLLBACK;

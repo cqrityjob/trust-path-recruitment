@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   AssessmentShell,
   AssessmentPanel,
@@ -160,6 +161,68 @@ function ParticipantReport() {
         contexts={r.context?.evidenceContexts ?? 1}
         bodyKey="academy.coverage.participantBody"
       />
+
+      {/* What the assessment was made of, and the distinction that matters most
+          to the person who sat it: what we watched them do, and what they told
+          us about themselves. Said in the participant's own report, in the same
+          words the employer sees. */}
+      {r.brief && r.brief.modules.length > 0 && (
+        <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">{t("report.modulesDone")}</h2>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {r.brief.modules.map((m) => (
+              <li
+                key={m.blockKey}
+                className="inline-flex items-center gap-1.5 rounded-[8px] border border-border px-2.5 py-1 text-xs text-foreground"
+              >
+                {lang === "en" ? m.nameEn : m.nameSv}
+                <span className="text-muted-foreground">
+                  {m.answered}/{m.items}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <h3 className="mt-5 text-sm font-semibold text-foreground">
+            {t("report.observedVsSelf")}
+          </h3>
+          <p className="mt-2 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("report.observedVsSelfBody")}
+          </p>
+        </section>
+      )}
+
+      {/* Their own answers, given back to them. No numbers: the participant
+          brief carries the pattern and the count and deliberately not the mean
+          or the spread, so there is nothing here that could be read as a mark
+          out of ten. */}
+      {r.brief && r.brief.selfReported.length > 0 && (
+        <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">{t("report.selfReported")}</h2>
+          <p className="mt-1.5 max-w-[70ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("report.selfReportedLede")}
+          </p>
+          <ul className="mt-4">
+            {r.brief.selfReported.map((sr) => (
+              <li
+                key={sr.domainKey}
+                className="border-b border-border py-3 last:border-b-0 last:pb-0"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h3 className="text-sm font-medium text-foreground">
+                    {lang === "en" ? sr.domainEn : sr.domainSv}
+                  </h3>
+                  <p className="text-[13px] text-foreground">
+                    {t(`brief.pattern.${sr.pattern}` as TranslationKey)}
+                  </p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {sr.items} {t("brief.questionsAnswered")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
         <h2 className="mb-2 text-sm font-semibold text-foreground">

@@ -292,8 +292,17 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   an assignment references a governed programme VERSION and a subject, and
 #   progress references that assignment and a module version. No parallel
 #   content, item, form or attempt model was introduced.
-if [ "$SCP_TABLES" -ne 70 ]; then
-  echo "FAIL: expected 70 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers), found $SCP_TABLES" >&2
+# + scp_form_blocks, scp_interview_guide_prompts and scp_interview_notes from the
+#   flagship recruitment assessment (20260830091000 / 20260830093000). Three
+#   tables, all hanging off the existing spine: a form's declared sections, an
+#   authored interview-question library keyed by competency and facet, and an
+#   append-only record of what an interview established. No second assessment
+#   engine, no second report model and no second evidence ledger.
+# + scp_assessment_invitations (20260831091000): an intent to assess somebody
+#   the platform does not know yet. Deliberately not an assignment -- it holds
+#   no subject and creates no attempt until the invited person claims it.
+if [ "$SCP_TABLES" -ne 74 ]; then
+  echo "FAIL: expected 74 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -777,6 +786,74 @@ echo "    ok  ${ASCOPE_PASSED} report evidence-scope assertions passed"
 if [ "$ASCOPE_PASSED" -lt 23 ]; then
   echo "FAIL: expected at least 23 report evidence-scope assertions, only ${ASCOPE_PASSED} ran." >&2
   exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-d2. Recruitment brief and interview guide, on three personas.
+#
+# The one that proves the product's central claim: a candidate who DESCRIBES
+# themselves well and a candidate who ANSWERS well must not produce the same
+# brief. Persona C says exactly what Persona A says and answers the scenarios
+# like somebody who has not done the job; several assertions are stated as
+# absences on C, because an absence is what no accidental finding can satisfy.
+#
+# It also holds the recruitment guard: the assessment is DESIGNED for
+# recruitment and is still refused in a recruitment context, because the
+# content is draft and selection_support is unpublished.
+# ---------------------------------------------------------------------------
+echo "==> Running recruitment brief + interview guide assertions"
+set +e
+RBRIEF_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_recruitment_brief_test.sql 2>&1)"
+RBRIEF_RC=$?
+set -e
+
+echo "$RBRIEF_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+RBRIEF_PASSED="$(echo "$RBRIEF_OUT" | grep -c "ok  " || true)"
+
+if [ "$RBRIEF_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the recruitment brief suite exited with code ${RBRIEF_RC}." >&2
+  echo "$RBRIEF_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruitment brief + interview guide"
+else
+  echo "    ok  ${RBRIEF_PASSED} recruitment brief assertions passed"
+  if [ "$RBRIEF_PASSED" -lt 50 ]; then
+    echo "FAIL: expected at least 50 recruitment brief assertions, only ${RBRIEF_PASSED} ran." >&2
+    suite_failed "Recruitment brief (assertion shortfall: floor 50)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 5l-d3. The recruitment journey around the assessment.
+#
+# One human from job application to released report: the same subject
+# throughout, an assessment started from an application without retyping an
+# address, somebody with no account invited and later bound to their own
+# identity, and a second organisation that sees none of it. Four properties are
+# asserted as ABSENCES, because each wrong outcome would look plausible in a
+# demo -- a fake employment record, a duplicate person, an assignment created
+# by a pending invitation, or one tenant reading another's pipeline.
+# ---------------------------------------------------------------------------
+echo "==> Running recruitment journey assertions"
+set +e
+RJOURNEY_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_recruitment_journey_test.sql 2>&1)"
+RJOURNEY_RC=$?
+set -e
+
+echo "$RJOURNEY_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+RJOURNEY_PASSED="$(echo "$RJOURNEY_OUT" | grep -c "ok  " || true)"
+
+if [ "$RJOURNEY_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the recruitment journey suite exited with code ${RJOURNEY_RC}." >&2
+  echo "$RJOURNEY_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Recruitment journey"
+else
+  echo "    ok  ${RJOURNEY_PASSED} recruitment journey assertions passed"
+  if [ "$RJOURNEY_PASSED" -lt 40 ]; then
+    echo "FAIL: expected at least 40 recruitment journey assertions, only ${RJOURNEY_PASSED} ran." >&2
+    suite_failed "Recruitment journey (assertion shortfall: floor 40)"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -1301,6 +1378,8 @@ echo "              ${VJ_PASSED} Vaktare journey assertions,"
 echo "              ${PGOV_PASSED} purpose-governance assertions,"
 echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
+echo "              ${RBRIEF_PASSED} recruitment brief + interview guide assertions,"
+echo "              ${RJOURNEY_PASSED} recruitment journey assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
 echo "              ${REV_PASSED} employer response-reviewer assertions,"
 echo "              ${SPINE_PASSED} person identity spine assertions,"

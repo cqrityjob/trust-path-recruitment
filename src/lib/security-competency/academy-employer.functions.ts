@@ -153,6 +153,9 @@ export type ReportContext = {
    *  and the coverage paragraph has to say that rather than "two occasions". */
   evidenceObservations?: number;
   evidenceContexts?: number;
+  /** Counted separately from evidenceObservations, and reported separately,
+   *  because a self-description is not an observation. */
+  selfReportObservations?: number;
   humanReviewOccurred?: boolean;
   /** Whether any reviewer actually FOUND a safety concern in this attempt.
    *  Distinct from humanReviewOccurred, and from the item having been
@@ -167,6 +170,129 @@ export type ReportContext = {
   scoringModelVersion?: string;
 };
 
+/** How a person answered THIS assessment, on one competency.
+ *
+ *  A third axis, and the one a recruiter is actually asking about. It is not
+ *  maturity (how much evidence exists across occasions) and it is not the
+ *  evidence state (what may be claimed about a way of working); it is a
+ *  description of the answers in one sitting, and every surface renders it
+ *  labelled that way.
+ *
+ *  `limited` means too few tasks touched the area to say anything — never that
+ *  the person lacks the ability. `mixed` is checked BEFORE the good bands in
+ *  the derivation, so answers that differ sharply across comparable tasks read
+ *  as mixed even when the average is high. */
+export type AssessmentSignal = "strong" | "consistent" | "mixed" | "developing" | "limited";
+
+/** What the person SAID about how they usually work. Never an observation.
+ *
+ *  `consistency: "varied"` means related answers pointed different ways. That
+ *  is a prompt to ask about it in interview and nothing else: it is never a
+ *  statement that anybody was untruthful, and the product has no vocabulary
+ *  for that claim anywhere. */
+export type SelfReportPattern =
+  | "consistently_described"
+  | "mostly_described"
+  | "rarely_described"
+  | "not_described";
+
+export type BriefModule = {
+  blockKey: string;
+  nameSv: string;
+  nameEn: string;
+  asks: "what_you_would_do" | "how_you_usually_work" | "your_own_experience";
+  items: number;
+  answered: number;
+};
+
+export type ObservedArea = {
+  areaCode: string;
+  areaSv: string;
+  areaEn: string;
+  evidenceType: "observed";
+  signal: AssessmentSignal;
+  items: number;
+  /** Kept so a surface can order strengths by how strongly they were shown.
+   *  Never rendered as a number: it is not a score and there is no scale a
+   *  reader could put it on. */
+  mean: number;
+  spread: number;
+  evidenceState: EvidenceState;
+  behaviourSv: string | null;
+  behaviourEn: string | null;
+  whySv: string;
+  whyEn: string;
+};
+
+export type SelfReportedArea = {
+  domainKey: string;
+  domainSv: string;
+  domainEn: string;
+  areaCode: string;
+  evidenceType: "self_reported";
+  pattern: SelfReportPattern;
+  consistency: "consistent" | "varied";
+  items: number;
+  mean?: number;
+  spread?: number;
+  whySv?: string;
+  whyEn?: string;
+};
+
+export type InterviewGuideEntry = {
+  areaCode: string;
+  areaSv: string;
+  areaEn: string;
+  focus:
+    | "explore_development"
+    | "explore_self_report"
+    | "explore_limited_evidence"
+    | "confirm_strength";
+  evidenceType: "observed" | "self_reported";
+  whySv: string;
+  whyEn: string;
+  questionSv: string;
+  questionEn: string;
+  followupSv: string;
+  followupEn: string;
+  /** Guidance for the interviewer, and deliberately not a key: it carries no
+   *  score and no preferred answer, and nothing reads an interview note back
+   *  into the evidence ledger. */
+  listenForSv: string[];
+  listenForEn: string[];
+};
+
+/** The frozen brief. Employer briefs carry everything; participant briefs carry
+ *  modules, what the person said about themselves, and coverage — and that is
+ *  a genuine subset rather than a softened rewrite. */
+export type ReportBrief = {
+  briefVersion: string;
+  signalVersion: string;
+  audience: "employer" | "participant";
+  /** A paragraph about THIS candidate, derived deterministically from the
+   *  arrays below and frozen with them. Employer briefs only: it is written
+   *  for somebody preparing to interview the person, and handing it to the
+   *  person themselves would be handing them a recruiter's working note. */
+  executiveSummary: { sv: string; en: string } | null;
+  modules: BriefModule[];
+  observed: ObservedArea[];
+  selfReported: SelfReportedArea[];
+  interviewGuide: InterviewGuideEntry[];
+  coverage: {
+    observedObservations: number;
+    selfReportObservations: number;
+    evidenceContexts: number;
+    reviewsTotal?: number;
+    reviewsCompleted?: number;
+  };
+  /** Present only when at least a quarter of the run was answered in quick
+   *  succession. A fact about the RUN, never a finding about the person — fast
+   *  answering has many innocent explanations and the product must not turn a
+   *  timestamp into a character claim. Carries its own denominator, because a
+   *  bare count is unreadable. */
+  pace: { rapidAnswers: number; answered: number } | null;
+};
+
 export type ReportSnapshot = {
   id: string;
   attemptId: string;
@@ -174,6 +300,7 @@ export type ReportSnapshot = {
   audience: "participant" | "employer";
   releasedAt: string;
   context: ReportContext | null;
+  brief: ReportBrief | null;
   lines: CompetencyLine[];
   safetyFlags: { severity: string | null; observedAt: string }[];
   limitationsSv: string[];
@@ -284,6 +411,11 @@ export type ContentLibraryEntry = {
   doesNotMeasureEn: string[];
   publishedAt: string | null;
   updatedAt: string | null;
+  /** PRODUCT DESIGN INTENT, never a governance basis. An assessment can be
+   *  designed for recruitment support and still be assignable only as a closed
+   *  test — which is exactly the flagship's state — so a surface must render
+   *  this BESIDE `governanceMode`, never instead of it. */
+  designedFor: "competence_development" | "recruitment_support";
 };
 
 /** The durable content library for one organisation, across assessments and
@@ -335,6 +467,8 @@ export const listContentLibrary = createServerFn({ method: "GET" })
       doesNotMeasureEn: r.does_not_measure_en ?? [],
       publishedAt: r.published_at ?? null,
       updatedAt: r.updated_at ?? null,
+      designedFor: (r.designed_for ??
+        "competence_development") as ContentLibraryEntry["designedFor"],
     }));
   });
 
@@ -597,6 +731,11 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         // Defaults to workforce, which is what the Academy has always meant.
         useCase: z.enum(["workforce", "recruitment"]).default("workforce"),
         employeeId: z.string().uuid().nullable().default(null),
+        // The hiring pipeline this assignment came from, when it came from
+        // one. The database verifies both belong to this employer AND that the
+        // applicant is the person being assessed — nothing here is trusted.
+        applicationId: z.string().uuid().nullable().default(null),
+        jobId: z.string().uuid().nullable().default(null),
       })
       .parse(d),
   )
@@ -622,6 +761,8 @@ export const assignAcademyProgramme = createServerFn({ method: "POST" })
         _language: data.language,
         _use_case: data.useCase,
         _employee_id: data.employeeId,
+        _application_id: data.applicationId,
+        _job_id: data.jobId,
       });
       if (error) throw fail(error.message, "assign_failed");
       const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
@@ -970,6 +1111,7 @@ function mapContext(c: RpcRow | null): ReportContext | null {
     reviewsCompleted: num("reviews_completed"),
     evidenceObservations: num("evidence_observations"),
     evidenceContexts: num("evidence_contexts"),
+    selfReportObservations: num("self_report_observations"),
     humanReviewOccurred:
       c.human_review_occurred == null ? undefined : Boolean(c.human_review_occurred),
     safetyConcernPresent:
@@ -979,6 +1121,93 @@ function mapContext(c: RpcRow | null): ReportContext | null {
     evidenceStateVersion: str("evidence_state_version"),
     thresholdVersion: str("threshold_version"),
     scoringModelVersion: str("scoring_model_version"),
+  };
+}
+
+/** snake_case jsonb to the camelCase the surfaces read, for the brief.
+ *
+ *  Returns null rather than an empty shell for a snapshot released before the
+ *  brief existed. A surface that renders `brief === null` differently from
+ *  `brief.observed.length === 0` is telling the truth about a historical
+ *  report; one that cannot tell them apart would invent an empty brief for
+ *  every report issued before this feature shipped. */
+function mapBrief(b: RpcRow | null): ReportBrief | null {
+  if (!b) return null;
+  const arr = (k: string): RpcRow[] => (Array.isArray(b[k]) ? (b[k] as RpcRow[]) : []);
+  const cov = (b.coverage ?? {}) as RpcRow;
+  const pace = b.pace as RpcRow | null;
+  const summary = b.executive_summary as RpcRow | null;
+  return {
+    briefVersion: String(b.brief_version ?? ""),
+    signalVersion: String(b.signal_version ?? ""),
+    audience: b.audience as ReportBrief["audience"],
+    executiveSummary: summary
+      ? { sv: String(summary.sv ?? ""), en: String(summary.en ?? "") }
+      : null,
+    modules: arr("modules").map((m) => ({
+      blockKey: String(m.block_key),
+      nameSv: String(m.name_sv),
+      nameEn: String(m.name_en),
+      asks: m.asks as BriefModule["asks"],
+      items: Number(m.items ?? 0),
+      answered: Number(m.answered ?? 0),
+    })),
+    observed: arr("observed").map((o) => ({
+      areaCode: String(o.area_code),
+      areaSv: String(o.area_sv),
+      areaEn: String(o.area_en),
+      evidenceType: "observed",
+      signal: o.signal as AssessmentSignal,
+      items: Number(o.items ?? 0),
+      mean: Number(o.mean ?? 0),
+      spread: Number(o.spread ?? 0),
+      evidenceState: o.evidence_state as EvidenceState,
+      behaviourSv: o.behaviour_sv ? String(o.behaviour_sv) : null,
+      behaviourEn: o.behaviour_en ? String(o.behaviour_en) : null,
+      whySv: String(o.why_sv ?? ""),
+      whyEn: String(o.why_en ?? ""),
+    })),
+    selfReported: arr("self_reported").map((r) => ({
+      domainKey: String(r.domain_key),
+      domainSv: String(r.domain_sv),
+      domainEn: String(r.domain_en),
+      areaCode: String(r.area_code),
+      evidenceType: "self_reported",
+      pattern: r.pattern as SelfReportPattern,
+      consistency: r.consistency as SelfReportedArea["consistency"],
+      items: Number(r.items ?? 0),
+      // Absent from the participant brief by construction, so undefined here
+      // rather than 0 — the surface renders what is present and omits the rest.
+      mean: r.mean == null ? undefined : Number(r.mean),
+      spread: r.spread == null ? undefined : Number(r.spread),
+      whySv: r.why_sv == null ? undefined : String(r.why_sv),
+      whyEn: r.why_en == null ? undefined : String(r.why_en),
+    })),
+    interviewGuide: arr("interview_guide").map((g) => ({
+      areaCode: String(g.area_code),
+      areaSv: String(g.area_sv),
+      areaEn: String(g.area_en),
+      focus: g.focus as InterviewGuideEntry["focus"],
+      evidenceType: g.evidence_type as InterviewGuideEntry["evidenceType"],
+      whySv: String(g.why_sv ?? ""),
+      whyEn: String(g.why_en ?? ""),
+      questionSv: String(g.question_sv ?? ""),
+      questionEn: String(g.question_en ?? ""),
+      followupSv: String(g.followup_sv ?? ""),
+      followupEn: String(g.followup_en ?? ""),
+      listenForSv: Array.isArray(g.listen_for_sv) ? (g.listen_for_sv as string[]) : [],
+      listenForEn: Array.isArray(g.listen_for_en) ? (g.listen_for_en as string[]) : [],
+    })),
+    coverage: {
+      observedObservations: Number(cov.observed_observations ?? 0),
+      selfReportObservations: Number(cov.self_report_observations ?? 0),
+      evidenceContexts: Number(cov.evidence_contexts ?? 0),
+      reviewsTotal: cov.reviews_total == null ? undefined : Number(cov.reviews_total),
+      reviewsCompleted: cov.reviews_completed == null ? undefined : Number(cov.reviews_completed),
+    },
+    pace: pace
+      ? { rapidAnswers: Number(pace.rapid_answers ?? 0), answered: Number(pace.answered ?? 0) }
+      : null,
   };
 }
 
@@ -1007,7 +1236,7 @@ export const getAcademyReport = createServerFn({ method: "GET" })
         // derivation_input is deliberately NOT selected. It holds the internal
         // maturity the state was derived from, and it exists for reproducibility,
         // not for a reader.
-        "id, attempt_id, subject_id, audience, released_at, payload, safety_flags, context, " +
+        "id, attempt_id, subject_id, audience, released_at, payload, brief, safety_flags, context, " +
           "scp_report_versions(limitations_sv, limitations_en)",
       )
       .eq("attempt_id", data.attemptId)
@@ -1027,6 +1256,7 @@ export const getAcademyReport = createServerFn({ method: "GET" })
       audience: row.audience,
       releasedAt: String(row.released_at),
       context: mapContext(row.context as RpcRow | null),
+      brief: mapBrief(row.brief as RpcRow | null),
       lines: (Array.isArray(row.payload) ? (row.payload as RpcRow[]) : []).map((x) => ({
         competencyCode: String(x.competency_code),
         competencyNameSv: String(x.competency_name_sv),
@@ -1216,3 +1446,368 @@ export const completeReview = createServerFn({ method: "POST" })
     if (error) throw fail(error.message, "review_failed");
     return { evidenceId: id == null ? null : String(id) };
   });
+
+/** What an interview established about one area of the brief.
+ *
+ *  Deliberately inert. Nothing here is aggregated, no outcome carries a weight,
+ *  and no note is ever written into public.scp_competency_evidence — so a
+ *  recruiter's reading of a conversation can never become platform-visible
+ *  "competence" that follows the person to the next employer. It is a record of
+ *  what was said, and it is not the employment decision: that stays in
+ *  recordEmployerDecision, where a human makes it and signs it. */
+export type InterviewNoteOutcome =
+  | "evidence_confirmed"
+  | "evidence_not_confirmed"
+  | "additional_context";
+
+export type InterviewNote = {
+  id: string;
+  areaCode: string;
+  outcome: InterviewNoteOutcome;
+  note: string | null;
+  recordedByEmail: string;
+  recordedAt: string;
+};
+
+export const listInterviewNotes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<InterviewNote[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_interview_notes", {
+      _attempt_id: data.attemptId,
+    });
+    if (error) throw fail(error.message, "interview_notes_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      id: String(r.id),
+      areaCode: String(r.area_code),
+      outcome: r.outcome as InterviewNoteOutcome,
+      note: r.note ? String(r.note) : null,
+      recordedByEmail: String(r.recorded_by_email ?? ""),
+      recordedAt: String(r.recorded_at),
+    }));
+  });
+
+export const recordInterviewNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        // Not a uuid: the brief is a frozen rendering, and an area code in it
+        // has to stay resolvable even if the competency catalogue is later
+        // reorganised. Bounded because it is written into an append-only row.
+        areaCode: z.string().min(1).max(64),
+        outcome: z.enum(["evidence_confirmed", "evidence_not_confirmed", "additional_context"]),
+        // Bounded here as well as in the CHECK: free text about a person is the
+        // riskiest field on the form, and the limit should be visible to
+        // whoever reads this file rather than only to the database.
+        note: z.string().max(1000).nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ noteId: string }> => {
+    const ctx = context as Ctx;
+    const { data: id, error } = await ctx.supabase.rpc("scp_record_interview_note", {
+      _attempt_id: data.attemptId,
+      _area_code: data.areaCode,
+      _outcome: data.outcome,
+      _note: data.note ?? undefined,
+    });
+    if (error) throw fail(error.message, "interview_note_failed");
+    return { noteId: String(id) };
+  });
+
+// ── The recruitment journey ────────────────────────────────────────────────
+//
+// One human from job application to released report. Everything below reads or
+// writes through a definer RPC that re-verifies membership for itself, so the
+// employer id arriving from a route is a CLAIM here exactly as it is elsewhere
+// in this file.
+
+/** Inviting somebody, whether or not the platform knows them yet.
+ *
+ *  `assigned` means the address resolved to an account and the governed assign
+ *  path ran. `invited` means it did not, and a pending invitation is waiting
+ *  for that person to create an account and confirm the address — at which
+ *  point it binds to their own subject. Two outcomes, one control, because the
+ *  employer is doing one thing and should not have to know which case they are
+ *  in. */
+export type InviteOutcome = "assigned" | "invited";
+
+export type InviteResult = {
+  outcome: InviteOutcome;
+  invitationId: string | null;
+  assignmentId: string | null;
+  attemptId: string | null;
+  subjectId: string | null;
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
+};
+
+export const inviteParticipant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        assessmentVersionId: z.string().uuid(),
+        email: z.string().email(),
+        useCase: z.enum(["workforce", "recruitment"]).default("recruitment"),
+        invitedName: z.string().max(160).nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+        deadline: z.string().nullable().default(null),
+        applicationId: z.string().uuid().nullable().default(null),
+        jobId: z.string().uuid().nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<InviteResult> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_invite_participant", {
+      _employer_id: data.employerId,
+      _assessment_version_id: data.assessmentVersionId,
+      _email: data.email,
+      _use_case: data.useCase,
+      _invited_name: data.invitedName ?? undefined,
+      _language: data.language,
+      _deadline: data.deadline ?? undefined,
+      _application_id: data.applicationId ?? undefined,
+      _job_id: data.jobId ?? undefined,
+    });
+    if (error) throw fail(error.message, "invite_failed");
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+    return {
+      outcome: String(r?.outcome ?? "invited") as InviteOutcome,
+      invitationId: r?.invitation_id ? String(r.invitation_id) : null,
+      assignmentId: r?.assignment_id ? String(r.assignment_id) : null,
+      attemptId: r?.attempt_id ? String(r.attempt_id) : null,
+      subjectId: r?.subject_id ? String(r.subject_id) : null,
+      governanceMode: (r?.governance_mode ?? null) as InviteResult["governanceMode"],
+    };
+  });
+
+export type PendingInvitation = {
+  invitationId: string;
+  email: string;
+  invitedName: string | null;
+  nameSv: string;
+  nameEn: string;
+  useCase: string;
+  applicationId: string | null;
+  jobId: string | null;
+  jobTitleSv: string | null;
+  jobTitleEn: string | null;
+  status: "pending" | "bound" | "cancelled" | "expired";
+  /** Why it stopped being claimable. "the grant expired" and "the employer
+   *  cancelled it" look identical from outside and mean different things to
+   *  the person who was invited, so the reason is carried rather than inferred. */
+  closedReason: string | null;
+  invitedAt: string;
+  expiresAt: string;
+  boundAssignmentId: string | null;
+  boundAt: string | null;
+};
+
+export const listEmployerInvitations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<PendingInvitation[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_invitations", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "invitations_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      invitationId: String(r.invitation_id),
+      email: String(r.email),
+      invitedName: r.invited_name ? String(r.invited_name) : null,
+      nameSv: String(r.name_sv ?? ""),
+      nameEn: String(r.name_en ?? ""),
+      useCase: String(r.use_case),
+      applicationId: r.application_id ? String(r.application_id) : null,
+      jobId: r.job_id ? String(r.job_id) : null,
+      jobTitleSv: r.job_title_sv ? String(r.job_title_sv) : null,
+      jobTitleEn: r.job_title_en ? String(r.job_title_en) : null,
+      status: String(r.status) as PendingInvitation["status"],
+      closedReason: r.closed_reason ? String(r.closed_reason) : null,
+      invitedAt: String(r.invited_at),
+      expiresAt: String(r.expires_at),
+      boundAssignmentId: r.bound_assignment_id ? String(r.bound_assignment_id) : null,
+      boundAt: r.bound_at ? String(r.bound_at) : null,
+    }));
+  });
+
+export const cancelInvitation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        invitationId: z.string().uuid(),
+        reason: z.string().max(200).nullable().default(null),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<void> => {
+    const ctx = context as Ctx;
+    const { error } = await ctx.supabase.rpc("scp_cancel_assessment_invitation", {
+      _invitation_id: data.invitationId,
+      _reason: data.reason ?? undefined,
+    });
+    if (error) throw fail(error.message, "cancel_invitation_failed");
+  });
+
+/** The assessments on one job application — the Application → Assessment →
+ *  Report step of the chain. Status and lineage only: the return type carries
+ *  no response, no option, no score and no reviewer material. */
+export type ApplicationAssessment = {
+  assignmentId: string;
+  attemptId: string;
+  subjectId: string;
+  assessmentSlug: string;
+  nameSv: string;
+  nameEn: string;
+  designedFor: string;
+  useCase: string;
+  governanceMode: "development" | "closed_test" | "recruitment" | null;
+  attemptStatus: string;
+  answered: number;
+  totalItems: number;
+  reviewsOutstanding: number;
+  invitedAt: string;
+  deadline: string | null;
+  submittedAt: string | null;
+  scoredAt: string | null;
+  releasedAt: string | null;
+  reportAvailable: boolean;
+};
+
+export const listApplicationAssessments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ applicationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ApplicationAssessment[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_application_assessments", {
+      _application_id: data.applicationId,
+    });
+    if (error) throw fail(error.message, "application_assessments_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      assignmentId: String(r.assignment_id),
+      attemptId: String(r.attempt_id),
+      subjectId: String(r.subject_id),
+      assessmentSlug: String(r.assessment_slug ?? ""),
+      nameSv: String(r.name_sv ?? ""),
+      nameEn: String(r.name_en ?? ""),
+      designedFor: String(r.designed_for ?? "competence_development"),
+      useCase: String(r.use_case ?? ""),
+      governanceMode: (r.governance_mode ?? null) as ApplicationAssessment["governanceMode"],
+      attemptStatus: String(r.attempt_status),
+      answered: Number(r.answered ?? 0),
+      totalItems: Number(r.total_items ?? 0),
+      reviewsOutstanding: Number(r.reviews_outstanding ?? 0),
+      invitedAt: String(r.invited_at),
+      deadline: r.deadline ? String(r.deadline) : null,
+      submittedAt: r.submitted_at ? String(r.submitted_at) : null,
+      scoredAt: r.scored_at ? String(r.scored_at) : null,
+      releasedAt: r.released_at ? String(r.released_at) : null,
+      reportAvailable: Boolean(r.report_available),
+    }));
+  });
+
+/** One person, as ONE organisation knows them. Scoped to both subject and
+ *  employer, so somebody who is a candidate at three companies never leaks one
+ *  company's activity to another. */
+export type PersonOverviewRow = {
+  rowKind: "application" | "assessment" | "interview_note";
+  rowId: string;
+  titleSv: string | null;
+  titleEn: string | null;
+  status: string | null;
+  useCase: string | null;
+  applicationId: string | null;
+  jobId: string | null;
+  attemptId: string | null;
+  releasedAt: string | null;
+  reportAvailable: boolean;
+  occurredAt: string;
+};
+
+export const getPersonOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ employerId: z.string().uuid(), subjectId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<PersonOverviewRow[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_person_overview", {
+      _employer_id: data.employerId,
+      _subject_id: data.subjectId,
+    });
+    if (error) throw fail(error.message, "person_overview_failed");
+    const mapped: PersonOverviewRow[] = (rows ?? []).map((r: RpcRow) => ({
+      rowKind: String(r.row_kind) as PersonOverviewRow["rowKind"],
+      rowId: String(r.row_id),
+      titleSv: r.title_sv ? String(r.title_sv) : null,
+      titleEn: r.title_en ? String(r.title_en) : null,
+      status: r.status ? String(r.status) : null,
+      useCase: r.use_case ? String(r.use_case) : null,
+      applicationId: r.application_id ? String(r.application_id) : null,
+      jobId: r.job_id ? String(r.job_id) : null,
+      attemptId: r.attempt_id ? String(r.attempt_id) : null,
+      releasedAt: r.released_at ? String(r.released_at) : null,
+      reportAvailable: Boolean(r.report_available),
+      occurredAt: String(r.occurred_at),
+    }));
+    // Newest first, across all three kinds — the person's timeline with this
+    // organisation, not three separate lists the reader has to interleave.
+    return mapped.sort((x, y) => y.occurredAt.localeCompare(x.occurredAt));
+  });
+
+/** Assign from an application, without the employer surface ever holding the
+ *  candidate's address.
+ *
+ *  The database resolves the applicant from the application. That is not a
+ *  convenience: prefilling an address here would mean the applications list had
+ *  to carry it, which is a disclosure it deliberately does not make — and a
+ *  retyped address is how a typo creates a second person and the result
+ *  attaches to nobody. */
+export const assignFromApplication = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        assessmentVersionId: z.string().uuid(),
+        deadline: z.string().nullable().default(null),
+        language: z.enum(["sv", "en"]).default("sv"),
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      assignmentId: string;
+      attemptId: string;
+      subjectId: string;
+      governanceMode: "development" | "closed_test" | "recruitment";
+    }> => {
+      const ctx = context as Ctx;
+      const { data: rows, error } = await ctx.supabase.rpc("scp_assign_from_application", {
+        _employer_id: data.employerId,
+        _application_id: data.applicationId,
+        _assessment_version_id: data.assessmentVersionId,
+        _deadline: data.deadline,
+        _language: data.language,
+      });
+      if (error) throw fail(error.message, "assign_failed");
+      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+      return {
+        assignmentId: String(r.assignment_id),
+        attemptId: String(r.attempt_id),
+        subjectId: String(r.subject_id),
+        governanceMode: r.governance_mode as "development" | "closed_test" | "recruitment",
+      };
+    },
+  );

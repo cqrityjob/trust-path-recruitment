@@ -64,7 +64,10 @@ SELECT
 
 INSERT INTO auth.users (id, email) VALUES
   ((SELECT owner_user  FROM vj), 'owner@sakerhet-vj.test'),
-  ((SELECT participant FROM vj), 'vaktare@sakerhet-vj.test');
+  ((SELECT participant FROM vj), 'vaktare@sakerhet-vj.test'),
+  -- A second person, used only by VJ3.1 so the recruitment-context proof
+  -- cannot disturb the workforce journey the rest of this file follows.
+  ('dd000000-0000-0000-0000-0000000000c1', 'kandidat@sakerhet-vj.test');
 
 INSERT INTO public.employers (id, name, slug, status)
 SELECT employer, 'Säkerhet AB', 'sakerhet-ab-vaktare-journey', 'active' FROM vj;
@@ -142,15 +145,58 @@ DO $$ BEGIN RAISE NOTICE 'GROUP VJ3 — assignment under a closed-test grant'; E
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
 
--- The grant admits a PILOT. It must never admit recruitment, whatever the
--- employer asks for — this is the line between a controlled test and a hiring
--- instrument, and it is the single most important assertion in this file.
-SELECT pg_temp.must_fail(format(
-  'SELECT * FROM public.scp_employer_assign(%L::uuid, %L::uuid, %L, NULL, %L, %L)',
+-- ── VJ3.1 changed shape, and it is worth saying why ─────────────────────
+--
+-- This assertion used to read: a closed-test grant can NEVER be used to assess
+-- a job candidate. That was the right rule while the platform had no truthful
+-- way to RECORD a candidate — the only alternative was assigning them as
+-- workforce, which meant a person applying for a job was written down as
+-- somebody's staff being developed, under a competence-development purpose.
+-- Refusing was the lesser of two untruths, not a principle.
+--
+-- The principle underneath it — a controlled test must never become a hiring
+-- instrument — is unchanged, and is now carried by three things asserted
+-- below: the attempt is stamped closed_test, the purpose recorded is
+-- closed_test_recruitment (which is explicitly not a basis for deciding about
+-- anybody), and selection_support remains unpublished so the operational path
+-- is exactly as shut as it was.
+--
+-- Run against a second participant, so the workforce journey the rest of this
+-- file follows is untouched by it.
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
+CREATE TEMP TABLE vjcand AS
+SELECT * FROM public.scp_employer_assign(
   (SELECT employer FROM vj), (SELECT version_id FROM vjv),
-  'vaktare@sakerhet-vj.test', 'sv', 'recruitment'),
-  'SCP_NOT_VALID_FOR_RECRUITMENT',
-  'VJ3.1 a closed-test grant can NEVER be used to assess a job candidate');
+  'kandidat@sakerhet-vj.test', NULL, 'sv', 'recruitment');
+RESET ROLE; RESET request.jwt.claim.sub;
+GRANT SELECT ON vjcand TO authenticated;
+
+SELECT pg_temp.ok((SELECT governance_mode FROM vjcand)::text = 'closed_test',
+  'VJ3.1 a closed-test grant carries a candidate as a CLOSED TEST, never as recruitment');
+
+SELECT pg_temp.ok(
+  (SELECT pv.purpose_code FROM public.scp_attempts a
+     JOIN public.scp_purpose_versions pv ON pv.id = a.purpose_version_id
+    WHERE a.id = (SELECT attempt_id FROM vjcand)) = 'closed_test_recruitment',
+  'VJ3.1b the purpose recorded is closed_test_recruitment, not selection_support');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_purpose_versions
+               WHERE purpose_code = 'selection_support' AND published_at IS NOT NULL),
+  'VJ3.1c and selection_support is still unpublished — operational selection stays shut');
+
+-- No employment relationship was invented to make the assessment possible.
+-- That was the whole defect this replaced.
+SELECT pg_temp.ok(
+  (SELECT aa.employee_id FROM public.assessment_assignments aa
+    WHERE aa.id = (SELECT assignment_id FROM vjcand)) IS NULL
+  AND NOT EXISTS (SELECT 1 FROM public.employees e
+                   WHERE e.employer_id = (SELECT employer FROM vj)
+                     AND e.email = 'kandidat@sakerhet-vj.test'),
+  'VJ3.1d the candidate is a candidate — no employment record was created or bound');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'dd000000-0000-0000-0000-000000000002';
 
 CREATE TEMP TABLE vja AS
 SELECT * FROM public.scp_employer_assign(
