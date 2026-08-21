@@ -242,10 +242,6 @@ function AssessmentDetails({
                 </p>
               </Field>
 
-              <Field label={t("employer.assessments.details.version")}>
-                <p className="text-sm text-foreground">{entry.version?.modelVersion ?? "—"}</p>
-              </Field>
-
               <Field label={t("employer.assessments.details.status")}>
                 <p className="text-sm text-foreground">
                   {t(
@@ -271,7 +267,7 @@ function AssessmentDetails({
               <h2 className="text-sm font-semibold text-foreground">
                 {t("employer.dashboard.actions.heading")}
               </h2>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Link
                   to="/employer/$employerSlug/assessments/assign"
                   params={{ employerSlug }}
@@ -291,7 +287,6 @@ function AssessmentDetails({
                     {t("employer.assessments.action.viewResults")}
                   </span>
                 </Link>
-                <DisabledAction label={t("employer.assessments.action.analytics")} />
               </div>
             </div>
           </>
@@ -306,18 +301,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <div className="mt-1.5">{children}</div>
-    </div>
-  );
-}
-
-function DisabledAction({ label }: { label: string }) {
-  const { t } = useT();
-  return (
-    <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4">
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
-      <span className="mt-2 inline-flex rounded-md border border-dashed border-border px-2 py-1 text-xs font-medium text-muted-foreground">
-        {t("employer.comingSoonShort")}
-      </span>
     </div>
   );
 }

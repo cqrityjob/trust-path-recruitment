@@ -3,7 +3,7 @@
 // Replaces the earlier "Command Center", which read as a technical admin
 // console: a header CTA, three competing quick actions, and five stacked
 // module lanes. A responsible manager should instead land on the four
-// areas they actually work in -- recruitment, their people, testing,
+// areas they actually work in -- recruitment, their people, assessment,
 // development -- at equal weight, with everything that needs their
 // judgement immediately below.
 //
@@ -11,9 +11,9 @@
 // (dashboard stats, workforce summary, assessment assignments). The
 // entry points that used to be top-level quick actions now sit inside
 // the area they belong to -- applications under Mina annonser, adding an
-// employee under Min personal -- and nothing has been removed from the
-// workspace: sites, reports, analytics and Fråga CQrity are reached from
-// the left navigation.
+// employee under Min personal. Every action on this page leads somewhere
+// finished: the shortcut into Kompetens was removed because that module is
+// still a stated intention rather than a working area.
 //
 // Access-resolution pattern unchanged from every other
 // /employer/$employerSlug/* route: the slug is a lookup key only,
@@ -239,7 +239,7 @@ function EmployerOverview({
     queryKey: ["academy", "training-status", employerId],
     queryFn: () => loadTraining({ data: { employerId } }),
   });
-  // Shared cache key with the Tester workspace: one fetch, one set of numbers,
+  // Shared cache key with the assessment workspace: one fetch, one set of numbers,
   // and the card can never show a total the workspace disagrees with.
   const pipelineQuery = useQuery({
     queryKey: ["academy", "participants", employerId],
@@ -257,7 +257,7 @@ function EmployerOverview({
   const applications: EmployerApplicationRow[] = applicationsQuery.data ?? [];
   const catalog: EmployerAssessmentCatalogEntry[] = catalogQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
-  // Tester metrics come from the governed pipeline -- the same rows, the same
+  // Assessment metrics come from the governed pipeline -- the same rows, the same
   // lifecycle derivation, as the workspace this card links into. Counting
   // assignment.status here would be a second status vocabulary on the
   // dashboard, and the two would drift.
@@ -495,8 +495,8 @@ function EmployerOverview({
           ]}
           actions={[
             {
-              label: t("employer.overview.card.people.action.competencies"),
-              linkProps: { to: "/employer/$employerSlug/competencies", params: { employerSlug } },
+              label: t("employer.overview.card.people.action.openWorkforce"),
+              linkProps: { to: "/employer/$employerSlug/workforce", params: { employerSlug } },
             },
           ]}
         />
@@ -527,15 +527,14 @@ function EmployerOverview({
             {
               label: t("employer.overview.card.tests.action.assign"),
               linkProps: {
-                to: "/employer/$employerSlug/assessments/assign",
+                to: "/employer/$employerSlug/assessments/library",
                 params: { employerSlug },
-                search: { assessmentId: "security-guard-foundation" },
               },
             },
             {
               label: t("employer.overview.card.tests.action.activity"),
               linkProps: {
-                to: "/employer/$employerSlug/assessments/assignments",
+                to: "/employer/$employerSlug/assessments/participants",
                 params: { employerSlug },
               },
             },

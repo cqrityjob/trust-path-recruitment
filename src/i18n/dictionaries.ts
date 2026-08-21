@@ -1111,7 +1111,7 @@ export const dictionaries = {
     "employer.assessments.card.intendedFor": "Avsett för",
     "employer.assessments.card.questionCount": "Antal frågor",
     "employer.assessments.card.duration": "Beräknad tid",
-    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.lastUpdated": "Senast uppdaterad",
     "employer.assessments.card.languages": "Språk",
     "employer.assessments.card.competencies": "Kompetenser som bedöms",
     "employer.assessments.card.viewDetails": "Visa detaljer",
@@ -1167,11 +1167,9 @@ export const dictionaries = {
     "employer.nav.group.people": "Personal",
     "employer.nav.group.development": "Utveckling",
     "employer.nav.group.organisation": "Organisation",
-
-    "employer.module.comingSoon.badge": "Kommer snart",
-    "employer.module.comingSoon.purpose": "Syfte",
-    "employer.module.comingSoon.value": "Värde för arbetsgivaren",
-    "employer.module.comingSoon.milestone": "Nästa milstolpe",
+    "employer.module.notYet.body":
+      "Det här området ingår inte i er arbetsyta ännu. Det finns inget att göra här i dagsläget.",
+    "employer.module.notYet.back": "Tillbaka till översikten",
 
     "employer.competencies.heading": "Kompetenser & certifikat",
     "employer.competencies.purpose":
@@ -1269,7 +1267,7 @@ export const dictionaries = {
     "employer.overview.card.people.stat.employees": "Medarbetare",
     "employer.overview.card.people.stat.roles": "Roller",
     "employer.overview.card.people.stat.sites": "Platser/team",
-    "employer.overview.card.people.action.competencies": "Kompetenser & certifikat",
+    "employer.overview.card.people.action.openWorkforce": "Öppna personallistan",
 
     "employer.overview.card.tests.title": "Bedömningar",
     "employer.overview.card.tests.body":
@@ -4020,7 +4018,7 @@ export const dictionaries = {
     "employer.assessments.card.intendedFor": "Intended for",
     "employer.assessments.card.questionCount": "Number of questions",
     "employer.assessments.card.duration": "Estimated duration",
-    "employer.assessments.card.version": "Version",
+    "employer.assessments.card.lastUpdated": "Last updated",
     "employer.assessments.card.languages": "Languages",
     "employer.assessments.card.competencies": "Competencies assessed",
     "employer.assessments.card.viewDetails": "View details",
@@ -4072,11 +4070,9 @@ export const dictionaries = {
     "employer.nav.group.people": "People",
     "employer.nav.group.development": "Development",
     "employer.nav.group.organisation": "Organisation",
-
-    "employer.module.comingSoon.badge": "Coming soon",
-    "employer.module.comingSoon.purpose": "Purpose",
-    "employer.module.comingSoon.value": "Employer value",
-    "employer.module.comingSoon.milestone": "Next milestone",
+    "employer.module.notYet.body":
+      "This area is not part of your workspace yet. There is nothing to do here for now.",
+    "employer.module.notYet.back": "Back to the overview",
 
     "employer.competencies.heading": "Competencies & certificates",
     "employer.competencies.purpose":
@@ -4172,7 +4168,7 @@ export const dictionaries = {
     "employer.overview.card.people.stat.employees": "Employees",
     "employer.overview.card.people.stat.roles": "Roles",
     "employer.overview.card.people.stat.sites": "Sites/teams",
-    "employer.overview.card.people.action.competencies": "Competencies & certificates",
+    "employer.overview.card.people.action.openWorkforce": "Open the people list",
 
     "employer.overview.card.tests.title": "Assessments",
     "employer.overview.card.tests.body":

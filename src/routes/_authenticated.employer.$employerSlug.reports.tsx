@@ -54,8 +54,7 @@ function EmployerReportsPage() {
         icon={<FileCheck2 className="h-5 w-5" aria-hidden="true" />}
         title={t("employer.reports.heading")}
         purpose={t("employer.reports.purpose")}
-        value={t("employer.reports.value")}
-        milestone={t("employer.reports.milestone")}
+        employerSlug={employerSlug}
       />
     </EmployerAppShell>
   );

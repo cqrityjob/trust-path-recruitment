@@ -64,8 +64,7 @@ function EmployerSitesPage() {
         icon={<MapPin className="h-5 w-5" aria-hidden="true" />}
         title={t("employer.sites.heading")}
         purpose={t("employer.sites.purpose")}
-        value={t("employer.sites.value")}
-        milestone={t("employer.sites.milestone")}
+        employerSlug={employerSlug}
       />
     </EmployerAppShell>
   );

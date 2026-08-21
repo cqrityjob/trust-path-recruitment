@@ -41,21 +41,11 @@ const DESCRIPTION_KEY: Record<string, TranslationKey> = {
   "security-guard-foundation": "employer.assessments.sgf.description",
 };
 
-// Future Assessment Center categories from the Employer OS product vision
-// (Leadership, Compliance, Custom company assessments, AI-generated
-// assessments) — prepared in the UI/type model only, per the brief.
-// Rendered as disabled tabs so employers can see the full intended shape
-// of the Assessment Center without a single fabricated assessment behind
-// any of them; none of these categories has a catalogue row, an
-// employer_visible flag, or a role_category value in the database today.
-type FutureAssessmentCategory = "leadership" | "compliance" | "custom" | "ai";
-const FUTURE_CATEGORIES: FutureAssessmentCategory[] = ["leadership", "compliance", "custom", "ai"];
-const FUTURE_CATEGORY_LABEL_KEY: Record<FutureAssessmentCategory, TranslationKey> = {
-  leadership: "employer.assessments.tab.leadership",
-  compliance: "employer.assessments.tab.compliance",
-  custom: "employer.assessments.tab.custom",
-  ai: "employer.assessments.tab.ai",
-};
+// The Assessment Center once advertised four further categories -- Leadership,
+// Compliance, Custom and AI-generated -- as disabled "coming soon" tabs. They
+// showed a customer a roadmap instead of a product, and none of them has a
+// catalogue row behind it. An area we cannot deliver is better absent than
+// present and greyed out.
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/assessments/")({
   ssr: false,
@@ -205,22 +195,6 @@ function AssessmentCatalog({
             )}
           </button>
         ))}
-        {FUTURE_CATEGORIES.map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="tab"
-            disabled
-            aria-disabled="true"
-            aria-selected={false}
-            className="flex cursor-not-allowed items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground/60"
-          >
-            {t(FUTURE_CATEGORY_LABEL_KEY[c])}
-            <span className="rounded-full border border-dashed border-border px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide">
-              {t("employer.comingSoonShort")}
-            </span>
-          </button>
-        ))}
       </div>
 
       <div className="mt-6">
@@ -291,10 +265,16 @@ function AssessmentCatalog({
                   </div>
                   <div>
                     <dt className="text-muted-foreground">
-                      {t("employer.assessments.card.version")}
+                      {t("employer.assessments.card.lastUpdated")}
                     </dt>
                     <dd className="font-medium text-foreground">
-                      {entry.version?.modelVersion ?? "—"}
+                      {entry.lastUpdated
+                        ? new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }).format(new Date(entry.lastUpdated))
+                        : "—"}
                     </dd>
                   </div>
                 </dl>
