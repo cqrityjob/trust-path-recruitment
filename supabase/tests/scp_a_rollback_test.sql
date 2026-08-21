@@ -288,6 +288,111 @@ DROP FUNCTION IF EXISTS public.scp_my_assessment_history() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_resolve_employment_for_assignment(uuid, text, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_bind_employee_subject(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_employer_person_assessments(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employment_from_application(uuid) CASCADE;
+-- Dropping the hire bridge leaves set_application_status calling a function
+-- that no longer exists, so the rollback restores its pre-bridge body. A
+-- rollback that removed the new platform and broke recruitment with it would
+-- not be a rollback.
+CREATE OR REPLACE FUNCTION public.set_application_status(
+  _application_id uuid,
+  _new_status text,
+  _note text DEFAULT NULL
+)
+RETURNS TABLE (
+  application_id uuid,
+  previous_status text,
+  new_status text,
+  updated_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  _caller uuid := auth.uid();
+  _app public.job_applications%ROWTYPE;
+  _is_applicant boolean;
+  _is_employer boolean;
+  _clean_note text;
+  _actor_role text;
+  _now timestamptz := now();
+BEGIN
+  IF _caller IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  IF _new_status NOT IN ('reviewing', 'interview', 'rejected', 'hired', 'withdrawn') THEN
+    RAISE EXCEPTION 'Invalid application status: %', _new_status;
+  END IF;
+
+  _clean_note := NULLIF(btrim(_note), '');
+  IF _clean_note IS NOT NULL AND char_length(_clean_note) > 1000 THEN
+    RAISE EXCEPTION 'Note is too long'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  SELECT * INTO _app
+  FROM public.job_applications
+  WHERE id = _application_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Application not found';
+  END IF;
+
+  _is_applicant := (_app.applicant_user_id = _caller);
+  _is_employer := public.has_employer_role(_caller, _app.employer_id, NULL)
+                  AND public.employer_is_active_status(_app.employer_id);
+
+  -- Role-derived permission, never a client-supplied flag. A candidate may
+  -- only ever request 'withdrawn' on their own application; an employer
+  -- may never request 'withdrawn'.
+  IF _is_applicant AND _new_status = 'withdrawn' THEN
+    IF _app.status NOT IN ('submitted', 'reviewing', 'interview') THEN
+      RAISE EXCEPTION 'Invalid transition: application status is %, cannot withdraw',
+        _app.status
+        USING ERRCODE = 'check_violation';
+    END IF;
+    _actor_role := 'candidate';
+
+  ELSIF _is_employer AND _new_status <> 'withdrawn' THEN
+    IF NOT (
+      (_app.status = 'submitted' AND _new_status IN ('reviewing', 'rejected')) OR
+      (_app.status = 'reviewing' AND _new_status IN ('interview', 'rejected')) OR
+      (_app.status = 'interview' AND _new_status IN ('hired', 'rejected'))
+    ) THEN
+      RAISE EXCEPTION 'Invalid transition: application status is %, action % not allowed',
+        _app.status, _new_status
+        USING ERRCODE = 'check_violation';
+    END IF;
+    _actor_role := 'employer';
+
+  ELSE
+    RAISE EXCEPTION 'Forbidden: not authorised to set this application status';
+  END IF;
+
+  UPDATE public.job_applications
+  SET
+    status = _new_status,
+    updated_at = _now,
+    withdrawn_at = CASE WHEN _new_status = 'withdrawn' THEN _now ELSE withdrawn_at END,
+    employer_note = CASE
+      WHEN _actor_role = 'employer' AND _clean_note IS NOT NULL THEN _clean_note
+      ELSE employer_note
+    END
+  WHERE id = _application_id;
+
+  INSERT INTO public.job_application_status_events (
+    application_id, job_id, employer_id, actor_user_id, actor_role,
+    previous_status, new_status, note, created_at
+  ) VALUES (
+    _application_id, _app.job_id, _app.employer_id, _caller, _actor_role,
+    _app.status, _new_status, _clean_note, _now
+  );
+
+  RETURN QUERY SELECT _application_id, _app.status, _new_status, _now;
+END;
+$$;
 DROP FUNCTION IF EXISTS public.scp_employer_team(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_grant_employer_reviewer(uuid, uuid, text[]) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_revoke_employer_reviewer(uuid, uuid) CASCADE;

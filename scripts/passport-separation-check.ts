@@ -28,6 +28,11 @@
 //      appears anywhere in the Passport tree.
 //   7. The dev route is fail-closed and no production route claims
 //      /passport or /p/:token.
+//   8. Employer recruitment surfaces reach no Passport data, with ONE named,
+//      reviewed exception: Candidate overview may render a disclosure the
+//      HOLDER created for that specific application, through one named panel
+//      and one named server module, both held to tighter rules than the ban
+//      they replace. See 3b and 3d.
 //
 // Plain TS script run with Bun, matching this repository's scripts/*-check.ts
 // convention (no test runner is configured in this project).
@@ -293,16 +298,46 @@ for (const dir of OTHER_DOMAIN_DIRS) {
 // into Passport consent by implementation, whatever the copy said.
 //
 // The rule is therefore about ACCESS, not about vocabulary. Candidate overview
-// carries a short, customer-facing Security Passport section that exists
-// precisely to say that nothing has been shared -- naming the product in order
-// to explain that the employer has none of it. Banning the word would ban the
-// privacy statement along with the breach, so what is banned instead is every
-// route by which a byte of Passport data could arrive: the modules, the
-// tables, the functions, the disclosure boundary, the tokens and the links.
+// carries a short, customer-facing Security Passport section -- naming the
+// product in order to explain what the employer has and has not been given.
+// Banning the word would ban the privacy statement along with the breach, so
+// what is banned instead is every route by which a byte of Passport data could
+// arrive: the modules, the tables, the functions, the disclosure boundary, the
+// tokens and the links.
 //
-// If in-platform, holder-authorised, application-scoped disclosure is designed
-// later, it replaces that copy and arrives as its own reviewed integration --
-// and this list is what has to be revisited deliberately.
+// ── REVISITED DELIBERATELY, ONCE ────────────────────────────────────────
+//
+// The previous version of this comment said: "if in-platform,
+// holder-authorised, application-scoped disclosure is designed later, it
+// replaces that copy and arrives as its own reviewed integration -- and this
+// list is what has to be revisited deliberately."
+//
+// That integration now exists, and this is that revisit. Exactly ONE
+// recruitment surface may render a disclosure, through exactly ONE component
+// and ONE server module, all three named below. Everything else on every
+// recruitment surface -- the applications list included -- stays exactly as
+// closed as it was, and rule 3d holds the permitted three to a tighter
+// standard than the ban it replaces:
+//
+//   * the panel may reach exactly one server function and no table;
+//   * that server module may call only the four holder-scoped RPCs;
+//   * the panel must still render the pinned "nothing has been shared"
+//     sentence, so the case PR #58 protected is protected by a test rather
+//     than by the absence of code;
+//   * and the section stays unconditional, so its presence still says nothing
+//     about whether this person holds a Passport.
+//
+// Anything beyond that fails the build, and widening this list again is the
+// same deliberate act it was the first time.
+// The one reviewed integration, named so that it is one line to audit and one
+// line to revoke. Mirrors SERVICE_ROLE_EXCEPTION above: an exception that is a
+// named constant is a decision; an exception that is a loosened regex is a
+// leak.
+const HOLDER_DISCLOSURE_ROUTE =
+  "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx";
+const HOLDER_DISCLOSURE_PANEL = "src/components/employer/ApplicationPassportPanel.tsx";
+const HOLDER_DISCLOSURE_SERVER = "src/lib/security-passport/application-disclosure.functions.ts";
+
 const RECRUITMENT_SURFACES = [
   "src/routes/_authenticated.employer.$employerSlug.applications.tsx",
   "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx",
@@ -348,9 +383,18 @@ const PASSPORT_ACCESS: readonly { pattern: RegExp; why: string }[] = [
 // This is what makes the copy safe to allow: the section can say the product's
 // name, and cannot acquire a single line of behaviour without failing here.
 const PASSPORT_COPY_ALLOWLIST: readonly RegExp[] = [
-  /^employer\.candidate\.passport\.(heading|none|lede)$/,
+  /^employer\.candidate\.passport\.(heading|none|lede|shared|sharedNote)$/,
   /^candidate-passport$/,
 ];
+
+// The reviewed integration needs two more things on ONE route: the import
+// specifier for the panel, and the panel's own name in the markup. Pinned as
+// exact strings rather than a pattern, and scoped to that single file, so a
+// second component cannot arrive under the same permission.
+const HOLDER_DISCLOSURE_LITERALS: readonly string[] = [
+  "@/components/employer/ApplicationPassportPanel",
+];
+const HOLDER_DISCLOSURE_IDENTIFIERS: readonly string[] = ["ApplicationPassportPanel"];
 
 for (const relPath of RECRUITMENT_SURFACES) {
   const full = path.join(root, relPath);
@@ -371,11 +415,17 @@ for (const relPath of RECRUITMENT_SURFACES) {
     );
   }
 
+  // The reviewed integration is permitted on ONE route and nowhere else.
+  const isDisclosureRoute = relPath === HOLDER_DISCLOSURE_ROUTE;
+
   // Every remaining mention of the word must be one of the allowed literals.
   for (const match of src.matchAll(/["'`]([^"'`\n]*passport[^"'`\n]*)["'`]/gi)) {
     const literal = match[1];
+    const allowed =
+      PASSPORT_COPY_ALLOWLIST.some((rule) => rule.test(literal)) ||
+      (isDisclosureRoute && HOLDER_DISCLOSURE_LITERALS.includes(literal));
     expect(
-      PASSPORT_COPY_ALLOWLIST.some((allowed) => allowed.test(literal)),
+      allowed,
       `${relPath}: "${literal}" is not an approved Passport copy key. An employer ` +
         `recruitment surface may name the Passport only through ` +
         `employer.candidate.passport.* and the section's anchor id -- anything ` +
@@ -383,12 +433,14 @@ for (const relPath of RECRUITMENT_SURFACES) {
     );
   }
   // A bare identifier (no quotes) is never copy.
-  const identifiers = stripComments(read(full))
-    .replace(/["'`][^"'`\n]*["'`]/g, "")
-    .match(/[\w$]*passport[\w$]*/gi);
+  const identifiers = (
+    stripComments(read(full))
+      .replace(/["'`][^"'`\n]*["'`]/g, "")
+      .match(/[\w$]*passport[\w$]*/gi) ?? []
+  ).filter((name) => !(isDisclosureRoute && HOLDER_DISCLOSURE_IDENTIFIERS.includes(name)));
   expect(
-    identifiers === null,
-    `${relPath}: Passport appears as an identifier (${identifiers?.join(", ")}), ` +
+    identifiers.length === 0,
+    `${relPath}: Passport appears as an identifier (${identifiers.join(", ")}), ` +
       `which means this surface holds Passport state or behaviour rather than copy.`,
   );
 }
@@ -413,6 +465,19 @@ for (const relPath of RECRUITMENT_SURFACES) {
         "No Security Passport information has been shared with your organisation " +
         "for this application.",
     },
+    // The two sentences the disclosed state uses. Same rule as the empty
+    // state: both say what YOUR ORGANISATION was given, and neither can be
+    // read as a fact about what the candidate holds.
+    {
+      key: "employer.candidate.passport.shared (sv)",
+      text: "Kandidaten har valt att dela följande med er för den här ansökan.",
+    },
+    {
+      key: "employer.candidate.passport.shared (en)",
+      text:
+        "The candidate has chosen to share the following with your organisation " +
+        "for this application.",
+    },
   ];
   for (const { key, text } of required) {
     expect(
@@ -433,6 +498,119 @@ for (const relPath of RECRUITMENT_SURFACES) {
       !pattern.test(dict),
       `Passport copy must never imply whether a candidate HOLDS a Passport ` +
         `(matched ${pattern}). Only what has been shared with the employer may be stated.`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3d. The one reviewed integration, held tighter than the ban it replaces
+// ---------------------------------------------------------------------------
+// Candidate overview may render a disclosure. That permission is worth only
+// what the three files behind it are worth, so each is pinned here:
+//
+//   * the PANEL reaches exactly one server function and no table, and must
+//     still render the sentence PR #58 pinned -- so the "nothing shared" case
+//     is protected by an assertion rather than by the absence of code;
+//   * the SERVER MODULE may call only the four holder-scoped RPCs. Every one
+//     of them checks, in the database, that the caller is either the holder
+//     or a member of the organisation the holder named;
+//   * and nothing else in the application may import that module, so the
+//     permission cannot spread to a second surface by an import statement.
+{
+  for (const relPath of [
+    HOLDER_DISCLOSURE_ROUTE,
+    HOLDER_DISCLOSURE_PANEL,
+    HOLDER_DISCLOSURE_SERVER,
+  ]) {
+    expect(
+      existsSync(path.join(root, relPath)),
+      `${relPath}: named as the reviewed disclosure integration but does not exist.`,
+    );
+  }
+
+  // ── The panel ──────────────────────────────────────────────────────────
+  const panelPath = path.join(root, HOLDER_DISCLOSURE_PANEL);
+  if (existsSync(panelPath)) {
+    const panel = stripComments(read(panelPath));
+
+    expect(
+      panel.includes("employer.candidate.passport.none"),
+      `${HOLDER_DISCLOSURE_PANEL}: must render employer.candidate.passport.none. ` +
+        `Loading, error, nothing-shared, revoked and expired are one branch, and ` +
+        `that branch is the sentence PR #58 pinned -- any difference between them ` +
+        `is an oracle for whether a Passport exists.`,
+    );
+
+    // The panel is a renderer. It may call the one server function and must
+    // reach nothing else that could carry Passport data.
+    const panelBans: readonly { pattern: RegExp; why: string }[] = [
+      { pattern: /\.from\s*\(/, why: "a direct table read" },
+      { pattern: /\bsp_[a-z_]+/, why: "a Passport table or function by name" },
+      { pattern: /client\.server|supabaseAdmin/, why: "the service-role client" },
+      { pattern: /getPublicDisclosure/, why: "the public recipient boundary" },
+      { pattern: /shareToken|disclosureToken|passportToken/i, why: "a share token" },
+      { pattern: /to=["'`]\/p\/|href=["'`]\/p\//, why: "a link to the recipient boundary" },
+      {
+        pattern: /to=["'`]\/passport|href=["'`]\/passport/,
+        why: "a link to the holder's Passport",
+      },
+      { pattern: /createDisclosure|sp_create_disclosure/, why: "token share creation" },
+    ];
+    for (const { pattern, why } of panelBans) {
+      expect(
+        !pattern.test(panel),
+        `${HOLDER_DISCLOSURE_PANEL}: the disclosure panel must not reference ${why}.`,
+      );
+    }
+  }
+
+  // ── The server module ──────────────────────────────────────────────────
+  const serverPath = path.join(root, HOLDER_DISCLOSURE_SERVER);
+  if (existsSync(serverPath)) {
+    const server = stripComments(read(serverPath));
+    const APPROVED_RPCS = new Set([
+      "sp_application_disclosure",
+      "sp_share_passport_with_application",
+      "sp_my_application_disclosures",
+    ]);
+    const called = [...server.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
+    for (const name of called) {
+      expect(
+        APPROVED_RPCS.has(name),
+        `${HOLDER_DISCLOSURE_SERVER}: may call only the holder-scoped disclosure ` +
+          `RPCs -- found ${name}.`,
+      );
+    }
+    expect(
+      !/\.from\s*\(/.test(server),
+      `${HOLDER_DISCLOSURE_SERVER}: must never read a table directly. Every read ` +
+        `goes through a SECURITY DEFINER function that checks who is asking.`,
+    );
+  }
+
+  // ── The permission cannot spread by import ─────────────────────────────
+  // Revocation deliberately reuses sp_revoke_disclosure through the Passport's
+  // own sharing centre module, so the candidate's control is listed here too.
+  const MAY_IMPORT_DISCLOSURE: readonly string[] = [
+    HOLDER_DISCLOSURE_PANEL,
+    "src/components/jobs/ApplicationPassportShare.tsx",
+  ];
+  for (const file of [
+    ...walk(path.join(root, "src/components")),
+    ...walk(path.join(root, "src/routes")),
+    ...walk(path.join(root, "src/lib")),
+  ]) {
+    const relPath = rel(file);
+    if (relPath === HOLDER_DISCLOSURE_SERVER) continue;
+    const importsIt = importLines(read(file)).some((line) =>
+      line.includes("application-disclosure.functions"),
+    );
+    if (!importsIt) continue;
+    expect(
+      MAY_IMPORT_DISCLOSURE.includes(relPath),
+      `${relPath}: only the reviewed disclosure surfaces may import the ` +
+        `application-scoped disclosure module. Add it to MAY_IMPORT_DISCLOSURE ` +
+        `only as a deliberate decision.`,
     );
   }
 }

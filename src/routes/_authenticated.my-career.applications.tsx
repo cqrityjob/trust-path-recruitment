@@ -14,6 +14,7 @@ import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { formatDate } from "@/lib/job-intelligence/date-format";
+import { ApplicationPassportShare } from "@/components/jobs/ApplicationPassportShare";
 import {
   listMyApplications,
   withdrawMyApplication,
@@ -157,6 +158,11 @@ function MyApplicationsPage() {
                         </button>
                       )}
                     </div>
+
+                    {/* The Passport decision belongs here, next to the
+                        employer it concerns — not in a sharing centre, and
+                        never as a link pasted into a cover note. */}
+                    <ApplicationPassportShare applicationId={r.id} />
                   </li>
                 );
               })}

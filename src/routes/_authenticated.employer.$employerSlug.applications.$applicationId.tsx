@@ -32,10 +32,14 @@
 //
 // ── WHAT IS DELIBERATELY ABSENT ─────────────────────────────────────────
 //
-// No Security Passport. An application is consent to be considered for a job;
-// it is not consent to disclose a Passport, and the two must never become the
-// same click. A Passport reaches an employer only through a disclosure its
-// holder created, and this page therefore names it nowhere.
+// No Security Passport that the holder did not hand over. An application is
+// consent to be considered for a job; it is not consent to disclose a
+// Passport, and the two are still not the same click. A Passport reaches this
+// page only through a disclosure its holder created naming THIS application,
+// read back through one membership-checked function that answers "nothing"
+// identically for a non-member, an unknown application, a revoked share, an
+// expired one and a candidate who shared nothing. The section renders for
+// every candidate either way, so its presence says nothing about the person.
 //
 // No ranking, no score, no recommendation, and no composite "candidate
 // status". The application lifecycle and the assessment lifecycle are two
@@ -54,6 +58,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { RecruitmentPage } from "@/components/academy/AcademyWorkspace";
 import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
+import { ApplicationPassportPanel } from "@/components/employer/ApplicationPassportPanel";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   getApplicationCvSignedUrl,
@@ -363,31 +368,33 @@ function Candidate360({
       </section>
 
       {/* ── Security Passport ───────────────────────────────────────── */}
-      {/*  Informational, and ONLY informational.
+      {/*  The section this page has always had, and the same guarantee.
        *
        *  A recruiter looking at a candidate will reasonably wonder where the
        *  Security Passport fits, and silence is the worst answer: it invites
        *  the assumption that the platform is withholding something, or that a
        *  Passport can be obtained by asking support. So the product says where
-       *  it fits, in one sentence, and shows nothing.
+       *  it fits and shows only what the holder gave it.
        *
-       *  This block reads NOTHING. It calls no function, holds no token,
-       *  performs no existence check, and renders the same sentence for every
-       *  candidate on the platform -- which is the point. Whether this person
-       *  holds a Passport is not a fact an employer is entitled to, and a
-       *  section that appeared only for holders would disclose exactly that
-       *  fact while appearing to disclose nothing.
+       *  The section renders for EVERY candidate on the platform, exactly as
+       *  it did when it could show nothing at all. That is the property worth
+       *  protecting: a section that appeared only for holders would disclose
+       *  precisely the fact an employer is not entitled to. Its heading and
+       *  its lede are unconditional, and the panel below renders the pinned
+       *  "nothing has been shared with your organisation" sentence for every
+       *  case that is not an explicit, live, holder-created disclosure naming
+       *  THIS application -- including loading, error, revoked and expired.
        *
-       *  Applying for a job remains not consent. If holder-authorised,
-       *  application-scoped disclosure is designed later, it replaces this
-       *  copy and arrives with its own reviewed consent model. */}
+       *  Applying for a job is still not consent. What changed is that the
+       *  holder now has a way to give consent deliberately, per application,
+       *  and to withdraw it; see the panel's own header and rules 3b/3d of
+       *  scripts/passport-separation-check.ts, which permit this one
+       *  integration and still close every other recruitment surface. */}
       <section className="mt-10" aria-labelledby="candidate-passport">
         <h2 id="candidate-passport" className="text-lg font-semibold text-foreground">
           {t("employer.candidate.passport.heading")}
         </h2>
-        <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-          {t("employer.candidate.passport.none")}
-        </p>
+        <ApplicationPassportPanel applicationId={applicationId} />
         <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
           {t("employer.candidate.passport.lede")}
         </p>
