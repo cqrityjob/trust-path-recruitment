@@ -48,6 +48,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import { ensureMyEmployerCompanyFromSignup } from "@/lib/job-intelligence/employer-onboarding.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
 
@@ -92,20 +93,53 @@ function EmployerWorkspacePicker() {
     queryFn: () => listWorkspaces(),
   });
 
+  // The first authenticated visit after verification is where a registration
+  // becomes an organisation an administrator can review. It runs once, before
+  // any redirect decision, and is a no-op for everybody who already has a
+  // workspace or who never named a company at signup.
+  const ensureCompany = useServerFn(ensureMyEmployerCompanyFromSignup);
+  const provision = useQuery({
+    queryKey: ["employer", "ensure-company-from-signup"],
+    queryFn: () => ensureCompany(),
+    enabled: query.isSuccess && (query.data ?? []).length === 0,
+    retry: false,
+    staleTime: Infinity,
+  });
+
+  // A newly created organisation is not in the workspace list yet.
+  const refetchWorkspaces = query.refetch;
+  useEffect(() => {
+    if (provision.data?.created) void refetchWorkspaces();
+  }, [provision.data, refetchWorkspaces]);
+
   const workspaces = query.data ?? [];
 
   useEffect(() => {
     if (!query.isSuccess) return;
 
     if (workspaces.length === 0) {
+      // Wait for provisioning to answer before deciding this person has no
+      // company -- otherwise a fresh registration is bounced to the manual
+      // onboarding form a moment before its organisation appears.
+      if (provision.isLoading || provision.data?.created) return;
       navigate({ to: "/employer/onboarding", replace: true });
       return;
     }
 
-    if (workspaces.length === 1) {
+    // Route by what the organisation actually is. Sending a pending or
+    // rejected employer into the dashboard shows them a workspace where the
+    // database refuses every real action -- a permissions failure dressed up
+    // as a product.
+    const active = workspaces.filter((w) => w.employerStatus === "active");
+    if (active.length === 0) {
+      navigate({ to: "/employer/pending", replace: true });
+      return;
+    }
+
+    if (active.length === 1) {
       navigate({
         to: "/employer/$employerSlug",
-        params: { employerSlug: workspaces[0].employerSlug },
+        params: { employerSlug: active[0].employerSlug },
         replace: true,
       });
       return;
@@ -117,12 +151,12 @@ function EmployerWorkspacePicker() {
     } catch {
       /* ignore */
     }
-    if (stored && workspaces.some((w) => w.employerSlug === stored)) {
+    if (stored && active.some((w) => w.employerSlug === stored)) {
       navigate({ to: "/employer/$employerSlug", params: { employerSlug: stored }, replace: true });
     }
     // else: fall through and render the picker below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.isSuccess, workspaces.length]);
+  }, [query.isSuccess, workspaces.length, provision.isLoading, provision.data]);
 
   if (query.isLoading) {
     return (
@@ -151,12 +185,16 @@ function EmployerWorkspacePicker() {
     );
   }
 
-  // workspaces.length === 0 and workspaces.length === 1 both redirect via
-  // the effect above (0 -> /employer/onboarding, 1 -> auto-select); a
-  // brief loading state covers that instant for either case.
-  // workspaces.length >= 2 (or a stale/no stored slug on a multi-membership
-  // account) renders the picker below.
-  if (workspaces.length <= 1) {
+  // The picker offers workspaces this person can actually open. An
+  // organisation still under review is not one of them -- listing it as a
+  // clickable card would hand out the exact route the status check exists to
+  // withhold, and the dashboard behind it refuses every real action anyway.
+  const openable = workspaces.filter((w) => w.employerStatus === "active");
+
+  // 0 and 1 openable workspaces both redirect via the effect above (0 ->
+  // onboarding or the review page, 1 -> auto-select); a brief loading state
+  // covers that instant for either case. 2+ renders the picker.
+  if (openable.length <= 1) {
     return (
       <SiteLayout>
         <Section containerClassName="max-w-2xl">
@@ -173,7 +211,7 @@ function EmployerWorkspacePicker() {
         <p className="mt-3 text-sm text-muted-foreground">{t("employer.picker.body")}</p>
 
         <ul className="mt-6 space-y-3">
-          {workspaces.map((w) => (
+          {openable.map((w) => (
             <li key={w.employerId}>
               <Link
                 to="/employer/$employerSlug"

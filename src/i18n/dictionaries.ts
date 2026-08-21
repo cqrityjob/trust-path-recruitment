@@ -414,6 +414,27 @@ export const dictionaries = {
     "auth.swap.to_signup": "Har du inget konto? Skapa ett",
     "auth.swap.to_signin": "Har du redan ett konto? Logga in",
     "auth.signup.check_email": "Kolla din inkorg — vi har skickat en verifieringslänk.",
+    "auth.signup.check_email_employer":
+      "Verifiera din e-postadress för att fortsätta. Därefter granskar vi din företagsregistrering.",
+    "auth.companyName": "Företagsnamn",
+    "auth.companyCountry": "Land",
+    "employer.pending.heading": "Företagskonto granskas",
+    "employer.pending.thanks": "Tack för din registrering.",
+    "employer.pending.body": "Vi granskar nu företagets uppgifter innan kontot aktiveras.",
+    "employer.pending.access":
+      "Du får tillgång till arbetsgivarytan när registreringen har godkänts.",
+    "employer.pending.registered": "Registrerat",
+    "employer.pending.company": "Företag",
+    "employer.pending.signOut": "Logga ut",
+    "employer.rejected.heading": "Registreringen godkändes inte",
+    "employer.rejected.body":
+      "Vi kan tyvärr inte aktivera ett arbetsgivarkonto för den här organisationen.",
+    "employer.rejected.contact": "Hör av dig till oss om du tror att det här är ett misstag.",
+    "employer.unavailable.heading": "Arbetsgivarytan är inte tillgänglig",
+    "employer.unavailable.body":
+      "Företagets tillgång till arbetsgivarytan är för närvarande avstängd.",
+    "employer.pending.checkStatus": "Kontrollera status",
+    "employer.pending.checking": "Kontrollerar din registrering …",
     "auth.intro":
       "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
     "auth.google": "Fortsätt med Google",
@@ -3323,6 +3344,28 @@ export const dictionaries = {
     "auth.swap.to_signup": "No account yet? Create one",
     "auth.swap.to_signin": "Already have an account? Sign in",
     "auth.signup.check_email": "Check your inbox — we've sent a verification link.",
+    "auth.signup.check_email_employer":
+      "Verify your email address to continue. Your company registration will then be reviewed.",
+    "auth.companyName": "Company name",
+    "auth.companyCountry": "Country",
+    "employer.pending.heading": "Company account under review",
+    "employer.pending.thanks": "Thank you for registering.",
+    "employer.pending.body":
+      "We are reviewing your organisation before activating employer access.",
+    "employer.pending.access":
+      "You will receive access to the employer workspace once the registration has been approved.",
+    "employer.pending.registered": "Registered",
+    "employer.pending.company": "Company",
+    "employer.pending.signOut": "Sign out",
+    "employer.rejected.heading": "Registration was not approved",
+    "employer.rejected.body":
+      "We are not able to activate an employer account for this organisation.",
+    "employer.rejected.contact": "Please contact us if you believe this is a mistake.",
+    "employer.unavailable.heading": "The employer workspace is not available",
+    "employer.unavailable.body":
+      "This organisation's access to the employer workspace is currently closed.",
+    "employer.pending.checkStatus": "Check status",
+    "employer.pending.checking": "Checking your registration …",
     "auth.intro":
       "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",
     "auth.google": "Continue with Google",

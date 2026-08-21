@@ -1072,6 +1072,29 @@ if [ "$PM_PASSED" -lt 18 ]; then
   exit 1
 fi
 
+echo "==> Employer onboarding: registration, review and decision"
+set +e
+ONB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_onboarding_approval_test.sql 2>&1)"
+ONB_RC=$?
+set -e
+
+echo "$ONB_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+ONB_PASSED="$(echo "$ONB_OUT" | grep -c "ok  " || true)"
+
+if [ "$ONB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer onboarding suite exited with code ${ONB_RC}." >&2
+  echo "$ONB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  exit 1
+fi
+
+echo "    ok  ${ONB_PASSED} employer onboarding assertions passed"
+
+if [ "$ONB_PASSED" -lt 26 ]; then
+  echo "FAIL: expected at least 26 employer onboarding assertions, only ${ONB_PASSED} ran." >&2
+  exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------

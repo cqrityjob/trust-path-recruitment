@@ -87,6 +87,7 @@ export type AdminEmployerListRow = {
   status: string;
   createdAt: string;
   ownerDisplayName: string | null;
+  ownerEmail: string | null;
   memberCount: number;
   draftJobCount: number;
   latestModerationAction: string | null;
@@ -176,6 +177,7 @@ export const adminListEmployersForModeration = createServerFn({ method: "POST" }
     // to exactly the owner user ids already resolved above.
     const ownerUserIds = Array.from(new Set(ownerUserIdByEmployer.values()));
     const nameByUserId = new Map<string, string | null>();
+    const emailByUserId = new Map<string, string | null>();
     if (ownerUserIds.length > 0) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: profileRows } = await supabaseAdmin
@@ -185,6 +187,21 @@ export const adminListEmployersForModeration = createServerFn({ method: "POST" }
       for (const p of profileRows ?? []) {
         nameByUserId.set(p.id as string, (p.display_name as string | null) ?? null);
       }
+
+      // The applicant's address, so an administrator can decide without
+      // leaving the queue -- and can reach the person if something needs
+      // asking. profiles does not carry an email, so it comes from the auth
+      // record, one lookup per owner, through the service-role client this
+      // file already uses for the names directly above.
+      //
+      // Deliberately narrow: only the owners of the employers already
+      // returned by this admin-only, RLS-scoped query. Never a user listing.
+      await Promise.all(
+        ownerUserIds.map(async (id) => {
+          const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+          emailByUserId.set(id, error ? null : ((data?.user?.email as string | null) ?? null));
+        }),
+      );
     }
 
     return rows.map((r: any) => {
@@ -200,6 +217,7 @@ export const adminListEmployersForModeration = createServerFn({ method: "POST" }
         status: r.status as string,
         createdAt: r.created_at as string,
         ownerDisplayName: ownerUserId ? (nameByUserId.get(ownerUserId) ?? null) : null,
+        ownerEmail: ownerUserId ? (emailByUserId.get(ownerUserId) ?? null) : null,
         memberCount: memberCountByEmployer.get(r.id) ?? 0,
         draftJobCount: draftCountByEmployer.get(r.id) ?? 0,
         latestModerationAction: latest?.action ?? null,

@@ -330,3 +330,81 @@ export const decideAccessRequest = createServerFn({ method: "POST" })
       };
     },
   );
+
+// -------- ensureMyEmployerCompanyFromSignup --------
+//
+// The step that was missing, and the reason the first employer journey ended
+// in silence.
+//
+// Registration collects a company name, but at that moment the person has no
+// session -- their address is unverified -- so nothing can be written under
+// their own identity. The values travel in auth user metadata instead, and
+// this turns them into a real, reviewable organisation on the first
+// authenticated visit after the verification link is clicked.
+//
+// Until that happened, a registration produced an auth.users row and nothing
+// else. The admin moderation queue reads `employers`, so there was genuinely
+// nothing for an administrator to act on, and the journey stopped there.
+//
+// Idempotent by construction. It refuses to do anything if the caller already
+// has any employer membership, so a double-click, a refresh, or two tabs
+// racing cannot produce two organisations. create_my_employer_company adds its
+// own duplicate detection on name, registration number and website; when that
+// fires we return `duplicate` and the caller falls through to the onboarding
+// page, where requesting access to the existing company is the correct move.
+//
+// It creates the organisation as `pending`, exactly like the manual path --
+// this is a shortcut through the form, never a shortcut through approval.
+
+export type EnsureEmployerCompanyResult =
+  | { created: true; employerId: string; employerSlug: string }
+  | { created: false; reason: "already_member" | "no_company_in_signup" | "duplicate" };
+
+export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<EnsureEmployerCompanyResult> => {
+    const ctx = context as Ctx;
+
+    // Already has a workspace: nothing to provision, and nothing to race.
+    const { data: existing, error: existingError } = await ctx.supabase
+      .from("employer_memberships")
+      .select("id")
+      .eq("user_id", ctx.userId)
+      .limit(1);
+    if (existingError) throw new Error("Could not check your existing access.");
+    if ((existing ?? []).length > 0) return { created: false, reason: "already_member" };
+
+    const { data: userData, error: userError } = await ctx.supabase.auth.getUser();
+    if (userError || !userData?.user) throw new Error("Could not read your account.");
+
+    const meta = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
+    const name = typeof meta.company_name === "string" ? meta.company_name.trim() : "";
+    const country = typeof meta.company_country === "string" ? meta.company_country.trim() : "";
+
+    // Somebody who registered before this existed, or through the candidate
+    // portal, simply has no company to create. The onboarding form is still
+    // there for them.
+    if (!name || !country) return { created: false, reason: "no_company_in_signup" };
+
+    const slugBase = slugify(name) || "company";
+    const { data: rows, error } = await ctx.supabase.rpc("create_my_employer_company", {
+      _name: name,
+      _slug_base: slugBase,
+      _country: country,
+      _registration_number: null,
+      _website: null,
+      _job_title: null,
+    });
+
+    if (error) {
+      if (/DUPLICATE_EMPLOYER:/.test(String(error.message ?? ""))) {
+        return { created: false, reason: "duplicate" };
+      }
+      throw new Error("Could not complete your company registration.");
+    }
+
+    const row = (rows as { employer_id: string; employer_slug: string }[] | null)?.[0];
+    if (!row) throw new Error("Could not complete your company registration.");
+
+    return { created: true, employerId: row.employer_id, employerSlug: row.employer_slug };
+  });
