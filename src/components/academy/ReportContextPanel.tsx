@@ -33,6 +33,27 @@ const PURPOSE_LABEL: Record<string, TranslationKey> = {
   closed_test_recruitment: "academy.report.purposeClosedTestRecruitment",
 };
 
+// The lineage section is what makes a released report auditable, so it stays.
+// It used to print the raw column values -- closed_test, design, draft,
+// in_progress -- which read as a database row rather than a document. The
+// version identifiers below (des-v2, det-v1, the report key) are left exactly
+// as they are: they ARE identifiers, and an auditor needs to match them
+// against ours character for character.
+const LINEAGE_LABEL: Record<string, TranslationKey> = {
+  development: "academy.lineage.mode.development",
+  closed_test: "academy.lineage.mode.closedTest",
+  recruitment: "academy.lineage.mode.recruitment",
+  design: "academy.lineage.validation.design",
+  pilot: "academy.lineage.validation.pilot",
+  operational: "academy.lineage.validation.operational",
+  draft: "academy.lineage.content.draft",
+  published: "academy.lineage.content.published",
+  in_progress: "academy.lineage.attempt.inProgress",
+  submitted: "academy.lineage.attempt.submitted",
+  scored: "academy.lineage.attempt.scored",
+  released: "academy.lineage.attempt.released",
+};
+
 const PERSON_LABEL: Record<string, TranslationKey> = {
   employee: "academy.report.personEmployee",
   candidate: "academy.report.personCandidate",
@@ -160,16 +181,40 @@ export function ReportContextPanel({
             <Fact label={t("academy.report.instrument")} value={c.assessmentSlug} />
           )}
           {c.governanceMode && (
-            <Fact label={t("academy.report.governance")} value={c.governanceMode} />
+            <Fact
+              label={t("academy.report.governance")}
+              value={
+                LINEAGE_LABEL[c.governanceMode]
+                  ? t(LINEAGE_LABEL[c.governanceMode])
+                  : c.governanceMode
+              }
+            />
           )}
           {c.validationStatus && (
-            <Fact label={t("academy.report.validation")} value={c.validationStatus} />
+            <Fact
+              label={t("academy.report.validation")}
+              value={
+                LINEAGE_LABEL[c.validationStatus]
+                  ? t(LINEAGE_LABEL[c.validationStatus])
+                  : c.validationStatus
+              }
+            />
           )}
           {c.contentStatus && (
-            <Fact label={t("academy.report.contentStatus")} value={c.contentStatus} />
+            <Fact
+              label={t("academy.report.contentStatus")}
+              value={
+                LINEAGE_LABEL[c.contentStatus] ? t(LINEAGE_LABEL[c.contentStatus]) : c.contentStatus
+              }
+            />
           )}
           {c.attemptStatus && (
-            <Fact label={t("academy.report.attemptStatus")} value={c.attemptStatus} />
+            <Fact
+              label={t("academy.report.attemptStatus")}
+              value={
+                LINEAGE_LABEL[c.attemptStatus] ? t(LINEAGE_LABEL[c.attemptStatus]) : c.attemptStatus
+              }
+            />
           )}
           {c.reviewsTotal != null && (
             <Fact

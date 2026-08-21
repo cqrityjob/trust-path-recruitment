@@ -126,10 +126,16 @@ function AssignmentsList({
           <p className="mt-1 text-sm text-muted-foreground">{t("assignment.list.subheading")}</p>
         </div>
         {canWrite && (
+          // This deep-linked into the assign form with
+          // assessmentId="security-guard-foundation" hardcoded. That definition
+          // was retired in July 2026 and every version of it carries
+          // retired_at, so a trigger refuses the assignment -- the button could
+          // not succeed. It goes to the library, which is where assignable
+          // assessments actually live. Same fix already applied on the people
+          // list for the same reason.
           <Link
-            to="/employer/$employerSlug/assessments/assign"
+            to="/employer/$employerSlug/assessments/library"
             params={{ employerSlug }}
-            search={{ assessmentId: "security-guard-foundation" }}
             className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             {t("assignment.action.assign")}

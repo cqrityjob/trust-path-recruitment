@@ -57,8 +57,7 @@ function EmployerCompetenciesPage() {
         icon={<BadgeCheck className="h-5 w-5" aria-hidden="true" />}
         title={t("employer.competencies.heading")}
         purpose={t("employer.competencies.purpose")}
-        value={t("employer.competencies.value")}
-        milestone={t("employer.competencies.milestone")}
+        employerSlug={employerSlug}
       />
     </EmployerAppShell>
   );

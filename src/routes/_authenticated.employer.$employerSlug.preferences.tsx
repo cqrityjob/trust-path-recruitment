@@ -63,8 +63,7 @@ function EmployerPreferencesPage() {
         icon={<Settings2 className="h-5 w-5" aria-hidden="true" />}
         title={t("employer.preferences.heading")}
         purpose={t("employer.preferences.purpose")}
-        value={t("employer.preferences.value")}
-        milestone={t("employer.preferences.milestone")}
+        employerSlug={employerSlug}
       />
     </EmployerAppShell>
   );

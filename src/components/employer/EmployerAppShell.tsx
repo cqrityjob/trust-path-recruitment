@@ -141,6 +141,23 @@ type NavGroup = {
 
 // Routes and permissions are unchanged from the flat version of this
 // navigation -- only the grouping and the labels differ.
+// ── WHAT A CUSTOMER SEES ────────────────────────────────────────────────
+//
+// Navigation lists what actually works. Six items were removed from the
+// customer sidebar because they render an intentional "controlled future
+// state" panel and have no backend behind them:
+//
+//   Platser & risk, Rapporter & regelefterlevnad, Analys,
+//   Kompetenser & certifikat  -- all EmployerModuleComingSoon shells
+//   Inställningar (preferences) -- likewise; the working organisation
+//                                  settings live on /settings, which stays
+//   Fråga CQrity              -- promises an assistant and delivers four
+//                                  navigation shortcuts
+//
+// The ROUTES are deliberately left in place: an existing bookmark still
+// resolves to an honest page rather than a 404. What changes is that a
+// prospective customer is no longer invited to click into an empty room.
+// Restoring one is a one-line edit here once it has something behind it.
 const NAV_GROUPS: NavGroup[] = [
   {
     key: "overview",
@@ -169,6 +186,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Inbox,
         to: "/employer/$employerSlug/applications",
       },
+      {
+        key: "assessments",
+        labelKey: "employer.nav.assessments",
+        icon: ClipboardCheck,
+        to: "/employer/$employerSlug/assessments",
+      },
     ],
   },
   {
@@ -180,24 +203,6 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.workforce",
         icon: Users,
         to: "/employer/$employerSlug/workforce",
-      },
-      {
-        key: "competencies",
-        labelKey: "employer.nav.competencies",
-        icon: BadgeCheck,
-        to: "/employer/$employerSlug/competencies",
-      },
-    ],
-  },
-  {
-    key: "development",
-    labelKey: "employer.nav.group.development",
-    items: [
-      {
-        key: "assessments",
-        labelKey: "employer.nav.assessments",
-        icon: ClipboardCheck,
-        to: "/employer/$employerSlug/assessments",
       },
       {
         key: "training",
@@ -212,47 +217,14 @@ const NAV_GROUPS: NavGroup[] = [
     labelKey: "employer.nav.group.organisation",
     items: [
       {
-        key: "sites",
-        labelKey: "employer.nav.sites",
-        icon: MapPin,
-        to: "/employer/$employerSlug/sites",
-      },
-      {
-        key: "reports",
-        labelKey: "employer.nav.reports",
-        icon: FileCheck2,
-        to: "/employer/$employerSlug/reports",
-      },
-      {
-        key: "analytics",
-        labelKey: "employer.nav.analytics",
-        icon: BarChart3,
-        to: "/employer/$employerSlug/analytics",
-      },
-      {
         key: "organisation",
         labelKey: "employer.nav.organisation",
         icon: Building2,
         to: "/employer/$employerSlug/settings",
       },
-      {
-        key: "settings",
-        labelKey: "employer.nav.settings",
-        icon: Settings2,
-        to: "/employer/$employerSlug/preferences",
-      },
     ],
   },
 ];
-
-// Kept out of the groups on purpose: a help/utility capability, not one
-// of the four daily workflows, so it sits alone at the foot of the list.
-const ASK_CQRITY_ITEM: NavItem = {
-  key: "ask-cqrity",
-  labelKey: "employer.nav.askCqrity",
-  icon: Sparkles,
-  to: "/employer/$employerSlug/ask-cqrity",
-};
 
 export function EmployerAppShell(props: EmployerAppShellProps) {
   const {
@@ -418,19 +390,6 @@ function NavGroups({
           </ul>
         </div>
       ))}
-      <div className="mt-auto border-t border-border pt-3">
-        <ul>
-          <li>
-            <NavLink
-              item={ASK_CQRITY_ITEM}
-              employerSlug={employerSlug}
-              active={ASK_CQRITY_ITEM.key === activeSection}
-              t={t}
-              onNavigate={onNavigate}
-            />
-          </li>
-        </ul>
-      </div>
     </>
   );
 }

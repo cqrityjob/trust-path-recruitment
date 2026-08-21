@@ -88,14 +88,9 @@ function EmployerAskCqrityPage() {
           <Sparkles className="h-5 w-5" />
         </span>
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-              {t("employer.askCqrity.heading")}
-            </h1>
-            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("employer.module.comingSoon.badge")}
-            </span>
-          </div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            {t("employer.askCqrity.heading")}
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {t("employer.askCqrity.body")}
           </p>

@@ -1,77 +1,30 @@
--- An assessment can say what it was DESIGNED for, without that being permission.
+-- Five assessment areas, counted instead of reported as zero.
 --
--- ── THE DISTINCTION THIS MIGRATION EXISTS TO KEEP ───────────────────────
+-- scp_employer_content_library returns module_count for every library row. The
+-- training branch counts scp_module_versions; the assessment branch has always
+-- returned a literal 0, because when the read model was written an assessment
+-- had no internal structure to count.
 --
--- There are two different questions about a piece of content and the platform
--- currently answers only one of them:
+-- It does now. 20260830091000 introduced scp_form_blocks, and the Vaktare
+-- recruitment assessment is built from five of them -- Sakerhetsbedomning,
+-- Observation och rapportering, Arbetsbeteende inom sakerhetsarbete,
+-- Integritet och tillforlitlighet, Reflektion. An employer deciding whether to
+-- run it should be able to see that it covers five areas, in the same line
+-- that already tells them how many questions it holds and how long it takes.
 --
---   1. "May this organisation run this, and on what basis?"
---      Answered by scp_grant_permits_assignment -> development | closed_test |
---      recruitment | NULL. This is GOVERNANCE. It is decided by content status,
---      validation status and an explicit, time-bounded grant. Nothing in this
---      migration touches it.
+-- ── WHAT THIS CHANGES ────────────────────────────────────────────────
 --
---   2. "What kind of assessment is this, as a product?"
---      Unanswered. A recruiter browsing the library cannot tell a competence
---      development programme from an assessment written for a hiring
---      conversation, because both are `development_programme` in the family
---      taxonomy and both read as generic.
+-- One expression: the literal 0 becomes a count of the blocks belonging to
+-- this assessment version's forms. Everything else in the function is copied
+-- forward verbatim from 20260830092000. No column is added or removed, no
+-- filter changes, no governance call changes, and an assessment with no blocks
+-- still reports 0 -- so nothing that reads this function has to change.
 --
--- Conflating those two is the failure mode worth naming: a column called
--- "recruitment" that a reader mistakes for permission to select people. So the
--- column is deliberately named for DESIGN INTENT, its values are deliberately
--- not the governance vocabulary, and it is deliberately surfaced beside the
--- governance mode rather than instead of it. An assessment can be designed for
--- recruitment support and still be assignable only as a closed test — that is
--- in fact exactly the state the Security Officer assessment is in, and the
--- library has to be able to show both facts at once without either being read
--- as the other.
---
--- ── WHY NOT A NEW FAMILY ────────────────────────────────────────────────
---
--- scp_assessment_families.product_type carries a guard
--- (scp_guard_family_product_separation) tying it to scp_assessment_definitions
--- .purpose, and scp_employer_content_library filters on it. Adding a
--- 'recruitment' product type would mean a new family, a new purpose value, a
--- widened guard and a widened library query — four changes to load-bearing
--- governance to express one product label. A nullable column with a default
--- expresses it in one.
---
--- ── SCOPE ───────────────────────────────────────────────────────────────
---
--- Additive. One column with a safe default, one CREATE OR REPLACE of the
--- library read model that appends ONE column to its return type. Every existing
--- definition is 'competence_development', which is what the library implied
--- before. No governance function is read, written or altered.
---
--- Remediation: restore scp_employer_content_library from 20260829093000 and
--- drop the column.
+-- Deliberately NOT a governance surface: module_count is descriptive metadata
+-- for a catalogue row. It is not consulted by scp_grant_permits_assignment and
+-- carries no assignability meaning.
 
-ALTER TABLE public.scp_assessment_definitions
-  ADD COLUMN IF NOT EXISTS designed_for text NOT NULL
-    DEFAULT 'competence_development'
-    CHECK (designed_for IN ('competence_development', 'recruitment_support'));
-
-COMMENT ON COLUMN public.scp_assessment_definitions.designed_for IS
-  'PRODUCT DESIGN INTENT, never a governance basis. recruitment_support means '
-  'the content was written to inform a hiring conversation -- role-specific '
-  'scenarios, an employer brief and an interview guide. It confers NOTHING: '
-  'whether an organisation may run the assessment, and under what mode, is '
-  'decided solely by scp_grant_permits_assignment, and a recruitment-designed '
-  'assessment that is still draft content remains assignable only as a closed '
-  'test. Surfaces must show this label BESIDE the governance mode, never '
-  'instead of it.';
-
--- ═══════════════════════════════════════════════════════════════════════════
--- The library carries the label
---
--- Body copied from 20260829093000 with one column appended to the return type
--- and one expression appended to each branch. Training programmes have no
--- design-intent concept, so they report the default -- honestly, rather than
--- being given a recruitment label they never earned.
--- ═══════════════════════════════════════════════════════════════════════════
-
-DROP FUNCTION IF EXISTS public.scp_employer_content_library(uuid);
+BEGIN;
 
 CREATE OR REPLACE FUNCTION public.scp_employer_content_library(_employer_id uuid)
 RETURNS TABLE(
@@ -137,7 +90,9 @@ BEGIN
     coalesce((SELECT count(*)::int FROM public.scp_forms f
                 JOIN public.scp_form_items fi ON fi.form_id = f.id
                WHERE f.assessment_version_id = av.id), 0),
-    0,
+    coalesce((SELECT count(*)::int FROM public.scp_forms f
+                JOIN public.scp_form_blocks fb ON fb.form_id = f.id
+               WHERE f.assessment_version_id = av.id), 0),
     (SELECT min(f.target_minutes_min) FROM public.scp_forms f WHERE f.assessment_version_id = av.id),
     (SELECT max(f.target_minutes_max) FROM public.scp_forms f WHERE f.assessment_version_id = av.id),
     av.language_scope,
@@ -246,26 +201,33 @@ BEGIN
 END;
 $function$;
 
-COMMENT ON FUNCTION public.scp_employer_content_library(uuid) IS
-  'The durable content library for one organisation, across assessments and '
-  'training. Assignability is decided by asking the same governance function '
-  'the assign path asks, so the library can never advertise something the '
-  'assign path would refuse. designed_for is a product label and is never part '
-  'of that decision.';
-
-REVOKE ALL     ON FUNCTION public.scp_employer_content_library(uuid) FROM PUBLIC, anon;
-GRANT  EXECUTE ON FUNCTION public.scp_employer_content_library(uuid) TO authenticated;
-
--- Design intent is not permission: proven, not asserted in a comment.
+-- The one behaviour this migration exists for, asserted rather than assumed.
 DO $$
-DECLARE _def text;
+DECLARE _blocks integer; _reported integer;
 BEGIN
-  _def := pg_get_functiondef('public.scp_grant_permits_assignment(uuid,uuid,text,text,boolean)'::regprocedure);
-  IF _def ILIKE '%designed_for%' THEN
-    RAISE EXCEPTION
-      'SCP_DESIGN_INTENT_IS_NOT_PERMISSION: the governance function now reads '
-      'designed_for. A product label must never influence whether an '
-      'organisation may run an assessment.';
+  SELECT count(*)::int INTO _blocks
+    FROM public.scp_forms f
+    JOIN public.scp_form_blocks fb ON fb.form_id = f.id
+    JOIN public.scp_assessment_versions av ON av.id = f.assessment_version_id
+    JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+   WHERE d.slug = 'security-officer-recruitment';
+
+  IF _blocks = 0 THEN
+    RAISE NOTICE 'no form blocks present for the recruitment assessment; area count stays 0';
+  ELSIF _blocks <> 5 THEN
+    RAISE EXCEPTION 'SCP_UNEXPECTED_BLOCK_COUNT: the recruitment assessment reports % areas, expected 5.', _blocks;
   END IF;
-  RAISE NOTICE 'design-intent separation proven: the governance function does not read the label';
+
+  -- module_count must stay descriptive. If it ever became an input to
+  -- assignability, changing how it is counted would change who may run what.
+  SELECT count(*)::int INTO _reported
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname = 'scp_grant_permits_assignment'
+     AND pg_get_functiondef(p.oid) ILIKE '%module_count%';
+  IF _reported > 0 THEN
+    RAISE EXCEPTION 'SCP_MODULE_COUNT_IS_GOVERNANCE: scp_grant_permits_assignment reads module_count.';
+  END IF;
 END $$;
+
+COMMIT;

@@ -245,8 +245,11 @@ function JobsList({
                 : t("employer.jobs.list.empty")}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <table className="w-full text-left text-sm">
+          // Five columns and a row of actions do not fit a phone. The wrapper
+          // was overflow-hidden, so on a narrow screen the last column was
+          // simply cut off rather than reachable.
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[46rem] text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">{t("employer.jobs.list.title")}</th>

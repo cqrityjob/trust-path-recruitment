@@ -10,7 +10,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, Circle, CircleDot, FlaskConical } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, CircleDot, Eye } from "lucide-react";
 import { useT } from "@/i18n/context";
 import {
   AssessmentShell,
@@ -98,7 +98,7 @@ function TrainingProgrammeRoute() {
             <>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 px-2.5 py-1 text-[11px] font-medium text-accent">
-                  <FlaskConical className="h-3 w-3" aria-hidden="true" />
+                  <Eye className="h-3 w-3" aria-hidden="true" />
                   {t("academy.training.internalTesting")}
                 </span>
                 <span className="text-[12px] text-muted-foreground">

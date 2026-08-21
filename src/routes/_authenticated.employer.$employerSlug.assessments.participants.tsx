@@ -71,6 +71,16 @@ function Participants({
     queryFn: () => list({ data: { employerId } }),
   });
 
+  // Recruitment candidates and existing staff sit in one list because they run
+  // the same assessments, but they are not the same people to a manager: one is
+  // being considered, the other is employed. The filter is how you look at one
+  // group without the other, and the chip on each row is how you never confuse
+  // the two -- a candidate is a candidate on this page and nowhere near
+  // Medarbetare.
+  const [context, setContext] = useState<"all" | "recruitment" | "workforce">("all");
+  const visible = (rows: PipelineRow[]) =>
+    context === "all" ? rows : rows.filter((r) => r.useCase === context);
+
   return (
     <>
       <AcademyHeading
@@ -78,10 +88,39 @@ function Participants({
         lede={t("academy.participants.lede")}
       />
 
+      <div
+        role="tablist"
+        aria-label={t("academy.participants.contextFilter")}
+        className="mb-5 inline-flex gap-1 rounded-[10px] border border-border p-1"
+      >
+        {(["all", "recruitment", "workforce"] as const).map((c) => (
+          <button
+            key={c}
+            type="button"
+            role="tab"
+            aria-selected={context === c}
+            onClick={() => setContext(c)}
+            className={
+              context === c
+                ? "rounded-[7px] bg-[color:var(--surface-subtle)] px-3 py-1.5 text-[13px] font-medium text-foreground"
+                : "rounded-[7px] px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+            }
+          >
+            {t(
+              c === "all"
+                ? "academy.participants.filterAll"
+                : c === "recruitment"
+                  ? "academy.participants.filterCandidates"
+                  : "academy.participants.filterEmployees",
+            )}
+          </button>
+        ))}
+      </div>
+
       <AcademyQueryState
         query={query}
         surface="assessments/participants"
-        isEmpty={(rows) => rows.length === 0}
+        isEmpty={(rows) => visible(rows).length === 0}
         emptyTitle={t("academy.participants.emptyTitle")}
         emptyBody={t("academy.participants.emptyBody")}
         // The empty state already told people to go to the library. Now it
@@ -98,7 +137,7 @@ function Participants({
       >
         {(rows) => (
           <div className="space-y-3">
-            {rows.map((p) => (
+            {visible(rows).map((p) => (
               <ParticipantCard
                 key={p.attemptId}
                 row={p}
@@ -235,7 +274,16 @@ function ParticipantCard({
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
-          <LifecycleChip state={row.lifecycleState} />
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              {t(
+                row.useCase === "recruitment"
+                  ? "academy.participants.contextCandidate"
+                  : "academy.participants.contextEmployee",
+              )}
+            </span>
+            <LifecycleChip state={row.lifecycleState} />
+          </div>
           <span className="text-[11px] text-muted-foreground">
             {nextActionLabel(t, row.lifecycleState)}
           </span>
@@ -330,18 +378,18 @@ function ParticipantCard({
           (row.lifecycleState === "invited" || row.lifecycleState === "in_progress") &&
           row.assignmentId &&
           !confirmCancel && (
-          <button
-            type="button"
-            onClick={() => {
-              setNotice(null);
-              setConfirmCancel(true);
-            }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Ban className="h-4 w-4" aria-hidden="true" />
-            {t("academy.participants.cancel")}
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={() => {
+                setNotice(null);
+                setConfirmCancel(true);
+              }}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Ban className="h-4 w-4" aria-hidden="true" />
+              {t("academy.participants.cancel")}
+            </button>
+          )}
 
         {canManage && row.releasedAt && !reassessmentAvailable && (
           <p className="w-full text-[12px] leading-relaxed text-muted-foreground">
@@ -396,4 +444,3 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
     </div>
   );
 }
-

@@ -54,8 +54,7 @@ function EmployerAnalyticsPage() {
         icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
         title={t("employer.analytics.heading")}
         purpose={t("employer.analytics.purpose")}
-        value={t("employer.analytics.value")}
-        milestone={t("employer.analytics.milestone")}
+        employerSlug={employerSlug}
       />
     </EmployerAppShell>
   );
