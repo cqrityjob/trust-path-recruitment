@@ -4224,6 +4224,7 @@ export type Database = {
       scp_assessment_definitions: {
         Row: {
           created_at: string
+          designed_for: string
           display_name_en: string | null
           display_name_sv: string | null
           family_id: string
@@ -4239,6 +4240,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          designed_for?: string
           display_name_en?: string | null
           display_name_sv?: string | null
           family_id: string
@@ -4254,6 +4256,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          designed_for?: string
           display_name_en?: string | null
           display_name_sv?: string | null
           family_id?: string
@@ -9332,6 +9335,7 @@ export type Database = {
           competencies_en: string[]
           competencies_sv: string[]
           content_status: string
+          designed_for: string
           does_not_measure_en: string[]
           does_not_measure_sv: string[]
           governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
