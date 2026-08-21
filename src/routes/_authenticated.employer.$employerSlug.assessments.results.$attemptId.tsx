@@ -138,6 +138,11 @@ function Report({
   const r = report.data;
   const limitations = lang === "en" ? r.limitationsEn : r.limitationsSv;
   const releases = new Set((progress.data ?? []).map((p: { releasedAt: string }) => p.releasedAt));
+  // Read from the frozen context, not from the live employment record: what
+  // this report is about was decided when it was released, and an employment
+  // that starts later must not retroactively turn a candidate's report into an
+  // employee's.
+  const isCandidate = r.context?.personContext === "candidate";
 
   return (
     <>
@@ -224,7 +229,13 @@ function Report({
         )}
       </section>
 
-      {(recs.data?.length ?? 0) > 0 && (
+      {/* Development recommendations and the progress table are about somebody
+          the organisation employs: what to train next, and how the picture has
+          moved across releases. Neither question exists for a candidate -- they
+          have no history here and no development plan with us, and offering one
+          would read as planning the career of a person nobody has hired. Both
+          sections are therefore for employees only. */}
+      {!isCandidate && (recs.data?.length ?? 0) > 0 && (
         <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground">
             {t("academy.results.recommendations")}
@@ -253,16 +264,18 @@ function Report({
 
       {/* Progress needs at least two releases to mean anything, and says so
           rather than drawing a one-point trend line. */}
-      <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold text-foreground">{t("academy.results.progress")}</h2>
-        {releases.size < 2 ? (
-          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-            {t("academy.results.progressNeedsTwo")}
-          </p>
-        ) : (
-          <ProgressTable rows={progress.data ?? []} />
-        )}
-      </section>
+      {!isCandidate && (
+        <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-foreground">{t("academy.results.progress")}</h2>
+          {releases.size < 2 ? (
+            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+              {t("academy.results.progressNeedsTwo")}
+            </p>
+          ) : (
+            <ProgressTable rows={progress.data ?? []} />
+          )}
+        </section>
+      )}
 
       <EmployerDecisionPanel attemptId={attemptId} canDecide={canDecide} />
 
