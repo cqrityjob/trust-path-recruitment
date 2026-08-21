@@ -6742,7 +6742,6 @@ export type Database = {
         Row: {
           attempt_id: string
           audience: string
-          brief: Json | null
           context: Json | null
           created_at: string
           derivation_input: Json | null
@@ -6761,7 +6760,6 @@ export type Database = {
         Insert: {
           attempt_id: string
           audience: string
-          brief?: Json | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -6780,7 +6778,6 @@ export type Database = {
         Update: {
           attempt_id?: string
           audience?: string
-          brief?: Json | null
           context?: Json | null
           created_at?: string
           derivation_input?: Json | null
@@ -9278,7 +9275,6 @@ export type Database = {
           competencies_en: string[]
           competencies_sv: string[]
           content_status: string
-          designed_for: string
           does_not_measure_en: string[]
           does_not_measure_sv: string[]
           governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
@@ -9425,22 +9421,9 @@ export type Database = {
           version_number: number
         }[]
       }
-      scp_get_attempt_blocks: {
-        Args: { _attempt_id: string; _language?: string }
-        Returns: {
-          answered: number
-          asks: string
-          block_key: string
-          display_order: number
-          intro: string
-          item_count: number
-          name: string
-        }[]
-      }
       scp_get_attempt_items: {
         Args: { _attempt_id: string; _language?: string }
         Returns: {
-          block_key: string
           display_order: number
           is_safety_critical: boolean
           item_format: string
@@ -9468,53 +9451,6 @@ export type Database = {
           label: string
           option_id: string
         }[]
-      }
-      scp_attempt_assessment_signal: {
-        Args: {
-          _attempt_id: string
-          _competency_version_id: string
-          _signal_version?: string
-        }
-        Returns: {
-          mean: number
-          observations: number
-          signal: string
-          spread: number
-        }[]
-      }
-      scp_attempt_self_report_pattern: {
-        Args: {
-          _attempt_id: string
-          _facet_id: string
-          _signal_version?: string
-        }
-        Returns: {
-          consistency: string
-          items: number
-          mean: number
-          pattern: string
-          spread: number
-        }[]
-      }
-      scp_interview_notes: {
-        Args: { _attempt_id: string }
-        Returns: {
-          area_code: string
-          id: string
-          note: string
-          outcome: string
-          recorded_at: string
-          recorded_by_email: string
-        }[]
-      }
-      scp_record_interview_note: {
-        Args: {
-          _area_code: string
-          _attempt_id: string
-          _note?: string
-          _outcome: string
-        }
-        Returns: string
       }
       scp_grant_employer_reviewer: {
         Args: { _employer_id: string; _use_cases?: string[]; _user_id: string }
