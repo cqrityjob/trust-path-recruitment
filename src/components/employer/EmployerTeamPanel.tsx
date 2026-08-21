@@ -58,9 +58,7 @@ export function EmployerTeamPanel({
   return (
     <section className="mt-12 border-t border-border pt-8">
       <h2 className="text-xl font-semibold text-foreground">{t("employer.team.heading")}</h2>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        {t("employer.team.lede")}
-      </p>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("employer.team.lede")}</p>
 
       {/* The independence rule is a product promise, so it is stated where the
           decision is made rather than buried in documentation. */}
@@ -119,7 +117,9 @@ export function EmployerTeamPanel({
                             .join(" · ")}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">{t("employer.team.notReviewer")}</span>
+                        <span className="text-muted-foreground">
+                          {t("employer.team.notReviewer")}
+                        </span>
                       )}
                     </td>
                     {canManage && (
@@ -144,6 +144,24 @@ export function EmployerTeamPanel({
                               }
                             >
                               {t("employer.team.grantWorkforce")}
+                            </button>
+                            {/* Recruitment on its own. The model has always
+                                accepted it -- scp_grant_employer_reviewer takes
+                                the array it is given -- but the panel offered
+                                only "workforce" and "both", so authorising
+                                somebody to review CANDIDATES meant also handing
+                                them every employee's free-text answers. An
+                                organisation that only recruits should not have
+                                to take the wider scope to get the narrow one. */}
+                            <button
+                              type="button"
+                              className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+                              disabled={grant.isPending}
+                              onClick={() =>
+                                grant.mutate({ userId: m.userId, useCases: ["recruitment"] })
+                              }
+                            >
+                              {t("employer.team.grantRecruitment")}
                             </button>
                             <button
                               type="button"

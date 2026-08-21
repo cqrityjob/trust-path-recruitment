@@ -84,12 +84,44 @@ BEGIN
   ON CONFLICT (employer_id) DO NOTHING;
 
   -- ── The reviewer ────────────────────────────────────────────────────────
-  -- A platform authoring principal, NOT a member of the employer. An employer
-  -- may never adjudicate its own candidate's constructed response, so the
-  -- reviewer deliberately has no membership row at all.
+  --
+  -- CORRECTED 2026-08-21. This block used to insert a content role and NOTHING
+  -- else, on the stated principle that the reviewer must not be a member of the
+  -- employer. #51 (20260829090000_scp_employer_response_reviewers) inverted
+  -- that. `scp_can_review_for` now requires an ACTIVE membership in the
+  -- reviewing organisation AND an explicit per-use-case authorisation, so the
+  -- account this script used to produce could review nothing at all: an empty
+  -- queue, every attempt stuck at `submitted`, and no report ever released.
+  -- That is the state the hosted project was found in during the recruitment
+  -- E2E, and it is what this script would have reproduced.
+  --
+  -- Independence is still enforced — it just lives in `scp_review_conflict`
+  -- now, which excludes the participant, whoever assigned the attempt, and for
+  -- recruitment anyone in that candidate's hiring chain. The reviewer account
+  -- below is deliberately NOT the owner, so it never assigns anything and never
+  -- records an employer decision.
   INSERT INTO public.scp_content_roles (user_id, role, granted_by)
   VALUES (_reviewer, 'reviewer', _owner)
   ON CONFLICT (user_id, role) DO NOTHING;
+
+  -- 1. Membership. `member`, not admin: reviewing needs no elevated role, and a
+  --    reviewer who could also assign would trip the conflict rule on every
+  --    attempt they had assigned.
+  INSERT INTO public.employer_memberships
+    (employer_id, user_id, role, status, accepted_at)
+  VALUES (_employer, _reviewer, 'member', 'active', now())
+  ON CONFLICT DO NOTHING;
+
+  -- 2. The authorisation itself. Both use cases, because this fixture exercises
+  --    the workforce journey and the recruitment journey. A real organisation
+  --    grants only what it needs — the Team panel offers workforce, recruitment
+  --    or both.
+  INSERT INTO public.scp_employer_reviewers
+    (employer_id, user_id, allowed_use_cases, granted_by)
+  VALUES (_employer, _reviewer, ARRAY['workforce','recruitment']::text[], _owner)
+  ON CONFLICT (employer_id, user_id) WHERE revoked_at IS NULL DO UPDATE
+    SET allowed_use_cases = EXCLUDED.allowed_use_cases,
+        granted_by = EXCLUDED.granted_by;
 
   RAISE NOTICE 'closed-test organisation: % (slug stangd-test-cqrityjob)', _employer;
   RAISE NOTICE 'owner %, participant %, reviewer %', _owner, _participant, _reviewer;
@@ -99,9 +131,11 @@ END $$;
 -- SECTION 2 — prove the grant does what it claims
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Configuration that is not verified is a guess. These four checks are the
+-- Configuration that is not verified is a guess. These six checks are the
 -- hosted equivalents of journey group J12, and they run as real principals via
--- SET LOCAL ROLE rather than as the owner.
+-- SET LOCAL ROLE rather than as the owner. Check 6 was added after the
+-- recruitment E2E found an organisation that passed every grant check and still
+-- could not complete a single assessment.
 
 DO $$
 DECLARE
@@ -199,6 +233,23 @@ BEGIN
     RAISE NOTICE 'CHECK 5 ok — permission denied, as intended';
   END;
 
+  -- ── 6. the reviewer can actually review ─────────────────────────────────
+  -- Added 2026-08-21. Without this the script could report five green checks
+  -- and still leave an organisation that cannot complete a single assessment,
+  -- which is precisely what happened. Configuration that is not verified is a
+  -- guess, and this is the guess that cost a pilot.
+  SELECT user_id INTO _other_usr FROM public.employer_memberships
+    WHERE employer_id = _employer AND role = 'member' LIMIT 1;
+  IF _other_usr IS NULL
+     OR NOT public.scp_can_review_for(_other_usr, _employer, 'workforce')
+     OR NOT public.scp_can_review_for(_other_usr, _employer, 'recruitment') THEN
+    RAISE EXCEPTION
+      'CHECK 6 FAILED: the reviewer holds no working authorisation. Reviewing '
+      'needs an ACTIVE employer_memberships row AND an scp_employer_reviewers '
+      'row covering the use case — a content role alone does nothing.';
+  END IF;
+  RAISE NOTICE 'CHECK 6 ok — the reviewer is authorised for workforce and recruitment';
+
   -- The control organisation was only ever scaffolding for checks 3 and 4.
   DELETE FROM public.employer_memberships WHERE employer_id = _other;
   DELETE FROM public.employers WHERE id = _other;
@@ -217,6 +268,7 @@ COMMIT;
 --   NOTICE:  CHECK 3 ok — an ungranted organisation sees no fixture content
 --   NOTICE:  CHECK 4 ok — refused with SCP_FIXTURE_NOT_AVAILABLE
 --   NOTICE:  CHECK 5 ok — permission denied, as intended
+--   NOTICE:  CHECK 6 ok — the reviewer is authorised for workforce and recruitment
 --   NOTICE:  control organisation removed
 --
 -- Any EXCEPTION rolls the whole thing back and configures nothing. That is the
