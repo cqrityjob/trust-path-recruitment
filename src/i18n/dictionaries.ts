@@ -1092,8 +1092,6 @@ export const dictionaries = {
     "employer.accountMenu.myCareer": "Min karriär",
     "employer.accountMenu.signOut": "Logga ut",
 
-    "employer.comingSoonShort": "Kommer snart",
-
     "employer.assessments.heading": "Bedömningar",
     "employer.assessments.catalogueHeading": "Standardbedömningar",
     "employer.assessments.subheading":
@@ -1136,7 +1134,6 @@ export const dictionaries = {
     "employer.assessments.details.questionCount": "Antal frågor",
     "employer.assessments.details.duration": "Beräknad tid",
     "employer.assessments.details.languages": "Språk",
-    "employer.assessments.details.version": "Version",
     "employer.assessments.details.status": "Publiceringsstatus",
     "employer.assessments.details.lastUpdated": "Senast uppdaterad",
     "employer.assessments.details.disclaimer":
@@ -1144,11 +1141,6 @@ export const dictionaries = {
     "employer.assessments.details.notFound": "Testet kunde inte hittas.",
     "employer.assessments.action.assign": "Tilldela test",
     "employer.assessments.action.viewResults": "Visa resultat",
-    "employer.assessments.action.analytics": "Testanalys",
-    "employer.assessments.tab.leadership": "Ledarskap",
-    "employer.assessments.tab.compliance": "Regelefterlevnad",
-    "employer.assessments.tab.custom": "Företagsspecifika tester",
-    "employer.assessments.tab.ai": "AI-genererade tester",
 
     "employer.nav.workforce": "Medarbetare",
     "employer.nav.competencies": "Kompetenser & certifikat",
@@ -1175,47 +1167,26 @@ export const dictionaries = {
     "employer.competencies.heading": "Kompetenser & certifikat",
     "employer.competencies.purpose":
       "Ett gemensamt kompetensramverk som beskriver vad varje roll kräver, och ett register över personalens certifikat och deras giltighetstid.",
-    "employer.competencies.value":
-      "Se i realtid vilka kompetensluckor som finns och vilka certifikat som snart går ut, innan de blir ett problem vid en revision eller ett uppdrag.",
-    "employer.competencies.milestone":
-      "Kompetensramverk kopplat till Assessment Center och personalregistret.",
 
     "employer.training.heading": "Kompetensutveckling",
     "employer.training.purpose":
       "Rekommendera och följa upp riktad utbildning utifrån identifierade kompetensluckor hos befintlig personal.",
-    "employer.training.value":
-      "Stäng kompetensluckor systematiskt istället för ad hoc, och dokumentera genomförd utbildning per medarbetare.",
-    "employer.training.milestone": "Kopplas till kompetensramverket när det finns på plats.",
 
     "employer.sites.heading": "Platser & risk",
     "employer.sites.purpose":
       "Ett register över era platser och verksamhetsställen, med kommande riskindikatorer kopplade till bemanning och kompetens.",
-    "employer.sites.value":
-      "Se vilka platser som är väl bemannade och kompetensmässigt redo, och vilka som behöver uppmärksamhet.",
-    "employer.sites.milestone":
-      "Fullständigt platsregister. Under tiden visar Personal-modulen platser/team som redan angetts där.",
 
     "employer.reports.heading": "Rapporter & regelefterlevnad",
     "employer.reports.purpose":
       "Granskningsklara rapporter som visar personalens kompetens- och certifikatsstatus vid en given tidpunkt.",
-    "employer.reports.value":
-      "Var alltid förberedd inför kund- eller myndighetsrevisioner utan att behöva samla ihop underlag manuellt.",
-    "employer.reports.milestone": "Byggs ovanpå kompetens- och certifikatsregistret.",
 
     "employer.analytics.heading": "Analys",
     "employer.analytics.purpose":
       "Trender över tid för rekrytering, bedömningar och kompetensutveckling, samt jämförelser mellan platser och team.",
-    "employer.analytics.value":
-      "Fatta beslut baserat på utveckling över tid, inte enstaka ögonblicksbilder.",
-    "employer.analytics.milestone": "Kräver historisk data från flera moduler.",
 
     "employer.preferences.heading": "Inställningar",
     "employer.preferences.purpose":
       "Kontoinställningar som notifieringar, fakturering och integrationer — skilt från organisationens företagsprofil.",
-    "employer.preferences.value":
-      "Anpassa hur ni arbetar i CQrityjob utan att påverka organisationens grunduppgifter.",
-    "employer.preferences.milestone":
-      "Första inställningarna tillkommer i takt med att fler funktioner lanseras.",
 
     "employer.askCqrity.heading": "Fråga CQrity",
     "employer.askCqrity.body":
@@ -4030,8 +4001,6 @@ export const dictionaries = {
     "employer.accountMenu.myCareer": "My Career",
     "employer.accountMenu.signOut": "Sign out",
 
-    "employer.comingSoonShort": "Coming soon",
-
     "employer.assessments.heading": "Assessments",
     "employer.assessments.catalogueHeading": "Standard assessments",
     "employer.assessments.subheading":
@@ -4074,7 +4043,6 @@ export const dictionaries = {
     "employer.assessments.details.questionCount": "Number of questions",
     "employer.assessments.details.duration": "Estimated duration",
     "employer.assessments.details.languages": "Languages",
-    "employer.assessments.details.version": "Assessment version",
     "employer.assessments.details.status": "Publication status",
     "employer.assessments.details.lastUpdated": "Last updated",
     "employer.assessments.details.disclaimer":
@@ -4082,11 +4050,6 @@ export const dictionaries = {
     "employer.assessments.details.notFound": "This assessment could not be found.",
     "employer.assessments.action.assign": "Assign assessment",
     "employer.assessments.action.viewResults": "View results",
-    "employer.assessments.action.analytics": "Assessment analytics",
-    "employer.assessments.tab.leadership": "Leadership",
-    "employer.assessments.tab.compliance": "Compliance",
-    "employer.assessments.tab.custom": "Custom company assessments",
-    "employer.assessments.tab.ai": "AI-generated assessments",
 
     "employer.nav.workforce": "Employees",
     "employer.nav.competencies": "Competencies & certificates",
@@ -4109,45 +4072,26 @@ export const dictionaries = {
     "employer.competencies.heading": "Competencies & certificates",
     "employer.competencies.purpose":
       "A shared competency framework describing what each role requires, and a register of employee certificates and their validity periods.",
-    "employer.competencies.value":
-      "See competence gaps and soon-to-expire certificates in real time, before they become a problem at an audit or on assignment.",
-    "employer.competencies.milestone":
-      "Competency framework connected to the Assessment Center and the employee directory.",
 
     "employer.training.heading": "Skills development",
     "employer.training.purpose":
       "Recommend and track targeted training based on identified competence gaps in the existing workforce.",
-    "employer.training.value":
-      "Close competence gaps systematically instead of ad hoc, with documented training completion per employee.",
-    "employer.training.milestone": "Connects to the competency framework once it exists.",
 
     "employer.sites.heading": "Sites & risk",
     "employer.sites.purpose":
       "A register of your sites and locations, with future risk indicators tied to staffing and competence.",
-    "employer.sites.value":
-      "See which sites are well-staffed and competence-ready, and which need attention.",
-    "employer.sites.milestone":
-      "A full site register. In the meantime, the Workforce module shows the sites/teams already recorded there.",
 
     "employer.reports.heading": "Reports & compliance",
     "employer.reports.purpose":
       "Audit-ready reports showing workforce competence and certificate status at a given point in time.",
-    "employer.reports.value":
-      "Stay prepared for client or regulatory audits without gathering evidence manually.",
-    "employer.reports.milestone": "Built on top of the competency and certificate registers.",
 
     "employer.analytics.heading": "Analytics",
     "employer.analytics.purpose":
       "Trends over time for recruitment, assessments and competency development, plus comparisons across sites and teams.",
-    "employer.analytics.value": "Decide based on trends over time, not single snapshots.",
-    "employer.analytics.milestone": "Requires historical data across several modules.",
 
     "employer.preferences.heading": "Settings",
     "employer.preferences.purpose":
       "Account-level preferences such as notifications, billing and integrations — distinct from the organisation's company profile.",
-    "employer.preferences.value":
-      "Adjust how you work in CQrityjob without affecting the organisation's core details.",
-    "employer.preferences.milestone": "First settings arrive as more features launch.",
 
     "employer.askCqrity.heading": "Ask CQrity",
     "employer.askCqrity.body":
