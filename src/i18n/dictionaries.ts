@@ -12,7 +12,7 @@ export const dictionaries = {
     "nav.signin": "Logga in",
     "nav.signin.tooltip": "Kommer snart",
     "nav.my_career": "Min karriär",
-    "nav.myAssessments": "Mina tester",
+    "nav.myAssessments": "Mina bedömningar",
     "nav.reviews": "Granskningar",
 
     "brand.name": "CQrityjob",
@@ -490,12 +490,12 @@ export const dictionaries = {
 
     "employer.auth.signin.title": "Logga in som arbetsgivare",
     "employer.auth.signin.intro":
-      "Hantera jobbannonser, rekryteringar, kandidater och tester i CQrityjobs arbetsgivarportal.",
+      "Hantera jobbannonser, rekryteringar, kandidater och bedömningar i CQrityjobs arbetsgivarportal.",
     "employer.auth.signin.submit": "Logga in",
     "employer.auth.signin.candidateLink": "Är du kandidat? Logga in till Min karriär",
     "employer.auth.signup.title": "Skapa arbetsgivarkonto",
     "employer.auth.signup.intro":
-      "Skapa ett arbetsgivarkonto för att publicera jobb, hantera rekryteringar och beställa tester.",
+      "Skapa ett arbetsgivarkonto för att publicera jobb, hantera rekryteringar och beställa bedömningar.",
     "employer.auth.signup.submit": "Skapa konto",
     "employer.auth.signup.candidateLink": "Är du kandidat? Skapa kandidatkonto",
     "employer.auth.swap.to_signup": "Skapa arbetsgivarkonto",
@@ -923,7 +923,7 @@ export const dictionaries = {
     "employer.dashboard.action.manageJobs": "Hantera annonser",
     "employer.dashboard.action.inviteAssessment": "Bjud in kandidat till bedömning",
     "employer.dashboard.action.orgSettings": "Organisationsinställningar",
-    "employer.dashboard.action.viewAssessments": "Visa tester",
+    "employer.dashboard.action.viewAssessments": "Visa bedömningar",
     "employer.dashboard.assessmentCenter.available":
       "Bedömningscentret är nu tillgängligt. Inbjudan av kandidater kommer i en senare fas.",
     "employer.dashboard.action.open": "Öppna",
@@ -1119,8 +1119,8 @@ export const dictionaries = {
     "employer.assessments.error.load": "Vi kunde inte läsa in bedömningskatalogen just nu.",
     "employer.assessments.error.retry": "Försök igen",
     "employer.assessments.strategic.empty":
-      "Tester för strategiska roller förbereds. De kommer att omfatta specialist-, analys- och ledningsroller inom säkerhetsområdet.",
-    "employer.assessments.operational.empty": "Inga tester tillgängliga just nu.",
+      "Bedömningar för strategiska roller förbereds. De kommer att omfatta specialist-, analys- och ledningsroller inom säkerhetsområdet.",
+    "employer.assessments.operational.empty": "Inga bedömningar tillgängliga just nu.",
     "employer.assessments.sgf.description":
       "En grundläggande bedömning för operativa säkerhetsroller, till exempel väktare, ordningsvakter, skyddsvakter och annan platsbunden säkerhetspersonal.",
     "employer.assessments.sgf.intendedFor":
@@ -1139,7 +1139,7 @@ export const dictionaries = {
     "employer.assessments.details.disclaimer":
       "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
     "employer.assessments.details.notFound": "Testet kunde inte hittas.",
-    "employer.assessments.action.assign": "Tilldela test",
+    "employer.assessments.action.assign": "Tilldela bedömning",
     "employer.assessments.action.viewResults": "Visa resultat",
 
     "employer.nav.workforce": "Medarbetare",
@@ -1193,7 +1193,7 @@ export const dictionaries = {
       "En framtida AI-assistent som kan svara på frågor om rekrytering och personal utifrån er egen data. Idag ger den genvägar till verklig information — inga påhittade svar.",
     "employer.askCqrity.shortcutsHeading": "Genvägar",
     "employer.askCqrity.query.applications": "Visa ansökningar som väntar på granskning",
-    "employer.askCqrity.query.assessments": "Visa tillgängliga tester",
+    "employer.askCqrity.query.assessments": "Visa tillgängliga bedömningar",
     "employer.askCqrity.query.employeesWithoutRole": "Visa medarbetare utan angiven roll",
     "employer.askCqrity.query.draftJobs": "Visa jobbannonser i utkast",
 
@@ -1222,7 +1222,7 @@ export const dictionaries = {
 
     "employer.overview.heading": "Översikt",
     "employer.overview.subheading":
-      "Hantera rekrytering, personal, tester och kompetensutveckling på ett ställe.",
+      "Hantera rekrytering, personal, bedömningar och kompetensutveckling på ett ställe.",
 
     "employer.overview.card.jobs.title": "Mina annonser",
     "employer.overview.card.jobs.body":
@@ -1243,11 +1243,11 @@ export const dictionaries = {
 
     "employer.overview.card.tests.title": "Bedömningar",
     "employer.overview.card.tests.body":
-      "Tilldela tester, följ pågående tester och använd resultaten som beslutsunderlag.",
+      "Tilldela bedömningar, följ pågående bedömningar och använd resultaten som beslutsunderlag.",
     "employer.overview.card.tests.stat.invited": "Inbjudna",
     "employer.overview.card.tests.stat.inProgress": "Pågående",
     "employer.overview.card.tests.stat.completed": "Genomförda",
-    "employer.overview.card.tests.action.assign": "Tilldela test",
+    "employer.overview.card.tests.action.assign": "Tilldela bedömning",
     "employer.overview.card.tests.action.activity": "Pågående tilldelningar",
 
     "employer.overview.card.development.title": "Kompetensutveckling",
@@ -1271,7 +1271,7 @@ export const dictionaries = {
     "employer.attention.jobsNoApplications":
       "publicerade jobbannonser har ännu inte fått några ansökningar",
     "employer.attention.draftJobs": "jobbannonser sparade som utkast",
-    "employer.attention.assessmentsAvailable": "tester tillgängliga att tilldela",
+    "employer.attention.assessmentsAvailable": "bedömningar tillgängliga att tilldela",
     "employer.attention.workforceEmpty":
       "Lägg till era medarbetare för att börja bygga en verifierad kompetensbild.",
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
@@ -1282,13 +1282,13 @@ export const dictionaries = {
     "employer.attention.action.viewOrganisation": "Visa organisation",
     "employer.attention.action.reviewApplications": "Granska ansökningar",
     "employer.attention.action.manageJobs": "Hantera annonser",
-    "employer.attention.action.viewAssessments": "Visa tester",
+    "employer.attention.action.viewAssessments": "Visa bedömningar",
     "employer.attention.action.openWorkforce": "Öppna Medarbetare",
 
     "assessment.disclaimer.decisionSupport":
       "Resultatet är ett beslutsstöd. Arbetsgivaren ansvarar alltid för det slutliga beslutet.",
 
-    "assignment.action.assign": "Tilldela test",
+    "assignment.action.assign": "Tilldela bedömning",
     "assignment.action.cancel": "Avbryt tilldelning",
     "assignment.action.viewResult": "Visa resultat",
 
@@ -1304,15 +1304,15 @@ export const dictionaries = {
     "assignment.status.expired": "Utgången",
     "assignment.status.cancelled": "Avbruten",
 
-    "assignment.list.heading": "Tilldelade tester",
+    "assignment.list.heading": "Tilldelade bedömningar",
     "assignment.list.subheading":
       "Följ status för tilldelade bedömningar till kandidater och medarbetare.",
-    "assignment.list.empty": "Inga tilldelade tester ännu.",
+    "assignment.list.empty": "Inga tilldelade bedömningar ännu.",
     "assignment.list.invited": "Inbjuden",
     "assignment.list.completed": "Genomförd",
     "assignment.list.expires": "Går ut",
 
-    "assignment.report.back": "Tillbaka till tilldelade tester",
+    "assignment.report.back": "Tillbaka till tilldelade bedömningar",
     "assignment.report.notFound": "Resultatet kunde inte hittas eller är inte klart än.",
 
     "assignment.form.heading": "Tilldela bedömning",
@@ -1359,8 +1359,8 @@ export const dictionaries = {
       "Ett e-postmeddelande med länken har skickats till mottagaren.",
     "assignment.form.success.deliveryNote.failed":
       "E-postmeddelandet kunde inte skickas. Dela länken ovan manuellt med mottagaren.",
-    "assignment.form.success.viewAssignments": "Visa tilldelade tester",
-    "assignment.form.success.assignAnother": "Tilldela ett till test",
+    "assignment.form.success.viewAssignments": "Visa tilldelade bedömningar",
+    "assignment.form.success.assignAnother": "Tilldela en till bedömning",
 
     "assignment.recipient.badge": "Säker inbjudan",
     "assignment.recipient.notFound.heading": "Länken kunde inte hittas",
@@ -1426,8 +1426,8 @@ export const dictionaries = {
     "employer.person.assessments.heading": "Bedömningar",
     "employer.person.assessments.lede":
       "Pågående och avslutade bedömningar som den här organisationen har tilldelat. Historiken följer personen, inte e-postadressen.",
-    "employer.person.assessments.assign": "Tilldela test",
-    "employer.person.assessments.empty": "Inga tester har tilldelats den här personen ännu.",
+    "employer.person.assessments.assign": "Tilldela bedömning",
+    "employer.person.assessments.empty": "Inga bedömningar har tilldelats den här personen ännu.",
     "employer.person.assessments.loadError": "Bedömningarna kunde inte hämtas.",
     "employer.person.assessments.submitted": "Inskickat",
     "employer.person.assessments.released": "Frisläppt",
@@ -1464,11 +1464,11 @@ export const dictionaries = {
     "employer.team.lede":
       "Vilka som tillhör organisationen, och vilka av dem som får granska deltagarnas svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
     "employer.team.separationNotice":
-      "Den som tilldelade ett test får aldrig granska samma test, och deltagaren granskar aldrig sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
+      "Den som tilldelade en bedömning får aldrig granska samma bedömning, och deltagaren granskar aldrig sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
     "employer.team.loadError": "Teamet kunde inte hämtas.",
     "employer.team.empty": "Inga medlemmar hittades i organisationen.",
     "employer.team.noReviewerWarning":
-      "Ingen i organisationen har granskningsbehörighet. Tester som kräver mänsklig granskning kan då inte bli klara och inga resultat kan frisläppas.",
+      "Ingen i organisationen har granskningsbehörighet. Bedömningar som kräver mänsklig granskning kan då inte bli klara och inga resultat kan frisläppas.",
     "employer.team.col.person": "Person",
     "employer.team.col.role": "Roll",
     "employer.team.col.reviewer": "Granskare",
@@ -2452,7 +2452,7 @@ export const dictionaries = {
     "academy.reviews.blocked": "Resultat som blockeras",
     "academy.reviews.notReviewerTitle": "Inget att granska just nu",
     "academy.reviews.notReviewerBody":
-      "Om du väntar dig arbete här kan en ägare eller administratör ge granskningsbehörighet under Organisation. Den som tilldelade ett test får aldrig granska det själv.",
+      "Om du väntar dig arbete här kan en ägare eller administratör ge granskningsbehörighet under Organisation. Den som tilldelade en bedömning får aldrig granska den själv.",
     "academy.reviews.triggerNoProvider": "Ingen automatisk bedömning tillgänglig",
     "academy.reviews.triggerSafety": "Säkerhetskritiskt svar",
     "academy.reviews.triggerRequested": "Deltagaren har begärt granskning",
@@ -4127,7 +4127,7 @@ export const dictionaries = {
 
     "employer.overview.heading": "Overview",
     "employer.overview.subheading":
-      "Manage recruitment, people, tests and skills development in one place.",
+      "Manage recruitment, people, assessments and skills development in one place.",
 
     "employer.overview.card.jobs.title": "My job ads",
     "employer.overview.card.jobs.body":
@@ -4148,11 +4148,11 @@ export const dictionaries = {
 
     "employer.overview.card.tests.title": "Assessments",
     "employer.overview.card.tests.body":
-      "Assign tests, follow tests in progress and use the results as decision support.",
+      "Assign assessments, follow the ones in progress, and use the results as decision support.",
     "employer.overview.card.tests.stat.invited": "Invited",
     "employer.overview.card.tests.stat.inProgress": "In progress",
     "employer.overview.card.tests.stat.completed": "Completed",
-    "employer.overview.card.tests.action.assign": "Assign test",
+    "employer.overview.card.tests.action.assign": "Assign assessment",
     "employer.overview.card.tests.action.activity": "Assignments in progress",
 
     "employer.overview.card.development.title": "Skills development",
@@ -4177,7 +4177,7 @@ export const dictionaries = {
     "employer.attention.jobsNoApplications":
       "published job ads have not yet received any applications",
     "employer.attention.draftJobs": "job ads saved as drafts",
-    "employer.attention.assessmentsAvailable": "tests available to assign",
+    "employer.attention.assessmentsAvailable": "assessments available to assign",
     "employer.attention.workforceEmpty":
       "Add your employees to begin building a verified competency picture.",
     "employer.attention.source.organisation": "Source: Organisation status",
