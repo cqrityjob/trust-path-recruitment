@@ -43,7 +43,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Copy,
-  FlaskConical,
+  Eye,
   GraduationCap,
   Hammer,
   ShieldCheck,
@@ -71,7 +71,7 @@ const SECTIONS: readonly { key: SectionKey; icon: typeof ShieldCheck }[] = [
   { key: "assessment", icon: ShieldCheck },
   { key: "training", icon: GraduationCap },
   { key: "development", icon: Hammer },
-  { key: "internal", icon: FlaskConical },
+  { key: "internal", icon: Eye },
 ];
 
 function sectionOf(e: ContentLibraryEntry): SectionKey {
@@ -441,7 +441,7 @@ function StateChip({ entry }: { entry: ContentLibraryEntry }) {
   if (entry.governanceMode === "closed_test") {
     return (
       <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-medium text-accent">
-        <FlaskConical className="h-3 w-3" aria-hidden="true" />
+        <Eye className="h-3 w-3" aria-hidden="true" />
         {t("academy.status.closedTest")}
       </span>
     );

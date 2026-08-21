@@ -2599,10 +2599,22 @@ export const dictionaries = {
       "Förhandsversion – endast för utvärdering. Rapporten är underlag inför samtal och ska inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
     "academy.report.lineageToggle": "Visa spårbarhet och versioner",
     "academy.report.instrument": "Instrument",
-    "academy.report.governance": "Governance",
+    "academy.report.governance": "Användningsläge",
     "academy.report.validation": "Valideringsstatus",
     "academy.report.contentStatus": "Innehållsstatus",
     "academy.report.attemptStatus": "Försöksstatus",
+    "academy.lineage.mode.development": "Utveckling",
+    "academy.lineage.mode.closedTest": "Förhandsversion",
+    "academy.lineage.mode.recruitment": "Rekrytering",
+    "academy.lineage.validation.design": "Under framtagning",
+    "academy.lineage.validation.pilot": "Pilot",
+    "academy.lineage.validation.operational": "Validerad för drift",
+    "academy.lineage.content.draft": "Utkast",
+    "academy.lineage.content.published": "Publicerad",
+    "academy.lineage.attempt.inProgress": "Pågår",
+    "academy.lineage.attempt.submitted": "Inlämnad",
+    "academy.lineage.attempt.scored": "Bedömd",
+    "academy.lineage.attempt.released": "Frisläppt",
     "academy.report.reviewStatus": "Granskningar klara",
     "academy.report.language": "Språk",
     "academy.report.reportVersion": "Rapportmall",
@@ -2860,6 +2872,18 @@ export const dictionaries = {
     "journey.sending": "Skickar…",
     "journey.assignFailed":
       "Bedömningen kunde inte skickas. Kontrollera att organisationen har ett giltigt medgivande för innehållet.",
+    "journey.assignNoAddress":
+      "Ansökan saknar e-postadress, så bedömningen kan inte skickas. Komplettera ansökan först.",
+    "journey.assignNoAccount":
+      "Kandidaten har ännu inget konto på CQrityjob. Bjud in personen från bedömningsbiblioteket — inbjudan kopplas automatiskt när kontot skapas.",
+    "journey.assignNoApplication":
+      "Ansökan gick inte att hitta i er organisation.",
+    "journey.assignNotAuthorised":
+      "Du behöver vara ägare eller administratör för att skicka en bedömning.",
+    "journey.assignNotForRecruitment":
+      "Den här bedömningen är inte öppen för rekrytering.",
+    "journey.assignNoBasis":
+      "Er organisation har inte tillgång till den här bedömningen.",
     "journey.openBrief": "Öppna kandidatunderlag",
     "journey.closedTest": "Förhandsversion",
     "journey.closedTestNotForSelection": "Förhandsversion – endast för utvärdering",
@@ -5496,10 +5520,22 @@ export const dictionaries = {
       "Preview – for evaluation only. This report is input for a conversation and should not on its own decide an appointment or a placement.",
     "academy.report.lineageToggle": "Show lineage and versions",
     "academy.report.instrument": "Instrument",
-    "academy.report.governance": "Governance",
+    "academy.report.governance": "Use context",
     "academy.report.validation": "Validation status",
     "academy.report.contentStatus": "Content status",
     "academy.report.attemptStatus": "Attempt status",
+    "academy.lineage.mode.development": "Development",
+    "academy.lineage.mode.closedTest": "Preview",
+    "academy.lineage.mode.recruitment": "Recruitment",
+    "academy.lineage.validation.design": "In design",
+    "academy.lineage.validation.pilot": "Pilot",
+    "academy.lineage.validation.operational": "Validated for operational use",
+    "academy.lineage.content.draft": "Draft",
+    "academy.lineage.content.published": "Published",
+    "academy.lineage.attempt.inProgress": "In progress",
+    "academy.lineage.attempt.submitted": "Submitted",
+    "academy.lineage.attempt.scored": "Scored",
+    "academy.lineage.attempt.released": "Released",
     "academy.report.reviewStatus": "Reviews complete",
     "academy.report.language": "Language",
     "academy.report.reportVersion": "Report template",
@@ -5753,6 +5789,18 @@ export const dictionaries = {
     "journey.sending": "Sending…",
     "journey.assignFailed":
       "The assessment could not be sent. Check that the organisation holds a valid grant for this content.",
+    "journey.assignNoAddress":
+      "This application has no email address, so the assessment cannot be sent. Complete the application first.",
+    "journey.assignNoAccount":
+      "The candidate does not have a CQrityjob account yet. Invite them from the assessment library — the invitation is connected automatically once the account is created.",
+    "journey.assignNoApplication":
+      "That application could not be found in your organisation.",
+    "journey.assignNotAuthorised":
+      "You need to be an owner or an administrator to send an assessment.",
+    "journey.assignNotForRecruitment":
+      "This assessment is not open for recruitment.",
+    "journey.assignNoBasis":
+      "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
     "journey.closedTest": "Preview",
     "journey.closedTestNotForSelection": "Preview – for evaluation only",

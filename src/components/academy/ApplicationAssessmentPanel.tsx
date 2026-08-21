@@ -41,6 +41,20 @@ function stageOf(a: ApplicationAssessment): TranslationKey {
   return "journey.stage.invited";
 }
 
+// The refusals this panel can actually produce, each said as the thing the
+// employer has to do next. The panel used to catch the code and then show one
+// generic "could not be sent", which leaves a recruiter guessing whether the
+// candidate, the assessment or the product is at fault.
+const ASSIGN_ERROR: Record<string, TranslationKey> = {
+  SCP_APPLICANT_HAS_NO_ADDRESS: "journey.assignNoAddress",
+  SCP_RECIPIENT_HAS_NO_ACCOUNT: "journey.assignNoAccount",
+  SCP_APPLICATION_NOT_FOUND: "journey.assignNoApplication",
+  SCP_APPLICATION_NOT_YOURS: "journey.assignNoApplication",
+  SCP_NOT_AUTHORISED_TO_ASSIGN: "journey.assignNotAuthorised",
+  SCP_NOT_VALID_FOR_RECRUITMENT: "journey.assignNotForRecruitment",
+  SCP_NO_GOVERNANCE_BASIS: "journey.assignNoBasis",
+};
+
 export function ApplicationAssessmentPanel({
   employerId,
   employerSlug,
@@ -162,7 +176,7 @@ export function ApplicationAssessmentPanel({
 
       {failed && (
         <p role="alert" className="mt-2 text-[13px] text-foreground">
-          {t("journey.assignFailed")}
+          {t(ASSIGN_ERROR[failed] ?? "journey.assignFailed")}
         </p>
       )}
     </div>
