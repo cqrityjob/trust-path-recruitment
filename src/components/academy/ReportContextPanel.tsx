@@ -184,7 +184,9 @@ export function ReportContextPanel({
             <Fact
               label={t("academy.report.governance")}
               value={
-                LINEAGE_LABEL[c.governanceMode] ? t(LINEAGE_LABEL[c.governanceMode]) : c.governanceMode
+                LINEAGE_LABEL[c.governanceMode]
+                  ? t(LINEAGE_LABEL[c.governanceMode])
+                  : c.governanceMode
               }
             />
           )}
@@ -192,7 +194,9 @@ export function ReportContextPanel({
             <Fact
               label={t("academy.report.validation")}
               value={
-                LINEAGE_LABEL[c.validationStatus] ? t(LINEAGE_LABEL[c.validationStatus]) : c.validationStatus
+                LINEAGE_LABEL[c.validationStatus]
+                  ? t(LINEAGE_LABEL[c.validationStatus])
+                  : c.validationStatus
               }
             />
           )}

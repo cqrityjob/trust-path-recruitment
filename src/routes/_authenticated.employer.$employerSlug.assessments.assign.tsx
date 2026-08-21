@@ -379,17 +379,13 @@ function AssignForm({
                   type="button"
                   onClick={() => setUseCase(uc)}
                   disabled={useCaseIsImpliedByRecipient}
-                  aria-describedby={
-                    useCaseIsImpliedByRecipient ? "use-case-implied" : undefined
-                  }
+                  aria-describedby={useCaseIsImpliedByRecipient ? "use-case-implied" : undefined}
                   className={
                     "rounded-md border px-3 py-1.5 text-sm font-medium " +
                     (useCase === uc
                       ? "border-accent bg-accent/10 text-accent"
                       : "border-border text-muted-foreground hover:text-foreground") +
-                    (useCaseIsImpliedByRecipient
-                      ? " cursor-not-allowed opacity-60"
-                      : "")
+                    (useCaseIsImpliedByRecipient ? " cursor-not-allowed opacity-60" : "")
                   }
                 >
                   {t(

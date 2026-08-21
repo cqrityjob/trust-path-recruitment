@@ -378,18 +378,18 @@ function ParticipantCard({
           (row.lifecycleState === "invited" || row.lifecycleState === "in_progress") &&
           row.assignmentId &&
           !confirmCancel && (
-          <button
-            type="button"
-            onClick={() => {
-              setNotice(null);
-              setConfirmCancel(true);
-            }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Ban className="h-4 w-4" aria-hidden="true" />
-            {t("academy.participants.cancel")}
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={() => {
+                setNotice(null);
+                setConfirmCancel(true);
+              }}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Ban className="h-4 w-4" aria-hidden="true" />
+              {t("academy.participants.cancel")}
+            </button>
+          )}
 
         {canManage && row.releasedAt && !reassessmentAvailable && (
           <p className="w-full text-[12px] leading-relaxed text-muted-foreground">
@@ -444,4 +444,3 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
     </div>
   );
 }
-

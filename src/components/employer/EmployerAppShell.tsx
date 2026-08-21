@@ -226,7 +226,6 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-
 export function EmployerAppShell(props: EmployerAppShellProps) {
   const {
     employerSlug,

@@ -2266,10 +2266,8 @@ export const dictionaries = {
     "academy.library.close": "Stäng",
     "academy.library.detailHeading": "Om programmet",
     "academy.library.provides": "Vad detta ger underlag om",
-    "academy.library.areas":
-      "Områden",
-    "academy.library.youReceive":
-      "Det här får ni tillbaka",
+    "academy.library.areas": "Områden",
+    "academy.library.youReceive": "Det här får ni tillbaka",
     "academy.library.youReceiveBody":
       "Ett kandidatunderlag inför intervjun: vad kandidaten visade i uppgifterna, vad kandidaten själv beskriver om sitt arbetssätt, områden värda att följa upp, och en strukturerad intervjuguide med frågor valda utifrån just de här svaren. Inget omdöme om lämplighet, ingen poäng och ingen rekommendation — beslutet är ert.",
     "academy.library.notEstablished": "Vad detta inte fastställer",
@@ -2434,8 +2432,7 @@ export const dictionaries = {
     "academy.participants.reassessmentPurposePending":
       "Ny bedömning är inte tillgänglig för den här personen ännu.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
-    "academy.participants.emptyBody":
-      "Tilldela en bedömning från biblioteket för att komma igång.",
+    "academy.participants.emptyBody": "Tilldela en bedömning från biblioteket för att komma igång.",
     "academy.participants.contextFilter": "Visa",
     "academy.participants.filterAll": "Alla",
     "academy.participants.filterCandidates": "Kandidater",
@@ -2856,14 +2853,11 @@ export const dictionaries = {
       "Ansökan saknar e-postadress, så bedömningen kan inte skickas. Komplettera ansökan först.",
     "journey.assignNoAccount":
       "Kandidaten har ännu inget konto på CQrityjob. Bjud in personen från bedömningsbiblioteket — inbjudan kopplas automatiskt när kontot skapas.",
-    "journey.assignNoApplication":
-      "Ansökan gick inte att hitta i er organisation.",
+    "journey.assignNoApplication": "Ansökan gick inte att hitta i er organisation.",
     "journey.assignNotAuthorised":
       "Du behöver vara ägare eller administratör för att skicka en bedömning.",
-    "journey.assignNotForRecruitment":
-      "Den här bedömningen är inte öppen för rekrytering.",
-    "journey.assignNoBasis":
-      "Er organisation har inte tillgång till den här bedömningen.",
+    "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
+    "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
     "journey.openBrief": "Öppna kandidatunderlag",
     "journey.closedTest": "Förhandsversion",
     "journey.closedTestNotForSelection": "Förhandsversion – endast för utvärdering",
@@ -2905,7 +2899,8 @@ export const dictionaries = {
     "invite.reason.governance_basis_withdrawn": "Medgivandet återkallades",
     "invite.reason.programme_retired": "Programmet är avvecklat",
     "invite.reason.invitation_expired": "Inbjudan hann gå ut",
-    "invite.reason.purpose_not_available": "Bedömningen är inte öppen för den här användningen ännu",
+    "invite.reason.purpose_not_available":
+      "Bedömningen är inte öppen för den här användningen ännu",
 
     // Candidate-side job context.
     "academy.work.forJob": "Gäller ansökan:",
@@ -5170,10 +5165,8 @@ export const dictionaries = {
     "academy.library.close": "Close",
     "academy.library.detailHeading": "About this programme",
     "academy.library.provides": "What this provides evidence about",
-    "academy.library.areas":
-      "Areas",
-    "academy.library.youReceive":
-      "What you get back",
+    "academy.library.areas": "Areas",
+    "academy.library.youReceive": "What you get back",
     "academy.library.youReceiveBody":
       "A candidate brief to work from before the interview: what the candidate demonstrated in the tasks, what they say about their own way of working, areas worth following up, and a structured interview guide whose questions are chosen from these particular answers. No verdict on suitability, no score and no recommendation — the decision is yours.",
     "academy.library.notEstablished": "What this does not establish",
@@ -5755,14 +5748,11 @@ export const dictionaries = {
       "This application has no email address, so the assessment cannot be sent. Complete the application first.",
     "journey.assignNoAccount":
       "The candidate does not have a CQrityjob account yet. Invite them from the assessment library — the invitation is connected automatically once the account is created.",
-    "journey.assignNoApplication":
-      "That application could not be found in your organisation.",
+    "journey.assignNoApplication": "That application could not be found in your organisation.",
     "journey.assignNotAuthorised":
       "You need to be an owner or an administrator to send an assessment.",
-    "journey.assignNotForRecruitment":
-      "This assessment is not open for recruitment.",
-    "journey.assignNoBasis":
-      "Your organisation does not have access to this assessment.",
+    "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
+    "journey.assignNoBasis": "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
     "journey.closedTest": "Preview",
     "journey.closedTestNotForSelection": "Preview – for evaluation only",
@@ -5807,8 +5797,7 @@ export const dictionaries = {
 
     "academy.work.forJob": "Relates to your application for:",
     "academy.work.recruitmentContext": "Recruitment",
-    "academy.report.purposeClosedTestRecruitment":
-      "Recruitment assessment (preview)",
+    "academy.report.purposeClosedTestRecruitment": "Recruitment assessment (preview)",
   },
 } as const;
 

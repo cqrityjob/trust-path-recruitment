@@ -37,7 +37,9 @@ function PersonRoute() {
   const { employerSlug, personId } = Route.useParams();
   return (
     <WorkforcePage employerSlug={employerSlug}>
-      {(ws) => <PersonDetail employerId={ws.employerId} employerSlug={employerSlug} personId={personId} />}
+      {(ws) => (
+        <PersonDetail employerId={ws.employerId} employerSlug={employerSlug} personId={personId} />
+      )}
     </WorkforcePage>
   );
 }
