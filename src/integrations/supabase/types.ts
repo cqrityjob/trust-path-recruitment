@@ -9463,10 +9463,12 @@ export type Database = {
       }
       scp_employer_assign: {
         Args: {
+          _application_id?: string
           _assessment_version_id: string
           _deadline?: string
           _employee_id?: string
           _employer_id: string
+          _job_id?: string
           _language?: string
           _purpose_intent?: string
           _recipient_email: string
@@ -9854,10 +9856,19 @@ export type Database = {
           participant_snapshot: string
         }[]
       }
-      scp_required_purpose_code: {
-        Args: { _purpose_intent?: string; _use_case: string }
-        Returns: string
-      }
+      scp_required_purpose_code:
+        | {
+            Args: { _purpose_intent?: string; _use_case: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+              _purpose_intent: string
+              _use_case: string
+            }
+            Returns: string
+          }
       scp_resolve_employment_for_assignment: {
         Args: { _email: string; _employer_id: string; _subject_id: string }
         Returns: string
