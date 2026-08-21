@@ -65,6 +65,7 @@ import { Route as AuthenticatedPassportInformationRouteImport } from './routes/_
 import { Route as AuthenticatedPassportCardRouteImport } from './routes/_authenticated.passport.card'
 import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/_authenticated.my-career.applications'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
+import { Route as AuthenticatedEmployerPendingRouteImport } from './routes/_authenticated.employer.pending'
 import { Route as AuthenticatedEmployerOnboardingRouteImport } from './routes/_authenticated.employer.onboarding'
 import { Route as AuthenticatedEmployerEmployerSlugRouteImport } from './routes/_authenticated.employer.$employerSlug'
 import { Route as AuthenticatedDiscoverySessionRouteImport } from './routes/_authenticated.discovery.session'
@@ -433,6 +434,12 @@ const AuthenticatedJourneyTargetIdRoute =
     id: '/$targetId',
     path: '/$targetId',
     getParentRoute: () => AuthenticatedJourneyRoute,
+  } as any)
+const AuthenticatedEmployerPendingRoute =
+  AuthenticatedEmployerPendingRouteImport.update({
+    id: '/pending',
+    path: '/pending',
+    getParentRoute: () => AuthenticatedEmployerRoute,
   } as any)
 const AuthenticatedEmployerOnboardingRoute =
   AuthenticatedEmployerOnboardingRouteImport.update({
@@ -910,6 +917,7 @@ export interface FileRoutesByFullPath {
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
+  '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
@@ -1021,6 +1029,7 @@ export interface FileRoutesByTo {
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
+  '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
@@ -1149,6 +1158,7 @@ export interface FileRoutesById {
   '/_authenticated/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
+  '/_authenticated/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
   '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
@@ -1277,6 +1287,7 @@ export interface FileRouteTypes {
     | '/discovery/session'
     | '/employer/$employerSlug'
     | '/employer/onboarding'
+    | '/employer/pending'
     | '/journey/$targetId'
     | '/my-career/applications'
     | '/passport/card'
@@ -1388,6 +1399,7 @@ export interface FileRouteTypes {
     | '/discovery/history'
     | '/discovery/session'
     | '/employer/onboarding'
+    | '/employer/pending'
     | '/journey/$targetId'
     | '/my-career/applications'
     | '/passport/card'
@@ -1515,6 +1527,7 @@ export interface FileRouteTypes {
     | '/_authenticated/discovery/session'
     | '/_authenticated/employer/$employerSlug'
     | '/_authenticated/employer/onboarding'
+    | '/_authenticated/employer/pending'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/my-career/applications'
     | '/_authenticated/passport/card'
@@ -2009,6 +2022,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/journey/$targetId'
       preLoaderRoute: typeof AuthenticatedJourneyTargetIdRouteImport
       parentRoute: typeof AuthenticatedJourneyRoute
+    }
+    '/_authenticated/employer/pending': {
+      id: '/_authenticated/employer/pending'
+      path: '/pending'
+      fullPath: '/employer/pending'
+      preLoaderRoute: typeof AuthenticatedEmployerPendingRouteImport
+      parentRoute: typeof AuthenticatedEmployerRoute
     }
     '/_authenticated/employer/onboarding': {
       id: '/_authenticated/employer/onboarding'
@@ -2771,6 +2791,7 @@ const AuthenticatedEmployerEmployerSlugRouteWithChildren =
 interface AuthenticatedEmployerRouteChildren {
   AuthenticatedEmployerEmployerSlugRoute: typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
   AuthenticatedEmployerOnboardingRoute: typeof AuthenticatedEmployerOnboardingRoute
+  AuthenticatedEmployerPendingRoute: typeof AuthenticatedEmployerPendingRoute
   AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
 }
 
@@ -2778,6 +2799,7 @@ const AuthenticatedEmployerRouteChildren: AuthenticatedEmployerRouteChildren = {
   AuthenticatedEmployerEmployerSlugRoute:
     AuthenticatedEmployerEmployerSlugRouteWithChildren,
   AuthenticatedEmployerOnboardingRoute: AuthenticatedEmployerOnboardingRoute,
+  AuthenticatedEmployerPendingRoute: AuthenticatedEmployerPendingRoute,
   AuthenticatedEmployerIndexRoute: AuthenticatedEmployerIndexRoute,
 }
 

@@ -59,6 +59,13 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  // Employer signup only. The company is captured here rather than on a later
+  // page because a registration that never names a company produces nothing an
+  // administrator can review -- which is exactly how the first employer
+  // journey used to end.
+  const [companyName, setCompanyName] = useState("");
+  const [companyCountry, setCompanyCountry] = useState("");
+  const employerSignup = portal === "employer" && mode === "signup";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -116,11 +123,25 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
           password,
           options: {
             emailRedirectTo: window.location.origin + "/auth?intent=" + portal,
-            data: { display_name: displayName || undefined, locale: lang, portal_intent: portal },
+            // Carried in user metadata, not written to a table: there is no
+            // session yet, so nothing can be inserted under this person's own
+            // identity. The organisation is created from these values on their
+            // first authenticated visit, once the address is verified.
+            data: {
+              display_name: displayName || undefined,
+              locale: lang,
+              portal_intent: portal,
+              ...(employerSignup
+                ? {
+                    company_name: companyName.trim() || undefined,
+                    company_country: companyCountry.trim() || undefined,
+                  }
+                : {}),
+            },
           },
         });
         if (err) throw err;
-        setInfo(t("auth.signup.check_email"));
+        setInfo(t(employerSignup ? "auth.signup.check_email_employer" : "auth.signup.check_email"));
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password });
         if (err) throw err;
@@ -223,6 +244,32 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
                     className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
                   />
                 </label>
+              )}
+              {employerSignup && (
+                <>
+                  <label className="block text-sm">
+                    <span className="text-foreground">{t("auth.companyName")}</span>
+                    <input
+                      type="text"
+                      required
+                      autoComplete="organization"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-foreground">{t("auth.companyCountry")}</span>
+                    <input
+                      type="text"
+                      required
+                      autoComplete="country-name"
+                      value={companyCountry}
+                      onChange={(e) => setCompanyCountry(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                    />
+                  </label>
+                </>
               )}
               <label className="block text-sm">
                 <span className="text-foreground">{t("auth.email")}</span>

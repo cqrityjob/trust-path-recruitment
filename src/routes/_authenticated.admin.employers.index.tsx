@@ -156,7 +156,10 @@ function AdminEmployersPage() {
                         {r.registrationNumber ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {r.ownerDisplayName ?? t("admin.employers.list.ownerUnknown")}
+                        <span className="block text-foreground">
+                          {r.ownerDisplayName ?? t("admin.employers.list.ownerUnknown")}
+                        </span>
+                        {r.ownerEmail && <span className="block">{r.ownerEmail}</span>}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{r.memberCount}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">{r.draftJobCount}</td>
