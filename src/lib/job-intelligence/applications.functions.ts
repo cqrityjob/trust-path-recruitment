@@ -399,13 +399,31 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
     );
     const namesByUserId = new Map<string, string | null>();
     if (applicantIds.length > 0) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: profileRows } = await supabaseAdmin
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", applicantIds);
-      for (const p of profileRows ?? []) {
-        namesByUserId.set(p.id as string, (p.display_name as string | null) ?? null);
+      // Best-effort, and deliberately so. A display name is an ENRICHMENT of a
+      // row that is already complete and already authorised: the job, the
+      // status, the cover note and every control on it work without it, and the
+      // surface already renders "anonymous candidate" when it is absent.
+      //
+      // Before this, a failure here threw and took the whole applications list
+      // with it — so an environment with no service-role key configured showed
+      // an employer "could not load applications" the moment their first
+      // application arrived, having shown an empty list quite happily until
+      // then. Losing a name is a smaller harm than losing the page, and the
+      // failure is logged rather than swallowed.
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: profileRows } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", applicantIds);
+        for (const p of profileRows ?? []) {
+          namesByUserId.set(p.id as string, (p.display_name as string | null) ?? null);
+        }
+      } catch (e) {
+        console.error(
+          "[applications] applicant name lookup unavailable; rows render without names",
+          e,
+        );
       }
     }
 

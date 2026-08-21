@@ -2908,6 +2908,7 @@ export const dictionaries = {
     // Candidate-side job context.
     "academy.work.forJob": "Gäller ansökan:",
     "academy.work.recruitmentContext": "Rekrytering",
+    "academy.report.purposeClosedTestRecruitment": "Rekryteringstest (sluten testning)",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -5800,6 +5801,8 @@ export const dictionaries = {
 
     "academy.work.forJob": "Relates to your application for:",
     "academy.work.recruitmentContext": "Recruitment",
+    "academy.report.purposeClosedTestRecruitment":
+      "Recruitment-context product testing (closed test)",
   },
 } as const;
 

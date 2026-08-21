@@ -27,6 +27,10 @@ const PURPOSE_LABEL: Record<string, TranslationKey> = {
   competence_development: "academy.reviews.purposeDevelopment",
   selection_support: "academy.reviews.purposeRecruitment",
   reassessment: "academy.report.purposeReassessment",
+  // Deliberately worded to distinguish it from selection_support at a glance:
+  // a report that said only "recruitment" would read as a selection basis,
+  // which is precisely what this purpose is not.
+  closed_test_recruitment: "academy.report.purposeClosedTestRecruitment",
 };
 
 const PERSON_LABEL: Record<string, TranslationKey> = {
