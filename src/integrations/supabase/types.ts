@@ -5981,6 +5981,7 @@ export type Database = {
           depends_on_employer_instruction: boolean
           difficulty: string | null
           difficulty_target: string | null
+          evidence_source_type: string
           facet_id: string | null
           id: string
           information_available_sv: string | null
@@ -6039,6 +6040,7 @@ export type Database = {
           depends_on_employer_instruction?: boolean
           difficulty?: string | null
           difficulty_target?: string | null
+          evidence_source_type?: string
           facet_id?: string | null
           id?: string
           information_available_sv?: string | null
@@ -6097,6 +6099,7 @@ export type Database = {
           depends_on_employer_instruction?: boolean
           difficulty?: string | null
           difficulty_target?: string | null
+          evidence_source_type?: string
           facet_id?: string | null
           id?: string
           information_available_sv?: string | null
@@ -6147,6 +6150,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scp_competencies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_item_versions_evidence_source_type_fkey"
+            columns: ["evidence_source_type"]
+            isOneToOne: false
+            referencedRelation: "scp_evidence_source_types"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "scp_item_versions_facet_id_fkey"
