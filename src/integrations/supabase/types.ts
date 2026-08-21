@@ -5520,6 +5520,53 @@ export type Database = {
           },
         ]
       }
+      scp_form_blocks: {
+        Row: {
+          asks: string
+          block_key: string
+          created_at: string
+          display_order: number
+          form_id: string
+          id: string
+          intro_en: string
+          intro_sv: string
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          asks: string
+          block_key: string
+          created_at?: string
+          display_order: number
+          form_id: string
+          id?: string
+          intro_en: string
+          intro_sv: string
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          asks?: string
+          block_key?: string
+          created_at?: string
+          display_order?: number
+          form_id?: string
+          id?: string
+          intro_en?: string
+          intro_sv?: string
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_form_blocks_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "scp_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_form_items: {
         Row: {
           block_key: string
@@ -9431,9 +9478,22 @@ export type Database = {
           version_number: number
         }[]
       }
+      scp_get_attempt_blocks: {
+        Args: { _attempt_id: string; _language?: string }
+        Returns: {
+          answered: number
+          asks: string
+          block_key: string
+          display_order: number
+          intro: string
+          item_count: number
+          name: string
+        }[]
+      }
       scp_get_attempt_items: {
         Args: { _attempt_id: string; _language?: string }
         Returns: {
+          block_key: string
           display_order: number
           is_safety_critical: boolean
           item_format: string
