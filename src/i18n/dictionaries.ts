@@ -6,7 +6,7 @@ export const dictionaries = {
     "nav.career_center": "Säkerhetskarriärcenter",
     "nav.jobs": "Jobb",
     "nav.employers": "Arbetsgivare",
-    "nav.assessment": "Tester",
+    "nav.assessment": "Bedömningar",
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
@@ -1071,7 +1071,7 @@ export const dictionaries = {
     "employer.nav.overview": "Översikt",
     "employer.nav.jobs": "Mina annonser",
     "employer.nav.applications": "Ansökningar",
-    "employer.nav.assessments": "Tester",
+    "employer.nav.assessments": "Bedömningar",
     "employer.nav.settings": "Inställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
@@ -1094,7 +1094,7 @@ export const dictionaries = {
 
     "employer.comingSoonShort": "Kommer snart",
 
-    "employer.assessments.heading": "Tester och bedömningar",
+    "employer.assessments.heading": "Bedömningar",
     "employer.assessments.subheading":
       "Använd strukturerade bedömningar för att stödja rekrytering, rollmatchning och kompetensutveckling inom säkerhetsverksamhet.",
     "employer.assessments.categoryNav.ariaLabel": "Kategorival",
@@ -1271,7 +1271,7 @@ export const dictionaries = {
     "employer.overview.card.people.stat.sites": "Platser/team",
     "employer.overview.card.people.action.competencies": "Kompetenser & certifikat",
 
-    "employer.overview.card.tests.title": "Tester",
+    "employer.overview.card.tests.title": "Bedömningar",
     "employer.overview.card.tests.body":
       "Tilldela tester, följ pågående tester och använd resultaten som beslutsunderlag.",
     "employer.overview.card.tests.stat.invited": "Inbjudna",
@@ -1307,7 +1307,7 @@ export const dictionaries = {
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
     "employer.attention.source.applications": "Källa: Ansökningar",
     "employer.attention.source.jobs": "Källa: Mina annonser",
-    "employer.attention.source.assessments": "Källa: Tester",
+    "employer.attention.source.assessments": "Källa: Bedömningar",
     "employer.attention.source.workforce": "Källa: Medarbetare",
     "employer.attention.action.viewOrganisation": "Visa organisation",
     "employer.attention.action.reviewApplications": "Granska ansökningar",
@@ -1444,7 +1444,7 @@ export const dictionaries = {
     "academy.reviews.myTasks": "Mina granskningsuppgifter",
     "academy.overview.readyToRelease": "Klara att frisläppa",
     "academy.overview.attemptsAwaitingReview": "Väntar på granskning",
-    "academy.history.heading": "Tester & bedömningar",
+    "academy.history.heading": "Bedömningar",
     "academy.history.lede":
       "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
     "academy.history.viewResult": "Visa mitt resultat",
@@ -1453,7 +1453,7 @@ export const dictionaries = {
     "employer.person.roleTitle": "Roll",
     "employer.person.site": "Plats",
     "employer.person.status": "Anställningsstatus",
-    "employer.person.assessments.heading": "Tester & bedömningar",
+    "employer.person.assessments.heading": "Bedömningar",
     "employer.person.assessments.lede":
       "Pågående och avslutade bedömningar som den här organisationen har tilldelat. Historiken följer personen, inte e-postadressen.",
     "employer.person.assessments.assign": "Tilldela test",
@@ -2243,7 +2243,7 @@ export const dictionaries = {
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Assessment Center",
     "academy.nav.overview": "Översikt",
-    "academy.nav.library": "Testbibliotek",
+    "academy.nav.library": "Bedömningsbibliotek",
     "academy.nav.participants": "Deltagare",
     "academy.nav.reviews": "Granskningar",
     "academy.nav.programmes": "Utvecklingsprogram",
@@ -2254,12 +2254,12 @@ export const dictionaries = {
     "academy.overview.active": "Pågående",
     "academy.overview.released": "Frisläppta rapporter",
     "academy.overview.awaitingReview": "Väntar på granskning",
-    "academy.overview.openLibrary": "Öppna testbiblioteket",
+    "academy.overview.openLibrary": "Öppna bedömningsbiblioteket",
     "academy.overview.openParticipants": "Visa deltagare",
-    "academy.overview.recruitmentTitle": "Rekryteringsbedömning är inte tillgänglig",
+    "academy.overview.recruitmentTitle": "Bedömning i rekrytering",
     "academy.overview.recruitmentBody":
-      "Innehållet här är framtaget för utveckling, inte för urval. Användning i rekrytering kräver en högre valideringsnivå än det här materialet har nått, och är därför avstängd.",
-    "academy.library.title": "Testbibliotek",
+      "Rekryteringsbedömningen ger ett underlag inför intervjun: vad kandidaten har visat i uppgifterna, vad kandidaten själv beskriver, och vilka frågor som är värda att ställa. Den ger inget omdöme om lämplighet och ingen rekommendation — beslutet är ert.",
+    "academy.library.title": "Bedömningsbibliotek",
     "academy.library.lede":
       "Program som kan tilldelas, och program som fortfarande är under utveckling. Vad ett program inte mäter står lika tydligt som vad det mäter.",
     "academy.library.items": "Frågor",
@@ -2276,12 +2276,12 @@ export const dictionaries = {
     "academy.library.sections.training": "Utbildning och utveckling",
     "academy.library.sections.trainingLede":
       "Lärande och fortlöpande utveckling. Genomförd utbildning ändrar inte uppmätt kompetens.",
-    "academy.library.sections.internal": "Intern testning",
+    "academy.library.sections.internal": "Internt material",
     "academy.library.sections.internalLede":
-      "Syntetiskt material för sluten testning. Aldrig kundinnehåll.",
+      "Exempelmaterial som vi använder för att visa och kvalitetssäkra produkten. Aldrig riktigt kundinnehåll.",
     "academy.library.sections.development": "Under utveckling",
     "academy.library.sections.developmentLede":
-      "Innehåll som ännu inte är validerat. Kan tilldelas som sluten testning om organisationen har ett pilotmedgivande.",
+      "Bedömningar som ännu inte är färdigvaliderade. De kan användas som förhandsversion om er organisation har fått tillgång.",
     "academy.library.filter.all": "Alla",
     "academy.library.kind.assessment": "Bedömning",
     "academy.library.kind.training": "Utbildning",
@@ -2306,7 +2306,7 @@ export const dictionaries = {
     "academy.library.trainingNotMaturity":
       "Genomförd utbildning registreras som utvecklingsaktivitet. Den ändrar aldrig uppmätt kompetensmognad.",
     "academy.library.state.draft": "Utkast",
-    "academy.library.state.internal_testing": "Intern testning",
+    "academy.library.state.internal_testing": "Internt",
     "academy.library.state.under_review": "Under granskning",
     "academy.library.state.published": "Publicerad",
     "academy.library.state.retired": "Avvecklad",
@@ -2351,7 +2351,7 @@ export const dictionaries = {
     "academy.training.notCompetence":
       "Genomförd utbildning registreras som utvecklingsaktivitet. Den styrker inte i sig yrkeskompetens och ändrar inte din uppmätta kompetensmognad.",
     "academy.training.review": "Visa programmet",
-    "academy.training.internalTesting": "Tillgänglig för intern testning",
+    "academy.training.internalTesting": "Internt material",
     "academy.training.moduleHeading": "Moduler",
     "academy.training.module": "Modul",
     "academy.training.moduleOf": "Modul {{n}} av {{total}}",
@@ -2393,11 +2393,11 @@ export const dictionaries = {
     "academy.library.countMany": "{{count}} program",
     "academy.status.available": "Tillgängligt",
     "academy.status.development": "Under utveckling",
-    "academy.status.closedTest": "Pilot – sluten testning",
-    "academy.library.closedTest.title": "Sluten testning",
+    "academy.status.closedTest": "Förhandsversion",
+    "academy.library.closedTest.title": "Förhandsversion",
     "academy.library.closedTest.body":
-      "Er organisation har ett tidsbegränsat pilotmedgivande för det här programmet. Innehållet är ännu inte validerat, så resultatet är utvecklingsinriktat underlag – det får inte användas för urval, rangordning eller anställningsbeslut. Varje resultat märks med att det kommer från en sluten testning.",
-    "academy.status.fixture": "Testfixtur",
+      "Den här bedömningen är tillgänglig för er organisation som förhandsversion. Innehållet är ännu inte färdigvaliderat, så resultatet är underlag för samtal och utveckling — det ska inte ensamt ligga till grund för ett anställningsbeslut. Varje resultat märks som förhandsversion.",
+    "academy.status.fixture": "Internt exempel",
     "academy.assign.email": "Deltagarens e-postadress",
     "academy.assign.deadline": "Sista dag (valfritt)",
     "academy.assign.confirm": "Skicka tilldelning",
@@ -2460,10 +2460,10 @@ export const dictionaries = {
       "Tilldelningen kan inte återkallas. Testet är redan inlämnat eller avslutat.",
     "academy.participants.cancelFailed": "Tilldelningen kunde inte återkallas.",
     "academy.participants.reassessmentPurposePending":
-      "Omprövning är inte tillgänglig ännu. Ändamålet för omprövning behöver godkännas innan en ny bedömning får begäras.",
+      "Ny bedömning är inte tillgänglig för den här personen ännu.",
     "academy.participants.emptyTitle": "Inga deltagare ännu",
     "academy.participants.emptyBody":
-      "Tilldela ett program från testbiblioteket för att komma igång.",
+      "Tilldela en bedömning från biblioteket för att komma igång.",
     "academy.attempt.inProgress": "Pågår",
     "academy.attempt.submitted": "Inlämnad",
     "academy.attempt.scored": "Bedömd",
@@ -2510,7 +2510,7 @@ export const dictionaries = {
     "academy.reviews.participantRefNote":
       "Deltagaren visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
     "academy.reviews.closedTestBasis":
-      "Stängt test. Innehållet är ännu inte validerat och bedömningen får inte användas som underlag för rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
+      "Förhandsversion. Innehållet är ännu inte färdigvaliderat, så den här granskningen är underlag för utveckling och samtal — den ska inte användas som grund för ett rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
     "academy.reviews.chose": "Deltagaren valde",
     "academy.reviews.choseBest": "Deltagaren valde som bästa handling",
     "academy.reviews.choseWorst": "Deltagaren valde som sämsta handling",
@@ -2598,7 +2598,7 @@ export const dictionaries = {
     "academy.report.completed": "Genomförd",
     "academy.report.started": "Påbörjad",
     "academy.report.closedTestBanner":
-      "Stängt test. Innehållet är ännu inte validerat och rapporten får inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
+      "Förhandsversion – endast för utvärdering. Rapporten är underlag inför samtal och ska inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
     "academy.report.lineageToggle": "Visa spårbarhet och versioner",
     "academy.report.instrument": "Instrument",
     "academy.report.governance": "Governance",
@@ -2863,8 +2863,8 @@ export const dictionaries = {
     "journey.assignFailed":
       "Bedömningen kunde inte skickas. Kontrollera att organisationen har ett giltigt medgivande för innehållet.",
     "journey.openBrief": "Öppna kandidatunderlag",
-    "journey.closedTest": "Sluten testning",
-    "journey.closedTestNotForSelection": "Sluten testning – ej för operativt urvalsbeslut",
+    "journey.closedTest": "Förhandsversion",
+    "journey.closedTestNotForSelection": "Förhandsversion – endast för utvärdering",
     "journey.stage.invited": "Inbjuden",
     "journey.stage.started": "Påbörjad",
     "journey.stage.under_review": "Under granskning",
@@ -2903,12 +2903,12 @@ export const dictionaries = {
     "invite.reason.governance_basis_withdrawn": "Medgivandet återkallades",
     "invite.reason.programme_retired": "Programmet är avvecklat",
     "invite.reason.invitation_expired": "Inbjudan hann gå ut",
-    "invite.reason.purpose_not_available": "Ändamålet är inte godkänt",
+    "invite.reason.purpose_not_available": "Bedömningen är inte öppen för den här användningen ännu",
 
     // Candidate-side job context.
     "academy.work.forJob": "Gäller ansökan:",
     "academy.work.recruitmentContext": "Rekrytering",
-    "academy.report.purposeClosedTestRecruitment": "Rekryteringstest (sluten testning)",
+    "academy.report.purposeClosedTestRecruitment": "Rekryteringsbedömning (förhandsversion)",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -3980,7 +3980,7 @@ export const dictionaries = {
     "employer.nav.overview": "Overview",
     "employer.nav.jobs": "My job ads",
     "employer.nav.applications": "Applications",
-    "employer.nav.assessments": "Tests",
+    "employer.nav.assessments": "Assessments",
     "employer.nav.settings": "Settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
@@ -4174,7 +4174,7 @@ export const dictionaries = {
     "employer.overview.card.people.stat.sites": "Sites/teams",
     "employer.overview.card.people.action.competencies": "Competencies & certificates",
 
-    "employer.overview.card.tests.title": "Tests",
+    "employer.overview.card.tests.title": "Assessments",
     "employer.overview.card.tests.body":
       "Assign tests, follow tests in progress and use the results as decision support.",
     "employer.overview.card.tests.stat.invited": "Invited",
@@ -4211,7 +4211,7 @@ export const dictionaries = {
     "employer.attention.source.organisation": "Source: Organisation status",
     "employer.attention.source.applications": "Source: Applications",
     "employer.attention.source.jobs": "Source: My job ads",
-    "employer.attention.source.assessments": "Source: Tests",
+    "employer.attention.source.assessments": "Source: Assessments",
     "employer.attention.source.workforce": "Source: Employees",
     "employer.attention.action.viewOrganisation": "View organisation",
     "employer.attention.action.reviewApplications": "Review applications",
@@ -5142,7 +5142,7 @@ export const dictionaries = {
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Assessment Center",
     "academy.nav.overview": "Overview",
-    "academy.nav.library": "Library",
+    "academy.nav.library": "Assessment library",
     "academy.nav.participants": "Participants",
     "academy.nav.reviews": "Reviews",
     "academy.nav.programmes": "Development programmes",
@@ -5153,11 +5153,11 @@ export const dictionaries = {
     "academy.overview.active": "In progress",
     "academy.overview.released": "Released reports",
     "academy.overview.awaitingReview": "Awaiting review",
-    "academy.overview.openLibrary": "Open the library",
+    "academy.overview.openLibrary": "Open the assessment library",
     "academy.overview.openParticipants": "View participants",
-    "academy.overview.recruitmentTitle": "Recruitment assessment is not available",
+    "academy.overview.recruitmentTitle": "Assessment in recruitment",
     "academy.overview.recruitmentBody":
-      "This content is built for development, not for selection. Use in recruitment requires a higher validation level than this material has reached, so it is switched off.",
+      "A recruitment assessment gives you something to work from before the interview: what the candidate demonstrated in the tasks, what the candidate says about their own way of working, and which questions are worth asking. It offers no verdict on suitability and no recommendation — the decision stays yours.",
     "academy.library.title": "Assessment library",
     "academy.library.lede":
       "Programmes that can be assigned, and programmes still in development. What a programme does not measure is stated as plainly as what it does.",
@@ -5176,12 +5176,12 @@ export const dictionaries = {
     "academy.library.sections.training": "Training and development",
     "academy.library.sections.trainingLede":
       "Learning and continuing development. Completing training does not change measured competence.",
-    "academy.library.sections.internal": "Internal testing",
+    "academy.library.sections.internal": "Internal material",
     "academy.library.sections.internalLede":
-      "Synthetic closed-test material. Never customer content.",
+      "Sample material we use to demonstrate and quality-check the product. Never real customer content.",
     "academy.library.sections.development": "Under development",
     "academy.library.sections.developmentLede":
-      "Content that is not yet validated. It can be assigned as a closed test where the organisation holds a pilot grant.",
+      "Assessments that are not yet fully validated. They can be used as a preview if your organisation has been given access.",
     "academy.library.filter.all": "All",
     "academy.library.kind.assessment": "Assessment",
     "academy.library.kind.training": "Training",
@@ -5206,7 +5206,7 @@ export const dictionaries = {
     "academy.library.trainingNotMaturity":
       "Training completion is recorded as development activity. It never changes measured competence maturity.",
     "academy.library.state.draft": "Draft",
-    "academy.library.state.internal_testing": "Internal testing",
+    "academy.library.state.internal_testing": "Internal",
     "academy.library.state.under_review": "Under review",
     "academy.library.state.published": "Published",
     "academy.library.state.retired": "Retired",
@@ -5250,7 +5250,7 @@ export const dictionaries = {
     "academy.training.notCompetence":
       "Completed training is recorded as development activity. It does not by itself verify professional competence, and it does not change your measured competence maturity.",
     "academy.training.review": "View programme",
-    "academy.training.internalTesting": "Available for internal testing",
+    "academy.training.internalTesting": "Internal material",
     "academy.training.moduleHeading": "Modules",
     "academy.training.module": "Module",
     "academy.training.moduleOf": "Module {{n}} of {{total}}",
@@ -5292,11 +5292,11 @@ export const dictionaries = {
     "academy.library.countMany": "{{count}} programmes",
     "academy.status.available": "Available",
     "academy.status.development": "In development",
-    "academy.status.closedTest": "Pilot – closed test",
-    "academy.library.closedTest.title": "Closed test",
+    "academy.status.closedTest": "Preview",
+    "academy.library.closedTest.title": "Preview",
     "academy.library.closedTest.body":
-      "Your organisation holds a time-limited pilot grant for this programme. The content is not yet validated, so the result is developmental input only — it must not be used for selection, ranking or hiring decisions. Every result is labelled as coming from a closed test.",
-    "academy.status.fixture": "Test fixture",
+      "This assessment is available to your organisation as a preview. The content is not yet fully validated, so the result is input for a conversation and for development — it should not on its own decide an appointment. Every result is marked as a preview.",
+    "academy.status.fixture": "Internal sample",
     "academy.assign.email": "Participant's email address",
     "academy.assign.deadline": "Deadline (optional)",
     "academy.assign.confirm": "Send assignment",
@@ -5359,9 +5359,9 @@ export const dictionaries = {
       "This assignment cannot be withdrawn. The assessment has already been submitted or completed.",
     "academy.participants.cancelFailed": "The assignment could not be withdrawn.",
     "academy.participants.reassessmentPurposePending":
-      "Reassessment is not available yet. Its processing purpose has to be approved before a new assessment can be requested.",
+      "A new assessment is not available for this person yet.",
     "academy.participants.emptyTitle": "No participants yet",
-    "academy.participants.emptyBody": "Assign a programme from the library to get started.",
+    "academy.participants.emptyBody": "Assign an assessment from the library to get started.",
     "academy.attempt.inProgress": "In progress",
     "academy.attempt.submitted": "Submitted",
     "academy.attempt.scored": "Assessed",
@@ -5408,7 +5408,7 @@ export const dictionaries = {
     "academy.reviews.participantRefNote":
       "The participant is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
     "academy.reviews.closedTestBasis":
-      "Closed test. This content is not yet validated and the assessment may not be used as a basis for recruitment decisions. Your judgement is recorded with that limitation.",
+      "Preview. The content is not yet fully validated, so this review is input for development and for a conversation — it should not be used as the basis for a recruitment decision. Your review is recorded with that limitation.",
     "academy.reviews.chose": "The participant chose",
     "academy.reviews.choseBest": "The participant chose as the best action",
     "academy.reviews.choseWorst": "The participant chose as the worst action",
@@ -5497,7 +5497,7 @@ export const dictionaries = {
     "academy.report.completed": "Completed",
     "academy.report.started": "Started",
     "academy.report.closedTestBanner":
-      "Closed test. This content is not yet validated, and this report must not on its own inform an employment or placement decision.",
+      "Preview – for evaluation only. This report is input for a conversation and should not on its own decide an appointment or a placement.",
     "academy.report.lineageToggle": "Show lineage and versions",
     "academy.report.instrument": "Instrument",
     "academy.report.governance": "Governance",
@@ -5758,8 +5758,8 @@ export const dictionaries = {
     "journey.assignFailed":
       "The assessment could not be sent. Check that the organisation holds a valid grant for this content.",
     "journey.openBrief": "Open candidate brief",
-    "journey.closedTest": "Closed test",
-    "journey.closedTestNotForSelection": "Closed test – not for operational selection decisions",
+    "journey.closedTest": "Preview",
+    "journey.closedTestNotForSelection": "Preview – for evaluation only",
     "journey.stage.invited": "Invited",
     "journey.stage.started": "Started",
     "journey.stage.under_review": "Under review",
@@ -5797,12 +5797,12 @@ export const dictionaries = {
     "invite.reason.governance_basis_withdrawn": "The grant was withdrawn",
     "invite.reason.programme_retired": "The programme was retired",
     "invite.reason.invitation_expired": "The invitation expired",
-    "invite.reason.purpose_not_available": "The processing purpose is not approved",
+    "invite.reason.purpose_not_available": "This assessment is not open for that use yet",
 
     "academy.work.forJob": "Relates to your application for:",
     "academy.work.recruitmentContext": "Recruitment",
     "academy.report.purposeClosedTestRecruitment":
-      "Recruitment-context product testing (closed test)",
+      "Recruitment assessment (preview)",
   },
 } as const;
 
