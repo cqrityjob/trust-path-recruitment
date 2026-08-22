@@ -23,6 +23,7 @@ import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspa
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import {
   cancelAcademyAssignment,
+  listAssignmentApplications,
   releaseAcademyReport,
   resolveParticipantIdentity,
   listAvailablePurposeCodes,
@@ -120,6 +121,16 @@ function Participants({
   const query = useQuery({
     queryKey: ["academy", "participants", employerId],
     queryFn: () => list({ data: { employerId } }),
+  });
+
+  // Which assignments came from an application. Asked once for the list rather
+  // than once per row, and never blocking: a row whose mapping is missing
+  // simply links to the report without carrying the application forward.
+  const appsFn = useServerFn(listAssignmentApplications);
+  const applications = useQuery({
+    queryKey: ["academy", "assignment-applications", employerId],
+    queryFn: () => appsFn({ data: { employerId } }),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Recruitment candidates and existing staff sit in one list because they run
@@ -251,6 +262,7 @@ function Participants({
                 row={p}
                 employerId={employerId}
                 employerSlug={employerSlug}
+                applicationId={(p.assignmentId && applications.data?.[p.assignmentId]) || null}
                 canManage={canManage}
               />
             ))}
@@ -265,11 +277,14 @@ function ParticipantCard({
   row,
   employerId,
   employerSlug,
+  applicationId,
   canManage,
 }: {
   row: PipelineRow;
   employerId: string;
   employerSlug: string;
+  /** The application this assignment came from, when it came from one. */
+  applicationId: string | null;
   canManage: boolean;
 }) {
   const { t, lang } = useT();
@@ -293,6 +308,9 @@ function ParticipantCard({
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const programme = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
+  // Candidate rows and employee rows are the same objects and not the same
+  // work, so they are told apart in words rather than only by a chip.
+  const recruitment = row.useCase === "recruitment";
 
   const identityM = useMutation({
     mutationFn: () => resolve({ data: { employerId, subjectId: row.subjectId } }),
@@ -390,10 +408,10 @@ function ParticipantCard({
                   : "academy.participants.contextEmployee",
               )}
             </span>
-            <LifecycleChip state={row.lifecycleState} />
+            <LifecycleChip state={row.lifecycleState} useCase={row.useCase} />
           </div>
           <span className="text-[11px] text-muted-foreground">
-            {nextActionLabel(t, row.lifecycleState)}
+            {nextActionLabel(t, row.lifecycleState, row.useCase)}
           </span>
         </div>
       </div>
@@ -435,10 +453,15 @@ function ParticipantCard({
           <Link
             to="/employer/$employerSlug/assessments/results/$attemptId"
             params={{ employerSlug, attemptId: row.attemptId }}
+            search={applicationId ? { application: applicationId } : {}}
             className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
-            {t("academy.participants.openReport")}
+            {t(
+              recruitment
+                ? "academy.participants.openReportRecruitment"
+                : "academy.participants.openReport",
+            )}
           </Link>
         )}
 
@@ -454,16 +477,30 @@ function ParticipantCard({
           </button>
         )}
 
+        {/* "Frisläpp" said nothing to anybody outside this codebase. What the
+            button does is share the material — and because the same click also
+            gives the participant their own copy and unlocks the identity
+            request, and because none of it can be undone, the sentence under it
+            says so before the click rather than after. */}
         {row.canRelease && (
-          <button
-            type="button"
-            onClick={() => releaseM.mutate()}
-            disabled={releaseM.isPending}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Send className="h-4 w-4" aria-hidden="true" />
-            {t("academy.participants.release")}
-          </button>
+          <div className="w-full">
+            <button
+              type="button"
+              onClick={() => releaseM.mutate()}
+              disabled={releaseM.isPending}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              {t(
+                recruitment
+                  ? "academy.participants.releaseRecruitment"
+                  : "academy.participants.release",
+              )}
+            </button>
+            <p className="mt-2 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+              {t("academy.participants.releaseExplain")}
+            </p>
+          </div>
         )}
 
         {canManage && row.releasedAt && (
