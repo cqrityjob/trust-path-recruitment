@@ -28,6 +28,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
+  clearIncompatible,
   validateCredential,
   type CredentialCategory,
   type CredentialDraft,
@@ -222,7 +223,15 @@ export const saveCredential = createServerFn({ method: "POST" })
     }
 
     const mode = data.activate ? "active" : "draft";
-    const problems = validateCredential(toDomainDraft(data), type, mode);
+
+    // Drop anything the chosen credential does not ask for, BEFORE validating
+    // and before writing. The form does this on the type switch too, but this
+    // is the guarantee: a caller that skipped the form — or a form left open
+    // across a deploy that changed the taxonomy — cannot write a scope onto a
+    // course or an expiry onto a credential that has none.
+    const draft = type ? clearIncompatible(toDomainDraft(data), type) : toDomainDraft(data);
+
+    const problems = validateCredential(draft, type, mode);
     if (problems.length > 0) {
       // The field-level messages are already on the client, which validated
       // the same way from the same module. This is the server refusing, so it
@@ -240,18 +249,18 @@ export const saveCredential = createServerFn({ method: "POST" })
       // arrived. The database refuses anything else for every caller, so
       // passing the holder's text through would only turn a rule into an
       // error message.
-      title: type.narrowResultOnly ? type.nameSv : (nullIfBlank(data.title) ?? type.nameSv),
-      claimed_issuer_name: nullIfBlank(data.issuerName),
-      jurisdiction_code: nullIfBlank(data.jurisdictionCode),
-      issued_on: data.issuedOn,
-      valid_from: data.validFrom ?? data.issuedOn,
-      valid_until: data.validUntil,
-      credential_reference: nullIfBlank(data.credentialReference),
+      title: type.narrowResultOnly ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
+      claimed_issuer_name: nullIfBlank(draft.issuerName),
+      jurisdiction_code: nullIfBlank(draft.jurisdictionCode),
+      issued_on: draft.issuedOn,
+      valid_from: draft.validFrom ?? draft.issuedOn,
+      valid_until: draft.validUntil,
+      credential_reference: nullIfBlank(draft.credentialReference),
       // Same reasoning, and this one matters more: a note on a narrow-result
       // credential is where register contents or a medical finding would
       // arrive. Dropped here as well as refused there.
-      holder_note: type.narrowResultOnly ? null : nullIfBlank(data.holderNote),
-      authorisation_scope: nullIfBlank(data.authorisationScope),
+      holder_note: type.narrowResultOnly ? null : nullIfBlank(draft.holderNote),
+      authorisation_scope: nullIfBlank(draft.authorisationScope),
       lifecycle_state: mode,
     };
 

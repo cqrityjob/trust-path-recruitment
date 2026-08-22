@@ -127,6 +127,51 @@ export function fieldsFor(type: CredentialType): FieldVisibility {
   };
 }
 
+/**
+ * Drops every value the chosen credential does not ask for.
+ *
+ * ── WHY A HIDDEN FIELD IS NOT AN EMPTY ONE ─────────────────────────────
+ *
+ * `fieldsFor` decides what the form SHOWS. It does not decide what the draft
+ * CARRIES, and until this existed those were different things: a holder who
+ * filled in a skyddsvakt scope and an end date, then changed their mind and
+ * picked VU1, still had both in the draft. The scope field was hidden. The
+ * value was submitted.
+ *
+ * The consequences were not cosmetic. A VU1 would have been written with a
+ * `valid_until` — a fabricated expiry on a course that has none — and with an
+ * `authorisation_scope` describing an authorisation it is not. Switching to a
+ * narrow-result credential was worse: the retained note is refused by both the
+ * validator and the database, so the holder saw an error about a field the
+ * form was no longer showing them.
+ *
+ * Applied on the switch AND again on the server before the write, so a stale
+ * value cannot reach the database through a caller that skipped the form.
+ */
+export function clearIncompatible(draft: CredentialDraft, type: CredentialType): CredentialDraft {
+  const fields = fieldsFor(type);
+  return {
+    ...draft,
+    issuerName: fields.issuer ? draft.issuerName : "",
+    issuedOn: fields.issuedOn ? draft.issuedOn : null,
+    validFrom: fields.validFrom ? draft.validFrom : null,
+    validUntil: fields.validUntil ? draft.validUntil : null,
+    credentialReference: fields.reference ? draft.credentialReference : "",
+    authorisationScope: fields.scope ? draft.authorisationScope : "",
+    holderNote: fields.note ? draft.holderNote : "",
+    // A narrow-result credential's title is not the holder's to choose, so
+    // switching to one SETS the controlled label rather than blanking it or
+    // leaving the previous credential's name behind.
+    //
+    // The first version left it alone, reasoning that the write path supplies
+    // the label anyway. It does — but `validateCredential` runs first and
+    // refuses a title that is not the controlled one, so a switch away from
+    // Skyddsvaktsförordnande produced SP_CREDENTIAL_INVALID on a field the
+    // form was no longer showing. The guard caught it.
+    title: fields.title ? draft.title : type.nameSv,
+  };
+}
+
 /** The label an appointment's issuer field should carry.
  *
  *  "Training provider" and "appointing authority" are not synonyms, and using

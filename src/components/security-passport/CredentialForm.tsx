@@ -34,6 +34,7 @@ import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  clearIncompatible,
   emptyCredentialDraft,
   fieldsFor,
   issuedOnLabelKey,
@@ -221,18 +222,26 @@ export function CredentialForm({
                   value={t.code}
                   checked={chosen}
                   onChange={() =>
-                    setDraft((d) => ({
-                      ...d,
-                      credentialCode: t.code,
-                      // The certificate name is almost always the taxonomy
-                      // name, so it is prefilled — but stays editable, and a
-                      // name the holder typed themselves is never replaced.
-                      title:
-                        d.title.trim() === "" ||
-                        types.some((x) => d.title === x.nameSv || d.title === x.nameEn)
-                          ? typeName(t)
-                          : d.title,
-                    }))
+                    setDraft((d) =>
+                      // Values the new credential does not ask for are dropped,
+                      // not merely hidden. A retained scope or end date would
+                      // be submitted from a field the holder can no longer see.
+                      clearIncompatible(
+                        {
+                          ...d,
+                          credentialCode: t.code,
+                          // The certificate name is almost always the taxonomy
+                          // name, so it is prefilled — but stays editable, and a
+                          // name the holder typed themselves is never replaced.
+                          title:
+                            d.title.trim() === "" ||
+                            types.some((x) => d.title === x.nameSv || d.title === x.nameEn)
+                              ? typeName(t)
+                              : d.title,
+                        },
+                        t,
+                      ),
+                    )
                   }
                   className="sr-only"
                 />

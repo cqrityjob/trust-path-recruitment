@@ -21,6 +21,7 @@
  */
 
 import {
+  clearIncompatible,
   emptyCredentialDraft,
   fieldsFor,
   validateCredential,
@@ -146,7 +147,67 @@ for (const type of FIXTURE_CREDENTIAL_TYPES) {
   }
 }
 
-console.log("\nGROUP 3 -- a draft stays savable while incomplete");
+console.log("\nGROUP 3 -- switching credential type drops what no longer applies");
+
+// A holder fills in everything the most demanding credential asks for, then
+// changes their mind. Nothing they typed for the old one may survive into the
+// new one unless the new one asks for it too.
+const scoped = FIXTURE_CREDENTIAL_TYPES.find((t) => t.requiresScope);
+const narrow = FIXTURE_CREDENTIAL_TYPES.find((t) => t.narrowResultOnly);
+const plainCourse = FIXTURE_CREDENTIAL_TYPES.find(
+  (t) => !t.requiresScope && !t.requiresValidUntil && !t.narrowResultOnly,
+);
+
+ok(Boolean(scoped && narrow && plainCourse), "the fixture set covers all three shapes");
+
+if (scoped && narrow && plainCourse) {
+  const filled: CredentialDraft = {
+    ...completeDraft(scoped),
+    holderNote: "En anteckning",
+    credentialReference: "DNR-1",
+  };
+
+  // The leak that mattered most: a course carrying a scope and an expiry.
+  const asCourse = clearIncompatible({ ...filled, credentialCode: plainCourse.code }, plainCourse);
+  ok(
+    asCourse.authorisationScope === "",
+    `${scoped.code} → ${plainCourse.code}: the scope is dropped, not merely hidden`,
+  );
+  ok(
+    asCourse.validUntil === null,
+    `${scoped.code} → ${plainCourse.code}: the end date is dropped — a course has no expiry to fabricate`,
+  );
+  ok(
+    asCourse.holderNote === "En anteckning",
+    `${scoped.code} → ${plainCourse.code}: POSITIVE CONTROL a field the new type DOES ask for survives`,
+  );
+  ok(
+    keysFor(plainCourse, asCourse, "active").length === 0,
+    `${scoped.code} → ${plainCourse.code}: the cleaned draft validates clean`,
+  );
+
+  // Switching INTO a narrow-result credential: the retained note is refused by
+  // both the validator and the database, so leaving it would show the holder an
+  // error about a field the form is no longer displaying.
+  const asNarrow = clearIncompatible({ ...filled, credentialCode: narrow.code }, narrow);
+  ok(
+    asNarrow.holderNote === "",
+    `${scoped.code} → ${narrow.code}: the note is dropped rather than left to be refused`,
+  );
+  ok(
+    keysFor(narrow, asNarrow, "active").length === 0,
+    `${scoped.code} → ${narrow.code}: the cleaned draft validates clean`,
+  );
+
+  // MUTATION: without the clean, the same switch is invalid on a hidden field.
+  const uncleaned = { ...filled, credentialCode: narrow.code };
+  ok(
+    keysFor(narrow, uncleaned, "active").includes("cred.error.noNoteAllowed"),
+    `${scoped.code} → ${narrow.code}: MUTATION without clearing, the draft is invalid on a hidden field`,
+  );
+}
+
+console.log("\nGROUP 4 -- a draft stays savable while incomplete");
 
 for (const type of FIXTURE_CREDENTIAL_TYPES) {
   const bare = { ...emptyCredentialDraft(), credentialCode: type.code };
