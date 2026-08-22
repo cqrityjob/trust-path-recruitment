@@ -2990,12 +2990,15 @@ export type Database = {
       }
       employees: {
         Row: {
+          cig_profession_slug: string | null
           created_at: string
           created_by: string
           email: string | null
           employer_id: string
           employment_status: string
           first_name: string
+          hired_from_application_id: string | null
+          hired_from_job_id: string | null
           id: string
           last_name: string
           role_title: string | null
@@ -3005,12 +3008,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cig_profession_slug?: string | null
           created_at?: string
           created_by: string
           email?: string | null
           employer_id: string
           employment_status?: string
           first_name: string
+          hired_from_application_id?: string | null
+          hired_from_job_id?: string | null
           id?: string
           last_name: string
           role_title?: string | null
@@ -3020,12 +3026,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cig_profession_slug?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
           employer_id?: string
           employment_status?: string
           first_name?: string
+          hired_from_application_id?: string | null
+          hired_from_job_id?: string | null
           id?: string
           last_name?: string
           role_title?: string | null
@@ -3036,10 +3045,31 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "employees_cig_profession_slug_fkey"
+            columns: ["cig_profession_slug"]
+            isOneToOne: false
+            referencedRelation: "cig_professions"
+            referencedColumns: ["slug"]
+          },
+          {
             foreignKeyName: "employees_employer_id_fkey"
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_hired_from_application_id_fkey"
+            columns: ["hired_from_application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_hired_from_job_id_fkey"
+            columns: ["hired_from_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
           {
@@ -9877,6 +9907,10 @@ export type Database = {
           subject_id: string
           version_number: number
         }[]
+      }
+      scp_employment_from_application: {
+        Args: { _application_id: string }
+        Returns: string
       }
       scp_get_attempt_blocks: {
         Args: { _attempt_id: string; _language?: string }
