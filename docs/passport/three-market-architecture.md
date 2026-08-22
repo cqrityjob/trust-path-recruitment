@@ -176,6 +176,12 @@ _Status: Implemented, Tested, in CI._
 
 ## Future
 
-Candidate data-entry UI for the new credentials · application-scoped disclosure
-made jurisdiction-aware · Arabic and RTL · issuer workflow · renewal engine ·
-automated register integration.
+Application-scoped disclosure made jurisdiction-aware · Arabic and RTL · issuer
+workflow · renewal engine · automated register integration · Playwright
+coverage at three viewports in three languages · a constrained
+employer-attestation vocabulary.
+
+Candidate data entry is **partly done**: the Swedish credentials the truth
+model added are recordable, the jurisdiction control reads the active market
+packs, and both are guarded. Clearing incompatible hidden values on a
+credential-type switch is not yet implemented.

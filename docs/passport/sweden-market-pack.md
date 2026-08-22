@@ -153,5 +153,10 @@ Swedish sources answered the checker on 2026-08-22.
 ## Future
 
 Renewal reminders linked to Polisen's fortbildning guidance · the constrained
-employer-attestation vocabulary · candidate-facing forms for the four new
-credentials.
+employer-attestation vocabulary · clearing incompatible hidden values when the
+holder switches credential type.
+
+Candidate-facing forms for the four new credentials are **Implemented and
+Tested** — see the section above. The jurisdiction control now reads the active
+market packs rather than a literal, so it offers Sweden and nothing else until
+a reviewer approves another pack.
