@@ -1022,6 +1022,28 @@ fi
 # Runs BEFORE the rollback step: it reads the SCP content spine, which the
 # rollback drops.
 # ---------------------------------------------------------------------------
+echo "==> Running standard recruitment availability assertions"
+set +e
+STDR_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_standard_recruitment_availability_test.sql 2>&1)"
+STDR_RC=$?
+set -e
+
+STDR_PASSED="$(echo "$STDR_OUT" | grep -c "ok  " || true)"
+
+if [ "$STDR_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the standard recruitment availability suite exited with code ${STDR_RC}." >&2
+  echo "$STDR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "standard recruitment availability"
+else
+  echo "    ok  ${STDR_PASSED} standard recruitment availability assertions passed"
+  if [ "$STDR_PASSED" -lt 16 ]; then
+    echo "FAIL: expected at least 16 standard recruitment availability assertions, only ${STDR_PASSED} ran." >&2
+    suite_failed "standard recruitment availability (assertion shortfall: floor 16)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running content library and maturity-isolation assertions"
 set +e
 LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"
@@ -1507,5 +1529,6 @@ echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
-echo "              ${ARCH_PASSED} job archive assertions"
+echo "              ${ARCH_PASSED} job archive assertions,"
+echo "              ${STDR_PASSED} standard recruitment availability assertions"
 echo "===================================================="

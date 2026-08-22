@@ -159,6 +159,9 @@ DROP FUNCTION IF EXISTS
   public.scp_grant_permits_assignment(uuid, uuid, text, text, boolean) CASCADE;
 DROP FUNCTION IF EXISTS
   public.scp_has_test_grant(uuid, public.scp_governance_mode, uuid) CASCADE;
+-- 20260905090000: the second admission route for standard recruitment content.
+DROP FUNCTION IF EXISTS
+  public.scp_is_standard_recruitment_content(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_governance_lineage_immutable() CASCADE;
 -- The purpose mapping (20260820090000) has to be named explicitly. Most SCP
 -- functions disappear with `DROP TYPE scp_governance_mode CASCADE` below,
