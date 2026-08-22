@@ -41,9 +41,11 @@ import {
   saveClaimEntry,
   saveExperienceEntry,
   saveSkillEntry,
+  listJurisdictions,
   type ClaimEntry,
   type ExperienceEntry,
   type FreeClaimKind,
+  type Jurisdiction,
   type SkillType,
 } from "@/lib/security-passport/entries.functions";
 import { formatPeriodRange } from "@/lib/security-passport/format";
@@ -122,18 +124,35 @@ function PassportInformationRoute() {
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
   const loadSkillTypes = useServerFn(listSkillTypes);
+  const loadJurisdictions = useServerFn(listJurisdictions);
   const saveSkill = useServerFn(saveSkillEntry);
 
   const [experience, setExperience] = useState<readonly ExperienceEntry[]>([]);
   const [claims, setClaims] = useState<readonly ClaimEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // ── ONE OPERATION OWNS ONE OUTCOME ────────────────────────────────
+  //
+  // These were two independent strings, and the page could hold both at once:
+  // `setNotice("Sparat.")` fired before the read-back, so when the refresh
+  // then failed, `setError` painted "Något gick fel. Försök igen." underneath
+  // a success message that had already been shown. The owner photographed
+  // exactly that.
+  //
+  // A save either succeeded or it did not, so the page now carries ONE
+  // outcome. Starting an operation clears it; success is only recorded after
+  // the write AND the read-back have both returned.
+  const [outcome, setOutcome] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const error = outcome?.kind === "error" ? outcome.text : null;
+  const notice = outcome?.kind === "ok" ? outcome.text : null;
+  const beginOperation = useCallback(() => setOutcome(null), []);
+  const succeeded = useCallback((text: string) => setOutcome({ kind: "ok", text }), []);
+  const failed = useCallback((text: string) => setOutcome({ kind: "error", text }), []);
   const [editing, setEditing] = useState<Editing>(null);
   const [expErrors, setExpErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [claimErrors, setClaimErrors] = useState<Partial<Record<string, PassportCopyKey>>>({});
   const [skillTypes, setSkillTypes] = useState<readonly SkillType[]>([]);
+  const [jurisdictions, setJurisdictions] = useState<readonly Jurisdiction[]>([]);
   // One draft per section, keyed by claim_type, so opening the language form
   // does not close a half-filled licence form.
   const [skillDrafts, setSkillDrafts] = useState<Record<string, SkillDraft | null>>({
@@ -145,22 +164,29 @@ function PassportInformationRoute() {
     practical_skill: {},
   });
 
-  const refresh = useCallback(async () => {
+  /** Resolves true only when the read-back returned. Callers must not
+   *  report success without it: a write that cannot be read back has not
+   *  been shown to have happened. */
+  const refresh = useCallback(async (): Promise<boolean> => {
     try {
-      const [data, types] = await Promise.all([
+      const [data, types, jurs] = await Promise.all([
         load({ data: undefined }),
         loadSkillTypes({ data: undefined }),
+        loadJurisdictions({ data: undefined }),
       ]);
       setExperience(data.experience);
       setClaims(data.claims);
       setSkillTypes(types);
+      setJurisdictions(jurs);
+      return true;
     } catch (err) {
       console.error("[passport] entries load failed", err);
-      setError(pt("common.error"));
+      failed(pt("common.error"));
+      return false;
     } finally {
       setLoaded(true);
     }
-  }, [load, loadSkillTypes, pt]);
+  }, [load, loadSkillTypes, loadJurisdictions, failed, pt]);
 
   useEffect(() => {
     void refresh();
@@ -176,7 +202,7 @@ function PassportInformationRoute() {
     setExpErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setBusy(true);
-    setError(null);
+    beginOperation();
     try {
       await saveExp({
         data: {
@@ -193,11 +219,12 @@ function PassportInformationRoute() {
         },
       });
       setEditing(null);
-      setNotice(pt("entry.saved"));
-      await refresh();
+      // Read-back before success. "Sparat." is a claim about persistence, so
+      // it is only made once the server has handed the entry back.
+      if (await refresh()) succeeded(pt("entry.saved"));
     } catch (err) {
       console.error("[passport] experience save failed", err);
-      setError(pt("common.error"));
+      failed(pt("common.error"));
     } finally {
       setBusy(false);
     }
@@ -208,7 +235,7 @@ function PassportInformationRoute() {
     setClaimErrors(errs);
     if (Object.keys(errs).length > 0) return;
     setBusy(true);
-    setError(null);
+    beginOperation();
     try {
       await saveClaim({
         data: {
@@ -222,11 +249,12 @@ function PassportInformationRoute() {
         },
       });
       setEditing(null);
-      setNotice(pt("entry.saved"));
-      await refresh();
+      // Read-back before success. "Sparat." is a claim about persistence, so
+      // it is only made once the server has handed the entry back.
+      if (await refresh()) succeeded(pt("entry.saved"));
     } catch (err) {
       console.error("[passport] claim save failed", err);
-      setError(pt("common.error"));
+      failed(pt("common.error"));
     } finally {
       setBusy(false);
     }
@@ -234,12 +262,12 @@ function PassportInformationRoute() {
 
   async function commitSkill(claimType: "language" | "practical_skill", draft: SkillDraft) {
     const type = skillTypes.find((t) => t.code === draft.skillCode);
-    const errs = validateSkill(draft, type);
+    const errs = validateSkill(draft, type, jurisdictions);
     setSkillErrors((prev) => ({ ...prev, [claimType]: errs }));
     if (Object.keys(errs).length > 0) return;
 
     setBusy(true);
-    setError(null);
+    beginOperation();
     try {
       await saveSkill({
         data: {
@@ -255,11 +283,12 @@ function PassportInformationRoute() {
         },
       });
       setSkillDrafts((prev) => ({ ...prev, [claimType]: null }));
-      setNotice(pt("entry.saved"));
-      await refresh();
+      // Read-back before success. "Sparat." is a claim about persistence, so
+      // it is only made once the server has handed the entry back.
+      if (await refresh()) succeeded(pt("entry.saved"));
     } catch (err) {
       console.error("[passport] skill save failed", err);
-      setError(pt("common.error"));
+      failed(pt("common.error"));
     } finally {
       setBusy(false);
     }
@@ -268,15 +297,17 @@ function PassportInformationRoute() {
   async function remove(kind: "claim" | "experience", id: string) {
     if (!window.confirm(pt("entry.removeConfirm"))) return;
     setBusy(true);
+    beginOperation();
     try {
       const res = await doRemove({ data: { kind, id } });
       // The server refuses once an entry has evidence or a review, and says
       // so rather than pretending the delete worked.
-      setNotice(res.removed ? pt("entry.saved") : pt("entry.removeBlocked"));
-      await refresh();
+      const readBack = await refresh();
+      if (!res.removed) failed(pt("entry.removeBlocked"));
+      else if (readBack) succeeded(pt("entry.saved"));
     } catch (err) {
       console.error("[passport] remove failed", err);
-      setError(pt("common.error"));
+      failed(pt("common.error"));
     } finally {
       setBusy(false);
     }
@@ -487,6 +518,7 @@ function PassportInformationRoute() {
           <SkillSection
             claimType={section.kind}
             types={skillTypes}
+            jurisdictions={jurisdictions}
             entries={claims.filter((c) => c.claimType === section.kind)}
             draft={skillDrafts[section.kind]}
             errors={skillErrors[section.kind] ?? {}}

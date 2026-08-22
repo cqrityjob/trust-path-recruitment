@@ -1006,7 +1006,9 @@ const sv = {
   "skill.none.practical_skill": "Inga behörigheter tillagda ännu.",
   "skill.selfDeclared": "Egen uppgift tills någon har granskat underlag för den.",
   "skill.levelRequired": "Välj en nivå.",
-  "skill.jurisdictionRequired": "Ange landskod med två bokstäver, till exempel SE.",
+  "skill.jurisdictionRequired": "Välj var behörigheten är utfärdad.",
+  "skill.levelNotApplicable": "Den här behörigheten har ingen nivå.",
+  "skill.levelInvalid": "Välj en nivå ur listan.",
   "skill.validUntilRequired": "Den här behörigheten har ett slutdatum.",
   // CEFR, in words rather than bare codes. The code is kept in parentheses so
   // a reader who knows the scale still recognises it.
@@ -2092,7 +2094,9 @@ const en: Record<PassportCopyKey, string> = {
   "skill.none.practical_skill": "No licences added yet.",
   "skill.selfDeclared": "Self-declared until someone has reviewed evidence for it.",
   "skill.levelRequired": "Choose a level.",
-  "skill.jurisdictionRequired": "Enter a two-letter country code, for example SE.",
+  "skill.jurisdictionRequired": "Choose where the licence was issued.",
+  "skill.levelNotApplicable": "This licence has no level.",
+  "skill.levelInvalid": "Choose a level from the list.",
   "skill.validUntilRequired": "This licence has an end date.",
   "skill.cefr.A1": "Beginner (A1)",
   "skill.cefr.A2": "Elementary (A2)",

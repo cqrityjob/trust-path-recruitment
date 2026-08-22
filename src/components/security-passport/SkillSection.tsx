@@ -24,7 +24,11 @@
 import { useMemo } from "react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import type { ClaimEntry, SkillType } from "@/lib/security-passport/entries.functions";
+import type {
+  ClaimEntry,
+  Jurisdiction,
+  SkillType,
+} from "@/lib/security-passport/entries.functions";
 
 export interface SkillDraft {
   readonly skillCode: string;
@@ -43,12 +47,32 @@ export function emptySkillDraft(): SkillDraft {
 export function validateSkill(
   draft: SkillDraft,
   type: SkillType | undefined,
+  jurisdictions: readonly Jurisdiction[] = [],
 ): Record<string, PassportCopyKey> {
   const errs: Record<string, PassportCopyKey> = {};
   if (!type) return errs;
   if (type.allowedLevels.length > 0 && !draft.skillLevel) errs.skillLevel = "skill.levelRequired";
-  if (type.requiresJurisdiction && !/^[A-Za-z]{2}$/.test(draft.jurisdictionCode.trim())) {
-    errs.jurisdictionCode = "skill.jurisdictionRequired";
+  // A level the type does not have is refused by the database; catching it
+  // here means the holder is told which field is wrong instead of being told
+  // that something, somewhere, went wrong.
+  if (type.allowedLevels.length === 0 && draft.skillLevel) {
+    errs.skillLevel = "skill.levelNotApplicable";
+  }
+  if (
+    type.allowedLevels.length > 0 &&
+    draft.skillLevel &&
+    !type.allowedLevels.includes(draft.skillLevel)
+  ) {
+    errs.skillLevel = "skill.levelInvalid";
+  }
+  if (type.requiresJurisdiction) {
+    const code = draft.jurisdictionCode.trim().toUpperCase();
+    // Membership, not shape. Two letters is what "SV" is too, and "SV" is not
+    // a jurisdiction — the FK is the real rule, so the form checks the real
+    // rule rather than a lookalike of it.
+    if (!code || (jurisdictions.length > 0 && !jurisdictions.some((j) => j.code === code))) {
+      errs.jurisdictionCode = "skill.jurisdictionRequired";
+    }
   }
   if (type.requiresValidUntil && !draft.validUntil) errs.validUntil = "skill.validUntilRequired";
   return errs;
@@ -57,6 +81,7 @@ export function validateSkill(
 export function SkillSection({
   claimType,
   types,
+  jurisdictions,
   entries,
   draft,
   errors,
@@ -70,6 +95,7 @@ export function SkillSection({
 }: {
   claimType: "language" | "practical_skill";
   types: readonly SkillType[];
+  jurisdictions: readonly Jurisdiction[];
   entries: readonly ClaimEntry[];
   draft: SkillDraft | null;
   errors: Record<string, PassportCopyKey>;
@@ -150,7 +176,7 @@ export function SkillSection({
                   <button
                     type="button"
                     onClick={() => onOpen(e.id)}
-                    className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     {pt("entry.edit")}
                   </button>
@@ -159,7 +185,7 @@ export function SkillSection({
                       type="button"
                       onClick={() => onRemove(e.id)}
                       disabled={busy}
-                      className="inline-flex h-9 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                       {pt("entry.remove")}
                     </button>
@@ -189,9 +215,22 @@ export function SkillSection({
             <select
               id={`skill-code-${claimType}`}
               value={draft.skillCode}
-              onChange={(ev) =>
-                onDraftChange({ ...draft, skillCode: ev.target.value, skillLevel: "" })
-              }
+              // Switching type discards every value the NEW type cannot carry.
+              // A category chosen for Truckkort is meaningless on Liftkort, and
+              // an expiry entered for ADR must not silently ride along to a
+              // licence that never lapses — the field vanishes from the form,
+              // so a value left behind in state would be invisible and still be
+              // sent.
+              onChange={(ev) => {
+                const next = byCode.get(ev.target.value);
+                onDraftChange({
+                  ...draft,
+                  skillCode: ev.target.value,
+                  skillLevel: "",
+                  jurisdictionCode: next?.requiresJurisdiction ? draft.jurisdictionCode : "",
+                  validUntil: next?.requiresValidUntil ? draft.validUntil : "",
+                });
+              }}
               className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <option value="">—</option>
@@ -239,14 +278,26 @@ export function SkillSection({
               >
                 {pt("skill.field.jurisdiction")}
               </label>
-              <input
+              {/* A select, not a text box. `jurisdiction_code` is FK-constrained,
+                  so two typed letters are an invitation to fail: "SV" is the
+                  language code and "SE" is the country, and the database can
+                  only answer that with a foreign-key violation the holder reads
+                  as "Något gick fel". Offering the vocabulary removes the class
+                  of error instead of explaining it. */}
+              <select
                 id={`skill-jur-${claimType}`}
                 value={draft.jurisdictionCode}
-                maxLength={2}
                 onChange={(ev) => onDraftChange({ ...draft, jurisdictionCode: ev.target.value })}
                 aria-invalid={errors.jurisdictionCode ? true : undefined}
-                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm uppercase text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
+                className="mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <option value="">—</option>
+                {jurisdictions.map((j) => (
+                  <option key={j.code} value={j.code}>
+                    {lang === "sv" ? j.nameSv : j.nameEn} ({j.code})
+                  </option>
+                ))}
+              </select>
               {errors.jurisdictionCode ? (
                 <p className="mt-1 text-sm text-destructive">{pt(errors.jurisdictionCode)}</p>
               ) : null}

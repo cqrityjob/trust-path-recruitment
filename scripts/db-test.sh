@@ -1178,6 +1178,36 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport skill/language taxonomy assertions"
+set +e
+SPSK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_skill_taxonomy_test.sql 2>&1)"
+SPSK_RC=$?
+set -e
+
+echo "$SPSK_OUT" | grep -E "sp_skill_taxonomy_test:" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+# The suite reports one aggregate count rather than per-line "ok"; read it back
+# so a suite that silently stops iterating the taxonomy cannot pass quietly.
+SPSK_PASSED="$(echo "$SPSK_OUT" | sed -n 's/.*sp_skill_taxonomy_test: \([0-9]*\) assertions.*/\1/p' | head -1)"
+SPSK_PASSED="${SPSK_PASSED:-0}"
+
+if [ "$SPSK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport skill taxonomy suite exited with code ${SPSK_RC}." >&2
+  echo "$SPSK_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport skill/language taxonomy"
+else
+  echo "    ok  ${SPSK_PASSED} skill/language taxonomy assertions passed"
+  # The floor is the taxonomy's own size: 19 languages and 5 practical skills,
+  # each saved, read back and trust-checked, plus every value on every scale.
+  # A short run means the loop stopped covering the vocabulary, which is the
+  # exact blindness that let the allowed_levels defect ship.
+  if [ "$SPSK_PASSED" -lt 250 ]; then
+    echo "FAIL: expected at least 250 skill taxonomy assertions, only ${SPSK_PASSED} ran." >&2
+    suite_failed "Security Passport skill/language taxonomy (assertion shortfall: floor 250)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport Phase 2 assertions"
 set +e
 SP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase2_test.sql 2>&1)"
@@ -1448,5 +1478,6 @@ echo "              ${LIB_PASSED} content library + maturity-isolation assertion
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
+echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
 echo "===================================================="
