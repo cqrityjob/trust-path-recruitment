@@ -2976,29 +2976,50 @@ export const dictionaries = {
     "decision.step.requestClarification": "Begär förtydligande",
     "decision.step.gatherMoreEvidence": "Samla ytterligare underlag innan nästa steg",
     "decision.why.safety":
-      "Ett eller flera svar rör säkerhetskritisk bedömning och har lästs av en granskare. Förtydliga de svaren innan processen går vidare — intervjuguiden nedan är ett sätt att göra det.",
+      "Ett säkerhetskritiskt svar behöver följas upp innan processen går vidare.",
     "decision.why.noObserved":
       "Bedömningen gav inga observerade svar att utgå ifrån. Det säger ingenting om personen, bara att underlaget saknas.",
     "decision.why.thinCoverage":
-      "Fler områden berördes för lite än som faktiskt prövades. Ett bredare underlag behövs innan en intervju kan bygga på det här.",
+      "Fler områden berördes för lite än som faktiskt prövades. Komplettera underlaget innan en intervju byggs på det — det säger något om bedömningens bredd och inget om kandidaten.",
     "decision.why.readyForInterview":
-      "Underlaget räcker för att förbereda ett strukturerat samtal. Frågorna nedan är valda utifrån just de här svaren.",
+      "Underlaget räcker för att förbereda ett strukturerat samtal. Använd intervjuguiden nedan — frågorna är valda utifrån just de här svaren.",
     "decision.panel.strongest": "Starkast stöd i underlaget",
-    "decision.panel.strongestNone":
-      "Inget område nådde sammanhållet observerat underlag i den här bedömningen.",
     "decision.panel.followUp": "Viktigast att följa upp",
-    "decision.panel.followUpNone": "Inget område utmärker sig för uppföljning.",
     "decision.panel.safety": "Säkerhetskritisk uppföljning",
     "decision.panel.safetyNote":
       "Visas oavsett hur underlaget ser ut i övrigt. Ett starkt underlag tar aldrig bort en säkerhetskritisk notering.",
-    "decision.panel.uncertain": "Osäkert i underlaget",
-    "decision.panel.uncertainNone": "Inget område är särskilt osäkert.",
-    "decision.panel.thinArea": "{n} uppgift(er) berörde området — för lite för att säga något.",
+    "decision.panel.uncertain": "Begränsat underlag",
     "decision.strip.observed": "Observerade svar",
     "decision.strip.selfReported": "Självrapporterade svar",
     "decision.strip.review": "Granskning",
     "decision.strip.reviewDone": "Klar",
     "decision.strip.reviewOpen": "Pågår",
+    "decision.panel.steadiest": "Stabilaste signalerna i underlaget",
+    "decision.panel.steadiestLede":
+      "Inget observerat område höll ihop nog för att kallas en styrka. Det stadigaste här är vad kandidaten själv beskriver konsekvent — verifiera det i intervju.",
+    "decision.panel.safetyBodyOne":
+      "Ett svar rör en säkerhetskritisk bedömning och har lästs av en granskare.",
+    "decision.panel.safetyBodyMany":
+      "{n} svar rör säkerhetskritiska bedömningar och har lästs av en granskare.",
+    "decision.panel.safetyAction":
+      "Gå igenom kandidatens resonemang i intervjun innan processen går vidare. Intervjuguiden nedan tar upp de områden svaret rörde.",
+    "decision.panel.uncertainBody":
+      "{n} kompetensområden berördes för lite för att tolkas. Det säger något om bedömningens bredd och inget om kandidaten — de listas i kompetensöversikten nedan.",
+    "decision.card.summary": "Sammanfattning",
+    "decision.card.evidence": "Underlag",
+    "decision.card.evidenceBody": "{n} observerade uppgifter i den här bedömningen.",
+    // The recruitment reading of a signal. "Utvecklingsområde" is competence
+    // development's word: it belongs on somebody the organisation employs and
+    // has a development plan with, not on a candidate nobody has met.
+    "decision.signal.strong": "Starkt underlag",
+    "decision.signal.consistent": "Sammanhängande underlag",
+    "decision.signal.mixed": "Blandat underlag",
+    "decision.signal.followUp": "Behöver följas upp",
+    "decision.signal.limited": "Begränsat underlag",
+    "decision.focus.explore_development": "Utforska",
+    "decision.focus.explore_self_report": "Be om ett exempel",
+    "decision.focus.explore_limited_evidence": "Begränsat underlag — fråga",
+    "decision.focus.confirm_strength": "Pröva djupet",
     "decision.card.whyRelevant": "Varför det är relevant",
     "decision.card.followUp": "Följ upp",
     "decision.competencies.title": "Kompetensöversikt",
@@ -6065,29 +6086,47 @@ export const dictionaries = {
     "decision.step.requestClarification": "Ask for clarification",
     "decision.step.gatherMoreEvidence": "Gather more evidence before the next step",
     "decision.why.safety":
-      "One or more responses concern a safety-critical judgement and have been read by a reviewer. Clarify those responses before the process continues — the interview guide below is one way to do it.",
+      "A safety-critical response needs following up before the process continues.",
     "decision.why.noObserved":
       "This assessment produced no observed responses to work from. That says nothing about the person, only that the evidence is missing.",
     "decision.why.thinCoverage":
-      "More areas were barely touched than were actually exercised. A broader basis is needed before an interview can build on this.",
+      "More areas were barely touched than were actually exercised. Broaden the evidence before an interview builds on it — that says something about the breadth of the assessment and nothing about the candidate.",
     "decision.why.readyForInterview":
-      "There is enough here to prepare a structured conversation. The questions below were selected from these specific responses.",
+      "There is enough here to prepare a structured conversation. Use the interview guide below — the questions were selected from these specific responses.",
     "decision.panel.strongest": "Strongest support in the evidence",
-    "decision.panel.strongestNone":
-      "No area reached consistent observed evidence in this assessment.",
     "decision.panel.followUp": "Most important to follow up",
-    "decision.panel.followUpNone": "No area stands out for follow-up.",
     "decision.panel.safety": "Safety-critical follow-up",
     "decision.panel.safetyNote":
       "Shown whatever the rest of the evidence looks like. Strong evidence elsewhere never removes a safety-critical note.",
-    "decision.panel.uncertain": "Uncertain in the evidence",
-    "decision.panel.uncertainNone": "No area is particularly uncertain.",
-    "decision.panel.thinArea": "{n} task(s) touched this area — too few to say anything.",
+    "decision.panel.uncertain": "Limited evidence",
     "decision.strip.observed": "Observed responses",
     "decision.strip.selfReported": "Self-reported responses",
     "decision.strip.review": "Review",
     "decision.strip.reviewDone": "Complete",
     "decision.strip.reviewOpen": "In progress",
+    "decision.panel.steadiest": "Steadiest signals in the evidence",
+    "decision.panel.steadiestLede":
+      "No observed area held together enough to be called a strength. The steadiest thing here is what the candidate consistently describes — verify it in interview.",
+    "decision.panel.safetyBodyOne":
+      "One response concerns a safety-critical judgement and has been read by a reviewer.",
+    "decision.panel.safetyBodyMany":
+      "{n} responses concern safety-critical judgements and have been read by a reviewer.",
+    "decision.panel.safetyAction":
+      "Go through the candidate's reasoning in the interview before the process continues. The guide below covers the areas the response touched.",
+    "decision.panel.uncertainBody":
+      "{n} competency areas were touched too lightly to be read. That says something about the breadth of the assessment and nothing about the candidate — they are listed in the competency overview below.",
+    "decision.card.summary": "Summary",
+    "decision.card.evidence": "Evidence",
+    "decision.card.evidenceBody": "{n} observed tasks in this assessment.",
+    "decision.signal.strong": "Strong evidence",
+    "decision.signal.consistent": "Consistent evidence",
+    "decision.signal.mixed": "Mixed evidence",
+    "decision.signal.followUp": "Needs following up",
+    "decision.signal.limited": "Limited evidence",
+    "decision.focus.explore_development": "Explore",
+    "decision.focus.explore_self_report": "Ask for an example",
+    "decision.focus.explore_limited_evidence": "Limited evidence — ask",
+    "decision.focus.confirm_strength": "Test the depth",
     "decision.card.whyRelevant": "Why this matters",
     "decision.card.followUp": "Follow up",
     "decision.competencies.title": "Competency overview",
