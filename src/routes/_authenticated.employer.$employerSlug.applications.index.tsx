@@ -32,6 +32,7 @@
 // an employer can never be shown (or send) 'withdrawn'.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -60,11 +61,32 @@ import {
   EMPLOYER_NEXT_STATUSES,
   type EmployerSettableStatus,
 } from "@/lib/job-intelligence/application-status";
+import { listEmployerJobs } from "@/lib/job-intelligence/employer-jobs.functions";
+
+// ── WHY THIS LIST TAKES A FILTER FROM THE URL ──────────────────────────
+//
+// Every surface that counts applications -- the dashboard's "new applications"
+// action, the Job Recruitment Hub's candidate list -- used to link HERE, to
+// every application this organisation has ever received, and leave the
+// employer to find the five the number was about. A count that does not land
+// on the rows it counted is a count the reader has to re-derive by hand.
+//
+// Both filters are in the URL rather than in component state, so the view is
+// shareable, survives a reload, and can be linked to precisely by whoever is
+// naming the number. `catch` rather than a hard failure: a stale bookmark
+// shows the unfiltered list rather than a validation error.
+const STATUS_FILTERS = ["submitted", "reviewing", "interview", "hired", "rejected"] as const;
+
+const searchSchema = z.object({
+  job: z.string().uuid().optional().catch(undefined),
+  status: z.enum(STATUS_FILTERS).optional().catch(undefined),
+});
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/applications/")({
   ssr: false,
   component: EmployerApplicationsPage,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
 });
 
 function EmployerApplicationsPage() {
@@ -134,11 +156,23 @@ function ApplicationsList({
   const listFn = useServerFn(listApplicationsForEmployer);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
+  const listJobsFn = useServerFn(listEmployerJobs);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { job: jobFilter, status: statusFilter } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const query = useQuery({
     queryKey: ["employer", employerId, "applications"],
     queryFn: () => listFn({ data: { employerId } }),
+  });
+
+  // Only to name the vacancy in the filter banner. Shares the cache key the
+  // job list and the dashboard already use, so it costs nothing extra, and the
+  // page renders perfectly well before it resolves.
+  const jobsQuery = useQuery({
+    queryKey: ["employer", employerId, "jobs"],
+    queryFn: () => listJobsFn({ data: { employerId } }),
+    enabled: jobFilter !== undefined,
   });
 
   const setStatus = useMutation({
@@ -161,7 +195,24 @@ function ApplicationsList({
     }
   }
 
-  const rows: EmployerApplicationRow[] = query.data ?? [];
+  // Filtered in the browser rather than re-fetched: this page shares its cache
+  // key with the dashboard, which already holds the same rows, and every row in
+  // it is already RLS-scoped to this organisation server-side. The filter is a
+  // view over authorised data, never a substitute for the authorisation.
+  const allRows: EmployerApplicationRow[] = query.data ?? [];
+  const rows = allRows.filter(
+    (r) =>
+      (jobFilter === undefined || r.jobId === jobFilter) &&
+      (statusFilter === undefined || r.status === statusFilter),
+  );
+  const filtered = jobFilter !== undefined || statusFilter !== undefined;
+  const filteredJobTitle = jobFilter
+    ? (() => {
+        const j = (jobsQuery.data ?? []).find((row) => row.id === jobFilter);
+        if (!j) return null;
+        return (lang === "en" ? j.title_en : j.title_sv) || j.title_sv || j.title_en || null;
+      })()
+    : null;
 
   return (
     <EmployerAppShell
@@ -176,6 +227,56 @@ function ApplicationsList({
         {t("employer.applications.heading")}
       </h1>
 
+      {/* The filter is shown, not just applied. Arriving from a dashboard
+          action and seeing a short list is only reassuring if the page says
+          why it is short -- and offers the way back out. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <FilterChip
+          label={t("employer.applications.filter.all")}
+          active={statusFilter === undefined}
+          onSelect={() =>
+            void navigate({ search: (prev) => ({ ...prev, status: undefined }), replace: true })
+          }
+        />
+        {STATUS_FILTERS.map((sf) => (
+          <FilterChip
+            key={sf}
+            label={t(APPLICATION_STATUS_LABEL_KEY[sf])}
+            active={statusFilter === sf}
+            onSelect={() =>
+              void navigate({ search: (prev) => ({ ...prev, status: sf }), replace: true })
+            }
+          />
+        ))}
+      </div>
+
+      {jobFilter !== undefined && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">
+            {t("employer.applications.filter.forJob")}{" "}
+            <span className="font-medium text-foreground">
+              {filteredJobTitle ?? t("employer.jobs.list.untitled")}
+            </span>
+          </span>
+          <Link
+            to="/employer/$employerSlug/jobs/$jobId"
+            params={{ employerSlug, jobId: jobFilter }}
+            className="text-xs font-medium text-accent hover:underline"
+          >
+            {t("employer.jobHub.openJob")}
+          </Link>
+          <button
+            type="button"
+            onClick={() =>
+              void navigate({ search: (prev) => ({ ...prev, job: undefined }), replace: true })
+            }
+            className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {t("employer.applications.filter.clearJob")}
+          </button>
+        </div>
+      )}
+
       {actionError && (
         <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {actionError}
@@ -187,6 +288,23 @@ function ApplicationsList({
           <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : query.isError ? (
           <p className="text-sm text-destructive">{t("employer.applications.error.load")}</p>
+        ) : rows.length === 0 && filtered ? (
+          // A filter that matches nothing is not an empty inbox. Telling an
+          // employer with forty applications that they have none, because they
+          // clicked "Anstalld", would be false.
+          <NoEvidenceState
+            title={t("employer.applications.filter.emptyTitle")}
+            body={t("employer.applications.filter.emptyBody")}
+            action={
+              <button
+                type="button"
+                onClick={() => void navigate({ search: {}, replace: true })}
+                className="inline-flex h-10 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("employer.applications.filter.showAll")}
+              </button>
+            }
+          />
         ) : rows.length === 0 ? (
           // Applications only ever arrive from a published advertisement, so
           // the empty state says where they come from and offers the way
@@ -285,5 +403,34 @@ function ApplicationsList({
         )}
       </div>
     </EmployerAppShell>
+  );
+}
+
+/** One status filter. A button rather than a link because the destination is
+ *  this page: the filter is written to the URL so the view is shareable, but
+ *  the click is not navigation and should not read as it. `aria-pressed` says
+ *  which one is on, because the border alone does not reach a screen reader. */
+function FilterChip({
+  label,
+  active,
+  onSelect,
+}: {
+  label: string;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onSelect}
+      className={
+        active
+          ? "rounded-full border border-accent bg-accent/10 px-3 py-1 text-xs font-semibold text-accent"
+          : "rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      }
+    >
+      {label}
+    </button>
   );
 }

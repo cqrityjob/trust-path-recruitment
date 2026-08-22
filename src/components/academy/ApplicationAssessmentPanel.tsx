@@ -20,11 +20,13 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { ClipboardCheck, FileText, Send } from "lucide-react";
+import { ClipboardCheck, FileText, Send, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   assignFromApplication,
+  getEmployerReviewBoard,
+  getMyReviewCapability,
   listApplicationAssessments,
   listContentLibrary,
   type ApplicationAssessment,
@@ -79,6 +81,32 @@ export function ApplicationAssessmentPanel({
   const assessments = useQuery({
     queryKey: ["employer", employerId, "application", applicationId, "assessments"],
     queryFn: () => listFn({ data: { applicationId } }),
+  });
+
+  // ── WHY THE REVIEW GATE IS READ HERE ────────────────────────────────
+  //
+  // This panel could already say "Under granskning" and stop, which is a dead
+  // end: the work exists, the employer is looking straight at it, and the only
+  // route to it was Bedomningar > Granskningar > find this attempt again. The
+  // board answers, per attempt, what basis THIS reader has to act -- so the
+  // panel can offer the review where the recruiter already is, and where they
+  // may not act, say why instead of showing a control that would be refused.
+  //
+  // It is not an authorisation decision. scp_employer_review_board is the same
+  // membership-checked function the review workspace calls, and the review
+  // route and scp_complete_human_review re-verify everything independently.
+  // Both queries share the review workspace's cache keys, so this costs one
+  // fetch across both surfaces and the two can never disagree.
+  const boardFn = useServerFn(getEmployerReviewBoard);
+  const capabilityFn = useServerFn(getMyReviewCapability);
+
+  const board = useQuery({
+    queryKey: ["academy", "review-board", employerId],
+    queryFn: () => boardFn({ data: { employerId } }),
+  });
+  const capability = useQuery({
+    queryKey: ["academy", "my-review-capability", employerId],
+    queryFn: () => capabilityFn({ data: { employerId } }),
   });
 
   // Only assessments WRITTEN for recruitment, and only ones this organisation
@@ -139,6 +167,16 @@ export function ApplicationAssessmentPanel({
               {a.governanceMode === "closed_test" && (
                 <span className="text-xs text-muted-foreground">{t("journey.closedTest")}</span>
               )}
+              {a.reviewsOutstanding > 0 && (
+                <ReviewAction
+                  employerSlug={employerSlug}
+                  attemptId={a.attemptId}
+                  responsesOpen={a.reviewsOutstanding}
+                  basis={board.data?.find((b) => b.attemptId === a.attemptId)?.basis ?? null}
+                  isReviewer={capability.data?.isReviewer ?? false}
+                  canManageReviewers={capability.data?.canManageReviewers ?? false}
+                />
+              )}
               {a.reportAvailable && (
                 <Link
                   to="/employer/$employerSlug/assessments/results/$attemptId"
@@ -183,5 +221,79 @@ export function ApplicationAssessmentPanel({
         </p>
       )}
     </div>
+  );
+}
+
+/** The review step, offered where the recruiter already is.
+ *
+ *  Three outcomes, and they are genuinely different facts that call for
+ *  different sentences -- which is exactly what the review workspace learned
+ *  and what a single greyed-out button would collapse back into one:
+ *
+ *    may act               a real control, straight to this attempt's queue
+ *    holds no authorisation  say so, and offer the fix to whoever can make it
+ *    authorised, conflicted  say which conflict; a colleague takes this one
+ *
+ *  A null basis means the board has not answered yet (or does not list this
+ *  attempt). Nothing is claimed in that case: no control, no refusal.
+ */
+function ReviewAction({
+  employerSlug,
+  attemptId,
+  responsesOpen,
+  basis,
+  isReviewer,
+  canManageReviewers,
+}: {
+  employerSlug: string;
+  attemptId: string;
+  responsesOpen: number;
+  basis: string | null;
+  isReviewer: boolean;
+  canManageReviewers: boolean;
+}) {
+  const { t } = useT();
+  if (basis === null) return null;
+
+  if (basis === "authorised" || basis === "break_glass") {
+    return (
+      <Link
+        to="/employer/$employerSlug/assessments/reviews/$attemptId"
+        params={{ employerSlug, attemptId }}
+        className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+        {t("journey.reviewResponses").replace("{count}", String(responsesOpen))}
+      </Link>
+    );
+  }
+
+  // Not a dead end: the person who can grant the authorisation is often the
+  // person reading this, and the settings page is where they do it.
+  if (!isReviewer) {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+        {t("journey.reviewNotAuthorised")}
+        {canManageReviewers && (
+          <Link
+            to="/employer/$employerSlug/settings"
+            params={{ employerSlug }}
+            className="font-medium text-accent hover:underline"
+          >
+            {t("academy.reviews.manageReviewers")}
+          </Link>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[13px] text-muted-foreground">
+      {t(
+        basis === "conflict:is_participant"
+          ? "academy.reviews.whyNotOwnResponses"
+          : "academy.reviews.whyNotConflict",
+      )}
+    </span>
   );
 }
