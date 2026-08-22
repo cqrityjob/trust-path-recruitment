@@ -1016,6 +1016,42 @@ export const resolveParticipantIdentity = createServerFn({ method: "POST" })
     return r?.display_email ? { email: String(r.display_email) } : null;
   });
 
+/** Which assignments came from a job application, for one organisation.
+ *
+ *  ── WHY THIS EXISTS ──────────────────────────────────────────────────
+ *
+ *  The participants list links to a released report, and the report can only
+ *  offer the way back into the recruitment process if it knows which
+ *  application it belongs to. That edge is `assessment_assignments`
+ *  .application_id and nothing else holds it: an attempt cannot be traversed
+ *  from the employer's side, because scp_attempts is readable only by the
+ *  person who sat it and by content authors.
+ *
+ *  So the list asks for the mapping it can legitimately read and passes the
+ *  answer along in the link. Plain RLS does the authorisation — the employer
+ *  select policy already requires an active membership — and the row carries
+ *  two ids and nothing about anybody.
+ */
+export const listAssignmentApplications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<Record<string, string>> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase
+      .from("assessment_assignments")
+      .select("id, application_id")
+      .eq("employer_id", data.employerId)
+      .not("application_id", "is", null);
+    // A missing mapping costs one navigation affordance, never the page. The
+    // list must render for an organisation whose policy refuses this read.
+    if (error) return {};
+    const out: Record<string, string> = {};
+    for (const r of (rows ?? []) as { id: string; application_id: string | null }[]) {
+      if (r.application_id) out[r.id] = r.application_id;
+    }
+    return out;
+  });
+
 export const releaseAcademyReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ attemptId: z.string().uuid() }).parse(d))

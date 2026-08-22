@@ -1479,7 +1479,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
     "employer.overview.card.tests.stat.readyToRelease": "Klara att frisläppa",
     "academy.reviews.myTasks": "Mina granskningsuppgifter",
-    "academy.overview.readyToRelease": "Klara att frisläppa",
+    "academy.overview.readyToRelease": "Klara att delas",
     "academy.overview.attemptsAwaitingReview": "Bedömningar som väntar på granskning",
     "academy.history.heading": "Bedömningar",
     "academy.history.lede":
@@ -1509,9 +1509,9 @@ export const dictionaries = {
       "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
     "lifecycle.employer.invited": "Inbjuden",
     "lifecycle.employer.in_progress": "Pågår",
-    "lifecycle.employer.under_review": "Under granskning",
+    "lifecycle.employer.under_review": "Väntar på granskning",
     "lifecycle.employer.processing": "Bearbetas",
-    "lifecycle.employer.ready_to_release": "Klar att frisläppa",
+    "lifecycle.employer.ready_to_release": "Klar att delas",
     "lifecycle.employer.result_available": "Resultat tillgängligt",
     "lifecycle.participant.invited": "Inbjuden",
     "lifecycle.participant.in_progress": "Pågår",
@@ -1522,9 +1522,17 @@ export const dictionaries = {
     "lifecycle.next.awaitingParticipant": "Väntar på deltagare",
     "lifecycle.next.awaitingReview": "Väntar på granskning",
     "lifecycle.next.processing": "Bearbetas automatiskt",
-    "lifecycle.next.release": "Frisläpp resultat",
+    "lifecycle.next.release": "Dela underlaget",
     "lifecycle.next.viewResult": "Visa resultat",
     "lifecycle.next.none": "Ingen åtgärd",
+    "lifecycle.recruitment.invited": "Tilldelad",
+    "lifecycle.recruitment.in_progress": "Pågår",
+    "lifecycle.recruitment.under_review": "Väntar på granskning",
+    "lifecycle.recruitment.processing": "Bearbetas",
+    "lifecycle.recruitment.ready_to_release": "Bedömning klar",
+    "lifecycle.recruitment.result_available": "Kandidatunderlag klart",
+    "lifecycle.next.recruitment.release": "Dela kandidatunderlaget",
+    "lifecycle.next.recruitment.viewResult": "Öppna kandidatunderlaget",
     "lifecycle.purpose.workforce": "Kompetensutveckling",
     "lifecycle.purpose.recruitment": "Rekrytering",
     "employer.team.heading": "Team och granskningsbehörighet",
@@ -2290,7 +2298,7 @@ export const dictionaries = {
     "academy.overview.competenceLede":
       "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
-    "academy.overview.released": "Frisläppta rapporter",
+    "academy.overview.released": "Slutförda bedömningar",
     "academy.overview.awaitingReview": "Svar som väntar på granskning",
     "academy.overview.openLibrary": "Öppna bedömningsbiblioteket",
     "academy.overview.openParticipants": "Visa deltagare",
@@ -2479,14 +2487,18 @@ export const dictionaries = {
     "academy.participants.progress": "Besvarat",
     "academy.participants.awaitingReview": "Väntar på granskning",
     "academy.participants.deadline": "Sista dag",
-    "academy.participants.released": "Frisläppt",
+    "academy.participants.released": "Delat",
     "academy.participants.showIdentity": "Visa vem detta är",
     "academy.participants.identityRefused": "Identiteten kan inte visas för den här deltagaren.",
-    "academy.participants.release": "Frisläpp rapport",
+    "academy.participants.release": "Dela underlaget",
     "academy.participants.releaseBlocked":
       "Rapporten kan inte frisläppas medan ett svar fortfarande väntar på granskning.",
     "academy.participants.releaseFailed": "Rapporten kunde inte frisläppas.",
     "academy.participants.openReport": "Öppna rapport",
+    "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
+    "academy.participants.releaseExplain":
+      "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger deltagaren sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
+    "academy.participants.openReportRecruitment": "Öppna kandidatunderlag",
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
     "academy.participants.reassessmentFailed": "Omprövningen kunde inte bokas.",
@@ -2642,7 +2654,7 @@ export const dictionaries = {
       "Välj utfall, ange allvarlighetsgrad där det krävs och skriv en motivering för att kunna slutföra.",
     "academy.results.title": "Kompetensprofil",
     "academy.results.back": "Tillbaka till deltagare",
-    "academy.results.releasedOn": "Frisläppt",
+    "academy.results.releasedOn": "Delat",
     "academy.results.competencies": "Kompetenser",
     "academy.results.competency": "Kompetens",
     "academy.results.recommendations": "Föreslagen utveckling",
@@ -2948,6 +2960,70 @@ export const dictionaries = {
     "brief.notes.failed": "Det gick inte att spara. Försök igen.",
     "brief.notes.notPermitted":
       "Att registrera intervjuunderlag kräver behörigheten ägare eller administratör.",
+
+    // ── Candidate Decision Support Report V2 (rds-v1) ───────────────────
+    //
+    // Recruitment-context wording. The workforce report keeps its own
+    // vocabulary: a manager reading a development report is not holding
+    // "kandidatunderlag", and renaming both would have made one of them lie.
+    "decision.reportTitle": "Kandidatunderlag",
+    "decision.summaryTitle": "Kandidatöversikt",
+    "decision.recommendedStep": "Rekommenderat nästa steg",
+    "decision.stepIsProcessOnly":
+      "Rekommendationen gäller nästa steg i rekryteringsprocessen. Den är inte ett besked om anställning — det beslutet fattar arbetsgivaren.",
+    "decision.step.structuredInterview": "Genomför strukturerad intervju",
+    "decision.step.additionalAssessment": "Komplettera med ytterligare bedömning",
+    "decision.step.requestClarification": "Begär förtydligande",
+    "decision.step.gatherMoreEvidence": "Samla ytterligare underlag innan nästa steg",
+    "decision.why.safety":
+      "Ett eller flera svar rör säkerhetskritisk bedömning och har lästs av en granskare. Förtydliga de svaren innan processen går vidare — intervjuguiden nedan är ett sätt att göra det.",
+    "decision.why.noObserved":
+      "Bedömningen gav inga observerade svar att utgå ifrån. Det säger ingenting om personen, bara att underlaget saknas.",
+    "decision.why.thinCoverage":
+      "Fler områden berördes för lite än som faktiskt prövades. Ett bredare underlag behövs innan en intervju kan bygga på det här.",
+    "decision.why.readyForInterview":
+      "Underlaget räcker för att förbereda ett strukturerat samtal. Frågorna nedan är valda utifrån just de här svaren.",
+    "decision.panel.strongest": "Starkast stöd i underlaget",
+    "decision.panel.strongestNone":
+      "Inget område nådde sammanhållet observerat underlag i den här bedömningen.",
+    "decision.panel.followUp": "Viktigast att följa upp",
+    "decision.panel.followUpNone": "Inget område utmärker sig för uppföljning.",
+    "decision.panel.safety": "Säkerhetskritisk uppföljning",
+    "decision.panel.safetyNote":
+      "Visas oavsett hur underlaget ser ut i övrigt. Ett starkt underlag tar aldrig bort en säkerhetskritisk notering.",
+    "decision.panel.uncertain": "Osäkert i underlaget",
+    "decision.panel.uncertainNone": "Inget område är särskilt osäkert.",
+    "decision.panel.thinArea": "{n} uppgift(er) berörde området — för lite för att säga något.",
+    "decision.strip.observed": "Observerade svar",
+    "decision.strip.selfReported": "Självrapporterade svar",
+    "decision.strip.review": "Granskning",
+    "decision.strip.reviewDone": "Klar",
+    "decision.strip.reviewOpen": "Pågår",
+    "decision.card.whyRelevant": "Varför det är relevant",
+    "decision.card.followUp": "Följ upp",
+    "decision.competencies.title": "Kompetensöversikt",
+    "decision.competencies.lede":
+      "Varje område bedömningen berörde, med det mönster svaren visade och en fråga att ta vidare. Starkast stöd först, därefter det som behöver följas upp, sist det som berördes för lite.",
+    "decision.method.title": "Om bedömningsunderlaget",
+    "decision.method.basis": "Vad underlaget omfattar",
+    "decision.method.selfReportCount": "Utöver det {n} självrapporterade svar.",
+    "decision.method.oneOccasion": "Underlagets bredd",
+    "decision.method.selfReport": "Självrapporterat är inte observerat",
+    "decision.method.selfReportBody":
+      "Det personen själv beskriver om sitt arbetssätt hålls skilt från det som observerats, i egna avsnitt och med egen märkning på varje rad. Det ska inte läsas som visad kompetens.",
+    "decision.method.thinEvidence": "Begränsat underlag är inte en svaghet",
+    "decision.method.thinEvidenceBody":
+      "När ett område berördes av få uppgifter säger det att bedömningen inte frågade tillräckligt — inte att personen saknar förmågan.",
+    "decision.method.review": "Mänsklig granskning",
+    "decision.method.reviewBody":
+      "{done} av {total} svar som kräver granskning är granskade av en person. Inget underlag kan delas innan den granskningen är klar.",
+    "decision.method.decision": "Beslutet är arbetsgivarens",
+    "decision.method.decisionBody":
+      "CQrityjob ger strukturerat beslutsstöd inför ett samtal. Rapporten är ett underlag från ett bedömningstillfälle, inte ett besked, inte en jämförelse mellan personer och inte ett omdöme om lämplighet.",
+    "decision.actions.title": "Nästa steg i rekryteringen",
+    "decision.actions.lede":
+      "Statusen på ansökan ändras där ansökan hanteras, så att processen har ett enda ställe.",
+    "decision.actions.backToCandidate": "Tillbaka till kandidaten",
 
     // Library.
     "library.tag.recruitment": "Rekrytering",
@@ -4503,7 +4579,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.awaitingReview": "Awaiting review",
     "employer.overview.card.tests.stat.readyToRelease": "Ready to release",
     "academy.reviews.myTasks": "My review tasks",
-    "academy.overview.readyToRelease": "Ready to release",
+    "academy.overview.readyToRelease": "Ready to share",
     "academy.overview.attemptsAwaitingReview": "Assessments awaiting review",
     "academy.history.heading": "Assessments",
     "academy.history.lede":
@@ -4533,9 +4609,9 @@ export const dictionaries = {
       "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
     "lifecycle.employer.invited": "Invited",
     "lifecycle.employer.in_progress": "In progress",
-    "lifecycle.employer.under_review": "Under review",
+    "lifecycle.employer.under_review": "Waiting for review",
     "lifecycle.employer.processing": "Processing",
-    "lifecycle.employer.ready_to_release": "Ready to release",
+    "lifecycle.employer.ready_to_release": "Ready to share",
     "lifecycle.employer.result_available": "Result available",
     "lifecycle.participant.invited": "Invited",
     "lifecycle.participant.in_progress": "In progress",
@@ -4546,9 +4622,17 @@ export const dictionaries = {
     "lifecycle.next.awaitingParticipant": "Waiting for the participant",
     "lifecycle.next.awaitingReview": "Waiting for review",
     "lifecycle.next.processing": "Processing automatically",
-    "lifecycle.next.release": "Release result",
+    "lifecycle.next.release": "Share the material",
     "lifecycle.next.viewResult": "View result",
     "lifecycle.next.none": "No action",
+    "lifecycle.recruitment.invited": "Assigned",
+    "lifecycle.recruitment.in_progress": "In progress",
+    "lifecycle.recruitment.under_review": "Waiting for review",
+    "lifecycle.recruitment.processing": "Processing",
+    "lifecycle.recruitment.ready_to_release": "Assessment complete",
+    "lifecycle.recruitment.result_available": "Candidate brief ready",
+    "lifecycle.next.recruitment.release": "Share the candidate brief",
+    "lifecycle.next.recruitment.viewResult": "Open the candidate brief",
     "lifecycle.purpose.workforce": "Competence development",
     "lifecycle.purpose.recruitment": "Recruitment",
     "employer.team.heading": "Team and review authorisation",
@@ -5308,7 +5392,7 @@ export const dictionaries = {
     "academy.overview.competenceLede":
       "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
-    "academy.overview.released": "Released reports",
+    "academy.overview.released": "Completed assessments",
     "academy.overview.awaitingReview": "Answers awaiting review",
     "academy.overview.openLibrary": "Open the assessment library",
     "academy.overview.openParticipants": "View participants",
@@ -5497,14 +5581,18 @@ export const dictionaries = {
     "academy.participants.progress": "Answered",
     "academy.participants.awaitingReview": "Awaiting review",
     "academy.participants.deadline": "Deadline",
-    "academy.participants.released": "Released",
+    "academy.participants.released": "Shared",
     "academy.participants.showIdentity": "Show who this is",
     "academy.participants.identityRefused": "Identity cannot be shown for this participant.",
-    "academy.participants.release": "Release report",
+    "academy.participants.release": "Share the material",
     "academy.participants.releaseBlocked":
       "The report cannot be released while an answer is still awaiting review.",
     "academy.participants.releaseFailed": "The report could not be released.",
     "academy.participants.openReport": "Open report",
+    "academy.participants.releaseRecruitment": "Share the candidate brief",
+    "academy.participants.releaseExplain":
+      "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the participant their own copy, and allows the person's identity to be requested. The step cannot be undone.",
+    "academy.participants.openReportRecruitment": "Open candidate brief",
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",
     "academy.participants.reassessmentFailed": "The reassessment could not be scheduled.",
@@ -5661,7 +5749,7 @@ export const dictionaries = {
       "Choose an outcome, state a severity where one is required, and write your reasons to complete the review.",
     "academy.results.title": "Competency profile",
     "academy.results.back": "Back to participants",
-    "academy.results.releasedOn": "Released",
+    "academy.results.releasedOn": "Shared",
     "academy.results.competencies": "Competencies",
     "academy.results.competency": "Competency",
     "academy.results.recommendations": "Suggested development",
@@ -5965,6 +6053,66 @@ export const dictionaries = {
     "brief.notes.additional_context": "Additional context",
     "brief.notes.failed": "That could not be saved. Try again.",
     "brief.notes.notPermitted": "Recording interview evidence requires the owner or admin role.",
+
+    // Candidate Decision Support Report V2 (rds-v1) — see the Swedish block.
+    "decision.reportTitle": "Candidate assessment brief",
+    "decision.summaryTitle": "Candidate summary",
+    "decision.recommendedStep": "Recommended next step",
+    "decision.stepIsProcessOnly":
+      "The recommendation concerns the next step in the recruitment process. It is not an employment decision — that one is the employer's.",
+    "decision.step.structuredInterview": "Run a structured interview",
+    "decision.step.additionalAssessment": "Add a further assessment",
+    "decision.step.requestClarification": "Ask for clarification",
+    "decision.step.gatherMoreEvidence": "Gather more evidence before the next step",
+    "decision.why.safety":
+      "One or more responses concern a safety-critical judgement and have been read by a reviewer. Clarify those responses before the process continues — the interview guide below is one way to do it.",
+    "decision.why.noObserved":
+      "This assessment produced no observed responses to work from. That says nothing about the person, only that the evidence is missing.",
+    "decision.why.thinCoverage":
+      "More areas were barely touched than were actually exercised. A broader basis is needed before an interview can build on this.",
+    "decision.why.readyForInterview":
+      "There is enough here to prepare a structured conversation. The questions below were selected from these specific responses.",
+    "decision.panel.strongest": "Strongest support in the evidence",
+    "decision.panel.strongestNone":
+      "No area reached consistent observed evidence in this assessment.",
+    "decision.panel.followUp": "Most important to follow up",
+    "decision.panel.followUpNone": "No area stands out for follow-up.",
+    "decision.panel.safety": "Safety-critical follow-up",
+    "decision.panel.safetyNote":
+      "Shown whatever the rest of the evidence looks like. Strong evidence elsewhere never removes a safety-critical note.",
+    "decision.panel.uncertain": "Uncertain in the evidence",
+    "decision.panel.uncertainNone": "No area is particularly uncertain.",
+    "decision.panel.thinArea": "{n} task(s) touched this area — too few to say anything.",
+    "decision.strip.observed": "Observed responses",
+    "decision.strip.selfReported": "Self-reported responses",
+    "decision.strip.review": "Review",
+    "decision.strip.reviewDone": "Complete",
+    "decision.strip.reviewOpen": "In progress",
+    "decision.card.whyRelevant": "Why this matters",
+    "decision.card.followUp": "Follow up",
+    "decision.competencies.title": "Competency overview",
+    "decision.competencies.lede":
+      "Every area the assessment touched, with the pattern the responses showed and a question to take forward. Strongest support first, then what needs following up, and last what was barely touched.",
+    "decision.method.title": "About this assessment evidence",
+    "decision.method.basis": "What the evidence covers",
+    "decision.method.selfReportCount": "Alongside that, {n} self-reported responses.",
+    "decision.method.oneOccasion": "Breadth of the evidence",
+    "decision.method.selfReport": "Self-reported is not observed",
+    "decision.method.selfReportBody":
+      "What the person describes about their own way of working is kept apart from what was observed — in its own sections, and stamped on every row. It must not be read as demonstrated competence.",
+    "decision.method.thinEvidence": "Limited evidence is not a weakness",
+    "decision.method.thinEvidenceBody":
+      "When few tasks touched an area, that says the assessment did not ask enough — not that the person lacks the ability.",
+    "decision.method.review": "Human review",
+    "decision.method.reviewBody":
+      "{done} of {total} responses requiring review have been read by a person. No material can be shared before that review is complete.",
+    "decision.method.decision": "The decision is the employer's",
+    "decision.method.decisionBody":
+      "CQrityjob provides structured decision support ahead of a conversation. The report is material from one assessment occasion — not a verdict, not a comparison between people, and not a judgement of suitability.",
+    "decision.actions.title": "Next step in the recruitment process",
+    "decision.actions.lede":
+      "The application's status is changed where the application is handled, so the process has a single place.",
+    "decision.actions.backToCandidate": "Back to the candidate",
 
     "library.tag.recruitment": "Recruitment",
     "library.tag.recruitmentTitle":

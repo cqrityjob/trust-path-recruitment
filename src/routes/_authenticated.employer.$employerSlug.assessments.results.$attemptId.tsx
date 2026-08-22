@@ -1,4 +1,4 @@
-// A released competency profile, employer view.
+// A released report, employer view — two audiences, one snapshot.
 //
 // Maturity levels and the evidence behind them. There is no total, no
 // percentage and no overall verdict anywhere on this page — not because they
@@ -7,12 +7,32 @@
 //
 // Safety-critical findings render from their own field, above the fold,
 // regardless of how strong the rest of the profile is.
+//
+// ── WHY THE PAGE FORKS ON personContext ───────────────────────────
+//
+// A candidate report and an employee report answer different questions from the
+// same evidence. A recruiter is deciding what the next step in a hiring process
+// should be; a manager is deciding what to train and watching a picture move
+// across releases. Report V2 restructures the FIRST of those — decision support
+// at the top, methodology once at the bottom — and deliberately leaves the
+// workforce report exactly as it was, because development recommendations and
+// progress over time are not improved by a recruiter's ordering.
+//
+// The fork is read from the FROZEN context, never from the live employment
+// record: an employment that starts later must not retroactively turn a
+// candidate's report into an employee's.
+//
+// A brief-less snapshot (released before the brief existed) always renders the
+// legacy layout, whichever audience it is for. History is not rewritten, and a
+// page that degrades to what it showed last year is better than one that
+// invents the sections it cannot fill.
 
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
+import { z } from "zod";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
@@ -20,6 +40,20 @@ import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import { EmployerDecisionPanel } from "@/components/academy/EmployerDecisionPanel";
 import { CandidateBrief, InterviewNotesPanel } from "@/components/academy/CandidateBrief";
 import { DecisionSummary, ReportContextPanel } from "@/components/academy/ReportContextPanel";
+import {
+  DecisionSupportSummary,
+  RecruitmentActions,
+} from "@/components/academy/DecisionSupportSummary";
+import {
+  CompetencyOverviewSection,
+  InterviewGuideSection,
+  SelfReportedSection,
+} from "@/components/academy/RecruitmentReportSections";
+import { ReportMethodSection } from "@/components/academy/ReportMethodSection";
+import {
+  buildDecisionSupport,
+  buildDecisionSupportInput,
+} from "@/lib/security-competency/decision-support";
 import {
   EvidenceCoverage,
   evidenceStateLabelKey,
@@ -34,7 +68,24 @@ import {
   getSubjectProgress,
   resolveParticipantIdentity,
   type ProgressRow,
+  type ReportSnapshot,
 } from "@/lib/security-competency/academy-employer.functions";
+
+// ── HOW THE REPORT KNOWS WHICH APPLICATION IT BELONGS TO ─────────────
+//
+// It is told, by whoever linked here. The attempt-to-application edge lives on
+// assessment_assignments, and reading it from this page would mean traversing
+// scp_attempts — a table an employer member deliberately cannot select, because
+// attempts belong to the person who sat them. Rather than open a read model to
+// close a navigation gap, the two surfaces that KNOW the application (the
+// candidate page and the participants list) pass it, and the report renders the
+// way back only when it has one. Arriving without it costs nothing: the page
+// still returns to the participants list, which is where it came from.
+const searchSchema = z.object({
+  // Optional and forgiving: a malformed id in a pasted URL should cost the
+  // return link, never the report.
+  application: z.string().uuid().optional().catch(undefined),
+});
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/assessments/results/$attemptId",
@@ -42,10 +93,12 @@ export const Route = createFileRoute(
   ssr: false,
   component: ResultsRoute,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
 });
 
 function ResultsRoute() {
   const { employerSlug, attemptId } = Route.useParams();
+  const { application } = Route.useSearch();
   return (
     <AcademyPage employerSlug={employerSlug}>
       {(ws) => (
@@ -53,6 +106,7 @@ function ResultsRoute() {
           attemptId={attemptId}
           employerSlug={employerSlug}
           employerId={ws.employerId}
+          applicationId={application ?? null}
           canDecide={ws.role === "owner" || ws.role === "admin"}
         />
       )}
@@ -64,11 +118,13 @@ function Report({
   attemptId,
   employerSlug,
   employerId,
+  applicationId,
   canDecide,
 }: {
   attemptId: string;
   employerSlug: string;
   employerId: string;
+  applicationId: string | null;
   canDecide: boolean;
 }) {
   const { t, lang } = useT();
@@ -143,6 +199,30 @@ function Report({
   // that starts later must not retroactively turn a candidate's report into an
   // employee's.
   const isCandidate = r.context?.personContext === "candidate";
+
+  // Report V2 needs a brief to build from. A candidate snapshot without one
+  // predates the brief and takes the legacy path with everybody else.
+  if (isCandidate && r.brief) {
+    const support = buildDecisionSupport(buildDecisionSupportInput(r.brief, r.safetyFlags.length));
+    return (
+      <CandidateDecisionSupportReport
+        report={r}
+        support={support}
+        limitations={limitations}
+        attemptId={attemptId}
+        employerSlug={employerSlug}
+        employerId={employerId}
+        applicationId={applicationId}
+        canDecide={canDecide}
+        identity={identity}
+        onResolveIdentity={() =>
+          void resolveFn({ data: { employerId, subjectId: r.subjectId } }).then((x) =>
+            setIdentity(x?.email ?? t("academy.participants.identityRefused")),
+          )
+        }
+      />
+    );
+  }
 
   return (
     <>
@@ -343,5 +423,123 @@ function ProgressTable({ rows }: { rows: ProgressRow[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * Report V2 — the candidate decision-support report.
+ *
+ * Order is the argument this component makes. Section 1 answers "what do I do
+ * next and why" before anything else is on screen; sections 2 to 4 give the
+ * evidence in the order a recruiter needs it; section 5 states the method once,
+ * in full, at the bottom, where it belongs on a document somebody has already
+ * decided to trust or not.
+ *
+ * Everything rendered here comes from the frozen snapshot. Nothing on this page
+ * scores, ranks, compares or concludes: `support` carries four possible PROCESS
+ * steps and no other verdict exists in the types it is built from.
+ */
+function CandidateDecisionSupportReport({
+  report,
+  support,
+  limitations,
+  attemptId,
+  employerSlug,
+  applicationId,
+  canDecide,
+  identity,
+  onResolveIdentity,
+}: {
+  report: ReportSnapshot;
+  support: ReturnType<typeof buildDecisionSupport>;
+  limitations: string[];
+  attemptId: string;
+  employerSlug: string;
+  employerId: string;
+  applicationId: string | null;
+  canDecide: boolean;
+  identity: string | null;
+  onResolveIdentity: () => void;
+}) {
+  const { t, lang } = useT();
+  const sv = lang !== "en";
+  const r = report;
+  const brief = r.brief!;
+
+  return (
+    <>
+      <Link
+        to="/employer/$employerSlug/assessments/participants"
+        params={{ employerSlug }}
+        className="no-print mb-4 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("academy.results.back")}
+      </Link>
+
+      {/* "Kompetensprofil" is the workforce document. What a recruiter is
+          holding is the material behind one candidate, and calling it what it
+          is stops the page from promising a durable profile that one assessment
+          occasion cannot support. */}
+      <AcademyHeading
+        title={t("decision.reportTitle")}
+        lede={`${t("academy.report.completed")} ${new Date(
+          r.context?.submittedAt ?? r.releasedAt,
+        ).toLocaleDateString(sv ? "sv-SE" : "en-GB")}`}
+      />
+
+      <DecisionSupportSummary support={support} context={r.context} sv={sv} />
+
+      <RecruitmentActions employerSlug={employerSlug} applicationId={applicationId} />
+
+      <CompetencyOverviewSection support={support} modules={brief.modules} sv={sv} />
+
+      <SelfReportedSection areas={brief.selfReported} sv={sv} />
+
+      <InterviewGuideSection entries={brief.interviewGuide} sv={sv} />
+
+      {/* What the conversation gave, recorded after the material it is about. */}
+      <InterviewNotesPanel
+        attemptId={attemptId}
+        canRecord={canDecide}
+        areas={brief.observed.map((o) => ({
+          code: o.areaCode,
+          label: sv ? o.areaSv : o.areaEn,
+        }))}
+      />
+
+      <EmployerDecisionPanel attemptId={attemptId} canDecide={canDecide} />
+
+      <ReportMethodSection
+        observations={r.context?.evidenceObservations ?? 0}
+        contexts={r.context?.evidenceContexts ?? 1}
+        selfReportObservations={r.context?.selfReportObservations ?? 0}
+        reviewsTotal={r.context?.reviewsTotal ?? 0}
+        reviewsCompleted={r.context?.reviewsCompleted ?? 0}
+        pace={brief.pace}
+        limitations={limitations}
+      />
+
+      {/* Provenance and lineage last, and the audited identity reveal with it.
+          Both are what the document is, rather than what it says. */}
+      <ReportContextPanel
+        context={r.context}
+        reportId={r.id}
+        releasedAt={r.releasedAt}
+        identityAction={
+          identity ? (
+            <p className="text-[13px] text-foreground">{identity}</p>
+          ) : (
+            <button
+              type="button"
+              onClick={onResolveIdentity}
+              className="inline-flex min-h-[44px] items-center rounded-[8px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.participants.showIdentity")}
+            </button>
+          )
+        }
+      />
+    </>
   );
 }

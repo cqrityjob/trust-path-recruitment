@@ -143,6 +143,9 @@ export function ApplicationAssessmentPanel({
                 <Link
                   to="/employer/$employerSlug/assessments/results/$attemptId"
                   params={{ employerSlug, attemptId: a.attemptId }}
+                  // Carried so the report can offer the way back to this
+                  // candidate rather than ending on the participants list.
+                  search={{ application: applicationId }}
                   className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline"
                 >
                   <FileText className="h-3.5 w-3.5" aria-hidden="true" />
