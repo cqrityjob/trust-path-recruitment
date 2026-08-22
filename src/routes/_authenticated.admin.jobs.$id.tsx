@@ -389,16 +389,16 @@ function AdminJobEditor() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="external">
-                        {t("employer.jobs.form.applicationMethod.external")}
+                        {t("admin.jobs.detail.applicationMethod.external")}
                       </SelectItem>
                       <SelectItem value="email">
-                        {t("employer.jobs.form.applicationMethod.email")}
+                        {t("admin.jobs.detail.applicationMethod.email")}
                       </SelectItem>
                       <SelectItem value="internal">
-                        {t("employer.jobs.form.applicationMethod.internal")}
+                        {t("admin.jobs.detail.applicationMethod.internal")}
                       </SelectItem>
                       <SelectItem value="unavailable">
-                        {t("employer.jobs.form.applicationMethod.unavailable")}
+                        {t("admin.jobs.detail.applicationMethod.unavailable")}
                       </SelectItem>
                     </SelectContent>
                   </Select>

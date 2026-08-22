@@ -109,6 +109,8 @@ function EmployerJobNewPage() {
 
       <EmployerJobForm
         initial={emptyValues}
+        employerName={workspace.employerName}
+        employerStatus={workspace.employerStatus}
         saving={saveMutation.isPending}
         submitting={submitMutation.isPending}
         error={formError}
