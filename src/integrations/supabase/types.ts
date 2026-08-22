@@ -4272,6 +4272,7 @@ export type Database = {
           profession_id: string | null
           purpose: string
           slug: string
+          standard_for_recruitment: boolean
           updated_at: string
         }
         Insert: {
@@ -4288,6 +4289,7 @@ export type Database = {
           profession_id?: string | null
           purpose: string
           slug: string
+          standard_for_recruitment?: boolean
           updated_at?: string
         }
         Update: {
@@ -4304,6 +4306,7 @@ export type Database = {
           profession_id?: string | null
           purpose?: string
           slug?: string
+          standard_for_recruitment?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -5831,6 +5834,7 @@ export type Database = {
           review_status: string
           reviewed_under_break_glass: boolean
           reviewer_actor_id: string | null
+          reviewer_conflict_disclosed: string | null
           reviewer_rationale: string | null
           scoring_run_id: string | null
           trigger_reason: string
@@ -5845,6 +5849,7 @@ export type Database = {
           review_status?: string
           reviewed_under_break_glass?: boolean
           reviewer_actor_id?: string | null
+          reviewer_conflict_disclosed?: string | null
           reviewer_rationale?: string | null
           scoring_run_id?: string | null
           trigger_reason: string
@@ -5859,6 +5864,7 @@ export type Database = {
           review_status?: string
           reviewed_under_break_glass?: boolean
           reviewer_actor_id?: string | null
+          reviewer_conflict_disclosed?: string | null
           reviewer_rationale?: string | null
           scoring_run_id?: string | null
           trigger_reason?: string
@@ -10028,6 +10034,10 @@ export type Database = {
           outcome: string
           subject_id: string
         }[]
+      }
+      scp_is_standard_recruitment_content: {
+        Args: { _definition_id: string; _employer_id: string }
+        Returns: boolean
       }
       scp_join_human: {
         Args: { _items: string[]; _lang: string }
