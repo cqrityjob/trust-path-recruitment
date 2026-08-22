@@ -72,11 +72,18 @@ BEGIN
   IF (SELECT count(*) FROM public.sp_regulated_roles WHERE market_pack_code = 'SE') < 3 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 1.6 Sweden must have its three regulated roles';
   END IF;
-  IF (SELECT count(DISTINCT market_pack_code) FROM public.sp_regulated_roles) <> 1 THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: 1.7 only Sweden may have roles before its pack ships';
+  -- The invariant is not "Sweden is the only market" -- that was true the day
+  -- this suite was written and stopped being true when the UK pack landed. It
+  -- is that a role can never be live ahead of the rules that define it.
+  IF EXISTS (
+    SELECT 1 FROM public.sp_regulated_roles r
+      JOIN public.sp_market_packs m ON m.code = r.market_pack_code
+     WHERE r.is_active AND NOT m.is_active
+  ) THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 1.7 a regulated role is active inside an inactive market';
   END IF;
   RAISE NOTICE 'ok  1.6 Väktare, Ordningsvakt and Skyddsvakt are distinct roles';
-  RAISE NOTICE 'ok  1.7 a role cannot exist without the market pack that defines it';
+  RAISE NOTICE 'ok  1.7 no role is live inside a market pack that is not';
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 2 -- the legal gate is a constraint, not a habit';

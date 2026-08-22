@@ -1556,6 +1556,69 @@ fi
 # the eight foundation tables and the columns they added. A rollback file that
 # has never been executed is a hope, not a procedure -- and the one property
 # that matters is asserted inside it, namely that Sweden survives.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport UK (SIA) market pack assertions"
+set +e
+SPUK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uk_market_pack_test.sql 2>&1)"
+SPUK_RC=$?
+set -e
+
+echo "$SPUK_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPUK_PASSED="$(echo "$SPUK_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPUK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK market pack suite exited with code ${SPUK_RC}." >&2
+  echo "$SPUK_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport UK market pack"
+else
+  echo "    ok  ${SPUK_PASSED} UK market pack assertions passed"
+  # The suite switches the pack ON to test it and OFF again at the end. A short
+  # run means it may have stopped in between -- leaving an unreviewed market
+  # live in the replayed database, which is the one outcome the pack exists to
+  # make impossible.
+  if [ "$SPUK_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 UK market pack assertions, only ${SPUK_PASSED} ran." >&2
+    suite_failed "Security Passport UK market pack (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Independently of the suite above: the replayed database must never end with
+# an unreviewed market switched on. Asserted here rather than only inside the
+# suite, because a suite that aborted early cannot assert its own cleanup.
+echo "==> Verifying no unreviewed market pack is active"
+psql_q -d "$TEST_DB" -c "
+DO \$mp\$
+DECLARE _bad text;
+BEGIN
+  SELECT string_agg(code, ', ') INTO _bad FROM public.sp_market_packs
+   WHERE is_active AND legal_review_state NOT IN ('approved', 'grandfathered');
+  IF _bad IS NOT NULL THEN
+    RAISE EXCEPTION 'unreviewed market pack(s) are ACTIVE: %', _bad;
+  END IF;
+END \$mp\$;" >/dev/null
+echo "    ok  every active market pack has a recorded review state"
+
+# The UK rollback runs before the Swedish one, which runs before the
+# three-market one. Each restores the claim trigger to the version the previous
+# migration left, so the chain only unwinds correctly in this order.
+echo "==> Verifying the UK market pack rollback"
+set +e
+SPUKRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907092000_sp_uk_market_pack_rollback.sql 2>&1)"
+SPUKRB_RC=$?
+set -e
+
+if [ "$SPUKRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK market pack rollback exited with code ${SPUKRB_RC}." >&2
+  echo "$SPUKRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "UK market pack rollback"
+else
+  echo "    ok  the UK market pack rolls back cleanly, Sweden untouched"
+fi
+
 # The Swedish rollback must run FIRST: it restores the claim trigger to the
 # three-market version that the next step then replaces with the pre-market
 # one. The other order leaves a trigger describing a schema that is gone.
@@ -1668,5 +1731,6 @@ echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
-echo "              ${SPSE_PASSED} Swedish truth model assertions"
+echo "              ${SPSE_PASSED} Swedish truth model assertions,"
+echo "              ${SPUK_PASSED} UK market pack assertions"
 echo "===================================================="
