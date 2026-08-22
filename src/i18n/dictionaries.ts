@@ -2520,6 +2520,8 @@ export const dictionaries = {
     "academy.reviews.lede":
       "Fritextsvar bedöms av en människa. Granskaren utses av organisationen, och den som tilldelade testet får aldrig granska det själv.",
     "academy.reviews.awaiting": "Svar som väntar",
+    "academy.reviews.noRubric":
+      "Den här skrivuppgiften saknar en styrd bedömningsmall, så ingen bedömning kan registreras för den. Det är ett fel i innehållet — kontakta CQrityjob. Inget du skriver här går förlorat för andra svar.",
     "academy.reviews.openBlockedList": "Visa blockerade resultat",
     "academy.reviews.review": "Granska",
     "academy.reviews.responsesOpen": "Svar att granska",
@@ -5536,6 +5538,8 @@ export const dictionaries = {
     "academy.reviews.lede":
       "Written answers are judged by a person. The reviewer is appointed by the organisation, and whoever assigned an assessment may never review it themselves.",
     "academy.reviews.awaiting": "Answers waiting",
+    "academy.reviews.noRubric":
+      "This written task has no governed rubric, so no assessment can be recorded against it. That is a content fault — contact CQrityjob. Nothing you enter here is lost for the other answers.",
     "academy.reviews.openBlockedList": "Show blocked results",
     "academy.reviews.review": "Review",
     "academy.reviews.responsesOpen": "Answers to review",

@@ -279,12 +279,30 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
   const rubric = review.rubric ?? [];
   const needsRubric = review.itemFormat === "constructed_response" && rubric.length > 0;
 
+  // ── A WRITTEN ANSWER WITH NO RUBRIC ─────────────────────────────────
+  //
+  // scp_complete_human_review refuses this with SCP_NO_RUBRIC: a constructed
+  // response has no governed way to become a number without one, and inventing
+  // a default level would put a fabricated measurement on somebody's record.
+  //
+  // The client used to be blind to it. `needsRubric` is false when the rubric
+  // is empty, so nothing was required, the button was enabled, and the refusal
+  // arrived only after the reviewer had read the answer, chosen a severity and
+  // written their reasoning -- appearing as "Granskningen kunde inte sparas."
+  //
+  // #65 removed the content defect that made this reachable, and asserts in the
+  // database that no constructed response on any form lacks a rubric. This
+  // stays as the honest answer if one ever appears again: say what is wrong,
+  // before the work rather than after it.
+  const rubricMissing = review.itemFormat === "constructed_response" && rubric.length === 0;
+
   // The same rules scp_complete_human_review enforces, stated once here so the
   // button can be honest about them instead of letting the database refuse
   // after the reviewer has already written their reasoning.
   const missingFinding = review.findingRequired && finding === null;
   const missingLevels = needsRubric && rubric.some((d) => levels[d.dimension_key] === undefined);
-  const incomplete = outcome === null || rationale.trim() === "" || missingFinding || missingLevels;
+  const incomplete =
+    rubricMissing || outcome === null || rationale.trim() === "" || missingFinding || missingLevels;
 
   const m = useMutation({
     mutationFn: () =>
@@ -323,7 +341,9 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
                 ? t("academy.reviews.needRubric")
                 : code === "SCP_REVIEW_NOT_PENDING"
                   ? t("academy.reviews.alreadyCompleted")
-                  : t("academy.reviews.failed"),
+                  : code === "SCP_NO_RUBRIC"
+                    ? t("academy.reviews.noRubric")
+                    : t("academy.reviews.failed"),
       );
     },
   });
@@ -533,7 +553,7 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
         </button>
         {incomplete && (
           <p className="text-[12px] leading-relaxed text-muted-foreground">
-            {t("academy.reviews.completeBlocked")}
+            {rubricMissing ? t("academy.reviews.noRubric") : t("academy.reviews.completeBlocked")}
           </p>
         )}
       </form>
