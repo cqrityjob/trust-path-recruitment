@@ -287,13 +287,34 @@ function ReviewAction({
     );
   }
 
+  // Self-review. The rule is not negotiable and does not move: nobody reviews
+  // their own answers, and this branch never renders a control that would do
+  // it. What it stops doing is ending the sentence there. An owner reading
+  // "a colleague must take this one" and holding no way to produce such a
+  // colleague was the actual dead end -- so where this reader can staff the
+  // team, the fix is one click away.
+  if (basis === "conflict:is_participant") {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+        {t("academy.reviews.whyNotOwnResponses")}
+        {canManageReviewers && (
+          <>
+            <span>{t("academy.reviews.ownResponsesFix")}</span>
+            <Link
+              to="/employer/$employerSlug/settings"
+              params={{ employerSlug }}
+              hash="team"
+              className="font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("employer.team.manageLink")}
+            </Link>
+          </>
+        )}
+      </span>
+    );
+  }
+
   return (
-    <span className="text-[13px] text-muted-foreground">
-      {t(
-        basis === "conflict:is_participant"
-          ? "academy.reviews.whyNotOwnResponses"
-          : "academy.reviews.whyNotConflict",
-      )}
-    </span>
+    <span className="text-[13px] text-muted-foreground">{t("academy.reviews.whyNotConflict")}</span>
   );
 }

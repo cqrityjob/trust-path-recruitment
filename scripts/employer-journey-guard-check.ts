@@ -59,6 +59,12 @@ const CANDIDATE = `${R}applications.$applicationId.tsx`;
 const PARTICIPANTS = `${R}assessments.participants.tsx`;
 const RESULTS = `${R}assessments.results.$attemptId.tsx`;
 const PANEL = "src/components/academy/ApplicationAssessmentPanel.tsx";
+const REVIEWS = `${R}assessments.reviews.index.tsx`;
+const SETTINGS = `${R}settings.tsx`;
+const TEAM_PANEL = "src/components/employer/EmployerTeamPanel.tsx";
+const JOIN = "src/routes/_authenticated.employer.join.tsx";
+const ONBOARDING_FNS = "src/lib/job-intelligence/employer-onboarding.functions.ts";
+const ROUTE_TREE = "src/routeTree.gen.ts";
 
 /** The source of one JSX element, from its opening tag to the matching `>`
  *  of that tag plus a generous tail, so `params`/`search`/`to` on the same
@@ -196,6 +202,204 @@ function elementWithTarget(src: string, to: string): string | null {
     `F: the results route must read the application through to the surface that ` +
       `renders the way back.`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// G. Team & permissions: an owner can actually produce a colleague.
+// ---------------------------------------------------------------------------
+//
+// The capability was complete in the database for months and had no interface:
+// listAccessRequestsForMyEmployer and decideAccessRequest were written,
+// wrapped and RLS-tested, and called from nowhere in the application. An owner
+// told "a colleague with review authorisation must take this one" had no way
+// to produce one. These assertions exist so that cannot silently become true
+// again -- a server function with no call site is invisible to every other
+// check in this repository.
+
+{
+  const team = stripComments(read(TEAM_PANEL));
+  const join = stripComments(read(JOIN));
+  const settings = stripComments(read(SETTINGS));
+  const tree = read(ROUTE_TREE);
+
+  // The owner's half is wired.
+  for (const fn of ["listAccessRequestsForMyEmployer", "decideAccessRequest", "getEmployerTeam"]) {
+    expect(
+      team.includes(fn),
+      `G: ${TEAM_PANEL} must call ${fn} -- it is the surface that makes the ` +
+        `existing access-request model reachable by the customer.`,
+    );
+  }
+  expect(
+    settings.includes("<EmployerTeamPanel"),
+    `G: the Organisation page must render the team panel.`,
+  );
+
+  // The invite is a link to the join route, carrying the organisation.
+  expect(
+    /\/employer\/join\?org=\$\{employerId\}/.test(team),
+    `G: the invite control must produce /employer/join?org=<employerId>.`,
+  );
+
+  // The colleague's half is wired, and is a REQUEST -- never a membership.
+  expect(join.includes("requestAccessToEmployer"), `G: ${JOIN} must call requestAccessToEmployer.`);
+  expect(
+    /org:\s*z\.string\(\)\.uuid\(\)/.test(join),
+    `G: the join route must validate the organisation as a uuid.`,
+  );
+  expect(
+    tree.includes("_authenticated.employer.join"),
+    `G: the join route is not registered in the route tree. Run a build.`,
+  );
+
+  // The reason the previous self-service request page was removed was
+  // DISCOVERY, not the request itself. That objection must stay answered:
+  // no directory, no search, no name lookup on this page.
+  for (const banned of ["findMatchingEmployers", "employers"]) {
+    expect(
+      !join.includes(banned),
+      `G: ${JOIN} must not reach for an employer directory (${banned}). The ` +
+        `organisation comes from the link and is never searched for.`,
+    );
+  }
+
+  // No parallel membership architecture, and no privilege escalation path.
+  for (const banned of [
+    "adminCreateEmployerMembership",
+    "adminUpdateEmployerMembershipRole",
+    "adminUpdateEmployerMembershipStatus",
+    "employer_memberships",
+  ]) {
+    expect(
+      !team.includes(banned),
+      `G: ${TEAM_PANEL} must not touch ${banned}. Membership is created only by ` +
+        `approve_access_request(), which does its own owner/admin check.`,
+    );
+  }
+
+  // Handing over the organisation is not a queue action.
+  expect(
+    !/grantedRole:\s*"owner"/.test(team),
+    `G: approving a request must never grant the owner role.`,
+  );
+  // Only the three roles the database already has.
+  const roles = [...team.matchAll(/grantedRole:\s*"([a-z]+)"/g)].map((m) => m[1]);
+  for (const role of roles) {
+    expect(
+      role === "admin" || role === "member",
+      `G: unknown employer role "${role}" -- the model is owner/admin/member and ` +
+        `this pass introduces no new one.`,
+    );
+  }
+
+  // Reviewer grant/revoke still goes through the governed functions.
+  for (const fn of ["grantEmployerReviewer", "revokeEmployerReviewer"]) {
+    expect(team.includes(fn), `G: ${TEAM_PANEL} must manage review access through ${fn}.`);
+  }
+  // Granting recruitment review must not silently drop a workforce scope the
+  // person already holds.
+  expect(
+    /new Set\(\[\.\.\.m\.reviewerUseCases,\s*"recruitment"\]\)/.test(team),
+    `G: granting recruitment review must preserve any existing use-case scope.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// H. Self-review stays blocked, and stops being a dead end.
+// ---------------------------------------------------------------------------
+
+{
+  const panel = stripComments(read(PANEL));
+  const reviews = stripComments(read(REVIEWS));
+
+  for (const [name, src] of [
+    [PANEL, panel],
+    [REVIEWS, reviews],
+  ] as const) {
+    // The protection itself.
+    expect(
+      src.includes("conflict:is_participant"),
+      `H: ${name} must still recognise the self-review conflict.`,
+    );
+    expect(
+      src.includes("academy.reviews.whyNotOwnResponses"),
+      `H: ${name} must still say why a participant cannot review their own answers.`,
+    );
+    // The way out, and only for somebody who can actually take it.
+    expect(
+      src.includes("employer.team.manageLink") && src.includes("canManageReviewers"),
+      `H: ${name} must offer "Hantera team & behörigheter" to a reader who can ` +
+        `staff the team -- otherwise the block is a dead end.`,
+    );
+    expect(
+      /hash="team"/.test(src),
+      `H: ${name} must deep-link to the team section, not the top of the ` + `Organisation page.`,
+    );
+  }
+
+  // The anchor the deep link needs.
+  expect(
+    /id="team"/.test(read(TEAM_PANEL)),
+    `H: the team panel must carry id="team" for the deep link to land on.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// I. The request queue identifies people, without becoming a contact export.
+// ---------------------------------------------------------------------------
+
+{
+  const fns = stripComments(read(ONBOARDING_FNS));
+  expect(
+    fns.includes("requesterDisplayName"),
+    `I: the access-request queue must resolve a display name -- an owner cannot ` +
+      `decide about a UUID.`,
+  );
+  expect(
+    !/select\("id, display_name, email|\bemail\b/.test(
+      fns.split("listAccessRequestsForMyEmployer")[1]?.slice(0, 2000) ?? "",
+    ),
+    `I: the access-request queue must not return email addresses.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// J. Both languages, for every key the team and join surfaces render.
+// ---------------------------------------------------------------------------
+
+{
+  const sv = dictionaries.sv as Record<string, string>;
+  const en = dictionaries.en as Record<string, string>;
+  const rendered = [read(TEAM_PANEL), read(JOIN), read(SETTINGS), read(PANEL), read(REVIEWS)].join(
+    "\n",
+  );
+
+  const used = new Set<string>();
+  for (const m of rendered.matchAll(
+    /["'`](employer\.(?:team|join|settings\.section)\.[a-zA-Z0-9.]+|academy\.reviews\.ownResponsesFix)["'`]/g,
+  )) {
+    used.add(m[1]);
+  }
+
+  expect(
+    used.size >= 30,
+    `J: expected the team/join keys to be found in the surfaces that render them, ` +
+      `found ${used.size}. Has the scan stopped matching?`,
+  );
+
+  for (const key of [...used].sort()) {
+    if (!sv[key]) errors.push(`J: dictionaries.sv is missing "${key}".`);
+    if (!en[key]) errors.push(`J: dictionaries.en is missing "${key}".`);
+    if (sv[key] && en[key] && sv[key] === en[key]) {
+      // Verified as genuinely identical in both languages.
+      const SAME_IS_FINE = new Set(["employer.team.col.status", "employer.team.col.person"]);
+      if (!SAME_IS_FINE.has(key)) {
+        errors.push(
+          `J: "${key}" is identical in sv and en ("${sv[key]}") -- a missed translation.`,
+        );
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

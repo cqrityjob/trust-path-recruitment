@@ -255,6 +255,10 @@ const listRequestsForEmployerSchema = z.object({
 export type IncomingAccessRequest = {
   id: string;
   requesterUserId: string;
+  /** Best-effort. A colleague asking to join is a person, and an owner cannot
+   *  decide about a UUID. Null when the lookup is unavailable, and the row
+   *  still renders and still decides -- see the note at the lookup itself. */
+  requesterDisplayName: string | null;
   message: string | null;
   status: "pending" | "approved" | "denied";
   createdAt: string;
@@ -275,9 +279,38 @@ export const listAccessRequestsForMyEmployer = createServerFn({ method: "POST" }
       .eq("employer_id", data.employerId)
       .order("created_at", { ascending: false });
     if (error) throw new Error("Could not load access requests.");
+
+    // The same narrow, already-authorised name lookup listApplicationsForEmployer
+    // performs, and for the same reason: profiles is self-select-only under RLS,
+    // so an owner reading their own inbound requests cannot see who sent them.
+    //
+    // Best-effort and deliberately so. The decision controls, the message and the
+    // date are all complete without a name, and the panel renders a neutral
+    // fallback -- so an environment with no service-role key configured shows an
+    // owner a decidable request rather than an error where their team should be.
+    const requesterIds: string[] = Array.from(
+      new Set((rows ?? []).map((r: { requester_user_id: string }) => r.requester_user_id)),
+    );
+    const nameByUserId = new Map<string, string | null>();
+    if (requesterIds.length > 0) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: profileRows } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", requesterIds);
+        for (const p of profileRows ?? []) {
+          nameByUserId.set(p.id as string, (p.display_name as string | null) ?? null);
+        }
+      } catch (e) {
+        console.error("[employer-onboarding] requester name lookup failed", e);
+      }
+    }
+
     return (rows ?? []).map((row: any) => ({
       id: row.id as string,
       requesterUserId: row.requester_user_id as string,
+      requesterDisplayName: nameByUserId.get(row.requester_user_id as string) ?? null,
       message: row.message as string | null,
       status: row.status as IncomingAccessRequest["status"],
       createdAt: row.created_at as string,

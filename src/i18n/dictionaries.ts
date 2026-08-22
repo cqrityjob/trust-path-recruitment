@@ -1633,7 +1633,57 @@ export const dictionaries = {
     "lifecycle.next.recruitment.viewResult": "Underlaget är tillgängligt",
     "lifecycle.purpose.workforce": "Kompetensutveckling",
     "lifecycle.purpose.recruitment": "Rekrytering",
-    "employer.team.heading": "Team och granskningsbehörighet",
+    "employer.team.heading": "Team & behörigheter",
+    "employer.team.invite": "Bjud in användare",
+    "employer.team.invite.heading": "Så lägger du till en kollega",
+    "employer.team.invite.step1":
+      "Skicka länken nedan till din kollega. Den som inte redan har ett konto skapar ett först.",
+    "employer.team.invite.step2":
+      "När kollegan har begärt åtkomst dyker begäran upp här, och du väljer roll när du godkänner.",
+    "employer.team.invite.linkLabel": "Inbjudningslänk",
+    "employer.team.invite.copy": "Kopiera länk",
+    "employer.team.invite.copied": "Kopierad",
+    "employer.team.requests.heading": "Väntar på ditt svar",
+    "employer.team.requests.unknownPerson": "Okänd person",
+    "employer.team.requests.approveMember": "Godkänn som rekryterare",
+    "employer.team.requests.approveAdmin": "Godkänn som administratör",
+    "employer.team.requests.deny": "Neka",
+    "employer.team.col.recruitment": "Rekrytering",
+    "employer.team.col.review": "Granska bedömningar",
+    "employer.team.col.status": "Status",
+    "employer.team.status.active": "Aktiv",
+    "employer.team.status.invited": "Inväntar svar",
+    "employer.team.status.suspended": "Avstängd",
+    "employer.team.status.removed": "Borttagen",
+    "employer.team.yes": "Ja",
+    "employer.team.no": "Nej",
+    "employer.team.grantReview": "Ge granskningsbehörighet",
+    "employer.team.revokeReview": "Ta bort granskningsbehörighet",
+    "employer.team.noRecruitmentReviewerWarning":
+      "Ingen i organisationen får granska rekryteringsbedömningar. Kandidatunderlag kan då inte bli klara och inga resultat kan delas.",
+    "employer.settings.section.company": "Företagsuppgifter",
+
+    // The self-review block, made actionable. The rule does not change --
+    // nobody reviews their own answers -- but the owner is now told what to do
+    // about it instead of being left at a full stop.
+    "employer.team.manageLink": "Hantera team & behörigheter",
+    "academy.reviews.ownResponsesFix":
+      "Bjud in en kollega och ge hen granskningsbehörighet, så kan hen ta den här.",
+
+    "employer.join.heading": "Begär åtkomst till organisationen",
+    "employer.join.body":
+      "Du har fått en länk till en organisation på CQrityjob. Skicka en begäran här, så avgör en ägare eller administratör i organisationen om du ska få åtkomst. Du får ingen åtkomst förrän någon har godkänt begäran.",
+    "employer.join.messageLabel": "Meddelande (valfritt)",
+    "employer.join.messagePlaceholder": "Till exempel din roll, så att mottagaren vet vem du är.",
+    "employer.join.submit": "Skicka begäran",
+    "employer.join.sending": "Skickar…",
+    "employer.join.error": "Begäran kunde inte skickas. Försök igen.",
+    "employer.join.sentHeading": "Begäran skickad",
+    "employer.join.sentBody":
+      "En ägare eller administratör i organisationen får se din begäran och väljer roll när den godkänns. Du ser organisationen i din arbetsyta så snart den är godkänd.",
+    "employer.join.noOrgHeading": "Länken saknar organisation",
+    "employer.join.noOrgBody":
+      "Länken är ofullständig. Be den som bjöd in dig att skicka den igen från Organisation → Team & behörigheter.",
     "employer.team.lede":
       "Vilka som tillhör organisationen, och vilka av dem som får granska deltagarnas svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
     "employer.team.separationNotice":
@@ -1649,7 +1699,7 @@ export const dictionaries = {
     "employer.team.you": "(du)",
     "employer.team.role.owner": "Ägare",
     "employer.team.role.admin": "Administratör",
-    "employer.team.role.member": "Medlem",
+    "employer.team.role.member": "Rekryterare",
     "employer.team.useCase.workforce": "Kompetensutveckling",
     "employer.team.useCase.recruitment": "Rekrytering",
     "employer.team.notReviewer": "Ingen granskningsbehörighet",
@@ -4852,7 +4902,58 @@ export const dictionaries = {
     "lifecycle.next.recruitment.viewResult": "The brief is available",
     "lifecycle.purpose.workforce": "Competence development",
     "lifecycle.purpose.recruitment": "Recruitment",
-    "employer.team.heading": "Team and review authorisation",
+    "employer.team.heading": "Team & permissions",
+    "employer.team.invite": "Invite a user",
+    "employer.team.invite.heading": "How to add a colleague",
+    "employer.team.invite.step1":
+      "Send the link below to your colleague. If they do not have an account yet, they create one first.",
+    "employer.team.invite.step2":
+      "Once they have requested access, the request appears here and you choose their role as you approve it.",
+    "employer.team.invite.linkLabel": "Invitation link",
+    "employer.team.invite.copy": "Copy link",
+    "employer.team.invite.copied": "Copied",
+    "employer.team.requests.heading": "Waiting for your decision",
+    "employer.team.requests.unknownPerson": "Unknown person",
+    "employer.team.requests.approveMember": "Approve as recruiter",
+    "employer.team.requests.approveAdmin": "Approve as administrator",
+    "employer.team.requests.deny": "Deny",
+    "employer.team.col.recruitment": "Recruitment",
+    "employer.team.col.review": "Review assessments",
+    "employer.team.col.status": "Status",
+    "employer.team.status.active": "Active",
+    "employer.team.status.invited": "Awaiting response",
+    "employer.team.status.suspended": "Suspended",
+    "employer.team.status.removed": "Removed",
+    "employer.team.yes": "Yes",
+    "employer.team.no": "No",
+    "employer.team.grantReview": "Give review permission",
+    "employer.team.revokeReview": "Remove review permission",
+    "employer.team.noRecruitmentReviewerWarning":
+      "Nobody in this organisation may review recruitment assessments. Candidate briefs cannot be completed and no results can be shared.",
+    "employer.settings.section.company": "Company details",
+
+    // The self-review block, made actionable. The rule does not change --
+    // nobody reviews their own answers -- but the owner is now told what to do
+    // about it instead of being left at a full stop.
+    "employer.team.manageLink": "Manage team & permissions",
+    "academy.reviews.ownResponsesFix":
+      "Invite a colleague and give them review permission, and they can take this one.",
+
+    "employer.join.heading": "Request access to the organisation",
+    "employer.join.body":
+      "You have been sent a link to an organisation on CQrityjob. Send a request here and an owner or administrator in that organisation decides whether you get access. You have no access until somebody approves the request.",
+    "employer.join.messageLabel": "Message (optional)",
+    "employer.join.messagePlaceholder":
+      "For example your role, so the recipient knows who you are.",
+    "employer.join.submit": "Send request",
+    "employer.join.sending": "Sending…",
+    "employer.join.error": "The request could not be sent. Please try again.",
+    "employer.join.sentHeading": "Request sent",
+    "employer.join.sentBody":
+      "An owner or administrator in the organisation will see your request and chooses your role when approving it. The organisation appears in your workspace as soon as it is approved.",
+    "employer.join.noOrgHeading": "The link has no organisation",
+    "employer.join.noOrgBody":
+      "This link is incomplete. Ask whoever invited you to send it again from Organisation → Team & permissions.",
     "employer.team.lede":
       "Who belongs to the organisation, and which of them may review participants' responses. Review authorisation grants access to free-text answers and is granted per person.",
     "employer.team.separationNotice":
@@ -4868,7 +4969,7 @@ export const dictionaries = {
     "employer.team.you": "(you)",
     "employer.team.role.owner": "Owner",
     "employer.team.role.admin": "Administrator",
-    "employer.team.role.member": "Member",
+    "employer.team.role.member": "Recruiter",
     "employer.team.useCase.workforce": "Competence development",
     "employer.team.useCase.recruitment": "Recruitment",
     "employer.team.notReviewer": "No review authorisation",

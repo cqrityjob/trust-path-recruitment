@@ -176,6 +176,9 @@ function SettingsForm({
           }}
           className="mt-6 max-w-xl space-y-4"
         >
+          <h2 className="text-xl font-semibold text-foreground">
+            {t("employer.settings.section.company")}
+          </h2>
           <label className="block text-sm">
             <span className="text-foreground">{t("employer.settings.field.name")}</span>
             <input
