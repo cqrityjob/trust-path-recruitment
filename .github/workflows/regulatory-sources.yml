@@ -1,0 +1,99 @@
+# Weekly check that the official sources behind the market packs still say
+# what they said when somebody last read them.
+#
+# ── THIS WORKFLOW CHANGES NOTHING ──────────────────────────────────────
+#
+# It opens or updates ONE issue and stops. It does not edit the baseline, does
+# not touch a market pack, does not commit, and has no write access to the
+# repository contents. A regulator editing a page must never be able to
+# reconfigure the product; a human reads the issue and decides.
+name: Regulatory sources
+
+on:
+  schedule:
+    # Mondays 06:17 UTC. Off the hour on purpose — the top of the hour is when
+    # every cron on GitHub fires at once and jobs queue behind each other.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: regulatory-sources
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Fingerprint the official sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Non-zero exit means drift, which is a finding rather than a build
+      # failure: the job's product is the issue below, and stopping here would
+      # throw away the report that explains what moved.
+      - name: Check registered regulatory sources
+        id: monitor
+        continue-on-error: true
+        run: bun run regulatory-sources:check
+
+      - name: Open or update the review issue
+        if: steps.monitor.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITLE="Regulatory sources changed — review needed"
+          BODY_FILE=regulatory-source-report.md
+
+          if [ ! -f "$BODY_FILE" ]; then
+            echo "The monitor failed before writing a report — that is a script" >&2
+            echo "error, not source drift. Failing loudly rather than opening an" >&2
+            echo "issue that would misdescribe it." >&2
+            exit 1
+          fi
+
+          # One issue, reused. A new issue every Monday for the same unchanged
+          # finding is how a real signal becomes noise nobody opens.
+          EXISTING="$(gh issue list --state open --search "$TITLE in:title" \
+            --json number --jq '.[0].number // empty')"
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body-file "$BODY_FILE"
+            echo "Commented on existing issue #${EXISTING}"
+          else
+            gh issue create --title "$TITLE" --body-file "$BODY_FILE"
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regulatory-source-report
+          path: regulatory-source-report.md
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # A crash in the monitor itself (a bad parse, a missing migration) is a
+      # real failure and must not be swallowed by continue-on-error above.
+      # Exit code 2 is reserved for that; 1 means drift and is handled.
+      - name: Fail the job if the monitor itself broke
+        if: steps.monitor.outcome == 'failure'
+        run: |
+          if [ ! -f regulatory-source-report.md ]; then
+            echo "monitor produced no report — treating as a script failure" >&2
+            exit 1
+          fi
+          echo "Drift reported and filed as an issue. Not failing the workflow."
