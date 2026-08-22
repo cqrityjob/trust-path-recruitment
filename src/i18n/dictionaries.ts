@@ -1477,7 +1477,7 @@ export const dictionaries = {
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
     "employer.overview.card.tests.stat.active": "Aktiva",
     "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
-    "employer.overview.card.tests.stat.readyToRelease": "Klara att frisläppa",
+    "employer.overview.card.tests.stat.readyToRelease": "Klara att delas",
     "academy.reviews.myTasks": "Mina granskningsuppgifter",
     "academy.overview.readyToRelease": "Klara att delas",
     "academy.overview.attemptsAwaitingReview": "Bedömningar som väntar på granskning",
@@ -2482,7 +2482,7 @@ export const dictionaries = {
     "academy.assign.doneAction": "Klar",
     "academy.participants.title": "Deltagare",
     "academy.participants.lede":
-      "Varje rad är en pseudonym referens. Vem personen är visas först när du uttryckligen frågar, och först när ett resultat har frisläppts.",
+      "Varje rad är en pseudonym referens. Vem personen är visas först när du uttryckligen frågar, och först när underlaget har delats.",
     "academy.participants.subject": "Referens",
     "academy.participants.progress": "Besvarat",
     "academy.participants.awaitingReview": "Väntar på granskning",
@@ -2492,8 +2492,8 @@ export const dictionaries = {
     "academy.participants.identityRefused": "Identiteten kan inte visas för den här deltagaren.",
     "academy.participants.release": "Dela underlaget",
     "academy.participants.releaseBlocked":
-      "Rapporten kan inte frisläppas medan ett svar fortfarande väntar på granskning.",
-    "academy.participants.releaseFailed": "Rapporten kunde inte frisläppas.",
+      "Underlaget kan inte delas medan ett svar fortfarande väntar på granskning.",
+    "academy.participants.releaseFailed": "Underlaget kunde inte delas.",
     "academy.participants.openReport": "Öppna rapport",
     "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
     "academy.participants.releaseExplain":
@@ -2664,9 +2664,9 @@ export const dictionaries = {
     "academy.results.progress": "Utveckling över tid",
     "academy.results.progressNeedsTwo":
       "Utveckling går att visa först när det finns minst två frisläppta resultat att jämföra.",
-    "academy.results.notReleasedTitle": "Ingen frisläppt rapport",
+    "academy.results.notReleasedTitle": "Underlaget är inte delat ännu",
     "academy.results.notReleasedBody":
-      "Rapporten visas här när den har frisläppts av din organisation.",
+      "Det visas här när din organisation har delat det. Väntar ett svar på granskning sker det först när granskningen är klar.",
     "academy.results.noEvidenceTitle": "Inget underlag ännu",
     "academy.results.noEvidenceBody":
       "Det betyder att det inte finns tillräckligt att uttala sig om — inte att något saknas hos personen.",
@@ -3024,11 +3024,13 @@ export const dictionaries = {
     "decision.card.followUp": "Följ upp",
     "decision.competencies.title": "Kompetensöversikt",
     "decision.competencies.lede":
-      "Varje område bedömningen berörde, med det mönster svaren visade och en fråga att ta vidare. Starkast stöd först, därefter det som behöver följas upp, sist det som berördes för lite.",
+      "Varje område bedömningen berörde, med mönstret svaren visade och — där intervjuguiden valt en fråga för området — vad du tar vidare i samtalet. Starkast stöd först, därefter det som behöver följas upp, sist det som berördes för lite.",
     "decision.method.title": "Om bedömningsunderlaget",
     "decision.method.basis": "Vad underlaget omfattar",
     "decision.method.selfReportCount": "Utöver det {n} självrapporterade svar.",
     "decision.method.oneOccasion": "Underlagets bredd",
+    "decision.method.oneOccasionBody":
+      "Ett bedömningstillfälle är en enda informationskälla. Rapporten beskriver hur kandidaten svarade vid det tillfället — inte vad hen kan över tid. Ett starkt mönster här är därför inget belägg för varaktig kompetens, och ett begränsat underlag är inget belägg för att förmågan saknas. Bilden kan kompletteras senare med underlag från en annan källa, till exempel ett praktiskt moment eller observation i tjänst.",
     "decision.method.selfReport": "Självrapporterat är inte observerat",
     "decision.method.selfReportBody":
       "Det personen själv beskriver om sitt arbetssätt hålls skilt från det som observerats, i egna avsnitt och med egen märkning på varje rad. Det ska inte läsas som visad kompetens.",
@@ -3082,8 +3084,8 @@ export const dictionaries = {
     "journey.stage.invited": "Inbjuden",
     "journey.stage.started": "Påbörjad",
     "journey.stage.under_review": "Under granskning",
-    "journey.stage.ready_to_release": "Klar att frisläppas",
-    "journey.stage.report_available": "Resultat tillgängligt",
+    "journey.stage.ready_to_release": "Bedömning klar",
+    "journey.stage.report_available": "Kandidatunderlag klart",
     "journey.person.title": "Person",
     "journey.person.applications": "Ansökningar",
     "journey.person.assessments": "Bedömningar",
@@ -4598,7 +4600,7 @@ export const dictionaries = {
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
     "employer.overview.card.tests.stat.active": "Active",
     "employer.overview.card.tests.stat.awaitingReview": "Awaiting review",
-    "employer.overview.card.tests.stat.readyToRelease": "Ready to release",
+    "employer.overview.card.tests.stat.readyToRelease": "Ready to share",
     "academy.reviews.myTasks": "My review tasks",
     "academy.overview.readyToRelease": "Ready to share",
     "academy.overview.attemptsAwaitingReview": "Assessments awaiting review",
@@ -5597,7 +5599,7 @@ export const dictionaries = {
     "academy.assign.doneAction": "Done",
     "academy.participants.title": "Participants",
     "academy.participants.lede":
-      "Every row is a pseudonymous reference. Who somebody is appears only when you explicitly ask, and only once a result has been released.",
+      "Every row is a pseudonymous reference. Who the person is appears only when you explicitly ask, and only once the material has been shared.",
     "academy.participants.subject": "Reference",
     "academy.participants.progress": "Answered",
     "academy.participants.awaitingReview": "Awaiting review",
@@ -5607,8 +5609,8 @@ export const dictionaries = {
     "academy.participants.identityRefused": "Identity cannot be shown for this participant.",
     "academy.participants.release": "Share the material",
     "academy.participants.releaseBlocked":
-      "The report cannot be released while an answer is still awaiting review.",
-    "academy.participants.releaseFailed": "The report could not be released.",
+      "The material cannot be shared while an answer is still awaiting review.",
+    "academy.participants.releaseFailed": "The material could not be shared.",
     "academy.participants.openReport": "Open report",
     "academy.participants.releaseRecruitment": "Share the candidate brief",
     "academy.participants.releaseExplain":
@@ -5780,9 +5782,9 @@ export const dictionaries = {
     "academy.results.progress": "Progress over time",
     "academy.results.progressNeedsTwo":
       "Progress can only be shown once there are at least two released results to compare.",
-    "academy.results.notReleasedTitle": "No released report",
+    "academy.results.notReleasedTitle": "The material has not been shared yet",
     "academy.results.notReleasedBody":
-      "The report will appear here once your organisation has released it.",
+      "It appears here once your organisation has shared it. If an answer is awaiting review, that happens only when the review is complete.",
     "academy.results.noEvidenceTitle": "No evidence yet",
     "academy.results.noEvidenceBody":
       "That means there is not enough to say anything — not that something is lacking in the person.",
@@ -6131,11 +6133,13 @@ export const dictionaries = {
     "decision.card.followUp": "Follow up",
     "decision.competencies.title": "Competency overview",
     "decision.competencies.lede":
-      "Every area the assessment touched, with the pattern the responses showed and a question to take forward. Strongest support first, then what needs following up, and last what was barely touched.",
+      "Every area the assessment touched, with the pattern the responses showed and — where the interview guide selected a question for that area — what to take into the conversation. Strongest support first, then what needs following up, then what was barely touched.",
     "decision.method.title": "About this assessment evidence",
     "decision.method.basis": "What the evidence covers",
     "decision.method.selfReportCount": "Alongside that, {n} self-reported responses.",
     "decision.method.oneOccasion": "Breadth of the evidence",
+    "decision.method.oneOccasionBody":
+      "One assessment occasion is a single source of evidence. This report describes how the candidate answered on that occasion — not what they can do over time. A strong pattern here is therefore no proof of durable competence, and limited evidence is no proof that the ability is missing. The picture can be completed later from another source, such as a practical exercise or observation on duty.",
     "decision.method.selfReport": "Self-reported is not observed",
     "decision.method.selfReportBody":
       "What the person describes about their own way of working is kept apart from what was observed — in its own sections, and stamped on every row. It must not be read as demonstrated competence.",
@@ -6187,8 +6191,8 @@ export const dictionaries = {
     "journey.stage.invited": "Invited",
     "journey.stage.started": "Started",
     "journey.stage.under_review": "Under review",
-    "journey.stage.ready_to_release": "Ready to release",
-    "journey.stage.report_available": "Result available",
+    "journey.stage.ready_to_release": "Assessment complete",
+    "journey.stage.report_available": "Candidate brief ready",
     "journey.person.title": "Person",
     "journey.person.applications": "Applications",
     "journey.person.assessments": "Assessments",

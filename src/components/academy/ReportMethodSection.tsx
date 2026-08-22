@@ -59,8 +59,16 @@ export function ReportMethodSection({
           {t("decision.method.selfReportCount").replace("{n}", String(selfReportObservations))}
         </MethodItem>
 
+        {/* Its own string, not academy.coverage.employerBody.
+            That one was written for the V1 report and describes the maturity
+            list: no competency can reach "Visat", every row lands on "Behöver
+            följdfråga", the follow-ups are below. V2 does not render that list,
+            so on this page all three sentences were false -- and the last of
+            them contradicted the "Starkt underlag" labels a screen above.
+            The workforce report still renders that list and still uses that
+            string; only recruitment needed its own. */}
         <MethodItem term={t("decision.method.oneOccasion")}>
-          {t("academy.coverage.employerBody")}
+          {t("decision.method.oneOccasionBody")}
         </MethodItem>
 
         <MethodItem term={t("decision.method.selfReport")}>

@@ -46,7 +46,12 @@ function page(safetyFlagCount: number) {
   return renderToStaticMarkup(
     <I18nProvider>
       <DecisionSupportSummary support={support} context={CONTEXT} sv />
-      <CompetencyOverviewSection support={support} modules={[]} sv />
+      <CompetencyOverviewSection
+        support={support}
+        modules={[]}
+        interviewGuide={INTERVIEW_GUIDE}
+        sv
+      />
       <SelfReportedSection areas={SELF_REPORTED} sv />
       <InterviewGuideSection entries={INTERVIEW_GUIDE} sv />
       <ReportMethodSection
@@ -229,7 +234,102 @@ console.log("\n9. Status is never carried by colour alone, and headings nest");
   check("no heading level is skipped to h4 without an h3", (html.match(/<h4/g) ?? []).length === 0);
 }
 
-console.log("\n10. Nothing on the page states a verdict");
+console.log("\n10. The methodology says only what is still true of this report");
+{
+  const method = html.slice(at("Om bedömningsunderlaget"));
+  // The V1 paragraph this section used to borrow described the maturity list:
+  // nothing can reach "Visat", every row lands on "Behöver följdfråga", the
+  // follow-ups are below. V2 renders no such list, and the page above shows
+  // signal labels the paragraph said were unreachable.
+  for (const stale of ["Starkt visat", "Behöver följdfråga", "Följdfrågorna nedan"]) {
+    check(`the methodology no longer says "${stale}"`, !method.includes(stale), "");
+  }
+  check("no maturity label appears anywhere on the page", !html.includes("Visat"));
+  check(
+    "it still says one occasion is one source",
+    method.includes("Ett bedömningstillfälle är en enda informationskälla"),
+  );
+  check(
+    "it still says strong evidence here is not durable competence",
+    method.includes("inget belägg för varaktig kompetens"),
+  );
+  check(
+    "it still says limited evidence is not a missing ability",
+    method.includes("inget belägg för att förmågan saknas"),
+  );
+  check("it still says self-report is not observed", method.includes("inte observerat"));
+  check(
+    "and it does not contradict the signals above it",
+    html.includes("Starkt underlag") || html.includes("Behöver följas upp"),
+  );
+}
+
+console.log("\n11. The competency lede matches the cards under it");
+{
+  const cards = html.slice(at("Kompetensöversikt"), at("Självrapporterat arbetsbeteende"));
+  // The lede promises a question WHERE THE GUIDE SELECTED ONE. Every area that
+  // has an observed guide entry must therefore carry one, and every area that
+  // does not must carry none.
+  const withObservedEntry = new Set(
+    INTERVIEW_GUIDE.filter((g) => g.evidenceType === "observed").map((g) => g.areaCode),
+  );
+  const promised = OBSERVED.filter((a) => withObservedEntry.has(a.areaCode));
+  const unpromised = OBSERVED.filter((a) => !withObservedEntry.has(a.areaCode));
+
+  check(
+    "the fixture exercises both branches",
+    promised.length > 0 && unpromised.length > 0,
+    `${promised.length} with / ${unpromised.length} without`,
+  );
+
+  const cardOf = (name: string) => {
+    const i = cards.indexOf(name);
+    if (i < 0) return "";
+    const rest = cards.slice(i + name.length);
+    const next = OBSERVED.map((o) => rest.indexOf(o.areaSv)).filter((n) => n > 0);
+    return next.length ? rest.slice(0, Math.min(...next)) : rest;
+  };
+
+  for (const a of promised) {
+    check(`"${a.areaSv}" carries its question`, cardOf(a.areaSv).includes("Följ upp:"), a.signal);
+  }
+  for (const a of unpromised) {
+    check(
+      `"${a.areaSv}" has no invented question`,
+      !cardOf(a.areaSv).includes("Följ upp:"),
+      a.signal,
+    );
+  }
+
+  // The fix is not "show the follow-up bucket's questions": a limited area now
+  // carries one too, which is the whole point.
+  const limitedWithEntry = promised.filter((a) => a.signal === "limited");
+  check("a limited-evidence area now carries its authored question", limitedWithEntry.length > 0);
+  for (const a of limitedWithEntry) {
+    const entry = INTERVIEW_GUIDE.find(
+      (g) => g.areaCode === a.areaCode && g.evidenceType === "observed",
+    )!;
+    check(
+      `"${a.areaSv}" shows the guide's own wording`,
+      cardOf(a.areaSv).includes(entry.questionSv.slice(0, 40)),
+    );
+  }
+
+  // Evidence types do not cross. One fixture area code carries both an observed
+  // line and a self-reported guide entry; the card must show neither that
+  // question nor any other.
+  check(
+    "a self-reported question never lands on an observed card",
+    !cards.includes("SJÄLVRAPPORTERAD FRÅGA"),
+  );
+  check(
+    "no question on a card was invented",
+    (cards.match(/Följ upp:/g) ?? []).length === promised.length,
+    `${(cards.match(/Följ upp:/g) ?? []).length} vs ${promised.length}`,
+  );
+}
+
+console.log("\n12. Nothing on the page states a verdict");
 {
   for (const word of ["anställ", "avslå", "lämplig", "rangordn", "poäng"]) {
     const bad =
