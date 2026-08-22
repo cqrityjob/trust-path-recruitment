@@ -30,6 +30,7 @@ import {
   listApplicationAssessments,
   listContentLibrary,
   type ApplicationAssessment,
+  type ContentLibraryEntry,
 } from "@/lib/security-competency/academy-employer.functions";
 
 /** The five states an employer needs to tell apart, derived from the attempt
@@ -41,6 +42,25 @@ function stageOf(a: ApplicationAssessment): TranslationKey {
   if (a.reviewsOutstanding > 0) return "journey.stage.under_review";
   if (a.answered > 0) return "journey.stage.started";
   return "journey.stage.invited";
+}
+
+/** Why the organisation cannot run any recruitment assessment yet.
+ *
+ *  The reasons come from scp_employer_content_library, which computes them
+ *  from the same expression that decides `assignable`, so the sentence and
+ *  the missing button can never disagree. `not_permitted` is the one a real
+ *  customer hits: the flagship recruitment assessment is genuinely draft /
+ *  design content, and running it at all requires a closed-test grant that
+ *  only CQrityjob can issue. That is a governance decision, not a bug -- but
+ *  saying nothing about it turns it into one. */
+function unavailableReasonKey(blocked: ApplicationAssessment[] | ContentLibraryEntry[]) {
+  const reasons = new Set(
+    (blocked as ContentLibraryEntry[]).map((r) => r.unassignableReason ?? "unknown"),
+  );
+  if (reasons.has("not_permitted")) return "journey.assessmentsNotPermitted" as TranslationKey;
+  if (reasons.has("no_items")) return "journey.assessmentsNoItems" as TranslationKey;
+  if (reasons.has("retired")) return "journey.assessmentsRetired" as TranslationKey;
+  return "journey.assessmentsUnavailable" as TranslationKey;
 }
 
 // The refusals this panel can actually produce, each said as the thing the
@@ -109,17 +129,22 @@ export function ApplicationAssessmentPanel({
     queryFn: () => capabilityFn({ data: { employerId } }),
   });
 
-  // Only assessments WRITTEN for recruitment, and only ones this organisation
-  // may actually run. Offering anything else here would be offering a control
-  // the assign path would refuse.
+  // Every assessment WRITTEN for recruitment -- assignable or not.
+  //
+  // This used to filter on `assignable` inside the query and throw the rest
+  // away, which is how a brand-new organisation ended up looking at a heading,
+  // a sentence promising an assessment step, and then nothing at all: the
+  // panel returned null and the page said nothing about why.
+  //
+  // scp_employer_content_library has always answered the "why" -- it returns
+  // unassignable_reason alongside every row -- and the panel simply discarded
+  // it. Keeping both halves means the empty state can name the actual
+  // condition instead of implying the organisation has no assessments.
   const library = useQuery({
     queryKey: ["employer", employerId, "library", "recruitment"],
     queryFn: () => libraryFn({ data: { employerId } }),
     select: (rows) =>
-      rows.filter(
-        (r) =>
-          r.libraryKind === "assessment" && r.designedFor === "recruitment_support" && r.assignable,
-      ),
+      rows.filter((r) => r.libraryKind === "assessment" && r.designedFor === "recruitment_support"),
   });
 
   async function assign(assessmentVersionId: string) {
@@ -140,9 +165,31 @@ export function ApplicationAssessmentPanel({
   }
 
   const rows = assessments.data ?? [];
-  const options = library.data ?? [];
+  const recruitmentLibrary = library.data ?? [];
+  const options = recruitmentLibrary.filter((r) => r.assignable);
+  const blocked = recruitmentLibrary.filter((r) => !r.assignable);
 
-  if (rows.length === 0 && options.length === 0) return null;
+  // Nothing has been sent, and nothing can be. Say which, and say who can
+  // change it -- an employer cannot grant themselves a pilot, and pretending
+  // the shelf is empty would send them looking for a setting that does not
+  // exist.
+  if (rows.length === 0 && options.length === 0) {
+    if (library.isLoading) return null;
+    return (
+      <div className="mt-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-accent">
+          <ClipboardCheck className="h-3.5 w-3.5" aria-hidden="true" />
+          {t("journey.assessment")}
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-foreground">
+          {t(blocked.length > 0 ? unavailableReasonKey(blocked) : "journey.noAssessmentsAtAll")}
+        </p>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          {t("journey.assessmentsContactCqrityjob")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3">

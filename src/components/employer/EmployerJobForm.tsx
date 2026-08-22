@@ -97,7 +97,11 @@ export const emptyValues: EmployerJobFormValues = {
   workplace_type: "",
   employment_type: "",
   experience_level: "",
-  application_method: "external",
+  // A first-time employer almost always wants applications to arrive HERE --
+  // that is what produces a candidate they can then assess. Only the default
+  // for a brand-new draft changes; fromJobRow() still reads whatever an
+  // existing advertisement already stores.
+  application_method: "internal",
   application_url: "",
   application_email: "",
   deadline_at: "",
@@ -378,10 +382,23 @@ export function EmployerJobForm({
   const fieldWithError = (hasError: boolean) =>
     hasError ? `${field} border-destructive focus:ring-destructive` : field;
   const label = "block text-xs font-medium uppercase tracking-wide text-muted-foreground";
-  const requiredForReviewHint = (
-    <span className="ml-1 normal-case text-[11px] font-normal tracking-normal text-muted-foreground">
-      ({t("employer.jobs.form.hint.requiredForReview")})
+  // "(krävs för granskning)" beside six fields was doing two jobs badly: it
+  // was longer than most of the labels it followed, and "granskning" is an
+  // internal moderation word a first-time employer has no reason to know. The
+  // convention every other form on the internet uses is one asterisk and one
+  // legend, so that is what this is now. aria-hidden because the legend above
+  // carries the meaning; a screen reader announcing "asterisk" after every
+  // label is noise, and the fields are deliberately NOT marked `required` --
+  // an incomplete draft must still save.
+  const req = (
+    <span aria-hidden="true" className="ml-0.5 font-normal text-destructive">
+      *
     </span>
+  );
+  const pairHint = (
+    <p className="mt-1 text-xs text-muted-foreground">
+      {t("employer.jobs.form.hint.oneLanguageEnough")}
+    </p>
   );
 
   function FieldError({ name }: { name: keyof EmployerJobFormValues }) {
@@ -418,6 +435,14 @@ export function EmployerJobForm({
         </div>
       )}
 
+      {/* The legend, once, before anything is asked. It says both halves of the
+          truth: what the star means, and that nothing here blocks saving. An
+          employer who does not know a draft is safe to leave half-finished
+          will either not start or will invent values to get past the form. */}
+      <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        {t("employer.jobs.form.requiredLegend")}
+      </p>
+
       <fieldset disabled={readOnly} className="space-y-6">
         <div>
           <h2 className="text-base font-semibold text-foreground">
@@ -430,7 +455,7 @@ export function EmployerJobForm({
             <div>
               <label className={label}>
                 {t("employer.jobs.form.field.titleSv")}
-                {requiredForReviewHint}
+                {req}
               </label>
               <input
                 ref={(el) => {
@@ -445,7 +470,7 @@ export function EmployerJobForm({
             <div>
               <label className={label}>
                 {t("employer.jobs.form.field.titleEn")}
-                {requiredForReviewHint}
+                {req}
               </label>
               <input
                 ref={(el) => {
@@ -458,11 +483,12 @@ export function EmployerJobForm({
               <FieldError name="title_en" />
             </div>
           </div>
+          {pairHint}
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={label}>
                 {t("employer.jobs.form.field.descriptionSv")}
-                {requiredForReviewHint}
+                {req}
               </label>
               <textarea
                 ref={(el) => {
@@ -478,7 +504,7 @@ export function EmployerJobForm({
             <div>
               <label className={label}>
                 {t("employer.jobs.form.field.descriptionEn")}
-                {requiredForReviewHint}
+                {req}
               </label>
               <textarea
                 ref={(el) => {
@@ -492,6 +518,7 @@ export function EmployerJobForm({
               <FieldError name="description_en" />
             </div>
           </div>
+          {pairHint}
         </div>
 
         <div>
@@ -586,7 +613,18 @@ export function EmployerJobForm({
           </h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className={label}>{t("employer.jobs.form.field.applicationMethod")}</label>
+              {/* "Ansökningssätt" with an option reading "Externt (länk)" is
+                  the system describing its own enum. The stored values are
+                  unchanged -- internal / external / email are still exactly
+                  what the column holds -- but what an employer reads is now
+                  the recruitment decision they are actually making: does the
+                  application land in CQrityjob, or on your own site.
+                  CQrityjob is listed first because it is the path that
+                  produces a candidate this product can then assess. */}
+              <label className={label}>
+                {t("employer.jobs.form.field.applicationMethod")}
+                {req}
+              </label>
               <select
                 className={field}
                 value={values.application_method}
@@ -597,20 +635,30 @@ export function EmployerJobForm({
                   )
                 }
               >
+                <option value="internal">
+                  {t("employer.jobs.form.applicationMethod.internal")}
+                </option>
                 <option value="external">
                   {t("employer.jobs.form.applicationMethod.external")}
                 </option>
                 <option value="email">{t("employer.jobs.form.applicationMethod.email")}</option>
-                <option value="internal">
-                  {t("employer.jobs.form.applicationMethod.internal")}
-                </option>
               </select>
+              {/* The consequence of the choice, next to the choice. */}
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  values.application_method === "internal"
+                    ? "employer.jobs.form.applicationMethod.internalHelp"
+                    : values.application_method === "external"
+                      ? "employer.jobs.form.applicationMethod.externalHelp"
+                      : "employer.jobs.form.applicationMethod.emailHelp",
+                )}
+              </p>
             </div>
             {values.application_method === "external" && (
               <div>
                 <label className={label}>
                   {t("employer.jobs.form.field.applicationUrl")}
-                  {requiredForReviewHint}
+                  {req}
                 </label>
                 <input
                   ref={(el) => {
@@ -622,6 +670,9 @@ export function EmployerJobForm({
                   onChange={(e) => set("application_url", e.target.value)}
                   placeholder="https://…"
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("employer.jobs.form.field.applicationUrlHelp")}
+                </p>
                 <FieldError name="application_url" />
               </div>
             )}
@@ -629,7 +680,7 @@ export function EmployerJobForm({
               <div>
                 <label className={label}>
                   {t("employer.jobs.form.field.applicationEmail")}
-                  {requiredForReviewHint}
+                  {req}
                 </label>
                 <input
                   ref={(el) => {
@@ -640,6 +691,9 @@ export function EmployerJobForm({
                   value={values.application_email}
                   onChange={(e) => set("application_email", e.target.value)}
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("employer.jobs.form.field.applicationEmailHelp")}
+                </p>
                 <FieldError name="application_email" />
               </div>
             )}
@@ -655,7 +709,7 @@ export function EmployerJobForm({
             <div>
               <label className={label}>
                 {t("employer.jobs.form.field.expiresAt")}
-                {requiredForReviewHint}
+                {req}
               </label>
               <input
                 ref={(el) => {

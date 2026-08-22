@@ -65,6 +65,7 @@ const TEAM_PANEL = "src/components/employer/EmployerTeamPanel.tsx";
 const JOIN = "src/routes/_authenticated.employer.join.tsx";
 const ONBOARDING_FNS = "src/lib/job-intelligence/employer-onboarding.functions.ts";
 const ROUTE_TREE = "src/routeTree.gen.ts";
+const JOB_FORM = "src/components/employer/EmployerJobForm.tsx";
 
 /** The source of one JSX element, from its opening tag to the matching `>`
  *  of that tag plus a generous tail, so `params`/`search`/`to` on the same
@@ -400,6 +401,130 @@ function elementWithTarget(src: string, to: string): string | null {
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// K. Job creation: what is required, and what the employer is choosing.
+// ---------------------------------------------------------------------------
+
+{
+  const form = stripComments(read(JOB_FORM));
+  const sv = dictionaries.sv as Record<string, string>;
+  const en = dictionaries.en as Record<string, string>;
+
+  // One legend, and it must say BOTH halves: what the star means, and that an
+  // incomplete draft still saves. A first-time employer who thinks the form is
+  // all-or-nothing invents values to get past it.
+  expect(
+    form.includes("employer.jobs.form.requiredLegend"),
+    `K: the job form must carry a required-field legend.`,
+  );
+  for (const [lang, dict] of [
+    ["sv", sv],
+    ["en", en],
+  ] as const) {
+    const legend = dict["employer.jobs.form.requiredLegend"] ?? "";
+    expect(legend.includes("*"), `K: the ${lang} legend must explain the asterisk.`);
+    expect(
+      /utkast|draft/i.test(legend),
+      `K: the ${lang} legend must say an incomplete draft can still be saved.`,
+    );
+  }
+
+  // The asterisk must never be an HTML `required`: that would block saving a
+  // draft, which is the behaviour the legend promises.
+  expect(
+    // JSX attribute forms only. `const required = t(...)` and
+    // `errors.title_sv = required` are ordinary assignments, not markup.
+    !/\brequired=\{|\brequired\s*\/>|\brequired\s+[a-zA-Z-]+=/.test(form),
+    `K: job-form inputs must not be marked HTML-required -- an incomplete draft ` +
+      `must still save.`,
+  );
+
+  // The old internal-moderation wording is gone from both dictionaries.
+  expect(
+    !("employer.jobs.form.hint.requiredForReview" in sv),
+    `K: "krävs för granskning" must not come back -- "granskning" is a moderation ` +
+      `word a first-time employer has no reason to know.`,
+  );
+
+  // Application method: recruitment language over the SAME stored values.
+  for (const value of ["internal", "external", "email"]) {
+    expect(
+      new RegExp(`<option value="${value}">`).test(form),
+      `K: the application-method select must still offer the stored value "${value}" ` +
+        `-- copy changes must not change the enum.`,
+    );
+    expect(
+      form.includes(`employer.jobs.form.applicationMethod.${value}Help`),
+      `K: "${value}" must carry helper copy saying what it means for the employer.`,
+    );
+  }
+  // CQrityjob first: it is the only path that produces a candidate this
+  // product can then assess.
+  expect(
+    form.indexOf('<option value="internal">') < form.indexOf('<option value="external">'),
+    `K: "Ansökan via CQrityjob" must be the first option.`,
+  );
+  expect(
+    /application_method:\s*"internal"/.test(form),
+    `K: a brand-new draft must default to applications arriving in CQrityjob.`,
+  );
+
+  // The link field appears only where it applies, and is hidden -- not
+  // disabled -- for the CQrityjob path.
+  expect(
+    /values\.application_method === "external" && \(/.test(form),
+    `K: the application link field must render only for the external method.`,
+  );
+  expect(
+    /values\.application_method === "email" && \(/.test(form),
+    `K: the application email field must render only for the email method.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// L. The assessment step never renders as an unexplained blank.
+// ---------------------------------------------------------------------------
+//
+// A new organisation saw a heading, a sentence promising an assessment step,
+// and nothing -- because the panel filtered the library on `assignable` and
+// then returned null when the result was empty. The read model has always
+// returned unassignable_reason next to every row; the panel threw it away.
+
+{
+  const panel = stripComments(read(PANEL));
+
+  expect(
+    !/select:[\s\S]{0,200}?r\.assignable\b[\s\S]{0,40}?\)/.test(panel) ||
+      panel.includes("unassignableReason"),
+    `L: the panel must not discard non-assignable rows in the query -- their ` +
+      `unassignableReason is the only thing that can explain the empty state.`,
+  );
+  expect(
+    panel.includes("unassignableReason"),
+    `L: the empty state must be built from the read model's own reason, never guessed.`,
+  );
+  for (const key of [
+    "journey.assessmentsNotPermitted",
+    "journey.assessmentsNoItems",
+    "journey.assessmentsRetired",
+    "journey.assessmentsContactCqrityjob",
+  ]) {
+    expect(panel.includes(key), `L: the empty state must be able to say "${key}".`);
+  }
+  // Honest about who can fix it. An employer cannot grant themselves a pilot.
+  expect(
+    panel.includes("journey.assessmentsContactCqrityjob"),
+    `L: where only CQrityjob can enable access, the panel must say so rather than ` +
+      `implying the shelf is empty.`,
+  );
+  // And still only offers what governance permits.
+  expect(
+    /designedFor === "recruitment_support"/.test(panel),
+    `L: only assessments written for recruitment may be offered here.`,
+  );
+  expect(/r\.assignable/.test(panel), `L: only assignable assessments may become send buttons.`);
 }
 
 // ---------------------------------------------------------------------------

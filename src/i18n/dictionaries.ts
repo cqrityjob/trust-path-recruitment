@@ -1021,7 +1021,10 @@ export const dictionaries = {
     "employer.jobs.form.section.application": "Ansökan",
     "employer.jobs.form.section.classification": "Klassificering",
     "employer.jobs.form.hint.optional": "Valfritt — påverkar inte möjligheten att spara utkast.",
-    "employer.jobs.form.hint.requiredForReview": "krävs för granskning",
+    "employer.jobs.form.requiredLegend":
+      "* Obligatoriskt fält för publicering. Du kan spara ett ofullständigt utkast och fylla i resten senare.",
+    "employer.jobs.form.hint.oneLanguageEnough":
+      "Minst ett av språken krävs för publicering — du behöver inte fylla i båda.",
     "employer.jobs.form.field.titleSv": "Titel (svenska)",
     "employer.jobs.form.field.titleEn": "Titel (engelska)",
     "employer.jobs.form.field.descriptionSv": "Beskrivning (svenska)",
@@ -1033,13 +1036,22 @@ export const dictionaries = {
     "employer.jobs.form.field.workplaceType": "Arbetsplatstyp",
     "employer.jobs.form.field.employmentType": "Anställningsform",
     "employer.jobs.form.field.experienceLevel": "Erfarenhetsnivå",
-    "employer.jobs.form.field.applicationMethod": "Ansökningssätt",
-    "employer.jobs.form.applicationMethod.external": "Externt (länk)",
-    "employer.jobs.form.applicationMethod.email": "E-post",
-    "employer.jobs.form.applicationMethod.internal": "Internt",
+    "employer.jobs.form.field.applicationMethod": "Hur ansöker kandidaten?",
+    "employer.jobs.form.applicationMethod.external": "Ansökan på er webbplats",
+    "employer.jobs.form.applicationMethod.externalHelp":
+      "Kandidaten skickas vidare till er karriärsida eller ert rekryteringssystem. Ansökningarna syns inte i CQrityjob.",
+    "employer.jobs.form.applicationMethod.email": "Ansökan via e-post",
+    "employer.jobs.form.applicationMethod.emailHelp":
+      "Kandidaten mejlar sin ansökan till adressen ni anger. Ansökningarna syns inte i CQrityjob.",
+    "employer.jobs.form.applicationMethod.internal": "Ansökan via CQrityjob",
+    "employer.jobs.form.applicationMethod.internalHelp":
+      "Kandidaten ansöker direkt här. Ansökan och kandidatunderlaget hanteras i CQrityjob.",
     "employer.jobs.form.applicationMethod.unavailable": "Ej tillgänglig",
-    "employer.jobs.form.field.applicationUrl": "Ansöknings-URL",
-    "employer.jobs.form.field.applicationEmail": "Ansöknings-e-post",
+    "employer.jobs.form.field.applicationUrl": "Länk till ansökningssidan",
+    "employer.jobs.form.field.applicationUrlHelp":
+      "Ange länken till sidan där kandidaten ska skicka sin ansökan.",
+    "employer.jobs.form.field.applicationEmail": "E-postadress för ansökningar",
+    "employer.jobs.form.field.applicationEmailHelp": "Adressen dit kandidatens ansökan skickas.",
     "employer.jobs.form.field.deadlineAt": "Ansökningsdeadline",
     "employer.jobs.form.field.expiresAt": "Sista visningsdatum",
     "employer.jobs.form.field.expiresAtHint":
@@ -3213,6 +3225,18 @@ export const dictionaries = {
     // ── Recruitment journey ─────────────────────────────────────────────
     "journey.reviewResponses": "Granska {count} svar",
     "journey.reviewNotAuthorised": "Du saknar behörighet att granska den här bedömningen.",
+    "journey.assessmentsNotPermitted":
+      "Rekryteringsbedömningen är i sluten testfas. Er organisation har ännu inte fått tillgång till den.",
+    "journey.assessmentsNoItems":
+      "Rekryteringsbedömningen är inte färdigställd och kan därför inte skickas ut ännu.",
+    "journey.assessmentsRetired":
+      "Rekryteringsbedömningen är tillbakadragen och kan inte längre skickas ut.",
+    "journey.assessmentsUnavailable":
+      "Ingen rekryteringsbedömning är tillgänglig för er organisation ännu.",
+    "journey.noAssessmentsAtAll":
+      "Det finns ännu ingen rekryteringsbedömning i er organisations bibliotek.",
+    "journey.assessmentsContactCqrityjob":
+      "Det här är inget ni kan aktivera själva. Kontakta CQrityjob så öppnar vi tillgången för er organisation.",
     "journey.assessment": "Bedömning",
     "journey.noAssessmentYet": "Ingen bedömning har skickats för den här ansökan.",
     "journey.sendAssessment": "Skicka bedömning",
@@ -4298,7 +4322,10 @@ export const dictionaries = {
     "employer.jobs.form.section.application": "Application",
     "employer.jobs.form.section.classification": "Classification",
     "employer.jobs.form.hint.optional": "Optional — does not affect saving a draft.",
-    "employer.jobs.form.hint.requiredForReview": "required for review",
+    "employer.jobs.form.requiredLegend":
+      "* Required to publish. You can save an incomplete draft and finish it later.",
+    "employer.jobs.form.hint.oneLanguageEnough":
+      "At least one language is required to publish — you do not have to fill in both.",
     "employer.jobs.form.field.titleSv": "Title (Swedish)",
     "employer.jobs.form.field.titleEn": "Title (English)",
     "employer.jobs.form.field.descriptionSv": "Description (Swedish)",
@@ -4310,13 +4337,23 @@ export const dictionaries = {
     "employer.jobs.form.field.workplaceType": "Workplace type",
     "employer.jobs.form.field.employmentType": "Employment type",
     "employer.jobs.form.field.experienceLevel": "Experience level",
-    "employer.jobs.form.field.applicationMethod": "Application method",
-    "employer.jobs.form.applicationMethod.external": "External (link)",
-    "employer.jobs.form.applicationMethod.email": "Email",
-    "employer.jobs.form.applicationMethod.internal": "Internal",
+    "employer.jobs.form.field.applicationMethod": "How does the candidate apply?",
+    "employer.jobs.form.applicationMethod.external": "Apply on your website",
+    "employer.jobs.form.applicationMethod.externalHelp":
+      "The candidate is sent on to your careers page or applicant tracking system. Those applications do not appear in CQrityjob.",
+    "employer.jobs.form.applicationMethod.email": "Apply by email",
+    "employer.jobs.form.applicationMethod.emailHelp":
+      "The candidate emails their application to the address you give. Those applications do not appear in CQrityjob.",
+    "employer.jobs.form.applicationMethod.internal": "Apply through CQrityjob",
+    "employer.jobs.form.applicationMethod.internalHelp":
+      "The candidate applies right here. The application and the candidate brief are handled in CQrityjob.",
     "employer.jobs.form.applicationMethod.unavailable": "Unavailable",
-    "employer.jobs.form.field.applicationUrl": "Application URL",
-    "employer.jobs.form.field.applicationEmail": "Application email",
+    "employer.jobs.form.field.applicationUrl": "Application page link",
+    "employer.jobs.form.field.applicationUrlHelp":
+      "The link to the page where the candidate submits their application.",
+    "employer.jobs.form.field.applicationEmail": "Email address for applications",
+    "employer.jobs.form.field.applicationEmailHelp":
+      "The address the candidate's application is sent to.",
     "employer.jobs.form.field.deadlineAt": "Application deadline",
     "employer.jobs.form.field.expiresAt": "Expires at",
     "employer.jobs.form.field.expiresAtHint":
@@ -6467,6 +6504,18 @@ export const dictionaries = {
     // ── Recruitment journey ─────────────────────────────────────────────
     "journey.reviewResponses": "Review {count} responses",
     "journey.reviewNotAuthorised": "You are not authorised to review this assessment.",
+    "journey.assessmentsNotPermitted":
+      "The recruitment assessment is in a closed pilot. Your organisation has not been given access to it yet.",
+    "journey.assessmentsNoItems":
+      "The recruitment assessment is not finished, so it cannot be sent out yet.",
+    "journey.assessmentsRetired":
+      "The recruitment assessment has been retired and can no longer be sent out.",
+    "journey.assessmentsUnavailable":
+      "No recruitment assessment is available to your organisation yet.",
+    "journey.noAssessmentsAtAll":
+      "There is no recruitment assessment in your organisation's library yet.",
+    "journey.assessmentsContactCqrityjob":
+      "This is not something you can switch on yourselves. Contact CQrityjob and we will open access for your organisation.",
     "journey.assessment": "Assessment",
     "journey.noAssessmentYet": "No assessment has been sent for this application.",
     "journey.sendAssessment": "Send assessment",
