@@ -4330,6 +4330,125 @@ export type Database = {
         }
         Relationships: []
       }
+      scp_assessment_invitations: {
+        Row: {
+          application_id: string | null
+          assessment_version_id: string
+          bound_assignment_id: string | null
+          bound_at: string | null
+          bound_subject_id: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          closed_reason: string | null
+          deadline: string | null
+          email: string
+          employer_id: string
+          expires_at: string
+          id: string
+          invited_at: string
+          invited_by: string
+          invited_name: string | null
+          job_id: string | null
+          language: string
+          status: string
+          use_case: string
+        }
+        Insert: {
+          application_id?: string | null
+          assessment_version_id: string
+          bound_assignment_id?: string | null
+          bound_at?: string | null
+          bound_subject_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          deadline?: string | null
+          email: string
+          employer_id: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by: string
+          invited_name?: string | null
+          job_id?: string | null
+          language?: string
+          status?: string
+          use_case: string
+        }
+        Update: {
+          application_id?: string | null
+          assessment_version_id?: string
+          bound_assignment_id?: string | null
+          bound_at?: string | null
+          bound_subject_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          closed_reason?: string | null
+          deadline?: string | null
+          email?: string
+          employer_id?: string
+          expires_at?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string
+          invited_name?: string | null
+          job_id?: string | null
+          language?: string
+          status?: string
+          use_case?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_invitations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_assessment_version_id_fkey"
+            columns: ["assessment_version_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_assignment_id_fkey"
+            columns: ["bound_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_assignment_id_fkey"
+            columns: ["bound_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_bound_subject_id_fkey"
+            columns: ["bound_subject_id"]
+            isOneToOne: false
+            referencedRelation: "scp_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_invitations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_assessment_versions: {
         Row: {
           approved_at: string | null
@@ -9291,6 +9410,64 @@ export type Database = {
           run_id: string
         }[]
       }
+      scp_application_assessments: {
+        Args: { _application_id: string }
+        Returns: {
+          answered: number
+          assessment_slug: string
+          assignment_id: string
+          attempt_id: string
+          attempt_status: string
+          deadline: string
+          designed_for: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          invited_at: string
+          name_en: string
+          name_sv: string
+          released_at: string
+          report_available: boolean
+          reviews_outstanding: number
+          scored_at: string
+          subject_id: string
+          submitted_at: string
+          total_items: number
+          use_case: string
+        }[]
+      }
+      scp_application_candidate: {
+        Args: { _application_id: string }
+        Returns: {
+          application_id: string
+          application_status: string
+          applied_at: string
+          cover_note: string
+          display_name: string
+          employer_id: string
+          has_cv: boolean
+          job_id: string
+          job_slug: string
+          job_title_en: string
+          job_title_sv: string
+          phone: string
+          subject_id: string
+          updated_at: string
+        }[]
+      }
+      scp_assign_from_application: {
+        Args: {
+          _application_id: string
+          _assessment_version_id: string
+          _deadline?: string
+          _employer_id: string
+          _language?: string
+        }
+        Returns: {
+          assignment_id: string
+          attempt_id: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          subject_id: string
+        }[]
+      }
       scp_assign_training: {
         Args: {
           _due_at?: string
@@ -9366,6 +9543,10 @@ export type Database = {
         Args: { _employee_id: string; _user_id: string }
         Returns: string
       }
+      scp_brief_executive_summary: {
+        Args: { _lang: string; _observed: Json; _self_reported: Json }
+        Returns: string
+      }
       scp_bundle_version_assignability: {
         Args: { _bundle_version_id: string }
         Returns: {
@@ -9377,6 +9558,20 @@ export type Database = {
       scp_can_review_for: {
         Args: { _employer_id: string; _use_case?: string; _user_id: string }
         Returns: boolean
+      }
+      scp_cancel_assessment_invitation: {
+        Args: { _invitation_id: string; _reason?: string }
+        Returns: undefined
+      }
+      scp_claim_assessment_invitations: {
+        Args: never
+        Returns: {
+          assignment_id: string
+          attempt_id: string
+          employer_id: string
+          invitation_id: string
+          outcome: string
+        }[]
       }
       scp_complete_human_review: {
         Args: {
@@ -9534,6 +9729,27 @@ export type Database = {
           supersedes_id: string
         }[]
       }
+      scp_employer_invitations: {
+        Args: { _employer_id: string }
+        Returns: {
+          application_id: string
+          bound_assignment_id: string
+          bound_at: string
+          closed_reason: string
+          email: string
+          expires_at: string
+          invitation_id: string
+          invited_at: string
+          invited_name: string
+          job_id: string
+          job_title_en: string
+          job_title_sv: string
+          name_en: string
+          name_sv: string
+          status: string
+          use_case: string
+        }[]
+      }
       scp_employer_library: {
         Args: { _employer_id: string }
         Returns: {
@@ -9593,6 +9809,23 @@ export type Database = {
           scored_at: string
           started_at: string
           submitted_at: string
+          use_case: string
+        }[]
+      }
+      scp_employer_person_overview: {
+        Args: { _employer_id: string; _subject_id: string }
+        Returns: {
+          application_id: string
+          attempt_id: string
+          job_id: string
+          occurred_at: string
+          released_at: string
+          report_available: boolean
+          row_id: string
+          row_kind: string
+          status: string
+          title_en: string
+          title_sv: string
           use_case: string
         }[]
       }
@@ -9716,6 +9949,31 @@ export type Database = {
           recorded_by_email: string
         }[]
       }
+      scp_invite_participant: {
+        Args: {
+          _application_id?: string
+          _assessment_version_id: string
+          _deadline?: string
+          _email: string
+          _employer_id: string
+          _invited_name?: string
+          _job_id?: string
+          _language?: string
+          _use_case?: string
+        }
+        Returns: {
+          assignment_id: string
+          attempt_id: string
+          governance_mode: Database["public"]["Enums"]["scp_governance_mode"]
+          invitation_id: string
+          outcome: string
+          subject_id: string
+        }[]
+      }
+      scp_join_human: {
+        Args: { _items: string[]; _lang: string }
+        Returns: string
+      }
       scp_lifecycle_state: {
         Args: {
           _content_status: string
@@ -9747,6 +10005,8 @@ export type Database = {
           assigned_at: string
           deadline: string
           employer_name: string
+          job_title_en: string
+          job_title_sv: string
           progress_done: number
           progress_total: number
           purpose_en: string
@@ -9755,6 +10015,7 @@ export type Database = {
           status: string
           title_en: string
           title_sv: string
+          use_case: string
           work_id: string
           work_kind: string
         }[]
