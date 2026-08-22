@@ -10,15 +10,10 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { getSupabasePublicConfig } from "@/integrations/supabase/config";
 
 export function serverPublicClient(): SupabaseClient<Database> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "serverPublicClient(): missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY",
-    );
-  }
+  const { url, publishableKey: key } = getSupabasePublicConfig();
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: {

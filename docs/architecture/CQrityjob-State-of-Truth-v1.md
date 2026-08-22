@@ -1,5 +1,14 @@
 # CQrityjob State of Truth v1.0
 
+> **HISTORICAL SNAPSHOT — SUPERSEDED 23 AUGUST 2026.**
+> The canonical owned backend is now Supabase project
+> `mlvzmiutmyyqeuvjglco`; Lovable Cloud project
+> `zrahptwsnjcdyzfywbeh` is retained only as a rollback source until the
+> frontend cutover is accepted. Current facts are recorded in
+> [State of Truth v1.1](./CQrityjob-State-of-Truth-v1.1.md). The facts below
+> remain the audit record for the earlier Lovable-hosted phase and must not be
+> used as current deployment instructions.
+
 **The technical source of truth.** Product definition lives in
 [Employer Product Source of Truth v1.1](../employer/employer-product-source-of-truth-v1.md);
 this document records what is *actually true of the systems*.

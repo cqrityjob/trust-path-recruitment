@@ -33,6 +33,7 @@
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
     "migrations:check": "bun run scripts/migration-safety-check.ts",
+    "supabase-owned-cutover:check": "bun run scripts/supabase-owned-cutover-check.ts",
     "mcp-exposure:check": "bun run scripts/mcp-exposure-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
     "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",

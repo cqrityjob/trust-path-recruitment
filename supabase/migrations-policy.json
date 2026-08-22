@@ -546,9 +546,10 @@
   ],
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
-    "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": 108,
-    "ledgerSnapshotNote": "100 after C1; 108 after the eight PR #51 migrations were applied through Lovable.",
-    "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
+    "hostedSupabaseRef": "mlvzmiutmyyqeuvjglco",
+    "legacyLovableCloudRef": "zrahptwsnjcdyzfywbeh",
+    "ledgerRowsAtSnapshot": 226,
+    "ledgerSnapshotNote": "Verified on 2026-08-23 after the owned-backend migration and the canonical job-application-cvs bucket migration.",
+    "note": "Owner-controlled Supabase is canonical. Legacy Lovable Cloud remains frozen as rollback until frontend acceptance."
   }
 }
