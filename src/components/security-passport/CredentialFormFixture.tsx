@@ -39,6 +39,18 @@ export function CredentialFormFixture() {
           <CredentialForm
             key={formKey}
             types={FIXTURE_CREDENTIAL_TYPES}
+            // The harness mirrors the ACTIVE packs, which is Sweden alone: the
+            // UK and Dubai packs ship inactive, so a form that offered them
+            // would be a screen nobody can reach.
+            markets={[
+              {
+                marketPackCode: "SE",
+                jurisdictionCode: "SE",
+                subJurisdictionCode: null,
+                nameSv: "Sverige",
+                nameEn: "Sweden",
+              },
+            ]}
             initial={saved}
             busy={false}
             serverError={null}

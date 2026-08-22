@@ -48,11 +48,30 @@ import { CredentialSymbol } from "./CredentialSymbol";
 
 /** The jurisdictions the select offers. ISO 3166-1 alpha-2; Sweden first
  *  because the launch taxonomy is Swedish, never because others are less. */
-const JURISDICTIONS: readonly string[] = ["SE", "NO", "DK", "FI", "DE"] as const;
+/** One market the form may offer.
+ *
+ *  Structural rather than imported from the server module, so this component
+ *  stays free of any database dependency — the same reason `CredentialType` is
+ *  declared this way. The dev harness supplies its own list. */
+export interface FormMarket {
+  readonly marketPackCode: string;
+  readonly jurisdictionCode: string;
+  readonly subJurisdictionCode: string | null;
+  readonly nameSv: string;
+  readonly nameEn: string;
+}
 
 export interface CredentialFormProps {
   /** The taxonomy, from sp_credential_types (or fixtures in the harness). */
   readonly types: readonly CredentialType[];
+  /** The markets a holder may record in, from the ACTIVE market packs.
+   *
+   *  This used to be a literal `["SE", "NO", "DK", "FI", "DE"]` in this file.
+   *  Only the first existed in sp_jurisdictions, so four of the five options
+   *  produced a foreign-key error — a controlled vocabulary whose control was
+   *  a list nobody had reconciled with the database. Reading it from the packs
+   *  means the form can only offer what the database will accept. */
+  readonly markets: readonly FormMarket[];
   /** Resumed draft, or null for a fresh form. */
   readonly initial?: (CredentialDraft & { readonly id: string }) | null;
   /** Preselected credential code (e.g. arriving from an overview action). */
@@ -108,6 +127,7 @@ function FieldError({ id, message }: { id: string; message: string | null }) {
 
 export function CredentialForm({
   types,
+  markets,
   initial = null,
   preselectCode = null,
   busy,
@@ -327,9 +347,9 @@ export function CredentialForm({
                 onChange={(e) => set("jurisdictionCode", e.target.value)}
                 className={cn(inputClass, "sm:w-64")}
               >
-                {JURISDICTIONS.map((code) => (
-                  <option key={code} value={code}>
-                    {code === "SE" ? pt("jurisdiction.SE") : code}
+                {markets.map((m) => (
+                  <option key={m.marketPackCode} value={m.jurisdictionCode}>
+                    {lang === "sv" ? m.nameSv : m.nameEn}
                   </option>
                 ))}
               </select>

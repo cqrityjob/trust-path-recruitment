@@ -38,6 +38,55 @@ import {
 /* Taxonomy                                                            */
 /* ------------------------------------------------------------------ */
 
+/** One market a holder may actually record a credential in.
+ *
+ *  ── WHY THIS REPLACED A CONSTANT ───────────────────────────────────────
+ *
+ *  The form used to offer `["SE", "NO", "DK", "FI", "DE"]` from a literal in
+ *  the component. Only the first existed in `sp_jurisdictions`, so four of the
+ *  five options produced a raw foreign-key error — a controlled vocabulary
+ *  whose control was a list nobody had reconciled with the database.
+ *
+ *  Read from the market packs instead, so the form can only ever offer what
+ *  the database will accept: an unreviewed market is absent because the pack
+ *  is inactive, and a new market appears the day its pack is switched on. */
+export interface SelectableMarket {
+  readonly marketPackCode: string;
+  readonly jurisdictionCode: string;
+  /** Present only where the regulator is sub-national — an emirate. Recorded
+   *  on the claim so a Dubai credential is never stored as UAE-wide. */
+  readonly subJurisdictionCode: string | null;
+  readonly nameSv: string;
+  readonly nameEn: string;
+}
+
+/** Every market a holder may currently record a credential in.
+ *
+ *  Deliberately filtered on `is_active`, which by the
+ *  sp_market_pack_active_needs_review constraint cannot be true while the
+ *  pack's regulatory content is unreviewed. So an unreviewed market is not
+ *  merely discouraged in the UI — it is not offered, and would be refused by
+ *  the claim trigger if it were. */
+export const listSelectableMarkets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly SelectableMarket[]> => {
+    const { data, error } = await context.supabase
+      .from("sp_market_packs")
+      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en")
+      .eq("is_active", true)
+      .is("superseded_on", null)
+      .order("code", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map((r) => ({
+      marketPackCode: r.code,
+      jurisdictionCode: r.jurisdiction_code,
+      subJurisdictionCode: r.sub_jurisdiction_code,
+      nameSv: r.name_sv,
+      nameEn: r.name_en,
+    }));
+  });
+
 /** The supported credentials, straight from the database.
  *
  *  Not a constant in the bundle: the taxonomy is data, and a fifth credential
