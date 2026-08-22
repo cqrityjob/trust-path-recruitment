@@ -52,7 +52,21 @@ INSERT INTO public.employers (id, name, slug, status) VALUES
   ('5e1f0000-1111-0000-0000-000000000003','Publicera Stängd AB','pub-stangd','suspended'),
   ('5e1f0000-1111-0000-0000-000000000004','Publicera Annan AB','pub-annan','active');
 
+-- The organisation whose only member is ALSO a platform admin. This is not a
+-- hypothetical: on the live database `buller-o-bang` and `cqrityjob` are both
+-- shaped exactly like this, and it is the shape that 20260906091000 could not
+-- publish. Every fixture in the original suite deliberately kept the employer
+-- owner and the platform admin as different people, which is precisely why
+-- the defect reached production green.
+INSERT INTO auth.users (id, email)
+VALUES ('5e1f0000-0000-0000-0000-000000000005','owner-and-admin@selfpub.invalid');
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('5e1f0000-1111-0000-0000-000000000005','Publicera Adminägd AB','pub-adminagd','active');
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('5e1f0000-0000-0000-0000-000000000005','admin');
+
 INSERT INTO public.employer_memberships (employer_id, user_id, role, status, accepted_at) VALUES
+  ('5e1f0000-1111-0000-0000-000000000005','5e1f0000-0000-0000-0000-000000000005','owner','active',now()),
   ('5e1f0000-1111-0000-0000-000000000001','5e1f0000-0000-0000-0000-000000000001','owner','active',now()),
   ('5e1f0000-1111-0000-0000-000000000002','5e1f0000-0000-0000-0000-000000000002','owner','active',now()),
   ('5e1f0000-1111-0000-0000-000000000003','5e1f0000-0000-0000-0000-000000000003','owner','active',now()),
@@ -116,6 +130,14 @@ VALUES
   ('5e1f0000-2222-0000-0000-00000000000c','5e1f0000-1111-0000-0000-000000000001',
    'pub-aktiv-extern-ok','pubaaa0012','Väktare Gävle','En riktig beskrivning av rollen.',
    'draft','external','https://exempel.invalid/ansok',NULL, now() + interval '30 days'),
+  -- P14: owned by the organisation whose only member is also a platform admin.
+  ('5e1f0000-2222-0000-0000-0000000000e1','5e1f0000-1111-0000-0000-000000000005',
+   'pub-adminagd-komplett','pubeee0001','Väktare Sundsvall','En riktig beskrivning av rollen.',
+   'draft','internal',NULL,NULL, now() + interval '30 days'),
+  -- P15: same organisation, used for the republication rule.
+  ('5e1f0000-2222-0000-0000-0000000000e2','5e1f0000-1111-0000-0000-000000000005',
+   'pub-adminagd-republ','pubeee0002','Väktare Östersund','En riktig beskrivning av rollen.',
+   'draft','internal',NULL,NULL, now() + interval '30 days'),
   -- P13: email WITH a valid address.
   ('5e1f0000-2222-0000-0000-00000000000d','5e1f0000-1111-0000-0000-000000000001',
    'pub-aktiv-epost-ok','pubaaa0013','Väktare Falun','En riktig beskrivning av rollen.',
@@ -171,26 +193,67 @@ SELECT pg_temp.ok(
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2. A caller cannot choose its own published_at
 -- ═══════════════════════════════════════════════════════════════════════════
--- The forged value is DISCARDED, not honoured and not merely refused: a
--- backdated published_at would silently widen the 90-day display window.
+-- REFUSED, not silently discarded. Until 20260906100000 the trigger stamped
+-- over a forged value and let the write through; now a non-admin who sends a
+-- published_at at all fails the moderation-owned guard. The value never takes
+-- effect either way -- a backdated one would silently widen the 90-day
+-- display window -- but a hard refusal is the stricter behaviour and does not
+-- quietly rewrite what the caller asked for.
 
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000001';
+DO $$
+BEGIN
+  EXECUTE 'SET LOCAL ROLE authenticated';
+  PERFORM set_config('request.jwt.claim.sub','5e1f0000-0000-0000-0000-000000000001', true);
+  -- Backdated by ten days, deliberately, not by three hundred: a large
+  -- backdate is refused by the 90-day display-window rule instead, which
+  -- runs earlier, and would let this assertion pass without the guard it
+  -- is actually meant to be testing ever being reached.
+  PERFORM pg_temp.must_fail(
+    'UPDATE public.jobs SET status = ''published'', '
+    'published_at = now() - interval ''10 days'' '
+    'WHERE id = ''5e1f0000-2222-0000-0000-00000000000c''',
+    'published_at is a moderation-owned field',
+    'S6 an employer-supplied backdated published_at is refused outright');
 
-UPDATE public.jobs
-   SET status = 'published', published_at = now() - interval '300 days'
- WHERE id = '5e1f0000-2222-0000-0000-00000000000c';
+  -- A wildly backdated one is refused too, just by a different rule: it
+  -- breaks the display window before the moderation guard is reached.
+  -- Both paths refuse; neither lets the forged value take effect.
+  PERFORM pg_temp.must_fail(
+    'UPDATE public.jobs SET status = ''published'', '
+    'published_at = now() - interval ''300 days'' '
+    'WHERE id = ''5e1f0000-2222-0000-0000-00000000000c''',
+    'expires_at cannot be more than 90 days after published_at',
+    'S6c a heavily backdated published_at is refused by the display-window rule');
 
-RESET ROLE; RESET request.jwt.claim.sub;
+  -- And a future-dated one cannot slip through either.
+  PERFORM pg_temp.must_fail(
+    'UPDATE public.jobs SET status = ''published'', '
+    'published_at = now() + interval ''5 days'' '
+    'WHERE id = ''5e1f0000-2222-0000-0000-00000000000c''',
+    'past or current timestamp',
+    'S6d a future-dated published_at is refused');
+  EXECUTE 'RESET ROLE';
+END $$;
 
 SELECT pg_temp.ok(
-  (SELECT published_at FROM public.jobs
-    WHERE id = '5e1f0000-2222-0000-0000-00000000000c') > now() - interval '1 minute',
-  'S6 a client-supplied backdated published_at is discarded and replaced with now()');
+  (SELECT status FROM public.jobs WHERE id = '5e1f0000-2222-0000-0000-00000000000c') = 'draft',
+  'S6b the forged write changed nothing at all');
+
+-- The same advertisement publishes cleanly once nothing is forged.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000001';
+UPDATE public.jobs SET status = 'published'
+ WHERE id = '5e1f0000-2222-0000-0000-00000000000c';
+RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.jobs WHERE id = '5e1f0000-2222-0000-0000-00000000000c') = 'published',
   'S7 an external application with a valid URL publishes');
+
+SELECT pg_temp.ok(
+  (SELECT published_at FROM public.jobs
+    WHERE id = '5e1f0000-2222-0000-0000-00000000000c') > now() - interval '1 minute',
+  'S7b ...and its published_at is the database''s own stamp, not an old date');
 
 -- An email application with a valid address publishes too.
 SET LOCAL ROLE authenticated;
@@ -523,6 +586,123 @@ BEGIN
 END $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- 8b. The admin-who-is-also-a-member case (regression: 20260906100000)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- The stamp must key off "did the caller supply a published_at", never off
+-- "is the caller a platform admin".
+
+SELECT pg_temp.ok(
+  public.is_platform_admin('5e1f0000-0000-0000-0000-000000000005'),
+  'X1 the actor really is a platform admin AND an active employer owner');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+
+UPDATE public.jobs SET status = 'published'
+ WHERE id = '5e1f0000-2222-0000-0000-0000000000e1';
+
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.jobs WHERE id = '5e1f0000-2222-0000-0000-0000000000e1') = 'published',
+  'X2 an employer member who is ALSO a platform admin can self-publish');
+
+SELECT pg_temp.ok(
+  (SELECT published_at FROM public.jobs
+    WHERE id = '5e1f0000-2222-0000-0000-0000000000e1')
+      BETWEEN now() - interval '1 minute' AND now(),
+  'X3 ...and the database stamped published_at, current and not in the future');
+
+SELECT pg_temp.ok(
+  (SELECT public.job_is_active(status, published_at, deadline_at, expires_at)
+     FROM public.jobs WHERE id = '5e1f0000-2222-0000-0000-0000000000e1'),
+  'X4 ...and the advertisement is publicly active');
+
+-- Republication gets a FRESH date, never the old one carried forward.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+UPDATE public.jobs SET status = 'published'
+ WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Take it down and put it back up: published -> archived -> draft -> published.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+UPDATE public.jobs SET status = 'archived' WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+UPDATE public.jobs SET status = 'draft'    WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Age the stored publication date while the row is a DRAFT. Two constraints
+-- shape this, and both are the guards working rather than getting in the way:
+--   * it cannot be done while the advert is live, because the published-branch
+--     validation re-runs on every write to a published row and would reject a
+--     200-day-old published_at against a 30-day expires_at;
+--   * it has to be done AS A PLATFORM ADMIN, because published_at is a
+--     moderation-owned field for everyone else -- including the table owner,
+--     whose auth.uid() is NULL and who is therefore not an admin here.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+UPDATE public.jobs SET published_at = now() - interval '200 days'
+ WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+UPDATE public.jobs SET status = 'published' WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT published_at FROM public.jobs
+    WHERE id = '5e1f0000-2222-0000-0000-0000000000e2') > now() - interval '1 minute',
+  'X5 republication stamps a fresh published_at rather than carrying the old one');
+
+-- An ordinary edit to an ALREADY-published advertisement must not move its
+-- publication date -- the stamp is for transitions INTO published only.
+DO $$
+DECLARE _before timestamptz; _after timestamptz;
+BEGIN
+  SELECT published_at INTO _before FROM public.jobs
+   WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+  PERFORM pg_sleep(0.05);
+  EXECUTE 'SET LOCAL ROLE authenticated';
+  PERFORM set_config('request.jwt.claim.sub','5e1f0000-0000-0000-0000-000000000005', true);
+  UPDATE public.jobs SET title_sv = 'Väktare Östersund (uppdaterad)'
+   WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+  EXECUTE 'RESET ROLE';
+  SELECT published_at INTO _after FROM public.jobs
+   WHERE id = '5e1f0000-2222-0000-0000-0000000000e2';
+  IF _before IS DISTINCT FROM _after THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: X6 editing a published advert moved its published_at (% -> %)', _before, _after;
+  END IF;
+  RAISE NOTICE '    ok  X6 editing an already-published advert does not move published_at';
+END $$;
+
+-- The admin moderation path -- an explicit published_at from a platform
+-- admin -- must still be honoured rather than overwritten by the stamp.
+DO $$
+DECLARE _chosen timestamptz := now() - interval '3 days'; _got timestamptz;
+BEGIN
+  INSERT INTO public.jobs (id, employer_id, slug, short_id, title_sv, description_sv,
+                           status, application_method, expires_at)
+  VALUES ('5e1f0000-2222-0000-0000-0000000000e3','5e1f0000-1111-0000-0000-000000000005',
+          'pub-adminagd-modpath','pubeee0003','Väktare Piteå','En riktig beskrivning av rollen.',
+          'draft','internal', now() + interval '30 days');
+
+  EXECUTE 'SET LOCAL ROLE authenticated';
+  PERFORM set_config('request.jwt.claim.sub','5e1f0000-0000-0000-0000-000000000005', true);
+  UPDATE public.jobs SET status = 'published', published_at = _chosen
+   WHERE id = '5e1f0000-2222-0000-0000-0000000000e3';
+  EXECUTE 'RESET ROLE';
+
+  SELECT published_at INTO _got FROM public.jobs
+   WHERE id = '5e1f0000-2222-0000-0000-0000000000e3';
+  IF _got IS DISTINCT FROM _chosen THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: X7 an admin-supplied published_at was overwritten (wanted %, got %)', _chosen, _got;
+  END IF;
+  RAISE NOTICE '    ok  X7 an admin-supplied published_at is honoured, not overwritten';
+END $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- 9. Nothing was destroyed
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -533,13 +713,14 @@ BEGIN
    WHERE employer_id IN ('5e1f0000-1111-0000-0000-000000000001',
                          '5e1f0000-1111-0000-0000-000000000002',
                          '5e1f0000-1111-0000-0000-000000000003',
-                         '5e1f0000-1111-0000-0000-000000000004');
-  IF _n <> 14 THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: R8 expected 14 job rows, found %', _n;
+                         '5e1f0000-1111-0000-0000-000000000004',
+                         '5e1f0000-1111-0000-0000-000000000005');
+  IF _n <> 17 THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: R8 expected 17 job rows, found %', _n;
   END IF;
   RAISE NOTICE '    ok  R8 no job row was destroyed anywhere in this suite';
 END $$;
 
-DO $$ BEGIN RAISE NOTICE '    ok  36 self-publish + requirements assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  47 self-publish + requirements assertions passed'; END $$;
 
 ROLLBACK;
