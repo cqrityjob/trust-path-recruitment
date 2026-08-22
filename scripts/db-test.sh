@@ -949,8 +949,8 @@ fi
 
 echo "    ok  ${REV_PASSED} employer response-reviewer assertions passed"
 
-if [ "$REV_PASSED" -lt 24 ]; then
-  echo "FAIL: expected at least 24 employer response-reviewer assertions, only ${REV_PASSED} ran." >&2
+if [ "$REV_PASSED" -lt 51 ]; then
+  echo "FAIL: expected at least 51 employer response-reviewer assertions, only ${REV_PASSED} ran." >&2
   exit 1
 fi
 

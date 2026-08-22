@@ -400,6 +400,10 @@ DROP FUNCTION IF EXISTS public.scp_my_review_workload() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_can_review_for(uuid, uuid, text) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_review_conflict(uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_review_authorisation(uuid, uuid) CASCADE;
+-- #63: the narrowed conflict rule, its disclosure, and the employer board.
+DROP FUNCTION IF EXISTS public.scp_review_conflict_disclosure(uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_stamp_review_conflict_disclosure() CASCADE;
+DROP FUNCTION IF EXISTS public.scp_employer_review_board(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_reviewer_is_member() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_complete_human_review(uuid, text, text, text, jsonb) CASCADE;
 -- The deprecated transition overload, which exists alongside the governed one

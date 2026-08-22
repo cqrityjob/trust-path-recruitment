@@ -918,6 +918,81 @@ export const getAcademyReviewPressure = createServerFn({ method: "GET" })
     },
   );
 
+/** #63 — The organisation's blocked work, and whether THIS caller may clear it.
+ *
+ *  The two numbers on Granskningar used to point at nothing. This is the list
+ *  underneath them: one row per attempt that cannot progress, how many
+ *  responses are open on it, and — the part that made the page honest — the
+ *  basis on which the person reading may act.
+ *
+ *  Three states the old empty state ran together, and which this separates:
+ *
+ *    not_authorised   nobody has given you review authorisation here
+ *    conflict:<rule>  you personally must not review THIS attempt
+ *    authorised       it is yours to do
+ *
+ *  Carries no response content. The material under review reaches a reviewer
+ *  through listReviewQueue and nowhere else, which is enforced by the function's
+ *  return type rather than by remembering to strip columns here. */
+export type ReviewBoardRow = {
+  attemptId: string;
+  responsesOpen: number;
+  /** "authorised" | "break_glass" | "not_authorised" | "conflict:<rule>" */
+  basis: string;
+  /** The reviewer's own involvement in this attempt — permitted, never silent. */
+  disclosure: string | null;
+};
+
+export const getEmployerReviewBoard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<ReviewBoardRow[]> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_review_board", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "review_board_failed");
+    return (rows ?? []).map((r: RpcRow) => ({
+      attemptId: String(r.attempt_id),
+      responsesOpen: Number(r.responses_open ?? 0),
+      basis: String(r.my_basis ?? "not_authorised"),
+      disclosure: r.my_disclosure ? String(r.my_disclosure) : null,
+    }));
+  });
+
+/** #63 — Does the person reading this page hold review authorisation here?
+ *
+ *  "Nothing is waiting" and "you are not allowed to see what is waiting" are
+ *  different facts, and the page said the same sentence for both. Answering
+ *  this separately is what lets it stop.
+ *
+ *  Reads the caller's OWN row out of scp_employer_team — the same source the
+ *  Organisation page manages — and returns nothing about anybody else, so a
+ *  capability check never becomes a colleague list. */
+export type MyReviewCapability = {
+  isReviewer: boolean;
+  useCases: string[];
+  /** Owner and admin can grant authorisation; a member has to ask one of them. */
+  canManageReviewers: boolean;
+};
+
+export const getMyReviewCapability = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ data, context }): Promise<MyReviewCapability> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_employer_team", {
+      _employer_id: data.employerId,
+    });
+    if (error) throw fail(error.message, "capability_failed");
+    const me = (rows ?? []).find((r: RpcRow) => Boolean(r.is_self));
+    return {
+      isReviewer: Boolean(me?.is_reviewer),
+      useCases: (me?.reviewer_use_cases as string[] | undefined) ?? [],
+      canManageReviewers: me?.employer_role === "owner" || me?.employer_role === "admin",
+    };
+  });
+
 /**
  * Resolve one pseudonymous subject to a person.
  *

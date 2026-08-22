@@ -12,10 +12,12 @@
 
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Ban, CalendarClock, Eye, FileText, Send } from "lucide-react";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
@@ -32,12 +34,61 @@ import {
 } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { LifecycleChip, nextActionLabel } from "@/components/academy/LifecycleChip";
 
+// ── ARRIVING FROM A NUMBER ────────────────────────────────────────────
+//
+// The status cards on Oversikt used to be printed metrics. They are entry
+// points now, and `state` is what makes the destination match the card that
+// was clicked: "Klara att frislappa: 3" opens this list showing those three,
+// not all thirty with the three somewhere in them.
+//
+// A single state, not a list, because a card names exactly one. Anything else
+// falls back to `all` rather than erroring -- a stale bookmark should show the
+// participants, not a validation failure.
+const STATE_FILTERS = [
+  "all",
+  "active",
+  "under_review",
+  "ready_to_release",
+  "result_available",
+] as const;
+type StateFilter = (typeof STATE_FILTERS)[number];
+
+// Optional, not defaulted. A defaulted search param becomes a REQUIRED prop on
+// every <Link> to this route, which would mean the twelve links that do not
+// care about the filter all have to name it. Absent means "all", decided once
+// where the filter is read.
+const searchSchema = z.object({
+  state: z.enum(STATE_FILTERS).catch("all").optional(),
+});
+
+/** `active` is the one filter that is not a lifecycle state: the Oversikt card
+ *  called "Pagaende" counts invited AND started, because to an employer both
+ *  mean the same thing -- sent out, not back yet. */
+const MATCHES: Record<
+  Exclude<StateFilter, "all">,
+  (s: PipelineRow["lifecycleState"]) => boolean
+> = {
+  active: (s) => s === "invited" || s === "in_progress",
+  under_review: (s) => s === "under_review",
+  ready_to_release: (s) => s === "ready_to_release",
+  result_available: (s) => s === "result_available",
+};
+
+const STATE_LABEL: Record<StateFilter, TranslationKey> = {
+  all: "academy.participants.filterStateAll",
+  active: "academy.overview.active",
+  under_review: "academy.overview.attemptsAwaitingReview",
+  ready_to_release: "academy.overview.readyToRelease",
+  result_available: "academy.overview.released",
+};
+
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/assessments/participants",
 )({
   ssr: false,
   component: ParticipantsRoute,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
 });
 
 function ParticipantsRoute() {
@@ -78,8 +129,18 @@ function Participants({
   // the two -- a candidate is a candidate on this page and nowhere near
   // Medarbetare.
   const [context, setContext] = useState<"all" | "recruitment" | "workforce">("all");
-  const visible = (rows: PipelineRow[]) =>
-    context === "all" ? rows : rows.filter((r) => r.useCase === context);
+
+  // The lifecycle filter lives in the URL rather than in state, because it is
+  // how another page hands this one a subject: a card on Oversikt links here
+  // with the state it was counting. That also makes the view shareable and
+  // survivable across a reload, which local state is not.
+  const state: StateFilter = Route.useSearch().state ?? "all";
+  const navigate = Route.useNavigate();
+
+  const visible = (rows: PipelineRow[]) => {
+    const byContext = context === "all" ? rows : rows.filter((r) => r.useCase === context);
+    return state === "all" ? byContext : byContext.filter((r) => MATCHES[state](r.lifecycleState));
+  };
 
   return (
     <>
@@ -117,22 +178,69 @@ function Participants({
         ))}
       </div>
 
+      {/* The filter is shown, not just applied. Arriving from a card and seeing
+          an unexplained short list is the same confusion as a dead card, one
+          step later -- so the active state names itself and offers the way out. */}
+      <div
+        role="tablist"
+        aria-label={t("academy.participants.stateFilter")}
+        className="mb-5 ml-0 flex flex-wrap gap-1 sm:ml-3 sm:inline-flex"
+      >
+        {STATE_FILTERS.map((sf) => (
+          <button
+            key={sf}
+            type="button"
+            role="tab"
+            aria-selected={state === sf}
+            onClick={() => void navigate({ search: { state: sf }, replace: true })}
+            className={
+              state === sf
+                ? "rounded-[7px] border border-accent bg-[color:var(--surface-subtle)] px-3 py-1.5 text-[13px] font-medium text-foreground"
+                : "rounded-[7px] border border-transparent px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+            }
+          >
+            {t(STATE_LABEL[sf])}
+          </button>
+        ))}
+      </div>
+
       <AcademyQueryState
         query={query}
         surface="assessments/participants"
         isEmpty={(rows) => visible(rows).length === 0}
-        emptyTitle={t("academy.participants.emptyTitle")}
-        emptyBody={t("academy.participants.emptyBody")}
+        // A filter that matches nothing is not an empty workspace. Telling
+        // someone who just clicked "Klara att frislappa" to go and assign their
+        // first assessment would be answering a question they did not ask.
+        emptyTitle={
+          state === "all"
+            ? t("academy.participants.emptyTitle")
+            : t("academy.participants.emptyFilteredTitle")
+        }
+        emptyBody={
+          state === "all"
+            ? t("academy.participants.emptyBody")
+            : t("academy.participants.emptyFilteredBody")
+        }
         // The empty state already told people to go to the library. Now it
         // takes them there.
         emptyAction={
-          <Link
-            to="/employer/$employerSlug/assessments/library"
-            params={{ employerSlug }}
-            className="inline-flex h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            {t("academy.overview.openLibrary")}
-          </Link>
+          state === "all" ? (
+            <Link
+              to="/employer/$employerSlug/assessments/library"
+              params={{ employerSlug }}
+              className="inline-flex h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.overview.openLibrary")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void navigate({ search: { state: "all" }, replace: true })}
+              className="inline-flex h-10 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.participants.clearStateFilter")}
+            </button>
+          )
         }
       >
         {(rows) => (

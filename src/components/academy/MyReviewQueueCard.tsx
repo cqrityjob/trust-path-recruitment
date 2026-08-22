@@ -4,17 +4,21 @@
 //
 // It is not gated in this component at all, and that is deliberate.
 //
-// scp_rm_review_queue is a security_invoker view: without the content-review
-// capability it returns zero rows, so the card renders nothing. A client-side
-// role check would be a second, weaker copy of a rule the database already
-// enforces -- and the kind of copy that drifts. Here the capability IS the
-// visibility gate, and someone who acquires or loses it sees the card appear
-// or disappear with no code change.
+// scp_review_queue returns only what its caller is authorised to review, so
+// without an authorisation the card renders nothing. A client-side role check
+// would be a second, weaker copy of a rule the database already enforces --
+// and the kind of copy that drifts. Here the capability IS the visibility
+// gate, and someone who acquires or loses it sees the card appear or disappear
+// with no code change.
 //
-// Reviewers are CQrityjob staff and are deliberately NOT members of any
-// employer organisation, so the employer portal is not a home for this. Every
-// signed-in person passes through /my-career, which makes it the one surface
-// a reviewer reliably sees.
+// ── WHY IT STILL POINTS AT /reviews ───────────────────────────────────
+//
+// Review is an EMPLOYER capability now (#51), and the workspace it belongs to
+// is Employer > Bedomningar > Granskningar (#63). This card cannot link there,
+// because it renders on the personal dashboard and does not know which of the
+// caller's organisations the waiting work belongs to -- the queue can span
+// more than one. So it keeps the tenant-neutral route, which exists for
+// exactly this case and is no longer anybody's primary way in.
 
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";

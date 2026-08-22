@@ -1480,7 +1480,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.readyToRelease": "Klara att frisläppa",
     "academy.reviews.myTasks": "Mina granskningsuppgifter",
     "academy.overview.readyToRelease": "Klara att frisläppa",
-    "academy.overview.attemptsAwaitingReview": "Väntar på granskning",
+    "academy.overview.attemptsAwaitingReview": "Bedömningar som väntar på granskning",
     "academy.history.heading": "Bedömningar",
     "academy.history.lede":
       "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
@@ -2291,7 +2291,7 @@ export const dictionaries = {
       "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
     "academy.overview.released": "Frisläppta rapporter",
-    "academy.overview.awaitingReview": "Väntar på granskning",
+    "academy.overview.awaitingReview": "Svar som väntar på granskning",
     "academy.overview.openLibrary": "Öppna bedömningsbiblioteket",
     "academy.overview.openParticipants": "Visa deltagare",
     "academy.overview.recruitmentTitle": "Bedömning i rekrytering",
@@ -2520,6 +2520,53 @@ export const dictionaries = {
     "academy.reviews.lede":
       "Fritextsvar bedöms av en människa. Granskaren utses av organisationen, och den som tilldelade testet får aldrig granska det själv.",
     "academy.reviews.awaiting": "Svar som väntar",
+    "academy.reviews.openBlockedList": "Visa blockerade resultat",
+    "academy.reviews.review": "Granska",
+    "academy.reviews.responsesOpen": "Svar att granska",
+    "academy.reviews.submittedAt": "Inlämnad",
+    "academy.reviews.myBasis": "Din behörighet",
+    "academy.reviews.backToQueue": "Tillbaka till granskningskön",
+    "academy.reviews.showAll": "Visa allt som väntar",
+    "academy.reviews.noCapabilityTitle": "Du har inte granskningsbehörighet",
+    "academy.reviews.noCapabilityOwnerBody":
+      "Ingen har gett dig behörighet att granska svar för den här organisationen. Som ägare eller administratör kan du ge behörigheten till dig själv eller till en kollega under Organisation.",
+    "academy.reviews.noCapabilityMemberBody":
+      "Ingen har gett dig behörighet att granska svar för den här organisationen. Be en ägare eller administratör om granskningsbehörighet under Organisation.",
+    "academy.reviews.manageReviewers": "Hantera granskningsbehörighet",
+    "academy.reviews.recruitmentScopeMissing":
+      "Din granskningsbehörighet gäller kompetensutveckling, inte rekrytering. Bedömningar från en rekrytering kräver att behörigheten utökas under Organisation.",
+    "academy.reviews.emptyQueueTitle": "Inget väntar på granskning",
+    "academy.reviews.emptyQueueBody":
+      "Inga svar från den här organisationen väntar på en människa just nu. När en deltagare lämnar in en bedömning som kräver granskning hamnar den här.",
+    "academy.reviews.emptyMineTitle": "Inget som du kan granska just nu",
+    "academy.reviews.emptyMineBody":
+      "Organisationen har svar som väntar, men inget av dem är ditt att granska. Listan över allt som väntar visar vem eller vad varje post väntar på.",
+    "academy.reviews.attemptEmptyTitle": "Inget kvar att granska här",
+    "academy.reviews.attemptEmptyBody":
+      "Den här bedömningen har inga svar kvar som väntar på dig. Någon annan kan ha slutfört granskningen, eller så är den redan klar.",
+    "academy.reviews.basisAuthorised": "Du kan granska",
+    "academy.reviews.basisBreakGlass": "Plattformsåtkomst (loggas)",
+    "academy.reviews.basisNotAuthorised": "Ingen behörighet",
+    "academy.reviews.basisOwnResponses": "Dina egna svar",
+    "academy.reviews.basisAlreadyDecided": "Du har redan fattat beslutet",
+    "academy.reviews.basisUnknown": "Okänd bedömning",
+    "academy.reviews.basisConflict": "Jäv",
+    "academy.reviews.discloseAssigned":
+      "Du tilldelade den här bedömningen. Det hindrar dig inte från att granska den, men det registreras på granskningen.",
+    "academy.reviews.discloseApplication":
+      "Du har hanterat kandidatens ansökan. Det hindrar dig inte från att granska bedömningen, men det registreras på granskningen.",
+    "academy.reviews.whyNotOwnResponses":
+      "Du är deltagaren i den här bedömningen. Ingen granskar sina egna svar — en kollega med granskningsbehörighet måste ta den här.",
+    "academy.reviews.whyNotAuthorised":
+      "Du har inte behörighet att granska svar för den här organisationen.",
+    "academy.reviews.whyNotConflict":
+      "Du kan inte granska just den här bedömningen. En kollega med granskningsbehörighet måste ta den.",
+    "academy.participants.stateFilter": "Filtrera på status",
+    "academy.participants.filterStateAll": "Alla statusar",
+    "academy.participants.clearStateFilter": "Visa alla statusar",
+    "academy.participants.emptyFilteredTitle": "Inget med den statusen",
+    "academy.participants.emptyFilteredBody":
+      "Ingen bedömning har den status du valde just nu. Välj en annan status eller visa alla.",
     "academy.reviews.blocked": "Resultat som blockeras",
     "academy.reviews.notReviewerTitle": "Inget att granska just nu",
     "academy.reviews.notReviewerBody":
@@ -4455,7 +4502,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.readyToRelease": "Ready to release",
     "academy.reviews.myTasks": "My review tasks",
     "academy.overview.readyToRelease": "Ready to release",
-    "academy.overview.attemptsAwaitingReview": "Awaiting review",
+    "academy.overview.attemptsAwaitingReview": "Assessments awaiting review",
     "academy.history.heading": "Assessments",
     "academy.history.lede":
       "Your assessment history, whichever organisation assigned it. A result appears once it has been released.",
@@ -5260,7 +5307,7 @@ export const dictionaries = {
       "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
     "academy.overview.released": "Released reports",
-    "academy.overview.awaitingReview": "Awaiting review",
+    "academy.overview.awaitingReview": "Answers awaiting review",
     "academy.overview.openLibrary": "Open the assessment library",
     "academy.overview.openParticipants": "View participants",
     "academy.overview.recruitmentTitle": "Assessment in recruitment",
@@ -5489,6 +5536,53 @@ export const dictionaries = {
     "academy.reviews.lede":
       "Written answers are judged by a person. The reviewer is appointed by the organisation, and whoever assigned an assessment may never review it themselves.",
     "academy.reviews.awaiting": "Answers waiting",
+    "academy.reviews.openBlockedList": "Show blocked results",
+    "academy.reviews.review": "Review",
+    "academy.reviews.responsesOpen": "Answers to review",
+    "academy.reviews.submittedAt": "Submitted",
+    "academy.reviews.myBasis": "Your authorisation",
+    "academy.reviews.backToQueue": "Back to the review queue",
+    "academy.reviews.showAll": "Show everything waiting",
+    "academy.reviews.noCapabilityTitle": "You do not hold review authorisation",
+    "academy.reviews.noCapabilityOwnerBody":
+      "Nobody has authorised you to review answers for this organisation. As an owner or administrator you can grant the authorisation to yourself or to a colleague under Organisation.",
+    "academy.reviews.noCapabilityMemberBody":
+      "Nobody has authorised you to review answers for this organisation. Ask an owner or administrator for review authorisation under Organisation.",
+    "academy.reviews.manageReviewers": "Manage review authorisation",
+    "academy.reviews.recruitmentScopeMissing":
+      "Your review authorisation covers competence development, not recruitment. Assessments from a recruitment need the authorisation extended under Organisation.",
+    "academy.reviews.emptyQueueTitle": "Nothing is waiting for review",
+    "academy.reviews.emptyQueueBody":
+      "No answers from this organisation are waiting for a person right now. When a participant submits an assessment that needs review, it appears here.",
+    "academy.reviews.emptyMineTitle": "Nothing here is yours to review",
+    "academy.reviews.emptyMineBody":
+      "The organisation has answers waiting, but none of them are yours to review. The list of everything waiting shows what each item is waiting on.",
+    "academy.reviews.attemptEmptyTitle": "Nothing left to review here",
+    "academy.reviews.attemptEmptyBody":
+      "This assessment has no answers left waiting for you. Somebody else may have completed the review, or it is already finished.",
+    "academy.reviews.basisAuthorised": "Yours to review",
+    "academy.reviews.basisBreakGlass": "Platform access (recorded)",
+    "academy.reviews.basisNotAuthorised": "No authorisation",
+    "academy.reviews.basisOwnResponses": "Your own answers",
+    "academy.reviews.basisAlreadyDecided": "You already made the decision",
+    "academy.reviews.basisUnknown": "Unknown assessment",
+    "academy.reviews.basisConflict": "Conflict of interest",
+    "academy.reviews.discloseAssigned":
+      "You assigned this assessment. That does not stop you reviewing it, but it is recorded on the review.",
+    "academy.reviews.discloseApplication":
+      "You have handled this candidate's application. That does not stop you reviewing the assessment, but it is recorded on the review.",
+    "academy.reviews.whyNotOwnResponses":
+      "You are the participant in this assessment. Nobody reviews their own answers — a colleague with review authorisation has to take this one.",
+    "academy.reviews.whyNotAuthorised":
+      "You are not authorised to review answers for this organisation.",
+    "academy.reviews.whyNotConflict":
+      "You cannot review this particular assessment. A colleague with review authorisation has to take it.",
+    "academy.participants.stateFilter": "Filter by status",
+    "academy.participants.filterStateAll": "All statuses",
+    "academy.participants.clearStateFilter": "Show all statuses",
+    "academy.participants.emptyFilteredTitle": "Nothing with that status",
+    "academy.participants.emptyFilteredBody":
+      "No assessment currently has the status you chose. Pick another status, or show them all.",
     "academy.reviews.blocked": "Results blocked",
     "academy.reviews.notReviewerTitle": "Nothing to review right now",
     "academy.reviews.notReviewerBody":

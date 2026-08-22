@@ -2,14 +2,17 @@
 //
 // ── WHY THIS IS A COMPONENT AND NOT A ROUTE ───────────────────────────
 //
-// Reviews are performed by CQrityjob reviewers, who hold the content-review
-// capability and are deliberately NOT members of any employer organisation —
-// an employer must never adjudicate its own candidate.
+// The same cards are mounted by three surfaces: the standalone /reviews route,
+// the employer review workspace, and the employer route that reviews one
+// candidate's submission. One implementation, three mount points — a second
+// copy would drift, and the copy that drifted would be the one putting a
+// judgement on somebody's competence record.
 //
-// That means the queue has to be reachable from the admin surface, while the
-// employer surface shows the same area with an empty queue and a count. One
-// implementation, two mount points: a second copy would drift, and the copy
-// that drifted would be the one handling somebody's competence record.
+// The header on this file used to say reviewers are CQrityjob staff who are
+// never members of an employer. That stopped being true in #51: an employer
+// authorises its own reviewers, per use case, revocably. #63 then narrowed the
+// separation-of-duties rule so that commissioning an assessment discloses a
+// conflict instead of refusing one — see the migration for why that is safe.
 //
 // ── WHAT A CARD HAS TO ANSWER ─────────────────────────────────────────
 //
@@ -70,15 +73,30 @@ export type ReviewQueueRow = {
 };
 
 /** The queue itself. Renders nothing but an explanation when the queue returns
- *  no rows — which is exactly what an employer without the capability sees. */
-export function ReviewQueue({ emptyTitle, emptyBody }: { emptyTitle: string; emptyBody: string }) {
+ *  no rows — which is exactly what a member without the capability sees.
+ *
+ *  `attemptId` narrows the same cached queue to one attempt, for the employer
+ *  route that reviews a single candidate's submission. It is a VIEW filter over
+ *  rows the database already decided this caller may read — never the thing
+ *  that decides it. Scoping still happens in scp_review_queue, so passing an
+ *  attempt id that is not in the queue shows nothing rather than something. */
+export function ReviewQueue({
+  attemptId,
+  emptyTitle,
+  emptyBody,
+}: {
+  attemptId?: string;
+  emptyTitle: string;
+  emptyBody: string;
+}) {
   const { lang } = useT();
   const queueFn = useServerFn(listReviewQueue);
   const queue = useQuery({
     queryKey: ["academy", "review-queue", lang],
     queryFn: () => queueFn({ data: { locale: lang } }),
   });
-  const rows = (queue.data ?? []) as ReviewQueueRow[];
+  const all = (queue.data ?? []) as ReviewQueueRow[];
+  const rows = attemptId ? all.filter((r) => r.attemptId === attemptId) : all;
 
   if (rows.length === 0) {
     return <NoEvidenceState title={emptyTitle} body={emptyBody} />;
