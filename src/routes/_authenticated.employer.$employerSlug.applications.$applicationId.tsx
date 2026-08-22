@@ -234,10 +234,16 @@ function Candidate360({
           <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground">
             {status ? t(APPLICATION_STATUS_LABEL_KEY[status]) : c.applicationStatus}
           </span>
-          {c.jobId && c.jobSlug && (
+          {/* The vacancy itself, not the list it is somewhere in. This link
+              used to land on Mina annonser and leave the recruiter to find the
+              job again by name -- and a published job had no page to land on
+              at all. `jobSlug` is no longer required: the hub is addressed by
+              id and exists for every status, including the drafts and archived
+              advertisements that have no public slug. */}
+          {c.jobId && (
             <Link
-              to="/employer/$employerSlug/jobs"
-              params={{ employerSlug }}
+              to="/employer/$employerSlug/jobs/$jobId"
+              params={{ employerSlug, jobId: c.jobId }}
               className="text-xs font-medium text-accent hover:underline"
             >
               {t("employer.candidate.openJob")}

@@ -22,6 +22,7 @@
 import { createFileRoute, Link, type LinkComponentProps } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
+import { getEmployerReviewBoard } from "@/lib/security-competency/academy-employer.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, type ReactNode } from "react";
 import {
@@ -30,9 +31,14 @@ import {
   Briefcase,
   CheckCircle2,
   ClipboardCheck,
+  FileCheck2,
   GraduationCap,
+  Hourglass,
+  Inbox,
   Info,
+  ShieldCheck,
   Sparkles,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -154,6 +160,28 @@ type AttentionItem = {
   actionLabel: string;
 };
 
+/** One piece of work, with the exact place it is done.
+ *
+ *  The contract this board keeps, and the reason it is separate from the
+ *  status cards below it: every row is a NUMBER OF THINGS and a LINK THAT
+ *  LANDS ON EXACTLY THOSE THINGS. A count whose link opens an unfiltered list
+ *  is not an action, it is a reading comprehension exercise -- the employer
+ *  has to re-find the five rows the number was about.
+ *
+ *  `tone` distinguishes work the employer owns from work they are waiting on
+ *  somebody else to finish. Both belong here (a recruiter needs to know an
+ *  assessment has been sitting with a candidate for a week), and they are not
+ *  the same call to action, so they do not look the same. */
+type ActionItem = {
+  key: string;
+  icon: ReactNode;
+  count: number;
+  text: string;
+  linkProps: LinkComponentProps;
+  actionLabel: string;
+  tone: "todo" | "waiting";
+};
+
 const SEVERITY_ORDER: Record<Severity, number> = {
   critical: 0,
   attention: 1,
@@ -206,6 +234,7 @@ function EmployerOverview({
   const loadAssignments = useServerFn(listAssignmentsForEmployer);
   const loadTraining = useServerFn(listTrainingStatus);
   const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
+  const loadReviewBoard = useServerFn(getEmployerReviewBoard);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -245,6 +274,15 @@ function EmployerOverview({
     queryKey: ["academy", "participants", employerId],
     queryFn: () => loadPipeline({ data: { employerId } }),
   });
+  // RESPONSES outstanding, not attempts. "7 svar behover granskas" is the
+  // sentence a reviewer can act on; "2 forsok under granskning" is a different
+  // number about a different object, and the review workspace already leads
+  // with the first. Same cache key as that workspace, so the dashboard can
+  // never quote a total the queue disagrees with.
+  const reviewBoardQuery = useQuery({
+    queryKey: ["academy", "review-board", employerId],
+    queryFn: () => loadReviewBoard({ data: { employerId } }),
+  });
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -282,6 +320,14 @@ function EmployerOverview({
   const trainingCompletedCount = training.filter((r) => r.status === "completed").length;
 
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
+  const responsesToReview = (reviewBoardQuery.data ?? []).reduce((n, r) => n + r.responsesOpen, 0);
+  // Somebody the employer has already picked up and not yet decided about.
+  // Deliberately not "everyone who is not rejected": a candidate still at
+  // `submitted` is in the first item above, and counting them twice would make
+  // the board describe more work than exists.
+  const nextStepCount = applications.filter(
+    (a) => a.status === "reviewing" || a.status === "interview",
+  ).length;
   const publishedJobIds = new Set(jobs.filter((j) => j.status === "published").map((j) => j.id));
   const jobIdsWithApplications = new Set(applications.map((a) => a.jobId));
   const publishedNoApplications = [...publishedJobIds].filter(
@@ -296,6 +342,107 @@ function EmployerOverview({
     rolesRepresented: 0,
     sitesRepresented: 0,
   };
+
+  // ---- Today's work. Ordered by who is blocked: things waiting on this
+  // employer first, things waiting on somebody else after. Nothing is shown
+  // at zero -- an empty row that says "0 svar behover granskas" is a metric,
+  // and this section is not for metrics.
+  const actions: ActionItem[] = [];
+
+  if (awaitingReviewCount > 0) {
+    actions.push({
+      key: "new-applications",
+      icon: <Inbox className="h-4 w-4" />,
+      count: awaitingReviewCount,
+      text: t("employer.actions.newApplications"),
+      // The exact rows, not the inbox they live in.
+      linkProps: {
+        to: "/employer/$employerSlug/applications",
+        params: { employerSlug },
+        search: { status: "submitted" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  if (responsesToReview > 0) {
+    actions.push({
+      key: "responses-to-review",
+      icon: <ShieldCheck className="h-4 w-4" />,
+      count: responsesToReview,
+      text: t("employer.actions.responsesToReview"),
+      linkProps: {
+        to: "/employer/$employerSlug/assessments/reviews",
+        params: { employerSlug },
+        search: { scope: "all" as const },
+      },
+      actionLabel: t("employer.actions.review"),
+      tone: "todo",
+    });
+  }
+
+  if (testsReadyToReleaseCount > 0) {
+    actions.push({
+      key: "results-ready",
+      icon: <FileCheck2 className="h-4 w-4" />,
+      count: testsReadyToReleaseCount,
+      text: t("employer.actions.resultsReady"),
+      linkProps: {
+        to: "/employer/$employerSlug/assessments/participants",
+        params: { employerSlug },
+        search: { state: "ready_to_release" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  if (nextStepCount > 0) {
+    actions.push({
+      key: "awaiting-next-step",
+      icon: <UserCheck className="h-4 w-4" />,
+      count: nextStepCount,
+      text: t("employer.actions.awaitingNextStep"),
+      linkProps: {
+        to: "/employer/$employerSlug/applications",
+        params: { employerSlug },
+        search: { status: "reviewing" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  if (data.draftJobs > 0) {
+    actions.push({
+      key: "draft-jobs",
+      icon: <Briefcase className="h-4 w-4" />,
+      count: data.draftJobs,
+      text: t("employer.actions.draftJobs"),
+      linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  // Waiting on the candidate, not on the employer. Still worth surfacing --
+  // an invitation nobody has opened is the thing a recruiter chases.
+  if (testsActiveCount > 0) {
+    actions.push({
+      key: "tests-with-candidates",
+      icon: <Hourglass className="h-4 w-4" />,
+      count: testsActiveCount,
+      text: t("employer.actions.testsWithCandidates"),
+      linkProps: {
+        to: "/employer/$employerSlug/assessments/participants",
+        params: { employerSlug },
+        search: { state: "active" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "waiting",
+    });
+  }
 
   // ---- Needs your attention: built only from signals that genuinely
   // exist today. Severity "critical" is reserved for an actually blocking
@@ -335,36 +482,12 @@ function EmployerOverview({
     });
   }
 
-  if (awaitingReviewCount > 0) {
-    items.push({
-      key: "applications-awaiting",
-      severity: "attention",
-      text: t("employer.attention.applicationsAwaiting"),
-      count: awaitingReviewCount,
-      sourceLabel: t("employer.attention.source.applications"),
-      linkProps: { to: "/employer/$employerSlug/applications", params: { employerSlug } },
-      actionLabel: t("employer.attention.action.reviewApplications"),
-    });
-  }
-
   if (publishedNoApplications > 0) {
     items.push({
       key: "jobs-no-applications",
       severity: "attention",
       text: t("employer.attention.jobsNoApplications"),
       count: publishedNoApplications,
-      sourceLabel: t("employer.attention.source.jobs"),
-      linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
-      actionLabel: t("employer.attention.action.manageJobs"),
-    });
-  }
-
-  if (data.draftJobs > 0) {
-    items.push({
-      key: "draft-jobs",
-      severity: "opportunity",
-      text: t("employer.attention.draftJobs"),
-      count: data.draftJobs,
       sourceLabel: t("employer.attention.source.jobs"),
       linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
       actionLabel: t("employer.attention.action.manageJobs"),
@@ -435,7 +558,64 @@ function EmployerOverview({
         </p>
       </div>
 
-      {/* B. The four working areas, at equal weight. */}
+      {/* B. Today's work, above the status cards.
+       *
+       *  Order matters here and it changed: the four area cards used to be the
+       *  first thing on the page, so an employer with five new applications
+       *  and seven responses to review landed on four totals and had to go
+       *  looking. Work first, totals second. */}
+      <section className="mt-6" aria-labelledby="employer-actions">
+        <h2 id="employer-actions" className="text-lg font-semibold text-foreground">
+          {t("employer.actions.heading")}
+        </h2>
+        {actions.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {actions.map((item) => (
+              <li key={item.key}>
+                {/* The whole row is the link. A number that is described as
+                    actionable and then needs a second, smaller target to act
+                    on is a number the employer has to aim at. */}
+                <Link
+                  {...item.linkProps}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 shadow-sm transition-colors hover:border-accent/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span
+                      className={
+                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md " +
+                        (item.tone === "todo"
+                          ? "bg-accent/10 text-accent"
+                          : "bg-muted text-muted-foreground")
+                      }
+                      aria-hidden="true"
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-foreground">
+                        <span className="tabular-nums">{item.count}</span> {item.text}
+                      </span>
+                      {item.tone === "waiting" && (
+                        <span className="block text-xs text-muted-foreground">
+                          {t("employer.actions.waitingLabel")}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-accent">
+                    {item.actionLabel}
+                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* C. The four working areas, at equal weight. */}
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <PrimaryCard
           icon={<Briefcase className="h-4 w-4" />}
@@ -452,11 +632,13 @@ function EmployerOverview({
               label: t("employer.overview.card.jobs.stat.drafts"),
               value: data.draftJobs,
               loading: stats.isLoading,
+              linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
             },
             {
               label: t("employer.overview.card.jobs.stat.applications"),
               value: data.applications,
               loading: stats.isLoading,
+              linkProps: { to: "/employer/$employerSlug/applications", params: { employerSlug } },
             },
           ]}
           actions={[
@@ -511,16 +693,31 @@ function EmployerOverview({
               label: t("employer.overview.card.tests.stat.active"),
               value: testsActiveCount,
               loading: pipelineQuery.isLoading,
+              linkProps: {
+                to: "/employer/$employerSlug/assessments/participants",
+                params: { employerSlug },
+                search: { state: "active" as const },
+              },
             },
             {
               label: t("employer.overview.card.tests.stat.awaitingReview"),
               value: testsAwaitingReviewCount,
               loading: pipelineQuery.isLoading,
+              linkProps: {
+                to: "/employer/$employerSlug/assessments/reviews",
+                params: { employerSlug },
+                search: { scope: "all" as const },
+              },
             },
             {
               label: t("employer.overview.card.tests.stat.readyToRelease"),
               value: testsReadyToReleaseCount,
               loading: pipelineQuery.isLoading,
+              linkProps: {
+                to: "/employer/$employerSlug/assessments/participants",
+                params: { employerSlug },
+                search: { state: "ready_to_release" as const },
+              },
             },
           ]}
           actions={[
@@ -580,7 +777,8 @@ function EmployerOverview({
         />
       </div>
 
-      {/* C. Needs your attention */}
+      {/* D. Organisation and setup notes. Not today's work -- the two are
+          separated now, and the actionable half is at the top of the page. */}
       <section className="mt-10">
         <h2 className="text-lg font-semibold text-foreground">{t("employer.attention.heading")}</h2>
         {items.length === 0 ? (
@@ -642,7 +840,7 @@ function PrimaryCard({
   title: string;
   body: string;
   linkProps: LinkComponentProps;
-  stats?: { label: string; value: number; loading: boolean }[];
+  stats?: { label: string; value: number; loading: boolean; linkProps?: LinkComponentProps }[];
   actions?: { label: string; linkProps: LinkComponentProps }[];
   badge?: string;
 }) {
@@ -684,7 +882,22 @@ function PrimaryCard({
                 {stat.label}
               </dt>
               <dd className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-                {stat.loading ? "—" : stat.value}
+                {/* A stat that names a pile of work is a way into that pile.
+                    A stat that is only a total (employees, sites) stays plain
+                    text -- making everything clickable teaches an employer
+                    that nothing in particular is. */}
+                {stat.loading ? (
+                  "—"
+                ) : stat.linkProps && stat.value > 0 ? (
+                  <Link
+                    {...stat.linkProps}
+                    className="text-foreground underline decoration-border underline-offset-4 hover:text-accent hover:decoration-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {stat.value}
+                  </Link>
+                ) : (
+                  stat.value
+                )}
               </dd>
             </div>
           ))}

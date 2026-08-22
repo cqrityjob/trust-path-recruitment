@@ -133,6 +133,26 @@ export function RecruitmentPage({
   );
 }
 
+/** The same frame for one job advertisement under Mina annonser.
+ *
+ *  The Job Recruitment Hub is reached from the job list and is about one
+ *  vacancy, so it keeps the Jobs section highlighted and shows no tab bar --
+ *  exactly as Medarbetare > [Person] and Ansokningar > [Kandidat] do. It
+ *  borrows this frame for the access check and nothing else. */
+export function JobsPage({
+  employerSlug,
+  children,
+}: {
+  employerSlug: string;
+  children: (ws: AcademyWorkspace) => ReactNode;
+}) {
+  return (
+    <WorkspaceFrame employerSlug={employerSlug} section="jobs" tabs={[]}>
+      {children}
+    </WorkspaceFrame>
+  );
+}
+
 /** The same frame for Kompetensutveckling. Same access check, different tabs,
  *  and activeSection="training" so the sidebar highlights the right entry. */
 export function TrainingPage({

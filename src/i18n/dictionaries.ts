@@ -1270,6 +1270,72 @@ export const dictionaries = {
     "employer.overview.card.development.body":
       "Riktad utveckling utifrån identifierade kompetensluckor. Genomförd utbildning dokumenterar deltagande — den är inte ett bevis på kompetens.",
 
+    // Job Recruitment Hub — one vacancy, its state, and everyone in its
+    // pipeline. Reached by clicking the advertisement itself.
+    "employer.jobs.list.open": "Öppna",
+    "employer.jobHub.backToJobs": "Tillbaka till mina annonser",
+    "employer.jobHub.eyebrow": "Rekrytering",
+    "employer.jobHub.notFound": "Annonsen hittades inte",
+    "employer.jobHub.notFoundBody": "Annonsen finns inte, eller tillhör inte din organisation.",
+    "employer.jobHub.viewPublic": "Visa publicerad annons",
+    "employer.jobHub.openJob": "Öppna annonsen",
+    "employer.jobHub.action.submit": "Skicka för granskning",
+    "employer.jobHub.readiness.heading": "Klar att publiceras?",
+    "employer.jobHub.readiness.ready":
+      "Allt som krävs finns på plats. Du kan skicka annonsen för granskning.",
+    "employer.jobHub.readiness.notReady":
+      "Något saknas ännu. Komplettera punkterna nedan innan du skickar annonsen.",
+    "employer.jobHub.readiness.optional": "rekommenderas",
+    "employer.jobHub.facts.heading": "Om annonsen",
+    "employer.jobHub.fact.location": "Plats",
+    "employer.jobHub.fact.published": "Publicerad",
+    "employer.jobHub.candidates.heading": "Kandidater",
+    "employer.jobHub.candidates.openList": "Visa i ansökningslistan",
+    "employer.jobHub.candidates.emptyPublished":
+      "Inga ansökningar ännu. Kandidater dyker upp här så snart någon söker tjänsten.",
+    "employer.jobHub.candidates.emptyUnpublished":
+      "Annonsen är inte publicerad ännu, så den kan inte ta emot ansökningar.",
+    "employer.jobHub.stage.new": "Nya",
+    "employer.jobHub.stage.reviewing": "Under bedömning",
+    "employer.jobHub.stage.interview": "Intervju",
+    "employer.jobHub.stage.hired": "Anställda",
+    "employer.jobHub.stage.closed": "Avslutade",
+
+    // The deterministic pre-publication check. The first five are what
+    // submitEmployerJob() itself refuses on; the rest are advice and block
+    // nothing.
+    "employer.jobs.readiness.title": "Titel",
+    "employer.jobs.readiness.description": "Beskrivning",
+    "employer.jobs.readiness.applicationMethod": "Så här söker man",
+    "employer.jobs.readiness.applicationTarget": "Länk eller e-postadress för ansökan",
+    "employer.jobs.readiness.expiresAt": "Sista visningsdag",
+    "employer.jobs.readiness.location": "Plats eller ort",
+    "employer.jobs.readiness.bothLanguages": "Både svenska och engelska",
+    "employer.jobs.readiness.descriptionDepth": "En beskrivning som säger något om tjänsten",
+
+    // Filtered application list — every count on Översikt lands on exactly
+    // the rows it counted.
+    "employer.applications.filter.all": "Alla",
+    "employer.applications.filter.forJob": "Visar kandidater för",
+    "employer.applications.filter.clearJob": "Visa alla annonser",
+    "employer.applications.filter.emptyTitle": "Inga ansökningar matchar filtret",
+    "employer.applications.filter.emptyBody":
+      "Du har ansökningar, men ingen i just det här urvalet.",
+    "employer.applications.filter.showAll": "Visa alla ansökningar",
+
+    // Översikt: today's work, separated from the totals.
+    "employer.actions.heading": "Att göra idag",
+    "employer.actions.empty": "Inget väntar på dig just nu.",
+    "employer.actions.open": "Öppna",
+    "employer.actions.review": "Granska",
+    "employer.actions.waitingLabel": "Väntar på kandidaten",
+    "employer.actions.newApplications": "nya ansökningar",
+    "employer.actions.responsesToReview": "svar behöver granskas",
+    "employer.actions.resultsReady": "resultat klara att släppas",
+    "employer.actions.awaitingNextStep": "kandidater väntar på nästa steg",
+    "employer.actions.draftJobs": "utkast till annonser",
+    "employer.actions.testsWithCandidates": "tester är ute hos kandidater",
+
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
     "employer.attention.severity.critical": "Kritiskt",
@@ -3063,6 +3129,8 @@ export const dictionaries = {
       "Bedömningen samlade två slags underlag. Det du gjorde i situationsuppgifterna är observerat. Det du beskrev om ditt eget arbetssätt är självrapporterat och redovisas aldrig som visad kompetens. Bedömningen är en informationskälla i en rekryteringsprocess och avgör inte anställning, behörighet eller framtida arbetsprestation.",
 
     // ── Recruitment journey ─────────────────────────────────────────────
+    "journey.reviewResponses": "Granska {count} svar",
+    "journey.reviewNotAuthorised": "Du saknar behörighet att granska den här bedömningen.",
     "journey.assessment": "Bedömning",
     "journey.noAssessmentYet": "Ingen bedömning har skickats för den här ansökan.",
     "journey.sendAssessment": "Skicka bedömning",
@@ -4392,6 +4460,73 @@ export const dictionaries = {
     "employer.overview.card.development.title": "Skills development",
     "employer.overview.card.development.body":
       "Targeted development based on identified competency gaps. Completed training documents participation — it is not proof of competence.",
+
+    // Job Recruitment Hub -- one vacancy, its state, and everyone in its
+    // pipeline. Reached by clicking the advertisement itself.
+    "employer.jobs.list.open": "Open",
+    "employer.jobHub.backToJobs": "Back to my job ads",
+    "employer.jobHub.eyebrow": "Recruitment",
+    "employer.jobHub.notFound": "Job ad not found",
+    "employer.jobHub.notFoundBody":
+      "This job ad does not exist, or does not belong to your organisation.",
+    "employer.jobHub.viewPublic": "View published ad",
+    "employer.jobHub.openJob": "Open the job ad",
+    "employer.jobHub.action.submit": "Submit for review",
+    "employer.jobHub.readiness.heading": "Ready to publish?",
+    "employer.jobHub.readiness.ready":
+      "Everything required is in place. You can submit this ad for review.",
+    "employer.jobHub.readiness.notReady":
+      "Something is still missing. Complete the items below before submitting.",
+    "employer.jobHub.readiness.optional": "recommended",
+    "employer.jobHub.facts.heading": "About this ad",
+    "employer.jobHub.fact.location": "Location",
+    "employer.jobHub.fact.published": "Published",
+    "employer.jobHub.candidates.heading": "Candidates",
+    "employer.jobHub.candidates.openList": "Show in the applications list",
+    "employer.jobHub.candidates.emptyPublished":
+      "No applications yet. Candidates appear here as soon as somebody applies.",
+    "employer.jobHub.candidates.emptyUnpublished":
+      "This ad is not published yet, so it cannot receive applications.",
+    "employer.jobHub.stage.new": "New",
+    "employer.jobHub.stage.reviewing": "In review",
+    "employer.jobHub.stage.interview": "Interview",
+    "employer.jobHub.stage.hired": "Hired",
+    "employer.jobHub.stage.closed": "Closed",
+
+    // The deterministic pre-publication check. The first five are what
+    // submitEmployerJob() itself refuses on; the rest are advice and block
+    // nothing.
+    "employer.jobs.readiness.title": "Title",
+    "employer.jobs.readiness.description": "Description",
+    "employer.jobs.readiness.applicationMethod": "How to apply",
+    "employer.jobs.readiness.applicationTarget": "Application link or email address",
+    "employer.jobs.readiness.expiresAt": "Last day shown",
+    "employer.jobs.readiness.location": "Location or city",
+    "employer.jobs.readiness.bothLanguages": "Both Swedish and English",
+    "employer.jobs.readiness.descriptionDepth": "A description that says something about the role",
+
+    // Filtered application list -- every count on the overview lands on
+    // exactly the rows it counted.
+    "employer.applications.filter.all": "All",
+    "employer.applications.filter.forJob": "Showing candidates for",
+    "employer.applications.filter.clearJob": "Show all job ads",
+    "employer.applications.filter.emptyTitle": "No applications match this filter",
+    "employer.applications.filter.emptyBody":
+      "You do have applications, just none in this particular selection.",
+    "employer.applications.filter.showAll": "Show all applications",
+
+    // Overview: today's work, separated from the totals.
+    "employer.actions.heading": "To do today",
+    "employer.actions.empty": "Nothing is waiting on you right now.",
+    "employer.actions.open": "Open",
+    "employer.actions.review": "Review",
+    "employer.actions.waitingLabel": "Waiting on the candidate",
+    "employer.actions.newApplications": "new applications",
+    "employer.actions.responsesToReview": "responses need review",
+    "employer.actions.resultsReady": "results ready to release",
+    "employer.actions.awaitingNextStep": "candidates waiting on a next step",
+    "employer.actions.draftJobs": "draft job ads",
+    "employer.actions.testsWithCandidates": "assessments are out with candidates",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
@@ -6170,6 +6305,8 @@ export const dictionaries = {
       "The assessment gathered two kinds of evidence. What you did in the situational tasks is observed. What you described about your own way of working is self-reported, and is never presented as demonstrated competence. The assessment is one source of information in a recruitment process and does not determine employment, authorisation or future job performance.",
 
     // ── Recruitment journey ─────────────────────────────────────────────
+    "journey.reviewResponses": "Review {count} responses",
+    "journey.reviewNotAuthorised": "You are not authorised to review this assessment.",
     "journey.assessment": "Assessment",
     "journey.noAssessmentYet": "No assessment has been sent for this application.",
     "journey.sendAssessment": "Send assessment",

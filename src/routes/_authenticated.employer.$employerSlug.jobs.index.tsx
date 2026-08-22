@@ -270,13 +270,22 @@ function JobsList({
                   return (
                     <tr key={r.id} className="align-top">
                       <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">
+                        {/* The advertisement is the way into its own
+                            recruitment workspace. It used to be plain text,
+                            so a published job -- the one thing a recruiter
+                            actually works -- had no destination at all and
+                            only a draft could be opened, via Redigera. */}
+                        <Link
+                          to="/employer/$employerSlug/jobs/$jobId"
+                          params={{ employerSlug, jobId: r.id }}
+                          className="font-medium text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
                           {r.title_sv || r.title_en || (
                             <span className="text-muted-foreground">
                               {t("employer.jobs.list.untitled")}
                             </span>
                           )}
-                        </div>
+                        </Link>
                         <div className="text-xs text-muted-foreground">{r.short_id}</div>
                       </td>
                       <td className="px-4 py-3">
@@ -292,6 +301,16 @@ function JobsList({
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-2">
+                          {/* Open works for every status; Redigera only for
+                              the two the database will actually accept an
+                              edit on. */}
+                          <Link
+                            to="/employer/$employerSlug/jobs/$jobId"
+                            params={{ employerSlug, jobId: r.id }}
+                            className="rounded-md border border-accent/50 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+                          >
+                            {t("employer.jobs.list.open")}
+                          </Link>
                           {editable && (
                             <Link
                               to="/employer/$employerSlug/jobs/$jobId/edit"
