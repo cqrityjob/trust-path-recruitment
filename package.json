@@ -34,7 +34,8 @@
     "migrations:check": "bun run scripts/migration-safety-check.ts",
     "mcp-exposure:check": "bun run scripts/mcp-exposure-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
-    "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts"
+    "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",
+    "header-entry:check": "bun run scripts/header-entry-check.ts"
   }, 
   "dependencies": {
     "embla-carousel-react": "^8.6.0", 

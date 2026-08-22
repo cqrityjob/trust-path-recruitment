@@ -478,7 +478,6 @@ export const dictionaries = {
     "auth.redirecting": "Omdirigerar…",
 
     "nav.employerPortal": "Arbetsgivarportal",
-    "nav.employerSignin": "Arbetsgivare",
 
     "candidate.auth.signin.title": "Logga in som kandidat",
     "candidate.auth.signin.intro":
@@ -3460,7 +3459,6 @@ export const dictionaries = {
     "auth.redirecting": "Redirecting…",
 
     "nav.employerPortal": "Employer portal",
-    "nav.employerSignin": "For employers",
 
     "candidate.auth.signin.title": "Log in as a candidate",
     "candidate.auth.signin.intro":
