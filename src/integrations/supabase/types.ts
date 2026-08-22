@@ -2990,15 +2990,12 @@ export type Database = {
       }
       employees: {
         Row: {
-          cig_profession_slug: string | null
           created_at: string
           created_by: string
           email: string | null
           employer_id: string
           employment_status: string
           first_name: string
-          hired_from_application_id: string | null
-          hired_from_job_id: string | null
           id: string
           last_name: string
           role_title: string | null
@@ -3008,15 +3005,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          cig_profession_slug?: string | null
           created_at?: string
           created_by: string
           email?: string | null
           employer_id: string
           employment_status?: string
           first_name: string
-          hired_from_application_id?: string | null
-          hired_from_job_id?: string | null
           id?: string
           last_name: string
           role_title?: string | null
@@ -3026,15 +3020,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          cig_profession_slug?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
           employer_id?: string
           employment_status?: string
           first_name?: string
-          hired_from_application_id?: string | null
-          hired_from_job_id?: string | null
           id?: string
           last_name?: string
           role_title?: string | null
@@ -8290,7 +8281,6 @@ export type Database = {
       sp_disclosures: {
         Row: {
           access_count: number
-          application_id: string | null
           created_at: string
           expires_at: string | null
           focus_claim_id: string | null
@@ -8300,11 +8290,10 @@ export type Database = {
           purpose: string | null
           recipient_hint: string | null
           revoked_at: string | null
-          token_hash: string | null
+          token_hash: string
         }
         Insert: {
           access_count?: number
-          application_id?: string | null
           created_at?: string
           expires_at?: string | null
           focus_claim_id?: string | null
@@ -8314,11 +8303,10 @@ export type Database = {
           purpose?: string | null
           recipient_hint?: string | null
           revoked_at?: string | null
-          token_hash?: string | null
+          token_hash: string
         }
         Update: {
           access_count?: number
-          application_id?: string | null
           created_at?: string
           expires_at?: string | null
           focus_claim_id?: string | null
@@ -8328,7 +8316,7 @@ export type Database = {
           purpose?: string | null
           recipient_hint?: string | null
           revoked_at?: string | null
-          token_hash?: string | null
+          token_hash?: string
         }
         Relationships: [
           {
@@ -9668,10 +9656,6 @@ export type Database = {
           use_case: string
         }[]
       }
-      scp_employment_from_application: {
-        Args: { _application_id: string }
-        Returns: string
-      }
       scp_employer_assign: {
         Args: {
           _application_id?: string
@@ -10315,34 +10299,7 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: Json
       }
-      sp_application_disclosure: { Args: { _application_id: string }; Returns: Json }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
-      sp_my_application_disclosures: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          access_count: number
-          application_id: string
-          created_at: string
-          disclosure_id: string
-          employer_name: string
-          expires_at: string | null
-          focus_claim_id: string | null
-          job_title_en: string
-          job_title_sv: string
-          package_code: string
-          revoked_at: string | null
-        }[]
-      }
-      sp_share_passport_with_application: {
-        Args: {
-          _application_id: string
-          _expires_days?: number
-          _focus_claim_id?: string
-          _package_code: string
-          _purpose?: string
-        }
-        Returns: string
-      }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
