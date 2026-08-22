@@ -595,9 +595,26 @@ RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok((SELECT count(*) FROM lib WHERE assignable) >= 1,
   'J7.1 the library offers at least one assignable programme');
+-- J7.2 was "every assignable programme is a fixture". That invariant was
+-- correct while the ONLY way to run unvalidated content was a per-employer
+-- grant. 20260905090000 adds a second, narrower route: an assessment CQrityjob
+-- has explicitly designated as standard recruitment content, assignable to an
+-- active employer without a grant.
+--
+-- So the assertion is narrowed rather than dropped, and it is deliberately
+-- written against the designation itself rather than against a slug: if
+-- somebody designates a second assessment, this still passes; if somebody
+-- makes real, UNDESIGNATED content assignable, it still fails, which is the
+-- property J7.2 existed to protect.
 SELECT pg_temp.ok(
-  (SELECT bool_and(is_test_fixture) FROM lib WHERE assignable),
-  'J7.2 every ASSIGNABLE programme is a fixture — no real content is assignable');
+  (SELECT bool_and(
+            l.is_test_fixture
+            OR EXISTS (SELECT 1 FROM public.scp_assessment_definitions d
+                        WHERE d.slug = l.definition_slug
+                          AND d.standard_for_recruitment))
+     FROM lib l WHERE l.assignable),
+  'J7.2 every ASSIGNABLE programme is a fixture or designated standard '
+  'recruitment content — no other real content is assignable');
 SELECT pg_temp.ok((SELECT count(*) FROM lib WHERE NOT assignable) >= 1,
   'J7.3 in-development programmes are listed, honestly marked unassignable');
 

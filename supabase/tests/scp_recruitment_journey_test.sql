@@ -390,8 +390,23 @@ SELECT * FROM public.scp_invite_participant(
 RESET ROLE; RESET request.jwt.claim.sub;
 GRANT SELECT ON rj_exp TO authenticated;
 
+-- Withdraw EVERY basis, not just the grant.
+--
+-- 20260905090000 gave standard recruitment content a second admission route:
+-- an active employer may run a designated assessment without a grant. So
+-- revoking the grant alone no longer withdraws this organisation's basis --
+-- which is the intended product rule, and would quietly turn this assertion
+-- into a test of nothing.
+--
+-- The property under test is unchanged and still worth protecting: when NO
+-- basis remains, a pending invitation must close with
+-- governance_basis_withdrawn rather than bind an attempt. Both routes are
+-- therefore closed here, inside the transaction this file rolls back.
 UPDATE public.scp_test_grants SET revoked_at = now()
  WHERE employer_id = (SELECT employer FROM rj);
+UPDATE public.scp_assessment_definitions SET standard_for_recruitment = false
+ WHERE id = (SELECT av.definition_id FROM public.scp_assessment_versions av
+              WHERE av.id = (SELECT version_id FROM rjv));
 INSERT INTO auth.users (id, email, email_confirmed_at)
 VALUES ('ea000000-0000-0000-0000-00000000000f', 'gone@journey.test', now());
 
