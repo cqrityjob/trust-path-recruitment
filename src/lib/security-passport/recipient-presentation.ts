@@ -74,6 +74,8 @@ export interface RecipientPresentation {
   readonly focus: "passport" | "credential";
   readonly purpose: string | null;
   readonly expiresAt: string | null;
+  /** When the holder authorised the disclosure, where the payload carries it. */
+  readonly authorisedAt: string | null;
   readonly lastUpdated: string;
   readonly credentials: readonly RecipientCredential[];
   readonly experience: readonly RecipientExperience[];
@@ -131,6 +133,7 @@ export function buildRecipientPresentation(
     focus: payload.focus ?? "passport",
     purpose: payload.purpose,
     expiresAt: payload.expires_at,
+    authorisedAt: payload.authorised_at ?? null,
     lastUpdated: payload.last_updated,
     credentials,
     experience,

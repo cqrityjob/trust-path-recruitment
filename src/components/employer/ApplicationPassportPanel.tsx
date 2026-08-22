@@ -115,8 +115,23 @@ export function ApplicationPassportPanel({ applicationId }: { applicationId: str
         </div>
       ) : null}
 
+      {/* When the candidate authorised this. Not a claim the employer has to
+          take on trust: it is the disclosure's own creation time, and only
+          the holder can create one. */}
+      {presentation.authorisedAt ? (
+        <p className="mt-4 text-sm tabular-nums text-muted-foreground">
+          {t("employer.candidate.passport.authorisedAt")}: {presentation.authorisedAt.slice(0, 10)}
+        </p>
+      ) : null}
+
       <p className="mt-4 max-w-[68ch] text-sm text-muted-foreground">
         {t("employer.candidate.passport.sharedNote")}
+      </p>
+
+      {/* Scope, stated where the records are read. The employer is a reader
+          here, never an owner. */}
+      <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
+        {t("employer.candidate.passport.scoped")}
       </p>
 
       {presentation.expiresAt ? (

@@ -37,6 +37,9 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { submitJobApplication } from "@/lib/job-intelligence/applications.functions";
+import { getApplicationPassportOffer } from "@/lib/security-passport/passport.functions";
+import { ShieldCheck } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const MAX_CV_BYTES = 5 * 1024 * 1024;
 
@@ -91,8 +94,23 @@ export function ApplyInternalDialog({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Enabled by default: a candidate who has verified records almost always
+  // wants the employer to see them, and the whole point is that including a
+  // Passport costs no extra steps. It is a plain checkbox they can clear
+  // before submitting — never a second wizard.
+  const [includePassport, setIncludePassport] = useState(true);
+  const [offer, setOffer] = useState<{
+    hasPassport: boolean;
+    hasShareableContent: boolean;
+    verifiedCredentials: readonly string[];
+    verifiedCredentialCount: number;
+    verifiedExperienceCount: number;
+  } | null>(null);
+  // What the SERVER did, not what the form asked for.
+  const [passportShared, setPassportShared] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitFn = useServerFn(submitJobApplication);
+  const offerFn = useServerFn(getApplicationPassportOffer);
 
   useEffect(() => {
     let alive = true;
@@ -141,6 +159,33 @@ export function ApplyInternalDialog({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  // Read once the dialog is actually open: the apply button on a job page
+  // must not query a signed-out visitor's Passport.
+  useEffect(() => {
+    if (!open || offer !== null) return;
+    let alive = true;
+    void offerFn({ data: undefined })
+      .then((o) => {
+        if (alive) setOffer(o);
+      })
+      .catch((err: unknown) => {
+        // A Passport read must never block applying. The panel falls back to
+        // "nothing to include" and the submission proceeds without one.
+        console.error("[jobs] passport offer read failed", err);
+        if (alive)
+          setOffer({
+            hasPassport: false,
+            hasShareableContent: false,
+            verifiedCredentials: [],
+            verifiedCredentialCount: 0,
+            verifiedExperienceCount: 0,
+          });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, offer, offerFn]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
@@ -152,7 +197,7 @@ export function ApplyInternalDialog({
     setSubmitting(true);
     try {
       const cvBase64 = await fileToBase64(file);
-      await submitFn({
+      const res = await submitFn({
         data: {
           jobId,
           phone: phone.trim() || null,
@@ -160,8 +205,12 @@ export function ApplyInternalDialog({
           consent: true,
           cvFilename: file.name,
           cvBase64,
+          // Only ever true when the candidate left it on AND has something
+          // verified: the confirmation must not be able to overstate.
+          includePassport: includePassport && (offer?.hasShareableContent ?? false),
         },
       });
+      setPassportShared(res.passportShared);
       setSuccess(true);
     } catch (err) {
       setSubmitError(translateSubmitError(err instanceof Error ? err.message : undefined, t));
@@ -208,6 +257,17 @@ export function ApplyInternalDialog({
               <DialogTitle>{t("jobs.apply.success.title")}</DialogTitle>
               <DialogDescription>{t("jobs.apply.success.body")}</DialogDescription>
             </DialogHeader>
+            {/* Read from what the server actually did. A candidate who asked
+                to include a Passport but had nothing verified is told the
+                truth, not a success message the database did not earn. */}
+            <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
+              {passportShared ? (
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              ) : null}
+              {passportShared
+                ? t("jobs.apply.passport.sharedConfirm")
+                : t("jobs.apply.passport.notSharedConfirm")}
+            </p>
             <DialogFooter className="mt-4">
               <Button type="button" onClick={() => setOpen(false)}>
                 {t("jobs.apply.success.close")}
@@ -270,6 +330,89 @@ export function ApplyInternalDialog({
                   </p>
                 )}
               </div>
+
+              {/* ── Ta med mitt verifierade Security Passport ──────────────
+                  The last thing before consent, because it is part of the
+                  same decision: pressing Skicka ansökan IS the holder's
+                  authorisation for whatever is enabled here. No modal, no
+                  package chooser — the package is fixed and the panel says
+                  what it contains. */}
+              {offer ? (
+                <div className="rounded-lg border border-border bg-muted/20 p-4">
+                  {offer.hasShareableContent ? (
+                    <>
+                      <label className="flex items-start gap-2 text-sm">
+                        <Checkbox
+                          checked={includePassport}
+                          onCheckedChange={(v) => setIncludePassport(v === true)}
+                          className="mt-0.5"
+                          aria-describedby="apply-passport-detail"
+                        />
+                        <span className="flex items-center gap-1.5 font-medium text-foreground">
+                          <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          {t("jobs.apply.passport.title")}
+                        </span>
+                      </label>
+
+                      <div id="apply-passport-detail" className="mt-2 pl-6">
+                        <p className="text-sm text-muted-foreground">
+                          {t("jobs.apply.passport.lede")}
+                        </p>
+
+                        <p className="mt-2 text-sm text-foreground">
+                          {t("jobs.apply.passport.includes")}:{" "}
+                          <span className="tabular-nums">{offer.verifiedCredentialCount}</span>{" "}
+                          {t("jobs.apply.passport.credentialsCount")}
+                          {offer.verifiedExperienceCount > 0 ? (
+                            <>
+                              {", "}
+                              <span className="tabular-nums">
+                                {offer.verifiedExperienceCount}
+                              </span>{" "}
+                              {t("jobs.apply.passport.experienceCount")}
+                            </>
+                          ) : null}
+                        </p>
+
+                        {offer.verifiedCredentials.length > 0 ? (
+                          <ul className="mt-1 space-y-0.5">
+                            {offer.verifiedCredentials.map((title) => (
+                              <li key={title} className="text-sm text-muted-foreground">
+                                · {title}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+
+                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                          <span className="font-medium">{t("jobs.apply.passport.excludes")}:</span>{" "}
+                          {t("jobs.apply.passport.exc")}
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {t("jobs.apply.passport.scope")}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    /* Nothing verified, or no Passport at all. The application
+                       must still work, so this is a calm statement and a link
+                       — never a disabled control that looks broken. */
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">
+                        {offer.hasPassport
+                          ? t("jobs.apply.passport.nothing")
+                          : t("jobs.apply.passport.noPassport")}
+                      </p>
+                      <Link
+                        to="/passport"
+                        className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        {t("jobs.apply.passport.openPassport")}
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ) : null}
 
               <label className="flex items-start gap-2 text-sm">
                 <Checkbox

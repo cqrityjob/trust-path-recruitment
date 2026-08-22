@@ -104,102 +104,146 @@ const submitApplicationSchema = z.object({
   consent: z.literal(true),
   cvFilename: z.string().trim().min(1).max(200),
   cvBase64: z.string().min(1),
+  /** The candidate's Passport authorisation, recorded by the submit action
+   *  itself. Defaults to false: applying is not consent, and a caller that
+   *  says nothing discloses nothing. */
+  includePassport: z.boolean().optional().default(false),
 });
 
 export const submitJobApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => submitApplicationSchema.parse(d))
-  .handler(async ({ data, context }): Promise<{ id: string; status: ApplicationStatus }> => {
-    const ctx = context as Ctx;
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      id: string;
+      status: ApplicationStatus;
+      /** What the candidate asked for. */
+      passportRequested: boolean;
+      /** What the database actually did. These differ when the candidate
+       *  asked to include a Passport but had nothing verified to disclose —
+       *  the application still succeeds, and the confirmation must not claim
+       *  a share that does not exist. */
+      passportShared: boolean;
+    }> => {
+      const ctx = context as Ctx;
 
-    // Early, friendly checks via the caller's own RLS-scoped client -- the
-    // database (BEFORE INSERT trigger + partial unique index) is the real
-    // boundary and re-validates both independently.
-    const { data: job, error: jobErr } = await ctx.supabase
-      .from("jobs")
-      .select("id, status, application_method")
-      .eq("id", data.jobId)
-      .maybeSingle();
-    if (jobErr) {
-      console.error("[applications] submitJobApplication job lookup failed", jobErr);
-      throw new Error("JOB_LOOKUP_FAILED");
-    }
-    if (!job || job.status !== "published" || job.application_method !== "internal") {
-      throw new Error("JOB_NOT_APPLICABLE");
-    }
+      // Early, friendly checks via the caller's own RLS-scoped client -- the
+      // database (BEFORE INSERT trigger + partial unique index) is the real
+      // boundary and re-validates both independently.
+      const { data: job, error: jobErr } = await ctx.supabase
+        .from("jobs")
+        .select("id, status, application_method")
+        .eq("id", data.jobId)
+        .maybeSingle();
+      if (jobErr) {
+        console.error("[applications] submitJobApplication job lookup failed", jobErr);
+        throw new Error("JOB_LOOKUP_FAILED");
+      }
+      if (!job || job.status !== "published" || job.application_method !== "internal") {
+        throw new Error("JOB_NOT_APPLICABLE");
+      }
 
-    const { data: existing, error: existingErr } = await ctx.supabase
-      .from("job_applications")
-      .select("id")
-      .eq("job_id", data.jobId)
-      .eq("applicant_user_id", ctx.userId)
-      .neq("status", "withdrawn")
-      .maybeSingle();
-    if (existingErr) {
-      console.error("[applications] submitJobApplication duplicate check failed", existingErr);
-      throw new Error("DUPLICATE_CHECK_FAILED");
-    }
-    if (existing) throw new Error("DUPLICATE_APPLICATION");
+      const { data: existing, error: existingErr } = await ctx.supabase
+        .from("job_applications")
+        .select("id")
+        .eq("job_id", data.jobId)
+        .eq("applicant_user_id", ctx.userId)
+        .neq("status", "withdrawn")
+        .maybeSingle();
+      if (existingErr) {
+        console.error("[applications] submitJobApplication duplicate check failed", existingErr);
+        throw new Error("DUPLICATE_CHECK_FAILED");
+      }
+      if (existing) throw new Error("DUPLICATE_APPLICATION");
 
-    // Decode + validate the CV. PDF only (brief: "secure PDF CV upload").
-    let cvBuffer: Buffer;
-    try {
-      cvBuffer = Buffer.from(data.cvBase64, "base64");
-    } catch {
-      throw new Error("CV_INVALID");
-    }
-    if (cvBuffer.length === 0 || cvBuffer.length > MAX_CV_BYTES) {
-      throw new Error("CV_TOO_LARGE");
-    }
-    if (cvBuffer.subarray(0, PDF_MAGIC.length).toString("ascii") !== PDF_MAGIC) {
-      throw new Error("CV_NOT_PDF");
-    }
+      // Decode + validate the CV. PDF only (brief: "secure PDF CV upload").
+      let cvBuffer: Buffer;
+      try {
+        cvBuffer = Buffer.from(data.cvBase64, "base64");
+      } catch {
+        throw new Error("CV_INVALID");
+      }
+      if (cvBuffer.length === 0 || cvBuffer.length > MAX_CV_BYTES) {
+        throw new Error("CV_TOO_LARGE");
+      }
+      if (cvBuffer.subarray(0, PDF_MAGIC.length).toString("ascii") !== PDF_MAGIC) {
+        throw new Error("CV_NOT_PDF");
+      }
 
-    const applicationId = crypto.randomUUID();
-    const safeFilename = data.cvFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "cv.pdf";
-    const storagePath = `${ctx.userId}/${applicationId}/${safeFilename}`;
+      const applicationId = crypto.randomUUID();
+      const safeFilename = data.cvFilename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "cv.pdf";
+      const storagePath = `${ctx.userId}/${applicationId}/${safeFilename}`;
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from("job-application-cvs")
-      .upload(storagePath, cvBuffer, {
-        contentType: "application/pdf",
-        upsert: false,
-      });
-    if (uploadErr) {
-      console.error("[applications] CV upload failed", uploadErr);
-      throw new Error("CV_UPLOAD_FAILED");
-    }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from("job-application-cvs")
+        .upload(storagePath, cvBuffer, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+      if (uploadErr) {
+        console.error("[applications] CV upload failed", uploadErr);
+        throw new Error("CV_UPLOAD_FAILED");
+      }
 
-    const { data: inserted, error: insertErr } = await ctx.supabase
-      .from("job_applications")
-      .insert({
-        id: applicationId,
-        job_id: data.jobId,
-        applicant_user_id: ctx.userId,
-        phone: data.phone || null,
-        cover_note: data.coverNote || null,
-        cv_storage_path: storagePath,
-        cv_original_filename: data.cvFilename,
-        cv_mime_type: "application/pdf",
-        cv_size_bytes: cvBuffer.length,
-        consent_given_at: new Date().toISOString(),
-      })
-      .select("id, status")
-      .single();
+      // ── ONE TRANSACTION ────────────────────────────────────────────────
+      //
+      // The application row and the application-scoped Passport disclosure are
+      // written by one database function, so they commit or roll back together.
+      // Doing it as two calls from here would allow the state the contract
+      // cannot describe: an application that exists, a disclosure that does
+      // not, and a candidate who has been told their Passport was included.
+      //
+      // The function is SECURITY INVOKER, so RLS, the BEFORE INSERT trigger and
+      // the duplicate-application index apply exactly as they did when this was
+      // a direct insert. `_include_passport` defaults to false in SQL as well.
+      const { data: submitted, error: insertErr } = await ctx.supabase.rpc(
+        "sp_submit_application_with_passport",
+        {
+          _application_id: applicationId,
+          _job_id: data.jobId,
+          _phone: data.phone || null,
+          _cover_note: data.coverNote || null,
+          _cv_storage_path: storagePath,
+          _cv_original_filename: data.cvFilename,
+          _cv_size_bytes: cvBuffer.length,
+          _include_passport: data.includePassport,
+        },
+      );
 
-    if (insertErr) {
-      // Failed submission cleans up the uploaded CV -- never leave an
-      // orphaned file for an application that doesn't exist.
-      await supabaseAdmin.storage.from("job-application-cvs").remove([storagePath]);
-      console.error("[applications] submitJobApplication insert failed", insertErr);
-      if (insertErr.code === "23505") throw new Error("DUPLICATE_APPLICATION");
-      if (insertErr.code === "23514") throw new Error("JOB_NOT_APPLICABLE");
-      throw new Error("SUBMISSION_FAILED");
-    }
+      if (insertErr) {
+        // Failed submission cleans up the uploaded CV -- never leave an
+        // orphaned file for an application that doesn't exist. Because the
+        // write was one transaction, there is also no half-submitted
+        // application and no orphan disclosure to clean up.
+        await supabaseAdmin.storage.from("job-application-cvs").remove([storagePath]);
+        console.error("[applications] submitJobApplication failed", insertErr);
+        if (insertErr.code === "23505") throw new Error("DUPLICATE_APPLICATION");
+        if (insertErr.code === "23514") throw new Error("JOB_NOT_APPLICABLE");
+        throw new Error("SUBMISSION_FAILED");
+      }
 
-    return { id: inserted.id as string, status: inserted.status as ApplicationStatus };
-  });
+      const result = submitted as unknown as {
+        id: string;
+        status: ApplicationStatus;
+        passport_requested: boolean;
+        passport_shared: boolean;
+      };
+
+      return {
+        id: result.id,
+        status: result.status,
+        passportRequested: result.passport_requested,
+        // Reported from what the database did, never from what the form asked
+        // for. A candidate with nothing verified applied successfully and was
+        // not told a Passport went with it.
+        passportShared: result.passport_shared,
+      };
+    },
+  );
 
 // -------------------- CANDIDATE HISTORY --------------------
 

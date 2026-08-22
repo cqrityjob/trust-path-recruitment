@@ -644,3 +644,92 @@ export const setPrivacyMode = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+/* ------------------------------------------------------------------ */
+/* What the candidate is about to include with an application          */
+/* ------------------------------------------------------------------ */
+//
+// The apply form has to say what the employer will receive BEFORE the
+// candidate authorises it. "Ta med mitt verifierade Security Passport" with
+// no idea what is in it is not an informed choice.
+//
+// It lives here rather than in application-disclosure.functions.ts because it
+// is a read of the holder's OWN Passport, not a disclosure operation: that
+// module may call only the three holder-scoped disclosure RPCs and may never
+// touch a table, and scripts/passport-separation-check.ts enforces both.
+//
+// It reads with the holder's OWN client, so RLS is the boundary and no
+// privileged path is involved. It deliberately returns counts and credential
+// titles only — never issuers, dates, reference numbers or anything the
+// employer_review package would not carry — because it renders on a page that
+// is not yet a disclosure.
+
+/** Whether this holder has anything an application disclosure could carry,
+ *  and a short, safe description of it. */
+export interface ApplicationPassportOffer {
+  /** False when the holder has no Passport profile at all. */
+  readonly hasPassport: boolean;
+  /** True when at least one verified, active claim or period exists — the
+   *  same condition sp_submit_application_with_passport checks before it
+   *  creates anything, so the form cannot promise what the database refuses. */
+  readonly hasShareableContent: boolean;
+  /** Verified, active credential titles. Names only. */
+  readonly verifiedCredentials: readonly string[];
+  readonly verifiedCredentialCount: number;
+  readonly verifiedExperienceCount: number;
+}
+
+export const getApplicationPassportOffer = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ApplicationPassportOffer> => {
+    const { supabase, userId } = context;
+
+    const [profileRes, claimRes, expRes] = await Promise.all([
+      supabase
+        .from("sp_passport_profiles")
+        .select("holder_user_id")
+        .eq("holder_user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("sp_claims")
+        .select("title")
+        .eq("holder_user_id", userId)
+        .eq("assertion_level", "verified")
+        .eq("lifecycle_state", "active"),
+      supabase
+        .from("sp_experience_periods")
+        .select("id", { count: "exact", head: true })
+        .eq("holder_user_id", userId)
+        .eq("assertion_level", "verified")
+        .eq("lifecycle_state", "active"),
+    ]);
+
+    // A failure to read the holder's own Passport must not block applying.
+    // The form falls back to "nothing to include", the submission proceeds
+    // without a disclosure, and the copy stays true.
+    if (profileRes.error || claimRes.error || expRes.error) {
+      console.error("[passport] application offer read failed", {
+        profile: profileRes.error?.message,
+        claims: claimRes.error?.message,
+        experience: expRes.error?.message,
+      });
+      return {
+        hasPassport: false,
+        hasShareableContent: false,
+        verifiedCredentials: [],
+        verifiedCredentialCount: 0,
+        verifiedExperienceCount: 0,
+      };
+    }
+
+    const titles = ((claimRes.data ?? []) as { title: string }[]).map((r) => r.title);
+    const experienceCount = expRes.count ?? 0;
+
+    return {
+      hasPassport: profileRes.data !== null,
+      hasShareableContent: titles.length > 0 || experienceCount > 0,
+      verifiedCredentials: titles,
+      verifiedCredentialCount: titles.length,
+      verifiedExperienceCount: experienceCount,
+    };
+  });

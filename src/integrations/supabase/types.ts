@@ -10394,6 +10394,19 @@ export type Database = {
         }
         Returns: string
       }
+      sp_submit_application_with_passport: {
+        Args: {
+          _application_id: string
+          _cover_note: string
+          _cv_original_filename: string
+          _cv_size_bytes: number
+          _cv_storage_path: string
+          _include_passport?: boolean
+          _job_id: string
+          _phone: string
+        }
+        Returns: Json
+      }
       sp_submit_for_verification: {
         Args: {
           _claim_id: string

@@ -28,6 +28,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { useT } from "@/i18n/context";
 import { LIVE_PACKAGES, type DisclosurePackageCode } from "@/lib/security-passport/packages";
 import {
   listMyApplicationDisclosures,
@@ -53,16 +54,22 @@ const EXPIRY_CHOICES: readonly { readonly days: number | null; readonly key: Pas
 
 export function ApplicationPassportShare({ applicationId }: { applicationId: string }) {
   const { pt } = usePassportCopy();
+  const { t } = useT();
   const qc = useQueryClient();
   const listFn = useServerFn(listMyApplicationDisclosures);
   const shareFn = useServerFn(sharePassportWithApplication);
   const revokeFn = useServerFn(revokeDisclosure);
   const passportFn = useServerFn(getMyPassport);
 
-  const [open, setOpen] = useState(false);
-  const [packageCode, setPackageCode] = useState<DisclosurePackageCode>("employer_review");
-  const [expiryDays, setExpiryDays] = useState<number | null>(30);
   const [error, setError] = useState<string | null>(null);
+
+  // Fixed, and deliberately the same package and expiry the submission path
+  // uses. Attaching a Passport to an application the candidate already sent
+  // must produce the SAME disclosure they would have got by ticking the box
+  // when they applied — otherwise "what did I share with this employer" has
+  // two different answers depending on when they decided.
+  const APPLICATION_PACKAGE: DisclosurePackageCode = "employer_review";
+  const APPLICATION_EXPIRY_DAYS = 30;
 
   const shares = useQuery({
     queryKey: ["passport", "application-disclosures"],
@@ -79,10 +86,16 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
   );
 
   const share = useMutation({
-    mutationFn: () => shareFn({ data: { applicationId, packageCode, expiresDays: expiryDays } }),
+    mutationFn: () =>
+      shareFn({
+        data: {
+          applicationId,
+          packageCode: APPLICATION_PACKAGE,
+          expiresDays: APPLICATION_EXPIRY_DAYS,
+        },
+      }),
     onSuccess: () => {
       setError(null);
-      setOpen(false);
       qc.invalidateQueries({ queryKey: ["passport", "application-disclosures"] });
     },
     onError: () => setError(pt("ad.error")),
@@ -128,7 +141,11 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
       ) : current ? (
         <div className="mt-3 rounded-md border border-border bg-background p-3">
           <p className="text-sm font-medium text-foreground">
-            {currentMeta ? pt(currentMeta.nameKey) : current.packageCode}
+            {t("myapps.passport.included")}
+            <span className="font-normal text-muted-foreground">
+              {" · "}
+              {currentMeta ? pt(currentMeta.nameKey) : current.packageCode}
+            </span>
           </p>
           <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
             {pt(STATE_KEY[current.state])} · {pt("sc.created")} {current.createdAt.slice(0, 10)}
@@ -140,13 +157,6 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setOpen((v) => !v)}
-              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-            >
-              {open ? pt("ad.cancel") : pt("ad.change")}
-            </button>
-            <button
-              type="button"
               disabled={revoke.isPending}
               onClick={() => revoke.mutate(current.disclosureId)}
               className="rounded-md border border-border px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
@@ -156,79 +166,20 @@ export function ApplicationPassportShare({ applicationId }: { applicationId: str
           </div>
         </div>
       ) : (
+        /* One action, not a wizard. The package is fixed and stated, so the
+           candidate is choosing WHETHER to share, never re-learning the
+           disclosure taxonomy to attach a Passport to an application they
+           have already sent. */
         <div className="mt-3">
           <p className="text-xs text-muted-foreground">{pt("ad.nothingShared")}</p>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="mt-2 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-          >
-            {open ? pt("ad.cancel") : pt("ad.share")}
-          </button>
-        </div>
-      )}
-
-      {open && hasPassport && (
-        <div className="mt-3 space-y-3 border-t border-border pt-3">
-          <p className="text-xs font-medium text-foreground">{pt("sc.choosePackage")}</p>
-          <p className="text-xs text-muted-foreground">{pt("sc.packagesAreFixed")}</p>
-          <div className="space-y-2">
-            {LIVE_PACKAGES.map((p) => (
-              <label
-                key={p.code}
-                className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-background p-2 hover:bg-accent/5"
-              >
-                <input
-                  type="radio"
-                  name={`ad-package-${applicationId}`}
-                  value={p.code}
-                  checked={packageCode === p.code}
-                  onChange={() => setPackageCode(p.code)}
-                  className="mt-0.5 h-4 w-4"
-                />
-                <span className="min-w-0">
-                  <span className="block text-xs font-medium text-foreground">{pt(p.nameKey)}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {pt(p.purposeKey)}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <div>
-            <label
-              htmlFor={`ad-expiry-${applicationId}`}
-              className="block text-xs font-medium text-foreground"
-            >
-              {pt("sc.expiry")}
-            </label>
-            <select
-              id={`ad-expiry-${applicationId}`}
-              value={String(expiryDays)}
-              onChange={(e) =>
-                setExpiryDays(e.target.value === "null" ? null : Number(e.target.value))
-              }
-              className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-xs text-foreground sm:w-56"
-            >
-              {EXPIRY_CHOICES.map((c) => (
-                <option key={String(c.days)} value={String(c.days)}>
-                  {pt(c.key)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <p className="text-xs text-muted-foreground">{pt("ad.replacesPrevious")}</p>
-          <p className="text-xs text-muted-foreground">{pt("sc.verifiedOnlyNote")}</p>
-
+          <p className="mt-1 text-xs text-muted-foreground">{pt("sc.verifiedOnlyNote")}</p>
           <button
             type="button"
             disabled={share.isPending}
             onClick={() => share.mutate()}
-            className="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground disabled:opacity-60"
+            className="mt-2 inline-flex min-h-[44px] items-center rounded-md bg-accent px-3 text-xs font-semibold text-accent-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {share.isPending ? pt("ad.sharing") : pt("ad.share")}
+            {share.isPending ? pt("ad.sharing") : t("myapps.passport.attach")}
           </button>
         </div>
       )}
