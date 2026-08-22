@@ -1,70 +1,53 @@
-# Saved assessment report — regression investigation and secure fix
+# Read-only cutover check: pointing the frontend at an externally owned backend
 
-## What I verified before writing this plan
+Target external project: `mlvzmiutmyyqeuvjglco`. Current Lovable Cloud backend `zrahptwsnjcdyzfywbeh` stays untouched and is the rollback.
 
-Read-only checks against the live backend:
+No code, data, migrations or deployments were changed by this check.
 
-- The public v3.1 assessment writes its report to `cd_report_snapshots`, not to `assessment_run_reports`. The security change described as "write-locked to trusted backend paths" touched `assessment_run_reports` only.
-- Effective permissions for signed-in users are intact across the whole v3.1 path: read on the definition version, insert on sessions and evidence, read on report snapshots, execute on the atomic completion routine.
-- `assessment_run_reports`: signed-in users can read their own rows and direct client insert/update/delete is blocked. That is the intended posture, and no application code inserts into that table directly — the only writer is the trusted server path using the service-role routine.
-- Every completed session in the database has exactly one matching report row, including the most recent one (2 Aug). There are no "completed with no report" rows.
-- The v3.1 definition version is `active`, so the assessment is admissible.
-- The completion flow in the UI already matches the required secure architecture: server-side computation, user id from the verified session, answers kept until the write is confirmed, no navigation on failure, retry allowed, technical error logged without answer content.
+## 1. Do preview/published builds use the committed root `.env`?
 
-So the symptom is **not explained** by the `assessment_run_reports` lock, and no stored data currently shows a failed save. The root cause is therefore **unconfirmed**, and confirming it is step 1 rather than something this plan asserts.
+Partly — and not for the two variables you named.
 
-## Step 1 — Reproduce and capture the real error (no code changes)
+- The committed `.env` contains `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`, plus the server-side `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_PROJECT_ID` and three release-control flags.
+- The runtime also *injects* `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` as real process environment variables from the Cloud binding. Verified in this sandbox: all of them resolve to `zrahptwsnjcdyzfywbeh`, and the injected values are byte-identical to the committed ones.
+- Vite's dotenv loading does not overwrite variables that already exist in the process environment, so where both exist the injected Cloud binding wins and `.env` is effectively inert. The reason nothing looks different today is only that the two sources currently agree.
+- The flags (`VITE_JOBS_ENABLED`, `VITE_EMPLOYER_PORTAL_ENABLED`, `VITE_CIG_LIFECYCLE_ENFORCED`) are *not* injected, so those genuinely come from `.env` (with `.env.local` able to override them locally).
 
-Run an authenticated end-to-end completion in the preview environment and capture:
+Practical consequence: editing `VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY` in the committed `.env` will most likely **not** repoint preview or published builds while Lovable Cloud remains bound to `zrahptwsnjcdyzfywbeh`.
 
-- browser console output from the completion handler (it already logs the server error code and message),
-- the server function log for that completion call,
-- backend auth/postgres logs for the same minute,
-- whether a session row, evidence rows and a report row were created for that attempt,
-- if the row exists, whether the report page and the report history query return it.
+## 2. Can this project keep Lovable as frontend/hosting and use an externally owned Supabase project?
 
-Outcome is a one-line classification:
+Yes in principle, but not by editing `.env` alone, and it is a real architectural change rather than a config tweak. Three things must line up:
 
-- **A. Write fails** — a specific database refusal (permission, policy, trigger guard, constraint) surfaces from the completion call.
-- **B. Write succeeds, read fails** — the row exists but a page or history query does not return it.
-- **C. Neither** — saving works and the perceived loss is a session/navigation issue (returning from sign-in without the buffered attempt, or landing on a page that queries the other report family).
+- **Client reads.** `src/integrations/supabase/client.ts` reads `import.meta.env.VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` with a `process.env.SUPABASE_*` SSR fallback. It is auto-generated and must not be edited.
+- **Server reads.** `src/integrations/supabase/auth-middleware.ts`, `public-server.ts` and `client.server.ts` read `process.env.SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY`. The service-role key for an external project is not something Lovable Cloud can supply; it would have to be provided as a project secret, and a Cloud-bound project keeps injecting its own.
+- **Schema parity.** The app depends on the full hosted schema: ~66+ tables, 50+ RPCs, RLS policies, storage buckets (`job-application-cvs`), auth users, and the whole `scp_*` / `cd_*` / passport surface, plus generated `src/integrations/supabase/types.ts`. The external project must be a faithful replica (migrations replayed in order, storage buckets and policies recreated, auth users migrated) or large parts of the product fail at runtime, not at build time.
 
-## Step 2 — Smallest secure fix, chosen by the classification
+Also note Lovable-Cloud-specific pieces that do not travel: Google OAuth via the Lovable broker (`src/integrations/lovable/index.ts` calls `supabase.auth.setSession`, and the provider must be enabled on the *target* project's Auth), and the AI Gateway key (`LOVABLE_API_KEY`) which is unrelated to the database but is Lovable-managed.
 
-- **A:** fix the exact refusing object. If the security migration removed a grant the trusted server flow legitimately needs, restore that single grant for the signed-in role or the service role only — never a broad policy, never client write access to the protected report table. If a trigger guard or constraint refuses, fix the payload the server sends rather than relaxing the guard.
-- **B:** fix the retrieval query or its ownership filter, leaving owner-scoped access rules unchanged.
-- **C:** fix the presentation/navigation defect: never present the result as saved before persistence succeeds, and resume the buffered attempt correctly after sign-in.
+Recommendation: treat this as "disconnect Cloud, then supply external config", not "override committed values". The decision of whether Cloud can be unbound for this project while hosting stays is a platform-level action and needs to be confirmed with Lovable support/settings before any cutover date is set — this plan does not assume it is available.
 
-Non-negotiable in all branches: the protected report table keeps its no-direct-client-write posture, the user id keeps coming from the verified session, scores and report content stay server-computed, and completion stays idempotent per attempt.
+## 3. What would override the committed values
 
-## Step 3 — Regression tests
+| Source | Overrides `.env`? | Notes |
+| --- | --- | --- |
+| Lovable Cloud binding (injected `VITE_SUPABASE_*`, `SUPABASE_*`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`) | Yes — highest precedence | Currently all `zrahptwsnjcdyzfywbeh` |
+| Project Settings → Secrets | Yes, for server-side `process.env` names | Only `LOVABLE_API_KEY` exists today |
+| `.env.local` / `.env.*.local` | Yes, over `.env`, but not over injected process env | git-ignored |
+| Committed `.env` | Lowest | Effective only for the three `VITE_*` flags today |
 
-Database-level (SQL suite, alongside the existing career-discovery tests):
+Auto-generated and not to be edited: `client.ts`, `client.server.ts`, `auth-middleware.ts`, `auth-attacher.ts`, `types.ts`, `supabase/config.toml`, and the Cloud-managed `.env` keys.
 
-- a completed attempt produces exactly one report row, owned by the attempting user and linked to that attempt,
-- re-running completion for the same attempt returns the same report and creates no duplicate,
-- one user cannot read or write another user's report,
-- a direct client-role insert or update on the protected report table is refused,
-- the trusted completion routine succeeds for the attempt's owner.
+## 4. Safest reversible preview procedure
 
-Application-level:
+Ordered, each step reversible, nothing touching `zrahptwsnjcdyzfywbeh`:
 
-- end-to-end: complete the public assessment signed in, land on the report, reload, sign out and back in, confirm it is still there and still a single row,
-- failure path: with persistence forced to fail, the UI shows a translated error, keeps the answers, offers retry, and does not navigate,
-- existing scoring and persona regression tests run unchanged.
+1. **Freeze a rollback fingerprint.** Record current main commit, hosted migration ledger max version, table/function/policy counts, and the current injected project ref — into `docs/technical/production-fingerprints/pre-external-backend-cutover.md`. No behaviour change.
+2. **Confirm the platform question** (Cloud unbinding vs. permanent injection) before spending effort on step 4. If injection cannot be turned off, cutover on this project is not possible and a new Lovable project bound to the external backend is the alternative path.
+3. **Build schema parity on `mlvzmiutmyyqeuvjglco`.** Replay `supabase/migrations` in order against the external project, recreate storage buckets and their policies, seed reference/content data, and diff object counts against the fingerprint. Read-only with respect to the current backend.
+4. **Preview locally, not in shared preview.** Use a git-ignored `.env.local` with the external `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` (and `SUPABASE_*` equivalents) and confirm from the running app which project ref the client actually reached. If the injected Cloud values still win, that is the definitive answer to step 2 — stop there.
+5. **Verify the journeys, not the boot.** Candidate discovery → report, employer job publish → application → CV download, assessment assign → attempt → review → release, admin portal, and both Swedish and English UI. Also verify denial cases (cross-tenant reads, anon access to `scp_*` and `cd_option_loadings`) on the external project's RLS.
+6. **Regenerate `types.ts` only against a verified-parity external project**, on a branch, never on main.
+7. **Cutover** only after owner approval, as a separate change with a documented one-step rollback: remove the external config, restore the Cloud binding, redeploy the recorded commit. `zrahptwsnjcdyzfywbeh` keeps all data throughout, so rollback is configuration-only.
 
-## Step 4 — Deliverable report
-
-- confirmed root cause and the exact policy, migration, function or call responsible,
-- whether the report failed to save or only failed to load,
-- fix applied, affected files and database objects, migration name if any,
-- database evidence (row counts before/after, ownership, single-row proof),
-- end-to-end evidence,
-- explicit confirmation that direct client writes to the protected report table are still refused,
-- rollback plan: any new migration is a single reversible statement with its inverse recorded in the report; frontend changes revert independently of the database.
-
-## Technical notes
-
-- Two report families are in play: `cd_report_snapshots` (Security Career Discovery v3.1, written by the atomic completion routine) and `assessment_run_reports` (Career Intelligence saved report, written only by the service-role routine). The fix must keep them distinct.
-- Files likely in scope depending on branch: the public v3.1 flow component, the v3.1 persistence server functions, the stored-report/history server functions and their routes.
-- No change to scoring, question content, or the domain model.
+Stop conditions: schema parity cannot be demonstrated; service-role access for the external project cannot be supplied without exposing it client-side; auth users cannot be migrated with sessions/identities intact; or the Cloud binding cannot be released.
