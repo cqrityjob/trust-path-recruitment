@@ -118,12 +118,21 @@ export function SiteHeader() {
             >
               {t("nav.contact")}
             </Link>
-            <Link
-              to={signedIn ? "/employer" : "/employer/login"}
-              className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
-            >
-              {signedIn ? t("nav.employerPortal") : t("nav.employerSignin")}
-            </Link>
+            {/* Signed in, the right-hand action group offers the person their
+                own workspace and nothing employer-shaped, so this quiet link
+                is the only way back into the portal and has to stay. Signed
+                out it would be an exact duplicate of the "Arbetsgivarportal"
+                action button below -- same label, same route -- which is the
+                ambiguity this header is being fixed for, so it is not
+                rendered at all. */}
+            {signedIn === true && (
+              <Link
+                to="/employer"
+                className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
+              >
+                {t("nav.employerPortal")}
+              </Link>
+            )}
           </div>
         </Container>
       </div>
@@ -183,6 +192,13 @@ export function SiteHeader() {
                 </Link>
               </>
             ) : (
+              // Two entries, two audiences, two destinations. "Logga in" is
+              // the candidate/general door (/candidate/login); the primary
+              // button is the employer door (/employer/login). Neither is
+              // "Arbetsgivare" -- that word belongs to the marketing page in
+              // the primary nav, and reusing it here for an action is what
+              // made the header unreadable. Both routes are the existing
+              // PortalAuthForm entries; no new auth surface is introduced.
               <>
                 <Link
                   to="/candidate/login"
@@ -191,10 +207,10 @@ export function SiteHeader() {
                   {t("nav.signin")}
                 </Link>
                 <Link
-                  to="/employers"
+                  to="/employer/login"
                   className="inline-flex items-center rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-[color:var(--primary-hover)] hover:shadow-md"
                 >
-                  {t("nav.employers")}
+                  {t("nav.employerPortal")}
                 </Link>
               </>
             )}
@@ -262,12 +278,22 @@ export function SiteHeader() {
                 </Link>
               )}
             </div>
+            {/* Mobile carries the same two-door distinction as desktop: the
+                pill above is the candidate/general door, this is the employer
+                one. Signed out it is the primary action and is styled like
+                the desktop button; signed in it drops back to a quiet link,
+                matching the utility bar it stands in for at this width. */}
             <Link
               to={signedIn ? "/employer" : "/employer/login"}
               onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              className={cn(
+                "flex min-h-[44px] items-center justify-center rounded-md px-2 py-2 text-sm font-semibold transition-colors",
+                signedIn
+                  ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "bg-primary text-primary-foreground shadow-sm hover:bg-[color:var(--primary-hover)]",
+              )}
             >
-              {signedIn ? t("nav.employerPortal") : t("nav.employerSignin")}
+              {t("nav.employerPortal")}
             </Link>
           </div>
         </Container>

@@ -516,6 +516,32 @@
       "doNotReExecute": true,
       "reason": "PR #55 hosted reconciliation. The canonical file is the reviewed artefact and stays in the repository; the Lovable-generated duplicate on main is removed. It also SORTS BEFORE its own dependencies -- 20260821* precedes 20260823100000 and 20260825091000 -- so leaving it in the active path breaks a clean replay outright, which was reproduced before removal.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = +hv+;"
+    },
+    {
+      "canonicalFile": "20260903091000_sp_application_scoped_disclosure.sql",
+      "canonicalVersion": "20260903091000",
+      "hostedVersion": "20260822054502",
+      "hostedName": "b80d17ff-27b9-4818-ba2d-f82df5f270d1",
+      "appliedAt": "2026-08-22T05:45:02Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260822054502_b80d17ff-27b9-4818-ba2d-f82df5f270d1.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty. 275 normalised lines on both sides; raw bytes differ only by a missing trailing newline on the generated copy.",
+      "doNotReExecute": true,
+      "reason": "P0 lifecycle, application-scoped Passport disclosure. Applied to hosted through Lovable and committed directly to main (0da45e2, merged as a445b7b), which placed a SECOND copy of the canonical SQL in the active path. This copy replays without erroring, which is precisely why it is dangerous: a clean replay silently applies the same SQL twice. The canonical file is the reviewed artefact and stays; the generated duplicate is removed before merge.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260822054502';"
+    },
+    {
+      "canonicalFile": "20260903092000_scp_hired_becomes_employee.sql",
+      "canonicalVersion": "20260903092000",
+      "hostedVersion": "20260822055345",
+      "hostedName": "38e8c4da-a403-40e9-8251-719cb49d3efe",
+      "appliedAt": "2026-08-22T05:53:45Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260822055345_38e8c4da-a403-40e9-8251-719cb49d3efe.sql",
+      "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty. 241 normalised lines on both sides; raw bytes differ only by a missing trailing newline on the generated copy.",
+      "doNotReExecute": true,
+      "reason": "P0 lifecycle, hired -> employee. Same Lovable commit as 20260822054502, and the one that broke clean replay outright. The generated version 20260822055345 SORTS BEFORE its own dependency: employees.subject_id is created by 20260829092000_scp_employee_subject_spine.sql. Replayed in filename order the duplicate reached its own closing self-verification -- has_column_privilege('authenticated','public.employees','subject_id','UPDATE') -- before that column existed, and failed with 'column \"subject_id\" of relation \"employees\" does not exist'. Hosted never saw this because there the canonical chain had already installed the spine. The canonical file at 20260903092000 sits after the spine and replays correctly. Same class as the PR #55 reconciliation above; removed for the same reason.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260822055345';"
     }
   ],
   "canonicalProject": {
