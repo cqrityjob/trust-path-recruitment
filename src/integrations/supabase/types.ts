@@ -8281,6 +8281,7 @@ export type Database = {
       sp_disclosures: {
         Row: {
           access_count: number
+          application_id: string | null
           created_at: string
           expires_at: string | null
           focus_claim_id: string | null
@@ -8290,10 +8291,11 @@ export type Database = {
           purpose: string | null
           recipient_hint: string | null
           revoked_at: string | null
-          token_hash: string
+          token_hash: string | null
         }
         Insert: {
           access_count?: number
+          application_id?: string | null
           created_at?: string
           expires_at?: string | null
           focus_claim_id?: string | null
@@ -8303,10 +8305,11 @@ export type Database = {
           purpose?: string | null
           recipient_hint?: string | null
           revoked_at?: string | null
-          token_hash: string
+          token_hash?: string | null
         }
         Update: {
           access_count?: number
+          application_id?: string | null
           created_at?: string
           expires_at?: string | null
           focus_claim_id?: string | null
@@ -8316,9 +8319,16 @@ export type Database = {
           purpose?: string | null
           recipient_hint?: string | null
           revoked_at?: string | null
-          token_hash?: string
+          token_hash?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sp_disclosures_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sp_disclosures_focus_claim_id_fkey"
             columns: ["focus_claim_id"]
@@ -10247,6 +10257,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      sp_application_disclosure: {
+        Args: { _application_id: string }
+        Returns: Json
+      }
       sp_attach_evidence: {
         Args: {
           _claim_id: string
@@ -10295,17 +10309,44 @@ export type Database = {
         }
         Returns: string
       }
+      sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }
         Returns: Json
       }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_my_application_disclosures: {
+        Args: never
+        Returns: {
+          access_count: number
+          application_id: string
+          created_at: string
+          disclosure_id: string
+          employer_name: string
+          expires_at: string
+          focus_claim_id: string
+          job_title_en: string
+          job_title_sv: string
+          package_code: string
+          revoked_at: string
+        }[]
+      }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
         Returns: undefined
       }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
+      sp_share_passport_with_application: {
+        Args: {
+          _application_id: string
+          _expires_days?: number
+          _focus_claim_id?: string
+          _package_code: string
+          _purpose?: string
+        }
+        Returns: string
+      }
       sp_submit_for_verification: {
         Args: {
           _claim_id: string
