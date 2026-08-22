@@ -21,7 +21,7 @@ type JsonValue =
 // -----------------------------------------------------------------------------
 
 const DETAIL_COLUMNS =
-  "id, slug, title_sv, title_en, description_sv, description_en, responsibilities, requirements, benefits, location_text, country, city, region, workplace_type, employment_type, experience_level, family_id, profession_slug, application_method, application_url, application_email, published_at, deadline_at, expires_at, employer_id, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type, salary_min, salary_max, salary_currency, salary_period, seniority, work_environment, leadership_responsibility";
+  "id, slug, title_sv, title_en, description_sv, description_en, responsibilities, requirements, requirements_sv, requirements_en, benefits, location_text, country, city, region, workplace_type, employment_type, experience_level, family_id, profession_slug, application_method, application_url, application_email, published_at, deadline_at, expires_at, employer_id, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type, salary_min, salary_max, salary_currency, salary_period, seniority, work_environment, leadership_responsibility";
 
 export type PublicJobSsrEmployer = {
   id: string;
@@ -43,6 +43,8 @@ export type PublicJobSsrDetail = {
   description_en: string | null;
   responsibilities: JsonValue;
   requirements: JsonValue;
+  requirements_sv: string | null;
+  requirements_en: string | null;
   benefits: JsonValue;
   location_text: string | null;
   country: string | null;

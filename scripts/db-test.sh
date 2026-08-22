@@ -1200,6 +1200,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Verifying employer self-publication and bilingual requirements"
+set +e
+SPUB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/jobs_self_publish_test.sql 2>&1)"
+SPUB_RC=$?
+set -e
+
+SPUB_PASSED="$(echo "$SPUB_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPUB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer self-publication suite exited with code ${SPUB_RC}." >&2
+  echo "$SPUB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "employer self-publication"
+else
+  echo "    ok  ${SPUB_PASSED} self-publication assertions passed"
+  if [ "$SPUB_PASSED" -lt 37 ]; then
+    echo "FAIL: expected at least 37 self-publication assertions, only ${SPUB_PASSED} ran." >&2
+    suite_failed "employer self-publication (assertion shortfall: floor 37)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport application-disclosure assertions"
 set +e
 SPAP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_application_passport_test.sql 2>&1)"

@@ -49,6 +49,8 @@ export type PublicJobDetail = PublicJobCard & {
   description_en: string | null;
   responsibilities: unknown;
   requirements: unknown;
+  requirements_sv: string | null;
+  requirements_en: string | null;
   benefits: unknown;
   language_requirements: string[];
   regulated: boolean;
@@ -63,7 +65,7 @@ const CARD_COLUMNS =
 
 const DETAIL_COLUMNS =
   CARD_COLUMNS +
-  ", description_sv, description_en, responsibilities, requirements, benefits, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type";
+  ", description_sv, description_en, responsibilities, requirements, requirements_sv, requirements_en, benefits, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type";
 
 export type JobsQueryArgs = {
   q?: string;

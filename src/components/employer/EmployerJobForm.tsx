@@ -93,7 +93,11 @@ type Props = {
   submitting?: boolean;
   error?: string | null;
   onSaveDraft: (values: EmployerJobFormValues) => void;
-  onSubmitForReview?: (values: EmployerJobFormValues) => void;
+  /** The employer's primary act on the review step. Named for what it now
+   *  does: an ACTIVE employer publishes. Under PUBLICATION_MODEL
+   *  "moderated" the caller wires this to submit-for-review instead — the
+   *  form does not choose, it only labels the button correctly. */
+  onPublish?: (values: EmployerJobFormValues) => void;
   editableStatus?: string;
   /** Shown in the preview so the employer sees their own advert. */
   employerName?: string | null;
@@ -191,7 +195,7 @@ export function EmployerJobForm({
   submitting,
   error,
   onSaveDraft,
-  onSubmitForReview,
+  onPublish,
   editableStatus,
   employerName,
   employerStatus,
@@ -225,9 +229,16 @@ export function EmployerJobForm({
   const descSecondary = (
     secondaryLang === "sv" ? "description_sv" : "description_en"
   ) as keyof EmployerJobFormValues;
+  const reqPrimary = (
+    primaryLang === "sv" ? "requirements_sv" : "requirements_en"
+  ) as keyof EmployerJobFormValues;
+  const reqSecondary = (
+    secondaryLang === "sv" ? "requirements_sv" : "requirements_en"
+  ) as keyof EmployerJobFormValues;
 
   const [secondTitleOpen, setSecondTitleOpen] = useState(!!initial[titleSecondary]);
   const [secondDescOpen, setSecondDescOpen] = useState(!!initial[descSecondary]);
+  const [secondReqOpen, setSecondReqOpen] = useState(!!initial[reqSecondary]);
   const [locationDetailOpen, setLocationDetailOpen] = useState(!!initial.location_text);
 
   const listProfessionsFn = useServerFn(listPublishedProfessionsV2);
@@ -299,7 +310,7 @@ export function EmployerJobForm({
       window.setTimeout(() => blockerPanelRef.current?.focus(), 0);
       return;
     }
-    onSubmitForReview?.(values);
+    onPublish?.(values);
   }
 
   // ---------------------------------------------------------------------
@@ -555,6 +566,55 @@ export function EmployerJobForm({
             rows={10}
             value={values[descSecondary]}
             onChange={(e) => set(descSecondary, e.target.value)}
+          />
+        </SecondaryLanguageField>
+      </Question>
+
+      {/* "Vad söker ni hos kandidaten?" — the question a recruiter asks
+          out loud, and the one the ad could not answer before. Optional,
+          and deliberately not marked required: the backend does not
+          require it, and the whole rule of this form is that a field the
+          employer is not obliged to fill in is never dressed up as though
+          they were. Same progressive-disclosure shape as the description:
+          the reading language first, the other one a click away. */}
+      <Question
+        id="job-requirements"
+        label={t("employer.jobs.form.field.requirements")}
+        help={t("employer.jobs.form.field.requirementsHelp")}
+      >
+        <textarea
+          id="job-requirements"
+          aria-describedby="job-requirements-help"
+          ref={(el) => {
+            fieldRefs.current[reqPrimary] = el;
+          }}
+          className={inputCls}
+          rows={8}
+          value={values[reqPrimary]}
+          onChange={(e) => set(reqPrimary, e.target.value)}
+          placeholder={t("employer.jobs.form.field.requirementsPlaceholder")}
+        />
+        <SecondaryLanguageField
+          open={secondReqOpen}
+          onOpen={() => setSecondReqOpen(true)}
+          openLabel={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.lang.addEnglish"
+              : "employer.jobs.form.lang.addSwedish",
+          )}
+          label={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.field.requirementsEnglish"
+              : "employer.jobs.form.field.requirementsSwedish",
+          )}
+          id="job-requirements-secondary"
+        >
+          <textarea
+            id="job-requirements-secondary"
+            className={inputCls}
+            rows={7}
+            value={values[reqSecondary]}
+            onChange={(e) => set(reqSecondary, e.target.value)}
           />
         </SecondaryLanguageField>
       </Question>
@@ -815,6 +875,10 @@ export function EmployerJobForm({
 
   const localTitle = values[titlePrimary] || values[titleSecondary];
   const localDesc = values[descPrimary] || values[descSecondary];
+  // Same cross-language fallback the public renderer uses, so the review
+  // summary shows what a candidate will actually read rather than a blank
+  // where the employer wrote in the other language.
+  const localReq = values[reqPrimary] || values[reqSecondary];
   const locationSummary = [values.city, values.region, values.location_text]
     .map((s) => s.trim())
     .filter(Boolean)
@@ -938,6 +1002,11 @@ export function EmployerJobForm({
                 ...summaryValue(localDesc),
                 multiline: true,
               },
+              {
+                label: t("employer.jobs.form.field.requirements"),
+                ...summaryValue(localReq),
+                multiline: true,
+              },
             ]}
           />
           <ReviewSection
@@ -978,13 +1047,32 @@ export function EmployerJobForm({
         </div>
       )}
 
-      {!readOnly && PUBLICATION_MODEL === "moderated" && (
+      {/* An organisation that is not approved cannot publish anything --
+          the database refuses it, whatever this screen shows. So it is told
+          the truth here, and the button is withheld below rather than
+          offered and then failing. */}
+      {!readOnly && orgNotApproved && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm font-medium text-foreground">
+            {t("employer.jobs.form.review.blockedTitle")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("employer.jobs.form.review.blockedBody")}
+          </p>
+        </div>
+      )}
+
+      {!readOnly && !orgNotApproved && (
         <div className="rounded-lg border border-border bg-muted/20 p-4">
           <p className="text-sm font-medium text-foreground">
             {t("employer.jobs.form.review.whatHappensTitle")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t("employer.jobs.form.review.whatHappensBody")}
+            {t(
+              PUBLICATION_MODEL === "moderated"
+                ? "employer.jobs.form.review.whatHappensBody"
+                : "employer.jobs.form.review.whatHappensBodyDirect",
+            )}
           </p>
         </div>
       )}
@@ -1170,7 +1258,11 @@ export function EmployerJobForm({
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           ) : (
-            onSubmitForReview && (
+            onPublish &&
+            // Withheld, not disabled-with-a-tooltip: a button that cannot
+            // work is worse than no button at all, and the review step has
+            // already said why in plain language.
+            !orgNotApproved && (
               <button
                 type="button"
                 disabled={busy}
@@ -1179,7 +1271,11 @@ export function EmployerJobForm({
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
                 {submitting
-                  ? t("employer.jobs.form.submitting")
+                  ? t(
+                      PUBLICATION_MODEL === "moderated"
+                        ? "employer.jobs.form.submitting"
+                        : "employer.jobs.form.publishing",
+                    )
                   : t(
                       PUBLICATION_MODEL === "moderated"
                         ? "employer.jobs.form.action.sendForPublication"

@@ -23,14 +23,16 @@
 //      form unchanged, and PUBLICATION_MODEL still matches what
 //      jobs_validate_before_write() actually permits an employer to do.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dictionaries } from "../src/i18n/dictionaries";
 import { formatDate, formatDateTime } from "../src/lib/job-intelligence/date-format";
 import {
   COUNTRY_OPTIONS,
   MAX_DISPLAY_DAYS,
+  MAX_EXPIRY_DAYS_OFFERED,
   PUBLICATION_MODEL,
+  maxExpiryDateInput,
   STEP_IDS,
   STEP_LABEL_KEYS,
   collectDraftIssues,
@@ -62,6 +64,9 @@ const CODE_TO_KEY: Record<string, string> = {
   LOAD_EMPLOYER_FAILED: "employer.jobs.form.error.loadEmployerFailed",
   EMPLOYER_NOT_FOUND: "employer.jobs.form.error.employerNotFound",
   JOB_NOT_SUBMITTABLE: "employer.jobs.form.error.jobNotSubmittable",
+  JOB_NOT_PUBLISHABLE: "employer.jobs.form.error.jobNotPublishable",
+  EMPLOYER_NOT_APPROVED: "employer.jobs.form.error.employerNotApproved",
+  PUBLISH_JOB_FAILED: "employer.jobs.form.error.publishJobFailed",
   MISSING_REQUIRED_FIELDS: "employer.jobs.form.error.missingRequiredFields",
   JOB_NOT_CLOSEABLE: "employer.jobs.form.error.jobNotCloseable",
   JOB_NOT_ARCHIVABLE: "employer.jobs.form.error.jobNotArchivable",
@@ -312,6 +317,42 @@ if (!tooFar.some((b) => b.field === "expires_at")) {
     `An expires_at more than ${MAX_DISPLAY_DAYS} days out did not block; the database would reject it at publication.`,
   );
 }
+// The last day the picker OFFERS must itself be publishable. This is the
+// bug that made the maximum selectable date unpublishable: the database
+// compares timestamps (expires_at <= published_at + 90 days) while the form
+// stores a chosen day as 23:59 of that day, so day 90 at 23:59 lands past
+// the bound whenever publication happens after 00:01. Day 89 cannot.
+{
+  const offered = maxExpiryDateInput();
+  const offeredIso = fromDateInput(offered);
+  const bound = new Date();
+  bound.setDate(bound.getDate() + MAX_DISPLAY_DAYS);
+  if (!offeredIso || new Date(offeredIso).getTime() > bound.getTime()) {
+    errors.push(
+      `maxExpiryDateInput() offers ${offered}, whose stored end-of-day value is later than published_at + ${MAX_DISPLAY_DAYS} days -- the database would refuse to publish at the very date the picker allows.`,
+    );
+  }
+  if (MAX_EXPIRY_DAYS_OFFERED >= MAX_DISPLAY_DAYS) {
+    errors.push(
+      `MAX_EXPIRY_DAYS_OFFERED (${MAX_EXPIRY_DAYS_OFFERED}) must be strictly less than MAX_DISPLAY_DAYS (${MAX_DISPLAY_DAYS}); an end-of-day expiry on the final day exceeds the database's timestamp bound.`,
+    );
+  }
+  // ...and the offered maximum must not itself register as a blocker.
+  const atOffered = collectPublishBlockers(
+    values({
+      title_sv: "T",
+      description_sv: "D",
+      application_method: "internal",
+      expires_at: offered,
+    }),
+  );
+  if (atOffered.length > 0) {
+    errors.push(
+      `The maximum expiry date the form offers still reports blockers: ${atOffered.map((b) => b.field).join(", ")}.`,
+    );
+  }
+}
+
 const pastDeadline = collectPublishBlockers(
   values({
     title_sv: "T",
@@ -454,14 +495,128 @@ if (emptyValues.application_method !== "unavailable") {
 }
 
 // 4.12 The publication model is honest about what the database allows.
-// jobs_validate_before_write() permits an employer exactly
-// draft->pending_review, rejected->pending_review and published->archived,
-// and rejects any employer write touching published_at. Flipping this
-// constant to "direct" without changing that trigger would give employers a
-// Publicera button that fails at the database.
-if (PUBLICATION_MODEL !== "moderated") {
+//
+// This is the check that used to pin PUBLICATION_MODEL to "moderated". It
+// is not deleted now that the value is "direct" -- it is pointed at the
+// migration instead, because the failure it guards against is unchanged and
+// far worse in this direction: a "Publicera" button whose transition the
+// trigger still refuses would fail at the database, after the employer had
+// filled in the whole form. So "direct" is only allowed to stand while a
+// migration in the repo genuinely grants the employer draft -> published.
+const migrationsDir = fileURLToPath(new URL("../supabase/migrations", import.meta.url));
+const grantsSelfPublish = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .some((f) => {
+    const sql = readFileSync(`${migrationsDir}/${f}`, "utf-8");
+    return (
+      sql.includes("jobs_validate_before_write") &&
+      /OLD\.status = 'draft'\s+AND NEW\.status = 'published'/.test(sql)
+    );
+  });
+
+if (PUBLICATION_MODEL === "direct" && !grantsSelfPublish) {
   errors.push(
-    'PUBLICATION_MODEL is no longer "moderated" -- confirm jobs_validate_before_write() actually allows an employer to publish before shipping this.',
+    'PUBLICATION_MODEL is "direct", but no migration grants an employer the draft -> published transition in jobs_validate_before_write(). The Publicera button would fail at the database.',
+  );
+}
+if (PUBLICATION_MODEL === "moderated" && grantsSelfPublish) {
+  errors.push(
+    'A migration grants employers draft -> published, but PUBLICATION_MODEL is still "moderated" -- the form would show "Skicka för publicering" for a platform that no longer moderates ordinary ads.',
+  );
+}
+
+// 4.13 The bilingual candidate-requirements field.
+//
+// The reason it exists is that the legacy `requirements` column is
+// monolingual jsonb. So the one thing that must never quietly happen is
+// requirements becoming required, or the two languages collapsing into one.
+const withSv = values({ requirements_sv: "Godkänd väktarutbildning." });
+const withEn = values({ requirements_en: "Approved security officer training." });
+
+if (collectPublishBlockers(withSv).some((b) => (b.field as string).startsWith("requirements"))) {
+  errors.push(
+    "Candidate requirements are treated as a publication blocker; the backend does not require them.",
+  );
+}
+for (const v of [emptyValues, withSv, withEn]) {
+  if (Object.keys(collectDraftIssues(v)).length > 0) {
+    errors.push("A draft was refused over the candidate-requirements field, which is optional.");
+  }
+}
+// A complete advert with NO requirements at all must still publish -- this
+// is the same assertion the database suite makes as R1.
+if (
+  collectPublishBlockers(
+    values({
+      title_sv: "T",
+      description_sv: "D",
+      application_method: "internal",
+      expires_at: dateIn(30),
+    }),
+  ).length !== 0
+) {
+  errors.push("An otherwise complete advert with no candidate requirements reports blockers.");
+}
+// Both languages survive the row -> form -> payload round trip independently.
+const reqRow = fromJobRow({
+  requirements_sv: "Krav på svenska",
+  requirements_en: "Requirements in English",
+  application_method: "internal",
+});
+if (
+  reqRow.requirements_sv !== "Krav på svenska" ||
+  reqRow.requirements_en !== "Requirements in English"
+) {
+  errors.push("fromJobRow() did not read both requirements languages back.");
+}
+const reqPayload = toServerPayload(reqRow);
+if (
+  reqPayload.requirements_sv !== "Krav på svenska" ||
+  reqPayload.requirements_en !== "Requirements in English"
+) {
+  errors.push("toServerPayload() lost or altered a requirements language.");
+}
+// An advert that predates the columns reads back as empty, never undefined,
+// so an old job opens in the form without a crash or a stray "undefined".
+const legacyRow = fromJobRow({ title_sv: "Gammal", application_method: "internal" });
+if (legacyRow.requirements_sv !== "" || legacyRow.requirements_en !== "") {
+  errors.push("A job row without the requirements columns did not read back as empty strings.");
+}
+if (toServerPayload(legacyRow).requirements_sv !== null) {
+  errors.push("An empty requirements field was not written as null.");
+}
+// The server function must actually accept and persist them, or the field
+// would be a text box that silently discards what is typed into it.
+for (const col of ["requirements_sv", "requirements_en"]) {
+  if (!employerJobsFnsSource.includes(col)) {
+    errors.push(`employer-jobs.functions.ts never mentions ${col}; the field would not be saved.`);
+  }
+}
+// And the shared renderer must render them, or preview and public page
+// would silently disagree with the form.
+const adContentSource = readFileSync(
+  fileURLToPath(new URL("../src/components/jobs/JobAdContent.tsx", import.meta.url)),
+  "utf-8",
+);
+if (!adContentSource.includes("requirements_sv") || !adContentSource.includes("requirements_en")) {
+  errors.push("JobAdContent.tsx does not render the bilingual requirements.");
+}
+// The legacy jsonb path must still be there -- it is the entire
+// backwards-compatibility strategy for existing advertisements.
+if (!adContentSource.includes("normalizeRequirements")) {
+  errors.push(
+    "JobAdContent.tsx no longer renders the legacy `requirements` jsonb; existing advertisements would lose their content.",
+  );
+}
+// Preview and public page must share one renderer, so they cannot drift.
+const previewSource = readFileSync(
+  fileURLToPath(new URL("../src/components/employer/job-form/JobAdPreview.tsx", import.meta.url)),
+  "utf-8",
+);
+if (!previewSource.includes("JobAdSections") || !previewSource.includes("requirements_sv")) {
+  errors.push(
+    "JobAdPreview.tsx does not feed requirements through the shared JobAdSections renderer; the preview would not match the published ad.",
   );
 }
 
