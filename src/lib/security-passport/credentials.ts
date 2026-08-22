@@ -47,6 +47,15 @@ export interface CredentialType {
   readonly symbolLabel: string;
   readonly requiresValidUntil: boolean;
   readonly requiresIssuer: boolean;
+  /** The authorisation is limited to an employer, principal or protected
+   *  object. A skyddsvakt approval shown without one reads as a general
+   *  national licence. */
+  readonly requiresScope: boolean;
+  /** The credential may only ever carry a controlled result: no holder note,
+   *  and the taxonomy's own label as the title. For facts whose underlying
+   *  material — a register check, a fitness certificate — must never enter the
+   *  Passport at all. */
+  readonly narrowResultOnly: boolean;
 }
 
 /** What the holder types. Every field is optional at this stage — a draft is
@@ -62,6 +71,7 @@ export interface CredentialDraft {
   readonly validUntil: string | null;
   readonly credentialReference: string;
   readonly holderNote: string;
+  readonly authorisationScope: string;
 }
 
 export function emptyCredentialDraft(): CredentialDraft {
@@ -75,6 +85,7 @@ export function emptyCredentialDraft(): CredentialDraft {
     validUntil: null,
     credentialReference: "",
     holderNote: "",
+    authorisationScope: "",
   };
 }
 
@@ -90,6 +101,13 @@ export interface FieldVisibility {
   readonly validFrom: boolean;
   readonly validUntil: boolean;
   readonly reference: boolean;
+  /** What the authorisation is limited to. */
+  readonly scope: boolean;
+  /** A narrow-result credential asks for neither, and the database refuses
+   *  both. Hiding them is not cosmetic: a form that offers a note the server
+   *  will reject teaches the holder to write one. */
+  readonly title: boolean;
+  readonly note: boolean;
 }
 
 export function fieldsFor(type: CredentialType): FieldVisibility {
@@ -103,6 +121,9 @@ export function fieldsFor(type: CredentialType): FieldVisibility {
     // Shown whenever the credential can expire at all. Required separately.
     validUntil: isAppointment || type.requiresValidUntil,
     reference: true,
+    scope: type.requiresScope,
+    title: !type.narrowResultOnly,
+    note: !type.narrowResultOnly,
   };
 }
 
@@ -180,6 +201,24 @@ export function validateCredential(
     errors.push({ field: "validUntil", messageKey: "cred.error.endBeforeStart" });
   }
 
+  // The narrow-result rules are checked BEFORE the draft exemption, because
+  // the database checks them on a draft too — a draft that has already stored
+  // register commentary has already done the harm. Validating them only at
+  // submit would mean the form accepts a note the server then refuses, which
+  // is how a holder learns to write one.
+  if (type?.narrowResultOnly) {
+    if (!isBlank(draft.holderNote)) {
+      errors.push({ field: "holderNote", messageKey: "cred.error.noNoteAllowed" });
+    }
+    if (
+      !isBlank(draft.title) &&
+      draft.title.trim() !== type.nameSv &&
+      draft.title.trim() !== type.nameEn
+    ) {
+      errors.push({ field: "title", messageKey: "cred.error.controlledLabelOnly" });
+    }
+  }
+
   if (mode === "draft") return errors;
 
   if (!type) {
@@ -187,7 +226,7 @@ export function validateCredential(
     return errors;
   }
 
-  if (isBlank(draft.title)) {
+  if (isBlank(draft.title) && !type.narrowResultOnly) {
     errors.push({ field: "title", messageKey: "cred.error.titleRequired" });
   }
   if (isBlank(draft.jurisdictionCode)) {
@@ -203,6 +242,9 @@ export function validateCredential(
   }
   if (type.requiresValidUntil && !draft.validUntil) {
     errors.push({ field: "validUntil", messageKey: "cred.error.validUntilRequired" });
+  }
+  if (type.requiresScope && isBlank(draft.authorisationScope)) {
+    errors.push({ field: "authorisationScope", messageKey: "cred.error.scopeRequired" });
   }
 
   return errors;

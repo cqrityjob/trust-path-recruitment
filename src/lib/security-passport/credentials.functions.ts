@@ -48,7 +48,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("sp_credential_types")
       .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer",
+        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
       )
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
@@ -63,6 +63,8 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
       symbolLabel: r.symbol_label,
       requiresValidUntil: r.requires_valid_until,
       requiresIssuer: r.requires_issuer,
+      requiresScope: r.requires_scope,
+      narrowResultOnly: r.narrow_result_only,
     }));
   });
 
@@ -91,6 +93,9 @@ const draftInput = z.object({
     .nullable(),
   credentialReference: z.string().max(120),
   holderNote: z.string().max(2000),
+  // Bounded to match the column's own CHECK, so an over-long scope is refused
+  // here with a field message rather than by the database with a 23514.
+  authorisationScope: z.string().max(200),
   /** `true` promotes the draft into the Passport. The database refuses an
    *  incomplete one, and `validateCredential` refuses it first. */
   activate: z.boolean(),
@@ -109,6 +114,7 @@ function toDomainDraft(data: DraftInput): CredentialDraft {
     validUntil: data.validUntil,
     credentialReference: data.credentialReference,
     holderNote: data.holderNote,
+    authorisationScope: data.authorisationScope,
   };
 }
 
@@ -146,7 +152,7 @@ export const saveCredential = createServerFn({ method: "POST" })
       const { data: row, error } = await supabase
         .from("sp_credential_types")
         .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer",
+          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
         )
         .eq("code", data.credentialCode)
         .maybeSingle();
@@ -161,6 +167,8 @@ export const saveCredential = createServerFn({ method: "POST" })
         symbolLabel: row.symbol_label,
         requiresValidUntil: row.requires_valid_until,
         requiresIssuer: row.requires_issuer,
+        requiresScope: row.requires_scope,
+        narrowResultOnly: row.narrow_result_only,
       };
     }
 
@@ -179,14 +187,22 @@ export const saveCredential = createServerFn({ method: "POST" })
     const fields = {
       claim_type: type.claimType,
       credential_code: type.code,
-      title: nullIfBlank(data.title) ?? type.nameSv,
+      // A narrow-result credential takes the taxonomy's own label, whatever
+      // arrived. The database refuses anything else for every caller, so
+      // passing the holder's text through would only turn a rule into an
+      // error message.
+      title: type.narrowResultOnly ? type.nameSv : (nullIfBlank(data.title) ?? type.nameSv),
       claimed_issuer_name: nullIfBlank(data.issuerName),
       jurisdiction_code: nullIfBlank(data.jurisdictionCode),
       issued_on: data.issuedOn,
       valid_from: data.validFrom ?? data.issuedOn,
       valid_until: data.validUntil,
       credential_reference: nullIfBlank(data.credentialReference),
-      holder_note: nullIfBlank(data.holderNote),
+      // Same reasoning, and this one matters more: a note on a narrow-result
+      // credential is where register contents or a medical finding would
+      // arrive. Dropped here as well as refused there.
+      holder_note: type.narrowResultOnly ? null : nullIfBlank(data.holderNote),
+      authorisation_scope: nullIfBlank(data.authorisationScope),
       lifecycle_state: mode,
     };
 
@@ -256,7 +272,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("sp_claims")
       .select(
-        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, updated_at",
+        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, authorisation_scope, updated_at",
       )
       .eq("holder_user_id", userId)
       .eq("lifecycle_state", "draft")
@@ -274,6 +290,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
       validUntil: r.valid_until,
       credentialReference: r.credential_reference ?? "",
       holderNote: r.holder_note ?? "",
+      authorisationScope: r.authorisation_scope ?? "",
       updatedAt: r.updated_at,
     }));
   });

@@ -416,6 +416,39 @@ export function CredentialForm({
             </div>
           </section>
 
+          {visible.scope ? (
+            <section aria-label={pt("cred.field.scope")} className="space-y-4">
+              <div>
+                <FieldLabel htmlFor={fieldId("authorisationScope")}>
+                  {pt("cred.field.scope")}
+                </FieldLabel>
+                <input
+                  id={fieldId("authorisationScope")}
+                  type="text"
+                  maxLength={200}
+                  value={draft.authorisationScope}
+                  aria-invalid={errorFor("authorisationScope") ? true : undefined}
+                  aria-describedby={describedBy(
+                    "authorisationScope",
+                    `${fieldId("authorisationScope")}-help`,
+                  )}
+                  onChange={(e) => set("authorisationScope", e.target.value)}
+                  className={inputClass}
+                />
+                <p
+                  id={`${fieldId("authorisationScope")}-help`}
+                  className="mt-1 text-xs text-muted-foreground"
+                >
+                  {pt("cred.field.scopeHelp")}
+                </p>
+                <FieldError
+                  id={`${fieldId("authorisationScope")}-error`}
+                  message={errorFor("authorisationScope")}
+                />
+              </div>
+            </section>
+          ) : null}
+
           <section aria-label={pt("cred.section.evidence")} className="space-y-4">
             <h3 className="text-base font-semibold tracking-tight text-foreground">
               {pt("cred.section.evidence")}
@@ -456,32 +489,41 @@ export function CredentialForm({
               </div>
             ) : null}
 
-            <div>
-              <FieldLabel
-                htmlFor={fieldId("holderNote")}
-                optional
-                optionalLabel={pt("common.optional")}
-              >
-                {pt("cred.field.holderNote")}
-              </FieldLabel>
-              <textarea
-                id={fieldId("holderNote")}
-                rows={3}
-                maxLength={2000}
-                value={draft.holderNote}
-                aria-invalid={errorFor("holderNote") ? true : undefined}
-                aria-describedby={describedBy("holderNote", `${fieldId("holderNote")}-help`)}
-                onChange={(e) => set("holderNote", e.target.value)}
-                className={cn(inputClass, "h-auto py-2.5")}
-              />
-              <p
-                id={`${fieldId("holderNote")}-help`}
-                className="mt-1 text-xs text-muted-foreground"
-              >
-                {pt("cred.field.holderNoteHelp")}
+            {!visible.note ? (
+              <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+                {pt("cred.field.narrowResultOnly")}
               </p>
-              <FieldError id={`${fieldId("holderNote")}-error`} message={errorFor("holderNote")} />
-            </div>
+            ) : (
+              <div>
+                <FieldLabel
+                  htmlFor={fieldId("holderNote")}
+                  optional
+                  optionalLabel={pt("common.optional")}
+                >
+                  {pt("cred.field.holderNote")}
+                </FieldLabel>
+                <textarea
+                  id={fieldId("holderNote")}
+                  rows={3}
+                  maxLength={2000}
+                  value={draft.holderNote}
+                  aria-invalid={errorFor("holderNote") ? true : undefined}
+                  aria-describedby={describedBy("holderNote", `${fieldId("holderNote")}-help`)}
+                  onChange={(e) => set("holderNote", e.target.value)}
+                  className={cn(inputClass, "h-auto py-2.5")}
+                />
+                <p
+                  id={`${fieldId("holderNote")}-help`}
+                  className="mt-1 text-xs text-muted-foreground"
+                >
+                  {pt("cred.field.holderNoteHelp")}
+                </p>
+                <FieldError
+                  id={`${fieldId("holderNote")}-error`}
+                  message={errorFor("holderNote")}
+                />
+              </div>
+            )}
 
             {/* Documentation ≠ approval, stated where documentation is first
                 mentioned rather than discovered after an upload. */}

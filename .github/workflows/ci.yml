@@ -90,6 +90,13 @@ jobs:
       - name: Passport title derivation guard
         run: bun run passport-title-derivation:check
 
+      # What the form asks for must be what the database will accept. Adding
+      # requires_scope to the skyddsvakt approval made the database refuse a
+      # claim the form could not supply, in a market that is live — this is the
+      # check that would have caught it.
+      - name: Passport credential form contract
+        run: bun run passport-credential-form:check
+
       # Production reported a page-wide "something went wrong" over a
       # verification queue that was working: four unrelated operations shared
       # one error string that nothing cleared on success. The browser test for

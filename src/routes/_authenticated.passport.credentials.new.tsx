@@ -268,5 +268,6 @@ function toFormDraft(d: DraftCredential): CredentialDraft {
     validUntil: d.validUntil,
     credentialReference: d.credentialReference,
     holderNote: d.holderNote,
+    authorisationScope: d.authorisationScope,
   };
 }
