@@ -40,7 +40,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 /* ------------------------------------------------------------------ */
 /* Shapes                                                              */
@@ -315,27 +315,41 @@ export interface SkillType {
 export const listSkillTypes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly SkillType[]> => {
+    // `allowed_levels` is the scale itself, and it MUST be requested. It was
+    // once missing from this list while the mapper below still read it: the
+    // column simply never arrived, every type came back with an empty scale,
+    // so the level field never rendered and every scaled type — every
+    // language, Körkort, Truckkort, Liftkort, ADR — was refused by
+    // sp_claims_skill_rules with SP_SKILL_LEVEL_REQUIRED. Only HLR, the one
+    // type that genuinely has no scale, could be saved.
+    //
+    // The old code hid that behind `as Array<{...}>`, which asserted a field
+    // the query had not asked for and so silenced the one check that would
+    // have caught it. The row shape is now derived from the generated table
+    // types instead, which makes the select list and the mapper impossible to
+    // disagree: drop a column here and this stops compiling.
     const { data, error } = await context.supabase
       .from("sp_skill_types")
       .select(
-        "code, claim_type, name_sv, name_en, level_scale, requires_jurisdiction, requires_valid_until",
+        "code, claim_type, name_sv, name_en, level_scale, allowed_levels, requires_jurisdiction, requires_valid_until",
       )
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (
-      (data ?? []) as Array<{
-        code: string;
-        claim_type: string;
-        name_sv: string;
-        name_en: string;
-        level_scale: string;
-        allowed_levels: string[] | null;
-        requires_jurisdiction: boolean;
-        requires_valid_until: boolean;
-      }>
-    ).map((r) => ({
+    type SkillTypeRow = Pick<
+      Tables<"sp_skill_types">,
+      | "code"
+      | "claim_type"
+      | "name_sv"
+      | "name_en"
+      | "level_scale"
+      | "allowed_levels"
+      | "requires_jurisdiction"
+      | "requires_valid_until"
+    >;
+
+    return ((data ?? []) as SkillTypeRow[]).map((r) => ({
       code: r.code,
       claimType: r.claim_type as SkillType["claimType"],
       nameSv: r.name_sv,
@@ -344,6 +358,43 @@ export const listSkillTypes = createServerFn({ method: "GET" })
       allowedLevels: r.allowed_levels ?? [],
       requiresJurisdiction: r.requires_jurisdiction,
       requiresValidUntil: r.requires_valid_until,
+    }));
+  });
+
+/* ------------------------------------------------------------------ */
+/* Jurisdictions                                                       */
+/* ------------------------------------------------------------------ */
+//
+// `sp_claims.jurisdiction_code` is FK-constrained to this table, so a form
+// that lets the holder TYPE two letters is offering them a way to fail. The
+// owner typed "SV" — the language code — into a field that wanted "SE", and
+// got a foreign-key violation reported as "Något gick fel".
+//
+// The vocabulary is small, active-filtered, RLS-readable by `authenticated`
+// and carries no personal data, so the form renders it as a select and the
+// class of error disappears rather than being explained.
+
+export interface Jurisdiction {
+  readonly code: string;
+  readonly nameSv: string;
+  readonly nameEn: string;
+}
+
+export const listJurisdictions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly Jurisdiction[]> => {
+    const { data, error } = await context.supabase
+      .from("sp_jurisdictions")
+      .select("code, name_sv, name_en")
+      .eq("is_active", true)
+      .order("code", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    type JurisdictionRow = Pick<Tables<"sp_jurisdictions">, "code" | "name_sv" | "name_en">;
+    return ((data ?? []) as JurisdictionRow[]).map((r) => ({
+      code: r.code,
+      nameSv: r.name_sv,
+      nameEn: r.name_en,
     }));
   });
 
