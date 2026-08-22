@@ -3774,6 +3774,8 @@ export type Database = {
           related_profession_slugs: string[]
           required_skill_ids: string[]
           requirements: Json | null
+          requirements_en: string | null
+          requirements_sv: string | null
           responsibilities: Json | null
           salary_currency: string | null
           salary_max: number | null
@@ -3837,6 +3839,8 @@ export type Database = {
           related_profession_slugs?: string[]
           required_skill_ids?: string[]
           requirements?: Json | null
+          requirements_en?: string | null
+          requirements_sv?: string | null
           responsibilities?: Json | null
           salary_currency?: string | null
           salary_max?: number | null
@@ -3900,6 +3904,8 @@ export type Database = {
           related_profession_slugs?: string[]
           required_skill_ids?: string[]
           requirements?: Json | null
+          requirements_en?: string | null
+          requirements_sv?: string | null
           responsibilities?: Json | null
           salary_currency?: string | null
           salary_max?: number | null

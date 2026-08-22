@@ -183,6 +183,7 @@ export const dictionaries = {
     "jobs.detail.deadline": "Sista ansökningsdag",
     "jobs.detail.published": "Publicerad",
     "jobs.detail.responsibilities": "Arbetsuppgifter",
+    "jobs.detail.lookingFor": "Vad vi söker",
     "jobs.detail.requirements": "Kvalifikationer",
     "jobs.detail.benefits": "Vi erbjuder",
     "jobs.detail.not_found.title": "Jobbet är inte tillgängligt",
@@ -1009,6 +1010,10 @@ export const dictionaries = {
       "Fyra korta steg: jobbet, beskrivningen, ansökan och en granskning innan annonsen skickas för publicering.",
     "employer.jobs.edit.heading": "Redigera jobbannons",
     "employer.jobs.edit.viewPublic": "Visa publik vy",
+    "employer.jobs.published.heading": "Annonsen är publicerad.",
+    "employer.jobs.published.body": "Annonsen är nu synlig för kandidater på CQrityjob.",
+    "employer.jobs.published.viewAd": "Visa annonsen",
+    "employer.jobs.published.toMyAds": "Till mina annonser",
     "employer.jobs.edit.duplicate": "Duplicera till nytt utkast",
     "employer.jobs.edit.close": "Stäng annons",
     "employer.jobs.edit.notEditable":
@@ -1036,6 +1041,7 @@ export const dictionaries = {
     "employer.jobs.form.saveDraft": "Spara utkast",
     "employer.jobs.form.saving": "Sparar…",
     "employer.jobs.form.submitting": "Skickar…",
+    "employer.jobs.form.publishing": "Publicerar…",
     "employer.jobs.form.validation.invalidUrl": "Ange en giltig webbadress (t.ex. https://…).",
     "employer.jobs.form.validation.invalidEmail": "Ange en giltig e-postadress.",
     "employer.jobs.form.error.generic":
@@ -1050,6 +1056,12 @@ export const dictionaries = {
     "employer.jobs.form.error.employerNotFound": "Organisationen kunde inte hittas.",
     "employer.jobs.form.error.jobNotSubmittable":
       "Endast utkast eller nekade annonser kan skickas till granskning.",
+    "employer.jobs.form.error.jobNotPublishable":
+      "Bara utkast och nekade annonser kan publiceras. Den här annonsen är redan publicerad, arkiverad eller ligger hos CQrityjob för granskning.",
+    "employer.jobs.form.error.employerNotApproved":
+      "Er organisation är inte godkänd hos CQrityjob ännu, så annonsen kan inte publiceras. Utkastet är sparat.",
+    "employer.jobs.form.error.publishJobFailed":
+      "Annonsen kunde inte publiceras. Kontrollera uppgifterna och försök igen.",
     "employer.jobs.form.error.missingRequiredFields":
       "Ett eller flera obligatoriska fält saknas. Kontrollera formuläret och försök igen.",
     "employer.jobs.form.error.jobNotArchivable":
@@ -1088,7 +1100,7 @@ export const dictionaries = {
     "employer.jobs.form.requiredLegend": "Obligatoriskt för publicering.",
     "employer.jobs.form.draftLegend": "Du kan spara ett ofullständigt utkast och fortsätta senare.",
     "employer.jobs.form.orgPendingNotice":
-      "Er organisation väntar fortfarande på godkännande hos CQrityjob. Ni kan skriva och spara annonser nu, men de kan skickas för publicering först när organisationen är godkänd.",
+      "Er organisation väntar fortfarande på godkännande hos CQrityjob. Ni kan skriva och spara annonser nu, men de kan publiceras först när organisationen är godkänd.",
     "employer.jobs.form.option.none": "Ej angivet",
     "employer.jobs.form.lang.addEnglish": "+ Lägg till engelsk version (valfritt)",
     "employer.jobs.form.lang.addSwedish": "+ Lägg till svensk version (valfritt)",
@@ -1118,6 +1130,13 @@ export const dictionaries = {
       "Om rollen…\n\nVi söker dig som…\n\nVi erbjuder…",
     "employer.jobs.form.field.descriptionEnglish": "Jobbeskrivning på engelska",
     "employer.jobs.form.field.descriptionSwedish": "Jobbeskrivning på svenska",
+    "employer.jobs.form.field.requirements": "Vad söker ni hos kandidaten?",
+    "employer.jobs.form.field.requirementsHelp":
+      "Beskriv de viktigaste kraven, erfarenheterna eller egenskaperna för rollen.",
+    "employer.jobs.form.field.requirementsPlaceholder":
+      "Krav…\n\nMeriterande…\n\nPersonliga egenskaper…",
+    "employer.jobs.form.field.requirementsEnglish": "Kandidatkrav på engelska",
+    "employer.jobs.form.field.requirementsSwedish": "Kandidatkrav på svenska",
     "employer.jobs.form.section.category": "Jobbkategori",
     "employer.jobs.form.section.categoryHelp":
       "Valfritt. Det hjälper CQrityjob att visa jobbet för rätt kandidater.",
@@ -1157,6 +1176,11 @@ export const dictionaries = {
     "employer.jobs.form.review.whatHappensTitle": "Vad händer sedan?",
     "employer.jobs.form.review.whatHappensBody":
       "Annonsen skickas till CQrityjob för en sista kontroll och publiceras därefter. Under tiden är den låst för redigering. Ni följer status i listan över jobbannonser.",
+    "employer.jobs.form.review.whatHappensBodyDirect":
+      "När ni publicerar blir annonsen synlig för kandidater direkt. Ni kan stänga den när som helst från listan över jobbannonser.",
+    "employer.jobs.form.review.blockedTitle": "Annonsen kan inte publiceras än",
+    "employer.jobs.form.review.blockedBody":
+      "Er organisation är inte godkänd hos CQrityjob ännu. Annonsen är sparad och ni kan publicera den så snart organisationen är godkänd.",
     "employer.jobs.form.action.back": "Tillbaka",
     "employer.jobs.form.action.next": "Nästa",
     "employer.jobs.form.action.preview": "Förhandsgranska annons",
@@ -3547,6 +3571,7 @@ export const dictionaries = {
     "jobs.detail.deadline": "Application deadline",
     "jobs.detail.published": "Published",
     "jobs.detail.responsibilities": "Responsibilities",
+    "jobs.detail.lookingFor": "What we are looking for",
     "jobs.detail.requirements": "Qualifications",
     "jobs.detail.benefits": "What we offer",
     "jobs.detail.not_found.title": "This job is not available",
@@ -4372,6 +4397,10 @@ export const dictionaries = {
       "Four short steps: the job, the description, how candidates apply, and a review before the ad is sent for publication.",
     "employer.jobs.edit.heading": "Edit job",
     "employer.jobs.edit.viewPublic": "View public page",
+    "employer.jobs.published.heading": "The ad is published.",
+    "employer.jobs.published.body": "It is now visible to candidates on CQrityjob.",
+    "employer.jobs.published.viewAd": "View the ad",
+    "employer.jobs.published.toMyAds": "To my job ads",
     "employer.jobs.edit.duplicate": "Duplicate into a new draft",
     "employer.jobs.edit.close": "Close job",
     "employer.jobs.edit.notEditable":
@@ -4399,6 +4428,7 @@ export const dictionaries = {
     "employer.jobs.form.saveDraft": "Save draft",
     "employer.jobs.form.saving": "Saving…",
     "employer.jobs.form.submitting": "Submitting…",
+    "employer.jobs.form.publishing": "Publishing…",
     "employer.jobs.form.validation.invalidUrl": "Enter a valid URL (e.g. https://…).",
     "employer.jobs.form.validation.invalidEmail": "Enter a valid email address.",
     "employer.jobs.form.error.generic":
@@ -4412,6 +4442,12 @@ export const dictionaries = {
     "employer.jobs.form.error.employerNotFound": "This organisation could not be found.",
     "employer.jobs.form.error.jobNotSubmittable":
       "Only draft or rejected jobs can be submitted for review.",
+    "employer.jobs.form.error.jobNotPublishable":
+      "Only drafts and rejected ads can be published. This one is already published, archived, or with CQrityjob for review.",
+    "employer.jobs.form.error.employerNotApproved":
+      "Your organisation has not been approved by CQrityjob yet, so this ad cannot be published. The draft is saved.",
+    "employer.jobs.form.error.publishJobFailed":
+      "The ad could not be published. Check the details and try again.",
     "employer.jobs.form.error.missingRequiredFields":
       "One or more required fields are missing. Check the form and try again.",
     "employer.jobs.form.error.jobNotArchivable":
@@ -4451,7 +4487,7 @@ export const dictionaries = {
     "employer.jobs.form.requiredLegend": "Required before the ad can be published.",
     "employer.jobs.form.draftLegend": "You can save an incomplete draft and carry on later.",
     "employer.jobs.form.orgPendingNotice":
-      "Your organisation is still awaiting approval from CQrityjob. You can write and save job ads now, but they can only be sent for publication once the organisation has been approved.",
+      "Your organisation is still awaiting approval from CQrityjob. You can write and save job ads now, but they can only be published once the organisation has been approved.",
     "employer.jobs.form.option.none": "Not specified",
     "employer.jobs.form.lang.addEnglish": "+ Add English version (optional)",
     "employer.jobs.form.lang.addSwedish": "+ Add Swedish version (optional)",
@@ -4480,6 +4516,13 @@ export const dictionaries = {
       "About the role…\n\nWe are looking for someone who…\n\nWe offer…",
     "employer.jobs.form.field.descriptionEnglish": "Job description in English",
     "employer.jobs.form.field.descriptionSwedish": "Job description in Swedish",
+    "employer.jobs.form.field.requirements": "What are you looking for in the candidate?",
+    "employer.jobs.form.field.requirementsHelp":
+      "Describe the most important requirements, experience or qualities for the role.",
+    "employer.jobs.form.field.requirementsPlaceholder":
+      "Requirements…\n\nNice to have…\n\nPersonal qualities…",
+    "employer.jobs.form.field.requirementsEnglish": "Candidate requirements in English",
+    "employer.jobs.form.field.requirementsSwedish": "Candidate requirements in Swedish",
     "employer.jobs.form.section.category": "Job category",
     "employer.jobs.form.section.categoryHelp":
       "Optional. It helps CQrityjob show the job to the right candidates.",
@@ -4518,6 +4561,11 @@ export const dictionaries = {
     "employer.jobs.form.review.whatHappensTitle": "What happens next?",
     "employer.jobs.form.review.whatHappensBody":
       "The ad goes to CQrityjob for a final check and is published after that. While it is being checked the ad is locked for editing. You can follow its status in your list of job ads.",
+    "employer.jobs.form.review.whatHappensBodyDirect":
+      "When you publish, the ad becomes visible to candidates straight away. You can close it at any time from your list of job ads.",
+    "employer.jobs.form.review.blockedTitle": "This ad cannot be published yet",
+    "employer.jobs.form.review.blockedBody":
+      "Your organisation has not been approved by CQrityjob yet. The ad is saved, and you can publish it as soon as the organisation is approved.",
     "employer.jobs.form.action.back": "Back",
     "employer.jobs.form.action.next": "Next",
     "employer.jobs.form.action.preview": "Preview ad",

@@ -221,6 +221,11 @@ const draftPayloadSchema = z.object({
   title_en: z.string().trim().max(200).optional().nullable(),
   description_sv: z.string().max(20000).optional().nullable(),
   description_en: z.string().max(20000).optional().nullable(),
+  // "Vad söker ni hos kandidaten?" — free prose, optional in both
+  // languages, bounded exactly like description because the columns are
+  // plain text with no length CHECK of their own.
+  requirements_sv: z.string().max(20000).optional().nullable(),
+  requirements_en: z.string().max(20000).optional().nullable(),
   family_id: z.string().max(64).optional().nullable(),
   profession_slug: z.string().max(120).optional().nullable(),
   location_text: z.string().max(200).optional().nullable(),
@@ -262,6 +267,8 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       title_en: data.title_en ?? null,
       description_sv: data.description_sv ?? null,
       description_en: data.description_en ?? null,
+      requirements_sv: data.requirements_sv ?? null,
+      requirements_en: data.requirements_en ?? null,
       family_id: data.family_id || null,
       profession_slug: data.profession_slug || null,
       location_text: data.location_text ?? null,
@@ -413,6 +420,114 @@ export const submitEmployerJob = createServerFn({ method: "POST" })
       after: { ...before, status: "pending_review" },
     });
     return { id: data.jobId, status: "pending_review" as const };
+  });
+
+// -------------------- PUBLISH (draft/rejected -> published) --------------------
+//
+// CQrityjob approves the EMPLOYER, not each of that employer's ordinary
+// advertisements. Once an organisation is active, a valid advert is theirs
+// to publish, and no CQrityjob admin stands in the way of an ordinary
+// vacancy.
+//
+// This function does NOT decide that. The database does, in
+// jobs_validate_before_write(): it re-checks that the employer is active,
+// that the application route is present and valid for the chosen method,
+// that expires_at is set and within 90 days of publication, and that
+// deadline_at is not before it. What this function adds is (a) an active-
+// employer check that fails with a message the employer can act on rather
+// than a raw constraint error, (b) the same readiness gate the review step
+// already shows them, so the failure is named rather than generic, and (c)
+// the audit row.
+//
+// published_at is STILL never sent from here. The trigger stamps it with
+// now(); a value written by this code -- or by any client -- is discarded.
+// That is deliberate: it is what keeps "when did this go live" a fact the
+// database owns rather than a number a caller chose.
+const publishSchema = z.object({
+  employerId: z.string().uuid(),
+  jobId: z.string().uuid(),
+});
+
+export const publishEmployerJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => publishSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await assertActiveMembership(ctx, data.employerId);
+
+    // assertActiveMembership admits `pending` employers too, because they
+    // are allowed to WRITE drafts. Publication is the one act that requires
+    // a fully approved organisation, so it is checked separately and
+    // explicitly -- the database would refuse anyway, but with a
+    // constraint error instead of something the employer can understand.
+    const { data: emp, error: empErr } = await ctx.supabase
+      .from("employers")
+      .select("status")
+      .eq("id", data.employerId)
+      .maybeSingle();
+    if (empErr) throw new Error("LOAD_EMPLOYER_FAILED");
+    if (!emp) throw new Error("EMPLOYER_NOT_FOUND");
+    if (emp.status !== "active") throw new Error("EMPLOYER_NOT_APPROVED");
+
+    const { data: before, error: bErr } = await ctx.supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId)
+      .maybeSingle();
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
+    if (before.status !== "draft" && before.status !== "rejected") {
+      throw new Error("JOB_NOT_PUBLISHABLE");
+    }
+
+    // The same publication-readiness set the form's review step enforces,
+    // and the same one submitEmployerJob() has always used. Nothing new is
+    // required here just because publication became direct.
+    const missing: string[] = [];
+    if (!(before.title_sv || before.title_en)) missing.push("title");
+    if (!(before.description_sv || before.description_en)) missing.push("description");
+    if (before.application_method === "unavailable") missing.push("application method");
+    if (before.application_method === "external" && !before.application_url)
+      missing.push("application URL");
+    if (before.application_method === "email" && !before.application_email)
+      missing.push("application email");
+    if (!before.expires_at) missing.push("expires at");
+    if (missing.length > 0) {
+      throw new Error("MISSING_REQUIRED_FIELDS");
+    }
+
+    const { error: uErr } = await ctx.supabase
+      .from("jobs")
+      .update({ status: "published", updated_at: new Date().toISOString() })
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId);
+    if (uErr) throw sanitizeJobWriteError(uErr, "publishEmployerJob update", "PUBLISH_JOB_FAILED");
+
+    // Read back rather than assume: published_at is the trigger's value,
+    // not ours, and the caller needs the slug to link to the live advert.
+    const { data: after } = await ctx.supabase
+      .from("jobs")
+      .select("slug, published_at")
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId)
+      .maybeSingle();
+
+    await writeAudit({
+      jobId: data.jobId,
+      slugSnapshot: before.slug,
+      actorId: ctx.userId,
+      action: "published",
+      before,
+      after: { ...before, status: "published", published_at: after?.published_at ?? null },
+    });
+
+    return {
+      id: data.jobId,
+      status: "published" as const,
+      slug: (after?.slug as string) ?? (before.slug as string),
+      published_at: (after?.published_at as string | null) ?? null,
+    };
   });
 
 // -------------------- CLOSE (published -> archived) --------------------
@@ -602,6 +717,8 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       title_en: src.title_en,
       description_sv: src.description_sv,
       description_en: src.description_en,
+      requirements_sv: src.requirements_sv,
+      requirements_en: src.requirements_en,
       family_id: src.family_id,
       profession_slug: src.profession_slug,
       location_text: src.location_text,

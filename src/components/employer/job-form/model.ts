@@ -30,6 +30,8 @@ export type EmployerJobFormValues = {
   title_en: string;
   description_sv: string;
   description_en: string;
+  requirements_sv: string;
+  requirements_en: string;
   location_text: string;
   country: string;
   region: string;
@@ -65,6 +67,8 @@ export const emptyValues: EmployerJobFormValues = {
   title_en: "",
   description_sv: "",
   description_en: "",
+  requirements_sv: "",
+  requirements_en: "",
   location_text: "",
   country: "SE",
   region: "",
@@ -121,14 +125,32 @@ export function daysFromToday(dateInput: string): number | null {
 }
 
 /** The longest display window the database will accept (see
- *  jobs_validate_before_write: expires_at <= published_at + 90 days).
- *  Measured from today because publication happens today or later, which
- *  makes this bound strictly safe rather than merely approximate. */
+ *  jobs_validate_before_write: expires_at <= published_at + 90 days). */
 export const MAX_DISPLAY_DAYS = 90;
+
+/**
+ * The last day the form actually offers and accepts: 89 days out, not 90.
+ *
+ * Not an off-by-one — a correction for one. The database compares two
+ * TIMESTAMPS, `expires_at <= published_at + 90 days`, while this form deals
+ * in whole days and stores a chosen day as 23:59 of that day (fromDateInput,
+ * so that "last day: 20 Nov" genuinely includes all of 20 November). Publish
+ * at 15:38 and pick day 90, and the stored 23:59 lands eight hours PAST
+ * published_at + 90 days, so the database refuses the publication — at the
+ * exact maximum the picker itself put in front of the employer.
+ *
+ * That was survivable while a moderator published later; now that an active
+ * employer publishes immediately, the last selectable day would fail every
+ * time. Day 89 at 23:59 is always strictly before published_at + 90 days
+ * whatever the hour, so this is the largest bound that cannot fail. The
+ * database rule is unchanged and remains the authority; the form simply
+ * stops offering a day it knows will be rejected.
+ */
+export const MAX_EXPIRY_DAYS_OFFERED = MAX_DISPLAY_DAYS - 1;
 
 export function maxExpiryDateInput(): string {
   const d = startOfToday();
-  d.setDate(d.getDate() + MAX_DISPLAY_DAYS);
+  d.setDate(d.getDate() + MAX_EXPIRY_DAYS_OFFERED);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -160,6 +182,14 @@ export function fromJobRow(job: JobRowLike): EmployerJobFormValues {
     title_en: str(job.title_en),
     description_sv: str(job.description_sv),
     description_en: str(job.description_en),
+    // The bilingual candidate-requirements columns. An advert written
+    // before they existed reads back as "" from str(undefined), which is
+    // exactly the empty-field state -- so an old job opens in the form
+    // without special-casing, and its legacy `requirements` jsonb is left
+    // where it is rather than being pulled into a field that cannot hold
+    // it (see the migration, and JobAdSections's legacy branch).
+    requirements_sv: str(job.requirements_sv),
+    requirements_en: str(job.requirements_en),
     location_text: str(job.location_text),
     country: str(job.country),
     region: str(job.region),
@@ -187,6 +217,8 @@ export function toServerPayload(v: EmployerJobFormValues) {
     title_en: v.title_en.trim() || null,
     description_sv: v.description_sv.trim() || null,
     description_en: v.description_en.trim() || null,
+    requirements_sv: v.requirements_sv.trim() || null,
+    requirements_en: v.requirements_en.trim() || null,
     location_text: v.location_text.trim() || null,
     country: v.country.trim() || null,
     region: v.region.trim() || null,
@@ -380,7 +412,7 @@ export function collectPublishBlockers(v: EmployerJobFormValues): Blocker[] {
         detailKey: "employer.jobs.form.validation.expiresInPast",
         focus: "expires_at",
       });
-    } else if (days !== null && days > MAX_DISPLAY_DAYS) {
+    } else if (days !== null && days > MAX_EXPIRY_DAYS_OFFERED) {
       out.push({
         field: "expires_at",
         step: "application",
@@ -438,22 +470,30 @@ export function collectDraftIssues(v: EmployerJobFormValues): DraftFieldErrors {
 // -----------------------------------------------------------------------------
 // How this platform publishes.
 //
-// Today: an employer submits, a CQrityjob moderator publishes. This is not
-// a UI choice — jobs_validate_before_write() allows an employer exactly
-// three status transitions (draft->pending_review, rejected->pending_review,
-// published->archived) and rejects any employer write that touches
-// published_at at all. A "Publicera" button on this form would therefore
-// fail at the database, not merely at the server function.
+// CQrityjob approves the EMPLOYER, not each of that employer's ordinary
+// advertisements. An ACTIVE organisation publishes its own valid vacancy
+// directly; no CQrityjob admin approves an ordinary job advert.
 //
-// The review step is built against this constant rather than against the
-// moderated flow directly, so the day the product decides approved
-// employers publish directly, the change is this value plus the server
-// function behind it — not another rewrite of the step.
+// This constant is honest about the database, which is the only place the
+// rule really lives. As of migration 20260906091000,
+// jobs_validate_before_write() allows an employer draft->published and
+// rejected->published, and stamps published_at itself. Before that
+// migration this said "moderated", because it had to: the trigger allowed
+// only draft->pending_review and refused any employer write touching
+// published_at, so a Publicera button would have failed at the database
+// rather than merely at the server function.
+//
+// pending_review is NOT gone. The transition into it is retained for legacy
+// adverts and for the exceptional one, and admin keeps every moderation
+// power it had. What changed is the normal path, and only for an employer
+// the platform has already approved — an employer that is pending,
+// suspended, rejected or archived still cannot publish anything, which the
+// database enforces independently of this constant.
 // -----------------------------------------------------------------------------
 
 export type PublicationModel = "moderated" | "direct";
 
-export const PUBLICATION_MODEL: PublicationModel = "moderated";
+export const PUBLICATION_MODEL: PublicationModel = "direct";
 
 // -----------------------------------------------------------------------------
 // Server error CODE -> localised message. employer-jobs.functions.ts throws
@@ -474,6 +514,9 @@ export const SERVER_ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   LOAD_EMPLOYER_FAILED: "employer.jobs.form.error.loadEmployerFailed",
   EMPLOYER_NOT_FOUND: "employer.jobs.form.error.employerNotFound",
   JOB_NOT_SUBMITTABLE: "employer.jobs.form.error.jobNotSubmittable",
+  JOB_NOT_PUBLISHABLE: "employer.jobs.form.error.jobNotPublishable",
+  EMPLOYER_NOT_APPROVED: "employer.jobs.form.error.employerNotApproved",
+  PUBLISH_JOB_FAILED: "employer.jobs.form.error.publishJobFailed",
   MISSING_REQUIRED_FIELDS: "employer.jobs.form.error.missingRequiredFields",
   JOB_NOT_CLOSEABLE: "employer.jobs.form.error.jobNotCloseable",
   JOB_NOT_ARCHIVABLE: "employer.jobs.form.error.jobNotArchivable",

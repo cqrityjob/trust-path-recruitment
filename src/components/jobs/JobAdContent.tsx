@@ -51,6 +51,14 @@ export type JobAdContentJob = {
   published_at?: string | null;
   deadline_at: string | null;
   responsibilities?: unknown;
+  /** What the employer is looking for in the candidate, free prose, in
+   *  each language. Optional in both — an advert may have neither, one, or
+   *  both, exactly like title and description. */
+  requirements_sv?: string | null;
+  requirements_en?: string | null;
+  /** LEGACY monolingual jsonb: a string[] or a bucketed object. Still
+   *  rendered, as a fallback, so advertisements that predate the bilingual
+   *  columns keep showing what they always showed. */
   requirements?: unknown;
   benefits?: unknown;
   regulated?: boolean;
@@ -231,7 +239,19 @@ export function JobAdHeading({
 export function JobAdSections({ job }: { job: JobAdContentJob }) {
   const { t, lang } = useT();
   const description = pickLocalized(job.description_sv, job.description_en, lang);
-  const reqs = normalizeRequirements(job.requirements);
+  // The bilingual prose wins when it exists, and falls back across
+  // languages by exactly the same rule as title and description — an
+  // advert written only in Swedish reads in Swedish to an English visitor
+  // rather than showing them nothing.
+  const requirementsText = pickLocalized(
+    job.requirements_sv ?? null,
+    job.requirements_en ?? null,
+    lang,
+  );
+  // Only consulted when there is no bilingual prose at all. This is the
+  // whole backwards-compatibility strategy: nothing was migrated out of
+  // the legacy jsonb column, so it has to still render.
+  const reqs = normalizeRequirements(requirementsText ? null : job.requirements);
   const responsibilities = toStringList(job.responsibilities);
   const benefits = toStringList(job.benefits);
 
@@ -248,6 +268,15 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
         <section>
           <h2 className="text-xl font-semibold">{t("jobs.detail.responsibilities")}</h2>
           <BulletList items={responsibilities} />
+        </section>
+      )}
+
+      {requirementsText && (
+        <section>
+          <h2 className="text-xl font-semibold">{t("jobs.detail.lookingFor")}</h2>
+          <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
+            {requirementsText}
+          </p>
         </section>
       )}
 

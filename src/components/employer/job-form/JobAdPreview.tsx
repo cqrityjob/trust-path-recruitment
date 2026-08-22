@@ -27,6 +27,11 @@ export function toPreviewJob(v: EmployerJobFormValues): JobAdContentJob {
     published_at: null,
     deadline_at: fromDateInput(v.deadline_at),
     responsibilities: null,
+    requirements_sv: v.requirements_sv.trim() || null,
+    requirements_en: v.requirements_en.trim() || null,
+    // The legacy jsonb is not part of the form and never has been, so a
+    // preview has nothing to show from it. The published page renders it
+    // for older adverts; see JobAdSections.
     requirements: null,
     benefits: null,
   };

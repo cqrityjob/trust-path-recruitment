@@ -12,7 +12,10 @@ import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.func
 import {
   saveEmployerJobDraft,
   submitEmployerJob,
+  publishEmployerJob,
 } from "@/lib/job-intelligence/employer-jobs.functions";
+import { PUBLICATION_MODEL } from "@/components/employer/job-form/model";
+import { JobPublishedPanel } from "@/components/employer/job-form/JobPublishedPanel";
 import {
   EmployerJobForm,
   emptyValues,
@@ -34,6 +37,7 @@ function EmployerJobNewPage() {
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
   const saveFn = useServerFn(saveEmployerJobDraft);
   const submitFn = useServerFn(submitEmployerJob);
+  const publishFn = useServerFn(publishEmployerJob);
 
   const workspacesQuery = useQuery({
     queryKey: ["employer", "my-workspaces"],
@@ -42,6 +46,9 @@ function EmployerJobNewPage() {
   const workspace = workspacesQuery.data?.find((w) => w.employerSlug === employerSlug);
 
   const [formError, setFormError] = useState<string | null>(null);
+  /** Set once the advertisement is live, so the page can confirm it
+   *  instead of navigating away in silence. */
+  const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
   const saveMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
@@ -60,21 +67,36 @@ function EmployerJobNewPage() {
     onError: (e: any) => setFormError(e?.message ?? "SAVE_DRAFT_FAILED"),
   });
 
-  const submitMutation = useMutation({
+  // Save first, then publish: the employer's last keystrokes must reach the
+  // row before the database validates it, or publication would judge a
+  // version of the advert nobody is looking at.
+  const publishMutation = useMutation({
     mutationFn: async (values: EmployerJobFormValues) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       const saved = await saveFn({
         data: { employerId: workspace.employerId, ...toServerPayload(values) },
       });
-      return submitFn({ data: { employerId: workspace.employerId, jobId: saved.id } });
+      if (PUBLICATION_MODEL === "moderated") {
+        await submitFn({ data: { employerId: workspace.employerId, jobId: saved.id } });
+        return null;
+      }
+      return publishFn({ data: { employerId: workspace.employerId, jobId: saved.id } });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       if (!workspace) return;
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
+      if (result?.slug) {
+        setPublishedSlug(result.slug);
+        return;
+      }
       navigate({ to: "/employer/$employerSlug/jobs", params: { employerSlug } });
     },
-    onError: (e: any) => setFormError(e?.message ?? "SUBMIT_FOR_REVIEW_FAILED"),
+    onError: (e: any) =>
+      setFormError(
+        e?.message ??
+          (PUBLICATION_MODEL === "moderated" ? "SUBMIT_FOR_REVIEW_FAILED" : "PUBLISH_JOB_FAILED"),
+      ),
   });
 
   if (workspacesQuery.isLoading) {
@@ -98,31 +120,37 @@ function EmployerJobNewPage() {
       activeSection="jobs"
       hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
     >
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {t("employer.jobs.new.heading")}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {t("employer.jobs.new.lede")}
-        </p>
-      </div>
+      {publishedSlug ? (
+        <JobPublishedPanel employerSlug={employerSlug} jobSlug={publishedSlug} />
+      ) : (
+        <>
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+              {t("employer.jobs.new.heading")}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              {t("employer.jobs.new.lede")}
+            </p>
+          </div>
 
-      <EmployerJobForm
-        initial={emptyValues}
-        employerName={workspace.employerName}
-        employerStatus={workspace.employerStatus}
-        saving={saveMutation.isPending}
-        submitting={submitMutation.isPending}
-        error={formError}
-        onSaveDraft={(v) => {
-          setFormError(null);
-          saveMutation.mutate(v);
-        }}
-        onSubmitForReview={(v) => {
-          setFormError(null);
-          submitMutation.mutate(v);
-        }}
-      />
+          <EmployerJobForm
+            initial={emptyValues}
+            employerName={workspace.employerName}
+            employerStatus={workspace.employerStatus}
+            saving={saveMutation.isPending}
+            submitting={publishMutation.isPending}
+            error={formError}
+            onSaveDraft={(v) => {
+              setFormError(null);
+              saveMutation.mutate(v);
+            }}
+            onPublish={(v) => {
+              setFormError(null);
+              publishMutation.mutate(v);
+            }}
+          />
+        </>
+      )}
     </EmployerAppShell>
   );
 }
