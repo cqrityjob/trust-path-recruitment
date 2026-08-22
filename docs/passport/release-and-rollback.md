@@ -78,6 +78,7 @@ bun run passport-fixture:check
 bun run passport-error-scope:check
 bun run passport-title-derivation:check
 bun run passport-identity-engine:check
+bun run passport-credential-form:check
 ```
 
 Full replay from empty plus every SQL suite — **port 54322**, the local

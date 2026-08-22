@@ -105,6 +105,27 @@ asked for. A recorded scope still cannot be removed.
 
 _Status: Implemented, Tested_ — including the grandfathering itself.
 
+## The form and the database must agree
+
+The taxonomy decides what a credential asks for, and **two** readers act on it:
+the form (`fieldsFor`, `validateCredential`) and a database trigger. That is the
+design — one source of truth, enforced for every caller — and it is also
+exactly how the two can silently disagree.
+
+They did. Adding `requires_scope` to `SV` made the database refuse a claim the
+form could not supply, and `narrow_result_only` on the personnel approval made
+it refuse a title and a note the form still offered. Both would have failed
+only at the moment a real holder pressed save, in a live market.
+
+`scripts/passport-credential-form:check` is the guard that was missing. For
+**every** credential in the taxonomy it builds a complete draft _from that
+row_ and asserts it validates clean, then asserts each rule refuses what it
+exists to refuse — so a credential added later is covered without editing the
+script. Negative-tested: removing the scope field from `fieldsFor` fails 2 of
+50 assertions.
+
+_Status: Implemented, Tested, in CI._
+
 ## Employment and experience
 
 Verified experience is computed by **interval union**, so two concurrent jobs
