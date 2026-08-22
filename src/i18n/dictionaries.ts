@@ -1467,6 +1467,12 @@ export const dictionaries = {
       "Ingen Security Passport-information har delats med er för den här ansökan.",
     "employer.candidate.passport.lede":
       "Security Passport tillhör kandidaten. Endast innehavaren kan välja att dela den, och en jobbansökan innebär inte ett sådant samtycke.",
+    // Both of these say what YOUR ORGANISATION has been given. Neither states,
+    // implies or can be read as a fact about what the candidate holds.
+    "employer.candidate.passport.shared":
+      "Kandidaten har valt att dela följande med er för den här ansökan.",
+    "employer.candidate.passport.sharedNote":
+      "Endast verifierade uppgifter ingår. Kandidaten kan återkalla delningen när som helst, och sidan visar då inget.",
 
     "employer.settings.heading": "Organisationsinställningar",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
@@ -4439,6 +4445,10 @@ export const dictionaries = {
       "No Security Passport information has been shared with your organisation for this application.",
     "employer.candidate.passport.lede":
       "A Security Passport belongs to the candidate. Only its holder can choose to share it, and a job application is not that consent.",
+    "employer.candidate.passport.shared":
+      "The candidate has chosen to share the following with your organisation for this application.",
+    "employer.candidate.passport.sharedNote":
+      "Only verified records are included. The candidate can withdraw this at any time, and the page will then show nothing.",
 
     "employer.settings.heading": "Organisation settings",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",

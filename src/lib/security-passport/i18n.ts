@@ -1106,6 +1106,29 @@ const sv = {
   "lip.fieldCourse": "Utbildning",
   "lip.fieldProvider": "Utbildningsanordnare",
   "lip.fieldCompleted": "Avslutad",
+
+  // ── Disclosing to one employer, through one application ──────────────
+  "ad.title": "Dela ditt Passport med den här arbetsgivaren",
+  "ad.lead":
+    "Att söka jobbet delar ingenting från ditt Passport. Arbetsgivaren ser bara det du uttryckligen väljer här, och du kan återkalla det när du vill.",
+  "ad.needPassport":
+    "Du har inget Passport ännu. Skapa det först, så kan du välja vad du vill dela.",
+  "ad.openPassport": "Öppna Security Passport",
+  "ad.share": "Dela med arbetsgivaren",
+  "ad.sharing": "Delar …",
+  "ad.change": "Ändra det du delar",
+  "ad.cancel": "Avbryt",
+  "ad.nothingShared": "Du har inte delat något från ditt Passport med den här arbetsgivaren.",
+  "ad.sharedNow": "Delat med arbetsgivaren",
+  "ad.replacesPrevious":
+    "En ny delning ersätter den förra för samma ansökan. Arbetsgivaren ser bara den senaste.",
+  "ad.error": "Delningen kunde inte sparas. Försök igen.",
+  "ad.revokeError": "Delningen kunde inte återkallas. Försök igen.",
+  "ad.employerTitle": "Delat från kandidatens Security Passport",
+  "ad.employerLead":
+    "Kandidaten har själv valt att dela detta med er. Det är inte hämtat från ansökan och kan återkallas av kandidaten när som helst.",
+  "ad.employerOnlyVerified":
+    "Bara verifierade uppgifter visas här. Egenrapporterat delas aldrig i ett paket.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -2166,6 +2189,29 @@ const en: Record<PassportCopyKey, string> = {
   "lip.fieldCourse": "Course",
   "lip.fieldProvider": "Provider",
   "lip.fieldCompleted": "Completed",
+
+  // ── Disclosing to one employer, through one application ──────────────
+  "ad.title": "Share your Passport with this employer",
+  "ad.lead":
+    "Applying for the job shares nothing from your Passport. This employer sees only what you explicitly choose here, and you can withdraw it whenever you like.",
+  "ad.needPassport":
+    "You do not have a Passport yet. Create it first, and you can then choose what to share.",
+  "ad.openPassport": "Open Security Passport",
+  "ad.share": "Share with this employer",
+  "ad.sharing": "Sharing …",
+  "ad.change": "Change what you share",
+  "ad.cancel": "Cancel",
+  "ad.nothingShared": "You have not shared anything from your Passport with this employer.",
+  "ad.sharedNow": "Shared with this employer",
+  "ad.replacesPrevious":
+    "A new share replaces the previous one for the same application. The employer only ever sees the latest.",
+  "ad.error": "The share could not be saved. Try again.",
+  "ad.revokeError": "The share could not be withdrawn. Try again.",
+  "ad.employerTitle": "Shared from the candidate's Security Passport",
+  "ad.employerLead":
+    "The candidate chose to share this with you. It does not come from their application, and they can withdraw it at any time.",
+  "ad.employerOnlyVerified":
+    "Only verified records appear here. Self-declared entries are never part of a package.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

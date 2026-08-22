@@ -777,12 +777,40 @@ SELECT pg_temp.ok(
     WHERE si.user_id = (SELECT anna FROM rj)) = 1,
   'RJ7.22 and still exactly one professional identity for her -- no second person');
 
--- And no employment record was invented on the way. Recruitment ends at a
--- decision; creating the employee is a separate, deliberate act.
+-- ── And the employment relation RJ7.21 was waiting for ──────────────────
+--
+-- This assertion previously read "hiring built no employee record as a side
+-- effect", and it was correct when it was written: nothing in the product
+-- reacted to 'hired', so recruitment ended at the decision and RJ7.21's own
+-- comment said an employment relation would be created "later against the
+-- identity that already carries their assessment history".
+--
+-- That is now what happens. set_application_status creates it in the same
+-- transaction as the decision, so there is no window in which an application
+-- says hired and the workforce has never heard of the person -- which is the
+-- window an employer used to close by typing them in by hand, producing the
+-- second, subject-less row this spine exists to prevent.
+--
+-- The property being protected has not changed and is not weaker. It was
+-- never "no employee may exist"; it was "hiring must not fork the person".
+-- So the count is now ONE, and the row must carry the very subject RJ7.21
+-- just proved survived -- which a bridge that minted a fresh identity would
+-- fail while passing any count.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.employees e
-    WHERE e.employer_id = (SELECT employer FROM rj)) = 0,
-  'RJ7.23 hiring built no employee record as a side effect');
+    WHERE e.employer_id = (SELECT employer FROM rj)) = 1,
+  'RJ7.23 hiring creates exactly one employment record, in the same act');
+
+SELECT pg_temp.ok(
+  (SELECT e.subject_id FROM public.employees e
+    WHERE e.employer_id = (SELECT employer FROM rj)) = (SELECT subject_id FROM rj_anna),
+  'RJ7.23b and it belongs to the subject the assessment already ran against');
+
+-- The lineage that makes the record auditable rather than merely present.
+SELECT pg_temp.ok(
+  (SELECT e.hired_from_application_id FROM public.employees e
+    WHERE e.employer_id = (SELECT employer FROM rj)) = (SELECT application FROM rj),
+  'RJ7.23c and remembers which application it came out of');
 
 -- ── The column itself, exercised where a write can actually reach it ─────
 --

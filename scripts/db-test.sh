@@ -857,6 +857,42 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-d4. The P0 lifecycle bridges.
+#
+# Application-scoped Passport disclosure, and hired -> employee against the
+# same subject. Both are asserted mostly as ABSENCES, because both failure
+# modes look like success: an employer who can read a Passport merely because
+# somebody applied still renders a page, and a hire that mints a second person
+# still fills the workforce directory. The two assertions that cannot be
+# faked are L1.1/L1.2 -- a Passport holder and a non-holder produce the
+# identical response -- and H2.2, the employment record carrying the subject
+# the assessment already ran against.
+# ---------------------------------------------------------------------------
+echo "==> Running lifecycle bridge assertions"
+set +e
+LBRIDGE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_lifecycle_bridges_test.sql 2>&1)"
+LBRIDGE_RC=$?
+set -e
+
+echo "$LBRIDGE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+LBRIDGE_PASSED="$(echo "$LBRIDGE_OUT" | grep -c "ok  " || true)"
+
+if [ "$LBRIDGE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the lifecycle bridge suite exited with code ${LBRIDGE_RC}." >&2
+  echo "$LBRIDGE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Lifecycle bridges"
+else
+  echo "    ok  ${LBRIDGE_PASSED} lifecycle bridge assertions passed"
+  # The floor matters more than usual here: almost every assertion in this
+  # suite is a denial, and a denial suite that stops early passes silently.
+  if [ "$LBRIDGE_PASSED" -lt 60 ]; then
+    echo "FAIL: expected at least 60 lifecycle bridge assertions, only ${LBRIDGE_PASSED} ran." >&2
+    suite_failed "Lifecycle bridges (assertion shortfall: floor 60)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 5l-e. Pilot security gate
 #
 # Phase 8.5A. Four confirmed findings, each proven closed against a REAL
@@ -1403,6 +1439,7 @@ echo "              ${RAUD_PASSED} report audience assertions,"
 echo "              ${ASCOPE_PASSED} report evidence-scope assertions,"
 echo "              ${RBRIEF_PASSED} recruitment brief + interview guide assertions,"
 echo "              ${RJOURNEY_PASSED} recruitment journey assertions,"
+echo "              ${LBRIDGE_PASSED} lifecycle bridge assertions,"
 echo "              ${GATE_PASSED} pilot security-gate assertions,"
 echo "              ${REV_PASSED} employer response-reviewer assertions,"
 echo "              ${SPINE_PASSED} person identity spine assertions,"
