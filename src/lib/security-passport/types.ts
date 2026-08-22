@@ -23,6 +23,8 @@
 // shape a future server response would take so the prototype exercises the
 // eventual contract, and nothing here authorises that schema.
 
+import type { ProfessionalIdentity } from "./identity/types";
+
 /** What kind of backing a claim has. Never a quality or suitability rating. */
 export type AssertionLevel = "self_declared" | "document_provided" | "verified";
 
@@ -128,6 +130,15 @@ export interface Claim {
   readonly issuerName: string;
   /** Required in practice for anything carrying legal meaning. */
   readonly jurisdictionCode: JurisdictionCode | null;
+  /** Emirate, devolved region or other sub-national area, where the regulator
+   *  is not national. Null everywhere the country IS the jurisdiction. A
+   *  Dubai credential without it would read as valid across the UAE. */
+  readonly subJurisdictionCode: string | null;
+  /** What a scoped authorisation is limited to — employer, principal or
+   *  protected object. A skyddsvakt approval shown without its scope reads as
+   *  a general national licence, so this travels with the claim into every
+   *  derived title and every disclosure. */
+  readonly authorisationScope: string | null;
   readonly issuedOn: IsoDate | null;
   readonly validFrom: IsoDate | null;
   readonly validUntil: IsoDate | null;
@@ -147,8 +158,16 @@ export interface PassportHolder {
   readonly id: string;
   readonly displayName: string;
   readonly professionSlug: string | null;
-  readonly professionTitleSv: string;
-  readonly professionTitleEn: string;
+  /** What this person may currently be called, derived from their claims by
+   *  src/lib/security-passport/identity/.
+   *
+   *  There is deliberately no stored `professionTitleSv` beside it. There used
+   *  to be, and the server set it to the literal "Väktare" for every holder
+   *  who had ever signed in — whether they held VU1, held nothing, or held a
+   *  current ordningsvaktsförordnande. Six surfaces printed it. Removing the
+   *  field rather than fixing the string is what makes that unrepeatable: a
+   *  component cannot render a title nobody derived if there is none to read. */
+  readonly identity: ProfessionalIdentity;
   readonly jurisdictionCode: JurisdictionCode;
   readonly periods: readonly ExperiencePeriod[];
   readonly claims: readonly Claim[];

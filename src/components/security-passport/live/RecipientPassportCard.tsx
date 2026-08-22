@@ -20,6 +20,7 @@
 // plain duration with the words that say what it counts — never as an
 // emblem that could be mistaken for a rating.
 
+import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
@@ -85,7 +86,7 @@ export function RecipientPassportCard({
             {holderName}
           </h2>
           <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-            {presentation.professionSlug ? pt("rec.professionVaktare") : pt("common.notStated")}
+            {joinTitles(presentation.titles, lang, pt("common.notStated"))}
             <span aria-hidden="true"> · </span>
             <span style={{ color: TRUST_PALETTE.ink }}>{jurisdiction}</span>
           </p>

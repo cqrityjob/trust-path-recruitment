@@ -23,6 +23,7 @@
 // credential is the whole risk this wording exists to cover, so no format
 // is permitted to drop it for space.
 
+import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import {
   TRUST_PALETTE,
   shareFormat,
@@ -46,7 +47,7 @@ function useSocialStrings(model: SocialCardModel) {
   const { pt, lang } = usePassportCopy();
   return {
     brand: pt("card.brand"),
-    profession: lang === "sv" ? model.professionTitleSv : model.professionTitleEn,
+    profession: joinTitles(model.titles, lang, pt("identity.none")),
     jurisdiction: model.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : model.jurisdictionCode,
     yearsLabel:
       (model.milestoneYears ?? 0) >= 20

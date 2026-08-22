@@ -27,6 +27,7 @@
 // keeping it out of search indexes is a governance decision, not a tuning
 // knob to trade away for a nicer preview.
 
+import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -255,9 +256,7 @@ function RecipientRoute() {
           />
           <Row
             label={pt("rec.profession")}
-            value={
-              presentation.professionSlug ? pt("rec.professionVaktare") : pt("common.notStated")
-            }
+            value={joinTitles(presentation.titles, lang, pt("common.notStated"))}
           />
           <Row
             label={pt("rec.jurisdiction")}

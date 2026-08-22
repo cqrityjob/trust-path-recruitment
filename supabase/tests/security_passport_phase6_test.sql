@@ -99,9 +99,16 @@ BEGIN
   VALUES (_h1, 'licence', 'OV', 'OV', 'Polismyndigheten', '2027-01-01');
   RAISE NOTICE 'ok  3.3 a complete appointment is accepted';
 
+  -- authorisation_scope arrived with the Swedish truth model (20260907091000):
+  -- a skyddsvakt approval is limited to an employer, principal or protected
+  -- object, and an approval shown without saying which reads as a general
+  -- national licence. What this assertion is ABOUT -- that skyddsvakt and
+  -- ordningsvakt are separate claims -- is unchanged.
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until)
-  VALUES (_h1, 'licence', 'SV', 'SV', 'Polismyndigheten', '2027-06-30');
+    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until,
+     authorisation_scope)
+  VALUES (_h1, 'licence', 'SV', 'SV', 'Polismyndigheten', '2027-06-30',
+          'Skyddsobjekt: Syntetisk anläggning');
   RAISE NOTICE 'ok  3.4 skyddsvakt is a separate appointment claim from ordningsvakt';
 
   RAISE NOTICE 'GROUP 4 -- drafts can be saved half-finished';

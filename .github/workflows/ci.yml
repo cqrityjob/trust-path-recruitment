@@ -76,6 +76,20 @@ jobs:
       - name: Passport fixture and copy-parity check
         run: bun run passport-fixture:check
 
+      # The professional identity engine. Every case is a mutation: hold one
+      # credential, assert the title the product must NOT grant is absent. Two
+      # are load-bearing — VU1 alone must never produce Väktare, and
+      # ordningsvakt training must never produce Ordningsvakt — because the
+      # server used to label every holder "Väktare" from a hardcoded string.
+      - name: Passport identity engine check
+        run: bun run passport-identity-engine:check
+
+      # Keeps the derivation rules in exactly one place: the mirror used by the
+      # fixtures must match the migration that seeds sp_professional_titles,
+      # and no component may map a credential code to a professional title.
+      - name: Passport title derivation guard
+        run: bun run passport-title-derivation:check
+
       # Production reported a page-wide "something went wrong" over a
       # verification queue that was working: four unrelated operations shared
       # one error string that nothing cleared on success. The browser test for

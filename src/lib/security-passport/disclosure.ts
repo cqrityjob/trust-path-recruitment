@@ -25,6 +25,8 @@
 // exactly as the eventual server response would be, so the contract is
 // exercised without a database existing.
 
+import { withoutSelfDeclared } from "./identity/visibility";
+import type { ProfessionalIdentity } from "./identity/types";
 import type { PassportCopyKey } from "./i18n";
 import { totalsByEvidenceLevel, toEpochDay, type ExperienceTotals } from "./experience";
 import { recognitionFor, type RecognitionState } from "./recognition";
@@ -187,8 +189,9 @@ export interface DisclosurePayload {
   readonly packageId: DisclosurePackageId;
   readonly packageVersionNo: number;
   readonly holderDisplayName: string;
-  readonly professionTitleSv: string;
-  readonly professionTitleEn: string;
+  /** Derived from the holder's verified claims, never stored. Self-declared
+   *  titles cannot reach here: the payload is built for somebody else. */
+  readonly identity: ProfessionalIdentity;
   readonly jurisdictionCode: string;
   readonly purposeKey: PassportCopyKey;
   readonly packageNameKey: PassportCopyKey;
@@ -298,8 +301,7 @@ export function buildDisclosurePayload(
     packageId: pkg.id,
     packageVersionNo: pkg.versionNo,
     holderDisplayName: holder.displayName,
-    professionTitleSv: holder.professionTitleSv,
-    professionTitleEn: holder.professionTitleEn,
+    identity: withoutSelfDeclared(holder.identity),
     jurisdictionCode: holder.jurisdictionCode,
     purposeKey: pkg.purposeKey,
     packageNameKey: pkg.nameKey,

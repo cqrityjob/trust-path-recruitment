@@ -22,6 +22,7 @@
 // rewrite the facts" is a property of the type signature rather than a
 // convention.
 
+import { professionLine } from "@/lib/security-passport/identity/presentation";
 import { Ban, Clock, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -69,7 +70,9 @@ export function PassportCard({
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
-  const profession = lang === "sv" ? card.professionTitleSv : card.professionTitleEn;
+  // One derivation, one renderer. The card never decides what somebody may
+  // be called; it prints what the engine derived from their verified claims.
+  const profession = professionLine(card.identity, lang, pt("identity.none"));
   const jurisdiction =
     card.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : card.jurisdictionCode;
 

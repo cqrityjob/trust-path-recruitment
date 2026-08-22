@@ -761,7 +761,19 @@ const sv = {
   "rec.holder": "Innehavare",
   "rec.anonymousHolder": "Namnet visas inte",
   "rec.profession": "Yrke",
-  "rec.professionVaktare": "Väktare",
+  // ── Derived professional identity ────────────────────────────────────
+  // Printed by every surface from one derivation. "Ingen aktiv yrkestitel"
+  // is a true statement about somebody who has recorded training but holds
+  // no current appointment, and it is deliberately not phrased as a failure:
+  // finishing VU1 and not yet being appointed is an ordinary place to be.
+  "identity.none": "Ingen aktiv yrkestitel",
+  "identity.selfDeclared": "Egenrapporterad",
+  "identity.selfDeclaredNote":
+    "Titeln bygger på uppgifter du själv har lämnat och som ingen har kontrollerat. Den visas bara för dig.",
+  "identity.education": "Genomförd utbildning",
+  "identity.competence": "Yrkeskompetens",
+  "identity.eligibility": "Lokal behörighet",
+  "identity.activeTitle": "Aktiv yrkestitel",
   "rec.cardTitle": "Delat Security Passport",
   "rec.detailsTitle": "Uppgifter i delningen",
   "rec.packageShows": "Den här delningen visar",
@@ -1857,7 +1869,14 @@ const en: Record<PassportCopyKey, string> = {
   "rec.holder": "Holder",
   "rec.anonymousHolder": "The name is not shown",
   "rec.profession": "Profession",
-  "rec.professionVaktare": "Security Officer (Väktare)",
+  "identity.none": "No active professional title",
+  "identity.selfDeclared": "Self-declared",
+  "identity.selfDeclaredNote":
+    "This title rests on information you provided yourself, which nobody has checked. Only you can see it.",
+  "identity.education": "Completed education",
+  "identity.competence": "Professional competence",
+  "identity.eligibility": "Local eligibility",
+  "identity.activeTitle": "Active professional title",
   "rec.cardTitle": "Shared Security Passport",
   "rec.detailsTitle": "What this share contains",
   "rec.packageShows": "This share shows",

@@ -33,6 +33,9 @@
 // therefore carries a verify-at-source line: the image is a summary, and
 // the live verification page is the only authoritative current status.
 
+import { withoutSelfDeclared } from "./identity/visibility";
+import { toPublicTitles } from "./identity/presentation";
+import type { PublicTitle } from "./identity/types";
 import { totalsByEvidenceLevel } from "./experience";
 import { recognitionFor } from "./recognition";
 import { validityOf } from "./validity";
@@ -58,8 +61,10 @@ export interface SocialCardModel {
   /** Already privacy-transformed. The raw name is not carried. */
   readonly holderLabel: string;
   readonly privacyMode: PrivacyMode;
-  readonly professionTitleSv: string;
-  readonly professionTitleEn: string;
+  /** The headline titles, reduced to words and jurisdiction. Not a
+   *  `ProfessionalIdentity`: an exported image must carry no dates, and the
+   *  forbidden-key guard caught `expiresOn` here on the first attempt. */
+  readonly titles: readonly PublicTitle[];
   readonly jurisdictionCode: string;
   /** Verified years only, or null. The single permitted prominent number. */
   readonly milestoneYears: number | null;
@@ -174,8 +179,7 @@ export function buildSocialCard(
   return {
     holderLabel: holderLabelFor(holder, options.privacyMode, options.anonymousLabel),
     privacyMode: options.privacyMode,
-    professionTitleSv: holder.professionTitleSv,
-    professionTitleEn: holder.professionTitleEn,
+    titles: toPublicTitles(withoutSelfDeclared(holder.identity)),
     jurisdictionCode: holder.jurisdictionCode,
     milestoneYears: recognition.earnedYears,
     verifiedCredentials,
