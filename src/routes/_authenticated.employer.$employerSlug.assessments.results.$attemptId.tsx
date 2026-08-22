@@ -492,7 +492,12 @@ function CandidateDecisionSupportReport({
 
       <RecruitmentActions employerSlug={employerSlug} applicationId={applicationId} />
 
-      <CompetencyOverviewSection support={support} modules={brief.modules} sv={sv} />
+      <CompetencyOverviewSection
+        support={support}
+        modules={brief.modules}
+        interviewGuide={brief.interviewGuide}
+        sv={sv}
+      />
 
       <SelfReportedSection areas={brief.selfReported} sv={sv} />
 

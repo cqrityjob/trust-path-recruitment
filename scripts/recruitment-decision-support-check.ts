@@ -475,7 +475,85 @@ console.log("\n13. Recruitment and workforce keep different words");
   );
 }
 
-console.log("\n14. The release step still says what it does before it is taken");
+console.log("\n14. The release step is invisible on every recruiter-facing surface");
+{
+  // The UAT found the terminology work had stopped at Bedomningar: the employer
+  // landing card still counted "Klara att frislappa", and the assessment chip
+  // inside the candidate page still said "Klar att frislappas" / "Resultat
+  // tillgangligt". Those are the first and last screens of the journey.
+  //
+  // Scoped to the prefixes a recruiter actually passes through. The workforce
+  // report, the participant's own pages and the audit lineage keep their own
+  // words and are asserted separately below.
+  const RECRUITER_SURFACES = [
+    "decision.",
+    "lifecycle.recruitment.",
+    "lifecycle.next.recruitment.",
+    "journey.",
+    "academy.participants.",
+    "academy.overview.",
+    "employer.overview.card.tests.",
+    "academy.results.notReleased",
+  ];
+  for (const lang of ["sv", "en"] as const) {
+    const dict = dictionaries[lang] as Record<string, string>;
+    const word = lang === "sv" ? /frisläpp/i : /\brelease[ds]?\b/i;
+    const leaks = Object.keys(dict).filter(
+      (k) => RECRUITER_SURFACES.some((p) => k.startsWith(p)) && word.test(dict[k]),
+    );
+    check(
+      `${lang}: no recruiter-facing string uses release vocabulary`,
+      leaks.length === 0,
+      leaks.join(", "),
+    );
+  }
+
+  const sv = dictionaries.sv as Record<string, string>;
+  check(
+    "the landing card and the assessments overview count the same thing by the same name",
+    sv["employer.overview.card.tests.stat.readyToRelease"] ===
+      sv["academy.overview.readyToRelease"],
+    `${sv["employer.overview.card.tests.stat.readyToRelease"]} / ${sv["academy.overview.readyToRelease"]}`,
+  );
+  check(
+    "the candidate-page chip uses the recruitment lifecycle words",
+    sv["journey.stage.ready_to_release"] === sv["lifecycle.recruitment.ready_to_release"] &&
+      sv["journey.stage.report_available"] === sv["lifecycle.recruitment.result_available"],
+    `${sv["journey.stage.ready_to_release"]} / ${sv["journey.stage.report_available"]}`,
+  );
+}
+
+console.log("\n15. The workforce report keeps its own words");
+{
+  const sv = dictionaries.sv as Record<string, string>;
+  // The V1 paragraph the recruitment methodology used to borrow. It is still
+  // TRUE of the workforce report, which still renders the maturity list it
+  // describes -- so it must stay exactly as it is.
+  check(
+    "the V1 coverage paragraph is untouched",
+    /Starkt visat/.test(sv["academy.coverage.employerBody"] ?? "") &&
+      /Behöver följdfråga/.test(sv["academy.coverage.employerBody"] ?? ""),
+  );
+  check(
+    "and the recruitment methodology does not borrow it",
+    !/Starkt visat|Behöver följdfråga|Följdfrågorna nedan/.test(
+      sv["decision.method.oneOccasionBody"] ?? "",
+    ),
+  );
+  check(
+    "the recruitment methodology still states the four things that remain true",
+    /en enda informationskälla/.test(sv["decision.method.oneOccasionBody"] ?? "") &&
+      /varaktig kompetens/.test(sv["decision.method.oneOccasionBody"] ?? "") &&
+      /förmågan saknas/.test(sv["decision.method.oneOccasionBody"] ?? ""),
+  );
+  check(
+    "the workforce report is still Kompetensprofil",
+    sv["academy.results.title"] === "Kompetensprofil",
+  );
+  check("maturity vocabulary is untouched", sv["academy.state.shown"] === "Visat");
+}
+
+console.log("\n16. The release step still says what it does before it is taken");
 {
   for (const lang of ["sv", "en"] as const) {
     const d = dictionaries[lang] as Record<string, string>;

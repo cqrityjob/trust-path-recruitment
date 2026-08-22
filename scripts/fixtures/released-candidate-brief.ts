@@ -244,6 +244,25 @@ export const INTERVIEW_GUIDE: InterviewGuideEntry[] = [
     listenForSv: ["Ser vardagliga situationer, inte bara grova fall"],
     listenForEn: ["Sees everyday situations"],
   },
+  // Shares an area code with the OBSERVED "Beslutsfattande under press" line
+  // above, and is self-reported. The competency card for that area must show
+  // no question rather than this one: a question drawn from a self-description
+  // on an observed card is the blur the whole report is built to prevent.
+  {
+    areaCode: "pressure",
+    areaSv: "Återhämtning",
+    areaEn: "Recovery",
+    focus: "explore_self_report",
+    evidenceType: "self_reported",
+    whySv: "Svaren varierade mellan närliggande frågor om återhämtning.",
+    whyEn: "EN why",
+    questionSv: "SJÄLVRAPPORTERAD FRÅGA — får inte hamna på ett observerat kort.",
+    questionEn: "SELF-REPORTED QUESTION — must not land on an observed card.",
+    followupSv: "Vad märkte du på dig själv?",
+    followupEn: "What did you notice in yourself?",
+    listenForSv: ["Kan beskriva den egna reaktionen konkret"],
+    listenForEn: ["Can describe their own reaction"],
+  },
   {
     areaCode: "rule_loyalty",
     areaSv: "Regel- och syfteslojalitet",

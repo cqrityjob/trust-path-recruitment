@@ -74,15 +74,37 @@ export function ReportSection({
 export function CompetencyOverviewSection({
   support,
   modules,
+  interviewGuide,
   sv,
 }: {
   support: DecisionSupport;
   modules: BriefModule[];
+  /** The frozen guide, read here as well as in section 7. Nothing is generated
+   *  from it: this section shows the question, section 7 shows the question
+   *  with its follow-up, its reason and what to listen for. */
+  interviewGuide: InterviewGuideEntry[];
   sv: boolean;
 }) {
   const { t } = useT();
+
+  // ── WHY THIS READS THE GUIDE AND NOT priorityFollowUp ─────────────────
+  //
+  // It used to read the follow-up bucket, which holds only `developing` and
+  // `mixed` areas -- so seven of eight cards on a real report carried no
+  // question while the lede promised one. The governed guide has an entry for
+  // the strong areas (confirm_strength) and the thin ones
+  // (explore_limited_evidence) too; they were simply never looked up.
+  //
+  // The match is on evidence type as well as area code, and that is the whole
+  // subtlety: one area code can carry both an observed entry and a
+  // self-reported one, and putting a question drawn from a self-description on
+  // an OBSERVED competency card is exactly the blur this report may not make.
+  // An area with no observed entry gets no row -- the lede says "where the
+  // guide selected a question", because a governed guide is entitled to have
+  // nothing to ask.
   const promptFor = (area: ObservedArea) =>
-    support.priorityFollowUp.find((f) => f.area.areaCode === area.areaCode)?.prompt ?? null;
+    interviewGuide.find((g) => g.areaCode === area.areaCode && g.evidenceType === "observed") ??
+    null;
 
   const ordered: ObservedArea[] = [
     ...support.strongestSupported,
