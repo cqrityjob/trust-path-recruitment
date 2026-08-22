@@ -211,6 +211,8 @@ function EmployerJobEditPage() {
         initial={fromJobRow(job)}
         readOnly={!editable}
         editableStatus={job.status}
+        employerName={workspace.employerName}
+        employerStatus={workspace.employerStatus}
         saving={saveMutation.isPending}
         submitting={submitMutation.isPending}
         error={formError}

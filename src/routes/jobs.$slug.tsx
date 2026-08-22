@@ -1,18 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import {
-  MapPin,
-  Building2,
-  Calendar,
-  Mail,
-  Briefcase,
-  Home as HomeIcon,
-  Award,
-  Globe,
-  ShieldCheck,
-  Clock as ClockIcon,
-} from "lucide-react";
+import { Building2, Mail, Globe } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
@@ -31,10 +20,11 @@ import { buildJobPostingJsonLd, buildJobHeadMeta } from "@/lib/job-intelligence/
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { getProfession } from "@/lib/career-center/professions";
 import {
-  employmentTypeLabel,
-  workplaceTypeLabel,
-  experienceLevelLabel,
-} from "@/lib/job-intelligence/enum-labels";
+  JobAdHeading,
+  JobAdSections,
+  pickLocalized,
+  formatJobDate as formatDate,
+} from "@/components/jobs/JobAdContent";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
 import { ApplyInternalDialog } from "@/components/jobs/ApplyInternalDialog";
@@ -61,75 +51,6 @@ export const Route = createFileRoute("/jobs/$slug")({
   errorComponent: ({ error }) => <ErrorState message={error.message} />,
   notFoundComponent: () => <NotFoundState />,
 });
-
-function pickLocalized(sv: string | null, en: string | null, lang: "sv" | "en"): string {
-  const primary = lang === "sv" ? sv : en;
-  const fallback = lang === "sv" ? en : sv;
-  return primary || fallback || "";
-}
-
-/** Requirements may arrive as either a legacy string[] or a structured
- * object with mandatory/preferred/formal/employer_specific keys. Both
- * shapes are accepted; we degrade gracefully. */
-type ReqBuckets = {
-  mandatory: string[];
-  preferred: string[];
-  formal: string[];
-  employer: string[];
-  legacy: string[];
-};
-
-function toStringList(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((x): x is string => typeof x === "string" && x.trim() !== "");
-}
-
-function normalizeRequirements(raw: unknown): ReqBuckets {
-  const empty: ReqBuckets = {
-    mandatory: [],
-    preferred: [],
-    formal: [],
-    employer: [],
-    legacy: [],
-  };
-  if (!raw) return empty;
-  if (Array.isArray(raw)) return { ...empty, legacy: toStringList(raw) };
-  if (typeof raw === "object") {
-    const o = raw as Record<string, unknown>;
-    return {
-      mandatory: toStringList(o.mandatory ?? o.must ?? o.required),
-      preferred: toStringList(o.preferred ?? o.nice_to_have ?? o.desired),
-      formal: toStringList(o.formal ?? o.regulated),
-      employer: toStringList(o.employer_specific ?? o.employer ?? o.company_specific),
-      legacy: [],
-    };
-  }
-  return empty;
-}
-
-function formatDate(iso: string | null, lang: "sv" | "en"): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "";
-  return d.toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function BulletList({ items }: { items: string[] }) {
-  if (items.length === 0) return null;
-  return (
-    <ul className="mt-3 list-disc space-y-1.5 pl-5 text-foreground">
-      {items.map((item, i) => (
-        <li key={i} className="leading-relaxed">
-          {item}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 function JobDetailPage() {
   const { slug } = Route.useParams();
@@ -191,17 +112,9 @@ function JobDetailPage() {
   if (!q.data) return <NotFoundState />;
 
   const job = q.data;
-  const title = pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
-  const description = pickLocalized(job.description_sv, job.description_en, lang);
   const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
   const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
-  const location = [job.location_text, job.city, job.region, job.country]
-    .filter(Boolean)
-    .join(", ");
   const expired = isJobExpired(job);
-  const reqs = normalizeRequirements(job.requirements);
-  const responsibilities = toStringList(job.responsibilities);
-  const benefits = toStringList(job.benefits);
   const employer = job.employer ?? null;
   const employerDesc = employer
     ? pickLocalized(employer.description_sv, employer.description_en, lang)
@@ -214,148 +127,13 @@ function JobDetailPage() {
           {t("jobs.detail.back")}
         </Link>
 
-        <header className="mt-4">
-          {expired && (
-            <span className="inline-flex items-center rounded-full bg-destructive/10 px-3 py-0.5 text-xs font-medium text-destructive">
-              {t("jobs.detail.expired.badge")}
-            </span>
-          )}
-          <h1
-            className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {title}
-          </h1>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-            {employer?.name && (
-              <span className="inline-flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="truncate">{employer.name}</span>
-              </span>
-            )}
-            {location && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{location}</span>
-              </span>
-            )}
-            {job.published_at && (
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>
-                  {t("jobs.detail.published")}: {formatDate(job.published_at, lang)}
-                </span>
-              </span>
-            )}
-            {job.deadline_at && (
-              <span className="inline-flex items-center gap-1.5">
-                <ClockIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>
-                  {t("jobs.detail.deadline")}: {formatDate(job.deadline_at, lang)}
-                </span>
-              </span>
-            )}
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            {job.employment_type && (
-              <Chip icon={<Briefcase className="h-3 w-3" />}>
-                {employmentTypeLabel(job.employment_type, lang)}
-              </Chip>
-            )}
-            {job.workplace_type && (
-              <Chip icon={<HomeIcon className="h-3 w-3" />}>
-                {workplaceTypeLabel(job.workplace_type, lang)}
-              </Chip>
-            )}
-            {job.experience_level && (
-              <Chip icon={<Award className="h-3 w-3" />}>
-                {experienceLevelLabel(job.experience_level, lang)}
-              </Chip>
-            )}
-            {job.regulated && (
-              <Chip icon={<ShieldCheck className="h-3 w-3" />}>
-                {t("jobs.detail.badge.regulated")}
-              </Chip>
-            )}
-            {job.security_vetting_mentioned && <Chip>{t("jobs.detail.badge.vetting")}</Chip>}
-            {job.driving_licence_required && <Chip>{t("jobs.detail.badge.driving")}</Chip>}
-          </div>
-        </header>
+        <div className="mt-4">
+          <JobAdHeading job={job} employerName={employer?.name ?? null} expired={expired} />
+        </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
           <article className="min-w-0 space-y-8">
-            {description && (
-              <section>
-                <h2 className="text-xl font-semibold">{t("jobs.detail.summary")}</h2>
-                <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
-                  {description}
-                </p>
-              </section>
-            )}
-
-            {responsibilities.length > 0 && (
-              <section>
-                <h2 className="text-xl font-semibold">{t("jobs.detail.responsibilities")}</h2>
-                <BulletList items={responsibilities} />
-              </section>
-            )}
-
-            {(reqs.mandatory.length > 0 ||
-              reqs.preferred.length > 0 ||
-              reqs.formal.length > 0 ||
-              reqs.employer.length > 0 ||
-              reqs.legacy.length > 0) && (
-              <section>
-                <h2 className="text-xl font-semibold">{t("jobs.detail.requirements")}</h2>
-                {reqs.legacy.length > 0 ? (
-                  <BulletList items={reqs.legacy} />
-                ) : (
-                  <div className="mt-3 space-y-5">
-                    {reqs.mandatory.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("jobs.detail.requirements.mandatory")}
-                        </h3>
-                        <BulletList items={reqs.mandatory} />
-                      </div>
-                    )}
-                    {reqs.preferred.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("jobs.detail.requirements.preferred")}
-                        </h3>
-                        <BulletList items={reqs.preferred} />
-                      </div>
-                    )}
-                    {reqs.formal.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("jobs.detail.requirements.formal")}
-                        </h3>
-                        <BulletList items={reqs.formal} />
-                      </div>
-                    )}
-                    {reqs.employer.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("jobs.detail.requirements.employer")}
-                        </h3>
-                        <BulletList items={reqs.employer} />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {benefits.length > 0 && (
-              <section>
-                <h2 className="text-xl font-semibold">{t("jobs.detail.benefits")}</h2>
-                <BulletList items={benefits} />
-              </section>
-            )}
+            <JobAdSections job={job} />
 
             {employer && (employer.name || employerDesc || employer.website) && (
               <EmployerCard employer={employer} description={employerDesc} />
@@ -387,15 +165,6 @@ function JobDetailPage() {
         </div>
       </Section>
     </SiteLayout>
-  );
-}
-
-function Chip({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5">
-      {icon && <span aria-hidden="true">{icon}</span>}
-      {children}
-    </span>
   );
 }
 
