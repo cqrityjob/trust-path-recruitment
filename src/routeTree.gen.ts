@@ -67,6 +67,7 @@ import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedEmployerPendingRouteImport } from './routes/_authenticated.employer.pending'
 import { Route as AuthenticatedEmployerOnboardingRouteImport } from './routes/_authenticated.employer.onboarding'
+import { Route as AuthenticatedEmployerJoinRouteImport } from './routes/_authenticated.employer.join'
 import { Route as AuthenticatedEmployerEmployerSlugRouteImport } from './routes/_authenticated.employer.$employerSlug'
 import { Route as AuthenticatedDiscoverySessionRouteImport } from './routes/_authenticated.discovery.session'
 import { Route as AuthenticatedDiscoveryHistoryRouteImport } from './routes/_authenticated.discovery.history'
@@ -449,6 +450,12 @@ const AuthenticatedEmployerOnboardingRoute =
   AuthenticatedEmployerOnboardingRouteImport.update({
     id: '/onboarding',
     path: '/onboarding',
+    getParentRoute: () => AuthenticatedEmployerRoute,
+  } as any)
+const AuthenticatedEmployerJoinRoute =
+  AuthenticatedEmployerJoinRouteImport.update({
+    id: '/join',
+    path: '/join',
     getParentRoute: () => AuthenticatedEmployerRoute,
   } as any)
 const AuthenticatedEmployerEmployerSlugRoute =
@@ -946,6 +953,7 @@ export interface FileRoutesByFullPath {
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  '/employer/join': typeof AuthenticatedEmployerJoinRoute
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -1062,6 +1070,7 @@ export interface FileRoutesByTo {
   '/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
+  '/employer/join': typeof AuthenticatedEmployerJoinRoute
   '/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -1194,6 +1203,7 @@ export interface FileRoutesById {
   '/_authenticated/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/_authenticated/discovery/session': typeof AuthenticatedDiscoverySessionRoute
   '/_authenticated/employer/$employerSlug': typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  '/_authenticated/employer/join': typeof AuthenticatedEmployerJoinRoute
   '/_authenticated/employer/onboarding': typeof AuthenticatedEmployerOnboardingRoute
   '/_authenticated/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
@@ -1327,6 +1337,7 @@ export interface FileRouteTypes {
     | '/discovery/history'
     | '/discovery/session'
     | '/employer/$employerSlug'
+    | '/employer/join'
     | '/employer/onboarding'
     | '/employer/pending'
     | '/journey/$targetId'
@@ -1443,6 +1454,7 @@ export interface FileRouteTypes {
     | '/admin/passport-verification'
     | '/discovery/history'
     | '/discovery/session'
+    | '/employer/join'
     | '/employer/onboarding'
     | '/employer/pending'
     | '/journey/$targetId'
@@ -1574,6 +1586,7 @@ export interface FileRouteTypes {
     | '/_authenticated/discovery/history'
     | '/_authenticated/discovery/session'
     | '/_authenticated/employer/$employerSlug'
+    | '/_authenticated/employer/join'
     | '/_authenticated/employer/onboarding'
     | '/_authenticated/employer/pending'
     | '/_authenticated/journey/$targetId'
@@ -2087,6 +2100,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/employer/onboarding'
       preLoaderRoute: typeof AuthenticatedEmployerOnboardingRouteImport
+      parentRoute: typeof AuthenticatedEmployerRoute
+    }
+    '/_authenticated/employer/join': {
+      id: '/_authenticated/employer/join'
+      path: '/join'
+      fullPath: '/employer/join'
+      preLoaderRoute: typeof AuthenticatedEmployerJoinRouteImport
       parentRoute: typeof AuthenticatedEmployerRoute
     }
     '/_authenticated/employer/$employerSlug': {
@@ -2894,6 +2914,7 @@ const AuthenticatedEmployerEmployerSlugRouteWithChildren =
 
 interface AuthenticatedEmployerRouteChildren {
   AuthenticatedEmployerEmployerSlugRoute: typeof AuthenticatedEmployerEmployerSlugRouteWithChildren
+  AuthenticatedEmployerJoinRoute: typeof AuthenticatedEmployerJoinRoute
   AuthenticatedEmployerOnboardingRoute: typeof AuthenticatedEmployerOnboardingRoute
   AuthenticatedEmployerPendingRoute: typeof AuthenticatedEmployerPendingRoute
   AuthenticatedEmployerIndexRoute: typeof AuthenticatedEmployerIndexRoute
@@ -2902,6 +2923,7 @@ interface AuthenticatedEmployerRouteChildren {
 const AuthenticatedEmployerRouteChildren: AuthenticatedEmployerRouteChildren = {
   AuthenticatedEmployerEmployerSlugRoute:
     AuthenticatedEmployerEmployerSlugRouteWithChildren,
+  AuthenticatedEmployerJoinRoute: AuthenticatedEmployerJoinRoute,
   AuthenticatedEmployerOnboardingRoute: AuthenticatedEmployerOnboardingRoute,
   AuthenticatedEmployerPendingRoute: AuthenticatedEmployerPendingRoute,
   AuthenticatedEmployerIndexRoute: AuthenticatedEmployerIndexRoute,

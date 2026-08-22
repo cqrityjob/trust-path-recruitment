@@ -235,7 +235,12 @@ function Reviews({ employerId, employerSlug }: { employerId: string; employerSlu
           <ul className="space-y-3">
             {visible.map((item) => (
               <li key={item.attemptId}>
-                <WorkRow item={item} employerSlug={employerSlug} lang={lang} />
+                <WorkRow
+                  item={item}
+                  employerSlug={employerSlug}
+                  lang={lang}
+                  canManageReviewers={canManageReviewers}
+                />
               </li>
             ))}
           </ul>
@@ -279,10 +284,12 @@ function WorkRow({
   item,
   employerSlug,
   lang,
+  canManageReviewers,
 }: {
   item: WorkItem;
   employerSlug: string;
   lang: "sv" | "en";
+  canManageReviewers: boolean;
 }) {
   const { t } = useT();
   const a = item.attempt;
@@ -357,6 +364,23 @@ function WorkRow({
                 : item.basis === "not_authorised"
                   ? "academy.reviews.whyNotAuthorised"
                   : "academy.reviews.whyNotConflict",
+            )}
+            {/* The queue's own version of the same dead end: this row cannot
+                be actioned by this reader, and somebody has to be able to. The
+                link only appears for a reader who can actually staff the team. */}
+            {item.basis === "conflict:is_participant" && canManageReviewers && (
+              <>
+                {" "}
+                {t("academy.reviews.ownResponsesFix")}{" "}
+                <Link
+                  to="/employer/$employerSlug/settings"
+                  params={{ employerSlug }}
+                  hash="team"
+                  className="font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("employer.team.manageLink")}
+                </Link>
+              </>
             )}
           </p>
         )}
