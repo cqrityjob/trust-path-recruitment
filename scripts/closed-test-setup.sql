@@ -95,11 +95,17 @@ BEGIN
   -- That is the state the hosted project was found in during the recruitment
   -- E2E, and it is what this script would have reproduced.
   --
-  -- Independence is still enforced — it just lives in `scp_review_conflict`
-  -- now, which excludes the participant, whoever assigned the attempt, and for
-  -- recruitment anyone in that candidate's hiring chain. The reviewer account
-  -- below is deliberately NOT the owner, so it never assigns anything and never
-  -- records an employer decision.
+  -- Independence lives in `scp_review_conflict`, and #63
+  -- (20260903100000_scp_review_conflict_disclosure) narrowed it to the two
+  -- rules that are absolute: nobody reviews their own responses, and nobody
+  -- reviews an attempt whose employer decision they have already recorded.
+  -- Commissioning the assessment, or having moved the candidate's application,
+  -- is now DISCLOSED on the completed review rather than refused — a two-person
+  -- firm should not need a third person to finish its own cycle.
+  --
+  -- The reviewer account below is still deliberately NOT the owner. It costs
+  -- nothing here and keeps the fixture exercising the cleanest path, where no
+  -- disclosure is recorded at all.
   INSERT INTO public.scp_content_roles (user_id, role, granted_by)
   VALUES (_reviewer, 'reviewer', _owner)
   ON CONFLICT (user_id, role) DO NOTHING;

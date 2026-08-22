@@ -6,15 +6,29 @@
 // validation level this content has not reached, because an employer who
 // assumes otherwise would be the most costly misunderstanding this product can
 // produce.
+//
+// ── #63: A COUNT OF WORK IS A DOOR, NOT A NOTICE ──────────────────────
+//
+// Every number here counts something an employer has to DO something about,
+// and each one used to be inert: "Klara att frisläppa: 3" told you three
+// results were waiting for you and gave you no way to reach them. The fix is
+// not a link next to the number — it is the number, because that is where a
+// person clicks. Each card names the state it counts and opens the list
+// filtered to exactly that state, so the destination visibly matches the card.
+//
+// The two review numbers are deliberately different destinations, because they
+// are different questions: how many RESULTS are stuck (an attempt list, with
+// the release control on it) versus how many RESPONSES need a person (the
+// review workspace). They were also both labelled "Väntar på granskning",
+// which made the pair unreadable; they now say which one they mean.
 
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ClipboardCheck, Lock, Users , Send, Hourglass } from "lucide-react";
+import { ClipboardCheck, Lock, Users, Send, Hourglass } from "lucide-react";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
-import {
-  getAcademyReviewPressure,
-} from "@/lib/security-competency/academy-employer.functions";
+import { getAcademyReviewPressure } from "@/lib/security-competency/academy-employer.functions";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 
 export function AcademyOverview({
@@ -64,41 +78,54 @@ export function AcademyOverview({
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <Stat icon={Users} label={t("academy.overview.active")} value={active} />
+        <StatLink
+          icon={Users}
+          label="academy.overview.active"
+          value={active}
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/participants"
+          search={{ state: "active" as const }}
+        />
         {/* "Ready to release" is the one state where the EMPLOYER is the party
             being waited on, so it is surfaced next to the others rather than
             left for them to discover by scrolling the list. */}
-        <Stat
+        <StatLink
           icon={Send}
-          label={t("academy.overview.readyToRelease")}
+          label="academy.overview.readyToRelease"
           value={readyToRelease}
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/participants"
+          search={{ state: "ready_to_release" as const }}
         />
-        <Stat icon={ClipboardCheck} label={t("academy.overview.released")} value={released} />
-        <Stat
+        <StatLink
+          icon={ClipboardCheck}
+          label="academy.overview.released"
+          value={released}
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/participants"
+          search={{ state: "result_available" as const }}
+        />
+        {/* ATTEMPTS whose result cannot progress. The destination is the
+            participant list, because that is where the attempt lives and where
+            releasing it will happen once review completes. */}
+        <StatLink
           icon={Hourglass}
-          label={t("academy.overview.attemptsAwaitingReview")}
+          label="academy.overview.attemptsAwaitingReview"
           value={attemptsAwaitingReview}
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/participants"
+          search={{ state: "under_review" as const }}
         />
-        {/* The tab strip already navigates to Reviews, so this is not a second
-            way in — it is the difference between reporting a number and
-            letting someone act on it. A non-zero "awaiting review" is work
-            waiting for a person, and the count is where they will look for it.
-            At zero it stays inert: nothing to go and do. */}
-        {awaitingReview > 0 ? (
-          <Link
-            to="/employer/$employerSlug/assessments/reviews"
-            params={{ employerSlug }}
-            className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
-          >
-            <StatBody
-              icon={Lock}
-              label={t("academy.overview.awaitingReview")}
-              value={awaitingReview}
-            />
-          </Link>
-        ) : (
-          <Stat icon={Lock} label={t("academy.overview.awaitingReview")} value={0} />
-        )}
+        {/* RESPONSES waiting for a person. The destination is the review
+            workspace, because that is where somebody acts on them. */}
+        <StatLink
+          icon={Lock}
+          label="academy.overview.awaitingReview"
+          value={awaitingReview}
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/reviews"
+          search={{ scope: "all" as const }}
+        />
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -133,11 +160,38 @@ export function AcademyOverview({
 
 const STAT_SHELL = "rounded-[14px] border border-border bg-card p-5";
 
-function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+/** A metric that is also the way to the work it counts.
+ *
+ *  A zero is still a link. Disabling the card at zero looked tidy and made the
+ *  affordance flicker: the same tile was clickable on Monday and dead on
+ *  Tuesday, which teaches people not to try. An empty filtered list is a
+ *  perfectly good answer to "show me the three that are ready" when there are
+ *  none, and the list says so in words. */
+function StatLink<S extends Record<string, string>>({
+  icon: Icon,
+  label,
+  value,
+  employerSlug,
+  to,
+  search,
+}: {
+  icon: typeof Users;
+  label: TranslationKey;
+  value: number;
+  employerSlug: string;
+  to: string;
+  search: S;
+}) {
+  const { t } = useT();
   return (
-    <div className={STAT_SHELL}>
-      <StatBody icon={Icon} label={label} value={value} />
-    </div>
+    <Link
+      to={to}
+      params={{ employerSlug }}
+      search={search}
+      className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
+    >
+      <StatBody icon={Icon} label={t(label)} value={value} />
+    </Link>
   );
 }
 

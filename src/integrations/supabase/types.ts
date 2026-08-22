@@ -9869,6 +9869,15 @@ export type Database = {
           use_case: string
         }[]
       }
+      scp_employer_review_board: {
+        Args: { _employer_id: string }
+        Returns: {
+          attempt_id: string
+          my_basis: string
+          my_disclosure: string
+          responses_open: number
+        }[]
+      }
       scp_employer_review_pressure: {
         Args: { _employer_id: string }
         Returns: {
@@ -10191,6 +10200,10 @@ export type Database = {
         Returns: string
       }
       scp_review_conflict: {
+        Args: { _attempt_id: string; _user_id: string }
+        Returns: string
+      }
+      scp_review_conflict_disclosure: {
         Args: { _attempt_id: string; _user_id: string }
         Returns: string
       }

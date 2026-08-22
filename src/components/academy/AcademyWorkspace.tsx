@@ -49,13 +49,24 @@ export type AcademyWorkspace = {
   hasMultipleWorkspaces: boolean;
 };
 
-type Tab = { to: string; label: TranslationKey };
+type Tab = {
+  to: string;
+  label: TranslationKey;
+  /** Highlight this tab on its child routes too. Only Granskningar has any:
+   *  reviewing one submission lives at .../reviews/$attemptId, and the tab
+   *  going dark there told the reviewer they had left the workspace. */
+  matchesChildren?: boolean;
+};
 
 const ASSESSMENT_TABS: Tab[] = [
   { to: "/employer/$employerSlug/assessments", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/assessments/library", label: "academy.nav.library" },
   { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.participants" },
-  { to: "/employer/$employerSlug/assessments/reviews", label: "academy.nav.reviews" },
+  {
+    to: "/employer/$employerSlug/assessments/reviews",
+    label: "academy.nav.reviews",
+    matchesChildren: true,
+  },
 ];
 
 const TRAINING_TABS: Tab[] = [
@@ -222,7 +233,11 @@ export function AcademyTabs({
       <ul className="flex min-w-max gap-1 px-1">
         {tabs.map((tab) => {
           const active = Boolean(
-            matchRoute({ to: tab.to, params: { employerSlug }, fuzzy: false }),
+            matchRoute({
+              to: tab.to,
+              params: { employerSlug },
+              fuzzy: tab.matchesChildren === true,
+            }),
           );
           return (
             <li key={tab.to}>

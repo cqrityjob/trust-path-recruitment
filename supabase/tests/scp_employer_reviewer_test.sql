@@ -217,7 +217,17 @@ SELECT pg_temp.ok(
 RESET ROLE; RESET request.jwt.claim.sub;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- R3. Separation of duties
+-- R3. Separation of duties: what refuses, and what is merely disclosed
+--
+-- #63 narrowed this. Two of the four rules described the ordinary behaviour of
+-- a small employer -- the person who sends an assessment out is the person who
+-- reads the answers -- and refusing them meant the customer had to hire a
+-- second human or invent a second login. Those two are now DISCLOSED: computed,
+-- named, shown, and written onto the completed review row.
+--
+-- The two that refuse still refuse, and the assertions below are the reason
+-- narrowing was safe: nobody grades their own answers, and nobody reviews an
+-- attempt they have already decided.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 SELECT pg_temp.ok(
@@ -227,15 +237,22 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.ok(
   public.scp_review_conflict('e1000000-0000-0000-0000-00000000000a'::uuid,
+                             'e1000000-4444-0000-0000-00000000000a'::uuid) IS NULL,
+  'R3.2 commissioning the assessment no longer BLOCKS its review');
+
+SELECT pg_temp.ok(
+  public.scp_review_conflict_disclosure('e1000000-0000-0000-0000-00000000000a'::uuid,
                              'e1000000-4444-0000-0000-00000000000a'::uuid) = 'assigned_this_assessment',
-  'R3.2 the member who assigned the assessment may not review it');
+  'R3.2b but it is disclosed, by name');
 
 SELECT pg_temp.ok(
   public.scp_review_conflict('e1000000-0000-0000-0000-00000000000b'::uuid,
+                             'e1000000-4444-0000-0000-00000000000a'::uuid) IS NULL
+  AND public.scp_review_conflict_disclosure('e1000000-0000-0000-0000-00000000000b'::uuid,
                              'e1000000-4444-0000-0000-00000000000a'::uuid) IS NULL,
-  'R3.3 an authorised reviewer who neither took nor assigned it has no conflict');
+  'R3.3 an authorised reviewer who neither took nor assigned it has nothing to disclose');
 
--- Recruitment is stricter: acting on the candidate's application disqualifies.
+-- Recruitment: acting on the candidate's application is disclosed too.
 -- Employers may only create a job as draft; publishing is a separate step.
 INSERT INTO public.jobs (id, slug, short_id, employer_id, application_method, title_sv, status)
 VALUES ('e1000000-8888-0000-0000-00000000000a','vaktare-alpha-rev','REVA01',
@@ -263,26 +280,106 @@ VALUES ('e1000000-7777-0000-0000-00000000000a','e1000000-8888-0000-0000-00000000
         'e1000000-0000-0000-0000-00000000000b','employer','submitted','in_review');
 
 SELECT pg_temp.ok(
-  public.scp_review_conflict('e1000000-0000-0000-0000-00000000000b'::uuid,
+  public.scp_review_conflict_disclosure('e1000000-0000-0000-0000-00000000000b'::uuid,
                              'e1000000-4444-0000-0000-00000000000c'::uuid) = 'acted_on_this_application',
-  'R3.4 recruitment: whoever acted on the candidate''s application cannot review it');
+  'R3.4 recruitment: having moved the candidate''s application is disclosed');
 
 SELECT pg_temp.ok(
   public.scp_review_conflict('e1000000-0000-0000-0000-00000000000b'::uuid,
-                             'e1000000-4444-0000-0000-00000000000a'::uuid) IS NULL,
-  'R3.5 the same person is still clear to review the unrelated workforce attempt');
+                             'e1000000-4444-0000-0000-00000000000c'::uuid) IS NULL,
+  'R3.4b and does not block the review');
 
+SELECT pg_temp.ok(
+  public.scp_review_conflict_disclosure('e1000000-0000-0000-0000-00000000000b'::uuid,
+                             'e1000000-4444-0000-0000-00000000000a'::uuid) IS NULL,
+  'R3.5 the same person has nothing to disclose on the unrelated workforce attempt');
+
+-- The decisive one. This attempt used to vanish from its own organisation's
+-- queue, which is how an employer ended up with fourteen responses waiting and
+-- nobody permitted to look at them.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
 SELECT pg_temp.ok(
-  NOT EXISTS (SELECT 1 FROM public.scp_review_queue('sv-SE')
-               WHERE attempt_id = 'e1000000-4444-0000-0000-00000000000c'),
-  'R3.6 a conflicted attempt disappears from that reviewer''s queue');
-SELECT pg_temp.must_fail(
-  'SELECT public.scp_complete_human_review(''e1000000-6666-0000-0000-00000000000c''::uuid, ''upheld'', ''conflicted'', ''no_concern'')',
-  'SCP_REVIEW_CONFLICT_OF_INTEREST',
-  'R3.7 and completing it is refused by name, not silently');
+  EXISTS (SELECT 1 FROM public.scp_review_queue('sv-SE')
+           WHERE attempt_id = 'e1000000-4444-0000-0000-00000000000c'),
+  'R3.6 a DISCLOSED conflict keeps the attempt in that reviewer''s queue');
 RESET ROLE; RESET request.jwt.claim.sub;
+
+-- And the refusal that remains absolute: whoever recorded the employer decision
+-- on this attempt cannot then go back and review it.
+INSERT INTO public.scp_employer_report_decisions
+  (attempt_id, employer_id, decided_by, action, reason_code)
+VALUES ('e1000000-4444-0000-0000-00000000000b','e1000000-1111-0000-0000-00000000000b',
+        'e1000000-0000-0000-0000-00000000000f','no_action_needed','meets_expectation');
+
+SELECT pg_temp.ok(
+  public.scp_review_conflict('e1000000-0000-0000-0000-00000000000f'::uuid,
+                             'e1000000-4444-0000-0000-00000000000b'::uuid) = 'recorded_employer_decision',
+  'R3.7 whoever recorded the employer decision still may not review that attempt');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000f';
+SELECT pg_temp.must_fail(
+  'SELECT public.scp_complete_human_review(''e1000000-6666-0000-0000-00000000000b''::uuid, ''upheld'', ''after the fact'', ''no_concern'')',
+  'SCP_REVIEW_CONFLICT_OF_INTEREST',
+  'R3.7b and completing it is refused by name, not silently');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- The decision row stays: it is append-only by design, and every assertion
+-- after this point concerns Alpha.
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- R3c. The case this whole change exists for
+--
+-- A small employer where the owner is the only person who could ever review:
+-- they sent the assessment out, so under the old rule they were disqualified
+-- from reading the answers, and the product's only remedies were "hire someone"
+-- or "make a second login". The owner here has exactly that shape -- they
+-- assigned attempt A -- so granting them an authorisation and asking the
+-- database whether they may proceed is the whole product claim in one query.
+--
+-- The grant is removed again immediately: R8 and W4 depend on this owner having
+-- blocked work and no workload of their own, which is the OTHER honest state
+-- and must keep being asserted.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+VALUES ('e1000000-1111-0000-0000-00000000000a','e1000000-0000-0000-0000-00000000000a',
+        ARRAY['workforce','recruitment']::text[],'e1000000-0000-0000-0000-00000000000a');
+
+SELECT pg_temp.ok(
+  public.scp_review_authorisation('e1000000-0000-0000-0000-00000000000a'::uuid,
+                                  'e1000000-4444-0000-0000-00000000000a'::uuid) = 'authorised',
+  'R3c.1 an authorised owner who commissioned the assessment MAY review it');
+
+SELECT pg_temp.ok(
+  public.scp_review_conflict_disclosure('e1000000-0000-0000-0000-00000000000a'::uuid,
+                                  'e1000000-4444-0000-0000-00000000000a'::uuid)
+    = 'assigned_this_assessment',
+  'R3c.2 and their involvement is disclosed rather than hidden');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000a';
+SELECT pg_temp.ok(
+  EXISTS (SELECT 1 FROM public.scp_review_queue('sv-SE')
+           WHERE attempt_id = 'e1000000-4444-0000-0000-00000000000a'),
+  'R3c.3 the work reaches their queue -- no second account, no hidden URL');
+SELECT pg_temp.ok(
+  (SELECT responses_waiting FROM public.scp_my_review_workload())
+  = (SELECT count(*) FROM public.scp_review_queue('sv-SE')),
+  'R3c.4 and the counter agrees with it, which is the defect that started this');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Break-glass must NOT be how an ordinary customer clears their own backlog.
+SELECT pg_temp.ok(
+  public.scp_review_authorisation('e1000000-0000-0000-0000-00000000000a'::uuid,
+                                  'e1000000-4444-0000-0000-00000000000b'::uuid) = 'not_authorised',
+  'R3c.5 the same owner still reaches nothing in the other tenant');
+
+UPDATE public.scp_employer_reviewers
+   SET revoked_at = now(), revoked_by = 'e1000000-0000-0000-0000-00000000000a'
+ WHERE employer_id = 'e1000000-1111-0000-0000-00000000000a'
+   AND user_id = 'e1000000-0000-0000-0000-00000000000a';
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- R4. Use-case scope
@@ -414,6 +511,106 @@ SELECT pg_temp.ok(
      'e1000000-1111-0000-0000-00000000000a'::uuid)) > 0
   AND coalesce((SELECT responses_waiting FROM public.scp_my_review_workload()), 0) = 0,
   'W4 an organisation can have blocked work while a given member has none to do');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- R10. The employer board: a list under the numbers, and no responses in it
+--
+-- The Granskningar page used to print two numbers -- "14 svar väntar", "2
+-- resultat blockeras" -- with nothing under them and an empty queue beneath,
+-- and the page could not say which of three different things was true. This is
+-- the list those numbers point at. It carries counts and a basis, never a word
+-- the participant wrote.
+--
+-- Alpha still has attempt C pending here, which is what makes the assertions
+-- below real rather than vacuous.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000a';
+CREATE TEMP TABLE board_owner AS
+  SELECT * FROM public.scp_employer_review_board('e1000000-1111-0000-0000-00000000000a');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_review_board(
+     'e1000000-1111-0000-0000-00000000000b'::uuid)) = 0,
+  'R10.1 Alpha''s owner gets nothing back for Beta''s board');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM board_owner) = 1
+  AND (SELECT attempt_id FROM board_owner) = 'e1000000-4444-0000-0000-00000000000c'
+  AND (SELECT responses_open FROM board_owner) = 1,
+  'R10.2 the board names Alpha''s one blocked attempt and how many responses it holds');
+
+SELECT pg_temp.ok(
+  (SELECT my_basis FROM board_owner) = 'not_authorised',
+  'R10.3 a member holding no authorisation is told that, not shown an empty page');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
+CREATE TEMP TABLE board_reviewer AS
+  SELECT * FROM public.scp_employer_review_board('e1000000-1111-0000-0000-00000000000a');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT my_basis FROM board_reviewer) = 'authorised'
+  AND (SELECT my_disclosure FROM board_reviewer) = 'acted_on_this_application',
+  'R10.4 the authorised reviewer may act on the same attempt, with the involvement disclosed');
+
+SELECT pg_temp.ok(
+  (SELECT responses_open FROM board_reviewer)
+  = (SELECT count(*) FROM public.scp_human_reviews hr
+      JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+     WHERE r.attempt_id = 'e1000000-4444-0000-0000-00000000000c'
+       AND hr.review_status = 'pending'),
+  'R10.5 the board''s count is the real number of open reviews, not an estimate');
+
+SELECT pg_temp.ok(
+  (SELECT awaiting_review FROM public.scp_employer_review_pressure(
+     'e1000000-1111-0000-0000-00000000000a'::uuid))
+  = (SELECT sum(responses_open)::int FROM board_owner),
+  'R10.6 the KPI equals the sum of the list beneath it');
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- R9. A disclosed conflict is completed, and the row says so
+--
+-- Deliberately last: it consumes Alpha's remaining pending review, which every
+-- assertion above needs to still be open.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
+SELECT public.scp_complete_human_review(
+  'e1000000-6666-0000-0000-00000000000c'::uuid, 'upheld',
+  'Kandidaten larmar och avvaktar; den styrda bedomningen star fast.',
+  'no_concern');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT reviewer_conflict_disclosed FROM public.scp_human_reviews
+    WHERE id = 'e1000000-6666-0000-0000-00000000000c') = 'acted_on_this_application',
+  'R9.1 completing a disclosed review records WHICH involvement the reviewer had');
+
+SELECT pg_temp.ok(
+  (SELECT NOT reviewed_under_break_glass FROM public.scp_human_reviews
+    WHERE id = 'e1000000-6666-0000-0000-00000000000c'),
+  'R9.2 and does not misreport it as platform break-glass');
+
+SELECT pg_temp.ok(
+  (SELECT reviewer_conflict_disclosed IS NULL FROM public.scp_human_reviews
+    WHERE id = 'e1000000-6666-0000-0000-00000000000a'),
+  'R9.3 a review with no such involvement records none -- the column is not decorative');
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.scp_attempts WHERE id='e1000000-4444-0000-0000-00000000000c') = 'scored',
+  'R9.4 the last review completing advances the attempt, so the result can be released');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000a';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_review_board(
+     'e1000000-1111-0000-0000-00000000000a'::uuid)) = 0,
+  'R9.5 and the board empties, so the number and the list fall to zero together');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 ROLLBACK;
