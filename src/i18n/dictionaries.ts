@@ -1530,14 +1530,46 @@ export const dictionaries = {
     "employer.candidate.passport.heading": "Security Passport",
     "employer.candidate.passport.none":
       "Ingen Security Passport-information har delats med er för den här ansökan.",
+    // Applying is still not consent — the candidate authorises explicitly when
+    // they submit. What changed is that this can now happen, so the copy no
+    // longer reads as "you will never see one here".
     "employer.candidate.passport.lede":
-      "Security Passport tillhör kandidaten. Endast innehavaren kan välja att dela den, och en jobbansökan innebär inte ett sådant samtycke.",
+      "Security Passport tillhör kandidaten. Endast innehavaren kan välja att dela den, och kandidaten gör det valet när ansökan skickas.",
     // Both of these say what YOUR ORGANISATION has been given. Neither states,
     // implies or can be read as a fact about what the candidate holds.
     "employer.candidate.passport.shared":
       "Kandidaten har valt att dela följande med er för den här ansökan.",
     "employer.candidate.passport.sharedNote":
       "Endast verifierade uppgifter ingår. Kandidaten kan återkalla delningen när som helst, och sidan visar då inget.",
+
+    "employer.candidate.passport.authorisedAt": "Delad av kandidaten",
+    "employer.candidate.passport.open": "Öppna verifierat Passport",
+    "employer.candidate.passport.scoped":
+      "Åtkomsten gäller bara den här ansökan. Uppgifterna tillhör kandidaten och får inte spridas vidare.",
+
+    // ── Candidate: including the Passport with an application ──────────
+    "jobs.apply.passport.title": "Ta med mitt verifierade Security Passport",
+    "jobs.apply.passport.lede":
+      "Arbetsgivaren ser dina verifierade uppgifter tillsammans med ansökan.",
+    "jobs.apply.passport.includes": "Det här delas",
+    "jobs.apply.passport.excludes": "Det här delas aldrig",
+    "jobs.apply.passport.exc":
+      "Dokument, intygsnummer, egenrapporterade uppgifter, interna granskningsanteckningar och kontaktuppgifter.",
+    "jobs.apply.passport.scope":
+      "Åtkomsten gäller bara den här ansökan och du kan återkalla den när som helst.",
+    "jobs.apply.passport.credentialsCount": "verifierade behörigheter",
+    "jobs.apply.passport.experienceCount": "verifierade anställningar",
+    "jobs.apply.passport.nothing":
+      "Du har ännu inga verifierade Passport-uppgifter att bifoga. Ansökan skickas utan Security Passport.",
+    "jobs.apply.passport.noPassport":
+      "Du har inget Security Passport ännu. Ansökan skickas som vanligt — du kan skapa ett Passport när du vill.",
+    "jobs.apply.passport.openPassport": "Öppna mitt Passport",
+    "jobs.apply.passport.sharedConfirm": "Security Passport skickades med ansökan.",
+    "jobs.apply.passport.notSharedConfirm": "Ansökan skickades utan Security Passport.",
+
+    // ── Candidate: the application row ─────────────────────────────────
+    "myapps.passport.included": "Security Passport inkluderat",
+    "myapps.passport.attach": "Dela verifierat Passport med denna ansökan",
 
     "employer.settings.heading": "Organisationsinställningar",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
@@ -4725,11 +4757,38 @@ export const dictionaries = {
     "employer.candidate.passport.none":
       "No Security Passport information has been shared with your organisation for this application.",
     "employer.candidate.passport.lede":
-      "A Security Passport belongs to the candidate. Only its holder can choose to share it, and a job application is not that consent.",
+      "A Security Passport belongs to the candidate. Only its holder can choose to share it, and the candidate makes that choice when they submit their application.",
     "employer.candidate.passport.shared":
       "The candidate has chosen to share the following with your organisation for this application.",
     "employer.candidate.passport.sharedNote":
       "Only verified records are included. The candidate can withdraw this at any time, and the page will then show nothing.",
+
+    "employer.candidate.passport.authorisedAt": "Shared by the candidate",
+    "employer.candidate.passport.open": "Open verified Passport",
+    "employer.candidate.passport.scoped":
+      "Access applies to this application only. The records belong to the candidate and must not be passed on.",
+
+    "jobs.apply.passport.title": "Include my verified Security Passport",
+    "jobs.apply.passport.lede":
+      "The employer sees your verified records alongside your application.",
+    "jobs.apply.passport.includes": "Shared",
+    "jobs.apply.passport.excludes": "Never shared",
+    "jobs.apply.passport.exc":
+      "Documents, certificate numbers, self-declared entries, internal review notes and contact details.",
+    "jobs.apply.passport.scope":
+      "Access applies to this application only, and you can withdraw it at any time.",
+    "jobs.apply.passport.credentialsCount": "verified credentials",
+    "jobs.apply.passport.experienceCount": "verified employments",
+    "jobs.apply.passport.nothing":
+      "You have no verified Passport records to attach yet. Your application will be sent without a Security Passport.",
+    "jobs.apply.passport.noPassport":
+      "You do not have a Security Passport yet. Your application is sent as normal — you can create one whenever you like.",
+    "jobs.apply.passport.openPassport": "Open my Passport",
+    "jobs.apply.passport.sharedConfirm": "Your Security Passport was sent with the application.",
+    "jobs.apply.passport.notSharedConfirm": "The application was sent without a Security Passport.",
+
+    "myapps.passport.included": "Security Passport included",
+    "myapps.passport.attach": "Share verified Passport with this application",
 
     "employer.settings.heading": "Organisation settings",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",

@@ -208,6 +208,9 @@ export interface RecipientPayloadActive {
   readonly focus?: "passport" | "credential";
   readonly purpose: string | null;
   readonly expires_at: string | null;
+  /** When the holder authorised this disclosure. Added by
+   *  20260904090000; older payloads may not carry it. */
+  readonly authorised_at?: string | null;
   readonly last_updated: string;
   readonly holder: string | null;
   readonly privacy_mode: string;

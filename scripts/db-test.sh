@@ -1178,6 +1178,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport application-disclosure assertions"
+set +e
+SPAP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_application_passport_test.sql 2>&1)"
+SPAP_RC=$?
+set -e
+
+echo "$SPAP_OUT" | grep -E "sp_application_passport_test:" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPAP_PASSED="$(echo "$SPAP_OUT" | sed -n 's/.*sp_application_passport_test: \([0-9]*\) assertions.*/\1/p' | head -1)"
+SPAP_SURF="$(echo "$SPAP_OUT" | sed -n 's/.*sp_application_passport_test: \([0-9]*\) surface.*/\1/p' | head -1)"
+SPAP_PASSED=$(( ${SPAP_PASSED:-0} + ${SPAP_SURF:-0} ))
+
+if [ "$SPAP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport application-disclosure suite exited with code ${SPAP_RC}." >&2
+  echo "$SPAP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport application disclosure"
+else
+  echo "    ok  ${SPAP_PASSED} application-disclosure assertions passed"
+  # A short run means the leak and authorisation cases did not execute, which
+  # is the whole reason an employer may read a candidate's Passport at all.
+  if [ "$SPAP_PASSED" -lt 34 ]; then
+    echo "FAIL: expected at least 34 application-disclosure assertions, only ${SPAP_PASSED} ran." >&2
+    suite_failed "Security Passport application disclosure (assertion shortfall: floor 34)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport skill/language taxonomy assertions"
 set +e
 SPSK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_skill_taxonomy_test.sql 2>&1)"
@@ -1478,6 +1505,7 @@ echo "              ${LIB_PASSED} content library + maturity-isolation assertion
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
+echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions"
 echo "===================================================="
