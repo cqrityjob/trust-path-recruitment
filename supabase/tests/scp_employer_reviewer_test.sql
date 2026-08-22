@@ -613,4 +613,253 @@ SELECT pg_temp.ok(
   'R9.5 and the board empties, so the number and the list fall to zero together');
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- R11. A constructed response is reviewable end to end
+--
+-- #65. SCP_NO_RUBRIC refused every review of a Rapportering & dokumentation
+-- written answer, because that assessment was authored with three
+-- constructed_response items and no rubric -- a promise its own migration
+-- header made in prose and never wrote as rows.
+--
+-- The refusal was right. What was missing was content. So this group asserts
+-- the content invariant first, and then drives a real constructed response all
+-- the way through the review that used to fail: rubric levels supplied, a
+-- governed contribution derived from them, the outstanding count falling, and
+-- the attempt reaching scored so the employer can release it.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- R11.1 is the assertion whose absence caused the defect. It is deliberately
+-- global: not "the flagship has rubrics" but "nothing on any form lacks one".
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.scp_form_items fi
+      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+     WHERE iv.item_format = 'constructed_response'
+       AND NOT EXISTS (SELECT 1 FROM public.scp_rubric_versions rv
+                        WHERE rv.item_version_id = iv.id)),
+  'R11.1 no constructed response on any form is without a governed rubric');
+
+-- The flagship recruitment assessment, named explicitly, because it is the one
+-- an employer pays for and a global assertion could pass while it was empty.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_form_items fi
+     JOIN public.scp_forms f ON f.id = fi.form_id
+     JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+    WHERE f.slug = 'security-officer-recruitment-form-a'
+      AND iv.item_format = 'constructed_response'
+      AND iv.requires_human_review) = 4,
+  'R11.2 the flagship still has its four human-reviewed written items');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.scp_form_items fi
+      JOIN public.scp_forms f ON f.id = fi.form_id
+      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+     WHERE f.slug = 'security-officer-recruitment-form-a'
+       AND iv.item_format = 'constructed_response'
+       AND NOT EXISTS (SELECT 1 FROM public.scp_rubric_versions rv
+                        WHERE rv.item_version_id = iv.id)),
+  'R11.3 and every one of them has a rubric');
+
+-- Every rubric dimension must be answerable: a dimension with no levels is a
+-- control the reviewer cannot fill in, and scp_complete_human_review then
+-- refuses for a different reason at the same moment.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.scp_rubric_dimensions d
+     WHERE NOT EXISTS (SELECT 1 FROM public.scp_rubric_levels l
+                        WHERE l.rubric_dimension_id = d.id)),
+  'R11.4 every rubric dimension carries at least one level');
+
+-- ── The review that used to fail ──────────────────────────────────────────
+--
+-- Real library content: sg-rd-04, the note that separates observation from
+-- interpretation. Alpha runs it under its existing closed-test grant.
+
+-- Two DIFFERENT written items on the same form: one response per item version
+-- is enforced, and reusing one item would be testing the fixture, not the review.
+CREATE TEMP TABLE crfx AS
+SELECT av.id AS av_id, f.id AS form_id,
+       -- No max(uuid) in Postgres; min/max over text and cast back. Each
+       -- filter matches exactly one row, so the aggregate only collapses the
+       -- group, it never chooses between candidates.
+       (max(iv.id::text) FILTER (WHERE i.slug = 'sg-rd-04'))::uuid AS iv_note,
+       (max(iv.id::text) FILTER (WHERE i.slug = 'sg-rd-08'))::uuid AS iv_handover
+  FROM public.scp_assessment_versions av
+  JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
+  JOIN public.scp_forms f ON f.assessment_version_id = av.id
+  JOIN public.scp_form_items fi ON fi.form_id = f.id
+  JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+  JOIN public.scp_items i ON i.id = iv.item_id
+ WHERE d.slug = 'sg-reporting-documentation' AND i.slug IN ('sg-rd-04','sg-rd-08')
+ GROUP BY av.id, f.id;
+
+SELECT av_id AS cravid, form_id AS crfid, iv_note AS crivid, iv_handover AS crivid2
+  FROM crfx \gset
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM crfx WHERE iv_note IS NOT NULL AND iv_handover IS NOT NULL) = 1,
+  'R11.5 the fixture found the real sg-rd-04 and sg-rd-08 constructed responses');
+
+INSERT INTO public.assessment_assignments
+  (id, employer_id, use_case, recipient_email, assigned_by, invitation_token_hash, expires_at,
+   scp_assessment_version_id, status)
+VALUES ('e1000000-3333-0000-0000-00000000000d','e1000000-1111-0000-0000-00000000000a','workforce',
+        'participantA@rev.test','e1000000-0000-0000-0000-00000000000c','hashA3',
+        now()+interval '30 days', :'cravid'::uuid,'started');
+
+INSERT INTO public.scp_attempts
+  (id, subject_id, issuer_organization_id, assignment_id, mode, form_id,
+   assessment_version_id, status, submitted_at)
+VALUES ('e1000000-4444-0000-0000-00000000000d','e1000000-2222-0000-0000-00000000000a',
+        'e1000000-1111-0000-0000-00000000000a','e1000000-3333-0000-0000-00000000000d',
+        'assessment', :'crfid'::uuid, :'cravid'::uuid, 'submitted', now());
+
+-- A written answer. Immutability is asserted against this exact text below.
+INSERT INTO public.scp_candidate_responses (id, attempt_id, item_version_id, response_text)
+VALUES ('e1000000-5555-0000-0000-00000000000d','e1000000-4444-0000-0000-00000000000d',
+        :'crivid'::uuid,
+        'Kl 13:40 observerade jag att en person stallde ifran sig en vaska innanfor '
+        'entren och gick ut utan den. Personen aterkom 13:46 och tog med sig vaskan. '
+        'Tolkning: jag bedomer det som troligt att vaskan glomdes, men det ar min '
+        'tolkning och inte nagot jag sett.');
+
+INSERT INTO public.scp_human_reviews (id, response_id, trigger_reason, review_status)
+VALUES ('e1000000-6666-0000-0000-00000000000d','e1000000-5555-0000-0000-00000000000d',
+        'no_provider_available','pending');
+
+-- Two outstanding reviews on this attempt, so the decrement is observable and
+-- the "last one scores it" transition is not assumed from a single row.
+INSERT INTO public.scp_candidate_responses (id, attempt_id, item_version_id, response_text)
+VALUES ('e1000000-5555-0000-0000-00000000000e','e1000000-4444-0000-0000-00000000000d',
+        :'crivid2'::uuid,
+        'Hissen star mellan plan 2 och 3 med tva personer i. Raddningstjanst pa vag.');
+INSERT INTO public.scp_human_reviews (id, response_id, trigger_reason, review_status)
+VALUES ('e1000000-6666-0000-0000-00000000000e','e1000000-5555-0000-0000-00000000000e',
+        'no_provider_available','pending');
+
+-- Alpha re-authorises its reviewer (R5 revoked and restored it; this is the
+-- same live grant) and reviews a written answer for the first time.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
+
+-- The queue must carry the rubric, or the reviewer is shown a form they cannot
+-- complete -- which is precisely what the employer saw.
+SELECT pg_temp.ok(
+  (SELECT jsonb_array_length(rubric) FROM public.scp_review_queue('sv-SE')
+    WHERE review_id = 'e1000000-6666-0000-0000-00000000000d') = 4,
+  'R11.6 the reviewer is shown all four rubric dimensions');
+
+-- Levels short of a full set are refused BY NAME. The safeguard is not relaxed
+-- by this change; it is now reachable.
+SELECT pg_temp.must_fail(
+  'SELECT public.scp_complete_human_review(''e1000000-6666-0000-0000-00000000000d''::uuid,
+     ''upheld'', ''ofullstandig'', NULL, ''{"observable_facts":3}''::jsonb)',
+  'SCP_RUBRIC_DIMENSION_MISSING',
+  'R11.7 a partial set of levels is still refused');
+
+SELECT pg_temp.must_fail(
+  'SELECT public.scp_complete_human_review(''e1000000-6666-0000-0000-00000000000d''::uuid,
+     ''upheld'', ''inga nivaer'', NULL, NULL)',
+  'SCP_RUBRIC_LEVELS_REQUIRED',
+  'R11.8 and so is supplying none at all');
+
+-- The real thing.
+SELECT public.scp_complete_human_review(
+  'e1000000-6666-0000-0000-00000000000d'::uuid, 'upheld',
+  'Tid, plats och handelseforlopp framgar, och tolkningen ar utpekad som tolkning.',
+  NULL,
+  '{"observable_facts":4,"interpretation_marked":4,"usable_by_reader":3,"clarity":2}'::jsonb);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT review_status FROM public.scp_human_reviews
+    WHERE id = 'e1000000-6666-0000-0000-00000000000d') = 'completed',
+  'R11.9 the review that used to fail with SCP_NO_RUBRIC now completes');
+
+-- ── The contribution ──────────────────────────────────────────────────────
+--
+-- Levels 4, 4, 3 on the three substantive dimensions; clarity 2 is
+-- assesses_writing_quality and must be EXCLUDED. (4+4+3)/3/4 = 0.917.
+-- Including clarity would give (4+4+3+2)/4/4 = 0.813, so the assertion
+-- distinguishes the two rather than accepting any plausible number.
+SELECT pg_temp.ok(
+  (SELECT round(contribution, 3) FROM public.scp_competency_evidence
+    WHERE provenance_ref = 'e1000000-6666-0000-0000-00000000000d') = 0.917,
+  'R11.10 the contribution is derived from the substantive dimensions only');
+
+SELECT pg_temp.ok(
+  (SELECT source_type FROM public.scp_competency_evidence
+    WHERE provenance_ref = 'e1000000-6666-0000-0000-00000000000d') = 'assessment_response'
+  AND (SELECT provenance_type FROM public.scp_competency_evidence
+        WHERE provenance_ref = 'e1000000-6666-0000-0000-00000000000d') = 'human_review',
+  'R11.11 and is recorded as a human review of an assessment response');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_human_reviews hr
+     JOIN public.scp_candidate_responses r ON r.id = hr.response_id
+    WHERE r.attempt_id = 'e1000000-4444-0000-0000-00000000000d'
+      AND hr.review_status = 'pending') = 1,
+  'R11.12 the outstanding count on the attempt falls by exactly one');
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.scp_attempts
+    WHERE id = 'e1000000-4444-0000-0000-00000000000d') = 'submitted',
+  'R11.13 and the attempt does NOT advance while a review is still outstanding');
+
+-- The candidate's own words are evidence, and evidence does not change because
+-- somebody judged it.
+SELECT pg_temp.ok(
+  (SELECT response_text FROM public.scp_candidate_responses
+    WHERE id = 'e1000000-5555-0000-0000-00000000000d')
+  LIKE 'Kl 13:40 observerade jag%',
+  'R11.14 the submitted response is untouched by the review');
+
+-- Finish the attempt.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000b';
+SELECT public.scp_complete_human_review(
+  'e1000000-6666-0000-0000-00000000000e'::uuid, 'upheld',
+  'Valskrivet men saknar vad som gjorts och vad som aterstar.',
+  NULL,
+  '{"current_status":2,"actions_taken":2,"what_remains":2,"clarity":4}'::jsonb);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.scp_attempts
+    WHERE id = 'e1000000-4444-0000-0000-00000000000d') = 'scored'
+  AND (SELECT scored_at IS NOT NULL FROM public.scp_attempts
+        WHERE id = 'e1000000-4444-0000-0000-00000000000d'),
+  'R11.15 the last review moves the attempt to scored, ready for the employer to release');
+
+-- Elegance must not outscore substance. The second answer scored 2/2/2 with
+-- clarity 4; the first scored 4/4/3 with clarity 2. If writing quality leaked
+-- into the contribution the gap would narrow.
+SELECT pg_temp.ok(
+  (SELECT round(contribution,3) FROM public.scp_competency_evidence
+    WHERE provenance_ref = 'e1000000-6666-0000-0000-00000000000e') = 0.500,
+  'R11.16 the better-written but thinner answer scores lower, not higher');
+
+-- ── The rules that must survive the fix ───────────────────────────────────
+
+SELECT pg_temp.ok(
+  public.scp_review_conflict('e1000000-0000-0000-0000-00000000000d'::uuid,
+                             'e1000000-4444-0000-0000-00000000000d'::uuid) = 'is_participant',
+  'R11.17 the participant still cannot review their own written answer');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1000000-0000-0000-0000-00000000000f';
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_review_queue('sv-SE')
+               WHERE attempt_id = 'e1000000-4444-0000-0000-00000000000d'),
+  'R11.18 the other tenant never sees this attempt or its written answers');
+RESET ROLE; RESET request.jwt.claim.sub;
+
+-- Nothing in this path may write an employment decision. The review produces
+-- evidence about a behaviour; who gets hired stays a human act elsewhere.
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM public.scp_employer_report_decisions
+               WHERE attempt_id = 'e1000000-4444-0000-0000-00000000000d'),
+  'R11.19 completing reviews records no employer decision of any kind');
+
 ROLLBACK;
