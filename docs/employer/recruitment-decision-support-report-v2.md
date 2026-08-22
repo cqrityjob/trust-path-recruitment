@@ -137,9 +137,18 @@ frozen brief (observed[] · selfReported[] · interviewGuide[] · coverage)
       ↓  validated DecisionSupport
 ```
 
-The narrative is the paragraph `scp_brief_executive_summary` already freezes with
-the snapshot — deterministic SQL, traceable to the rows that produced it. Nothing
-was rebuilt.
+Signals, evidence states and safety findings stay in SQL and arrive already
+decided. What the builder adds is selection and prose:
+
+```
+selectSummaryFacts  →  at most five facts, fixed priority order,
+                       thin areas COUNTED rather than named
+composeNarrative    →  three to five sentences from those facts
+```
+
+The paragraph `scp_brief_executive_summary` freezes with the snapshot is kept as
+the fallback for a brief whose arrays are empty. It is not the default: see
+§14 below.
 
 **No AI provider is wired in and none was added.** The seam mirrors the one
 already in `src/lib/career-discovery/v31/ai-explanation.ts`, so there is one
@@ -198,3 +207,164 @@ human-review gate, evidence provenance or the observed/self-report boundary. No
 migration is required and none was written. The one new server function reads
 two id columns from `assessment_assignments` under the existing employer RLS
 policy, and returns `{}` rather than failing if that policy refuses.
+
+
+---
+
+# Polish pass — summary quality and visual hierarchy
+
+## 14. What was wrong with the executive summary
+
+The V2 structure put the right things in the right order and then filled the
+first screen with a paragraph nobody could use. The narrative was the one
+`scp_brief_executive_summary` freezes, and its problem was completeness:
+
+* it named **every** competency in **every** bucket — eight of eight for this
+  candidate, five of them only to say the assessment had barely touched them;
+* it was one 118-word breath with no sentence a reader could stop on;
+* it repeated, in prose, what the panels beneath it were about to show;
+* the safety-critical finding was said three times on one screen — in the
+  recommendation's reason, in the narrative, and in its own panel.
+
+Three further things worked against the same screen:
+
+* **"Starkast stöd i underlaget: none."** A prominent empty box announcing an
+  absence. On a candidate with no observed strength, the most visually
+  emphasised thing on the page was a statement that there was nothing to show.
+* **Four panels of equal size.** They are not equal. A safety-critical response
+  outranks everything; "these five areas were barely touched" is true, necessary
+  and the least actionable line on the page.
+* **`Utvecklingsområde`** on a candidate. It is competence development's word,
+  and on somebody nobody has met it quietly says the organisation has taken a
+  view on how this person needs to grow — from one assessment.
+
+## 15. The new summary, for participant 4C42C8
+
+Composed by `composeNarrative`, from the five facts `selectSummaryFacts` kept.
+86 words, four sentences, three competencies named:
+
+> Svaren valde genomgående mindre välavvägda alternativ inom Kommunikation och
+> informationskvalitet, Situationsmedvetenhet — det är det tydligaste behovet av
+> uppföljning. Ansvarstagande och tillförlitlighet gav ett mer blandat mönster
+> mellan jämförbara uppgifter. Fem kompetensområden berördes för lite för att
+> kunna tolkas, vilket säger något om bedömningens bredd och inget om
+> kandidaten. Det självrapporterade arbetssättet visar flera konsekventa
+> mönster, men de är inte observerade och behöver verifieras i intervju.
+
+The five thin areas are counted, not listed — all five are in the competency
+overview one screen down.
+
+The safety fact is still **selected first**; it is not written into the
+paragraph, because two slots above it already own it. Each of the three slots
+now says something different:
+
+| Slot | Owns |
+|---|---|
+| Recommendation reason | why this step |
+| Safety panel | the finding, and the action to take |
+| Narrative | the evidence picture |
+
+**Recommended next step:**
+
+> **Begär förtydligande**
+> Ett säkerhetskritiskt svar behöver följas upp innan processen går vidare.
+>
+> <small>Rekommendationen gäller nästa steg i rekryteringsprocessen. Den är inte
+> ett besked om anställning — det beslutet fattar arbetsgivaren.</small>
+
+## 16. The panels, as rendered
+
+**Säkerhetskritisk uppföljning** — full width, emphasised, first:
+
+> Ett svar rör en säkerhetskritisk bedömning och har lästs av en granskare.
+> **Följ upp:** Gå igenom kandidatens resonemang i intervjun innan processen går
+> vidare. Intervjuguiden nedan tar upp de områden svaret rörde.
+> <small>Visas oavsett hur underlaget ser ut i övrigt. Ett starkt underlag tar
+> aldrig bort en säkerhetskritisk notering.</small>
+
+**Viktigast att följa upp** — three areas; the interview question on the top one
+only:
+
+> **Kommunikation och informationskvalitet** `Observerat`
+> Svaren valde genomgående handlingsalternativ som uppgifterna beskriver som
+> mindre välavvägda (6 uppgifter).
+> **Följ upp:** Berätta om en rapport eller en överlämning du skrivit som fick
+> konsekvenser för någon annan.
+>
+> **Situationsmedvetenhet** `Observerat` — Svaren valde genomgående
+> handlingsalternativ som uppgifterna beskriver som mindre välavvägda (4 uppgifter).
+>
+> **Ansvarstagande och tillförlitlighet** `Observerat` — Svaren skilde sig åt
+> mellan jämförbara uppgifter (4 uppgifter, spännvidd 0.83).
+
+**Stabilaste signalerna i underlaget** — the renamed panel, because this
+candidate has no observed strength and inventing one is not an option:
+
+> Inget observerat område höll ihop nog för att kallas en styrka. Det stadigaste
+> här är vad kandidaten själv beskriver konsekvent — verifiera det i intervju.
+>
+> Aktiv scanning `Självrapporterat` · Fel- och avvikelseansvar
+> `Självrapporterat` · Genomförandedisciplin `Självrapporterat`
+
+Only self-report is promoted into it. `mixed` means the answers pointed
+different ways and `developing` means they consistently chose the less
+well-judged option; calling either "comparatively strongest" would be inventing
+a strength out of a ranking this product does not make. Where there is neither
+an observed strength nor a consistent self-description, the panel is **absent**.
+
+**Begränsat underlag** — one muted line, not a fourth card:
+
+> **Begränsat underlag:** 5 kompetensområden berördes för lite för att tolkas.
+> Det säger något om bedömningens bredd och inget om kandidaten — de listas i
+> kompetensöversikten nedan.
+
+## 17. Competency cards
+
+Four labelled lines. The breadth caveat that used to close all eight cards is
+gone from here and stated once in the methodology section.
+
+> **Situationsmedvetenhet** · Behöver följas upp · `Observerat`
+> **Sammanfattning:** Svaren valde genomgående handlingsalternativ som
+> uppgifterna beskriver som mindre välavvägda (4 uppgifter).
+> **Underlag:** 4 observerade uppgifter i den här bedömningen.
+> **Varför det är relevant:** Bedömer situationen utifrån det som faktiskt
+> observeras innan hen agerar.
+> **Följ upp:** Berätta om en gång då du märkte att något inte stämde på en
+> plats du kände väl.
+
+> **Ansvarstagande och tillförlitlighet** · Blandat underlag · `Observerat`
+> **Sammanfattning:** Svaren skilde sig åt mellan jämförbara uppgifter
+> (4 uppgifter, spännvidd 0.83).
+> **Underlag:** 4 observerade uppgifter i den här bedömningen.
+> **Varför det är relevant:** Håller sig inom sitt mandat och eskalerar när
+> gränsen nås.
+> **Följ upp:** Berätta om ett misstag du gjort i tjänsten som ingen annan hade
+> märkt.
+
+## 18. Terminology, polish pass
+
+Recruitment-only. Every workforce string is untouched, and the suite asserts
+`brief.signal.developing` still reads `Utvecklingsområde`.
+
+| Current (shared) | Recruitment | Reason |
+|---|---|---|
+| `Utvecklingsområde` | `Behöver följas upp` | Development's word, on somebody nobody has met |
+| `Starkt underlag` / `Sammanhängande underlag` / `Blandat underlag` / `Begränsat underlag` | same, own keys | So the recruitment reading can move without moving the workforce one |
+| `För lite underlag` (section) | `Begränsat underlag` | A shortfall in the instrument, not in the person |
+| `För lite underlag — fråga` (guide) | `Begränsat underlag — fråga` | Same |
+| `Osäkert i underlaget` | `Begränsat underlag` | Says which kind of uncertainty |
+| — | `Stabilaste signalerna i underlaget` | The honest panel title when nothing qualifies as a strength |
+
+## 19. Visual changes
+
+* Recommendation card: tighter padding, the governance line set smaller than the
+  reason above it — still unhedged, still on the page, no longer competing.
+* Panels weighted: safety full width and first; follow-up and stability a pair;
+  thin coverage one muted line.
+* The empty-state panels are gone rather than emptied.
+* Section rhythm tightened (`mt-6` → `mt-5`, row padding `py-4` → `py-3.5`).
+* Recruitment actions collapsed from a three-line block to one row.
+* Competency card labels are visible `dt`s. They were `sr-only` `dt`s plus a
+  bold span that looked identical, which made a screen reader announce every
+  label twice.
+* No horizontal overflow at 375 px; headings still nest h2 → h3.

@@ -6,15 +6,13 @@
 // order: what does this indicate, what is strongest, what should worry or
 // interest me, what is uncertain, what do I ask, and what do I do next. The
 // frozen brief already contains every fact needed to answer them; what it does
-// not contain is the PRIORITISATION. This module is that layer, and nothing
-// else: it reads the frozen brief and returns the same facts, ordered and
-// bucketed, plus one recommended PROCESS step.
+// not contain is the PRIORITISATION. This module is that layer.
 //
 // ── THE LINE THIS MODULE MAY NOT CROSS ──────────────────────────────────
 //
 // It recommends a step in the RECRUITMENT PROCESS. It does not recommend an
-// employment outcome, and it cannot: `RecommendedNextStep` has four values,
-// all of them process steps, and there is no hire, no reject, no suitability
+// employment outcome, and it cannot: `RecommendedNextStep` has four values, all
+// of them process steps, and there is no hire, no reject, no suitability
 // verdict, no total, no band and no comparison with another candidate anywhere
 // in the type. Those are absent from the vocabulary rather than filtered out of
 // it, which is the same discipline scp_release_attempt_report proves about
@@ -29,9 +27,26 @@
 // written out below. No scoring happens here — signal, evidence state and
 // safety findings are decided in the database and arrive already decided.
 //
-// The AI seam is at the END of this file and is additive: it may reword the
-// narrative, never choose the step, never invent an area, never change a
-// count. See `enrichDecisionSupport`.
+// ── AND WHY THE PROSE IS DETERMINISTIC TOO ──────────────────────────────
+//
+// The first version of this layer reused the paragraph the database freezes
+// with the snapshot. That paragraph is honest and complete, and completeness is
+// exactly what was wrong with it: it named every competency in every bucket, in
+// one breath, and a recruiter with forty minutes read a catalogue instead of a
+// brief.
+//
+// So there are now two steps rather than one. `selectSummaryFacts` decides WHICH
+// facts are decision-relevant — at most five, in a fixed priority order, with
+// thin areas COUNTED rather than listed. `composeNarrative` writes those, and
+// only those, into three to five sentences. Nothing was added to the evidence to
+// make this possible; what changed is that most of it is deliberately left out
+// of the opening paragraph and kept in the sections below, where a reader goes
+// looking for it.
+//
+// The AI seam at the end of this file is additive and stays additive. It exists
+// so a provider can improve the register one day; it is not the plan for making
+// the copy good. The deterministic paragraph has to read well on its own,
+// because it is what ships.
 
 import type { TranslationKey } from "@/i18n/dictionaries";
 import type {
@@ -79,9 +94,34 @@ export type DecisionSupportInput = {
   evidenceContexts: number;
   reviewsTotal: number;
   reviewsCompleted: number;
-  /** The paragraph the database froze with the snapshot, if the snapshot is
-   *  new enough to carry one. Reused rather than rewritten. */
+  /** The paragraph the database froze with the snapshot. Kept as the last
+   *  resort for a brief whose arrays are empty — never as the ordinary path,
+   *  because it is the catalogue this layer exists to replace. */
   frozenSummary: { sv: string; en: string } | null;
+};
+
+/**
+ * What the steadiest part of the evidence is — and how much weight it can take.
+ *
+ * `supported` means at least one competency actually held together across
+ * comparable tasks. `provisional` means none did, and what is shown instead is
+ * what the candidate CONSISTENTLY DESCRIBES about their own way of working,
+ * labelled as self-report on every row.
+ *
+ * ── WHY PROVISIONAL IS SELF-REPORT ONLY ─────────────────────────────────
+ *
+ * The temptation is to promote the least-bad observed area into the panel. It
+ * would be wrong twice over: `mixed` means answers pointed different ways, and
+ * `developing` means they consistently chose the less well-judged option —
+ * neither is a stable signal, and dressing one as "comparatively strongest"
+ * would be inventing a strength out of a ranking the product does not make.
+ * A consistent self-description is a real, observable regularity; it simply is
+ * not evidence of competence, and the panel says so.
+ */
+export type StabilityPanel = {
+  kind: "supported" | "provisional";
+  observed: ObservedArea[];
+  selfReported: SelfReportedArea[];
 };
 
 export type DecisionSupport = {
@@ -94,11 +134,15 @@ export type DecisionSupport = {
    *  than as prose so the reason is one sentence in both languages and cannot
    *  drift between them. */
   rationaleKey: TranslationKey;
-  /** The narrative. Null when the snapshot predates the frozen summary and no
-   *  enrichment ran — the surface then renders the panels alone, which is a
-   *  smaller page rather than a broken one. */
+  /** Three to five sentences. Null only when there is nothing at all to say. */
   narrative: { sv: string; en: string } | null;
+  /** The facts the narrative was built from, in the order it used them. Carried
+   *  so a surface — or a test — can check the prose against its own sources. */
+  facts: SummaryFact[];
   strongestSupported: ObservedArea[];
+  /** Null hides the panel entirely rather than rendering an empty box that
+   *  reads as a finding. */
+  stability: StabilityPanel | null;
   priorityFollowUp: FollowUpItem[];
   /** Null, not an empty array: a panel that renders "no safety-critical
    *  findings" on every clean report is a panel that alarms every reader of a
@@ -181,6 +225,210 @@ const byWeight = (a: ObservedArea, b: ObservedArea) =>
  *  areas is the report it was supposed to replace. */
 export const PANEL_LIMIT = 4;
 
+/** Follow-up is capped tighter than the other panels. "Everything matters" and
+ *  "nothing matters" arrive at the same place, and a recruiter can hold three
+ *  priorities into an interview. The rest are one section further down. */
+export const FOLLOW_UP_LIMIT = 3;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The selection layer
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Between the evidence and the prose. Its whole job is to LEAVE THINGS OUT: at
+// most five facts, in a fixed priority order, with the thin-coverage areas
+// counted rather than named. Everything it discards is still on the page — one
+// section down, where somebody reading past the summary will find it.
+
+export type SummaryFact =
+  | { kind: "safety"; count: number }
+  | { kind: "strength"; areas: ObservedArea[] }
+  | { kind: "follow_up"; areas: ObservedArea[] }
+  | { kind: "mixed"; areas: ObservedArea[] }
+  | { kind: "thin"; count: number }
+  | { kind: "self_report_consistent"; count: number }
+  | { kind: "self_report_varied"; count: number }
+  | { kind: "next_step"; step: RecommendedNextStep };
+
+/** At most two areas are ever named per sentence. Three names in one clause is
+ *  where a sentence stops being read and starts being skimmed. */
+const NAMED_PER_SENTENCE = 2;
+
+const MAX_FACTS = 5;
+
+export function selectSummaryFacts(input: DecisionSupportInput): SummaryFact[] {
+  const developing = input.observed.filter((o) => o.signal === "developing").sort(byWeight);
+  const mixed = input.observed.filter((o) => o.signal === "mixed").sort(byWeight);
+  const strong = input.observed
+    .filter((o) => o.signal === "strong" || o.signal === "consistent")
+    .sort(byWeight);
+  const thin = input.observed.filter((o) => o.signal === "limited").length;
+  const consistent = input.selfReported.filter(
+    (s) => s.consistency === "consistent" && s.pattern === "consistently_described",
+  ).length;
+  const varied = input.selfReported.filter((s) => s.consistency === "varied").length;
+
+  const facts: SummaryFact[] = [];
+  if (input.safetyFlagCount > 0) facts.push({ kind: "safety", count: input.safetyFlagCount });
+
+  // The strongest OBSERVED signal, whichever direction it points. A run where
+  // two areas held together and one was uneven opens on the two that held; a
+  // run where nothing held opens on what needs following up.
+  if (strong.length > 0)
+    facts.push({ kind: "strength", areas: strong.slice(0, NAMED_PER_SENTENCE) });
+  if (developing.length > 0)
+    facts.push({ kind: "follow_up", areas: developing.slice(0, NAMED_PER_SENTENCE) });
+  if (mixed.length > 0) facts.push({ kind: "mixed", areas: mixed.slice(0, NAMED_PER_SENTENCE) });
+  if (thin > 0) facts.push({ kind: "thin", count: thin });
+  if (consistent > 0) facts.push({ kind: "self_report_consistent", count: consistent });
+  else if (varied > 0) facts.push({ kind: "self_report_varied", count: varied });
+
+  const { step } = recommendNextStep(input);
+  facts.push({ kind: "next_step", step });
+
+  // Five, and the last one out is the process step — because it is already the
+  // headline of the card directly above the paragraph, and repeating it there
+  // costs a sentence that could have carried something the reader does not
+  // already know.
+  if (facts.length <= MAX_FACTS) return facts;
+  return facts.filter((f) => f.kind !== "next_step").slice(0, MAX_FACTS);
+}
+
+// ── Composition ────────────────────────────────────────────────────────
+//
+// A fixed clause per fact kind, in both languages. Not a template engine: the
+// point of writing them out is that every sentence this product can produce is
+// visible in one place and can be read as English and Swedish prose rather than
+// inferred from a grammar.
+
+const NUMBER_WORD: Record<"sv" | "en", string[]> = {
+  sv: ["noll", "ett", "två", "tre", "fyra", "fem", "sex", "sju", "åtta", "nio", "tio"],
+  en: ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"],
+};
+
+const count = (n: number, lang: "sv" | "en") => NUMBER_WORD[lang][n] ?? String(n);
+
+/** "a och b", or "a, b" when a name already contains the conjunction.
+ *
+ *  Several competency names are themselves conjunctions — "Kommunikation och
+ *  informationskvalitet", "Ansvarstagande och tillförlitlighet" — and joining
+ *  two of those with another "och" produces a sentence a reader has to parse
+ *  twice to find the boundary. A comma has one reading. */
+const join = (items: string[], lang: "sv" | "en") => {
+  if (items.length <= 1) return items[0] ?? "";
+  const conj = lang === "sv" ? "och" : "and";
+  const collides = items.some((i) => new RegExp(`\\b${conj}\\b`, "i").test(i));
+  const head = items.slice(0, -1).join(", ");
+  return collides
+    ? `${head}, ${items[items.length - 1]}`
+    : `${head} ${conj} ${items[items.length - 1]}`;
+};
+
+const STEP_PHRASE: Record<RecommendedNextStep, { sv: string; en: string }> = {
+  structured_interview: {
+    sv: "gå vidare till en strukturerad intervju",
+    en: "move on to a structured interview",
+  },
+  additional_assessment: {
+    sv: "komplettera med ytterligare bedömning",
+    en: "add a further assessment",
+  },
+  request_clarification: { sv: "begära förtydligande", en: "ask for clarification" },
+  gather_more_evidence: {
+    sv: "samla ytterligare underlag",
+    en: "gather more evidence",
+  },
+};
+
+function sentence(fact: SummaryFact, lang: "sv" | "en"): string {
+  const sv = lang === "sv";
+  const name = (a: ObservedArea) => (sv ? a.areaSv : a.areaEn);
+
+  switch (fact.kind) {
+    case "safety":
+      return sv
+        ? fact.count === 1
+          ? "Ett svar rör säkerhetskritisk bedömning och har lästs av en granskare — det behöver följas upp innan processen går vidare."
+          : `${count(fact.count, "sv")[0].toUpperCase()}${count(fact.count, "sv").slice(1)} svar rör säkerhetskritisk bedömning och har lästs av en granskare — de behöver följas upp innan processen går vidare.`
+        : fact.count === 1
+          ? "One response concerns a safety-critical judgement and has been read by a reviewer — it needs following up before the process continues."
+          : `${count(fact.count, "en")[0].toUpperCase()}${count(fact.count, "en").slice(1)} responses concern a safety-critical judgement and have been read by a reviewer — they need following up before the process continues.`;
+
+    case "strength": {
+      const names = join(fact.areas.map(name), lang);
+      // The named areas sit at the END of the clause rather than in the middle:
+      // several competency names are themselves two words joined by "och", and
+      // a list of them followed by a subordinate clause is a sentence the
+      // reader has to re-enter to find where the list stopped.
+      return sv
+        ? `Svaren pekade åt samma håll över jämförbara uppgifter inom ${names} — det är där underlaget håller tydligast ihop.`
+        : `The answers pointed the same way across comparable tasks in ${names} — that is where the evidence holds together most clearly.`;
+    }
+
+    case "follow_up": {
+      const names = join(fact.areas.map(name), lang);
+      return sv
+        ? `Svaren valde genomgående mindre välavvägda alternativ inom ${names} — det är det tydligaste behovet av uppföljning.`
+        : `The answers consistently chose the less well-judged option in ${names} — that is the clearest need for follow-up.`;
+    }
+
+    case "mixed": {
+      const names = join(fact.areas.map(name), lang);
+      return sv
+        ? `${names} gav ett mer blandat mönster mellan jämförbara uppgifter.`
+        : `${names} produced a more mixed pattern across comparable tasks.`;
+    }
+
+    case "thin":
+      return sv
+        ? fact.count === 1
+          ? "Ett kompetensområde berördes för lite för att kunna tolkas, vilket säger något om bedömningens bredd och inget om kandidaten."
+          : `${count(fact.count, "sv")[0].toUpperCase()}${count(fact.count, "sv").slice(1)} kompetensområden berördes för lite för att kunna tolkas, vilket säger något om bedömningens bredd och inget om kandidaten.`
+        : fact.count === 1
+          ? "One competency area was touched too lightly to be read, which says something about the breadth of the assessment and nothing about the candidate."
+          : `${count(fact.count, "en")[0].toUpperCase()}${count(fact.count, "en").slice(1)} competency areas were touched too lightly to be read, which says something about the breadth of the assessment and nothing about the candidate.`;
+
+    case "self_report_consistent":
+      return sv
+        ? "Det självrapporterade arbetssättet visar flera konsekventa mönster, men de är inte observerade och behöver verifieras i intervju."
+        : "The self-reported way of working shows several consistent patterns, but they are not observed and need verifying in interview.";
+
+    case "self_report_varied":
+      return sv
+        ? "Inom det självrapporterade arbetssättet pekade närliggande svar åt olika håll — värt att utforska i intervju."
+        : "Within the self-reported way of working, related answers pointed different ways — worth exploring in interview.";
+
+    case "next_step":
+      return sv
+        ? `Rekommendationen är att ${STEP_PHRASE[fact.step].sv} innan nästa beslut i processen.`
+        : `The recommendation is to ${STEP_PHRASE[fact.step].en} before the next decision in the process.`;
+  }
+}
+
+/**
+ * Three to five sentences from the selected facts.
+ *
+ * ── WHY THE SAFETY FACT IS SELECTED AND NOT WRITTEN ─────────────────────
+ *
+ * It stays first in `facts`, because the priority order is the product's and
+ * has to be visible and testable. It does not become a sentence, because on the
+ * page it already owns two slots above this paragraph: the recommended step's
+ * reason ("a safety-critical response needs following up before the process
+ * continues") and its own emphasised panel, which states the finding and the
+ * action to take. Saying it a third time in the narrative is how the reader
+ * learns that this paragraph repeats what they have already read.
+ *
+ * A surface that renders `narrative` MUST also render `safetyCriticalFollowUp`.
+ * DecisionSupportSummary does; the render suite asserts it does.
+ */
+export function composeNarrative(facts: SummaryFact[]): { sv: string; en: string } | null {
+  const written = facts.filter((f) => f.kind !== "safety");
+  if (written.length === 0) return null;
+  return {
+    sv: written.map((f) => sentence(f, "sv")).join(" "),
+    en: written.map((f) => sentence(f, "en")).join(" "),
+  };
+}
+
 export function buildDecisionSupport(input: DecisionSupportInput): DecisionSupport {
   const { step, rationaleKey } = recommendNextStep(input);
 
@@ -202,6 +450,10 @@ export function buildDecisionSupport(input: DecisionSupportInput): DecisionSuppo
 
   const uncertainties = input.observed.filter((o) => o.signal === "limited").sort(byWeight);
 
+  const describedConsistently = input.selfReported.filter(
+    (s) => s.consistency === "consistent" && s.pattern === "consistently_described",
+  );
+
   // What the person said about themselves, with the areas whose related
   // answers pointed different ways first. Never merged with the observed
   // buckets above: they are different kinds of evidence and occupy different
@@ -213,13 +465,31 @@ export function buildDecisionSupport(input: DecisionSupportInput): DecisionSuppo
     ),
   ];
 
+  const stability: StabilityPanel | null =
+    strongest.length > 0
+      ? { kind: "supported", observed: strongest.slice(0, PANEL_LIMIT), selfReported: [] }
+      : describedConsistently.length > 0
+        ? {
+            kind: "provisional",
+            observed: [],
+            selfReported: describedConsistently.slice(0, PANEL_LIMIT),
+          }
+        : null;
+
+  const facts = selectSummaryFacts(input);
+
   return {
     version: DECISION_SUPPORT_VERSION,
     source: "deterministic",
     recommendedNextStep: step,
     rationaleKey,
-    narrative: input.frozenSummary,
+    // The frozen paragraph is the fallback, not the default: it is the
+    // catalogue this layer replaced, and it is better than nothing on a brief
+    // whose arrays turn out to be empty.
+    narrative: composeNarrative(facts) ?? input.frozenSummary,
+    facts,
     strongestSupported: strongest,
+    stability,
     priorityFollowUp: followUp,
     safetyCriticalFollowUp:
       input.safetyFlagCount > 0
@@ -247,21 +517,32 @@ export function buildDecisionSupport(input: DecisionSupportInput): DecisionSuppo
 // (src/lib/career-discovery/v31/ai-explanation.ts) and this mirrors it, so the
 // day a provider is chosen there is one shape to implement, not two.
 //
+// It is an improvement to the register, never the plan for making the copy
+// good. `composeNarrative` above is what ships and has to read well on its own.
+//
 // What an AI layer may and may not do here is enforced by code rather than by
 // a prompt:
 //
-//   MAY   reword `narrative` into something shorter and more readable.
+//   MAY   reword the narrative into something shorter and more readable.
 //   MAY   NOT choose the step         — `recommendedNextStep` is overwritten
 //                                       back to the deterministic value.
 //   MAY   NOT invent an area          — a narrative naming an area absent from
 //                                       the input is rejected wholesale.
 //   MAY   NOT express a verdict       — forbidden vocabulary is rejected.
+//   MAY   NOT ramble                  — a narrative longer than the ceiling the
+//                                       deterministic path holds itself to is
+//                                       rejected.
 //   MAY   NOT fail loudly             — any throw returns the deterministic
 //                                       result unchanged.
 
 export type DecisionSupportAiFn = (
   input: DecisionSupportInput,
 ) => Promise<{ sv: string; en: string }>;
+
+/** The ceiling the deterministic paragraph holds itself to, and therefore the
+ *  ceiling anything replacing it has to clear. Fifteen to twenty seconds of
+ *  reading, which is what the summary is for. */
+export const NARRATIVE_WORD_LIMIT = 130;
 
 /** The vocabulary a narrative may not contain, in either language. Mirrors the
  *  assertion scp_release_attempt_report makes about its own source. */
@@ -282,9 +563,12 @@ const FORBIDDEN = [
   "betyg",
 ];
 
+export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+
 export function narrativeIsAcceptable(text: string, input: DecisionSupportInput): boolean {
   const lower = text.toLowerCase();
   if (lower.trim().length === 0) return false;
+  if (wordCount(text) > NARRATIVE_WORD_LIMIT) return false;
   if (FORBIDDEN.some((w) => lower.includes(w))) return false;
 
   // Every capitalised area name the narrative uses must be one the evidence

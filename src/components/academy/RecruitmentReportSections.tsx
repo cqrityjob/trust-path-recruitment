@@ -30,11 +30,15 @@ import type {
 import type { DecisionSupport } from "@/lib/security-competency/decision-support";
 import { CompetencyAssessmentCard, EvidenceTag } from "./DecisionSupportSummary";
 
+/** The recruitment reading of why a question was selected. Separate from
+ *  `brief.focus.*` for the same reason the signal labels are: "För lite
+ *  underlag" reads as a shortfall, and what it describes is an assessment that
+ *  did not ask enough. */
 const FOCUS_LABEL: Record<InterviewGuideEntry["focus"], TranslationKey> = {
-  explore_development: "brief.focus.explore_development",
-  explore_self_report: "brief.focus.explore_self_report",
-  explore_limited_evidence: "brief.focus.explore_limited_evidence",
-  confirm_strength: "brief.focus.confirm_strength",
+  explore_development: "decision.focus.explore_development",
+  explore_self_report: "decision.focus.explore_self_report",
+  explore_limited_evidence: "decision.focus.explore_limited_evidence",
+  confirm_strength: "decision.focus.confirm_strength",
 };
 
 export function ReportSection({
@@ -47,7 +51,7 @@ export function ReportSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-6 rounded-[14px] border border-border bg-card p-5">
+    <section className="mt-5 rounded-[14px] border border-border bg-card p-5">
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       {lede && (
         <p className="mt-1.5 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
@@ -140,7 +144,7 @@ export function SelfReportedSection({ areas, sv }: { areas: SelfReportedArea[]; 
         {ordered.map((area) => (
           <li
             key={area.domainKey}
-            className="border-b border-border py-4 last:border-b-0 last:pb-0"
+            className="border-b border-border py-3.5 last:border-b-0 last:pb-0"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
               <h3 className="text-sm font-semibold text-foreground">
@@ -189,7 +193,7 @@ export function InterviewGuideSection({
 
   return (
     <ReportSection title={t("brief.interviewGuide")} lede={t("brief.interviewGuideLede")}>
-      <ol className="mt-4 space-y-4">
+      <ol className="mt-3.5 space-y-3">
         {entries.map((g, i) => (
           <li
             key={`${g.areaCode}-${g.focus}-${i}`}
