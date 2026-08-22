@@ -1215,9 +1215,9 @@ if [ "$SPUB_RC" -ne 0 ]; then
   suite_failed "employer self-publication"
 else
   echo "    ok  ${SPUB_PASSED} self-publication assertions passed"
-  if [ "$SPUB_PASSED" -lt 37 ]; then
-    echo "FAIL: expected at least 37 self-publication assertions, only ${SPUB_PASSED} ran." >&2
-    suite_failed "employer self-publication (assertion shortfall: floor 37)"
+  if [ "$SPUB_PASSED" -lt 47 ]; then
+    echo "FAIL: expected at least 47 self-publication assertions, only ${SPUB_PASSED} ran." >&2
+    suite_failed "employer self-publication (assertion shortfall: floor 47)"
   fi
 fi
 
