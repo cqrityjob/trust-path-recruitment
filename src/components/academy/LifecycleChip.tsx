@@ -10,6 +10,11 @@
 // same moment is "Resultatet förbereds". Same fact, different audience --
 // which is why audience is a parameter and not a second derivation.
 //
+// The chip says what the PERSON has done ("Test genomfört"); nextActionLabel
+// below says what the EMPLOYER has to do about it ("Svar behöver granskas").
+// Both used to read "Väntar på granskning", which described the same moment
+// twice and told the employer neither thing.
+//
 // ── AND WHY USE CASE IS A SECOND PARAMETER ────────────────────────────
 //
 // A recruiter and a manager are both "the employer", and the same state means
@@ -126,12 +131,18 @@ export function nextActionLabel(
   if (useCase === "recruitment") {
     if (state === "ready_to_release") return tt("lifecycle.next.recruitment.release");
     if (state === "result_available") return tt("lifecycle.next.recruitment.viewResult");
+    // Who is being waited on has a name here. "Vantar pa deltagare" was the
+    // machinery's word for it; a recruiter is waiting for a candidate and a
+    // manager is waiting for a colleague, and the row already knows which.
+    if (state === "invited" || state === "in_progress") {
+      return tt("lifecycle.next.recruitment.awaitingCandidate");
+    }
   }
   switch (state) {
     case "invited":
-      return tt("lifecycle.next.awaitingParticipant");
+      return tt("lifecycle.next.awaitingEmployee");
     case "in_progress":
-      return tt("lifecycle.next.awaitingParticipant");
+      return tt("lifecycle.next.awaitingEmployee");
     case "under_review":
       return tt("lifecycle.next.awaitingReview");
     case "processing":

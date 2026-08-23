@@ -28,7 +28,7 @@ function TrainingProgrammesRoute() {
         <ContentLibrary
           employerId={ws.employerId}
           canAssign={ws.role !== "member"}
-          kind="training"
+          area="workforce"
           title={t("training.programmes.title")}
           lede={t("training.programmes.lede")}
         />

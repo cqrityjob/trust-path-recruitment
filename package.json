@@ -44,6 +44,7 @@
     "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",
     "employer-recruitment-flow:check": "bun run scripts/employer-recruitment-flow-check.ts",
     "employer-journey:check": "bun run scripts/employer-journey-guard-check.ts",
+    "employer-library-purpose:check": "bun run scripts/employer-library-purpose-check.ts",
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
     "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx"
