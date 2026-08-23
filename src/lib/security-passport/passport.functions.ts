@@ -26,6 +26,7 @@
 // regardless (see the Phase 2 migration's trigger and CHECK constraints);
 // this is the same rule stated where the writes happen.
 
+import { CREDENTIAL_CODE_MAX_LENGTH } from "./credentials";
 import { createServerFn } from "@tanstack/react-start";
 import { derivePreviewIdentity } from "./identity/visibility";
 import type { TitleRule } from "./identity/types";
@@ -649,7 +650,7 @@ const correctionInput = z.object({
    *  every parameter as a full replacement, so an omitted credential code
    *  would blank it. The correction form is pre-filled with the current
    *  values, so "unchanged" arrives as the same value rather than as absence. */
-  credentialCode: z.string().max(16).nullable(),
+  credentialCode: z.string().max(CREDENTIAL_CODE_MAX_LENGTH).nullable(),
   credentialReference: z.string().max(120).nullable(),
   holderNote: z.string().max(2000).nullable(),
 });

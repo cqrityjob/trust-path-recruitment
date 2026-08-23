@@ -28,6 +28,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
+  CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,
   validateCredential,
   type CredentialCategory,
@@ -125,7 +126,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
 const draftInput = z.object({
   /** Absent when creating; present when updating an existing draft. */
   claimId: z.string().uuid().nullable(),
-  credentialCode: z.string().max(16).nullable(),
+  credentialCode: z.string().max(CREDENTIAL_CODE_MAX_LENGTH).nullable(),
   title: z.string().max(200),
   issuerName: z.string().max(160),
   jurisdictionCode: z.string().max(2),

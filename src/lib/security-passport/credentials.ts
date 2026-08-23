@@ -30,6 +30,27 @@ import type { PassportCopyKey } from "./i18n";
  *  union exists only so the UI can be explicit about what it ships today. */
 export type CredentialCode = "VU1" | "VU2" | "OV" | "SV";
 
+/**
+ * The longest credential code the database will accept.
+ *
+ * ── WHY THIS IS A CONSTANT AND NOT A LITERAL ───────────────────────────
+ *
+ * `sp_credential_types_code_check` is `^[A-Z0-9_]{2,48}$`, relaxed from the
+ * original 16 by 20260907091000 because `SE_PERSONNEL_APPROVAL` is 21
+ * characters and `AE_DU_PEOPLE_OF_DETERMINATION` is 29.
+ *
+ * The Zod schemas that guard the write paths kept the old 16. The result was
+ * not theoretical: `SE_PERSONNEL_APPROVAL` ships ACTIVE in Sweden, so a
+ * credential the product offers could not be recorded — the client refused it
+ * before the database ever saw it. Every UK and UAE code would have hit the
+ * same wall.
+ *
+ * One exported constant, used by every layer, and
+ * `scripts/passport-credential-form-check.ts` parses the CHECK out of the
+ * migration and fails the build if the two ever disagree again.
+ */
+export const CREDENTIAL_CODE_MAX_LENGTH = 48;
+
 export type CredentialCategory = "qualification" | "appointment";
 
 /** One row of `sp_credential_types`, in domain terms.

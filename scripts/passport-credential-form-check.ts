@@ -20,7 +20,10 @@
  * Run: bun run passport-credential-form:check
  */
 
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
+  CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,
   emptyCredentialDraft,
   fieldsFor,
@@ -63,7 +66,96 @@ function completeDraft(type: CredentialType): CredentialDraft {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* The canonical SQL, not a handwritten mirror                         */
+/* ------------------------------------------------------------------ */
+
+/** Every credential code the migrations actually seed, and the CHECK the
+ *  database enforces on them.
+ *
+ *  This guard used to read only `fixtures/credential-types.ts` — a mirror
+ *  maintained by hand. That is precisely why A2 shipped: the database relaxed
+ *  its code CHECK to 48 characters, the Zod schemas kept 16, and nothing
+ *  compared them. `SE_PERSONNEL_APPROVAL` (21) ships ACTIVE in Sweden and
+ *  could not be recorded at all.
+ *
+ *  So the source of truth here is the SQL. */
+const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
+
+function migrationSql(): string {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"))
+    .join("\n");
+}
+
+const SQL = migrationSql();
+
+/** The LAST definition wins — migrations replay in filename order, and
+ *  20260907091000 relaxes what 20260817160000 first declared. */
+function canonicalCodeCheck(): { min: number; max: number } {
+  const all = [...SQL.matchAll(/code\s*~\s*'\^\[A-Z0-9_\]\{(\d+),(\d+)\}\$'/g)];
+  if (all.length === 0)
+    throw new Error("No sp_credential_types code CHECK found in the migrations.");
+  const last = all[all.length - 1];
+  return { min: Number(last[1]), max: Number(last[2]) };
+}
+
+/** Codes seeded by any migration, from the INSERT column lists. Anchored on
+ *  the quoted code in first position of each VALUES tuple. */
+function seededCredentialCodes(): string[] {
+  const codes = new Set<string>();
+  const inserts = [...SQL.matchAll(/INSERT INTO public\.sp_credential_types[\s\S]*?ON CONFLICT/g)];
+  for (const block of inserts) {
+    for (const m of block[0].matchAll(/\(\s*'([A-Z][A-Z0-9_]{1,47})'\s*,/g)) codes.add(m[1]);
+  }
+  return [...codes].sort();
+}
+
 console.log("passport-credential-form-check\n");
+
+console.log("GROUP 0 -- the app agrees with the canonical SQL about codes");
+
+const check = canonicalCodeCheck();
+ok(
+  CREDENTIAL_CODE_MAX_LENGTH === check.max,
+  `CREDENTIAL_CODE_MAX_LENGTH (${CREDENTIAL_CODE_MAX_LENGTH}) matches the database CHECK (${check.min}..${check.max})`,
+);
+
+const seeded = seededCredentialCodes();
+ok(seeded.length >= 20, `parsed ${seeded.length} seeded credential codes from the migrations`);
+
+const tooLongForApp = seeded.filter((c) => c.length > CREDENTIAL_CODE_MAX_LENGTH);
+ok(
+  tooLongForApp.length === 0,
+  `every seeded code is accepted by the application cap` +
+    (tooLongForApp.length ? ` — rejected: ${tooLongForApp.join(", ")}` : ""),
+);
+
+const tooLongForDb = seeded.filter((c) => c.length > check.max || c.length < check.min);
+ok(
+  tooLongForDb.length === 0,
+  `every seeded code satisfies the database CHECK itself` +
+    (tooLongForDb.length ? ` — violating: ${tooLongForDb.join(", ")}` : ""),
+);
+
+// The specific code that A2 made unrecordable, named so a regression is
+// unmistakable rather than a count that quietly drops by one.
+const longest = seeded.reduce((a, b) => (b.length > a.length ? b : a), "");
+ok(
+  seeded.includes("SE_PERSONNEL_APPROVAL"),
+  "SE_PERSONNEL_APPROVAL is seeded (the credential A2 made unrecordable)",
+);
+ok(
+  "SE_PERSONNEL_APPROVAL".length <= CREDENTIAL_CODE_MAX_LENGTH,
+  `SE_PERSONNEL_APPROVAL (21 chars) is within the application cap`,
+);
+ok(
+  longest.length <= CREDENTIAL_CODE_MAX_LENGTH,
+  `the longest seeded code ${longest} (${longest.length}) is within the application cap`,
+);
+
 console.log(
   `GROUP 1 -- every credential can actually be completed (${FIXTURE_CREDENTIAL_TYPES.length} types)`,
 );
