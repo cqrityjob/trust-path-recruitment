@@ -979,7 +979,7 @@ export const dictionaries = {
       "Bedöm kandidater och medarbetare med strukturerade, professionella bedömningar. Lanseras snart.",
     "employer.dashboard.assessmentCenter.badge": "Lanseras snart",
     "employer.dashboard.empty.cta": "Skapa din första annons",
-    "employer.jobs.list.heading": "Jobbannonser",
+    "employer.jobs.list.heading": "Mina annonser",
     "employer.jobs.list.title": "Titel",
     "employer.jobs.list.newJob": "Ny jobbannons",
     "employer.jobs.list.empty":
@@ -1197,7 +1197,7 @@ export const dictionaries = {
     "employer.nav.overview": "Översikt",
     "employer.nav.jobs": "Mina annonser",
     "employer.nav.applications": "Ansökningar",
-    "employer.nav.assessments": "Bedömningar",
+    "employer.nav.assessments": "Tester & bedömningar",
     "employer.nav.settings": "Inställningar",
     "employer.nav.ariaLabel": "Arbetsgivarnavigering",
 
@@ -1218,7 +1218,7 @@ export const dictionaries = {
     "employer.accountMenu.myCareer": "Min karriär",
     "employer.accountMenu.signOut": "Logga ut",
 
-    "employer.assessments.heading": "Bedömningar",
+    "employer.assessments.heading": "Tester & bedömningar",
     "employer.assessments.catalogueHeading": "Standardbedömningar",
     "employer.assessments.subheading":
       "Använd strukturerade bedömningar för att stödja rekrytering, rollmatchning och kompetensutveckling inom säkerhetsverksamhet.",
@@ -1251,7 +1251,7 @@ export const dictionaries = {
       "En grundläggande bedömning för operativa säkerhetsroller, till exempel väktare, ordningsvakter, skyddsvakter och annan platsbunden säkerhetspersonal.",
     "employer.assessments.sgf.intendedFor":
       "Väktare, ordningsvakter, skyddsvakter, larmoperatörer, receptions- och passagepersonal, mobila väktare, evenemangssäkerhet och annan operativ säkerhetspersonal.",
-    "employer.assessments.details.back": "Tillbaka till bedömningar",
+    "employer.assessments.details.back": "Tillbaka till tester & bedömningar",
     "employer.assessments.details.overview": "Översikt",
     "employer.assessments.details.intendedRoles": "Avsedda roller",
     "employer.assessments.details.intendedUse": "Avsedd användning",
@@ -1323,18 +1323,18 @@ export const dictionaries = {
     "employer.askCqrity.query.employeesWithoutRole": "Visa medarbetare utan angiven roll",
     "employer.askCqrity.query.draftJobs": "Visa jobbannonser i utkast",
 
-    "employer.workforce.heading": "Personal",
+    "employer.workforce.heading": "Medarbetare",
     "employer.workforce.subheading":
-      "Ert register över befintlig personal — grunden för en framtida kompetensbild.",
+      "Era medarbetare med roller och platser — grunden för en samlad kompetensbild.",
     "employer.workforce.action.add": "Lägg till medarbetare",
     "employer.workforce.action.edit": "Redigera",
     "employer.workforce.action.deactivate": "Inaktivera",
     "employer.workforce.action.reactivate": "Återaktivera",
     "employer.workforce.error.save": "Kunde inte spara medarbetaren.",
-    "employer.workforce.error.load": "Kunde inte läsa in personalregistret.",
+    "employer.workforce.error.load": "Kunde inte läsa in medarbetarlistan.",
     "employer.workforce.empty.heading": "Inga medarbetare ännu",
     "employer.workforce.empty.body":
-      "Lägg till er personal för att börja bygga en verifierad kompetensbild.",
+      "Lägg till era medarbetare för att börja bygga en verifierad kompetensbild.",
     "employer.workforce.status.active": "Aktiv",
     "employer.workforce.status.inactive": "Inaktiv",
     "employer.workforce.form.firstName": "Förnamn",
@@ -1348,28 +1348,27 @@ export const dictionaries = {
 
     "employer.overview.heading": "Översikt",
     "employer.overview.subheading":
-      "Hantera rekrytering, personal, bedömningar och kompetensutveckling på ett ställe.",
+      "Hantera rekrytering, medarbetare, tester och kompetensutveckling på ett ställe.",
 
     "employer.overview.card.jobs.title": "Mina annonser",
     "employer.overview.card.jobs.body":
-      "Publicerade annonser, utkast och inkomna ansökningar — hela rekryteringen på ett ställe.",
+      "Skapa och hantera jobbannonser och följ inkomna ansökningar.",
     "employer.overview.card.jobs.stat.active": "Aktiva",
     "employer.overview.card.jobs.stat.drafts": "Utkast",
     "employer.overview.card.jobs.stat.applications": "Ansökningar",
     "employer.overview.card.jobs.action.create": "Skapa jobbannons",
     "employer.overview.card.jobs.action.applications": "Visa ansökningar",
 
-    "employer.overview.card.people.title": "Min personal",
-    "employer.overview.card.people.body":
-      "Era medarbetare med roller och platser. Lägg till nya medarbetare och håll kompetenser och certifikat aktuella.",
+    "employer.overview.card.people.title": "Medarbetare",
+    "employer.overview.card.people.body": "Hantera medarbetare, roller och kompetenser.",
     "employer.overview.card.people.stat.employees": "Medarbetare",
     "employer.overview.card.people.stat.roles": "Roller",
     "employer.overview.card.people.stat.sites": "Platser/team",
-    "employer.overview.card.people.action.openWorkforce": "Öppna personallistan",
+    "employer.overview.card.people.action.openWorkforce": "Öppna Medarbetare",
 
-    "employer.overview.card.tests.title": "Bedömningar",
+    "employer.overview.card.tests.title": "Tester & bedömningar",
     "employer.overview.card.tests.body":
-      "Tilldela bedömningar, följ pågående bedömningar och använd resultaten som beslutsunderlag.",
+      "Skicka tester till kandidater och medarbetare, följ genomförandet och använd resultaten som stöd i nästa steg.",
     "employer.overview.card.tests.stat.invited": "Inbjudna",
     "employer.overview.card.tests.stat.inProgress": "Pågående",
     "employer.overview.card.tests.stat.completed": "Genomförda",
@@ -1378,7 +1377,7 @@ export const dictionaries = {
 
     "employer.overview.card.development.title": "Kompetensutveckling",
     "employer.overview.card.development.body":
-      "Riktad utveckling utifrån identifierade kompetensluckor. Genomförd utbildning dokumenterar deltagande — den är inte ett bevis på kompetens.",
+      "Planera och följ kompetensutveckling för dina medarbetare.",
 
     // Job Recruitment Hub — one vacancy, its state, and everyone in its
     // pipeline. Reached by clicking the advertisement itself.
@@ -1441,7 +1440,7 @@ export const dictionaries = {
     "employer.actions.waitingLabel": "Väntar på kandidaten",
     "employer.actions.newApplications": "nya ansökningar",
     "employer.actions.responsesToReview": "svar behöver granskas",
-    "employer.actions.resultsReady": "resultat klara att släppas",
+    "employer.actions.resultsReady": "resultat klara att delas",
     "employer.actions.awaitingNextStep": "kandidater väntar på nästa steg",
     "employer.actions.draftJobs": "utkast till annonser",
     "employer.actions.testsWithCandidates": "tester är ute hos kandidater",
@@ -1469,12 +1468,12 @@ export const dictionaries = {
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
     "employer.attention.source.applications": "Källa: Ansökningar",
     "employer.attention.source.jobs": "Källa: Mina annonser",
-    "employer.attention.source.assessments": "Källa: Bedömningar",
+    "employer.attention.source.assessments": "Källa: Tester & bedömningar",
     "employer.attention.source.workforce": "Källa: Medarbetare",
     "employer.attention.action.viewOrganisation": "Visa organisation",
     "employer.attention.action.reviewApplications": "Granska ansökningar",
     "employer.attention.action.manageJobs": "Hantera annonser",
-    "employer.attention.action.viewAssessments": "Visa bedömningar",
+    "employer.attention.action.viewAssessments": "Visa tester & bedömningar",
     "employer.attention.action.openWorkforce": "Öppna Medarbetare",
 
     "assessment.disclaimer.decisionSupport":
@@ -1615,7 +1614,7 @@ export const dictionaries = {
     "employer.candidate.fact.updated": "Senast uppdaterad",
     "employer.candidate.fact.phone": "Telefon",
     "employer.candidate.coverNote": "Personligt brev",
-    "employer.candidate.assessment.heading": "Bedömning",
+    "employer.candidate.assessment.heading": "Tester & bedömningar",
     "employer.candidate.assessment.lede":
       "Skicka en bedömning som hör till den här ansökan och följ hur den fortskrider. Kandidaten hämtas från ansökan – ni behöver aldrig ange någon e-postadress.",
     "employer.candidate.interview.heading": "Intervju",
@@ -1681,14 +1680,14 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport inkluderat",
     "myapps.passport.attach": "Dela verifierat Passport med denna ansökan",
 
-    "employer.settings.heading": "Organisationsinställningar",
+    "employer.settings.heading": "Organisation",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
     "employer.overview.card.tests.stat.active": "Aktiva",
-    "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
+    "employer.overview.card.tests.stat.awaitingReview": "Att granska",
     "employer.overview.card.tests.stat.readyToRelease": "Klara att delas",
     "academy.reviews.myTasks": "Mina granskningsuppgifter",
     "academy.overview.readyToRelease": "Klara att delas",
-    "academy.overview.attemptsAwaitingReview": "Bedömningar som väntar på granskning",
+    "academy.overview.attemptsAwaitingReview": "Genomförda tester att granska",
     "academy.history.heading": "Bedömningar",
     "academy.history.lede":
       "Din historik över bedömningar, oavsett vilken organisation som tilldelade dem. Resultatet visas när det har frisläppts.",
@@ -1698,26 +1697,26 @@ export const dictionaries = {
     "employer.person.roleTitle": "Roll",
     "employer.person.site": "Plats",
     "employer.person.status": "Anställningsstatus",
-    "employer.person.assessments.heading": "Bedömningar",
+    "employer.person.assessments.heading": "Tester & bedömningar",
     "employer.person.assessments.lede":
       "Pågående och avslutade bedömningar som den här organisationen har tilldelat. Historiken följer personen, inte e-postadressen.",
     "employer.person.assessments.assign": "Tilldela bedömning",
     "employer.person.assessments.empty": "Inga bedömningar har tilldelats den här personen ännu.",
     "employer.person.assessments.loadError": "Bedömningarna kunde inte hämtas.",
     "employer.person.assessments.submitted": "Inskickat",
-    "employer.person.assessments.released": "Frisläppt",
+    "employer.person.assessments.released": "Delat",
     "employer.person.assessments.reviewsOpen": "Kvar att granska:",
     "employer.person.assessments.openReport": "Visa rapport",
     "employer.person.development.heading": "Kompetensutveckling",
     "employer.person.development.lede":
       "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
-    "employer.person.development.open": "Öppna deltagare i Kompetensutveckling",
+    "employer.person.development.open": "Öppna Kompetensutveckling",
     "employer.person.credentials.heading": "Kompetenser & certifikat",
     "employer.person.credentials.lede":
       "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
     "lifecycle.employer.invited": "Inbjuden",
     "lifecycle.employer.in_progress": "Pågår",
-    "lifecycle.employer.under_review": "Väntar på granskning",
+    "lifecycle.employer.under_review": "Test genomfört",
     "lifecycle.employer.processing": "Bearbetas",
     "lifecycle.employer.ready_to_release": "Klar att delas",
     "lifecycle.employer.result_available": "Resultat tillgängligt",
@@ -1727,20 +1726,21 @@ export const dictionaries = {
     "lifecycle.participant.processing": "Resultatet förbereds",
     "lifecycle.participant.result_available": "Resultat tillgängligt",
     "lifecycle.abandoned": "Avbruten",
-    "lifecycle.next.awaitingParticipant": "Väntar på deltagare",
-    "lifecycle.next.awaitingReview": "Väntar på granskning",
+    "lifecycle.next.awaitingReview": "Svar behöver granskas",
+    "lifecycle.next.awaitingEmployee": "Väntar på medarbetaren",
     "lifecycle.next.processing": "Bearbetas automatiskt",
     "lifecycle.next.release": "Dela underlaget",
     "lifecycle.next.viewResult": "Visa resultat",
     "lifecycle.next.none": "Ingen åtgärd",
     "lifecycle.recruitment.invited": "Tilldelad",
     "lifecycle.recruitment.in_progress": "Pågår",
-    "lifecycle.recruitment.under_review": "Väntar på granskning",
+    "lifecycle.recruitment.under_review": "Test genomfört",
     "lifecycle.recruitment.processing": "Bearbetas",
     "lifecycle.recruitment.ready_to_release": "Bedömning klar",
     "lifecycle.recruitment.result_available": "Kandidatunderlag klart",
     "lifecycle.next.recruitment.release": "Väntar på att delas",
     "lifecycle.next.recruitment.viewResult": "Underlaget är tillgängligt",
+    "lifecycle.next.recruitment.awaitingCandidate": "Väntar på kandidaten",
     "lifecycle.purpose.workforce": "Kompetensutveckling",
     "lifecycle.purpose.recruitment": "Rekrytering",
     "employer.team.heading": "Team & behörigheter",
@@ -1795,9 +1795,9 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "Länken är ofullständig. Be den som bjöd in dig att skicka den igen från Organisation → Team & behörigheter.",
     "employer.team.lede":
-      "Vilka som tillhör organisationen, och vilka av dem som får granska deltagarnas svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
+      "Vilka som tillhör organisationen, och vilka av dem som får granska inlämnade svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
     "employer.team.separationNotice":
-      "Den som tilldelade en bedömning får aldrig granska samma bedömning, och deltagaren granskar aldrig sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
+      "Den som tilldelade en bedömning får aldrig granska samma bedömning, och ingen granskar sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
     "employer.team.loadError": "Teamet kunde inte hämtas.",
     "employer.team.empty": "Inga medlemmar hittades i organisationen.",
     "employer.team.noReviewerWarning":
@@ -2545,11 +2545,11 @@ export const dictionaries = {
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
     // ── Assessment Center (Academy) — employer + participant ────────────
-    "academy.nav.aria": "Bedömningar",
+    "academy.nav.aria": "Tester & bedömningar",
     "academy.nav.overview": "Översikt",
     "academy.nav.library": "Bedömningsbibliotek",
-    "academy.nav.participants": "Deltagare",
-    "academy.nav.reviews": "Granskningar",
+    "academy.nav.assignedTests": "Tilldelade tester",
+    "academy.nav.reviews": "Granska svar",
     "academy.nav.programmes": "Utvecklingsprogram",
     "academy.cancel": "Avbryt",
     "academy.overview.competenceTitle": "Kompetensunderlag",
@@ -2557,9 +2557,9 @@ export const dictionaries = {
       "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
     "academy.overview.released": "Slutförda bedömningar",
-    "academy.overview.awaitingReview": "Svar som väntar på granskning",
+    "academy.overview.awaitingReview": "Svar att granska",
     "academy.overview.openLibrary": "Öppna bedömningsbiblioteket",
-    "academy.overview.openParticipants": "Visa deltagare",
+    "academy.overview.openParticipants": "Visa tilldelade tester",
     "academy.overview.recruitmentTitle": "Bedömning i rekrytering",
     "academy.overview.recruitmentBody":
       "Rekryteringsbedömningen ger ett underlag inför intervjun: vad kandidaten har visat i uppgifterna, vad kandidaten själv beskriver, och vilka frågor som är värda att ställa. Den ger inget omdöme om lämplighet och ingen rekommendation — beslutet är ert.",
@@ -2625,27 +2625,28 @@ export const dictionaries = {
     "academy.library.reason.training_delivery_pending":
       "Utbildningsleverans är ännu inte aktiverad.",
     "training.nav.programmes": "Program",
+    "training.nav.participants": "Tilldelade utbildningar",
     "training.overview.title": "Kompetensutveckling",
     "training.overview.lede":
-      "Utvecklingsprogram som din organisation har tilldelat, och hur långt deltagarna har kommit. Genomförd utbildning registreras som utvecklingsaktivitet — den ändrar inte uppmätt kompetensmognad.",
+      "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit. Genomförd utbildning registreras som utvecklingsaktivitet — den ändrar inte uppmätt kompetensmognad.",
     "training.overview.stat.active": "Pågående",
     "training.overview.stat.completed": "Slutförda",
     "training.overview.stat.available": "Program att tilldela",
     "training.overview.openProgrammes": "Öppna program",
-    "training.overview.openParticipants": "Visa deltagare",
+    "training.overview.openParticipants": "Visa tilldelade utbildningar",
     "training.overview.boundaryTitle": "Utbildning styrker inte kompetens",
     "training.overview.boundaryBody":
       "Ett genomfört utvecklingsprogram visar att en person har gjort arbetet. Det fastställer inte yrkeskompetens och höjer aldrig en mognadsnivå — det gör bara en ny bedömning.",
     "training.programmes.title": "Utvecklingsprogram",
     "training.programmes.lede":
       "Program som kan tilldelas, och program som fortfarande är under utveckling. Vad ett program inte fastställer står lika tydligt som vad det ger.",
-    "training.participants.title": "Deltagare i utbildning",
+    "training.participants.title": "Tilldelade utbildningar",
     "training.participants.lede":
-      "Tilldelade utvecklingsprogram och hur långt deltagarna har kommit. Svaren i en utbildningsaktivitet är deltagarens egna och visas inte här.",
+      "Tilldelade utvecklingsprogram och hur långt medarbetarna har kommit. Svaren i en utbildningsaktivitet är personens egna och visas inte här.",
     "employer.overview.card.development.stat.active": "Pågående",
     "employer.overview.card.development.stat.completed": "Slutförda",
     "employer.overview.card.development.action.programmes": "Program",
-    "employer.overview.card.development.action.participants": "Deltagare",
+    "employer.overview.card.development.action.participants": "Tilldelade utbildningar",
     "academy.home.assessmentHeading": "Kompetensbedömning",
     "academy.home.assessmentLede":
       "Bedömningar som ger underlag om din kompetens. Resultatet släpps av din arbetsgivare.",
@@ -2706,7 +2707,7 @@ export const dictionaries = {
     "academy.library.closedTest.body":
       "Den här bedömningen är tillgänglig för er organisation som förhandsversion. Innehållet är ännu inte färdigvaliderat, så resultatet är underlag för samtal och utveckling — det ska inte ensamt ligga till grund för ett anställningsbeslut. Varje resultat märks som förhandsversion.",
     "academy.status.fixture": "Internt exempel",
-    "academy.assign.email": "Deltagarens e-postadress",
+    "academy.assign.email": "Personens e-postadress",
     "academy.assign.deadline": "Sista dag (valfritt)",
     "academy.assign.confirm": "Skicka tilldelning",
     "academy.assign.sending": "Skickar …",
@@ -2714,7 +2715,7 @@ export const dictionaries = {
       "Personen har inget CQrityjob-konto ännu. En bedömning knyts till en person, inte till en adress.",
     "academy.assign.notAssignable": "Programmet är inte publicerat och kan inte tilldelas.",
     "academy.assign.failed": "Tilldelningen kunde inte skapas.",
-    "academy.assign.language": "Språk för deltagaren",
+    "academy.assign.language": "Språk för personen",
     "academy.assign.languageSv": "Svenska",
     "academy.assign.languageEn": "Engelska",
     "academy.assign.purposeHeading": "Syfte med tilldelningen",
@@ -2729,25 +2730,25 @@ export const dictionaries = {
     "academy.assign.doneTitle": "Tilldelningen är skapad",
     "academy.assign.mailSent": "Ett e-postmeddelande med länk har skickats.",
     "academy.assign.mailNotConfigured":
-      "E-postutskick är inte aktiverat i den här miljön. Dela länken nedan med deltagaren.",
+      "E-postutskick är inte aktiverat i den här miljön. Dela länken nedan med personen.",
     "academy.assign.mailFailed":
-      "E-postmeddelandet kunde inte skickas. Tilldelningen gäller — dela länken nedan med deltagaren.",
-    "academy.assign.linkLabel": "Länk till deltagarens testyta",
+      "E-postmeddelandet kunde inte skickas. Tilldelningen gäller — dela länken nedan med personen.",
+    "academy.assign.linkLabel": "Länk till personens testyta",
     "academy.assign.linkHint":
-      "Deltagaren loggar in med sitt eget konto. Länken innehåller ingen information om testet.",
+      "Personen loggar in med sitt eget konto. Länken innehåller ingen information om testet.",
     "academy.assign.copy": "Kopiera",
     "academy.assign.copied": "Kopierad",
     "academy.assign.doneAction": "Klar",
-    "academy.participants.title": "Deltagare",
+    "academy.participants.title": "Tilldelade tester",
     "academy.participants.lede":
-      "Varje rad är en pseudonym referens. Vem personen är visas först när du uttryckligen frågar, och först när underlaget har delats.",
+      "Varje rad är ett tilldelat test, visat med en pseudonym referens. Vem personen är visas först när du uttryckligen frågar, och först när underlaget har delats.",
     "academy.participants.subject": "Referens",
     "academy.participants.progress": "Besvarat",
-    "academy.participants.awaitingReview": "Väntar på granskning",
+    "academy.participants.awaitingReview": "Svar att granska",
     "academy.participants.deadline": "Sista dag",
     "academy.participants.released": "Delat",
     "academy.participants.showIdentity": "Visa vem detta är",
-    "academy.participants.identityRefused": "Identiteten kan inte visas för den här deltagaren.",
+    "academy.participants.identityRefused": "Identiteten kan inte visas för den här personen.",
     "academy.participants.release": "Dela underlaget",
     "academy.participants.releaseBlocked":
       "Underlaget kan inte delas medan ett svar fortfarande väntar på granskning.",
@@ -2755,7 +2756,7 @@ export const dictionaries = {
     "academy.participants.openReport": "Öppna rapport",
     "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
     "academy.participants.releaseExplain":
-      "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger deltagaren sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
+      "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger personen sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
     "academy.participants.openReportRecruitment": "Öppna kandidatunderlag",
     "academy.participants.reassess": "Boka omprövning",
     "academy.participants.reassessmentScheduled": "En omprövning har tilldelats.",
@@ -2763,7 +2764,7 @@ export const dictionaries = {
     "academy.participants.cancel": "Återkalla tilldelning",
     "academy.participants.cancelConfirmTitle": "Återkalla den här tilldelningen?",
     "academy.participants.cancelConfirmBody":
-      "Testet försvinner från deltagarens lista och kan inte längre genomföras. Svar som redan lämnats sparas i historiken och raderas inte. Programmet kan tilldelas på nytt senare.",
+      "Testet försvinner från personens lista och kan inte längre genomföras. Svar som redan lämnats sparas i historiken och raderas inte. Programmet kan tilldelas på nytt senare.",
     "academy.participants.cancelConfirmAction": "Återkalla",
     "academy.participants.cancelKeep": "Behåll",
     "academy.participants.cancelling": "Återkallar …",
@@ -2773,7 +2774,7 @@ export const dictionaries = {
     "academy.participants.cancelFailed": "Tilldelningen kunde inte återkallas.",
     "academy.participants.reassessmentPurposePending":
       "Ny bedömning är inte tillgänglig för den här personen ännu.",
-    "academy.participants.emptyTitle": "Inga deltagare ännu",
+    "academy.participants.emptyTitle": "Inga tilldelade tester ännu",
     "academy.participants.emptyBody": "Tilldela en bedömning från biblioteket för att komma igång.",
     "academy.participants.contextFilter": "Visa",
     "academy.participants.filterAll": "Alla",
@@ -2786,12 +2787,12 @@ export const dictionaries = {
     "academy.attempt.scored": "Bedömd",
     "academy.attempt.released": "Frisläppt",
     "academy.attempt.other": "Annan status",
-    "academy.reviews.title": "Granskningar",
+    "academy.reviews.title": "Granska svar",
     "academy.reviews.lede":
       "Fritextsvar bedöms av en människa. Granskaren utses av organisationen, och den som tilldelade testet får aldrig granska det själv.",
     "academy.reviews.awaiting": "Svar som väntar",
     "academy.reviews.noRubric":
-      "Den här skrivuppgiften saknar en styrd bedömningsmall, så ingen bedömning kan registreras för den. Det är ett fel i innehållet — kontakta CQrityjob. Inget du skriver här går förlorat för andra svar.",
+      "Den här skrivuppgiften saknar en bedömningsmall, så ingen bedömning kan registreras för den. Det är ett fel i innehållet — kontakta CQrityjob. Inget du skriver här går förlorat för andra svar.",
     "academy.reviews.openBlockedList": "Visa blockerade resultat",
     "academy.reviews.review": "Granska",
     "academy.reviews.responsesOpen": "Svar att granska",
@@ -2809,7 +2810,7 @@ export const dictionaries = {
       "Din granskningsbehörighet gäller kompetensutveckling, inte rekrytering. Bedömningar från en rekrytering kräver att behörigheten utökas under Organisation.",
     "academy.reviews.emptyQueueTitle": "Inget väntar på granskning",
     "academy.reviews.emptyQueueBody":
-      "Inga svar från den här organisationen väntar på en människa just nu. När en deltagare lämnar in en bedömning som kräver granskning hamnar den här.",
+      "Inga svar från den här organisationen väntar på en människa just nu. När någon lämnar in en bedömning som kräver granskning hamnar den här.",
     "academy.reviews.emptyMineTitle": "Inget som du kan granska just nu",
     "academy.reviews.emptyMineBody":
       "Organisationen har svar som väntar, men inget av dem är ditt att granska. Listan över allt som väntar visar vem eller vad varje post väntar på.",
@@ -2828,7 +2829,7 @@ export const dictionaries = {
     "academy.reviews.discloseApplication":
       "Du har hanterat kandidatens ansökan. Det hindrar dig inte från att granska bedömningen, men det registreras på granskningen.",
     "academy.reviews.whyNotOwnResponses":
-      "Du är deltagaren i den här bedömningen. Ingen granskar sina egna svar — en kollega med granskningsbehörighet måste ta den här.",
+      "Du är den som har gjort den här bedömningen. Ingen granskar sina egna svar — en kollega med granskningsbehörighet måste ta den här.",
     "academy.reviews.whyNotAuthorised":
       "Du har inte behörighet att granska svar för den här organisationen.",
     "academy.reviews.whyNotConflict":
@@ -2845,7 +2846,7 @@ export const dictionaries = {
       "Om du väntar dig arbete här kan en ägare eller administratör ge granskningsbehörighet under Organisation. Den som tilldelade en bedömning får aldrig granska den själv.",
     "academy.reviews.triggerNoProvider": "Ingen automatisk bedömning tillgänglig",
     "academy.reviews.triggerSafety": "Säkerhetskritiskt svar",
-    "academy.reviews.triggerRequested": "Deltagaren har begärt granskning",
+    "academy.reviews.triggerRequested": "Personen har begärt granskning",
     "academy.reviews.triggerOther": "Granskning krävs",
     "academy.reviews.noText": "Inget fritextsvar registrerat.",
     "academy.reviews.outcome": "Utfall",
@@ -2863,10 +2864,10 @@ export const dictionaries = {
       "Svaret är skrivet med egna ord och ingen automatisk bedömning är tillgänglig. Det måste läsas av en människa innan det kan bli underlag.",
     "academy.reviews.whySafety":
       "Situationen rör säkerhetskritisk bedömning. Sådana svar poängsätts inte automatiskt — de bedöms av en människa som också anger hur allvarligt det är.",
-    "academy.reviews.whyRequested": "Deltagaren har själv begärt att en människa läser svaret.",
+    "academy.reviews.whyRequested": "Personen har själv begärt att en människa läser svaret.",
     "academy.reviews.whyOther":
       "Det här svaret kräver en mänsklig bedömning innan det kan bli underlag.",
-    "academy.reviews.participant": "Deltagare",
+    "academy.reviews.participant": "Person",
     "academy.reviews.organisation": "Organisation",
     "academy.reviews.assessment": "Bedömning",
     "academy.reviews.purpose": "Syfte",
@@ -2874,14 +2875,14 @@ export const dictionaries = {
     "academy.reviews.purposeDevelopment": "Kompetensutveckling",
     "academy.reviews.purposeRecruitment": "Rekrytering",
     "academy.reviews.participantRefNote":
-      "Deltagaren visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
+      "Personen visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
     "academy.reviews.closedTestBasis":
       "Förhandsversion. Innehållet är ännu inte färdigvaliderat, så den här granskningen är underlag för utveckling och samtal — den ska inte användas som grund för ett rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
-    "academy.reviews.chose": "Deltagaren valde",
-    "academy.reviews.choseBest": "Deltagaren valde som bästa handling",
-    "academy.reviews.choseWorst": "Deltagaren valde som sämsta handling",
+    "academy.reviews.chose": "Personen valde",
+    "academy.reviews.choseBest": "Personen valde som bästa handling",
+    "academy.reviews.choseWorst": "Personen valde som sämsta handling",
     "academy.reviews.noChoice": "Inget val registrerat.",
-    "academy.reviews.evidenceHeading": "Deltagarens underlag",
+    "academy.reviews.evidenceHeading": "Personens svar",
     "academy.reviews.itemLabel": "Fråga",
     "academy.reviews.judgementHeading": "Din bedömning",
     "academy.reviews.finding": "Vad visar svaret?",
@@ -2903,15 +2904,15 @@ export const dictionaries = {
     "academy.reviews.rubricLevel": "Nivå",
     "academy.reviews.rubricStyleOnly": "påverkar inte poängen",
     "academy.reviews.rationalePrivate":
-      "Motiveringen är intern och visas för granskare. Den ingår inte i deltagarens rapport.",
+      "Motiveringen är intern och visas för granskare. Den ingår inte i personens rapport.",
     "academy.reviews.nextRemaining":
-      "När alla granskningar för det här försöket är klara blir resultatet tillgängligt för arbetsgivaren att frisläppa. Kvar att granska:",
+      "När alla granskningar för det här försöket är klara blir resultatet tillgängligt för arbetsgivaren att dela. Kvar att granska:",
     "academy.reviews.nextLast":
-      "Det här är den sista granskningen för försöket. När den är klar blir resultatet tillgängligt för arbetsgivaren att frisläppa. Arbetsgivaren fattar beslutet.",
+      "Det här är den sista granskningen för försöket. När den är klar blir resultatet tillgängligt för arbetsgivaren att dela. Arbetsgivaren fattar beslutet.",
     "academy.reviews.completeBlocked":
       "Välj utfall, ange allvarlighetsgrad där det krävs och skriv en motivering för att kunna slutföra.",
     "academy.results.title": "Kompetensprofil",
-    "academy.results.back": "Tillbaka till deltagare",
+    "academy.results.back": "Tillbaka till tilldelade tester",
     "academy.results.releasedOn": "Delat",
     "academy.results.competencies": "Kompetenser",
     "academy.results.competency": "Kompetens",
@@ -2921,7 +2922,7 @@ export const dictionaries = {
     "academy.results.addresses": "Adresserar:",
     "academy.results.progress": "Utveckling över tid",
     "academy.results.progressNeedsTwo":
-      "Utveckling går att visa först när det finns minst två frisläppta resultat att jämföra.",
+      "Utveckling går att visa först när det finns minst två delade resultat att jämföra.",
     "academy.results.notReleasedTitle": "Underlaget är inte delat ännu",
     "academy.results.notReleasedBody":
       "Det visas här när din organisation har delat det. Väntar ett svar på granskning sker det först när granskningen är klar.",
@@ -2982,7 +2983,7 @@ export const dictionaries = {
     "academy.lineage.attempt.inProgress": "Pågår",
     "academy.lineage.attempt.submitted": "Inlämnad",
     "academy.lineage.attempt.scored": "Bedömd",
-    "academy.lineage.attempt.released": "Frisläppt",
+    "academy.lineage.attempt.released": "Delat",
     "academy.report.reviewStatus": "Granskningar klara",
     "academy.report.language": "Språk",
     "academy.report.reportVersion": "Rapportmall",
@@ -3023,7 +3024,7 @@ export const dictionaries = {
       "Du kan begära rättelse av en faktauppgift, fråga hur underlaget används och begära utdrag eller radering av dina personuppgifter.",
     "academy.decision.title": "Arbetsgivarens beslut",
     "academy.decision.lede":
-      "Beslutet fattas av arbetsgivaren efter att rapporten frisläppts och registreras separat från bedömningen. Tidigare beslut ligger kvar — en rättelse ersätter inte historiken.",
+      "Beslutet fattas av arbetsgivaren efter att underlaget har delats och registreras separat från bedömningen. Tidigare beslut ligger kvar — en rättelse ersätter inte historiken.",
     "academy.decision.none": "Inget beslut är registrerat ännu.",
     "academy.decision.record": "Registrera beslut",
     "academy.decision.correct": "Registrera rättelse",
@@ -3044,8 +3045,7 @@ export const dictionaries = {
     "academy.decision.blocked": "Välj åtgärd och skäl för att kunna spara.",
     "academy.decision.failed": "Beslutet kunde inte sparas.",
     "academy.decision.notAuthorised": "Du har inte behörighet att registrera beslut.",
-    "academy.decision.beforeRelease":
-      "Ett beslut kan registreras först när rapporten är frisläppt.",
+    "academy.decision.beforeRelease": "Ett beslut kan registreras först när underlaget har delats.",
     "academy.decision.actionConversation": "Uppföljande samtal",
     "academy.decision.actionDevelopment": "Tilldela utvecklingsinsats",
     "academy.decision.actionMoreEvidence": "Komplettera underlaget",
@@ -3098,7 +3098,7 @@ export const dictionaries = {
     "academy.home.noModulesBody": "Övningsmoduler visas här när de publicerats.",
     "academy.report.title": "Min utvecklingsrapport",
     "academy.report.back": "Tillbaka",
-    "academy.report.releasedOn": "Frisläppt",
+    "academy.report.releasedOn": "Delat",
     "academy.report.whatThisIs":
       "Rapporten beskriver hur starkt underlaget är — inte hur bra du är. Den innehåller inget godkänt eller underkänt, ingen procent och ingen jämförelse med andra.",
     "academy.report.competencies": "Kompetenser",
@@ -4368,7 +4368,7 @@ export const dictionaries = {
       "Assess candidates and employees using structured professional assessments. Launching soon.",
     "employer.dashboard.assessmentCenter.badge": "Launching soon",
     "employer.dashboard.empty.cta": "Create your first job",
-    "employer.jobs.list.heading": "Job postings",
+    "employer.jobs.list.heading": "My job ads",
     "employer.jobs.list.title": "Title",
     "employer.jobs.list.newJob": "New job",
     "employer.jobs.list.empty": "No jobs yet. Create your first job posting to get started.",
@@ -4582,7 +4582,7 @@ export const dictionaries = {
     "employer.nav.overview": "Overview",
     "employer.nav.jobs": "My job ads",
     "employer.nav.applications": "Applications",
-    "employer.nav.assessments": "Assessments",
+    "employer.nav.assessments": "Tests & assessments",
     "employer.nav.settings": "Settings",
     "employer.nav.ariaLabel": "Employer navigation",
 
@@ -4603,7 +4603,7 @@ export const dictionaries = {
     "employer.accountMenu.myCareer": "My Career",
     "employer.accountMenu.signOut": "Sign out",
 
-    "employer.assessments.heading": "Assessments",
+    "employer.assessments.heading": "Tests & assessments",
     "employer.assessments.catalogueHeading": "Standard assessments",
     "employer.assessments.subheading":
       "Use structured assessments to support recruitment, role matching and competence development within security operations.",
@@ -4636,7 +4636,7 @@ export const dictionaries = {
       "A foundation assessment for operational security roles, such as security guards, public order guards, protective security guards and other frontline security personnel.",
     "employer.assessments.sgf.intendedFor":
       "Security guards, public order guards, protective security guards, control room operators, reception and access-control personnel, mobile patrol personnel, event security personnel and other frontline security roles.",
-    "employer.assessments.details.back": "Back to assessments",
+    "employer.assessments.details.back": "Back to tests & assessments",
     "employer.assessments.details.overview": "Overview",
     "employer.assessments.details.intendedRoles": "Intended roles",
     "employer.assessments.details.intendedUse": "Intended use",
@@ -4655,7 +4655,7 @@ export const dictionaries = {
 
     "employer.nav.workforce": "Employees",
     "employer.nav.competencies": "Competencies & certificates",
-    "employer.nav.training": "Skills development",
+    "employer.nav.training": "Competence development",
     "employer.nav.sites": "Sites & risk",
     "employer.nav.reports": "Reports & compliance",
     "employer.nav.analytics": "Analytics",
@@ -4704,18 +4704,18 @@ export const dictionaries = {
     "employer.askCqrity.query.employeesWithoutRole": "Show employees without a current role",
     "employer.askCqrity.query.draftJobs": "Show draft jobs",
 
-    "employer.workforce.heading": "Workforce",
+    "employer.workforce.heading": "Employees",
     "employer.workforce.subheading":
-      "Your directory of existing employees — the foundation for a future competency picture.",
+      "Your employees with their roles and sites — the basis for a joined-up competence picture.",
     "employer.workforce.action.add": "Add employee",
     "employer.workforce.action.edit": "Edit",
     "employer.workforce.action.deactivate": "Deactivate",
     "employer.workforce.action.reactivate": "Reactivate",
     "employer.workforce.error.save": "Could not save this employee.",
-    "employer.workforce.error.load": "Could not load the employee directory.",
+    "employer.workforce.error.load": "Could not load the employee list.",
     "employer.workforce.empty.heading": "No employees yet",
     "employer.workforce.empty.body":
-      "Add your workforce to begin building a verified competency picture.",
+      "Add your employees to begin building a verified competence picture.",
     "employer.workforce.status.active": "Active",
     "employer.workforce.status.inactive": "Inactive",
     "employer.workforce.form.firstName": "First name",
@@ -4729,37 +4729,36 @@ export const dictionaries = {
 
     "employer.overview.heading": "Overview",
     "employer.overview.subheading":
-      "Manage recruitment, people, assessments and skills development in one place.",
+      "Manage recruitment, employees, tests and competence development in one place.",
 
     "employer.overview.card.jobs.title": "My job ads",
     "employer.overview.card.jobs.body":
-      "Published ads, drafts and incoming applications — your whole recruitment in one place.",
+      "Create and manage job ads and follow the applications that come in.",
     "employer.overview.card.jobs.stat.active": "Active",
     "employer.overview.card.jobs.stat.drafts": "Drafts",
     "employer.overview.card.jobs.stat.applications": "Applications",
     "employer.overview.card.jobs.action.create": "Create job ad",
     "employer.overview.card.jobs.action.applications": "View applications",
 
-    "employer.overview.card.people.title": "My people",
-    "employer.overview.card.people.body":
-      "Your employees with their roles and sites. Add new employees and keep competencies and certificates up to date.",
+    "employer.overview.card.people.title": "Employees",
+    "employer.overview.card.people.body": "Manage employees, roles and competencies.",
     "employer.overview.card.people.stat.employees": "Employees",
     "employer.overview.card.people.stat.roles": "Roles",
     "employer.overview.card.people.stat.sites": "Sites/teams",
-    "employer.overview.card.people.action.openWorkforce": "Open the people list",
+    "employer.overview.card.people.action.openWorkforce": "Open Employees",
 
-    "employer.overview.card.tests.title": "Assessments",
+    "employer.overview.card.tests.title": "Tests & assessments",
     "employer.overview.card.tests.body":
-      "Assign assessments, follow the ones in progress, and use the results as decision support.",
+      "Send tests to candidates and employees, follow how they progress, and use the results as support for the next step.",
     "employer.overview.card.tests.stat.invited": "Invited",
     "employer.overview.card.tests.stat.inProgress": "In progress",
     "employer.overview.card.tests.stat.completed": "Completed",
     "employer.overview.card.tests.action.assign": "Assign assessment",
     "employer.overview.card.tests.action.activity": "Assignments in progress",
 
-    "employer.overview.card.development.title": "Skills development",
+    "employer.overview.card.development.title": "Competence development",
     "employer.overview.card.development.body":
-      "Targeted development based on identified competency gaps. Completed training documents participation — it is not proof of competence.",
+      "Plan and follow competence development for your employees.",
 
     // Job Recruitment Hub -- one vacancy, its state, and everyone in its
     // pipeline. Reached by clicking the advertisement itself.
@@ -4823,7 +4822,7 @@ export const dictionaries = {
     "employer.actions.waitingLabel": "Waiting on the candidate",
     "employer.actions.newApplications": "new applications",
     "employer.actions.responsesToReview": "responses need review",
-    "employer.actions.resultsReady": "results ready to release",
+    "employer.actions.resultsReady": "results ready to share",
     "employer.actions.awaitingNextStep": "candidates waiting on a next step",
     "employer.actions.draftJobs": "draft job ads",
     "employer.actions.testsWithCandidates": "assessments are out with candidates",
@@ -4848,16 +4847,16 @@ export const dictionaries = {
     "employer.attention.draftJobs": "job ads saved as drafts",
     "employer.attention.assessmentsAvailable": "assessments available to assign",
     "employer.attention.workforceEmpty":
-      "Add your employees to begin building a verified competency picture.",
+      "Add your employees to begin building a verified competence picture.",
     "employer.attention.source.organisation": "Source: Organisation status",
     "employer.attention.source.applications": "Source: Applications",
     "employer.attention.source.jobs": "Source: My job ads",
-    "employer.attention.source.assessments": "Source: Assessments",
+    "employer.attention.source.assessments": "Source: Tests & assessments",
     "employer.attention.source.workforce": "Source: Employees",
     "employer.attention.action.viewOrganisation": "View organisation",
     "employer.attention.action.reviewApplications": "Review applications",
     "employer.attention.action.manageJobs": "Manage job ads",
-    "employer.attention.action.viewAssessments": "View assessments",
+    "employer.attention.action.viewAssessments": "View tests & assessments",
     "employer.attention.action.openWorkforce": "Open Employees",
 
     "assessment.disclaimer.decisionSupport":
@@ -4999,7 +4998,7 @@ export const dictionaries = {
     "employer.candidate.fact.updated": "Last updated",
     "employer.candidate.fact.phone": "Phone",
     "employer.candidate.coverNote": "Cover note",
-    "employer.candidate.assessment.heading": "Assessment",
+    "employer.candidate.assessment.heading": "Tests & assessments",
     "employer.candidate.assessment.lede":
       "Send an assessment that belongs to this application and follow how it progresses. The candidate is resolved from the application, so you never enter an email address.",
     "employer.candidate.interview.heading": "Interview",
@@ -5058,14 +5057,14 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport included",
     "myapps.passport.attach": "Share verified Passport with this application",
 
-    "employer.settings.heading": "Organisation settings",
+    "employer.settings.heading": "Organisation",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
     "employer.overview.card.tests.stat.active": "Active",
-    "employer.overview.card.tests.stat.awaitingReview": "Awaiting review",
+    "employer.overview.card.tests.stat.awaitingReview": "To review",
     "employer.overview.card.tests.stat.readyToRelease": "Ready to share",
     "academy.reviews.myTasks": "My review tasks",
     "academy.overview.readyToRelease": "Ready to share",
-    "academy.overview.attemptsAwaitingReview": "Assessments awaiting review",
+    "academy.overview.attemptsAwaitingReview": "Completed tests to review",
     "academy.history.heading": "Assessments",
     "academy.history.lede":
       "Your assessment history, whichever organisation assigned it. A result appears once it has been released.",
@@ -5075,26 +5074,26 @@ export const dictionaries = {
     "employer.person.roleTitle": "Role",
     "employer.person.site": "Site",
     "employer.person.status": "Employment status",
-    "employer.person.assessments.heading": "Assessments",
+    "employer.person.assessments.heading": "Tests & assessments",
     "employer.person.assessments.lede":
       "Current and completed assessments this organisation has assigned. History follows the person, not the email address.",
     "employer.person.assessments.assign": "Assign assessment",
     "employer.person.assessments.empty": "No assessments have been assigned to this person yet.",
     "employer.person.assessments.loadError": "The assessments could not be loaded.",
     "employer.person.assessments.submitted": "Submitted",
-    "employer.person.assessments.released": "Released",
+    "employer.person.assessments.released": "Shared",
     "employer.person.assessments.reviewsOpen": "Reviews outstanding:",
     "employer.person.assessments.openReport": "View report",
     "employer.person.development.heading": "Competence development",
     "employer.person.development.lede":
       "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
-    "employer.person.development.open": "Open participants in Competence development",
+    "employer.person.development.open": "Open Competence development",
     "employer.person.credentials.heading": "Competencies & certificates",
     "employer.person.credentials.lede":
       "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
     "lifecycle.employer.invited": "Invited",
     "lifecycle.employer.in_progress": "In progress",
-    "lifecycle.employer.under_review": "Waiting for review",
+    "lifecycle.employer.under_review": "Test completed",
     "lifecycle.employer.processing": "Processing",
     "lifecycle.employer.ready_to_release": "Ready to share",
     "lifecycle.employer.result_available": "Result available",
@@ -5104,20 +5103,21 @@ export const dictionaries = {
     "lifecycle.participant.processing": "Your result is being prepared",
     "lifecycle.participant.result_available": "Result available",
     "lifecycle.abandoned": "Cancelled",
-    "lifecycle.next.awaitingParticipant": "Waiting for the participant",
-    "lifecycle.next.awaitingReview": "Waiting for review",
+    "lifecycle.next.awaitingReview": "Responses need review",
+    "lifecycle.next.awaitingEmployee": "Waiting for the employee",
     "lifecycle.next.processing": "Processing automatically",
     "lifecycle.next.release": "Share the material",
     "lifecycle.next.viewResult": "View result",
     "lifecycle.next.none": "No action",
     "lifecycle.recruitment.invited": "Assigned",
     "lifecycle.recruitment.in_progress": "In progress",
-    "lifecycle.recruitment.under_review": "Waiting for review",
+    "lifecycle.recruitment.under_review": "Test completed",
     "lifecycle.recruitment.processing": "Processing",
     "lifecycle.recruitment.ready_to_release": "Assessment complete",
     "lifecycle.recruitment.result_available": "Candidate brief ready",
     "lifecycle.next.recruitment.release": "Waiting to be shared",
     "lifecycle.next.recruitment.viewResult": "The brief is available",
+    "lifecycle.next.recruitment.awaitingCandidate": "Waiting for the candidate",
     "lifecycle.purpose.workforce": "Competence development",
     "lifecycle.purpose.recruitment": "Recruitment",
     "employer.team.heading": "Team & permissions",
@@ -5173,9 +5173,9 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "This link is incomplete. Ask whoever invited you to send it again from Organisation → Team & permissions.",
     "employer.team.lede":
-      "Who belongs to the organisation, and which of them may review participants' responses. Review authorisation grants access to free-text answers and is granted per person.",
+      "Who belongs to the organisation, and which of them may review submitted responses. Review authorisation grants access to free-text answers and is granted per person.",
     "employer.team.separationNotice":
-      "Whoever assigned an assessment may never review that same assessment, and a participant never reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
+      "Whoever assigned an assessment may never review that same assessment, and nobody reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
     "employer.team.loadError": "The team could not be loaded.",
     "employer.team.empty": "No members were found in this organisation.",
     "employer.team.noReviewerWarning":
@@ -5917,11 +5917,11 @@ export const dictionaries = {
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
     // ── Assessment Center (Academy) — employer + participant ────────────
-    "academy.nav.aria": "Assessments",
+    "academy.nav.aria": "Tests & assessments",
     "academy.nav.overview": "Overview",
     "academy.nav.library": "Assessment library",
-    "academy.nav.participants": "Participants",
-    "academy.nav.reviews": "Reviews",
+    "academy.nav.assignedTests": "Assigned tests",
+    "academy.nav.reviews": "Review responses",
     "academy.nav.programmes": "Development programmes",
     "academy.cancel": "Cancel",
     "academy.overview.competenceTitle": "Competence evidence",
@@ -5929,9 +5929,9 @@ export const dictionaries = {
       "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
     "academy.overview.released": "Completed assessments",
-    "academy.overview.awaitingReview": "Answers awaiting review",
+    "academy.overview.awaitingReview": "Responses to review",
     "academy.overview.openLibrary": "Open the assessment library",
-    "academy.overview.openParticipants": "View participants",
+    "academy.overview.openParticipants": "View assigned tests",
     "academy.overview.recruitmentTitle": "Assessment in recruitment",
     "academy.overview.recruitmentBody":
       "A recruitment assessment gives you something to work from before the interview: what the candidate demonstrated in the tasks, what the candidate says about their own way of working, and which questions are worth asking. It offers no verdict on suitability and no recommendation — the decision stays yours.",
@@ -5997,27 +5997,28 @@ export const dictionaries = {
       "Not assignable yet — in development and not yet validated.",
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
     "training.nav.programmes": "Programmes",
+    "training.nav.participants": "Assigned training",
     "training.overview.title": "Competence development",
     "training.overview.lede":
-      "Development programmes your organisation has assigned, and how far each participant has got. Completed training is recorded as development activity — it does not change measured competence maturity.",
+      "Development programmes your organisation has assigned, and how far the employees have got. Completed training is recorded as development activity — it does not change measured competence maturity.",
     "training.overview.stat.active": "In progress",
     "training.overview.stat.completed": "Completed",
     "training.overview.stat.available": "Programmes to assign",
     "training.overview.openProgrammes": "Open programmes",
-    "training.overview.openParticipants": "View participants",
+    "training.overview.openParticipants": "View assigned training",
     "training.overview.boundaryTitle": "Training does not verify competence",
     "training.overview.boundaryBody":
       "A completed development programme shows that somebody did the work. It does not establish professional competence and never raises a maturity level — only a new assessment does that.",
     "training.programmes.title": "Development programmes",
     "training.programmes.lede":
       "Programmes that can be assigned, and programmes still in development. What a programme does not establish is stated as plainly as what it provides.",
-    "training.participants.title": "Training participants",
+    "training.participants.title": "Assigned training",
     "training.participants.lede":
-      "Assigned development programmes and how far each participant has got. Answers given in a training activity belong to the participant and are not shown here.",
+      "Assigned development programmes and how far the employees have got. The answers given in a training activity are the person's own and are not shown here.",
     "employer.overview.card.development.stat.active": "In progress",
     "employer.overview.card.development.stat.completed": "Completed",
     "employer.overview.card.development.action.programmes": "Programmes",
-    "employer.overview.card.development.action.participants": "Participants",
+    "employer.overview.card.development.action.participants": "Assigned training",
     "academy.home.assessmentHeading": "Competence assessment",
     "academy.home.assessmentLede":
       "Assessments that generate evidence about your competence. Results are released by your employer.",
@@ -6078,7 +6079,7 @@ export const dictionaries = {
     "academy.library.closedTest.body":
       "This assessment is available to your organisation as a preview. The content is not yet fully validated, so the result is input for a conversation and for development — it should not on its own decide an appointment. Every result is marked as a preview.",
     "academy.status.fixture": "Internal sample",
-    "academy.assign.email": "Participant's email address",
+    "academy.assign.email": "The person's email address",
     "academy.assign.deadline": "Deadline (optional)",
     "academy.assign.confirm": "Send assignment",
     "academy.assign.sending": "Sending …",
@@ -6086,7 +6087,7 @@ export const dictionaries = {
       "That person does not have a CQrityjob account yet. An assessment attaches to a person, not to an address.",
     "academy.assign.notAssignable": "This programme is not published and cannot be assigned.",
     "academy.assign.failed": "The assignment could not be created.",
-    "academy.assign.language": "Participant's language",
+    "academy.assign.language": "Language for the person",
     "academy.assign.languageSv": "Swedish",
     "academy.assign.languageEn": "English",
     "academy.assign.purposeHeading": "Purpose of this assignment",
@@ -6101,25 +6102,25 @@ export const dictionaries = {
     "academy.assign.doneTitle": "Assignment created",
     "academy.assign.mailSent": "An email with the link has been sent.",
     "academy.assign.mailNotConfigured":
-      "Email delivery is not enabled in this environment. Share the link below with the participant.",
+      "Email delivery is not enabled in this environment. Share the link below with the person.",
     "academy.assign.mailFailed":
-      "The email could not be sent. The assignment stands — share the link below with the participant.",
-    "academy.assign.linkLabel": "Link to the participant's assessment area",
+      "The email could not be sent. The assignment stands — share the link below with the person.",
+    "academy.assign.linkLabel": "Link to the person's test area",
     "academy.assign.linkHint":
-      "The participant signs in with their own account. The link carries no information about the assessment.",
+      "The person signs in with their own account. The link carries no information about the assessment.",
     "academy.assign.copy": "Copy",
     "academy.assign.copied": "Copied",
     "academy.assign.doneAction": "Done",
-    "academy.participants.title": "Participants",
+    "academy.participants.title": "Assigned tests",
     "academy.participants.lede":
-      "Every row is a pseudonymous reference. Who the person is appears only when you explicitly ask, and only once the material has been shared.",
+      "Each row is an assigned test, shown by a pseudonymous reference. Who the person is appears only when you explicitly ask, and only once the material has been shared.",
     "academy.participants.subject": "Reference",
     "academy.participants.progress": "Answered",
-    "academy.participants.awaitingReview": "Awaiting review",
+    "academy.participants.awaitingReview": "Responses to review",
     "academy.participants.deadline": "Deadline",
     "academy.participants.released": "Shared",
     "academy.participants.showIdentity": "Show who this is",
-    "academy.participants.identityRefused": "Identity cannot be shown for this participant.",
+    "academy.participants.identityRefused": "Identity cannot be shown for this person.",
     "academy.participants.release": "Share the material",
     "academy.participants.releaseBlocked":
       "The material cannot be shared while an answer is still awaiting review.",
@@ -6127,7 +6128,7 @@ export const dictionaries = {
     "academy.participants.openReport": "Open report",
     "academy.participants.releaseRecruitment": "Share the candidate brief",
     "academy.participants.releaseExplain":
-      "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the participant their own copy, and allows the person's identity to be requested. The step cannot be undone.",
+      "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the person their own copy, and allows the person's identity to be requested. The step cannot be undone.",
     "academy.participants.openReportRecruitment": "Open candidate brief",
     "academy.participants.reassess": "Schedule reassessment",
     "academy.participants.reassessmentScheduled": "A reassessment has been assigned.",
@@ -6135,7 +6136,7 @@ export const dictionaries = {
     "academy.participants.cancel": "Withdraw assignment",
     "academy.participants.cancelConfirmTitle": "Withdraw this assignment?",
     "academy.participants.cancelConfirmBody":
-      "The assessment leaves the participant's list and can no longer be completed. Answers already given are kept in the record and are not deleted. The programme can be assigned again later.",
+      "The test leaves the person's list and can no longer be completed. Answers already given are kept in the record and are not deleted. The programme can be assigned again later.",
     "academy.participants.cancelConfirmAction": "Withdraw",
     "academy.participants.cancelKeep": "Keep",
     "academy.participants.cancelling": "Withdrawing …",
@@ -6145,7 +6146,7 @@ export const dictionaries = {
     "academy.participants.cancelFailed": "The assignment could not be withdrawn.",
     "academy.participants.reassessmentPurposePending":
       "A new assessment is not available for this person yet.",
-    "academy.participants.emptyTitle": "No participants yet",
+    "academy.participants.emptyTitle": "No assigned tests yet",
     "academy.participants.emptyBody": "Assign an assessment from the library to get started.",
     "academy.participants.contextFilter": "Show",
     "academy.participants.filterAll": "All",
@@ -6158,12 +6159,12 @@ export const dictionaries = {
     "academy.attempt.scored": "Assessed",
     "academy.attempt.released": "Released",
     "academy.attempt.other": "Other status",
-    "academy.reviews.title": "Reviews",
+    "academy.reviews.title": "Review responses",
     "academy.reviews.lede":
       "Written answers are judged by a person. The reviewer is appointed by the organisation, and whoever assigned an assessment may never review it themselves.",
     "academy.reviews.awaiting": "Answers waiting",
     "academy.reviews.noRubric":
-      "This written task has no governed rubric, so no assessment can be recorded against it. That is a content fault — contact CQrityjob. Nothing you enter here is lost for the other answers.",
+      "This written task has no scoring rubric, so no assessment can be recorded against it. That is a content fault — contact CQrityjob. Nothing you enter here is lost for the other answers.",
     "academy.reviews.openBlockedList": "Show blocked results",
     "academy.reviews.review": "Review",
     "academy.reviews.responsesOpen": "Answers to review",
@@ -6181,7 +6182,7 @@ export const dictionaries = {
       "Your review authorisation covers competence development, not recruitment. Assessments from a recruitment need the authorisation extended under Organisation.",
     "academy.reviews.emptyQueueTitle": "Nothing is waiting for review",
     "academy.reviews.emptyQueueBody":
-      "No answers from this organisation are waiting for a person right now. When a participant submits an assessment that needs review, it appears here.",
+      "No answers from this organisation are waiting for a person right now. When somebody submits an assessment that needs review, it appears here.",
     "academy.reviews.emptyMineTitle": "Nothing here is yours to review",
     "academy.reviews.emptyMineBody":
       "The organisation has answers waiting, but none of them are yours to review. The list of everything waiting shows what each item is waiting on.",
@@ -6200,7 +6201,7 @@ export const dictionaries = {
     "academy.reviews.discloseApplication":
       "You have handled this candidate's application. That does not stop you reviewing the assessment, but it is recorded on the review.",
     "academy.reviews.whyNotOwnResponses":
-      "You are the participant in this assessment. Nobody reviews their own answers — a colleague with review authorisation has to take this one.",
+      "You are the person who took this assessment. Nobody reviews their own answers — a colleague with review authorisation has to take this one.",
     "academy.reviews.whyNotAuthorised":
       "You are not authorised to review answers for this organisation.",
     "academy.reviews.whyNotConflict":
@@ -6217,7 +6218,7 @@ export const dictionaries = {
       "If you expect work here, an owner or administrator can grant review authorisation under Organisation. Whoever assigned an assessment may never review it themselves.",
     "academy.reviews.triggerNoProvider": "No automated scoring available",
     "academy.reviews.triggerSafety": "Safety-critical answer",
-    "academy.reviews.triggerRequested": "Participant requested a review",
+    "academy.reviews.triggerRequested": "The person requested a review",
     "academy.reviews.triggerOther": "Review required",
     "academy.reviews.noText": "No written answer recorded.",
     "academy.reviews.outcome": "Outcome",
@@ -6232,13 +6233,13 @@ export const dictionaries = {
     "academy.reviews.failed": "The review could not be saved.",
     "academy.reviews.safetyCritical": "Safety-critical",
     "academy.reviews.whyNoProvider":
-      "The answer is written in the participant's own words and no automated scoring is available. A person has to read it before it can become evidence.",
+      "The answer is written in the person's own words and no automated scoring is available. A person has to read it before it can become evidence.",
     "academy.reviews.whySafety":
       "This situation involves safety-critical judgement. Such answers are not scored automatically — a person assesses them and states how serious it is.",
-    "academy.reviews.whyRequested": "The participant asked for a person to read this answer.",
+    "academy.reviews.whyRequested": "The person asked for a human to read this answer.",
     "academy.reviews.whyOther":
       "This answer needs a human judgement before it can become evidence.",
-    "academy.reviews.participant": "Participant",
+    "academy.reviews.participant": "Person",
     "academy.reviews.organisation": "Organisation",
     "academy.reviews.assessment": "Assessment",
     "academy.reviews.purpose": "Purpose",
@@ -6246,14 +6247,14 @@ export const dictionaries = {
     "academy.reviews.purposeDevelopment": "Competence development",
     "academy.reviews.purposeRecruitment": "Recruitment",
     "academy.reviews.participantRefNote":
-      "The participant is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
+      "The person is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
     "academy.reviews.closedTestBasis":
       "Preview. The content is not yet fully validated, so this review is input for development and for a conversation — it should not be used as the basis for a recruitment decision. Your review is recorded with that limitation.",
-    "academy.reviews.chose": "The participant chose",
-    "academy.reviews.choseBest": "The participant chose as the best action",
-    "academy.reviews.choseWorst": "The participant chose as the worst action",
+    "academy.reviews.chose": "The person chose",
+    "academy.reviews.choseBest": "The person chose as the best action",
+    "academy.reviews.choseWorst": "The person chose as the worst action",
     "academy.reviews.noChoice": "No choice recorded.",
-    "academy.reviews.evidenceHeading": "Participant evidence",
+    "academy.reviews.evidenceHeading": "The person's answers",
     "academy.reviews.itemLabel": "Question",
     "academy.reviews.judgementHeading": "Your judgement",
     "academy.reviews.finding": "What does this response show?",
@@ -6276,15 +6277,15 @@ export const dictionaries = {
     "academy.reviews.rubricLevel": "Level",
     "academy.reviews.rubricStyleOnly": "does not affect the score",
     "academy.reviews.rationalePrivate":
-      "Your reasons are internal and shown to reviewers. They are not part of the participant's report.",
+      "Your reasons are internal and shown to reviewers. They are not part of the person's report.",
     "academy.reviews.nextRemaining":
-      "Once every review for this attempt is complete, the result becomes available for the employer to release. Still to review:",
+      "Once every review for this attempt is complete, the result becomes available for the employer to share. Still to review:",
     "academy.reviews.nextLast":
-      "This is the last review for this attempt. When it is complete the result becomes available for the employer to release. The employer makes the decision.",
+      "This is the last review for this attempt. When it is complete the result becomes available for the employer to share. The employer makes the decision.",
     "academy.reviews.completeBlocked":
       "Choose an outcome, state a severity where one is required, and write your reasons to complete the review.",
     "academy.results.title": "Competency profile",
-    "academy.results.back": "Back to participants",
+    "academy.results.back": "Back to assigned tests",
     "academy.results.releasedOn": "Shared",
     "academy.results.competencies": "Competencies",
     "academy.results.competency": "Competency",
@@ -6294,7 +6295,7 @@ export const dictionaries = {
     "academy.results.addresses": "Addresses:",
     "academy.results.progress": "Progress over time",
     "academy.results.progressNeedsTwo":
-      "Progress can only be shown once there are at least two released results to compare.",
+      "Progress can only be shown once there are at least two shared results to compare.",
     "academy.results.notReleasedTitle": "The material has not been shared yet",
     "academy.results.notReleasedBody":
       "It appears here once your organisation has shared it. If an answer is awaiting review, that happens only when the review is complete.",
@@ -6355,7 +6356,7 @@ export const dictionaries = {
     "academy.lineage.attempt.inProgress": "In progress",
     "academy.lineage.attempt.submitted": "Submitted",
     "academy.lineage.attempt.scored": "Scored",
-    "academy.lineage.attempt.released": "Released",
+    "academy.lineage.attempt.released": "Shared",
     "academy.report.reviewStatus": "Reviews complete",
     "academy.report.language": "Language",
     "academy.report.reportVersion": "Report template",
@@ -6396,7 +6397,7 @@ export const dictionaries = {
       "You can ask for a factual detail to be corrected, ask how the evidence is used, and request a copy or erasure of your personal data.",
     "academy.decision.title": "Employer decision",
     "academy.decision.lede":
-      "The employer decides after the report is released, and it is recorded separately from the assessment. Earlier decisions remain — a correction does not replace the history.",
+      "The employer decides once the material has been shared, and the decision is recorded separately from the assessment. Earlier decisions remain — a correction does not replace the history.",
     "academy.decision.none": "No decision has been recorded yet.",
     "academy.decision.record": "Record decision",
     "academy.decision.correct": "Record a correction",
@@ -6418,7 +6419,7 @@ export const dictionaries = {
     "academy.decision.failed": "The decision could not be saved.",
     "academy.decision.notAuthorised": "You do not have permission to record decisions.",
     "academy.decision.beforeRelease":
-      "A decision can only be recorded once the report is released.",
+      "A decision can only be recorded once the material has been shared.",
     "academy.decision.actionConversation": "Follow-up conversation",
     "academy.decision.actionDevelopment": "Assign development activity",
     "academy.decision.actionMoreEvidence": "Gather more evidence",
@@ -6472,7 +6473,7 @@ export const dictionaries = {
     "academy.home.noModulesBody": "Practice modules will appear here once published.",
     "academy.report.title": "My development report",
     "academy.report.back": "Back",
-    "academy.report.releasedOn": "Released",
+    "academy.report.releasedOn": "Shared",
     "academy.report.whatThisIs":
       "This report describes how strong the evidence is — not how good you are. It contains no pass or fail, no percentage, and no comparison with anybody else.",
     "academy.report.competencies": "Competencies",
