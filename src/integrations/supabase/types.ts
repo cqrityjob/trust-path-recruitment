@@ -8202,6 +8202,7 @@ export type Database = {
       sp_claims: {
         Row: {
           assertion_level: string
+          authorisation_scope: string | null
           claim_type: string
           claimed_issuer_name: string | null
           created_at: string
@@ -8227,6 +8228,7 @@ export type Database = {
         }
         Insert: {
           assertion_level?: string
+          authorisation_scope?: string | null
           claim_type: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8252,6 +8254,7 @@ export type Database = {
         }
         Update: {
           assertion_level?: string
+          authorisation_scope?: string | null
           claim_type?: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8328,12 +8331,18 @@ export type Database = {
           name_ar: string | null
           name_en: string
           name_sv: string
+          narrow_result_only: boolean
+          reference_label_en: string | null
+          reference_label_local: string | null
+          reference_pattern: string | null
           regulated_role_id: string | null
           requires_issuer: boolean
+          requires_scope: boolean
           requires_valid_until: boolean
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
+          typical_validity_months: number | null
         }
         Insert: {
           authority_id?: string | null
@@ -8349,12 +8358,18 @@ export type Database = {
           name_ar?: string | null
           name_en: string
           name_sv: string
+          narrow_result_only?: boolean
+          reference_label_en?: string | null
+          reference_label_local?: string | null
+          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
+          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
+          typical_validity_months?: number | null
         }
         Update: {
           authority_id?: string | null
@@ -8370,12 +8385,18 @@ export type Database = {
           name_ar?: string | null
           name_en?: string
           name_sv?: string
+          narrow_result_only?: boolean
+          reference_label_en?: string | null
+          reference_label_local?: string | null
+          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
+          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
+          typical_validity_months?: number | null
         }
         Relationships: [
           {
@@ -8847,36 +8868,6 @@ export type Database = {
           },
         ]
       }
-      sp_profession_families: {
-        Row: {
-          code: string
-          created_at: string
-          is_active: boolean
-          name_ar: string | null
-          name_en: string
-          name_sv: string
-          sort_order: number
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          is_active?: boolean
-          name_ar?: string | null
-          name_en: string
-          name_sv: string
-          sort_order?: number
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          is_active?: boolean
-          name_ar?: string | null
-          name_en?: string
-          name_sv?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
       sp_professional_titles: {
         Row: {
           code: string
@@ -8950,6 +8941,36 @@ export type Database = {
           },
         ]
       }
+      sp_profession_families: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name_ar: string | null
+          name_en: string
+          name_sv: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en: string
+          name_sv: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string
+          name_sv?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       sp_public_access_throttle: {
         Row: {
           attempts: number
@@ -8991,70 +9012,6 @@ export type Database = {
           version?: string
         }
         Relationships: []
-      }
-      sp_regulated_roles: {
-        Row: {
-          authority_id: string | null
-          code: string
-          created_at: string
-          id: string
-          is_active: boolean
-          market_pack_code: string
-          name_ar: string | null
-          name_en: string
-          name_local: string
-          profession_family_code: string
-          sort_order: number
-        }
-        Insert: {
-          authority_id?: string | null
-          code: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          market_pack_code: string
-          name_ar?: string | null
-          name_en: string
-          name_local: string
-          profession_family_code: string
-          sort_order?: number
-        }
-        Update: {
-          authority_id?: string | null
-          code?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          market_pack_code?: string
-          name_ar?: string | null
-          name_en?: string
-          name_local?: string
-          profession_family_code?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sp_regulated_roles_authority_id_fkey"
-            columns: ["authority_id"]
-            isOneToOne: false
-            referencedRelation: "sp_authorities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sp_regulated_roles_market_pack_code_fkey"
-            columns: ["market_pack_code"]
-            isOneToOne: false
-            referencedRelation: "sp_market_packs"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "sp_regulated_roles_profession_family_code_fkey"
-            columns: ["profession_family_code"]
-            isOneToOne: false
-            referencedRelation: "sp_profession_families"
-            referencedColumns: ["code"]
-          },
-        ]
       }
       sp_regulatory_sources: {
         Row: {
@@ -9135,6 +9092,70 @@ export type Database = {
           },
         ]
       }
+      sp_regulated_roles: {
+        Row: {
+          authority_id: string | null
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          market_pack_code: string
+          name_ar: string | null
+          name_en: string
+          name_local: string
+          profession_family_code: string
+          sort_order: number
+        }
+        Insert: {
+          authority_id?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          market_pack_code: string
+          name_ar?: string | null
+          name_en: string
+          name_local: string
+          profession_family_code: string
+          sort_order?: number
+        }
+        Update: {
+          authority_id?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          market_pack_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_local?: string
+          profession_family_code?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_regulated_roles_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "sp_authorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_regulated_roles_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_regulated_roles_profession_family_code_fkey"
+            columns: ["profession_family_code"]
+            isOneToOne: false
+            referencedRelation: "sp_profession_families"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_skill_types: {
         Row: {
           allowed_levels: string[]
@@ -9176,6 +9197,44 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      sp_sub_jurisdictions: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          jurisdiction_code: string
+          name_ar: string | null
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          jurisdiction_code: string
+          name_ar?: string | null
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          jurisdiction_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_sub_jurisdictions_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       sp_source_review_items: {
         Row: {
@@ -9221,44 +9280,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_regulatory_sources"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      sp_sub_jurisdictions: {
-        Row: {
-          code: string
-          created_at: string
-          is_active: boolean
-          jurisdiction_code: string
-          name_ar: string | null
-          name_en: string
-          name_sv: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          is_active?: boolean
-          jurisdiction_code: string
-          name_ar?: string | null
-          name_en: string
-          name_sv: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          is_active?: boolean
-          jurisdiction_code?: string
-          name_ar?: string | null
-          name_en?: string
-          name_sv?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sp_sub_jurisdictions_jurisdiction_code_fkey"
-            columns: ["jurisdiction_code"]
-            isOneToOne: false
-            referencedRelation: "sp_jurisdictions"
-            referencedColumns: ["code"]
           },
         ]
       }
@@ -10859,6 +10880,7 @@ export type Database = {
       }
       sp_correct_claim: {
         Args: {
+          _authorisation_scope?: string
           _claim_id: string
           _claimed_issuer_name: string
           _credential_code: string
@@ -10869,6 +10891,7 @@ export type Database = {
           _reason: string
           _skill_code?: string
           _skill_level?: string
+          _sub_jurisdiction_code?: string
           _title: string
           _valid_from: string
           _valid_until: string

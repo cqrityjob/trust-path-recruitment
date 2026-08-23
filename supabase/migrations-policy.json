@@ -542,6 +542,19 @@
       "doNotReExecute": true,
       "reason": "P0 lifecycle, hired -> employee. Same Lovable commit as 20260822054502, and the one that broke clean replay outright. The generated version 20260822055345 SORTS BEFORE its own dependency: employees.subject_id is created by 20260829092000_scp_employee_subject_spine.sql. Replayed in filename order the duplicate reached its own closing self-verification -- has_column_privilege('authenticated','public.employees','subject_id','UPDATE') -- before that column existed, and failed with 'column \"subject_id\" of relation \"employees\" does not exist'. Hosted never saw this because there the canonical chain had already installed the spine. The canonical file at 20260903092000 sits after the spine and replays correctly. Same class as the PR #55 reconciliation above; removed for the same reason.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260822055345';"
+    },
+    {
+      "canonicalFile": "20260907090000_sp_three_market_foundation.sql",
+      "canonicalVersion": "20260907090000",
+      "hostedVersion": "20260823223323",
+      "hostedName": "7e07d6b8-1f55-4537-84c2-bc4980cd839c",
+      "appliedAt": "2026-08-23T22:33:23Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260823223323_7e07d6b8-1f55-4537-84c2-bc4980cd839c.sql",
+      "sqlEquivalence": "Verified: the generated file is byte-identical to the canonical file except for a missing trailing newline -- canonical == generated + '\\n', and the generated file is a strict prefix of canonical. Comment-stripped comparison: 0 differing lines across 751 common lines. Whitespace-normalised: identical (sha256 prefix 51cea8f20c062b59, 31525 chars). Objects declared: 22 vs 22, identical. Hosted verification confirms the 8 tables, 3 market packs (SE active/grandfathered, GB and AE-DU inactive/pending), 4 authorities, 3 regulated roles, 25 sources, 8 new sp_credential_types columns and sp_claims.sub_jurisdiction_code.",
+      "doNotReExecute": true,
+      "reason": "Phase A migration 1 of 7, applied through the Lovable tracked-migration mechanism on owner approval. The generated copy is removed from supabase/migrations because its version 20260823223323 sorts BEFORE the canonical Phase A slot 20260907090000 and before five migrations already in the hosted ledger, so a replay in filename order would run it out of canonical order -- the same class of defect that broke CI in PR #55 and PR #61. The canonical file at 20260907090000 is preserved and replays correctly.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260823223323';"
     }
   ],
   "canonicalProject": {
