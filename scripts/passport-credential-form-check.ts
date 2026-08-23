@@ -156,6 +156,108 @@ ok(
   `the longest seeded code ${longest} (${longest.length}) is within the application cap`,
 );
 
+console.log("\nGROUP 0b -- the form mirror agrees with the canonical SQL");
+
+/** The credentials, as the SQL declares them.
+ *
+ *  The mirror in fixtures/credential-types.ts is Sweden-only by design: the UK
+ *  and Dubai packs ship inactive, so a form offering them would be a screen
+ *  nobody can reach. This compares the two sets and the attributes that decide
+ *  what the form ASKS FOR — the agreement B3 is about, and the one A2 shipped
+ *  without. */
+function seededCredentialRows(): Map<
+  string,
+  { requiresValidUntil: boolean; requiresIssuer: boolean; category: string; claimType: string }
+> {
+  const out = new Map<
+    string,
+    { requiresValidUntil: boolean; requiresIssuer: boolean; category: string; claimType: string }
+  >();
+  const row =
+    /\(\s*'([A-Z][A-Z0-9_]*)'\s*,\s*'([a-z_]+)'\s*,\s*'(qualification|appointment)'\s*,\s*'(?:[^']|'')*'\s*,\s*'(?:[^']|'')*'\s*,\s*'[^']*'\s*,\s*(true|false)\s*,\s*(true|false)/g;
+  for (const m of SQL.matchAll(row)) {
+    out.set(m[1], {
+      claimType: m[2],
+      category: m[3],
+      requiresValidUntil: m[4] === "true",
+      requiresIssuer: m[5] === "true",
+    });
+  }
+  return out;
+}
+
+/** Attributes turned on by a later UPDATE rather than in the INSERT.
+ *
+ *  Statement-scoped on purpose. The first attempt matched
+ *  `narrow_result_only = true` then lazily ran to the first `WHERE code =`,
+ *  which in the Swedish migration belongs to a SUBQUERY —
+ *  `(SELECT id FROM sp_authorities WHERE code = 'SE_LANSSTYRELSEN')` — so it
+ *  attributed the flag to the authority instead of the credential. The guard
+ *  reported a mismatch that was entirely its own. */
+function updatedFlag(flag: string): Set<string> {
+  const out = new Set<string>();
+
+  for (const stmt of SQL.split(";")) {
+    if (!/UPDATE\s+public\.sp_credential_types/.test(stmt)) continue;
+    if (!new RegExp(flag + "\\s*=\\s*true").test(stmt)) continue;
+
+    // The statement's OWN predicate is the last one in it; anything earlier
+    // belongs to a subquery.
+    const targets = [...stmt.matchAll(/WHERE\s+code\s*(?:=\s*'([A-Z0-9_]+)'|IN\s*\(([^)]*)\))/g)];
+    const last = targets[targets.length - 1];
+    if (!last) continue;
+    if (last[1]) out.add(last[1]);
+    if (last[2]) for (const c of last[2].matchAll(/'([A-Z0-9_]+)'/g)) out.add(c[1]);
+  }
+  return out;
+}
+
+{
+  const sqlCreds = seededCredentialRows();
+  const scoped = updatedFlag("requires_scope");
+  const narrow = updatedFlag("narrow_result_only");
+  const mirror = new Map(FIXTURE_CREDENTIAL_TYPES.map((t) => [t.code, t]));
+
+  const ghosts = [...mirror.keys()].filter((c) => !sqlCreds.has(c));
+  ok(
+    ghosts.length === 0,
+    "every credential the form offers exists in the database" +
+      (ghosts.length ? " — not seeded: " + ghosts.join(", ") : ""),
+  );
+
+  const swedish = [...sqlCreds.keys()].filter((c) => !c.startsWith("UK_") && !c.startsWith("AE_"));
+  const missing = swedish.filter((c) => !mirror.has(c));
+  ok(
+    missing.length === 0,
+    "every seeded Swedish credential is offered by the form" +
+      (missing.length ? " — missing from the form: " + missing.join(", ") : ""),
+  );
+
+  const mismatched: string[] = [];
+  for (const [code, sqlRow] of sqlCreds) {
+    const m = mirror.get(code);
+    if (!m) continue;
+    if (m.requiresValidUntil !== sqlRow.requiresValidUntil)
+      mismatched.push(code + ".requiresValidUntil");
+    if (m.requiresIssuer !== sqlRow.requiresIssuer) mismatched.push(code + ".requiresIssuer");
+    if (m.category !== sqlRow.category) mismatched.push(code + ".category");
+    if (m.claimType !== sqlRow.claimType) mismatched.push(code + ".claimType");
+    if (m.requiresScope !== scoped.has(code)) mismatched.push(code + ".requiresScope");
+    if (m.narrowResultOnly !== narrow.has(code)) mismatched.push(code + ".narrowResultOnly");
+  }
+  ok(
+    mismatched.length === 0,
+    "the form and the database agree on every credential attribute" +
+      (mismatched.length ? " — differing: " + mismatched.join(", ") : ""),
+  );
+
+  ok(scoped.has("SV"), "SV is parsed from the SQL as requiring a scope");
+  ok(
+    narrow.has("SE_PERSONNEL_APPROVAL"),
+    "SE_PERSONNEL_APPROVAL is parsed from the SQL as narrow-result-only",
+  );
+}
+
 console.log(
   `GROUP 1 -- every credential can actually be completed (${FIXTURE_CREDENTIAL_TYPES.length} types)`,
 );
