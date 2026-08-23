@@ -1,0 +1,38 @@
+{
+  // Scripts were outside every typecheck: tsconfig.json includes only
+  // `src/**`, `vite.config.ts` and `eslint.config.js`.
+  //
+  // That is how scripts/passport-fixture-check.ts kept reading
+  // `persona.professionTitleSv` after this stack deleted the field. It became
+  // `undefined`, the Set it fed kept working, and the guard silently stopped
+  // excluding the values it was written to exclude. No error, no warning.
+  //
+  // ── WHY THIS IS SCOPED TO THE PASSPORT SCRIPTS ────────────────────────
+  //
+  // Including all of `scripts/**` surfaces ~10 pre-existing errors in the
+  // Career Discovery checks — unreachable comparisons, a missing CID17 key, a
+  // cast that no longer holds. Those are real and worth fixing, and fixing
+  // them here would mean this branch touching a product it has no business
+  // touching, on a deadline it does not own.
+  //
+  // So the net is drawn around what this work is responsible for. Widening it
+  // later is one line, and each addition then arrives with whatever repair it
+  // needs rather than a dozen at once.
+  //
+  // A separate config rather than widening the app one: `scripts/` is Node and
+  // `src/` is the browser bundle, and merging them would drag Node globals
+  // into the application's typecheck to fix a problem that is not the
+  // application's.
+  "extends": "./tsconfig.json",
+  "include": [
+    "scripts/passport-*.ts",
+    "scripts/scripts-env.d.ts",
+    "scripts/regulatory-source-monitor.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["vite/client", "node"]
+  }
+}

@@ -102,10 +102,23 @@ const verified = (claims: readonly Claim[]) =>
 const preview = (claims: readonly Claim[]) =>
   derivePreviewIdentity(claims, MIRRORED_TITLE_RULES, TODAY);
 
-const rules = (id: ProfessionalIdentity, kind: keyof ProfessionalIdentity) =>
-  (id[kind] as { ruleCode: string }[]).map((t) => t.ruleCode).sort();
+/** The four keys that actually hold derived titles.
+ *
+ *  This was `keyof ProfessionalIdentity` with a cast, which also admitted
+ *  `engineVersion`, `evaluatedOn` and `includesSelfDeclared` — a string, a
+ *  string and a boolean — and then asserted they were arrays of titles. The
+ *  scripts typecheck added by B2 caught it the moment scripts/ came into
+ *  scope, which is precisely the point of adding it. */
+type TitleBucket =
+  | "educationCompleted"
+  | "professionalCompetence"
+  | "localEligibility"
+  | "activeTitles";
 
-const has = (id: ProfessionalIdentity, kind: keyof ProfessionalIdentity, code: string) =>
+const rules = (id: ProfessionalIdentity, kind: TitleBucket) =>
+  id[kind].map((t) => t.ruleCode).sort();
+
+const has = (id: ProfessionalIdentity, kind: TitleBucket, code: string) =>
   rules(id, kind).includes(code);
 
 /* ================================================================== */

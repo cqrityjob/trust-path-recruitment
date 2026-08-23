@@ -32,6 +32,7 @@ import {
   personaById,
 } from "../src/lib/security-passport/fixtures/personas";
 import { passportCopy, type PassportCopyKey } from "../src/lib/security-passport/i18n";
+import { headlineTitles, labelFor } from "../src/lib/security-passport/identity/presentation";
 import { ASSERTION_LEVELS, LIFECYCLE_STATES } from "../src/lib/security-passport/types";
 import { buildSocialCard, SOCIAL_FORBIDDEN_KEYS } from "../src/lib/security-passport/social";
 import {
@@ -548,9 +549,16 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       //     the card is supposed to show. Approved values are therefore
       //     excluded here; the field-level assertion in (a) is what stops
       //     `roleTitle` itself from ever being carried.
+      //     `professionTitleSv` / `professionTitleEn` used to be read here.
+      //     This stack DELETED those fields — the title is derived now — and
+      //     because scripts/ was outside the typecheck, both silently became
+      //     `undefined`. The set kept working and excluded nothing, which is
+      //     the quietest way for a guard to stop guarding.
+      //
+      //     The approved values are now the derived headline labels, in both
+      //     languages: exactly what the card is allowed to show.
       const approved = new Set<string>([
-        persona.professionTitleSv,
-        persona.professionTitleEn,
+        ...headlineTitles(persona.identity).flatMap((t) => [labelFor(t, "sv"), labelFor(t, "en")]),
         persona.jurisdictionCode,
       ]);
       const sensitiveValues = new Set<string>();

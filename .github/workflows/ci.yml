@@ -39,6 +39,12 @@ jobs:
       - name: Type-check
         run: bunx tsc --noEmit
 
+      # scripts/ is outside the app tsconfig, which is how a guard kept reading
+      # a field this codebase had deleted: it became undefined, the Set it fed
+      # kept working, and the guard silently stopped excluding anything.
+      - name: Type-check the Passport guard scripts
+        run: bun run scripts:typecheck
+
       - name: CIE deterministic regression check
         run: bun run cie:check
 
