@@ -160,6 +160,36 @@ BEGIN
    WHERE n.nspname = 'public'
      AND p.prokind = 'f'
      AND l.lanname NOT IN ('c','internal')
+     -- This migration owns the 25 functions listed above. Keep the
+     -- postcondition scoped to that set so an unrelated function introduced
+     -- by the disposable CI harness cannot make this migration non-replayable.
+     AND p.proname IN (
+       'scp_attempt_lifecycle_state',
+       'scp_guard_attempt_mode_matches_form',
+       'scp_guard_behaviour_has_competency',
+       'scp_guard_best_worst_keys',
+       'scp_guard_block_asks_agrees',
+       'scp_guard_closed_test_purpose_agrees',
+       'scp_guard_evidence_append_only',
+       'scp_guard_evidence_source_has_writer',
+       'scp_guard_evidence_source_honesty',
+       'scp_guard_form_single_mode',
+       'scp_guard_interview_notes_append_only',
+       'scp_guard_item_behaviour_agrees',
+       'scp_guard_item_mode_disjoint',
+       'scp_guard_learning_counterpart',
+       'scp_guard_no_learning_feedback_on_assessment',
+       'scp_guard_programme_states_limits',
+       'scp_guard_report_states_limits',
+       'scp_guard_response_matches_format',
+       'scp_guard_review_immutable_once_done',
+       'scp_guard_rubric_complete',
+       'scp_guard_rubric_score_append_only',
+       'scp_guard_scoring_run_append_only',
+       'scp_guard_scoring_run_consistent',
+       'scp_guard_single_enabled_provider',
+       'scp_guard_snapshot_immutable'
+     )
      AND NOT EXISTS (
        SELECT 1
          FROM unnest(coalesce(p.proconfig, '{}'::text[])) cfg
