@@ -440,6 +440,20 @@ function elementWithTarget(src: string, to: string): string | null {
       control: "academy.participants.releaseRecruitment",
       where: "Deltagare, ready-to-release recruitment row",
     },
+    // The workforce half of the same row, which the first version of this
+    // list forgot. An employee's ready-to-share row showed the hint "Dela
+    // underlaget" directly above a button reading "Dela underlaget" -- the
+    // identical defect, one use case over. Both hints now describe state.
+    {
+      hint: "lifecycle.next.release",
+      control: "academy.participants.release",
+      where: "Tilldelade tester, ready-to-share workforce row",
+    },
+    {
+      hint: "lifecycle.next.viewResult",
+      control: "academy.participants.openReport",
+      where: "Tilldelade tester, shared workforce row",
+    },
   ];
 
   for (const c of COLLISIONS) {
