@@ -159,26 +159,83 @@ Two Supabase projects exist and confusing them costs real time:
 
 "Hosted" alone is ambiguous. Always name the ref.
 
+### Capture the logical pre-state first
+
+**There is no verified backup for this project, and nothing below is one.**
+`zrahptwsnjcdyzfywbeh` is Lovable Cloud-managed: it does not appear in
+`supabase projects list`, so normal Supabase management backup and
+point-in-time-recovery access is **not available and has not been verified**
+from here. Do not describe the capture below as a backup, and do not plan a
+recovery that assumes one exists.
+
+**The rollback files are the release safety mechanism.** Recovery is forward:
+run the paired rollback, not a restore.
+
+Before applying anything, record — read-only — the state you would otherwise
+have to reconstruct from memory:
+
+- the migration ledger: `count(*)` and `max(version)` from
+  `supabase_migrations.schema_migrations`;
+- every function the release replaces, by identity:
+  `pg_get_function_identity_arguments`, `pronargs`, `prosecdef`, `proconfig`;
+- grants: `role_table_grants` and `role_routine_grants` for `anon` on the
+  objects being touched;
+- RLS: `relrowsecurity` per affected table;
+- row counts for the affected tables, and the reference-data codes already
+  present (jurisdictions, credential types) — **counts and codes only, never
+  holder data**;
+- the presence or absence of each object the release creates, so a partial
+  earlier landing cannot be mistaken for a clean start.
+
+Keep the capture with the release notes. Its purpose is to make "did this
+change anything we did not intend?" answerable afterwards.
+
 ### Runbook
 
-1. Merge in stack order: **#79 → #80 → #81 → docs**.
-2. Verify the merge SHA on `origin/main`.
-3. Read the hosted migration ledger and confirm which of the four versions are
+1. Confirm the merge SHA on `origin/main` and that the branch is merged.
+   Phase A's source of truth is the single consolidated PR **#86**; the earlier
+   `#79 → #80 → #81` stack was superseded and must not be used as an apply order.
+2. Capture the logical pre-state above.
+3. Read the hosted migration ledger and confirm which canonical versions are
    absent.
-4. Apply **only** the merged, missing migrations, each as one transaction, with
-   its canonical version and filename stem inserted into
-   `supabase_migrations.schema_migrations` **in the same transaction**.
-5. Verify read-only afterwards: the exact ledger row; the eight new tables
+4. Apply **only** the merged, missing migrations, one at a time, in ascending
+   canonical version order, through the **Lovable tracked migration**
+   mechanism. Never `supabase db push`, and never `query_database` DDL.
+   For each migration, in order:
+   1. submit the canonical SQL verbatim as one tracked migration;
+   2. capture the hosted version and UUID name Lovable generates — it stamps
+      its own and **cannot** record the canonical version, so this mapping
+      exists nowhere else and is unrecoverable later;
+   3. verify hosted state changed as that migration intended;
+   4. prove SQL equivalence: comment-stripped, whitespace-normalised diff of
+      the generated file against the canonical file is empty;
+   5. add the `appliedThroughLovable` mapping in
+      `supabase/migrations-policy.json`;
+   6. remove the generated duplicate file if Lovable synced one into
+      `supabase/migrations/`;
+   7. run `bun run migrations:check`.
+5. Verify read-only afterwards: the exact ledger rows; the eight new tables
    exist; `relrowsecurity` is true on each; `information_schema.role_table_grants`
-   shows **no** `anon` grant on any of them; `prosecdef` and `proconfig` on the
-   changed functions; the ledger grew by exactly the number applied.
+   shows **no** `anon` grant on any of them; `role_routine_grants` shows no
+   `anon` EXECUTE on the new functions — the hosted project's
+   `ALTER DEFAULT PRIVILEGES` grants it and local replay cannot observe that;
+   `prosecdef` and `proconfig` on the changed functions; the ledger grew by
+   exactly the number applied.
 6. Confirm no market pack is active with `legal_review_state` in
    `('pending','in_review')`.
 7. Allow Lovable's automatic GitHub sync; confirm the synced SHA.
 8. Owner-assisted browser verification of the authenticated journeys.
 
-**Never**: a generic `supabase db push`; a ledger row for SQL that was never
-executed; Lovable Build, Ask, a chat prompt, a visual edit or Publish.
+**Never edit the hosted migration ledger by hand.** Do not insert a canonical
+version into `supabase_migrations.schema_migrations`, and do not rewrite or
+delete a row Lovable wrote. The canonical-to-hosted mapping lives in
+`appliedThroughLovable`, which is the reason that field exists: the ledger
+records what Lovable executed, and the policy file records what it corresponds
+to.
+
+**Never**: a generic `supabase db push`; a hand-written ledger row; a ledger
+row for SQL that was never executed; `query_database` DDL; Lovable Build, Ask,
+a chat prompt, a visual edit or Publish.
 
 ## What cannot be verified from here
 
