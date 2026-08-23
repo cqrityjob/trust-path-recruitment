@@ -272,14 +272,70 @@ assert(
   "MUTATION: the headline shows the ACTIVE titles only, not the competence tier",
 );
 
+console.log("\nGROUP 5b -- A5: training is called training");
+
+// Owner decision 1. VU1 and VU2 are grundutbildning. Completing both is not a
+// personnel approval and not an appointment, and the WORDING must not suggest
+// otherwise — the rule already refused to derive an active title from them.
+{
+  const vu1Only = verified([claim("VU1")]);
+  const vu2Only = verified([claim("VU2")]);
+  const both = verified([claim("VU1"), claim("VU2")]);
+
+  assert(
+    professionLine(vu1Only, "sv", "—") === "Väktarutbildning 1 (VU1) genomförd",
+    "VU1 alone renders its own training and nothing else",
+  );
+  assert(
+    professionLine(vu2Only, "sv", "—") === "Väktarutbildning 2 (VU2) genomförd",
+    "VU2 alone renders its own training and nothing else",
+  );
+  assert(
+    professionLine(both, "sv", "—") === "Väktarutbildning (VU1 + VU2)",
+    "VU1 + VU2 renders the approved training wording",
+  );
+  assert(
+    professionLine(both, "en", "—") === "Security Guard Training (VU1 + VU2)",
+    "and its approved English wording",
+  );
+  // The headline is what a reader sees. It must never be the bare word.
+  assert(
+    professionLine(both, "sv", "—") !== "Väktare" &&
+      professionLine(vu1Only, "sv", "—") !== "Väktare" &&
+      professionLine(vu2Only, "sv", "—") !== "Väktare",
+    "MUTATION: no combination of VU1 and VU2 renders the bare title Väktare",
+  );
+  // And the tier is unchanged — the label moved, the architecture did not.
+  assert(
+    both.professionalCompetence.length === 1 && both.activeTitles.length === 0,
+    "the rewording left the tier alone: still competence, still no active title",
+  );
+}
+
 console.log("\nGROUP 6 -- language changes the label and nothing else");
 
 const sv = professionLine(ov, "sv", "—");
 const en = professionLine(ov, "en", "—");
 assert(sv === "Ordningsvakt", "Swedish shows the legal name as it appears on the decision");
 assert(
-  en === "Public Order Guard (Ordningsvakt) · Sweden",
+  en === "Public Order Guard (Ordningsvakt)",
   "English explains it AND keeps the Swedish word a reader must check against",
+);
+// A4. The surfaces append the jurisdiction themselves, so a label that also
+// carried it printed "· Sweden · Sweden" on screen. No derived label may name
+// a COUNTRY; Dubai's emirate is not a country and is deliberately kept.
+assert(
+  !/(Sweden|Sverige|United Kingdom|UAE|United Arab Emirates)\s*$/.test(en) &&
+    !/(Sweden|Sverige|United Kingdom|UAE|United Arab Emirates)\s*$/.test(sv),
+  "MUTATION: a derived label never ends in a country — the surface appends it",
+);
+assert(
+  MIRRORED_TITLE_RULES.every(
+    (r) =>
+      !/(Sweden|Sverige|United Kingdom|UAE|United Arab Emirates)\s*$/.test(r.nameEn) &&
+      !/(Sweden|Sverige|United Kingdom|UAE|United Arab Emirates)\s*$/.test(r.nameLocal),
+  ),
+  "MUTATION: no rule in the whole mirror ends in a country name",
 );
 assert(sv !== en, "the two languages genuinely differ");
 

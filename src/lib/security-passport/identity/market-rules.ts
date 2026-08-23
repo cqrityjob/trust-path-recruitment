@@ -105,8 +105,12 @@ export const SWEDEN_TITLE_RULES: readonly TitleRule[] = [
     professionFamilyCode: "SECURITY_GUARD",
     regulatedRoleCode: "SE_VAKTARE",
     outputKind: "professional_competence",
-    nameLocal: "Väktare",
-    nameEn: "Security Guard · Sweden",
+    // A5. VU1 + VU2 is grundutbildning — not a personnel approval and not an
+    // appointment. The rule already refused to derive an ACTIVE TITLE from
+    // them; the wording lagged behind it. The TIER stays: see
+    // 20260908091000 for why demoting it would be a semantic claim.
+    nameLocal: "Väktarutbildning (VU1 + VU2)",
+    nameEn: "Security Guard Training (VU1 + VU2)",
     nameAr: null,
     requiresCredentialCodes: ["VU1", "VU2"],
     requiresAssertionLevel: "verified",
@@ -166,7 +170,7 @@ export const SWEDEN_TITLE_RULES: readonly TitleRule[] = [
     regulatedRoleCode: "SE_ORDNINGSVAKT",
     outputKind: "active_title",
     nameLocal: "Ordningsvakt",
-    nameEn: "Public Order Guard (Ordningsvakt) · Sweden",
+    nameEn: "Public Order Guard (Ordningsvakt)",
     nameAr: null,
     requiresCredentialCodes: ["OV"],
     requiresAssertionLevel: "verified",
@@ -180,7 +184,7 @@ export const SWEDEN_TITLE_RULES: readonly TitleRule[] = [
     regulatedRoleCode: "SE_SKYDDSVAKT",
     outputKind: "active_title",
     nameLocal: "Skyddsvakt",
-    nameEn: "Protective Security Guard (Skyddsvakt) · Sweden",
+    nameEn: "Protective Security Guard (Skyddsvakt)",
     nameAr: null,
     requiresCredentialCodes: ["SV"],
     requiresAssertionLevel: "verified",

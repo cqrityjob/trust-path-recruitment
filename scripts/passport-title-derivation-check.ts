@@ -30,6 +30,7 @@ import type { TitleRule } from "../src/lib/security-passport/identity/types";
 
 const ROOT = process.cwd();
 const MIGRATION = join(ROOT, "supabase/migrations/20260907091000_sp_sweden_truth_model.sql");
+const MIGRATIONS_DIR = join(ROOT, "supabase/migrations");
 
 const failures: string[] = [];
 let checks = 0;
@@ -102,13 +103,54 @@ function parseSeed(): SeedRule[] {
   return out;
 }
 
+/** Later migrations that reword a title.
+ *
+ *  The seed is not the whole truth. 20260908091000 rewrote several labels —
+ *  the country was printing twice, and VU1+VU2 was calling itself Väktare —
+ *  and a guard that compared the mirror to the SEED alone would report drift
+ *  for a mirror that is correctly up to date.
+ *
+ *  So the effective state is the seed with every subsequent
+ *  `UPDATE public.sp_professional_titles SET name_local/name_en` applied in
+ *  filename order, which is the order the database applies them in.
+ *
+ *  Only the two name columns are followed. A migration that changed a
+ *  credential requirement, an output kind or a priority by UPDATE would NOT be
+ *  picked up here and would fail this guard loudly — which is the right
+ *  outcome: those are not rewordings, and they belong in a seed the guard can
+ *  read whole. */
+function applyLaterRenames(rules: SeedRule[]): SeedRule[] {
+  const byCode = new Map(rules.map((r) => [r.code, { ...r }]));
+
+  const later = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith(".sql") && f > "20260907091000")
+    .sort();
+
+  const stmt =
+    /UPDATE\s+public\.sp_professional_titles\s+SET\s+([\s\S]*?)\s+WHERE\s+code\s*=\s*'([A-Z0-9_]+)'\s*;/g;
+
+  for (const file of later) {
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
+    for (const m of sql.matchAll(stmt)) {
+      const target = byCode.get(m[2]);
+      if (!target) continue;
+      const local = /name_local\s*=\s*'((?:[^']|'')*)'/.exec(m[1]);
+      const en = /name_en\s*=\s*'((?:[^']|'')*)'/.exec(m[1]);
+      if (local) target.nameLocal = local[1].replace(/''/g, "'");
+      if (en) target.nameEn = en[1].replace(/''/g, "'");
+    }
+  }
+
+  return [...byCode.values()];
+}
+
 console.log("passport-title-derivation-check\n");
 console.log("GROUP 1 -- the mirror matches the migration");
 
 let seed: SeedRule[] = [];
 try {
-  seed = parseSeed();
-  ok(`parsed ${seed.length} rules from the Sweden migration`);
+  seed = applyLaterRenames(parseSeed());
+  ok(`parsed ${seed.length} rules from the Sweden migration, with later renames applied`);
 } catch (err) {
   fail(err instanceof Error ? err.message : String(err));
 }
