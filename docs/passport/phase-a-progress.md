@@ -54,21 +54,21 @@ guard working** — a regulatory source moved and a human must read it. It is no
 part of PR CI (weekly workflow only), and it must not be silently accepted with
 `--update`.
 
-## Items
+## Items — all complete
 
-| Item                                    | State                                     | Commit    |
-| --------------------------------------- | ----------------------------------------- | --------- |
-| A1 legacy Skyddsvakt correction         | done                                      | `a17ea5f` |
-| A2 credential-code validation drift     | done                                      | `68e061f` |
-| A3 scope flow                           | outstanding                               |           |
-| A4 duplicate jurisdiction rendering     | done                                      | `c4f0134` |
-| A5 training versus title                | done                                      | `c4f0134` |
-| B1 self-declared presentation           | outstanding                               |           |
-| B2 scripts type safety and social guard | outstanding                               |           |
-| B3 form/database agreement              | codes done in `68e061f`; rest outstanding |           |
-| B4 rollback safety                      | outstanding                               |           |
-| B5 hygiene                              | outstanding                               |           |
-| B6 regulatory-claim guard               | outstanding                               |           |
+| Item                                    | State | Commit                |
+| --------------------------------------- | ----- | --------------------- |
+| A1 legacy Skyddsvakt correction         | done  | `a17ea5f`             |
+| A2 credential-code validation drift     | done  | `68e061f`             |
+| A3 scope flow                           | done  | `d332792`             |
+| A4 duplicate jurisdiction rendering     | done  | `c4f0134`             |
+| A5 training versus title                | done  | `c4f0134`             |
+| B1 self-declared presentation           | done  | `63a96ea`             |
+| B2 scripts type safety and social guard | done  | `f2251dd`             |
+| B3 form/database agreement              | done  | `68e061f` + `e431693` |
+| B4 rollback safety                      | done  | `63a96ea`             |
+| B5 hygiene                              | done  | `63a96ea`             |
+| B6 regulatory-claim guard               | done  | `e431693`             |
 
 ## Migrations added by Phase A
 
@@ -76,9 +76,23 @@ part of PR CI (weekly workflow only), and it must not be silently accepted with
 | ---------------- | ------------------------------------- | ------------------------------------ |
 | `20260908090000` | legacy scope correctable              | yes — warns when it strands a holder |
 | `20260908091000` | title country suffix + training label | yes                                  |
+| `20260908092000` | disclosure scope boundary             | yes                                  |
 
-Rollback chain: `20260908090000` → Dubai → UK → Sweden → foundation.
-`20260908091000` touches only label columns and may run at any point.
+Rollback chain: `20260908092000` → `20260908090000` → Dubai → UK → Sweden →
+foundation. All six execute on every `db-test.sh` run.
+
+## Final gates
+
+`tsc` (app) clean · `tsc -p tsconfig.scripts.json` clean · production build
+clean · `db-test.sh` exit 0 · **35 / 36** guard scripts · changed-file eslint
+clean · Prettier clean on every changed file · replay allowlist **identical to
+`main`** (24 entries, not grown).
+
+New DB assertions: 42 three-market + 23 Swedish truth model + 22 UK + 24 Dubai
+
+- 16 legacy scope correction + 12 scope disclosure boundary.
+  Guard assertions: 70 credential-form, 60 identity-engine, 27 regulatory-claim
+  self-test.
 
 ## Not done, and must not be
 
