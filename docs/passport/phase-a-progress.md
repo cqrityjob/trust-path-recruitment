@@ -86,8 +86,12 @@ seven rollbacks**, all executed by `db-test.sh` in reverse migration order.
 Run against `origin/main` at `c224934`, merged forward into this branch.
 
 `tsc` (app) clean · `tsc -p tsconfig.scripts.json` clean · production build
-clean · `db-test.sh` **exit 0** · **37 / 38** guard scripts · changed-file
+clean · `db-test.sh` **exit 0** · **38 / 38** guard scripts · changed-file
 eslint clean · Prettier clean · replay allowlist **identical to `main`**.
+
+`regulatory-sources:check` passes since the owner accepted the Länsstyrelsen
+change on 2026-08-23 — see the register for what that acceptance does and does
+not claim.
 
 **Seven of seven rollbacks execute**, in reverse migration order, and the label
 rollback now asserts the previous values were restored rather than only that it

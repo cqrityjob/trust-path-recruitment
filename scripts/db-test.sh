@@ -1643,7 +1643,11 @@ SPSDB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_pa
 SPSDB_RC=$?
 set -e
 
-echo "$SPSDB_OUT" | grep -E "GROUP |ASSERTION FAILED|NOT COVERED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+# "ok  4." is listed explicitly: 4.1 and 4.2 are the two named mandatory
+# assertions, and only 4.2's text happens to contain the word GROUP. Without
+# this, a passing 4.1 is invisible in the log while 4.2 is shown, which reads
+# like the boundary assertion was skipped.
+echo "$SPSDB_OUT" | grep -E "GROUP |ok  4\.|ASSERTION FAILED|NOT COVERED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
 SPSDB_PASSED="$(echo "$SPSDB_OUT" | grep -c "ok  " || true)"
 
 if [ "$SPSDB_RC" -ne 0 ]; then

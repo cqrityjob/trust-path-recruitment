@@ -172,11 +172,15 @@ const NOTHING = payload({ holder: "Tom Provsson", package: "verified_qualificati
 
 const CASES: readonly { id: string; label: string; data: RecipientPayloadActive }[] = [
   { id: "current", label: "Current OV + VU2", data: CURRENT },
-  { id: "scope-employer", label: "Scoped SV — application employer", data: SCOPED_EMPLOYER },
-  { id: "scope-public", label: "Scoped SV — public card", data: SCOPED_PUBLIC },
   { id: "lapsed", label: "Stored active, validity lapsed", data: LAPSED },
   { id: "anonymous", label: "Anonymous holder", data: ANONYMOUS },
   { id: "nothing", label: "Package disclosed nothing", data: NOTHING },
+  // Appended rather than inserted. e2e/passport-credential-ui.spec.ts locates
+  // the lapsed card positionally, and putting these two after "current"
+  // renumbered every case behind them — a new fixture should not move the
+  // existing ones.
+  { id: "scope-employer", label: "Scoped SV — application employer", data: SCOPED_EMPLOYER },
+  { id: "scope-public", label: "Scoped SV — public card", data: SCOPED_PUBLIC },
 ];
 
 export function RecipientCardFixture() {

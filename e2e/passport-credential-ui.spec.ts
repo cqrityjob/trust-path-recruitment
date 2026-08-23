@@ -55,7 +55,11 @@ test.describe("credential form", () => {
 
   test("an appointment demands its end date and authority", async ({ page }) => {
     await openHarness(page, "credentialForm", undefined, "sv");
-    await page.getByRole("radio", { name: /Ordningsvakt/ }).check({ force: true });
+    // "Ordningsvakt" alone now matches the appointment AND the two
+    // ordningsvakt TRAINING credentials the Swedish truth model added, which
+    // is the distinction that model exists to draw. This test is about the
+    // APPOINTMENT.
+    await page.getByRole("radio", { name: /Ordningsvaktsförordnande/ }).check({ force: true });
     await expect(page.getByText(/Ett förordnande är en tidsbegränsad behörighet/)).toBeVisible();
     await expect(page.getByLabel(/Förordnande myndighet/)).toBeVisible();
     await expect(page.getByLabel(/Gäller till \(obligatoriskt/)).toBeVisible();
@@ -70,7 +74,9 @@ test.describe("credential form", () => {
 
   test("draft save and resume keep every field", async ({ page }) => {
     await openHarness(page, "credentialForm", undefined, "en");
-    await page.getByRole("radio", { name: /Ordningsvakt|Public Order/ }).check({ force: true });
+    await page
+      .getByRole("radio", { name: /Public Order Guard Appointment/ })
+      .check({ force: true });
     await page.getByLabel(/Appointing authority/).fill("Fiktiva Myndigheten");
     await page.getByLabel(/Decision date/).fill("2026-02-01");
     await page.getByLabel(/Valid until/).fill("2029-01-31");
@@ -212,7 +218,7 @@ test.describe("mobile 375px", () => {
     test(`${screen} has no horizontal overflow at 375px`, async ({ page }) => {
       await openHarness(page, screen, "cred-ov-current", "sv");
       if (screen === "credentialForm") {
-        await page.getByRole("radio", { name: /Ordningsvakt/ }).check({ force: true });
+        await page.getByRole("radio", { name: /Ordningsvaktsförordnande/ }).check({ force: true });
       }
       await page.waitForTimeout(250);
       const overflow = await page.evaluate(

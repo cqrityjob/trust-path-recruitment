@@ -112,45 +112,56 @@ _Status: Implemented. Not yet observed running on schedule._
 > pack's document-verification route cannot be described as monitored while its
 > portal does not respond to us, and that belongs in the pack's legal review.
 
-## Open review item — `se_lansstyrelsen_bevakningsforetag`
+## Accepted source change — `se_lansstyrelsen_bevakningsforetag`
 
-**Detected 2026-08-23. Baseline deliberately NOT updated.**
+**Detected 2026-08-23 · reviewed 2026-08-23 · accepted by the owner 2026-08-23.**
 
-The monitor reported the Länsstyrelsen bevakningsföretag page as changed since
-the 2026-08-22 baseline. Reviewed rather than accepted:
+|                          |                                                    |
+| ------------------------ | -------------------------------------------------- |
+| Previous fingerprint     | `8a78b1c1…` (baseline 2026-08-22)                  |
+| Accepted fingerprint     | `28887b27…` (2026-08-23)                           |
+| Stable within a session? | Yes — identical across three fetches seconds apart |
 
-|                          |                                                        |
-| ------------------------ | ------------------------------------------------------ |
-| Baseline fingerprint     | `8a78b1c1…` (2026-08-22)                               |
-| Current fingerprint      | `28887b27…` (2026-08-23)                               |
-| Stable within a session? | **Yes** — identical across three fetches seconds apart |
+The page genuinely changed; this was not per-request churn.
 
-So this is a genuine content change on the page, not per-request churn.
+### What the review established, and what it could not
 
-**Effect on the Swedish market pack: none found.** Every term the pack depends
-on is still present:
+**It established impact, not a diff.** The baseline stores a SHA-256 of the
+page's visible text, not the text itself, so **the previous exact wording cannot
+be reconstructed from anything this repository holds.** The fingerprint proves
+that words changed; it can never say which.
+
+The review therefore answered the question it _could_ answer — _does this affect
+us_ — by reading the current page against what the Swedish market pack actually
+relies on. Every substantive term the pack depends on was still present:
 
 `godkännande av personal` · `bevakningsföretag` · `auktorisation` · `väktare` ·
 `skyddsvakt` · `länsstyrelsen`
 
-The credential this source backs is `SE_PERSONNEL_APPROVAL`, whose contract is
-that CQrityjob records **only** that an approval was checked, with an authority
-and a date — enforced by `narrow_result_only`. Nothing in that contract, in any
-derivation rule, or in any user-facing string is derived from this page's
-wording, so no rule or copy changes as a result.
+**No product rule, eligibility rule, derivation, copy string or
+authorisation-scope behaviour changed as a result of this acceptance.** The
+credential this source backs is `SE_PERSONNEL_APPROVAL`, whose contract — that
+only _"an approval was checked"_ is ever recorded, with an authority and a date
+— is enforced by `narrow_result_only` in the database and is unaffected by the
+page's wording.
 
-> **What this review could not establish.** The baseline stores a fingerprint,
-> not the previous text, so _which words changed_ cannot be reconstructed from
-> it — only that they did. The finding above is from reading the current page
-> against what the pack relies on, which is the right test for "does this
-> affect us" but not for "what did they alter". A reviewer who needs the latter
-> must compare against the page's own history.
+### Owner acceptance
 
-**Outstanding for a human:** confirm the above and, if satisfied, accept the new
-state with `bun run regulatory-sources:check --update`. **CI must never do
-this.** Accepting a regulatory source change without reading it is precisely
-what the monitor exists to prevent, and is why this branch leaves the baseline
-as it found it.
+The owner accepted the new fingerprint after confirming the relied-upon
+substantive terms remain present. That acceptance is recorded **here and in the
+baseline diff**, both reviewable in version control.
+
+Anyone auditing this later should read the two sentences above as the limit of
+the claim: the owner accepted _that the change does not affect the product_, on
+the evidence of the terms surviving — not that the change was inspected
+word for word, which the stored data does not permit.
+
+### If a future change needs a word-for-word diff
+
+It will need the page's own history, not this baseline. Storing page text here
+would make that possible and is deliberately not done: it would put a third
+party's content under our retention, and the monitor's job is to notice a
+change and stop, not to archive the web.
 
 ## The baseline is tracked in git on purpose
 

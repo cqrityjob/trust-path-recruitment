@@ -1,156 +1,156 @@
 {
   "$comment": "Fingerprints of the official regulatory sources, as last accepted by a human. Never edited by CI: a changed source opens a review, and somebody runs `bun run regulatory-sources:check --update` once they have read the page.",
-  "checkedOn": "2026-08-22",
+  "checkedOn": "2026-08-23",
   "sources": {
     "se_polisen_ordningsvakter": {
       "url": "https://polisen.se/lagar-och-regler/ordningsvakter/",
       "fingerprint": "224a32157c59e16f448fad4a8e3f86622384d0bec4d177b6921b03b49158c805",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_polisen_ov_utbildningar": {
       "url": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/ordningsvaktsutbildningar/",
       "fingerprint": "bd9b4ef4fbd2affcb3d2c260f74bf6fc8d1eff5ce4e8601e27511f0f05b8c2b8",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_polisen_ov_fortbildning": {
       "url": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/ordningsvaktsutbildningar/fortbildning/",
       "fingerprint": "f7400d927d1f5819e0761b26605b125e81081327e97aa2e95cc4517238d13fae",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_lansstyrelsen_bevakningsforetag": {
       "url": "https://www.lansstyrelsen.se/ostergotland/samhalle/tillstand-for-att-utova-verksamhet/bevakningsforetag.html",
-      "fingerprint": "8a78b1c12b69d14595fdf56932a719c6a30bf5c162e89edd41fd5b3589aef734",
+      "fingerprint": "28887b270a6b0983b96e84442aeb60fddfb8f4f229f3a9488de93a44226a07cf",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_lansstyrelsen_skyddsvakt": {
       "url": "https://www.lansstyrelsen.se/e-portal/sok-e-tjanster/ansok-om-godkannande-av-skyddsvakt.html",
       "fingerprint": "5b2da3cf2dd940023a2f26b97cab2d4a612fb47f324f1d0582aecf0b2c196e4f",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_imy_rekryteringssystem": {
       "url": "https://www.imy.se/verksamhet/dataskydd/dataskydd-pa-olika-omraden/arbetsliv/rekryteringssystem-och-kompetensdatabaser/",
       "fingerprint": "2d7afe54d1eba8d4a8fcdff205238704dd494c515946026fc72b5a2f383de839",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_imy_brottsuppgifter": {
       "url": "https://www.imy.se/verksamhet/dataskydd/dataskydd-pa-olika-omraden/arbetsliv/tillaten-behandling--vilka-krav-galler/brottsuppgifter/",
       "fingerprint": "9521f68f7708dcc4340ca6ea971bd0407b56517169cd2a11033e2d2821ba9efa",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_imy_rattslig_grund": {
       "url": "https://www.imy.se/verksamhet/dataskydd/dataskydd-pa-olika-omraden/arbetsliv/tillaten-behandling--vilka-krav-galler/rattslig-grund/",
       "fingerprint": "2cf980fe0a7e9df8ea86a784256929095a2c84fa6a377190f081f7047380c1c1",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "se_imy_konsekvensbedomning": {
       "url": "https://www.imy.se/verksamhet/dataskydd/dataskydd-pa-olika-omraden/arbetsliv/tillaten-behandling--vilka-krav-galler/konsekvensbedomning/",
       "fingerprint": "5f8fe55e9e9ccfc876efefd4158b7a41664f30a129d22980ed06d95d45d95f62",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_sia_need_a_licence": {
       "url": "https://www.gov.uk/guidance/find-out-if-you-need-an-sia-licence",
       "fingerprint": "c1ba5d563ee3d975515ab3e8de5121b527fa303a758dfafbca41bffc8440c0ed",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_sia_apply": {
       "url": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
       "fingerprint": "16148dbd86c2dfa16d538dd5352c5f4a1a375eede0c9a27ab6482348ce2f6b1d",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_sia_training": {
       "url": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
       "fingerprint": "fe431fc4b9777d997dfdbc7437be8543cf456e52c3c3679ef990dbf4a434e980",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_sia_check_a_licence": {
       "url": "https://www.gov.uk/check-a-private-security-licence",
       "fingerprint": "975e3f55bf55993385e36bc6f8199e1450c15aecee6ee3f35437a836140a9362",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_sia_public_register": {
       "url": "https://rolh.services.sia.homeoffice.gov.uk/",
       "fingerprint": "3c02f6b40b302170e06e8bdcc421eb7d628ed78d05ddc5e9a5cc36e26f801182",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_ico_recruitment": {
       "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/employment/recruitment-and-selection/",
       "fingerprint": "9814f54cf8e12a15268f79f147d3431ae8edf4760c1eac415b563d952354b460",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_ico_vetting": {
       "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/employment/recruitment-and-selection/pre-employment-vetting-of-candidates/",
       "fingerprint": "7d40774ce7d4ccb933ef36f9b745068af40a016d1af0e86e855cf49856a3b746",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_ico_criminal_offence_data": {
       "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/lawful-basis/criminal-offence-data/what-are-the-rules-on-criminal-offence-data/",
       "fingerprint": "35293e9f11c764c2f3002b728cdda903ad4e36f0d9d131fb5fdbbcd1c4bb4dfb",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "gb_ico_automated_decisions": {
       "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/individual-rights/individual-rights/rights-related-to-automated-decision-making-including-profiling/",
       "fingerprint": "9d2b414f1ae3bf2f2cca7dade2969c986d1971cee0006242046d8ae19157b6b4",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_du_sira_services": {
       "url": "https://www.sira.gov.ae/en/services",
       "fingerprint": "97a67fe59b9ec72c0a462bf40ea205088624b5879d9669d367a073eb074e02fa",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_du_sira_cadre_card": {
       "url": "https://www.sira.gov.ae/en/services/security-cadre-card",
       "fingerprint": "d702cadfddddd10c4237af412ff6a53c6638bbf9edb969e48791512c82f38cf1",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_du_sira_cadre_card_individual": {
       "url": "https://www.sira.gov.ae/en/services/security-cadre-card-individual-3ad09d1c-2c672057",
       "fingerprint": "e6c138f69ced598b1697a79eea9ac08b62445721247c11b7da3498ccb51a242c",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_du_sira_training_centres": {
       "url": "https://www.sira.gov.ae/en/information-center/certified-security-training-centers",
       "fingerprint": "33e1144c3417b2b85922adc80528f44aecdf8208eea8fb39952a36364f4e56b4",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_du_sira_portal": {
       "url": "https://portal.sira.gov.ae/web",
       "fingerprint": null,
       "availability": "unreachable",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_business_regulations": {
       "url": "https://u.ae/en/information-and-services/business/Business-laws-and-compliance/business-regulations",
       "fingerprint": "9ae3a86e3540b3c6807c5a2a965f81f4a9d0287209ef1332e42893d3f3c80c1a",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     },
     "ae_data_protection_laws": {
       "url": "https://u.ae/en/about-the-uae/digital-uae/data/data-protection-laws",
       "fingerprint": "0f361594e0e4484b3fe9f72be07ed3fde573c77285ab70bbc652ed374f945279",
       "availability": "available",
-      "checkedOn": "2026-08-22"
+      "checkedOn": "2026-08-23"
     }
   }
 }
