@@ -633,6 +633,55 @@ export const archiveEmployerJob = createServerFn({ method: "POST" })
     return { id: data.jobId, status: "archived" as const };
   });
 
+// -------------------- DELETE (never-published draft only) --------------------
+
+/** Discarding a draft, which is the only advertisement that may actually go.
+ *
+ *  The work is all in jobs_delete_draft(): job_applications cascades from
+ *  jobs, so "delete" without a guard is "delete this and everyone who applied
+ *  to it". The function refuses anything that was ever published, has an
+ *  application, an assignment or an invitation, and this wrapper does not
+ *  re-implement any of that -- it would be a second copy of a safety rule. */
+export const deleteEmployerJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => archiveSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await assertActiveMembership(ctx, data.employerId);
+
+    // Read first, so the audit entry has something to describe: after the
+    // delete there is no row left to snapshot.
+    const { data: before, error: bErr } = await ctx.supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", data.jobId)
+      .eq("employer_id", data.employerId)
+      .maybeSingle();
+    if (bErr) throw new Error("LOAD_JOB_FAILED");
+    if (!before) throw new Error("JOB_NOT_FOUND");
+
+    const { error } = await ctx.supabase.rpc("jobs_delete_draft", {
+      _employer_id: data.employerId,
+      _job_id: data.jobId,
+    });
+    if (error) {
+      // The function's own vocabulary, kept intact so the surface can say
+      // which rule refused rather than "could not delete".
+      const code = /JOB_[A-Z_]+/.exec(error.message ?? "")?.[0];
+      throw new Error(code ?? "DELETE_JOB_FAILED");
+    }
+
+    await writeAudit({
+      jobId: data.jobId,
+      slugSnapshot: before.slug,
+      actorId: ctx.userId,
+      action: "deleted",
+      before,
+      after: null,
+    });
+    return { id: data.jobId, deleted: true as const };
+  });
+
 export const restoreEmployerJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => archiveSchema.parse(d))
