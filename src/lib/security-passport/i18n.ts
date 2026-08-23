@@ -781,6 +781,13 @@ const sv = {
     "En eller flera uppgifter är inte längre gällande. De visas med sitt nuvarande läge, inte som aktuella.",
   "rec.jurisdiction": "Jurisdiktion",
   "rec.qualifications": "Verifierade behörigheter",
+  // A scope shown to a reader who may see it, and the honest placeholder for
+  // one who may not. Saying "limited, details withheld" is narrower than
+  // saying nothing and letting the reader assume the approval is unlimited.
+  "rec.scopeLimited": "Begränsat godkännande",
+  "rec.scopeWithheld":
+    "Godkännandet gäller ett angivet skyddsobjekt, en arbetsgivare eller en uppdragsgivare. Omfattningen visas inte i den här vyn.",
+  "rec.subJurisdiction": "Region",
   "rec.experience": "Verifierad anställning",
   "rec.tenure": "Verifierad tid i yrket",
   "rec.verifiedBy": "Verifierad av",
@@ -1898,6 +1905,10 @@ const en: Record<PassportCopyKey, string> = {
     "One or more entries are no longer current. They are shown with their present state, not as current.",
   "rec.jurisdiction": "Jurisdiction",
   "rec.qualifications": "Verified authorisations",
+  "rec.scopeLimited": "Limited approval",
+  "rec.scopeWithheld":
+    "The approval applies to a stated protected object, employer or principal. The scope is not shown in this view.",
+  "rec.subJurisdiction": "Region",
   "rec.experience": "Verified employment",
   "rec.tenure": "Verified time in the profession",
   "rec.verifiedBy": "Verified by",
@@ -1989,8 +2000,7 @@ const en: Record<PassportCopyKey, string> = {
     "State what the authorisation is limited to. Without it, it reads as a general national licence.",
   "cred.error.noNoteAllowed":
     "This entry cannot carry a note. Only the fact of the check is recorded.",
-  "cred.error.controlledLabelOnly":
-    "This entry has a fixed label and cannot be reworded.",
+  "cred.error.controlledLabelOnly": "This entry has a fixed label and cannot be reworded.",
   "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
   "cred.error.endBeforeStart": "The end date cannot be before the start date.",
   "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",

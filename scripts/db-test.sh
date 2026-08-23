@@ -1610,6 +1610,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport scope disclosure boundary assertions"
+set +e
+SPSDB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_scope_disclosure_boundary_test.sql 2>&1)"
+SPSDB_RC=$?
+set -e
+
+echo "$SPSDB_OUT" | grep -E "GROUP |ASSERTION FAILED|NOT COVERED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPSDB_PASSED="$(echo "$SPSDB_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPSDB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the scope disclosure boundary suite exited with code ${SPSDB_RC}." >&2
+  echo "$SPSDB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport scope disclosure boundary"
+else
+  echo "    ok  ${SPSDB_PASSED} scope disclosure boundary assertions passed"
+  # Every exclusion is paired with the inclusion proving the payload COULD have
+  # carried the scope. A short run means those contrasts did not execute, which
+  # reads exactly like a boundary that holds.
+  if [ "$SPSDB_PASSED" -lt 10 ]; then
+    echo "FAIL: expected at least 10 scope boundary assertions, only ${SPSDB_PASSED} ran." >&2
+    suite_failed "Security Passport scope disclosure boundary (assertion shortfall: floor 10)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport legacy scope correction assertions"
 set +e
 SPLSC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_legacy_scope_correction_test.sql 2>&1)"
@@ -1651,6 +1677,22 @@ BEGIN
   END IF;
 END \$mp\$;" >/dev/null
 echo "    ok  every active market pack has a recorded review state"
+
+echo "==> Verifying the disclosure scope boundary rollback"
+set +e
+SPSDBRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908092000_sp_disclosure_scope_boundary_rollback.sql 2>&1)"
+SPSDBRB_RC=$?
+set -e
+
+if [ "$SPSDBRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the disclosure scope boundary rollback exited with code ${SPSDBRB_RC}." >&2
+  echo "$SPSDBRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "disclosure scope boundary rollback"
+else
+  echo "    ok  the disclosure scope boundary rolls back cleanly"
+fi
 
 # The legacy-scope rollback runs first of all: it restores the trigger to the
 # version the UK pack left, which the Dubai/UK/Sweden chain below then unwinds
@@ -1825,5 +1867,6 @@ echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"
 echo "              ${SPAE_PASSED} Dubai market pack assertions,"
-echo "              ${SPLSC_PASSED} legacy scope correction assertions"
+echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
+echo "              ${SPSDB_PASSED} scope disclosure boundary assertions"
 echo "===================================================="

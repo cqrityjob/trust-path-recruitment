@@ -95,6 +95,13 @@ export const SOCIAL_FORBIDDEN_KEYS: readonly string[] = [
   "claimId",
   "limitationSv",
   "limitationEn",
+  // The protected object, employer or principal a skyddsvakt approval is
+  // limited to. It belongs to an application-scoped disclosure and to the
+  // employer_review / full_verification packages — never to an image that
+  // outlives the record it depicts.
+  "authorisationScope",
+  "authorisation_scope",
+  "scopeRestriction",
   "assertionLevel",
   "lifecycleState",
   "fteFraction",

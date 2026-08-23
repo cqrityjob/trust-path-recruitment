@@ -331,8 +331,23 @@ function RecipientRoute() {
 
                 <LifecycleNote state={c.lifecycle} />
 
+                {/* A scoped approval says so on every surface. The exact
+                    scope is present only when sp_disclosure_payload decided
+                    this reader may see it — on a public card it is null and
+                    the reader is told the boundary exists without being told
+                    what it is, which is narrower than silence. */}
+                {c.scopeLimited ? (
+                  <p className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+                    <span className="font-medium">{pt("rec.scopeLimited")}</span>{" "}
+                    {c.authorisationScope ?? pt("rec.scopeWithheld")}
+                  </p>
+                ) : null}
+
                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                   <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
+                  {c.subJurisdiction ? (
+                    <Row label={pt("rec.subJurisdiction")} value={c.subJurisdiction} />
+                  ) : null}
                   <Row
                     label={pt("rec.verifiedBy")}
                     value={c.verifierOrganisation ?? pt("common.notStated")}

@@ -52,6 +52,13 @@ export interface RecipientCredential {
   readonly lapsed: boolean;
   readonly issuer: string | null;
   readonly jurisdiction: string | null;
+  /** The emirate or region, where the regulator is sub-national. */
+  readonly subJurisdiction: string | null;
+  /** The approval has boundaries. True on every package, including the public
+   *  card, where the exact scope is deliberately withheld. */
+  readonly scopeLimited: boolean;
+  /** What it is limited to. Null unless this reader is entitled to it. */
+  readonly authorisationScope: string | null;
   readonly issuedOn: IsoDate | null;
   readonly validUntil: IsoDate | null;
   readonly verifiedAt: string | null;
@@ -120,8 +127,10 @@ function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Cl
     titleEn: c.title,
     issuerName: c.issuer ?? "—",
     jurisdictionCode: c.jurisdiction,
-    subJurisdictionCode: null,
-    authorisationScope: null,
+    subJurisdictionCode: c.sub_jurisdiction ?? null,
+    // Present only when the reader is entitled to it; sp_disclosure_payload
+    // decides, and this never second-guesses it.
+    authorisationScope: c.authorisation_scope ?? null,
     issuedOn: c.issued_on,
     validFrom: null,
     validUntil: c.valid_until,
@@ -156,6 +165,9 @@ export function buildRecipientPresentation(
       lapsed: validity.hasExpired,
       issuer: c.issuer,
       jurisdiction: c.jurisdiction,
+      subJurisdiction: c.sub_jurisdiction ?? null,
+      scopeLimited: c.scope_limited === true,
+      authorisationScope: c.authorisation_scope ?? null,
       issuedOn: c.issued_on,
       validUntil: c.valid_until,
       verifiedAt: c.verified_at,
