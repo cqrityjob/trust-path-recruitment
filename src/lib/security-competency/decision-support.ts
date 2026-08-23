@@ -223,7 +223,10 @@ const byWeight = (a: ObservedArea, b: ObservedArea) =>
 /** How many rows a summary panel shows before the detail sections take over.
  *  The panel exists to be read in fifteen seconds; a panel that lists eleven
  *  areas is the report it was supposed to replace. */
-export const PANEL_LIMIT = 4;
+// Three, not four. The strongest-evidence panel is a scan target on a screen a
+// recruiter has thirty seconds for, and a fourth row is the one that turns it
+// back into a list to read rather than a shape to recognise.
+export const PANEL_LIMIT = 3;
 
 /** Follow-up is capped tighter than the other panels. "Everything matters" and
  *  "nothing matters" arrive at the same place, and a recruiter can hold three
@@ -420,8 +423,40 @@ function sentence(fact: SummaryFact, lang: "sv" | "en"): string {
  * A surface that renders `narrative` MUST also render `safetyCriticalFollowUp`.
  * DecisionSupportSummary does; the render suite asserts it does.
  */
+/** Fact kinds the PARAGRAPH does not write, though the report still carries
+ *  them as structured facts.
+ *
+ *  `safety` has its own panel, and saying it a third time in prose is how a
+ *  reader learns to skim the paragraph that matters most.
+ *
+ *  `thin` and `next_step` are new here, and both were removed for the same
+ *  reason: each was already on screen, in a better place, one line away.
+ *  `next_step` is the headline of the card directly above the paragraph.
+ *  `thin` is a fact about how much the instrument asked -- methodology, which
+ *  the summary is explicitly not for -- and the "Begransat underlag: N" line
+ *  below the panels already states it.
+ *
+ *  Nothing is lost by leaving them out; five sentences became three, and the
+ *  two that went were the two the reader had just read. */
+const NOT_WRITTEN_IN_PROSE = new Set<SummaryFact["kind"]>(["safety", "thin", "next_step"]);
+
+/** The paragraph's own ceiling, tighter than MAX_FACTS.
+ *
+ *  A customer read this brief and could not get the candidate picture out of
+ *  it quickly. The facts were right; there were simply too many sentences for
+ *  something a recruiter reads before an interview, so the paragraph stops at
+ *  three and the rest of the report carries the detail. */
+const MAX_SENTENCES = 3;
+
 export function composeNarrative(facts: SummaryFact[]): { sv: string; en: string } | null {
-  const written = facts.filter((f) => f.kind !== "safety");
+  const preferred = facts.filter((f) => !NOT_WRITTEN_IN_PROSE.has(f.kind));
+  // A brief with nothing observed selects only `next_step`, and excluding that
+  // would leave the paragraph empty -- so the exclusions are a preference, not
+  // a prohibition. The rule is "do not repeat what the reader just read", and
+  // on a report where there IS nothing else, the step has not been said twice.
+  const written = (
+    preferred.length > 0 ? preferred : facts.filter((f) => f.kind !== "safety")
+  ).slice(0, MAX_SENTENCES);
   if (written.length === 0) return null;
   return {
     sv: written.map((f) => sentence(f, "sv")).join(" "),

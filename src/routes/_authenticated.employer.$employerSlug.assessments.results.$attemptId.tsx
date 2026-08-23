@@ -31,12 +31,14 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { z } from "zod";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
+import type { DecisionSupport } from "@/lib/security-competency/decision-support";
+import type { ReportBrief } from "@/lib/security-competency/academy-employer.functions";
 import { EmployerDecisionPanel } from "@/components/academy/EmployerDecisionPanel";
 import { CandidateBrief, InterviewNotesPanel } from "@/components/academy/CandidateBrief";
 import { DecisionSummary, ReportContextPanel } from "@/components/academy/ReportContextPanel";
@@ -47,6 +49,7 @@ import {
 import {
   CompetencyOverviewSection,
   InterviewGuideSection,
+  InterviewQuestions,
   SelfReportedSection,
 } from "@/components/academy/RecruitmentReportSections";
 import { ReportMethodSection } from "@/components/academy/ReportMethodSection";
@@ -488,20 +491,36 @@ function CandidateDecisionSupportReport({
         ).toLocaleDateString(sv ? "sv-SE" : "en-GB")}`}
       />
 
+      {/* ── THE FIRST SCREEN ──────────────────────────────────────────────
+       *
+       *  A customer read this brief and could not tell us what the candidate
+       *  was like. Not because anything was missing -- everything was there,
+       *  in eleven thousand characters, opening with a five-sentence paragraph
+       *  and reaching the interview questions four scrolls down.
+       *
+       *  What a recruiter has before an interview is about thirty seconds, and
+       *  five questions:
+       *
+       *    what did they demonstrate?      strongest-evidence panel
+       *    what needs following up?        follow-up panel
+       *    is anything safety-critical?    the panel, or one calm line
+       *    what do I ask?                  InterviewQuestions, right here
+       *    what happens next?              the recommended-step card
+       *
+       *  All five are now above the fold and nothing was deleted to do it. The
+       *  competency cards, the self-report detail and the full guide moved
+       *  behind one disclosure; methodology and provenance were already folded.
+       */}
       <DecisionSupportSummary support={support} context={r.context} sv={sv} />
+
+      <InterviewQuestions entries={brief.interviewGuide} sv={sv} />
 
       <RecruitmentActions employerSlug={employerSlug} applicationId={applicationId} />
 
-      <CompetencyOverviewSection
-        support={support}
-        modules={brief.modules}
-        interviewGuide={brief.interviewGuide}
-        sv={sv}
-      />
-
-      <SelfReportedSection areas={brief.selfReported} sv={sv} />
-
-      <InterviewGuideSection entries={brief.interviewGuide} sv={sv} />
+      {/* Everything above answers "what should I know before the interview".
+          Everything below answers "show me how you got there", which is a
+          different question asked by a different reader on a different day. */}
+      <BriefDetail support={support} brief={brief} sv={sv} />
 
       {/* What the conversation gave, recorded after the material it is about. */}
       <InterviewNotesPanel
@@ -513,7 +532,14 @@ function CandidateDecisionSupportReport({
         }))}
       />
 
-      <EmployerDecisionPanel attemptId={attemptId} canDecide={canDecide} />
+      {/* No EmployerDecisionPanel here, deliberately.
+       *
+       *  It offers "Tilldela utvecklingsinsats" and "Sakerhetsuppfoljning" --
+       *  things an organisation does for somebody it employs. On a candidate
+       *  it invited a development decision about a person who does not work
+       *  here, beside the recruitment decision that actually applies, and the
+       *  customer read the two as one confused step. The workforce report
+       *  above still renders it, where those actions mean what they say. */}
 
       <ReportMethodSection
         observations={r.context?.evidenceObservations ?? 0}
@@ -546,5 +572,63 @@ function CandidateDecisionSupportReport({
         }
       />
     </>
+  );
+}
+
+/** The detail, one fold below the brief.
+ *
+ *  Same three sections, same components, same data — the only change is that
+ *  they no longer stand between a recruiter and the interview questions.
+ *
+ *  The fold is `.screen-fold`, whose hiding rule lives inside `@media screen`.
+ *  Everything stays in the DOM and print has no rule that hides it, so a
+ *  printed brief still carries every competency card, the self-report detail
+ *  and the full guide whether or not the section is open on screen. That
+ *  matters beyond tidiness: this document is evidence, and a fold that
+ *  silently shortened the printed version would make two different documents
+ *  out of one report. */
+function BriefDetail({
+  support,
+  brief,
+  sv,
+}: {
+  support: DecisionSupport;
+  brief: ReportBrief;
+  sv: boolean;
+}) {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <section className="mt-6">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="no-print inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ChevronDown
+          className={`h-4 w-4 transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+        {t(open ? "decision.detail.hide" : "decision.detail.show")}
+      </button>
+      {!open && (
+        <p className="no-print mt-1 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+          {t("decision.detail.lede")}
+        </p>
+      )}
+
+      <div className="screen-fold" data-open={open ? "true" : "false"}>
+        <CompetencyOverviewSection
+          support={support}
+          modules={brief.modules}
+          interviewGuide={brief.interviewGuide}
+          sv={sv}
+        />
+        <SelfReportedSection areas={brief.selfReported} sv={sv} />
+        <InterviewGuideSection entries={brief.interviewGuide} sv={sv} />
+      </div>
+    </section>
   );
 }

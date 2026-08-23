@@ -203,6 +203,65 @@ export function SelfReportedSection({ areas, sv }: { areas: SelfReportedArea[]; 
 }
 
 /** Section 7 — the structured interview guide, kept whole. */
+/** The questions, and only the questions, on the first screen.
+ *
+ *  ── WHY THIS EXISTS ALONGSIDE InterviewGuideSection ───────────────────
+ *
+ *  The full guide is the most useful thing the assessment produces, and it was
+ *  four scrolls below the summary behind two other sections. A recruiter
+ *  opening a brief half an hour before an interview never reached it.
+ *
+ *  So the questions come up to the summary and the reasoning stays down with
+ *  the detail. This renders nothing the guide does not already carry -- same
+ *  authored question, same area, same order -- which is why it takes the same
+ *  entries rather than a second selection. Nothing here is generated: an
+ *  authored question or no question.
+ *
+ *  Capped at five. A list a person is meant to take into a room stops being
+ *  one somewhere past that. */
+const FIRST_SCREEN_QUESTIONS = 5;
+
+export function InterviewQuestions({
+  entries,
+  sv,
+}: {
+  entries: InterviewGuideEntry[];
+  sv: boolean;
+}) {
+  const { t } = useT();
+  if (entries.length === 0) return null;
+  const shown = entries.slice(0, FIRST_SCREEN_QUESTIONS);
+
+  return (
+    <section className="mt-5 rounded-[14px] border border-border bg-card p-5">
+      <h2 className="text-sm font-semibold text-foreground">{t("decision.questions.title")}</h2>
+      <p className="mt-1 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
+        {t("decision.questions.lede")}
+      </p>
+      <ol className="mt-3 space-y-3">
+        {shown.map((g, i) => (
+          <li key={`${g.areaCode}-${g.focus}-${i}`} className="flex gap-3">
+            <span
+              aria-hidden="true"
+              className="mt-[2px] inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-[12px] font-semibold tabular-nums text-muted-foreground"
+            >
+              {i + 1}
+            </span>
+            <div className="min-w-0">
+              <p className="max-w-[74ch] text-[15px] leading-relaxed text-foreground">
+                {sv ? g.questionSv : g.questionEn}
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {sv ? g.areaSv : g.areaEn} · {t(FOCUS_LABEL[g.focus])}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export function InterviewGuideSection({
   entries,
   sv,

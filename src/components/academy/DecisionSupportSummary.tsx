@@ -300,6 +300,24 @@ export function DecisionSupportSummary({
         )}
       </div>
 
+      {/* Said once, quietly, when there is nothing to say.
+       *
+       *  This file used to argue the opposite: "a panel that renders 'no
+       *  safety-critical findings' on every clean report is a panel that alarms
+       *  every reader of a clean report." That reasoning was about a PANEL, and
+       *  it still holds — which is why this is not one. A recruiter reading a
+       *  clean brief was left to infer the absence of safety findings from the
+       *  absence of a box, and inferring silence is not the same as being told.
+       *
+       *  So: one muted line, the same weight as the coverage note beside it,
+       *  and nothing that looks like a warning. When findings DO exist the
+       *  emphasised full-width panel above renders instead and this does not. */}
+      {!support.safetyCriticalFollowUp && (
+        <p className="mt-3 max-w-[86ch] text-[12px] leading-relaxed text-muted-foreground">
+          {t("decision.panel.safetyNone")}
+        </p>
+      )}
+
       {/* The least actionable true thing on the page, given the least weight —
           but never omitted, because a reader who does not know how thin the
           coverage was will over-read everything above it. */}

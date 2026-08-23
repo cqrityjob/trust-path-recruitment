@@ -153,14 +153,18 @@ console.log("\n3. The summary is a brief, not a catalogue");
     wordCount(en) <= NARRATIVE_WORD_LIMIT,
     String(wordCount(en)),
   );
+  // The floor moved from 50 words to 40, and the ceiling from five sentences
+  // to four, when a customer said the brief was too long to use. Both are
+  // still floors and ceilings: the point of the lower bound is that a summary
+  // must not decay into a label, and 40 words is still three real sentences.
   check(
     "sv is long enough to be a brief rather than a label",
-    wordCount(sv) >= 50,
+    wordCount(sv) >= 40,
     String(wordCount(sv)),
   );
   check(
-    "sv is three to five sentences",
-    sentences(sv) >= 3 && sentences(sv) <= 5,
+    "sv is two to four sentences",
+    sentences(sv) >= 2 && sentences(sv) <= 4,
     String(sentences(sv)),
   );
   check(
@@ -287,10 +291,24 @@ console.log("\n6. Thin evidence is coverage, never a weakness");
     "no limited area appears among the strongest signals",
     support.strongestSupported.every((a) => a.signal !== "limited"),
   );
-  const sv = support.narrative!.sv;
+  // This sentence used to be in the paragraph and is now the dedicated
+  // "Begränsat underlag" line beneath the panels -- moved because it is
+  // methodology and the summary is not for methodology, NOT dropped. The
+  // governance point is the same either way: thin coverage describes the
+  // instrument, never the person. So the assertion follows it to its new home
+  // rather than disappearing with the sentence.
   check(
-    "the summary says thin coverage is about the assessment, not the candidate",
-    sv.includes("inget om kandidaten"),
+    "thin coverage is still framed as being about the assessment",
+    (dictionaries.sv["decision.panel.uncertainBody"] ?? "").includes("inget om kandidaten"),
+  );
+  check(
+    "and the line that carries it actually renders",
+    support.uncertainties.length > 0,
+    `${support.uncertainties.length} uncertainties`,
+  );
+  check(
+    "the paragraph no longer repeats it",
+    !support.narrative!.sv.includes("inget om kandidaten"),
   );
 }
 

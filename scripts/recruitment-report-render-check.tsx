@@ -13,6 +13,7 @@
 // could flatter the layout. The i18n provider defaults to Swedish on the
 // server, so this reads the Swedish surface.
 
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
 import { dictionaries } from "../src/i18n/dictionaries";
@@ -20,6 +21,7 @@ import { DecisionSupportSummary } from "../src/components/academy/DecisionSuppor
 import {
   CompetencyOverviewSection,
   InterviewGuideSection,
+  InterviewQuestions,
   SelfReportedSection,
 } from "../src/components/academy/RecruitmentReportSections";
 import { ReportMethodSection } from "../src/components/academy/ReportMethodSection";
@@ -47,6 +49,7 @@ function page(safetyFlagCount: number) {
   return renderToStaticMarkup(
     <I18nProvider>
       <DecisionSupportSummary support={support} context={CONTEXT} sv />
+      <InterviewQuestions entries={INTERVIEW_GUIDE} sv />
       <CompetencyOverviewSection
         support={support}
         modules={[]}
@@ -77,9 +80,12 @@ console.log("\n1. The employer's questions are answered in order");
   const order = [
     "Rekommenderat nästa steg",
     "Säkerhetskritisk uppföljning",
-    "Viktigast att följa upp",
+    "Följ upp i intervju",
     "Stabilaste signalerna i underlaget",
     "Begränsat underlag",
+    // The questions moved up to the first screen; the reasoning behind them
+    // stayed with the detail below.
+    "Frågor till intervjun",
     "Kompetensöversikt",
     "Självrapporterat arbetsbeteende",
     "Strukturerad intervjuguide",
@@ -148,9 +154,18 @@ console.log("\n4. The summary is short, and the panels are weighted");
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  // The budget moved from 350 to 420, and the extra words are the five
+  // interview questions that came UP from four scrolls down. That is a
+  // deliberate trade: word count is a proxy for reading effort, and a first
+  // screen a recruiter can act on beats a shorter one they have to leave.
+  //
+  // It is still a budget. Everything else on this screen is a scan target --
+  // three strongest areas, three follow-ups, six provenance fields -- so if
+  // this ever fails again it means prose came back, which is the thing the
+  // customer actually complained about.
   check(
-    "the first screen is under 350 words",
-    text.split(" ").length < 350,
+    "the first screen is under 420 words",
+    text.split(" ").length < 420,
     String(text.split(" ").length),
   );
   check(
@@ -372,6 +387,111 @@ console.log("\n13. The methodology fold is screen-only, so print keeps everythin
       html.indexOf('data-open="false"'),
     "it must stay visible with the section closed",
   );
+}
+
+console.log("\n14. The brief opens as an executive summary, not a document");
+{
+  const support = buildDecisionSupport(candidateInput({ safetyFlagCount: 0 }));
+  const prose = support.narrative?.sv ?? "";
+  const sentences = prose.split(/(?<=\.)\s+/).filter(Boolean).length;
+
+  // A customer read this and could not say what the candidate was like. It was
+  // five sentences, two of which she had already read one card above.
+  check("the summary is at most three sentences", sentences <= 3, `${sentences}`);
+  check("the summary is under 450 characters", prose.length < 450, `${prose.length}`);
+  check(
+    "the recommended step is not repeated in prose",
+    !/Rekommendationen är att/.test(prose),
+    "it is the headline of the card directly above",
+  );
+  check(
+    "instrument breadth is not in the summary",
+    !/bedömningens bredd/.test(prose),
+    "that is methodology; it is stated below as Begränsat underlag",
+  );
+  // Removing sentences must not remove FACTS.
+  check("the thin-coverage fact still exists on the object", support.uncertainties.length > 0);
+  check("the recommended step still exists on the object", Boolean(support.recommendedNextStep));
+
+  // The questions a recruiter takes into the room, on the first screen.
+  const questions = renderToStaticMarkup(
+    <I18nProvider>
+      <InterviewQuestions entries={INTERVIEW_GUIDE} sv />
+    </I18nProvider>,
+  );
+  const rendered = INTERVIEW_GUIDE.filter((g) => questions.includes(g.questionSv));
+  check(
+    "between three and five questions are shown",
+    rendered.length >= 3 && rendered.length <= 5,
+    `${rendered.length}`,
+  );
+  check(
+    "every question shown is an authored one",
+    rendered.length > 0 && rendered.every((g) => INTERVIEW_GUIDE.includes(g)),
+  );
+  check(
+    "the guide's full reasoning is NOT on the first screen",
+    !questions.includes(INTERVIEW_GUIDE[0].whySv),
+    "why/listen-for belong with the detail",
+  );
+}
+
+console.log("\n15. Safety is stated either way, and never manufactured");
+{
+  const clean = renderToStaticMarkup(
+    <I18nProvider>
+      <DecisionSupportSummary
+        support={buildDecisionSupport(candidateInput({ safetyFlagCount: 0 }))}
+        context={CONTEXT}
+        sv
+      />
+    </I18nProvider>,
+  );
+  const flagged = renderToStaticMarkup(
+    <I18nProvider>
+      <DecisionSupportSummary
+        support={buildDecisionSupport(candidateInput({ safetyFlagCount: 2 }))}
+        context={CONTEXT}
+        sv
+      />
+    </I18nProvider>,
+  );
+  check(
+    "a clean brief says so in one calm line",
+    clean.includes(dictionaries.sv["decision.panel.safetyNone"]),
+  );
+  check(
+    "the calm line is not a warning panel",
+    !clean.includes(dictionaries.sv["decision.panel.safetyAction"]),
+  );
+  check(
+    "a flagged brief shows the real panel instead",
+    flagged.includes(dictionaries.sv["decision.panel.safetyAction"]),
+  );
+  check(
+    "and does not also claim there were none",
+    !flagged.includes(dictionaries.sv["decision.panel.safetyNone"]),
+  );
+}
+
+console.log("\n16. No workforce development actions in the recruitment brief");
+{
+  const route = readFileSync(
+    new URL(
+      "../src/routes/_authenticated.employer.$employerSlug.assessments.results.$attemptId.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  // One render site left, and it is the workforce report.
+  const sites = (route.match(/<EmployerDecisionPanel/g) ?? []).length;
+  check("the decision panel renders exactly once", sites === 1, `${sites} sites`);
+  for (const key of ["actionDevelopment", "actionSafety"] as const) {
+    check(
+      `"${dictionaries.sv[`academy.decision.${key}`]}" is not offered on a candidate`,
+      !html.includes(dictionaries.sv[`academy.decision.${key}`]),
+    );
+  }
 }
 
 if (failures.length > 0) {
