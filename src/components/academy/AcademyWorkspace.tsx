@@ -61,7 +61,7 @@ type Tab = {
 const ASSESSMENT_TABS: Tab[] = [
   { to: "/employer/$employerSlug/assessments", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/assessments/library", label: "academy.nav.library" },
-  { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.participants" },
+  { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.assignedTests" },
   {
     to: "/employer/$employerSlug/assessments/reviews",
     label: "academy.nav.reviews",
@@ -72,7 +72,7 @@ const ASSESSMENT_TABS: Tab[] = [
 const TRAINING_TABS: Tab[] = [
   { to: "/employer/$employerSlug/training", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/training/programmes", label: "training.nav.programmes" },
-  { to: "/employer/$employerSlug/training/participants", label: "academy.nav.participants" },
+  { to: "/employer/$employerSlug/training/participants", label: "training.nav.participants" },
 ];
 
 /** Resolves the workspace, renders the shell and the assessment tabs, and
