@@ -1438,12 +1438,18 @@ export const dictionaries = {
     "employer.actions.open": "Öppna",
     "employer.actions.review": "Granska",
     "employer.actions.waitingLabel": "Väntar på kandidaten",
-    "employer.actions.newApplications": "nya ansökningar",
-    "employer.actions.responsesToReview": "svar behöver granskas",
-    "employer.actions.resultsReady": "resultat klara att delas",
-    "employer.actions.awaitingNextStep": "kandidater väntar på nästa steg",
-    "employer.actions.draftJobs": "utkast till annonser",
-    "employer.actions.testsWithCandidates": "tester är ute hos kandidater",
+    "employer.actions.newApplications.one": "ny ansökan",
+    "employer.actions.newApplications.other": "nya ansökningar",
+    "employer.actions.responsesToReview.one": "svar behöver granskas",
+    "employer.actions.responsesToReview.other": "svar behöver granskas",
+    "employer.actions.resultsReady.one": "resultat klart att delas",
+    "employer.actions.resultsReady.other": "resultat klara att delas",
+    "employer.actions.awaitingNextStep.one": "kandidat väntar på nästa steg",
+    "employer.actions.awaitingNextStep.other": "kandidater väntar på nästa steg",
+    "employer.actions.draftJobs.one": "utkast till annons",
+    "employer.actions.draftJobs.other": "utkast till annonser",
+    "employer.actions.testsWithCandidates.one": "test är ute hos en kandidat",
+    "employer.actions.testsWithCandidates.other": "tester är ute hos kandidater",
 
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
@@ -1459,10 +1465,13 @@ export const dictionaries = {
     "employer.attention.orgActive": "Företagskontot är godkänt och aktivt.",
     "employer.attention.orgIncomplete": "Organisationsprofilen saknar beskrivning och webbplats.",
     "employer.attention.applicationsAwaiting": "ansökningar väntar på granskning",
-    "employer.attention.jobsNoApplications":
+    "employer.attention.jobsNoApplications.one":
+      "publicerad jobbannons har ännu inte fått några ansökningar",
+    "employer.attention.jobsNoApplications.other":
       "publicerade jobbannonser har ännu inte fått några ansökningar",
     "employer.attention.draftJobs": "jobbannonser sparade som utkast",
-    "employer.attention.assessmentsAvailable": "bedömningar tillgängliga att tilldela",
+    "employer.attention.assessmentsAvailable.one": "bedömning tillgänglig att tilldela",
+    "employer.attention.assessmentsAvailable.other": "bedömningar tillgängliga att tilldela",
     "employer.attention.workforceEmpty":
       "Lägg till era medarbetare för att börja bygga en verifierad kompetensbild.",
     "employer.attention.source.organisation": "Källa: Organisationsstatus",
@@ -1711,6 +1720,7 @@ export const dictionaries = {
     "employer.person.development.lede":
       "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
     "employer.person.development.open": "Öppna Kompetensutveckling",
+    "employer.person.development.assign": "Tilldela utvecklingsprogram",
     "employer.person.credentials.heading": "Kompetenser & certifikat",
     "employer.person.credentials.lede":
       "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
@@ -2565,7 +2575,7 @@ export const dictionaries = {
       "Rekryteringsbedömningen ger ett underlag inför intervjun: vad kandidaten har visat i uppgifterna, vad kandidaten själv beskriver, och vilka frågor som är värda att ställa. Den ger inget omdöme om lämplighet och ingen rekommendation — beslutet är ert.",
     "academy.library.title": "Bedömningsbibliotek",
     "academy.library.lede":
-      "Program som kan tilldelas, och program som fortfarande är under utveckling. Vad ett program inte mäter står lika tydligt som vad det mäter.",
+      "Bedömningar som är skrivna för rekrytering och kan tilldelas en kandidat. Vad en bedömning inte mäter står lika tydligt som vad den mäter. Innehåll för medarbetarnas utveckling ligger under Kompetensutveckling.",
     "academy.library.items": "Frågor",
     "academy.library.duration": "Tidsåtgång",
     "academy.library.doesNotMeasure": "Mäter inte",
@@ -2585,7 +2595,7 @@ export const dictionaries = {
       "Exempelmaterial som vi använder för att visa och kvalitetssäkra produkten. Aldrig riktigt kundinnehåll.",
     "academy.library.sections.development": "Under utveckling",
     "academy.library.sections.developmentLede":
-      "Bedömningar som ännu inte är färdigvaliderade. De kan användas som förhandsversion om er organisation har fått tillgång.",
+      "Innehåll som ännu inte är färdigvaliderat. Det kan användas som förhandsversion om er organisation har fått tillgång.",
     "academy.library.filter.all": "Alla",
     "academy.library.kind.assessment": "Bedömning",
     "academy.library.kind.training": "Utbildning",
@@ -4820,12 +4830,18 @@ export const dictionaries = {
     "employer.actions.open": "Open",
     "employer.actions.review": "Review",
     "employer.actions.waitingLabel": "Waiting on the candidate",
-    "employer.actions.newApplications": "new applications",
-    "employer.actions.responsesToReview": "responses need review",
-    "employer.actions.resultsReady": "results ready to share",
-    "employer.actions.awaitingNextStep": "candidates waiting on a next step",
-    "employer.actions.draftJobs": "draft job ads",
-    "employer.actions.testsWithCandidates": "assessments are out with candidates",
+    "employer.actions.newApplications.one": "new application",
+    "employer.actions.newApplications.other": "new applications",
+    "employer.actions.responsesToReview.one": "response needs review",
+    "employer.actions.responsesToReview.other": "responses need review",
+    "employer.actions.resultsReady.one": "result is ready to share",
+    "employer.actions.resultsReady.other": "results are ready to share",
+    "employer.actions.awaitingNextStep.one": "candidate is waiting for the next step",
+    "employer.actions.awaitingNextStep.other": "candidates are waiting for the next step",
+    "employer.actions.draftJobs.one": "draft job ad",
+    "employer.actions.draftJobs.other": "draft job ads",
+    "employer.actions.testsWithCandidates.one": "test is out with a candidate",
+    "employer.actions.testsWithCandidates.other": "tests are out with candidates",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
@@ -4842,10 +4858,13 @@ export const dictionaries = {
     "employer.attention.orgIncomplete":
       "Your organisation profile is missing a description and website.",
     "employer.attention.applicationsAwaiting": "applications awaiting review",
-    "employer.attention.jobsNoApplications":
+    "employer.attention.jobsNoApplications.one":
+      "published job ad has not yet received any applications",
+    "employer.attention.jobsNoApplications.other":
       "published job ads have not yet received any applications",
     "employer.attention.draftJobs": "job ads saved as drafts",
-    "employer.attention.assessmentsAvailable": "assessments available to assign",
+    "employer.attention.assessmentsAvailable.one": "assessment available to assign",
+    "employer.attention.assessmentsAvailable.other": "assessments available to assign",
     "employer.attention.workforceEmpty":
       "Add your employees to begin building a verified competence picture.",
     "employer.attention.source.organisation": "Source: Organisation status",
@@ -5088,6 +5107,7 @@ export const dictionaries = {
     "employer.person.development.lede":
       "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
     "employer.person.development.open": "Open Competence development",
+    "employer.person.development.assign": "Assign a development programme",
     "employer.person.credentials.heading": "Competencies & certificates",
     "employer.person.credentials.lede":
       "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
@@ -5937,7 +5957,7 @@ export const dictionaries = {
       "A recruitment assessment gives you something to work from before the interview: what the candidate demonstrated in the tasks, what the candidate says about their own way of working, and which questions are worth asking. It offers no verdict on suitability and no recommendation — the decision stays yours.",
     "academy.library.title": "Assessment library",
     "academy.library.lede":
-      "Programmes that can be assigned, and programmes still in development. What a programme does not measure is stated as plainly as what it does.",
+      "Assessments written for recruitment and assignable to a candidate. What an assessment does not measure is stated as plainly as what it does. Content for developing your own employees lives under Competence development.",
     "academy.library.items": "Questions",
     "academy.library.duration": "Time needed",
     "academy.library.doesNotMeasure": "Does not measure",
@@ -5958,7 +5978,7 @@ export const dictionaries = {
       "Sample material we use to demonstrate and quality-check the product. Never real customer content.",
     "academy.library.sections.development": "Under development",
     "academy.library.sections.developmentLede":
-      "Assessments that are not yet fully validated. They can be used as a preview if your organisation has been given access.",
+      "Content that is not yet fully validated. It can be used as a preview if your organisation has been given access.",
     "academy.library.filter.all": "All",
     "academy.library.kind.assessment": "Assessment",
     "academy.library.kind.training": "Training",

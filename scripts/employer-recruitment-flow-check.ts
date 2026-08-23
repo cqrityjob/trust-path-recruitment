@@ -343,10 +343,20 @@ expect(
     `surfaces that render them, found ${used.size}. Has the scan stopped matching?`,
 );
 
+// A key rendered through tp() lives as a `.one` / `.other` pair rather than as
+// itself -- "employer.actions.draftJobs" is the base of two entries and not an
+// entry. Resolving to the plural half keeps every assertion below meaningful
+// (both languages present, and not identical) instead of reporting the whole
+// action queue as missing. employer-library-purpose:check owns completeness of
+// the pairs themselves.
+const resolve = (dict: Record<string, string>, key: string) => dict[key] ?? dict[`${key}.other`];
+
 for (const key of [...used].sort()) {
-  if (!sv[key]) errors.push(`dictionaries.sv is missing "${key}".`);
-  if (!en[key]) errors.push(`dictionaries.en is missing "${key}".`);
-  if (sv[key] && en[key] && sv[key] === en[key]) {
+  const svText = resolve(sv, key);
+  const enText = resolve(en, key);
+  if (!svText) errors.push(`dictionaries.sv is missing "${key}".`);
+  if (!enText) errors.push(`dictionaries.en is missing "${key}".`);
+  if (svText && enText && svText === enText) {
     // A handful of words are legitimately identical in both languages. Only
     // the ones actually verified as such are exempted.
     const IDENTICAL_IS_FINE = new Set([
@@ -354,7 +364,7 @@ for (const key of [...used].sort()) {
       "employer.jobHub.stage.interview",
     ]);
     if (!IDENTICAL_IS_FINE.has(key)) {
-      errors.push(`"${key}" is identical in sv and en ("${sv[key]}") -- a missed translation.`);
+      errors.push(`"${key}" is identical in sv and en ("${svText}") -- a missed translation.`);
     }
   }
 }

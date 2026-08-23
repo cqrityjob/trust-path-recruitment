@@ -4,16 +4,35 @@
 //
 // Competence assessments and training programmes are the same governed content
 // spine with the same versioning, ownership model and status ladder, and they
-// come from one RPC discriminated by libraryKind. But they are two different
-// employer questions and now two different top-level areas, so this component
-// takes a `kind` and renders only that side:
+// come from one RPC. But they are two different employer questions and two
+// different top-level areas, so this component takes an `area` and renders
+// only what belongs to it:
 //
-//   Testbibliotek (under Tester)          kind="assessment"
-//   Program (under Kompetensutveckling)   kind="training"
+//   Bedömningsbibliotek (under Tester & bedömningar)   area="recruitment"
+//   Program (under Kompetensutveckling)                area="workforce"
 //
 // One component rather than two, because the governance a row carries -- what
 // it is, what state it is in, whether it may be assigned and why not -- is
 // identical either way, and a second copy would be the one that drifts.
+//
+// ── WHY PURPOSE AND NOT ONLY KIND ─────────────────────────────────────
+//
+// `libraryKind` alone put every assessment definition in the recruitment area,
+// which is how Tester & bedömningar came to list "Konflikthantering &
+// nedtrappning" and "Rapportering & dokumentation" beside the one assessment
+// a recruiter actually assigns to a candidate. Those six are written for
+// competence development, they say so in governed metadata, and each has a
+// development programme of nearly the same name under Kompetensutveckling.
+//
+// So the recruitment area asks the question a recruiter is asking -- what was
+// this WRITTEN for -- and `designed_for` answers it. The filter is that field
+// and nothing else: no title matching, no allowlist, and content marked for
+// recruitment can never be hidden by it.
+//
+// The workforce area keeps exactly the programmes it had. Deliberately NOT the
+// six competence-development assessments as well: their names duplicate the
+// programmes already listed there, and one page showing "Incidenthantering &
+// första åtgärder" twice is the mixed library this split exists to end.
 //
 // ── SHOWING UNPUBLISHED PROGRAMMES ON PURPOSE ─────────────────────────
 //
@@ -83,35 +102,48 @@ function sectionOf(e: ContentLibraryEntry): SectionKey {
 /** The "ready to use" section differs by area; development and internal
  *  scaffolding are shown in both, because an employer needs to know what is
  *  coming and what is only test material wherever they are standing. */
-function sectionsFor(kind: ContentLibraryEntry["libraryKind"]): readonly SectionKey[] {
-  return kind === "training"
+function sectionsFor(area: LibraryArea): readonly SectionKey[] {
+  return area === "workforce"
     ? (["training", "development", "internal"] as const)
     : (["assessment", "development", "internal"] as const);
+}
+
+/** Which employer area a library row belongs in.
+ *
+ *  Recruitment is a purpose, not a content type: an assessment appears there
+ *  only if the governed `designed_for` says it was written for recruitment.
+ *  Everything the workforce area owns is a training programme. */
+export type LibraryArea = "recruitment" | "workforce";
+
+export function belongsToArea(area: LibraryArea, e: ContentLibraryEntry): boolean {
+  return area === "recruitment"
+    ? e.libraryKind === "assessment" && e.designedFor === "recruitment_support"
+    : e.libraryKind === "training";
 }
 
 export function ContentLibrary({
   employerId,
   canAssign,
-  kind,
+  area,
   title,
   lede,
 }: {
   employerId: string;
   canAssign: boolean;
-  kind: ContentLibraryEntry["libraryKind"];
+  area: LibraryArea;
   title: string;
   lede: string;
 }) {
   const { t, lang } = useT();
   const listLibrary = useServerFn(listContentLibrary);
   const [filter, setFilter] = useState<SectionKey | "all">("all");
-  const visible = sectionsFor(kind);
+  const visible = sectionsFor(area);
 
   const query = useQuery({
     queryKey: ["academy", "content-library", employerId],
     queryFn: () => listLibrary({ data: { employerId } }),
-    // One cache entry serves both areas; each filters to its own kind.
-    select: (rows: ContentLibraryEntry[]) => rows.filter((r) => r.libraryKind === kind),
+    // One cache entry serves both areas; each filters to its own.
+    select: (rows: ContentLibraryEntry[]) => rows.filter((r) => belongsToArea(area, r)),
   });
 
   const grouped = useMemo(() => {
