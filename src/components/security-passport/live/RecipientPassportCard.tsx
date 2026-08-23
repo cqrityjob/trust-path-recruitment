@@ -20,6 +20,7 @@
 // plain duration with the words that say what it counts — never as an
 // emblem that could be mistaken for a rating.
 
+import { CredentialScopeLine } from "./CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -178,6 +179,11 @@ export function RecipientPassportCard({
                         {pt("rec.verifiedBy")}: {c.verifierOrganisation}
                       </span>
                     ) : null}
+                    {/* An approval shown without its limits reads as a general
+                        national licence. This card is what the employer's view
+                        of an application renders, so the limit has to appear
+                        here and not only on the public page. */}
+                    <CredentialScopeLine credential={c} tone="inline" className="text-[11px]" />
                   </span>
                 </li>
               );

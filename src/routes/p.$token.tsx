@@ -27,6 +27,7 @@
 // keeping it out of search indexes is a governance decision, not a tuning
 // knob to trade away for a nicer preview.
 
+import { CredentialScopeLine } from "@/components/security-passport/live/CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
@@ -331,17 +332,10 @@ function RecipientRoute() {
 
                 <LifecycleNote state={c.lifecycle} />
 
-                {/* A scoped approval says so on every surface. The exact
-                    scope is present only when sp_disclosure_payload decided
-                    this reader may see it — on a public card it is null and
-                    the reader is told the boundary exists without being told
-                    what it is, which is narrower than silence. */}
-                {c.scopeLimited ? (
-                  <p className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
-                    <span className="font-medium">{pt("rec.scopeLimited")}</span>{" "}
-                    {c.authorisationScope ?? pt("rec.scopeWithheld")}
-                  </p>
-                ) : null}
+                {/* The same component the card uses, so the public page and
+                    the employer's application view cannot drift into two
+                    readings of one privacy boundary. */}
+                <CredentialScopeLine credential={c} className="mt-3" />
 
                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                   <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />

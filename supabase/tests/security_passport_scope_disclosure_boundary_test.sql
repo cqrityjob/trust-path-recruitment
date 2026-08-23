@@ -111,9 +111,13 @@ BEGIN
   -- shape a genuine application has, which is the point.
   SELECT id INTO _emp FROM public.employers LIMIT 1;
   IF _emp IS NULL THEN
-    -- Reported, never skipped silently: a run without this coverage says so.
-    RAISE NOTICE 'ok  4.0 NOT COVERED no employer exists in this database';
-  ELSE
+    RAISE EXCEPTION
+      'ASSERTION FAILED: 4.0 no employer exists, so the application-scoped '
+      'boundary cannot be tested. This suite must not pass without it: 4.1 and '
+      '4.2 are the assertions that distinguish an application disclosure from '
+      'a link share, and they are the whole point of the boundary.';
+  END IF;
+  IF true THEN
     -- Created as a draft and then published, because that is the only route
     -- the database allows. Following it rather than bypassing it is the whole
     -- point: this fixture is a real job, not a shape that looks like one.
@@ -128,35 +132,26 @@ BEGIN
     -- the status moves here.
     UPDATE public.jobs SET status = 'published' WHERE id = _job;
 
-    BEGIN
-      INSERT INTO public.job_applications
-        (job_id, employer_id, applicant_user_id, status, consent_given_at)
-      VALUES (_job, _emp, _h, 'submitted', now()) RETURNING id INTO _app;
-    EXCEPTION WHEN others THEN
-      _app := NULL;
-      GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-      RAISE NOTICE 'ok  4.0 NOT COVERED could not build a real application here: %', _txt;
-    END;
+    -- No exception handler. If a real application cannot be built here, the
+    -- application-scoped boundary is UNTESTED, and an untested privacy
+    -- boundary must fail the suite rather than emit a line beginning "ok".
+    INSERT INTO public.job_applications
+      (job_id, employer_id, applicant_user_id, status, consent_given_at)
+    VALUES (_job, _emp, _h, 'submitted', now()) RETURNING id INTO _app;
 
-    IF _app IS NOT NULL THEN
-      INSERT INTO public.sp_disclosures
-        (holder_user_id, package_code, application_id)
-      VALUES (_h, 'verified_qualifications', _app) RETURNING id INTO _d;
-    END IF;
+    INSERT INTO public.sp_disclosures
+      (holder_user_id, package_code, application_id)
+    VALUES (_h, 'verified_qualifications', _app) RETURNING id INTO _d;
 
-    IF _app IS NOT NULL THEN
-      _payload := public.sp_disclosure_payload(_d);
-      IF (_payload -> 'verified_claims' -> 0) ->> 'authorisation_scope' IS DISTINCT FROM _scope THEN
-        RAISE EXCEPTION 'ASSERTION FAILED: 4.1 an application disclosure withheld the scope';
-      END IF;
-      RAISE NOTICE 'ok  4.1 an application disclosure carries the scope on the SAME package';
-      RAISE NOTICE 'ok  4.2 which GROUP 2 proved withholds it when shared by link';
+    _payload := public.sp_disclosure_payload(_d);
+    IF (_payload -> 'verified_claims' -> 0) ->> 'authorisation_scope' IS DISTINCT FROM _scope THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: 4.1 an application disclosure withheld the scope';
     END IF;
+    RAISE NOTICE 'ok  4.1 an application disclosure carries the scope on the SAME package';
+    RAISE NOTICE 'ok  4.2 which GROUP 2 proved withholds it when shared by link';
 
-    IF _app IS NOT NULL THEN
-      DELETE FROM public.sp_disclosures WHERE application_id = _app;
-      DELETE FROM public.job_applications WHERE id = _app;
-    END IF;
+    DELETE FROM public.sp_disclosures WHERE application_id = _app;
+    DELETE FROM public.job_applications WHERE id = _app;
     DELETE FROM public.jobs WHERE id = _job;
   END IF;
 

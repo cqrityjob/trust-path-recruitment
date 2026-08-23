@@ -72,27 +72,53 @@ part of PR CI (weekly workflow only), and it must not be silently accepted with
 
 ## Migrations added by Phase A
 
-| Version          | Purpose                               | Rollback                             |
-| ---------------- | ------------------------------------- | ------------------------------------ |
-| `20260908090000` | legacy scope correctable              | yes — warns when it strands a holder |
-| `20260908091000` | title country suffix + training label | yes                                  |
-| `20260908092000` | disclosure scope boundary             | yes                                  |
+| Version          | Purpose                               | Rollback                              |
+| ---------------- | ------------------------------------- | ------------------------------------- |
+| `20260908090000` | legacy scope correctable              | yes — warns when it strands a holder  |
+| `20260908091000` | title country suffix + training label | yes — asserts the labels are restored |
+| `20260908092000` | disclosure scope boundary             | yes                                   |
 
-Rollback chain: `20260908092000` → `20260908090000` → Dubai → UK → Sweden →
-foundation. All six execute on every `db-test.sh` run.
+Together with the four inherited migrations that is **seven migrations and
+seven rollbacks**, all executed by `db-test.sh` in reverse migration order.
 
 ## Final gates
 
+Run against `origin/main` at `c224934`, merged forward into this branch.
+
 `tsc` (app) clean · `tsc -p tsconfig.scripts.json` clean · production build
-clean · `db-test.sh` exit 0 · **35 / 36** guard scripts · changed-file eslint
-clean · Prettier clean on every changed file · replay allowlist **identical to
-`main`** (24 entries, not grown).
+clean · `db-test.sh` **exit 0** · **37 / 38** guard scripts · changed-file
+eslint clean · Prettier clean · replay allowlist **identical to `main`**.
+
+**Seven of seven rollbacks execute**, in reverse migration order, and the label
+rollback now asserts the previous values were restored rather than only that it
+ran.
 
 New DB assertions: 42 three-market + 23 Swedish truth model + 22 UK + 24 Dubai
 
-- 16 legacy scope correction + 12 scope disclosure boundary.
-  Guard assertions: 70 credential-form, 60 identity-engine, 27 regulatory-claim
-  self-test.
+- 16 legacy scope correction + 12 scope disclosure boundary + 7 rollback data
+  safety. Guard assertions: 70 credential-form, 60 identity-engine, 27
+  regulatory-claim self-test, 14 scope surface. Browser: 53 passed, 3 skipped.
+
+### Review round two
+
+Six blockers, all closed:
+
+1. The employer application view rendered no scope at all. `RecipientPassportCard`
+   — which `ApplicationPassportPanel` draws — never mentioned it, so a correct
+   payload met a screen that ignored it. One shared `CredentialScopeLine` now
+   serves the employer view and the public page, and the holder's own entry
+   view displays the stored scope rather than only accepting it as input.
+2. The boundary suite could emit `ok … NOT COVERED` and pass. Removed: no
+   escape hatch, assertions 4.1 and 4.2 named as mandatory in `db-test.sh`,
+   floor raised to 12. A rendered spec proves what each audience sees.
+3. The label rollback existed but was never wired into the chain, so it had
+   never run. Wired in reverse order, with a restoration assertion.
+4. The Swedish rollback dropped `authorisation_scope` without checking whether
+   any holder had one — quieter than the deletes, because the claim rows
+   survive while what they were limited to is erased. It now refuses.
+5. `origin/main` merged forward (`2c56fdd` → `c224934`); every gate rerun.
+6. The changed Länsstyrelsen source reviewed, not accepted. See
+   `regulatory-source-register.md`.
 
 ## Not done, and must not be
 

@@ -32,6 +32,60 @@ function payload(over: Partial<RecipientPayloadActive>): RecipientPayloadActive 
   };
 }
 
+/** A skyddsvakt approval as an APPLICATION-SCOPED employer receives it:
+ *  sp_disclosure_payload emitted the exact protected object, because the
+ *  holder chose to attach their Passport to that specific application. */
+const SCOPED_EMPLOYER = payload({
+  package: "employer_review",
+  verified_claims: [
+    {
+      id: "r-sv-emp",
+      type: "licence",
+      title: "Skyddsvaktsförordnande",
+      credential_code: "SV",
+      issuer: "Fiktiva Länsstyrelsen",
+      jurisdiction: "SE",
+      sub_jurisdiction: null,
+      scope_limited: true,
+      authorisation_scope: "Skyddsobjekt: Fiktiv hamn, Kaj 12",
+      issued_on: "2025-03-01",
+      valid_until: "2029-02-28",
+      assertion: "verified",
+      lifecycle: "active",
+      verified_at: "2025-03-04T10:00:00Z",
+      verifier_organisation: "CQrityjob",
+      verification_method: "document_review",
+    },
+  ],
+});
+
+/** The SAME credential on a public card. The boundary is not enforced here —
+ *  the payload simply does not carry the object, exactly as the database
+ *  emitted it — so the card says the approval IS limited and stops. */
+const SCOPED_PUBLIC = payload({
+  package: "public_card",
+  verified_claims: [
+    {
+      id: "r-sv-pub",
+      type: "licence",
+      title: "Skyddsvaktsförordnande",
+      credential_code: "SV",
+      issuer: "Fiktiva Länsstyrelsen",
+      jurisdiction: "SE",
+      sub_jurisdiction: null,
+      scope_limited: true,
+      authorisation_scope: null,
+      issued_on: "2025-03-01",
+      valid_until: "2029-02-28",
+      assertion: "verified",
+      lifecycle: "active",
+      verified_at: "2025-03-04T10:00:00Z",
+      verifier_organisation: "CQrityjob",
+      verification_method: "document_review",
+    },
+  ],
+});
+
 const CURRENT = payload({
   verified_experience_days: 1490,
   verified_claims: [
@@ -118,6 +172,8 @@ const NOTHING = payload({ holder: "Tom Provsson", package: "verified_qualificati
 
 const CASES: readonly { id: string; label: string; data: RecipientPayloadActive }[] = [
   { id: "current", label: "Current OV + VU2", data: CURRENT },
+  { id: "scope-employer", label: "Scoped SV — application employer", data: SCOPED_EMPLOYER },
+  { id: "scope-public", label: "Scoped SV — public card", data: SCOPED_PUBLIC },
   { id: "lapsed", label: "Stored active, validity lapsed", data: LAPSED },
   { id: "anonymous", label: "Anonymous holder", data: ANONYMOUS },
   { id: "nothing", label: "Package disclosed nothing", data: NOTHING },

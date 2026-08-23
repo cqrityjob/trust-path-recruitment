@@ -112,6 +112,46 @@ _Status: Implemented. Not yet observed running on schedule._
 > pack's document-verification route cannot be described as monitored while its
 > portal does not respond to us, and that belongs in the pack's legal review.
 
+## Open review item — `se_lansstyrelsen_bevakningsforetag`
+
+**Detected 2026-08-23. Baseline deliberately NOT updated.**
+
+The monitor reported the Länsstyrelsen bevakningsföretag page as changed since
+the 2026-08-22 baseline. Reviewed rather than accepted:
+
+|                          |                                                        |
+| ------------------------ | ------------------------------------------------------ |
+| Baseline fingerprint     | `8a78b1c1…` (2026-08-22)                               |
+| Current fingerprint      | `28887b27…` (2026-08-23)                               |
+| Stable within a session? | **Yes** — identical across three fetches seconds apart |
+
+So this is a genuine content change on the page, not per-request churn.
+
+**Effect on the Swedish market pack: none found.** Every term the pack depends
+on is still present:
+
+`godkännande av personal` · `bevakningsföretag` · `auktorisation` · `väktare` ·
+`skyddsvakt` · `länsstyrelsen`
+
+The credential this source backs is `SE_PERSONNEL_APPROVAL`, whose contract is
+that CQrityjob records **only** that an approval was checked, with an authority
+and a date — enforced by `narrow_result_only`. Nothing in that contract, in any
+derivation rule, or in any user-facing string is derived from this page's
+wording, so no rule or copy changes as a result.
+
+> **What this review could not establish.** The baseline stores a fingerprint,
+> not the previous text, so _which words changed_ cannot be reconstructed from
+> it — only that they did. The finding above is from reading the current page
+> against what the pack relies on, which is the right test for "does this
+> affect us" but not for "what did they alter". A reviewer who needs the latter
+> must compare against the page's own history.
+
+**Outstanding for a human:** confirm the above and, if satisfied, accept the new
+state with `bun run regulatory-sources:check --update`. **CI must never do
+this.** Accepting a regulatory source change without reading it is precisely
+what the monitor exists to prevent, and is why this branch leaves the baseline
+as it found it.
+
 ## The baseline is tracked in git on purpose
 
 `supabase/regulatory-source-baseline.json` records what we last _accepted_ as

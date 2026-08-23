@@ -19,6 +19,9 @@
 --   * the eleven Swedish derivation rules, after which every surface falls
 --     back to the honest empty state rather than to the old hardcoded string.
 --
+-- It also REFUSES outright if any holder row records what an authorisation is
+-- limited to, because dropping the column erases that silently — see section 3.
+--
 -- Export before running in anger:
 --
 --   \copy (SELECT * FROM public.sp_claims WHERE credential_code IN
@@ -204,6 +207,51 @@ DELETE FROM public.sp_credential_types
 -- ---------------------------------------------------------------------------
 -- 3. The added columns
 -- ---------------------------------------------------------------------------
+-- Dropping `authorisation_scope` destroys every scope any holder ever
+-- recorded, in one statement, silently. The claim rows survive; what they were
+-- LIMITED TO does not — and a skyddsvakt approval whose scope has been erased
+-- reads as a general national licence, which is broader than the authority
+-- granted. The rows would look intact while asserting more than they should.
+--
+-- Section 1b already refuses when claims reference the four credentials this
+-- rollback removes. That is a different set: a scope lives on `SV`, which this
+-- file does not touch, so those rows sail straight past it and lose the column
+-- anyway. Legacy null-scope rows and corrected versions are both counted here.
+DO $rbsc$
+DECLARE
+  _scoped   integer;
+  _opted_in text := current_setting('sp.rollback_may_delete_holder_claims', true);
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'sp_claims'
+                AND column_name = 'authorisation_scope') THEN
+
+    SELECT count(*) INTO _scoped
+      FROM public.sp_claims
+     WHERE authorisation_scope IS NOT NULL
+       AND length(btrim(authorisation_scope)) > 0;
+
+    IF _scoped > 0 AND coalesce(_opted_in, '') <> 'yes' THEN
+      RAISE EXCEPTION
+        'ROLLBACK REFUSED: % claim(s) record what an authorisation is LIMITED TO. '
+        'Dropping authorisation_scope erases every one of them and leaves the '
+        'claims looking intact while asserting more than the authority granted. '
+        'RECOVERY: export them first — '
+        '\copy (SELECT id, holder_user_id, credential_code, authorisation_scope '
+        'FROM public.sp_claims WHERE authorisation_scope IS NOT NULL) '
+        'TO ''sp_claims_scopes.csv'' CSV HEADER — then either withdraw those '
+        'claims with their holders, or accept the loss deliberately with '
+        'SET LOCAL sp.rollback_may_delete_holder_claims = ''yes''; and re-run.',
+        _scoped;
+    END IF;
+
+    IF _scoped > 0 THEN
+      RAISE WARNING
+        'Erasing the recorded scope of % claim(s) — opted in explicitly.', _scoped;
+    END IF;
+  END IF;
+END $rbsc$;
+
 ALTER TABLE public.sp_claims DROP COLUMN IF EXISTS authorisation_scope;
 
 ALTER TABLE public.sp_credential_types

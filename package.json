@@ -39,6 +39,7 @@
     "passport-credential-form:check": "bun run scripts/passport-credential-form-check.ts",
     "scripts:typecheck": "tsc -p tsconfig.scripts.json --noEmit",
     "passport-regulatory-claim:check": "bun run scripts/passport-regulatory-claim-check.ts",
+    "passport-scope-surface:check": "bun run scripts/passport-scope-surface-check.ts",
     "mcp-exposure:check": "bun run scripts/mcp-exposure-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
     "review-contribution:check": "bun run scripts/review-contribution-guard-check.ts",

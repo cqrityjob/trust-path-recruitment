@@ -8,15 +8,21 @@ _(Status markers as defined in [three-market-architecture.md](./three-market-arc
 
 ## The migrations
 
-| Version          | File                         | Changes triggers/RPCs?                      |
-| ---------------- | ---------------------------- | ------------------------------------------- |
-| `20260907090000` | `sp_three_market_foundation` | yes — claim trigger, new title-rule trigger |
-| `20260907091000` | `sp_sweden_truth_model`      | yes — claim trigger, `sp_correct_claim`     |
-| `20260907092000` | `sp_uk_market_pack`          | yes — claim trigger                         |
-| `20260907093000` | `sp_uae_dubai_market_pack`   | **no** — one column and rows                |
+| Version          | File                                  | Changes triggers/RPCs?                      |
+| ---------------- | ------------------------------------- | ------------------------------------------- |
+| `20260907090000` | `sp_three_market_foundation`          | yes — claim trigger, new title-rule trigger |
+| `20260907091000` | `sp_sweden_truth_model`               | yes — claim trigger, `sp_correct_claim`     |
+| `20260907092000` | `sp_uk_market_pack`                   | yes — claim trigger                         |
+| `20260907093000` | `sp_uae_dubai_market_pack`            | **no** — one column and rows                |
+| `20260908090000` | `sp_legacy_scope_correctable`         | yes — claim trigger                         |
+| `20260908091000` | `sp_title_country_and_training_label` | **no** — two label columns                  |
+| `20260908092000` | `sp_disclosure_scope_boundary`        | yes — `sp_disclosure_payload`               |
 
-That last row is the point of the foundation: once it is in place, a market
-costs data.
+**Seven migrations, seven rollbacks.** Every rollback is executed by
+`scripts/db-test.sh` on each run, in reverse migration order.
+
+The Dubai row is the point of the foundation: once it is in place, a market
+costs data — one column and a set of rows.
 
 ### Why the versions run ahead of the calendar
 
@@ -30,8 +36,20 @@ the filename changed.
 ## Rollback, in order
 
 ```
-Dubai  →  UK  →  Sweden  →  foundation
+20260908092000  disclosure scope boundary
+20260908091000  title labels          ← was missing from the chain until review
+20260908090000  legacy scope correctable
+20260907093000  Dubai
+20260907092000  UK
+20260907091000  Sweden
+20260907090000  foundation
 ```
+
+Reverse migration order throughout. The label rollback was written but never
+wired in, so it had never once been executed — and a rollback that has never
+run is a hope, which is the whole reason the others are executed here. It now
+also **asserts the previous labels were restored**, because exiting without an
+error proves only that it ran.
 
 **The order is enforced, not documented.** The Swedish rollback restores the
 original 16-character limit on credential codes, and

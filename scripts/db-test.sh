@@ -1610,6 +1610,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Runs BEFORE the rollback chain, and creates the data the chain would destroy.
+# db-test.sh executes every rollback, which proves they RUN — it cannot prove
+# they REFUSE, because by then every suite has cleaned up and there is nothing
+# left to destroy. That is precisely how the blind DELETE survived review.
+echo "==> Running Security Passport rollback data-safety assertions"
+set +e
+SPRDS_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_rollback_data_safety_test.sql 2>&1)"
+SPRDS_RC=$?
+set -e
+
+echo "$SPRDS_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPRDS_PASSED="$(echo "$SPRDS_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPRDS_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the rollback data-safety suite exited with code ${SPRDS_RC}." >&2
+  echo "$SPRDS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport rollback data safety"
+else
+  echo "    ok  ${SPRDS_PASSED} rollback data-safety assertions passed"
+  if [ "$SPRDS_PASSED" -lt 7 ]; then
+    echo "FAIL: expected at least 7 rollback data-safety assertions, only ${SPRDS_PASSED} ran." >&2
+    suite_failed "Security Passport rollback data safety (assertion shortfall: floor 7)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport scope disclosure boundary assertions"
 set +e
 SPSDB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_scope_disclosure_boundary_test.sql 2>&1)"
@@ -1626,12 +1653,34 @@ if [ "$SPSDB_RC" -ne 0 ]; then
   suite_failed "Security Passport scope disclosure boundary"
 else
   echo "    ok  ${SPSDB_PASSED} scope disclosure boundary assertions passed"
+
+  # A skipped assertion must never be mistaken for a passing one. The suite
+  # itself no longer emits "NOT COVERED", but asserting it here too means a
+  # future edit cannot reintroduce the escape hatch quietly.
+  if echo "$SPSDB_OUT" | grep -q "NOT COVERED"; then
+    echo "FAIL: the scope boundary suite reported NOT COVERED. An untested privacy" >&2
+    echo "      boundary must fail, not emit a line beginning \"ok\"." >&2
+    suite_failed "Security Passport scope disclosure boundary (NOT COVERED path)"
+  fi
+
+  # 4.1 and 4.2 are the assertions that distinguish an application disclosure
+  # from a link share — the whole point of the boundary. Named explicitly so a
+  # run that skipped exactly those two cannot pass on count alone.
+  for REQUIRED in \
+    "4.1 an application disclosure carries the scope on the SAME package" \
+    "4.2 which GROUP 2 proved withholds it when shared by link"; do
+    if ! echo "$SPSDB_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory application-scope assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport scope disclosure boundary (missing: ${REQUIRED})"
+    fi
+  done
+
   # Every exclusion is paired with the inclusion proving the payload COULD have
   # carried the scope. A short run means those contrasts did not execute, which
   # reads exactly like a boundary that holds.
-  if [ "$SPSDB_PASSED" -lt 10 ]; then
-    echo "FAIL: expected at least 10 scope boundary assertions, only ${SPSDB_PASSED} ran." >&2
-    suite_failed "Security Passport scope disclosure boundary (assertion shortfall: floor 10)"
+  if [ "$SPSDB_PASSED" -lt 12 ]; then
+    echo "FAIL: expected at least 12 scope boundary assertions, only ${SPSDB_PASSED} ran." >&2
+    suite_failed "Security Passport scope disclosure boundary (assertion shortfall: floor 12)"
   fi
 fi
 
@@ -1692,6 +1741,64 @@ if [ "$SPSDBRB_RC" -ne 0 ]; then
   suite_failed "disclosure scope boundary rollback"
 else
   echo "    ok  the disclosure scope boundary rolls back cleanly"
+fi
+
+# Reverse migration order: 20260908092000 above, then this, then
+# 20260908090000 below. It touches only two label columns, but running the
+# chain in anything other than reverse order is how an ordering assumption
+# stops being tested.
+echo "==> Verifying the title label rollback"
+set +e
+SPTLRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908091000_sp_title_country_and_training_label_rollback.sql 2>&1)"
+SPTLRB_RC=$?
+set -e
+
+if [ "$SPTLRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the title label rollback exited with code ${SPTLRB_RC}." >&2
+  echo "$SPTLRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "title label rollback"
+else
+  # Executing without error proves nothing about whether it put the labels
+  # back. Assert the values it claims to restore.
+  set +e
+  SPTLRB_CHECK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "
+    DO \$tl\$
+    DECLARE _v text; _o text; _n integer;
+    BEGIN
+      SELECT name_en INTO _v FROM public.sp_professional_titles
+       WHERE code = 'SE_VAKTARE_COMPETENCE';
+      IF _v IS DISTINCT FROM 'Security Guard · Sweden' THEN
+        RAISE EXCEPTION 'label not restored: SE_VAKTARE_COMPETENCE is %', _v;
+      END IF;
+
+      SELECT name_en INTO _o FROM public.sp_professional_titles
+       WHERE code = 'SE_ORDNINGSVAKT_TITLE';
+      IF _o IS DISTINCT FROM 'Public Order Guard (Ordningsvakt) · Sweden' THEN
+        RAISE EXCEPTION 'label not restored: SE_ORDNINGSVAKT_TITLE is %', _o;
+      END IF;
+
+      -- The whole point of the forward migration was that the country printed
+      -- twice. Rolling back must bring the suffixes back on every pack, or the
+      -- rollback is only partially reversing what it claims to reverse.
+      SELECT count(*) INTO _n FROM public.sp_professional_titles
+       WHERE name_en ~ '(Sweden|United Kingdom|UAE)\\s*\$';
+      IF _n < 10 THEN
+        RAISE EXCEPTION 'only % title(s) regained a country suffix; expected at least 10', _n;
+      END IF;
+    END \$tl\$;" 2>&1)"
+  SPTLRB_CHECK_RC=$?
+  set -e
+
+  if [ "$SPTLRB_CHECK_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the title label rollback ran but did not restore the labels." >&2
+    echo "$SPTLRB_CHECK" | grep -iE "ERROR:|FEL:" | head -5 >&2
+    suite_failed "title label rollback (labels not restored)"
+  else
+    echo "    ok  the title labels roll back, and the previous values are restored"
+  fi
 fi
 
 # The legacy-scope rollback runs first of all: it restores the trigger to the
@@ -1757,7 +1864,20 @@ fi
 # one. The other order leaves a trigger describing a schema that is gone.
 echo "==> Verifying the Swedish truth model rollback"
 set +e
+# The Swedish rollback REFUSES while any holder row records what an
+# authorisation is limited to — dropping authorisation_scope would erase every
+# one of them silently. Suite fixtures leave such rows behind, so the refusal
+# fires here, correctly.
+#
+# This database is disposable and recreated from empty on every run, so the
+# destruction is both intended and harmless. The override is set explicitly
+# rather than by weakening the guard, because that is exactly what it is for:
+# a conscious act, visible in the script, rather than a silent side effect.
+#
+# The refusal itself is proven separately, against real data, by
+# supabase/tests/security_passport_rollback_data_safety_test.sql above.
 SPSERB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -c "SET sp.rollback_may_delete_holder_claims = 'yes';" \
   -f supabase/rollback/20260907091000_sp_sweden_truth_model_rollback.sql 2>&1)"
 SPSERB_RC=$?
 set -e
@@ -1868,5 +1988,6 @@ echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"
 echo "              ${SPAE_PASSED} Dubai market pack assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
-echo "              ${SPSDB_PASSED} scope disclosure boundary assertions"
+echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
+echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "===================================================="

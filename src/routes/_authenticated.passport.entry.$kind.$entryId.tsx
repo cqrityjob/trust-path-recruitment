@@ -348,6 +348,26 @@ function PassportEntryRoute() {
                   {formatExpiry(claim.validUntil, lang)}
                 </dd>
               </div>
+              {/* The holder could TYPE a scope during a correction and then
+                  never see it again: it was stored, disclosed to employers,
+                  and absent from their own record. A field somebody owns and
+                  cannot read is one they cannot check. */}
+              {claim.authorisationScope ? (
+                <div data-testid="sp-holder-scope">
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {pt("cred.field.scope")}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-foreground">{claim.authorisationScope}</dd>
+                </div>
+              ) : null}
+              {claim.subJurisdictionCode ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {pt("rec.subJurisdiction")}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-foreground">{claim.subJurisdictionCode}</dd>
+                </div>
+              ) : null}
             </>
           ) : (
             <>

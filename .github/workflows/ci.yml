@@ -111,6 +111,13 @@ jobs:
       - name: Passport regulatory-claim guard
         run: bun run passport-regulatory-claim:check
 
+      # A correct payload can still meet a screen that does not render it. The
+      # employer's application view goes through RecipientPassportCard, which
+      # carried the exact scope in its payload and never showed it — so this
+      # asserts what each audience SEES, not only what the database emits.
+      - name: Passport scope surface check
+        run: bun run passport-scope-surface:check
+
       # Production reported a page-wide "something went wrong" over a
       # verification queue that was working: four unrelated operations shared
       # one error string that nothing cleared on success. The browser test for
