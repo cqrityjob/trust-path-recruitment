@@ -1731,6 +1731,27 @@ BEGIN
 END \$mp\$;" >/dev/null
 echo "    ok  every active market pack has a recorded review state"
 
+# ---------------------------------------------------------------------------
+# The correction path, phase 1 of 2: with Phase A applied, immediately before
+# the rollback chain. Creates the holder and the two claims the "after" phase
+# depends on, so claim B is a row that genuinely predates the rollback.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport rollback correction assertions (before)"
+set +e
+SPRCB_OUT="$(psql -v ON_ERROR_STOP=1 -v phase=before -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_rollback_correction_test.sql 2>&1)"
+SPRCB_RC=$?
+set -e
+
+echo "$SPRCB_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+
+if [ "$SPRCB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the correction path is broken BEFORE any rollback ran (code ${SPRCB_RC})." >&2
+  echo "$SPRCB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport rollback correction (before)"
+fi
+
 echo "==> Verifying the disclosure scope boundary rollback"
 set +e
 SPSDBRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -1932,6 +1953,31 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# The correction path, phase 2 of 2: after all 7 rollbacks. This is the
+# assertion the original 35 shape assertions could not make -- they proved the
+# columns were gone while holder correction was silently broken.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport rollback correction assertions (after)"
+set +e
+SPRCA_OUT="$(psql -v ON_ERROR_STOP=1 -v phase=after -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_rollback_correction_test.sql 2>&1)"
+SPRCA_RC=$?
+set -e
+
+echo "$SPRCA_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPRC_PASSED="$(echo "$SPRCA_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPRCA_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: after the rollback chain a holder can no longer correct a claim (code ${SPRCA_RC})." >&2
+  echo "$SPRCA_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport rollback correction (after)"
+elif [ "$SPRC_PASSED" -lt 4 ]; then
+  echo "FAIL: expected at least 4 post-rollback correction assertions, only ${SPRC_PASSED} ran." >&2
+  suite_failed "Security Passport rollback correction (assertion shortfall: floor 4)"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
@@ -1994,4 +2040,5 @@ echo "              ${SPAE_PASSED} Dubai market pack assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"
+echo "              ${SPRC_PASSED} rollback correction assertions"
 echo "===================================================="
