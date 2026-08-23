@@ -1610,6 +1610,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport legacy scope correction assertions"
+set +e
+SPLSC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_legacy_scope_correction_test.sql 2>&1)"
+SPLSC_RC=$?
+set -e
+
+echo "$SPLSC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPLSC_PASSED="$(echo "$SPLSC_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPLSC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the legacy scope correction suite exited with code ${SPLSC_RC}." >&2
+  echo "$SPLSC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport legacy scope correction"
+else
+  echo "    ok  ${SPLSC_PASSED} legacy scope correction assertions passed"
+  # This suite exists because one production row was frozen: readable,
+  # withdrawable, uncorrectable. A short run means the correction attempts did
+  # not happen, which reads exactly like a fixed defect.
+  if [ "$SPLSC_PASSED" -lt 14 ]; then
+    echo "FAIL: expected at least 14 legacy scope assertions, only ${SPLSC_PASSED} ran." >&2
+    suite_failed "Security Passport legacy scope correction (assertion shortfall: floor 14)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Independently of the suite above: the replayed database must never end with
 # an unreviewed market switched on. Asserted here rather than only inside the
 # suite, because a suite that aborted early cannot assert its own cleanup.
@@ -1625,6 +1651,25 @@ BEGIN
   END IF;
 END \$mp\$;" >/dev/null
 echo "    ok  every active market pack has a recorded review state"
+
+# The legacy-scope rollback runs first of all: it restores the trigger to the
+# version the UK pack left, which the Dubai/UK/Sweden chain below then unwinds
+# in turn.
+echo "==> Verifying the legacy scope correction rollback"
+set +e
+SPLSCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908090000_sp_legacy_scope_correctable_rollback.sql 2>&1)"
+SPLSCRB_RC=$?
+set -e
+
+if [ "$SPLSCRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the legacy scope rollback exited with code ${SPLSCRB_RC}." >&2
+  echo "$SPLSCRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "legacy scope correction rollback"
+else
+  echo "    ok  the legacy scope correction rolls back cleanly"
+fi
 
 # Dubai first. The Swedish rollback restores a 16-character limit on credential
 # codes and AE_DU_PEOPLE_OF_DETERMINATION is 30 -- so running these out of
@@ -1779,5 +1824,6 @@ echo "              ${STDR_PASSED} standard recruitment availability assertions,
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"
-echo "              ${SPAE_PASSED} Dubai market pack assertions"
+echo "              ${SPAE_PASSED} Dubai market pack assertions,"
+echo "              ${SPLSC_PASSED} legacy scope correction assertions"
 echo "===================================================="

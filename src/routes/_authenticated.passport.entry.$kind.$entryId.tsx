@@ -12,6 +12,7 @@
 // separate facts because a verified licence that has expired is the normal
 // case, not an edge case.
 
+import { fieldsFor, type CredentialType } from "@/lib/security-passport/credentials";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -42,6 +43,7 @@ import { correctClaim } from "@/lib/security-passport/passport.functions";
 import {
   getCredentialPrivateFields,
   listClaimVersions,
+  listCredentialTypes,
   type ClaimVersion,
 } from "@/lib/security-passport/credentials.functions";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
@@ -86,6 +88,7 @@ function PassportEntryRoute() {
   const doShareCredential = useServerFn(createCredentialDisclosure);
   const doCorrect = useServerFn(correctClaim);
   const loadVersions = useServerFn(listClaimVersions);
+  const loadCredentialTypes = useServerFn(listCredentialTypes);
   const loadPrivateFields = useServerFn(getCredentialPrivateFields);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
@@ -93,6 +96,7 @@ function PassportEntryRoute() {
   const [requests, setRequests] = useState<readonly MyVerificationRequest[]>([]);
   const [decisions, setDecisions] = useState<readonly VerificationDecisionRecord[]>([]);
   const [employers, setEmployers] = useState<readonly { id: string; name: string }[]>([]);
+  const [credentialTypes, setCredentialTypes] = useState<readonly CredentialType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [credentialShareUrl, setCredentialShareUrl] = useState<string | null>(null);
   const [sharingBusy, setSharingBusy] = useState(false);
@@ -107,22 +111,27 @@ function PassportEntryRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const [snap, ev, reqs, emps] = await Promise.all([
+      const [snap, ev, reqs, emps, types] = await Promise.all([
         loadPassport({ data: undefined }),
         loadEvidence({ data: undefined }),
         loadRequests({ data: undefined }),
         loadEmployers({ data: undefined }),
+        // Needed to know whether this credential is scoped. Read from the
+        // taxonomy rather than a list here, so a credential that becomes
+        // scoped later asks for it without a code change.
+        loadCredentialTypes({ data: undefined }),
       ]);
       setSnapshot(snap);
       setEvidence(ev);
       setRequests(reqs.requests);
       setDecisions(reqs.decisions);
       setEmployers(emps);
+      setCredentialTypes(types);
     } catch (err) {
       console.error("[passport] entry load failed", err);
       setError(pt("common.error"));
     }
-  }, [loadPassport, loadEvidence, loadRequests, loadEmployers, pt]);
+  }, [loadPassport, loadEvidence, loadRequests, loadEmployers, loadCredentialTypes, pt]);
 
   useEffect(() => {
     void refresh();
@@ -200,6 +209,26 @@ function PassportEntryRoute() {
   const title = claim ? (lang === "en" ? claim.titleEn : claim.titleSv) : period!.roleTitle;
   const validity = validityOf(subject.lifecycleState, claim ? claim.validUntil : null, today());
 
+  // Whether this credential is scoped, straight from the taxonomy row via
+  // `fieldsFor` — the same function the create path uses, so the two can never
+  // disagree about which credentials ask for a scope.
+  const correctionRequiresScope = claim?.credentialCode
+    ? (fieldsFor(
+        credentialTypes.find((t) => t.code === claim.credentialCode) ?? {
+          code: "",
+          category: "qualification",
+          claimType: "",
+          nameSv: "",
+          nameEn: "",
+          symbolLabel: "",
+          requiresValidUntil: false,
+          requiresIssuer: false,
+          requiresScope: false,
+          narrowResultOnly: false,
+        },
+      ).scope ?? false)
+    : false;
+
   const mayCorrect =
     claim !== null &&
     (validity.effectiveState === "active" || validity.effectiveState === "expired");
@@ -235,6 +264,13 @@ function PassportEntryRoute() {
           credentialCode: claim.credentialCode,
           credentialReference: values.credentialReference.trim() || null,
           holderNote: values.holderNote.trim() || null,
+          // Both were omitted, and omitting the scope is what froze every
+          // legacy Skyddsvakt claim: sp_correct_claim coalesces an absent
+          // value with the superseded row's, and for a pre-column row that is
+          // NULL — which the write guard then refused. The holder supplies it
+          // here; the sub-jurisdiction carries forward unchanged.
+          authorisationScope: values.authorisationScope.trim() || null,
+          subJurisdictionCode: claim.subJurisdictionCode,
           // Carried unchanged for the same reason as the credential code: the
           // correction form does not offer the level, so it must not blank it.
           skillCode: claim.skillCode,
@@ -461,6 +497,7 @@ function PassportEntryRoute() {
           {correcting && correctionPrefill && claim ? (
             <div className="mt-3">
               <CredentialCorrectionForm
+                requiresScope={correctionRequiresScope}
                 claim={claim}
                 privateFields={correctionPrefill}
                 busy={correctionBusy}

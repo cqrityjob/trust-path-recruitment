@@ -653,6 +653,22 @@ const correctionInput = z.object({
   credentialCode: z.string().max(CREDENTIAL_CODE_MAX_LENGTH).nullable(),
   credentialReference: z.string().max(120).nullable(),
   holderNote: z.string().max(2000).nullable(),
+  /** Both added because omitting them made a legacy claim permanently
+   *  uncorrectable.
+   *
+   *  `sp_correct_claim` coalesces an omitted value with the superseded row's,
+   *  which carries forward correctly for a row that HAS one. A Skyddsvakt
+   *  approval created before `authorisation_scope` existed has none — and `SV`
+   *  is `requires_scope`, so coalescing NULL with NULL produced an INSERT the
+   *  write guard refused. The holder could read and withdraw that claim but
+   *  never correct it, and correcting it is the only way to supply the scope
+   *  the rule now demands. Reproduced against the real RPC as the real
+   *  authenticated holder; one such row exists in production today.
+   *
+   *  Nullable, and coalesced by the RPC, so a correction that does not mention
+   *  either one still carries the stored value forward. */
+  subJurisdictionCode: z.string().max(8).nullable(),
+  authorisationScope: z.string().max(200).nullable(),
 });
 
 /** Correction goes through the database RPC rather than two client writes,
@@ -683,6 +699,8 @@ export const correctClaim = createServerFn({ method: "POST" })
       _holder_note: orNull(data.holderNote),
       _skill_code: orNull(data.skillCode),
       _skill_level: orNull(data.skillLevel),
+      _sub_jurisdiction_code: orNull(data.subJurisdictionCode),
+      _authorisation_scope: orNull(data.authorisationScope),
     });
     if (error) throw new Error(error.message);
     return { id: newId as unknown as string };
