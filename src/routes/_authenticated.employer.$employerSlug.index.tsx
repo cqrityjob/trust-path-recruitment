@@ -223,7 +223,7 @@ function EmployerOverview({
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
 }) {
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
 
   const loadStats = useServerFn(getEmployerDashboardStats);
   const loadOrg = useServerFn(getEmployerOrganisation);
@@ -354,7 +354,7 @@ function EmployerOverview({
       key: "new-applications",
       icon: <Inbox className="h-4 w-4" />,
       count: awaitingReviewCount,
-      text: t("employer.actions.newApplications"),
+      text: tp("employer.actions.newApplications", awaitingReviewCount),
       // The exact rows, not the inbox they live in.
       linkProps: {
         to: "/employer/$employerSlug/applications",
@@ -371,7 +371,7 @@ function EmployerOverview({
       key: "responses-to-review",
       icon: <ShieldCheck className="h-4 w-4" />,
       count: responsesToReview,
-      text: t("employer.actions.responsesToReview"),
+      text: tp("employer.actions.responsesToReview", responsesToReview),
       linkProps: {
         to: "/employer/$employerSlug/assessments/reviews",
         params: { employerSlug },
@@ -387,7 +387,7 @@ function EmployerOverview({
       key: "results-ready",
       icon: <FileCheck2 className="h-4 w-4" />,
       count: testsReadyToReleaseCount,
-      text: t("employer.actions.resultsReady"),
+      text: tp("employer.actions.resultsReady", testsReadyToReleaseCount),
       linkProps: {
         to: "/employer/$employerSlug/assessments/participants",
         params: { employerSlug },
@@ -403,7 +403,7 @@ function EmployerOverview({
       key: "awaiting-next-step",
       icon: <UserCheck className="h-4 w-4" />,
       count: nextStepCount,
-      text: t("employer.actions.awaitingNextStep"),
+      text: tp("employer.actions.awaitingNextStep", nextStepCount),
       linkProps: {
         to: "/employer/$employerSlug/applications",
         params: { employerSlug },
@@ -419,7 +419,7 @@ function EmployerOverview({
       key: "draft-jobs",
       icon: <Briefcase className="h-4 w-4" />,
       count: data.draftJobs,
-      text: t("employer.actions.draftJobs"),
+      text: tp("employer.actions.draftJobs", data.draftJobs),
       linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
@@ -433,7 +433,7 @@ function EmployerOverview({
       key: "tests-with-candidates",
       icon: <Hourglass className="h-4 w-4" />,
       count: testsActiveCount,
-      text: t("employer.actions.testsWithCandidates"),
+      text: tp("employer.actions.testsWithCandidates", testsActiveCount),
       linkProps: {
         to: "/employer/$employerSlug/assessments/participants",
         params: { employerSlug },
@@ -486,7 +486,7 @@ function EmployerOverview({
     items.push({
       key: "jobs-no-applications",
       severity: "attention",
-      text: t("employer.attention.jobsNoApplications"),
+      text: tp("employer.attention.jobsNoApplications", publishedNoApplications),
       count: publishedNoApplications,
       sourceLabel: t("employer.attention.source.jobs"),
       linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
@@ -509,7 +509,7 @@ function EmployerOverview({
     items.push({
       key: "assessments-available",
       severity: "opportunity",
-      text: t("employer.attention.assessmentsAvailable"),
+      text: tp("employer.attention.assessmentsAvailable", catalog.length),
       count: catalog.length,
       sourceLabel: t("employer.attention.source.assessments"),
       linkProps: { to: "/employer/$employerSlug/assessments", params: { employerSlug } },

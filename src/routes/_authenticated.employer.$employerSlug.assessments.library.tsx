@@ -26,7 +26,7 @@ function LibraryRoute() {
         <ContentLibrary
           employerId={ws.employerId}
           canAssign={ws.role !== "member"}
-          kind="assessment"
+          area="recruitment"
           title={t("academy.library.title")}
           lede={t("academy.library.lede")}
         />

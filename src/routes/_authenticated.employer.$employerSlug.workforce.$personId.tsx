@@ -111,15 +111,22 @@ function PersonDetail({
         </p>
 
         {/* Assigning belongs in the person's context: an employer looking at
-            somebody is exactly where they decide to assess them. The assign
-            step needs an assessment chosen first, so this leads to the library
-            rather than inventing a second assignment flow. */}
+            somebody is exactly where they decide to develop them. The assign
+            step needs content chosen first, so this leads to a library rather
+            than inventing a second assignment flow.
+            
+            That library is Kompetensutveckling's, not the recruitment one.
+            This used to point at Bedomningsbibliotek, which now holds only
+            content written for recruitment -- so an employer standing on a
+            colleague's page would have been offered a candidate assessment and
+            nothing else. What this organisation assigns to its own people is a
+            development programme, and that is where the link goes. */}
         <Link
-          to="/employer/$employerSlug/assessments/library"
+          to="/employer/$employerSlug/training/programmes"
           params={{ employerSlug }}
           className="mt-4 inline-flex rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
         >
-          {t("employer.person.assessments.assign")}
+          {t("employer.person.development.assign")}
         </Link>
 
         {assessments.isLoading ? (
