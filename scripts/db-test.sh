@@ -1584,6 +1584,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
+set +e
+SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
+SPAE_RC=$?
+set -e
+
+echo "$SPAE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPAE_PASSED="$(echo "$SPAE_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPAE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Dubai market pack suite exited with code ${SPAE_RC}." >&2
+  echo "$SPAE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Dubai market pack"
+else
+  echo "    ok  ${SPAE_PASSED} Dubai market pack assertions passed"
+  # The suite opens the pack to test it and closes it again. A short run may
+  # have stopped in between, leaving an unreviewed market live -- which the
+  # independent check below would then catch, but late and confusingly.
+  if [ "$SPAE_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 Dubai market pack assertions, only ${SPAE_PASSED} ran." >&2
+    suite_failed "Security Passport Dubai market pack (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Independently of the suite above: the replayed database must never end with
 # an unreviewed market switched on. Asserted here rather than only inside the
 # suite, because a suite that aborted early cannot assert its own cleanup.
@@ -1599,6 +1625,26 @@ BEGIN
   END IF;
 END \$mp\$;" >/dev/null
 echo "    ok  every active market pack has a recorded review state"
+
+# Dubai first. The Swedish rollback restores a 16-character limit on credential
+# codes and AE_DU_PEOPLE_OF_DETERMINATION is 30 -- so running these out of
+# order aborts with ROLLBACK BLOCKED rather than corrupting anything, which is
+# how the ordering was established in the first place.
+echo "==> Verifying the Dubai market pack rollback"
+set +e
+SPAERB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907093000_sp_uae_dubai_market_pack_rollback.sql 2>&1)"
+SPAERB_RC=$?
+set -e
+
+if [ "$SPAERB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Dubai market pack rollback exited with code ${SPAERB_RC}." >&2
+  echo "$SPAERB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Dubai market pack rollback"
+else
+  echo "    ok  the Dubai market pack rolls back cleanly, Sweden and the UK intact"
+fi
 
 # The UK rollback runs before the Swedish one, which runs before the
 # three-market one. Each restores the claim trigger to the version the previous
@@ -1732,5 +1778,6 @@ echo "              ${ARCH_PASSED} job archive assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"
-echo "              ${SPUK_PASSED} UK market pack assertions"
+echo "              ${SPUK_PASSED} UK market pack assertions,"
+echo "              ${SPAE_PASSED} Dubai market pack assertions"
 echo "===================================================="
