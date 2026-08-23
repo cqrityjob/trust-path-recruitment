@@ -22,7 +22,10 @@
 // rewrite the facts" is a property of the type signature rather than a
 // convention.
 
-import { professionLine } from "@/lib/security-passport/identity/presentation";
+import {
+  headlineIsSelfDeclared,
+  professionLine,
+} from "@/lib/security-passport/identity/presentation";
 import { Ban, Clock, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -112,6 +115,16 @@ export function PassportCard({
             <p className="mt-1 text-sm text-foreground">
               {profession} · {jurisdiction}
             </p>
+            {/* buildPassportCard already applies withoutSelfDeclared, so in a
+                correct program this never renders. It is here because the card
+                is the artefact people screenshot and send onward: if a
+                self-declared title ever did reach it, the reader must be told
+                rather than left to assume it was checked. */}
+            {headlineIsSelfDeclared(card.identity) ? (
+              <p className="mt-1 text-xs font-medium text-foreground">
+                {pt("identity.selfDeclared")}
+              </p>
+            ) : null}
           </div>
 
           {mayShowBadge(card.recognition) ? (

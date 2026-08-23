@@ -14,7 +14,10 @@
 // history before it has earned any trust; saying plainly who can see the
 // answer is the cheapest way to earn some.
 
-import { professionLine } from "@/lib/security-passport/identity/presentation";
+import {
+  headlineIsSelfDeclared,
+  professionLine,
+} from "@/lib/security-passport/identity/presentation";
 import { Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -119,6 +122,25 @@ export function PassportOverview({
           {holder.displayName} · {profession} ·{" "}
           {holder.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : holder.jurisdictionCode}
         </p>
+
+        {/* The holder's own view derives with derivePreviewIdentity, which
+            admits self-declared evidence deliberately — seeing what
+            verification would get you is useful. Believing you already have it
+            is not, and until now nothing said which this was.
+
+            Words and a border, never colour alone. Nothing self-declared
+            reaches a recipient: buildDisclosurePayload, buildPassportCard and
+            buildSocialCard each strip it, and the recipient path derives with
+            deriveVerifiedIdentity, which has no argument that could admit it. */}
+        {headlineIsSelfDeclared(holder.identity) ? (
+          <p
+            className="mt-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground"
+            data-testid="sp-self-declared-marker"
+          >
+            <span className="font-medium">{pt("identity.selfDeclared")}</span>{" "}
+            {pt("identity.selfDeclaredNote")}
+          </p>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap gap-3">
           <button

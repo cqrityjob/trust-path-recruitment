@@ -50,6 +50,41 @@ All four rollback files are **executed** by `scripts/db-test.sh` on every run,
 in that order, and each asserts the markets below it survived. A rollback file
 that has never been run is a hope, not a procedure.
 
+### A rollback refuses rather than destroys
+
+Three of these rollbacks used to issue a blind `DELETE FROM sp_claims`. That had
+two failure modes and **both were real**:
+
+- `sp_claims.supersedes_id` is `ON DELETE RESTRICT`. A holder who **corrected**
+  one of these credentials has two rows, and if the correction changed the
+  `credential_code` the filter catches only one of them — so the delete aborts
+  on a foreign key, mid-transaction, reporting a constraint name rather than
+  what actually happened.
+- When it did _not_ abort, it silently deleted a holder's claims, their version
+  history and their verifier attributions, to tidy a schema.
+
+CI never saw either, because the suites clean up after themselves and the
+rollback then had nothing left to delete.
+
+Each now counts first and **refuses**:
+
+```
+ROLLBACK REFUSED: 1 Swedish truth-model holder claim(s) exist, 1 of them
+corrected. This rollback will not destroy a holder's record to tidy a schema.
+```
+
+**Recovery**, in preference order:
+
+1. Export the rows — every rollback header carries the exact `\copy`.
+2. Have each holder withdraw or correct the claim, which preserves their
+   history.
+3. Only if the loss is genuinely intended, accept it deliberately:
+   `SET LOCAL sp.rollback_may_delete_holder_claims = 'yes';` — which then logs
+   a `WARNING` naming the count it is about to destroy.
+
+Destruction is possible, but it can no longer happen as a side effect of
+tidying up.
+
 ### Prefer the switch to the hammer
 
 Withdrawing a market needs **no schema change at all**:

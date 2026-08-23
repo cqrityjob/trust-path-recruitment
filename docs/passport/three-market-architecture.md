@@ -130,7 +130,7 @@ an appointment lapses, and therefore no job that can stop running and leave a
 lapsed authorisation reading as a current title on the artefact people
 screenshot.
 
-_Status: Implemented, Tested_ — 47 assertions in
+_Status: Implemented, Tested_ — 55 assertions in
 `scripts/passport-identity-engine-check.ts`, nearly all mutations.
 
 ### Visibility
@@ -161,7 +161,7 @@ _Status: Implemented, Tested._
 
 Both were **negative-tested**: a probe file mapping `VU1` → `"Väktare"` fails
 the first, and weakening the Väktare rule to require only VU1 fails the second
-(4 of 47) _and_ the mirror comparison.
+(4 of the engine assertions) _and_ the mirror comparison.
 
 _Status: Implemented, Tested, in CI._
 

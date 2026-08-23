@@ -172,6 +172,56 @@ REVOKE ALL ON FUNCTION public.sp_claims_credential_rules() FROM PUBLIC, anon;
 -- 2. The UK content
 -- ---------------------------------------------------------------------------
 DELETE FROM public.sp_professional_titles WHERE market_pack_code = 'GB';
+-- ---------------------------------------------------------------------------
+-- Refuse rather than destroy a holder's record
+-- ---------------------------------------------------------------------------
+-- The blind `DELETE FROM sp_claims` below had two failure modes, and both were
+-- real:
+--
+--   * `sp_claims.supersedes_id` is ON DELETE RESTRICT. A holder who CORRECTED
+--     one of these credentials has two rows, and when the correction changed
+--     the credential_code the filter catches only one of them — so the delete
+--     aborts on a foreign key, mid-transaction, reporting a constraint name
+--     rather than what actually happened. Reproduced against a real database.
+--
+--   * When it did NOT abort, it silently deleted a holder's claims, their
+--     version history and their verifier attributions, to tidy a schema.
+--
+-- CI never saw either: the suites clean up after themselves, so by the time
+-- the rollback ran there was nothing left to delete.
+--
+-- Count first, and refuse. A rollback that destroys holder data is not a
+-- rollback, and making it succeed quietly is worse than making it stop.
+DO $rbuk$
+DECLARE
+  _claims    integer;
+  _corrected integer;
+  _opted_in  text := current_setting('sp.rollback_may_delete_holder_claims', true);
+BEGIN
+  SELECT count(*) INTO _claims FROM public.sp_claims c WHERE c.credential_code IN (SELECT t.code FROM public.sp_credential_types t WHERE t.market_pack_code = 'GB');
+
+  SELECT count(*) INTO _corrected FROM public.sp_claims c
+   WHERE (c.credential_code IN (SELECT t.code FROM public.sp_credential_types t WHERE t.market_pack_code = 'GB'))
+     AND (c.supersedes_id IS NOT NULL
+          OR EXISTS (SELECT 1 FROM public.sp_claims s WHERE s.supersedes_id = c.id));
+
+  IF _claims > 0 AND coalesce(_opted_in, '') <> 'yes' THEN
+    RAISE EXCEPTION
+      'ROLLBACK REFUSED: % UK holder claim(s) exist, % of them corrected. '
+      'This rollback will not destroy a holder''s record to tidy a schema. '
+      'RECOVERY: export the rows (see the header of this file), have each '
+      'holder withdraw or correct the claim so their history survives, or '
+      'accept the loss deliberately with '
+      'SET LOCAL sp.rollback_may_delete_holder_claims = ''yes''; then re-run.',
+      _claims, _corrected;
+  END IF;
+
+  IF _claims > 0 THEN
+    RAISE WARNING
+      'Deleting % UK holder claim(s) — opted in explicitly.', _claims;
+  END IF;
+END $rbuk$;
+
 DELETE FROM public.sp_claims
  WHERE credential_code IN (SELECT code FROM public.sp_credential_types
                             WHERE market_pack_code = 'GB');

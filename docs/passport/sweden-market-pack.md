@@ -122,7 +122,8 @@ only at the moment a real holder pressed save, in a live market.
 row_ and asserts it validates clean, then asserts each rule refuses what it
 exists to refuse — so a credential added later is covered without editing the
 script. Negative-tested: removing the scope field from `fieldsFor` fails 2 of
-50 assertions.
+65 assertions, which is also why the count is not repeated as a target: the
+guard reports it, and a number written down here only ever drifts.
 
 _Status: Implemented, Tested, in CI._
 

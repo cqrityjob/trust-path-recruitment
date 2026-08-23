@@ -26,12 +26,18 @@
  * Run: bun run passport-identity-engine:check
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   deriveVerifiedIdentity,
   derivePreviewIdentity,
 } from "../src/lib/security-passport/identity/visibility";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
-import { labelFor, professionLine } from "../src/lib/security-passport/identity/presentation";
+import {
+  headlineIsSelfDeclared,
+  labelFor,
+  professionLine,
+} from "../src/lib/security-passport/identity/presentation";
 import type { ProfessionalIdentity } from "../src/lib/security-passport/identity/types";
 import type { AssertionLevel, Claim, LifecycleState } from "../src/lib/security-passport/types";
 
@@ -309,6 +315,59 @@ console.log("\nGROUP 5b -- A5: training is called training");
   assert(
     both.professionalCompetence.length === 1 && both.activeTitles.length === 0,
     "the rewording left the tier alone: still competence, still no active title",
+  );
+}
+
+console.log("\nGROUP 5c -- B1: a previewed title is marked, and never travels");
+
+{
+  const selfDeclared = [claim("OV", { validUntil: FUTURE, assertion: "self_declared" })];
+  const preview = derivePreviewIdentity(selfDeclared, MIRRORED_TITLE_RULES, TODAY);
+  const verified = deriveVerifiedIdentity(selfDeclared, MIRRORED_TITLE_RULES, TODAY);
+
+  assert(
+    headlineIsSelfDeclared(preview),
+    "the holder's preview reports that its headline is self-declared",
+  );
+  assert(
+    !headlineIsSelfDeclared(verified) && verified.activeTitles.length === 0,
+    "MUTATION: the verified derivation has no such title to mark in the first place",
+  );
+
+  // The marker is only worth anything if something renders it. This is the
+  // defect B1 names: the function existed, the copy existed in both languages,
+  // and no call site did.
+  const rendered = readFileSync(
+    join(process.cwd(), "src/components/security-passport/PassportOverview.tsx"),
+    "utf8",
+  );
+  assert(
+    rendered.includes("headlineIsSelfDeclared") && rendered.includes("identity.selfDeclared"),
+    "PassportOverview actually renders the marker — an unused export marks nothing",
+  );
+
+  const card = readFileSync(
+    join(process.cwd(), "src/components/security-passport/PassportCard.tsx"),
+    "utf8",
+  );
+  assert(
+    card.includes("headlineIsSelfDeclared"),
+    "PassportCard carries the same guard, for the artefact people screenshot",
+  );
+
+  // A mixed holder: the verified appointment stands, the self-declared one is
+  // absent from what a recipient would see.
+  const mixed = deriveVerifiedIdentity(
+    [
+      claim("OV", { validUntil: FUTURE }),
+      claim("SV", { validUntil: FUTURE, assertion: "self_declared" }),
+    ],
+    MIRRORED_TITLE_RULES,
+    TODAY,
+  );
+  assert(
+    mixed.activeTitles.length === 1 && mixed.activeTitles[0].ruleCode === "SE_ORDNINGSVAKT_TITLE",
+    "MUTATION: a self-declared credential adds no title to what a recipient sees",
   );
 }
 
