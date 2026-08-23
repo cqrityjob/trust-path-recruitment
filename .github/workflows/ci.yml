@@ -39,6 +39,12 @@ jobs:
       - name: Type-check
         run: bunx tsc --noEmit
 
+      # scripts/ is outside the app tsconfig, which is how a guard kept reading
+      # a field this codebase had deleted: it became undefined, the Set it fed
+      # kept working, and the guard silently stopped excluding anything.
+      - name: Type-check the Passport guard scripts
+        run: bun run scripts:typecheck
+
       - name: CIE deterministic regression check
         run: bun run cie:check
 
@@ -75,6 +81,42 @@ jobs:
 
       - name: Passport fixture and copy-parity check
         run: bun run passport-fixture:check
+
+      # The professional identity engine. Every case is a mutation: hold one
+      # credential, assert the title the product must NOT grant is absent. Two
+      # are load-bearing — VU1 alone must never produce Väktare, and
+      # ordningsvakt training must never produce Ordningsvakt — because the
+      # server used to label every holder "Väktare" from a hardcoded string.
+      - name: Passport identity engine check
+        run: bun run passport-identity-engine:check
+
+      # Keeps the derivation rules in exactly one place: the mirror used by the
+      # fixtures must match the migration that seeds sp_professional_titles,
+      # and no component may map a credential code to a professional title.
+      - name: Passport title derivation guard
+        run: bun run passport-title-derivation:check
+
+      # What the form asks for must be what the database will accept. Adding
+      # requires_scope to the skyddsvakt approval made the database refuse a
+      # claim the form could not supply, in a market that is live — this is the
+      # check that would have caught it.
+      - name: Passport credential form contract
+        run: bun run passport-credential-form:check
+
+      # Owner decision 3 forbids claiming verification with an authority,
+      # government endorsement, cross-border equivalence or Arabic legal
+      # review. It looks for CLAIMS, not for authority names — truthful
+      # limiting language like "Not verified directly with SIA" must pass, and
+      # the guard self-tests both directions on every run.
+      - name: Passport regulatory-claim guard
+        run: bun run passport-regulatory-claim:check
+
+      # A correct payload can still meet a screen that does not render it. The
+      # employer's application view goes through RecipientPassportCard, which
+      # carried the exact scope in its payload and never showed it — so this
+      # asserts what each audience SEES, not only what the database emits.
+      - name: Passport scope surface check
+        run: bun run passport-scope-surface:check
 
       # Production reported a page-wide "something went wrong" over a
       # verification queue that was working: four unrelated operations shared

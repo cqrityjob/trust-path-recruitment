@@ -30,6 +30,9 @@
 //  12  Valid / expired / revoked disclosures     → DISCLOSURE_FIXTURES
 //  13  Swedish credential seen elsewhere         → VIEWING_JURISDICTIONS
 
+import { deriveVerifiedIdentity } from "../identity/visibility";
+import { MIRRORED_TITLE_RULES } from "../identity/market-rules";
+import type { ProfessionalIdentity } from "../identity/types";
 import type { Claim, ExperiencePeriod, PassportHolder } from "../types";
 import type { DisclosureRequest } from "../disclosure";
 
@@ -47,12 +50,26 @@ function period(p: ExperiencePeriod): ExperiencePeriod {
   return p;
 }
 
-/** Phase 11 added `skillCode` and `skillLevel` to every claim. None of these
- *  personas is a language or a practical skill, so the helper supplies the
- *  null pair rather than repeating it eighteen times — and a persona that
- *  genuinely needs one still passes it explicitly. */
-function claim(c: Omit<Claim, "skillCode" | "skillLevel"> & Partial<Claim>): Claim {
-  return { skillCode: null, skillLevel: null, ...c };
+/** Phase 11 added `skillCode` and `skillLevel` to every claim; the three-market
+ *  work added `subJurisdictionCode` and `authorisationScope`. None of these
+ *  personas is a language, a practical skill, or a credential from outside
+ *  Sweden, so the helper supplies the null defaults rather than repeating them
+ *  eighteen times — and a persona that genuinely needs one still passes it
+ *  explicitly.
+ *
+ *  The defaults are honest, not merely convenient: a Swedish credential HAS no
+ *  sub-jurisdiction, and an unscoped one HAS no scope. Null is the right
+ *  answer in both cases, not a placeholder for a value nobody filled in. */
+type ClaimDefaults = "skillCode" | "skillLevel" | "subJurisdictionCode" | "authorisationScope";
+
+function claim(c: Omit<Claim, ClaimDefaults> & Partial<Claim>): Claim {
+  return {
+    skillCode: null,
+    skillLevel: null,
+    subJurisdictionCode: null,
+    authorisationScope: null,
+    ...c,
+  };
 }
 
 // ── Reusable claim rows ──────────────────────────────────────────────────
@@ -285,6 +302,29 @@ function credentialClaim(c: {
   });
 }
 
+/** Every persona's professional identity is DERIVED from its own claims, by
+ *  the same engine the product uses, against the same rules the migration
+ *  seeds (mirrored in identity/market-rules.ts and checked against it by
+ *  scripts/passport-title-derivation-check.ts).
+ *
+ *  This is what makes the fixtures worth having. When they carried a hand-
+ *  written `professionTitleSv`, a persona could claim to be an Ordningsvakt
+ *  while holding nothing but VU1 — and the harness would render it happily,
+ *  which is exactly the bug the fixtures were supposed to catch. Now a
+ *  persona's title is a consequence of its credentials and cannot be typed. */
+function identityFor(claims: readonly Claim[]): ProfessionalIdentity {
+  return deriveVerifiedIdentity(claims, MIRRORED_TITLE_RULES, FIXTURE_EVALUATION_DATE);
+}
+
+/** A persona as it is written down: everything except the one field nobody
+ *  may write. `persona()` supplies `identity` by derivation, so the type
+ *  system itself refuses a fixture that states its own title. */
+type PersonaSeed = Omit<PassportHolder, "identity">;
+
+function persona(seed: PersonaSeed): PassportHolder {
+  return { ...seed, identity: identityFor(seed.claims) };
+}
+
 function credentialPersona(
   id: string,
   displayName: string,
@@ -294,8 +334,7 @@ function credentialPersona(
     id,
     displayName,
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
+    identity: identityFor(claims),
     jurisdictionCode: "SE",
     periods: [],
     claims,
@@ -484,15 +523,13 @@ const CREDENTIAL_PERSONAS: readonly PassportHolder[] = [
 
 // ── Personas ─────────────────────────────────────────────────────────────
 
-export const PERSONAS: readonly PassportHolder[] = [
+const PERSONA_SEEDS: readonly PersonaSeed[] = [
   // 1 — Career Discovery result, no Passport. Proves the two products are
   //     independent: the candidate home shows one entry populated, one not.
   {
     id: "career-discovery-only",
     displayName: "Nils Exempelsson",
     professionSlug: null,
-    professionTitleSv: "Ej angivet",
-    professionTitleEn: "Not stated",
     jurisdictionCode: "SE",
     periods: [],
     claims: [],
@@ -505,8 +542,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "passport-only",
     displayName: "Alva Testsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -536,8 +571,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "new-vaktare",
     displayName: "Iris Provsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -568,8 +601,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "overlapping-employers",
     displayName: "Björn Fiktivsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -632,8 +663,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "part-time",
     displayName: "Saga Testsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -663,8 +692,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "career-break",
     displayName: "Otto Exempelsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -712,8 +739,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "mixed-evidence",
     displayName: "Vera Provsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -777,8 +802,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "five-verified-years",
     displayName: "Elias Fiktivsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -823,8 +846,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "expired-licence",
     displayName: "Maja Testsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -854,8 +875,6 @@ export const PERSONAS: readonly PassportHolder[] = [
     id: "disputed-claim",
     displayName: "Hugo Exempelsson",
     professionSlug: "vaktare",
-    professionTitleSv: VAKTARE_SV,
-    professionTitleEn: VAKTARE_EN,
     jurisdictionCode: "SE",
     periods: [
       period({
@@ -900,6 +919,10 @@ export const PERSONAS: readonly PassportHolder[] = [
   //       fixture. See CREDENTIAL_PERSONAS above.
   ...CREDENTIAL_PERSONAS,
 ] as const;
+
+/** Every persona, with its professional identity derived from its own claims.
+ *  Nothing here can state a title it does not hold the credentials for. */
+export const PERSONAS: readonly PassportHolder[] = PERSONA_SEEDS.map(persona);
 
 export function personaById(id: string): PassportHolder {
   return PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];

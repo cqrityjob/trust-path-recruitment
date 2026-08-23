@@ -75,27 +75,32 @@ ON CONFLICT (holder_user_id) DO NOTHING;
 
 INSERT INTO public.sp_claims (
   id, holder_user_id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name,
-  issued_on, valid_until, assertion_level, lifecycle_state, verified_by_user_id, verified_at)
+  issued_on, valid_until, assertion_level, lifecycle_state, verified_by_user_id, verified_at,
+  -- Added by the Swedish truth model (20260907091000): a skyddsvakt approval
+  -- is limited to an employer, principal or protected object, and without
+  -- saying which it reads as a general national licence.
+  authorisation_scope)
 VALUES
   ('d0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001',
    'licence', 'OV', NULL, NULL, 'Ordningsvaktsförordnande', 'Syntetisk Myndighet',
-   current_date - 30, current_date + 365, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now()),
+   current_date - 30, current_date + 365, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now(), NULL),
   -- Must NOT be disclosed: self-declared.
   ('d0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001',
    'training', 'VU1', NULL, NULL, 'Väktarutbildning 1 (VU1)', 'Syntetisk Skola',
-   current_date - 200, NULL, 'self_declared', 'active', NULL, NULL),
+   current_date - 200, NULL, 'self_declared', 'active', NULL, NULL, NULL),
   -- Must NOT be disclosed: verified but expired lifecycle.
   ('d0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001',
    'licence', 'SV', NULL, NULL, 'Skyddsvaktsförordnande', 'Syntetisk Myndighet',
-   current_date - 800, current_date - 10, 'verified', 'expired', 'a0000000-0000-4000-8000-000000000002', now()),
+   current_date - 800, current_date - 10, 'verified', 'expired', 'a0000000-0000-4000-8000-000000000002', now(),
+   'Skyddsobjekt: Syntetisk anläggning'),
   -- Must NOT be disclosed: verified but disputed.
   ('d0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001',
    'certification', NULL, NULL, NULL, 'Omtvistad certifiering', 'Syntetisk Utfärdare',
-   current_date - 100, NULL, 'verified', 'disputed', 'a0000000-0000-4000-8000-000000000002', now()),
+   current_date - 100, NULL, 'verified', 'disputed', 'a0000000-0000-4000-8000-000000000002', now(), NULL),
   -- A VERIFIED language: proves the package already carries skill claims.
   ('d0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001',
    'language', NULL, 'lang_en', 'B2', 'Engelska', NULL,
-   NULL, NULL, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now())
+   NULL, NULL, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now(), NULL)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.sp_experience_periods (

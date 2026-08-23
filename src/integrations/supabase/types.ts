@@ -8145,9 +8145,64 @@ export type Database = {
           },
         ]
       }
+      sp_authorities: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          jurisdiction_code: string
+          name_ar: string | null
+          name_en: string
+          name_local: string
+          official_url: string | null
+          sub_jurisdiction_code: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          jurisdiction_code: string
+          name_ar?: string | null
+          name_en: string
+          name_local: string
+          official_url?: string | null
+          sub_jurisdiction_code?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          jurisdiction_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_local?: string
+          official_url?: string | null
+          sub_jurisdiction_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_authorities_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_authorities_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_claims: {
         Row: {
           assertion_level: string
+          authorisation_scope: string | null
           claim_type: string
           claimed_issuer_name: string | null
           created_at: string
@@ -8161,6 +8216,7 @@ export type Database = {
           lifecycle_state: string
           skill_code: string | null
           skill_level: string | null
+          sub_jurisdiction_code: string | null
           supersedes_id: string | null
           title: string
           updated_at: string
@@ -8172,6 +8228,7 @@ export type Database = {
         }
         Insert: {
           assertion_level?: string
+          authorisation_scope?: string | null
           claim_type: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8185,6 +8242,7 @@ export type Database = {
           lifecycle_state?: string
           skill_code?: string | null
           skill_level?: string | null
+          sub_jurisdiction_code?: string | null
           supersedes_id?: string | null
           title: string
           updated_at?: string
@@ -8196,6 +8254,7 @@ export type Database = {
         }
         Update: {
           assertion_level?: string
+          authorisation_scope?: string | null
           claim_type?: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8209,6 +8268,7 @@ export type Database = {
           lifecycle_state?: string
           skill_code?: string | null
           skill_level?: string | null
+          sub_jurisdiction_code?: string | null
           supersedes_id?: string | null
           title?: string
           updated_at?: string
@@ -8241,6 +8301,13 @@ export type Database = {
             referencedColumns: ["code"]
           },
           {
+            foreignKeyName: "sp_claims_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
             foreignKeyName: "sp_claims_supersedes_id_fkey"
             columns: ["supersedes_id"]
             isOneToOne: false
@@ -8251,45 +8318,123 @@ export type Database = {
       }
       sp_credential_types: {
         Row: {
+          authority_id: string | null
           category: string
           claim_type: string
           code: string
+          contributes_to: string[]
           created_at: string
           is_active: boolean
+          jurisdiction_code: string | null
+          legal_review_state: string
+          market_pack_code: string | null
+          name_ar: string | null
           name_en: string
           name_sv: string
+          narrow_result_only: boolean
+          reference_label_en: string | null
+          reference_label_local: string | null
+          reference_pattern: string | null
+          regulated_role_id: string | null
           requires_issuer: boolean
+          requires_scope: boolean
           requires_valid_until: boolean
           sort_order: number
+          sub_jurisdiction_code: string | null
           symbol_label: string
+          typical_validity_months: number | null
         }
         Insert: {
+          authority_id?: string | null
           category: string
           claim_type: string
           code: string
+          contributes_to?: string[]
           created_at?: string
           is_active?: boolean
+          jurisdiction_code?: string | null
+          legal_review_state?: string
+          market_pack_code?: string | null
+          name_ar?: string | null
           name_en: string
           name_sv: string
+          narrow_result_only?: boolean
+          reference_label_en?: string | null
+          reference_label_local?: string | null
+          reference_pattern?: string | null
+          regulated_role_id?: string | null
           requires_issuer?: boolean
+          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
+          sub_jurisdiction_code?: string | null
           symbol_label: string
+          typical_validity_months?: number | null
         }
         Update: {
+          authority_id?: string | null
           category?: string
           claim_type?: string
           code?: string
+          contributes_to?: string[]
           created_at?: string
           is_active?: boolean
+          jurisdiction_code?: string | null
+          legal_review_state?: string
+          market_pack_code?: string | null
+          name_ar?: string | null
           name_en?: string
           name_sv?: string
+          narrow_result_only?: boolean
+          reference_label_en?: string | null
+          reference_label_local?: string | null
+          reference_pattern?: string | null
+          regulated_role_id?: string | null
           requires_issuer?: boolean
+          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
+          sub_jurisdiction_code?: string | null
           symbol_label?: string
+          typical_validity_months?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_types_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "sp_authorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_regulated_role_id_fkey"
+            columns: ["regulated_role_id"]
+            isOneToOne: false
+            referencedRelation: "sp_regulated_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       sp_disclosure_accesses: {
         Row: {
@@ -8552,6 +8697,72 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_market_packs: {
+        Row: {
+          code: string
+          created_at: string
+          effective_from: string | null
+          is_active: boolean
+          jurisdiction_code: string
+          legal_review_state: string
+          legal_reviewed_by: string | null
+          legal_reviewed_on: string | null
+          name_ar: string | null
+          name_en: string
+          name_sv: string
+          sub_jurisdiction_code: string | null
+          superseded_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          effective_from?: string | null
+          is_active?: boolean
+          jurisdiction_code: string
+          legal_review_state?: string
+          legal_reviewed_by?: string | null
+          legal_reviewed_on?: string | null
+          name_ar?: string | null
+          name_en: string
+          name_sv: string
+          sub_jurisdiction_code?: string | null
+          superseded_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          effective_from?: string | null
+          is_active?: boolean
+          jurisdiction_code?: string
+          legal_review_state?: string
+          legal_reviewed_by?: string | null
+          legal_reviewed_on?: string | null
+          name_ar?: string | null
+          name_en?: string
+          name_sv?: string
+          sub_jurisdiction_code?: string | null
+          superseded_on?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_market_packs_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_market_packs_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_passport_events: {
         Row: {
           actor_user_id: string | null
@@ -8657,6 +8868,109 @@ export type Database = {
           },
         ]
       }
+      sp_professional_titles: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          market_pack_code: string
+          name_ar: string | null
+          name_en: string
+          name_local: string
+          output_kind: string
+          priority: number
+          profession_family_code: string | null
+          regulated_role_id: string | null
+          requires_assertion_level: string
+          requires_credential_codes: string[]
+          requires_current_validity: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          market_pack_code: string
+          name_ar?: string | null
+          name_en: string
+          name_local: string
+          output_kind: string
+          priority?: number
+          profession_family_code?: string | null
+          regulated_role_id?: string | null
+          requires_assertion_level?: string
+          requires_credential_codes: string[]
+          requires_current_validity?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          market_pack_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_local?: string
+          output_kind?: string
+          priority?: number
+          profession_family_code?: string | null
+          regulated_role_id?: string | null
+          requires_assertion_level?: string
+          requires_credential_codes?: string[]
+          requires_current_validity?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_professional_titles_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_professional_titles_profession_family_code_fkey"
+            columns: ["profession_family_code"]
+            isOneToOne: false
+            referencedRelation: "sp_profession_families"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_professional_titles_regulated_role_id_fkey"
+            columns: ["regulated_role_id"]
+            isOneToOne: false
+            referencedRelation: "sp_regulated_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_profession_families: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          name_ar: string | null
+          name_en: string
+          name_sv: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en: string
+          name_sv: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          name_ar?: string | null
+          name_en?: string
+          name_sv?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       sp_public_access_throttle: {
         Row: {
           attempts: number
@@ -8699,6 +9013,149 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_regulatory_sources: {
+        Row: {
+          authority_id: string | null
+          availability: string
+          checked_on: string | null
+          content_fingerprint: string | null
+          created_at: string
+          effective_from: string | null
+          id: string
+          jurisdiction_code: string
+          market_pack_code: string | null
+          review_state: string
+          source_key: string
+          source_type: string
+          superseded_on: string | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          authority_id?: string | null
+          availability?: string
+          checked_on?: string | null
+          content_fingerprint?: string | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          jurisdiction_code: string
+          market_pack_code?: string | null
+          review_state?: string
+          source_key: string
+          source_type: string
+          superseded_on?: string | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          authority_id?: string | null
+          availability?: string
+          checked_on?: string | null
+          content_fingerprint?: string | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          jurisdiction_code?: string
+          market_pack_code?: string | null
+          review_state?: string
+          source_key?: string
+          source_type?: string
+          superseded_on?: string | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_regulatory_sources_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "sp_authorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_regulatory_sources_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_regulatory_sources_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_regulated_roles: {
+        Row: {
+          authority_id: string | null
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          market_pack_code: string
+          name_ar: string | null
+          name_en: string
+          name_local: string
+          profession_family_code: string
+          sort_order: number
+        }
+        Insert: {
+          authority_id?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          market_pack_code: string
+          name_ar?: string | null
+          name_en: string
+          name_local: string
+          profession_family_code: string
+          sort_order?: number
+        }
+        Update: {
+          authority_id?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          market_pack_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_local?: string
+          profession_family_code?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_regulated_roles_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "sp_authorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_regulated_roles_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_regulated_roles_profession_family_code_fkey"
+            columns: ["profession_family_code"]
+            isOneToOne: false
+            referencedRelation: "sp_profession_families"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_skill_types: {
         Row: {
           allowed_levels: string[]
@@ -8740,6 +9197,91 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      sp_sub_jurisdictions: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          jurisdiction_code: string
+          name_ar: string | null
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          jurisdiction_code: string
+          name_ar?: string | null
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          jurisdiction_code?: string
+          name_ar?: string | null
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_sub_jurisdictions_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_source_review_items: {
+        Row: {
+          detected_at: string
+          id: string
+          observation: string
+          observed_fingerprint: string | null
+          previous_fingerprint: string | null
+          resolution: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          source_id: string
+        }
+        Insert: {
+          detected_at?: string
+          id?: string
+          observation: string
+          observed_fingerprint?: string | null
+          previous_fingerprint?: string | null
+          resolution?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          source_id: string
+        }
+        Update: {
+          detected_at?: string
+          id?: string
+          observation?: string
+          observed_fingerprint?: string | null
+          previous_fingerprint?: string | null
+          resolution?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_source_review_items_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "sp_regulatory_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sp_verification_decisions: {
         Row: {
@@ -10338,6 +10880,7 @@ export type Database = {
       }
       sp_correct_claim: {
         Args: {
+          _authorisation_scope?: string
           _claim_id: string
           _claimed_issuer_name: string
           _credential_code: string
@@ -10348,6 +10891,7 @@ export type Database = {
           _reason: string
           _skill_code?: string
           _skill_level?: string
+          _sub_jurisdiction_code?: string
           _title: string
           _valid_from: string
           _valid_until: string

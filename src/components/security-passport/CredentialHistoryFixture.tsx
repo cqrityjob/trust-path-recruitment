@@ -46,6 +46,7 @@ export function CredentialHistoryFixture() {
           <CredentialCorrectionForm
             claim={current}
             privateFields={{ credentialReference: "VS-2024-117 (fiktiv)", holderNote: null }}
+            requiresScope={false}
             busy={false}
             serverError={null}
             onSubmit={setSubmitted}

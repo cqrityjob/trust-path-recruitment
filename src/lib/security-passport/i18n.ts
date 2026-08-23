@@ -761,7 +761,19 @@ const sv = {
   "rec.holder": "Innehavare",
   "rec.anonymousHolder": "Namnet visas inte",
   "rec.profession": "Yrke",
-  "rec.professionVaktare": "Väktare",
+  // ── Derived professional identity ────────────────────────────────────
+  // Printed by every surface from one derivation. "Ingen aktiv yrkestitel"
+  // is a true statement about somebody who has recorded training but holds
+  // no current appointment, and it is deliberately not phrased as a failure:
+  // finishing VU1 and not yet being appointed is an ordinary place to be.
+  "identity.none": "Ingen aktiv yrkestitel",
+  "identity.selfDeclared": "Egenrapporterad",
+  "identity.selfDeclaredNote":
+    "Titeln bygger på uppgifter du själv har lämnat och som ingen har kontrollerat. Den visas bara för dig.",
+  "identity.education": "Genomförd utbildning",
+  "identity.competence": "Yrkeskompetens",
+  "identity.eligibility": "Lokal behörighet",
+  "identity.activeTitle": "Aktiv yrkestitel",
   "rec.cardTitle": "Delat Security Passport",
   "rec.detailsTitle": "Uppgifter i delningen",
   "rec.packageShows": "Den här delningen visar",
@@ -769,6 +781,13 @@ const sv = {
     "En eller flera uppgifter är inte längre gällande. De visas med sitt nuvarande läge, inte som aktuella.",
   "rec.jurisdiction": "Jurisdiktion",
   "rec.qualifications": "Verifierade behörigheter",
+  // A scope shown to a reader who may see it, and the honest placeholder for
+  // one who may not. Saying "limited, details withheld" is narrower than
+  // saying nothing and letting the reader assume the approval is unlimited.
+  "rec.scopeLimited": "Begränsat godkännande",
+  "rec.scopeWithheld":
+    "Godkännandet gäller ett angivet skyddsobjekt, en arbetsgivare eller en uppdragsgivare. Omfattningen visas inte i den här vyn.",
+  "rec.subJurisdiction": "Region",
   "rec.experience": "Verifierad anställning",
   "rec.tenure": "Verifierad tid i yrket",
   "rec.verifiedBy": "Verifierad av",
@@ -819,6 +838,14 @@ const sv = {
   "cred.field.title": "Benämning",
   "cred.field.titleHelp": "Namnet som står på beviset eller beslutet.",
   "cred.field.trainingProvider": "Utbildningsanordnare",
+  // What a scoped authorisation is limited to. A skyddsvakt approval shown
+  // without it reads as a general national licence, which is not what was
+  // granted — so the field is required, not optional.
+  "cred.field.scope": "Omfattning",
+  "cred.field.scopeHelp":
+    "Vilken arbetsgivare, uppdragsgivare eller vilket skyddsobjekt förordnandet gäller för. Står på beslutet.",
+  "cred.field.narrowResultOnly":
+    "Här registreras endast att kontrollen är gjord, med myndighet och datum. Inga uppgifter om vad kontrollen visade sparas.",
   "cred.field.appointingAuthority": "Förordnande myndighet",
   "cred.field.authorityHelp": "Myndigheten som fattade beslutet, till exempel Polismyndigheten.",
   "cred.field.jurisdiction": "Land",
@@ -853,6 +880,12 @@ const sv = {
   "cred.error.jurisdictionRequired": "Ange land.",
   "cred.error.authorityRequired": "Ange vilken myndighet som förordnade dig.",
   "cred.error.validUntilRequired": "Ett förordnande måste ha ett slutdatum.",
+  "cred.error.scopeRequired":
+    "Ange vad förordnandet är begränsat till. Utan det framstår det som ett generellt nationellt tillstånd.",
+  "cred.error.noNoteAllowed":
+    "Den här uppgiften kan inte ha någon anteckning. Endast själva kontrollen registreras.",
+  "cred.error.controlledLabelOnly":
+    "Den här uppgiften har en fast benämning och kan inte skrivas om.",
   "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
   "cred.error.endBeforeStart": "Slutdatumet kan inte vara före startdatumet.",
   "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
@@ -1857,7 +1890,14 @@ const en: Record<PassportCopyKey, string> = {
   "rec.holder": "Holder",
   "rec.anonymousHolder": "The name is not shown",
   "rec.profession": "Profession",
-  "rec.professionVaktare": "Security Officer (Väktare)",
+  "identity.none": "No active professional title",
+  "identity.selfDeclared": "Self-declared",
+  "identity.selfDeclaredNote":
+    "This title rests on information you provided yourself, which nobody has checked. Only you can see it.",
+  "identity.education": "Completed education",
+  "identity.competence": "Professional competence",
+  "identity.eligibility": "Local eligibility",
+  "identity.activeTitle": "Active professional title",
   "rec.cardTitle": "Shared Security Passport",
   "rec.detailsTitle": "What this share contains",
   "rec.packageShows": "This share shows",
@@ -1865,6 +1905,10 @@ const en: Record<PassportCopyKey, string> = {
     "One or more entries are no longer current. They are shown with their present state, not as current.",
   "rec.jurisdiction": "Jurisdiction",
   "rec.qualifications": "Verified authorisations",
+  "rec.scopeLimited": "Limited approval",
+  "rec.scopeWithheld":
+    "The approval applies to a stated protected object, employer or principal. The scope is not shown in this view.",
+  "rec.subJurisdiction": "Region",
   "rec.experience": "Verified employment",
   "rec.tenure": "Verified time in the profession",
   "rec.verifiedBy": "Verified by",
@@ -1912,6 +1956,11 @@ const en: Record<PassportCopyKey, string> = {
   "cred.field.title": "Name",
   "cred.field.titleHelp": "The name as it appears on the certificate or decision.",
   "cred.field.trainingProvider": "Training provider",
+  "cred.field.scope": "Scope",
+  "cred.field.scopeHelp":
+    "Which employer, principal or protected object the authorisation applies to. It is stated on the decision.",
+  "cred.field.narrowResultOnly":
+    "Only the fact that the check was made is recorded, with the authority and the date. Nothing about what the check found is stored.",
   "cred.field.appointingAuthority": "Appointing authority",
   "cred.field.authorityHelp":
     "The authority that made the decision, for example the Swedish Police Authority.",
@@ -1947,6 +1996,11 @@ const en: Record<PassportCopyKey, string> = {
   "cred.error.jurisdictionRequired": "Enter a country.",
   "cred.error.authorityRequired": "Enter the authority that appointed you.",
   "cred.error.validUntilRequired": "An appointment must have an end date.",
+  "cred.error.scopeRequired":
+    "State what the authorisation is limited to. Without it, it reads as a general national licence.",
+  "cred.error.noNoteAllowed":
+    "This entry cannot carry a note. Only the fact of the check is recorded.",
+  "cred.error.controlledLabelOnly": "This entry has a fixed label and cannot be reworded.",
   "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
   "cred.error.endBeforeStart": "The end date cannot be before the start date.",
   "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",

@@ -48,3 +48,9 @@ dist-ssr
 # Supabase CLI local-stack artefacts
 supabase/.branches/
 supabase/.temp/
+
+# Regulatory source monitor output. The REPORT is a per-run artefact and is
+# regenerated on every check; the BASELINE next to it is tracked deliberately,
+# because "what we last accepted as the state of the law" is exactly the kind
+# of thing that must be reviewable in a diff.
+/regulatory-source-report.md

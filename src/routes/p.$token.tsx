@@ -27,6 +27,8 @@
 // keeping it out of search indexes is a governance decision, not a tuning
 // knob to trade away for a nicer preview.
 
+import { CredentialScopeLine } from "@/components/security-passport/live/CredentialScopeLine";
+import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -255,9 +257,7 @@ function RecipientRoute() {
           />
           <Row
             label={pt("rec.profession")}
-            value={
-              presentation.professionSlug ? pt("rec.professionVaktare") : pt("common.notStated")
-            }
+            value={joinTitles(presentation.titles, lang, pt("common.notStated"))}
           />
           <Row
             label={pt("rec.jurisdiction")}
@@ -332,8 +332,16 @@ function RecipientRoute() {
 
                 <LifecycleNote state={c.lifecycle} />
 
+                {/* The same component the card uses, so the public page and
+                    the employer's application view cannot drift into two
+                    readings of one privacy boundary. */}
+                <CredentialScopeLine credential={c} className="mt-3" />
+
                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                   <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
+                  {c.subJurisdiction ? (
+                    <Row label={pt("rec.subJurisdiction")} value={c.subJurisdiction} />
+                  ) : null}
                   <Row
                     label={pt("rec.verifiedBy")}
                     value={c.verifierOrganisation ?? pt("common.notStated")}

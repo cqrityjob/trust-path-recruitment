@@ -26,7 +26,10 @@
 // regardless (see the Phase 2 migration's trigger and CHECK constraints);
 // this is the same rule stated where the writes happen.
 
+import { CREDENTIAL_CODE_MAX_LENGTH } from "./credentials";
 import { createServerFn } from "@tanstack/react-start";
+import { derivePreviewIdentity } from "./identity/visibility";
+import type { TitleRule } from "./identity/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
@@ -106,6 +109,8 @@ type ClaimRow = {
   title: string;
   claimed_issuer_name: string | null;
   jurisdiction_code: string | null;
+  sub_jurisdiction_code: string | null;
+  authorisation_scope: string | null;
   issued_on: string | null;
   valid_from: string | null;
   valid_until: string | null;
@@ -155,6 +160,47 @@ function toPeriod(row: PeriodRow): ExperiencePeriod {
   };
 }
 
+type TitleRuleRow = {
+  code: string;
+  market_pack_code: string;
+  profession_family_code: string | null;
+  output_kind: string;
+  name_local: string;
+  name_en: string;
+  name_ar: string | null;
+  requires_credential_codes: string[] | null;
+  requires_assertion_level: string;
+  requires_current_validity: boolean;
+  priority: number;
+  sp_regulated_roles: { code: string } | null;
+};
+
+function toTitleRules(rows: unknown): readonly TitleRule[] {
+  return (rows as TitleRuleRow[]).map((r) => ({
+    code: r.code,
+    marketPackCode: r.market_pack_code,
+    professionFamilyCode: r.profession_family_code,
+    regulatedRoleCode: r.sp_regulated_roles?.code ?? null,
+    outputKind: r.output_kind as TitleRule["outputKind"],
+    nameLocal: r.name_local,
+    nameEn: r.name_en,
+    nameAr: r.name_ar,
+    requiresCredentialCodes: r.requires_credential_codes ?? [],
+    requiresAssertionLevel: r.requires_assertion_level as Claim["assertionLevel"],
+    requiresCurrentValidity: r.requires_current_validity,
+    priority: r.priority,
+  }));
+}
+
+/** The evaluation date, as a plain ISO day.
+ *
+ *  Derivation is a function of the calendar, so it needs one — and it needs
+ *  the SAME one for every title in a single read, or a Passport rendered
+ *  across midnight could show an appointment as both current and lapsed. */
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function toClaim(row: ClaimRow): Claim {
   // The prototype carried bilingual titles because its content was authored.
   // A holder types one title, in their own words; showing it unchanged in
@@ -170,6 +216,8 @@ function toClaim(row: ClaimRow): Claim {
     titleEn: title,
     issuerName: row.claimed_issuer_name ?? "—",
     jurisdictionCode: row.jurisdiction_code,
+    subJurisdictionCode: row.sub_jurisdiction_code,
+    authorisationScope: row.authorisation_scope,
     issuedOn: row.issued_on,
     validFrom: row.valid_from,
     validUntil: row.valid_until,
@@ -193,7 +241,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const db = supabase;
 
-    const [profileRes, periodsRes, claimsRes, eventsRes] = await Promise.all([
+    const [profileRes, periodsRes, claimsRes, eventsRes, rulesRes] = await Promise.all([
       db
         .from("sp_passport_profiles")
         .select(
@@ -211,7 +259,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_claims")
         .select(
-          "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
+          "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, sub_jurisdiction_code, authorisation_scope, issued_on, valid_from, valid_until, assertion_level, lifecycle_state, version_no, supersedes_id",
         )
         .eq("holder_user_id", userId)
         .order("created_at", { ascending: false }),
@@ -219,6 +267,16 @@ export const getMyPassport = createServerFn({ method: "GET" })
         .from("sp_passport_events")
         .select("id", { count: "exact", head: true })
         .eq("holder_user_id", userId),
+      // The derivation rules. Fetched with everything else rather than in a
+      // second round trip: the Passport cannot be rendered without them, so
+      // making them a follow-up query would only add a serial hop.
+      db
+        .from("sp_professional_titles")
+        .select(
+          "code, market_pack_code, profession_family_code, output_kind, name_local, name_en, name_ar, requires_credential_codes, requires_assertion_level, requires_current_validity, priority, sp_regulated_roles(code)",
+        )
+        .eq("is_active", true)
+        .order("priority", { ascending: true }),
     ]);
 
     if (profileRes.error) throw new Error(profileRes.error.message);
@@ -231,14 +289,39 @@ export const getMyPassport = createServerFn({ method: "GET" })
       .filter((r) => r.lifecycle_state !== "superseded" && r.lifecycle_state !== "withdrawn")
       .map(toClaim);
 
+    // A Passport with no derivation rules would silently show every holder as
+    // having no professional identity at all, which is indistinguishable from
+    // the truth for a new holder. Failing loudly is the only honest response:
+    // the rules are seeded by migration and their absence is a broken
+    // deployment, not an empty Passport.
+    if (rulesRes.error) throw new Error(rulesRes.error.message);
+    const rules = toTitleRules(rulesRes.data ?? []);
+
     const holder: PassportHolder = {
       id: userId,
       displayName: profile?.displayName ?? "",
       professionSlug: profile?.cigProfessionSlug ?? null,
-      // Phase 2 ships one vertical. The labels are resolved in the UI from
-      // the Passport copy module rather than stored per row.
-      professionTitleSv: "Väktare",
-      professionTitleEn: "Security Officer (Väktare)",
+      // Derived from this holder's own claims, against the rules in
+      // sp_professional_titles.
+      //
+      // These two lines used to read:
+      //
+      //     professionTitleSv: "Väktare",
+      //     professionTitleEn: "Security Officer (Väktare)",
+      //
+      // for EVERY holder who had ever signed in — somebody with one
+      // self-declared VU1, somebody with an empty Passport, and somebody
+      // holding a current ordningsvaktsförordnande were all labelled the same
+      // thing, and six surfaces printed it. It was a placeholder from the
+      // single-vertical phase that outlived its phase.
+      //
+      // The preview derivation is used because this is the HOLDER'S OWN view:
+      // a title their evidence would support once verified is worth showing
+      // them, and every such title carries `selfDeclared: true` so the surface
+      // must label it. Nothing that leaves the product uses this value —
+      // buildPassportCard, buildDisclosurePayload and buildSocialCard each
+      // strip self-declared titles on the way out.
+      identity: derivePreviewIdentity(claims, rules, todayIso()),
       jurisdictionCode: profile?.jurisdictionCode ?? "SE",
       periods: periods.filter((p) => p.lifecycleState !== "superseded"),
       claims,
@@ -567,9 +650,25 @@ const correctionInput = z.object({
    *  every parameter as a full replacement, so an omitted credential code
    *  would blank it. The correction form is pre-filled with the current
    *  values, so "unchanged" arrives as the same value rather than as absence. */
-  credentialCode: z.string().max(16).nullable(),
+  credentialCode: z.string().max(CREDENTIAL_CODE_MAX_LENGTH).nullable(),
   credentialReference: z.string().max(120).nullable(),
   holderNote: z.string().max(2000).nullable(),
+  /** Both added because omitting them made a legacy claim permanently
+   *  uncorrectable.
+   *
+   *  `sp_correct_claim` coalesces an omitted value with the superseded row's,
+   *  which carries forward correctly for a row that HAS one. A Skyddsvakt
+   *  approval created before `authorisation_scope` existed has none — and `SV`
+   *  is `requires_scope`, so coalescing NULL with NULL produced an INSERT the
+   *  write guard refused. The holder could read and withdraw that claim but
+   *  never correct it, and correcting it is the only way to supply the scope
+   *  the rule now demands. Reproduced against the real RPC as the real
+   *  authenticated holder; one such row exists in production today.
+   *
+   *  Nullable, and coalesced by the RPC, so a correction that does not mention
+   *  either one still carries the stored value forward. */
+  subJurisdictionCode: z.string().max(8).nullable(),
+  authorisationScope: z.string().max(200).nullable(),
 });
 
 /** Correction goes through the database RPC rather than two client writes,
@@ -600,6 +699,8 @@ export const correctClaim = createServerFn({ method: "POST" })
       _holder_note: orNull(data.holderNote),
       _skill_code: orNull(data.skillCode),
       _skill_level: orNull(data.skillLevel),
+      _sub_jurisdiction_code: orNull(data.subJurisdictionCode),
+      _authorisation_scope: orNull(data.authorisationScope),
     });
     if (error) throw new Error(error.message);
     return { id: newId as unknown as string };

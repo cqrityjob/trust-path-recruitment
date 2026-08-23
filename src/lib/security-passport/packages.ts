@@ -175,6 +175,20 @@ export interface RecipientClaim {
   readonly credential_code: string | null;
   readonly issuer: string | null;
   readonly jurisdiction: string | null;
+  /** The emirate or region, where the regulator is sub-national. Provenance,
+   *  not private detail — a Dubai credential shown without it invites the
+   *  UAE-wide reading the market pack refuses. Emitted to every package. */
+  readonly sub_jurisdiction?: string | null;
+  /** Whether the approval has boundaries at all. Emitted to EVERY package,
+   *  including the public card: telling a stranger "limited, details withheld"
+   *  is narrower and honester than telling them nothing and letting them
+   *  assume the approval is unlimited. */
+  readonly scope_limited?: boolean;
+  /** The protected object, employer or principal itself. Present only for an
+   *  application-scoped disclosure or an employer_review / full_verification
+   *  package — never on a public card, and never in any social or marketing
+   *  export. `sp_disclosure_payload` decides; this is only the shape. */
+  readonly authorisation_scope?: string | null;
   readonly issued_on: string | null;
   readonly valid_until: string | null;
   readonly assertion: string;

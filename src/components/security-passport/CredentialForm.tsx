@@ -34,6 +34,7 @@ import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  clearIncompatible,
   emptyCredentialDraft,
   fieldsFor,
   issuedOnLabelKey,
@@ -48,11 +49,30 @@ import { CredentialSymbol } from "./CredentialSymbol";
 
 /** The jurisdictions the select offers. ISO 3166-1 alpha-2; Sweden first
  *  because the launch taxonomy is Swedish, never because others are less. */
-const JURISDICTIONS: readonly string[] = ["SE", "NO", "DK", "FI", "DE"] as const;
+/** One market the form may offer.
+ *
+ *  Structural rather than imported from the server module, so this component
+ *  stays free of any database dependency — the same reason `CredentialType` is
+ *  declared this way. The dev harness supplies its own list. */
+export interface FormMarket {
+  readonly marketPackCode: string;
+  readonly jurisdictionCode: string;
+  readonly subJurisdictionCode: string | null;
+  readonly nameSv: string;
+  readonly nameEn: string;
+}
 
 export interface CredentialFormProps {
   /** The taxonomy, from sp_credential_types (or fixtures in the harness). */
   readonly types: readonly CredentialType[];
+  /** The markets a holder may record in, from the ACTIVE market packs.
+   *
+   *  This used to be a literal `["SE", "NO", "DK", "FI", "DE"]` in this file.
+   *  Only the first existed in sp_jurisdictions, so four of the five options
+   *  produced a foreign-key error — a controlled vocabulary whose control was
+   *  a list nobody had reconciled with the database. Reading it from the packs
+   *  means the form can only offer what the database will accept. */
+  readonly markets: readonly FormMarket[];
   /** Resumed draft, or null for a fresh form. */
   readonly initial?: (CredentialDraft & { readonly id: string }) | null;
   /** Preselected credential code (e.g. arriving from an overview action). */
@@ -108,6 +128,7 @@ function FieldError({ id, message }: { id: string; message: string | null }) {
 
 export function CredentialForm({
   types,
+  markets,
   initial = null,
   preselectCode = null,
   busy,
@@ -201,18 +222,26 @@ export function CredentialForm({
                   value={t.code}
                   checked={chosen}
                   onChange={() =>
-                    setDraft((d) => ({
-                      ...d,
-                      credentialCode: t.code,
-                      // The certificate name is almost always the taxonomy
-                      // name, so it is prefilled — but stays editable, and a
-                      // name the holder typed themselves is never replaced.
-                      title:
-                        d.title.trim() === "" ||
-                        types.some((x) => d.title === x.nameSv || d.title === x.nameEn)
-                          ? typeName(t)
-                          : d.title,
-                    }))
+                    setDraft((d) =>
+                      // Values the new credential does not ask for are dropped,
+                      // not merely hidden. A retained scope or end date would
+                      // be submitted from a field the holder can no longer see.
+                      clearIncompatible(
+                        {
+                          ...d,
+                          credentialCode: t.code,
+                          // The certificate name is almost always the taxonomy
+                          // name, so it is prefilled — but stays editable, and a
+                          // name the holder typed themselves is never replaced.
+                          title:
+                            d.title.trim() === "" ||
+                            types.some((x) => d.title === x.nameSv || d.title === x.nameEn)
+                              ? typeName(t)
+                              : d.title,
+                        },
+                        t,
+                      ),
+                    )
                   }
                   className="sr-only"
                 />
@@ -327,9 +356,9 @@ export function CredentialForm({
                 onChange={(e) => set("jurisdictionCode", e.target.value)}
                 className={cn(inputClass, "sm:w-64")}
               >
-                {JURISDICTIONS.map((code) => (
-                  <option key={code} value={code}>
-                    {code === "SE" ? pt("jurisdiction.SE") : code}
+                {markets.map((m) => (
+                  <option key={m.marketPackCode} value={m.jurisdictionCode}>
+                    {lang === "sv" ? m.nameSv : m.nameEn}
                   </option>
                 ))}
               </select>
@@ -416,6 +445,39 @@ export function CredentialForm({
             </div>
           </section>
 
+          {visible.scope ? (
+            <section aria-label={pt("cred.field.scope")} className="space-y-4">
+              <div>
+                <FieldLabel htmlFor={fieldId("authorisationScope")}>
+                  {pt("cred.field.scope")}
+                </FieldLabel>
+                <input
+                  id={fieldId("authorisationScope")}
+                  type="text"
+                  maxLength={200}
+                  value={draft.authorisationScope}
+                  aria-invalid={errorFor("authorisationScope") ? true : undefined}
+                  aria-describedby={describedBy(
+                    "authorisationScope",
+                    `${fieldId("authorisationScope")}-help`,
+                  )}
+                  onChange={(e) => set("authorisationScope", e.target.value)}
+                  className={inputClass}
+                />
+                <p
+                  id={`${fieldId("authorisationScope")}-help`}
+                  className="mt-1 text-xs text-muted-foreground"
+                >
+                  {pt("cred.field.scopeHelp")}
+                </p>
+                <FieldError
+                  id={`${fieldId("authorisationScope")}-error`}
+                  message={errorFor("authorisationScope")}
+                />
+              </div>
+            </section>
+          ) : null}
+
           <section aria-label={pt("cred.section.evidence")} className="space-y-4">
             <h3 className="text-base font-semibold tracking-tight text-foreground">
               {pt("cred.section.evidence")}
@@ -456,32 +518,41 @@ export function CredentialForm({
               </div>
             ) : null}
 
-            <div>
-              <FieldLabel
-                htmlFor={fieldId("holderNote")}
-                optional
-                optionalLabel={pt("common.optional")}
-              >
-                {pt("cred.field.holderNote")}
-              </FieldLabel>
-              <textarea
-                id={fieldId("holderNote")}
-                rows={3}
-                maxLength={2000}
-                value={draft.holderNote}
-                aria-invalid={errorFor("holderNote") ? true : undefined}
-                aria-describedby={describedBy("holderNote", `${fieldId("holderNote")}-help`)}
-                onChange={(e) => set("holderNote", e.target.value)}
-                className={cn(inputClass, "h-auto py-2.5")}
-              />
-              <p
-                id={`${fieldId("holderNote")}-help`}
-                className="mt-1 text-xs text-muted-foreground"
-              >
-                {pt("cred.field.holderNoteHelp")}
+            {!visible.note ? (
+              <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">
+                {pt("cred.field.narrowResultOnly")}
               </p>
-              <FieldError id={`${fieldId("holderNote")}-error`} message={errorFor("holderNote")} />
-            </div>
+            ) : (
+              <div>
+                <FieldLabel
+                  htmlFor={fieldId("holderNote")}
+                  optional
+                  optionalLabel={pt("common.optional")}
+                >
+                  {pt("cred.field.holderNote")}
+                </FieldLabel>
+                <textarea
+                  id={fieldId("holderNote")}
+                  rows={3}
+                  maxLength={2000}
+                  value={draft.holderNote}
+                  aria-invalid={errorFor("holderNote") ? true : undefined}
+                  aria-describedby={describedBy("holderNote", `${fieldId("holderNote")}-help`)}
+                  onChange={(e) => set("holderNote", e.target.value)}
+                  className={cn(inputClass, "h-auto py-2.5")}
+                />
+                <p
+                  id={`${fieldId("holderNote")}-help`}
+                  className="mt-1 text-xs text-muted-foreground"
+                >
+                  {pt("cred.field.holderNoteHelp")}
+                </p>
+                <FieldError
+                  id={`${fieldId("holderNote")}-error`}
+                  message={errorFor("holderNote")}
+                />
+              </div>
+            )}
 
             {/* Documentation ≠ approval, stated where documentation is first
                 mentioned rather than discovered after an upload. */}

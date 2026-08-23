@@ -26,6 +26,10 @@ export interface CorrectionValues {
   readonly validUntil: string | null;
   readonly credentialReference: string;
   readonly holderNote: string;
+  /** What the authorisation is limited to. Only asked for when the credential
+   *  type says so, and owned by the holder — a reviewer may approve, reject or
+   *  request clarification, never silently edit it. */
+  readonly authorisationScope: string;
   readonly reason: string;
 }
 
@@ -35,6 +39,7 @@ const inputClass =
 export function CredentialCorrectionForm({
   claim,
   privateFields,
+  requiresScope,
   busy,
   serverError,
   onSubmit,
@@ -42,6 +47,11 @@ export function CredentialCorrectionForm({
 }: {
   claim: Claim;
   privateFields: { credentialReference: string | null; holderNote: string | null };
+  /** Straight from the taxonomy row via `fieldsFor`, not a list in this file.
+   *  A legacy claim stored before the column existed has no scope, and this is
+   *  where the holder supplies it — correction is the only route, and it was
+   *  closed until 20260908090000. */
+  requiresScope: boolean;
   busy: boolean;
   serverError: string | null;
   onSubmit: (values: CorrectionValues) => void;
@@ -56,9 +66,12 @@ export function CredentialCorrectionForm({
     validUntil: claim.validUntil,
     credentialReference: privateFields.credentialReference ?? "",
     holderNote: privateFields.holderNote ?? "",
+    authorisationScope: claim.authorisationScope ?? "",
     reason: "",
   });
-  const [problems, setProblems] = useState<readonly ("title" | "reason")[]>([]);
+  const [problems, setProblems] = useState<readonly ("title" | "reason" | "authorisationScope")[]>(
+    [],
+  );
   const summaryRef = useRef<HTMLDivElement>(null);
 
   function set<K extends keyof CorrectionValues>(key: K, value: CorrectionValues[K]) {
@@ -66,9 +79,14 @@ export function CredentialCorrectionForm({
   }
 
   function submit() {
-    const found: ("title" | "reason")[] = [];
+    const found: ("title" | "reason" | "authorisationScope")[] = [];
     if (values.title.trim() === "") found.push("title");
     if (values.reason.trim() === "") found.push("reason");
+    // The database refuses this too. Checking here means the holder gets a
+    // field-level message in their own language instead of a 23514.
+    if (requiresScope && values.authorisationScope.trim() === "") {
+      found.push("authorisationScope");
+    }
     setProblems(found);
     if (found.length > 0) {
       requestAnimationFrame(() => summaryRef.current?.focus());
@@ -167,6 +185,30 @@ export function CredentialCorrectionForm({
           className={inputClass}
         />
       </div>
+
+      {requiresScope ? (
+        <div>
+          <label htmlFor="sp-corr-scope" className="block text-sm font-medium text-foreground">
+            {pt("cred.field.scope")}
+          </label>
+          <input
+            id="sp-corr-scope"
+            type="text"
+            maxLength={200}
+            value={values.authorisationScope}
+            aria-invalid={problems.includes("authorisationScope") ? true : undefined}
+            aria-describedby="sp-corr-scope-help"
+            onChange={(e) => set("authorisationScope", e.target.value)}
+            className={inputClass}
+          />
+          <p id="sp-corr-scope-help" className="mt-1 text-xs text-muted-foreground">
+            {pt("cred.field.scopeHelp")}
+          </p>
+          {problems.includes("authorisationScope") ? (
+            <p className="mt-1 text-sm text-destructive">{pt("cred.error.scopeRequired")}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div>
         <label htmlFor="sp-corr-note" className="block text-sm font-medium text-foreground">

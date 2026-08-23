@@ -1347,6 +1347,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport three-market foundation assertions"
+set +e
+SP3M_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_three_market_foundation_test.sql 2>&1)"
+SP3M_RC=$?
+set -e
+
+echo "$SP3M_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP3M_PASSED="$(echo "$SP3M_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP3M_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport three-market foundation suite exited with code ${SP3M_RC}." >&2
+  echo "$SP3M_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport three-market foundation"
+else
+  echo "    ok  ${SP3M_PASSED} three-market foundation assertions passed"
+  # Every market rule is asserted by mutation and paired with a positive
+  # control, so a short run means the suite stopped attempting the things the
+  # schema is supposed to refuse -- which reads identically to success.
+  if [ "$SP3M_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 three-market assertions, only ${SP3M_PASSED} ran." >&2
+    suite_failed "Security Passport three-market foundation (assertion shortfall: floor 30)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport Phase 6 assertions"
 set +e
 SP6_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase6_test.sql 2>&1)"
@@ -1498,6 +1524,414 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Swedish truth model assertions"
+set +e
+SPSE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_sweden_truth_model_test.sql 2>&1)"
+SPSE_RC=$?
+set -e
+
+echo "$SPSE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPSE_PASSED="$(echo "$SPSE_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPSE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Swedish truth model suite exited with code ${SPSE_RC}." >&2
+  echo "$SPSE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Swedish truth model"
+else
+  echo "    ok  ${SPSE_PASSED} Swedish truth model assertions passed"
+  # The narrow-result and scope rules are asserted by attempting the forbidden
+  # write. A short run means those attempts did not happen, which reads exactly
+  # like a schema that forbids nothing.
+  if [ "$SPSE_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 Swedish truth model assertions, only ${SPSE_PASSED} ran." >&2
+    suite_failed "Security Passport Swedish truth model (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6b. The three-market rollback actually reverses the three-market migration
+# ---------------------------------------------------------------------------
+# Runs LAST, after every Passport suite, because it is destructive: it drops
+# the eight foundation tables and the columns they added. A rollback file that
+# has never been executed is a hope, not a procedure -- and the one property
+# that matters is asserted inside it, namely that Sweden survives.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport UK (SIA) market pack assertions"
+set +e
+SPUK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uk_market_pack_test.sql 2>&1)"
+SPUK_RC=$?
+set -e
+
+echo "$SPUK_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPUK_PASSED="$(echo "$SPUK_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPUK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK market pack suite exited with code ${SPUK_RC}." >&2
+  echo "$SPUK_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport UK market pack"
+else
+  echo "    ok  ${SPUK_PASSED} UK market pack assertions passed"
+  # The suite switches the pack ON to test it and OFF again at the end. A short
+  # run means it may have stopped in between -- leaving an unreviewed market
+  # live in the replayed database, which is the one outcome the pack exists to
+  # make impossible.
+  if [ "$SPUK_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 UK market pack assertions, only ${SPUK_PASSED} ran." >&2
+    suite_failed "Security Passport UK market pack (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
+set +e
+SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
+SPAE_RC=$?
+set -e
+
+echo "$SPAE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPAE_PASSED="$(echo "$SPAE_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPAE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Dubai market pack suite exited with code ${SPAE_RC}." >&2
+  echo "$SPAE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Dubai market pack"
+else
+  echo "    ok  ${SPAE_PASSED} Dubai market pack assertions passed"
+  # The suite opens the pack to test it and closes it again. A short run may
+  # have stopped in between, leaving an unreviewed market live -- which the
+  # independent check below would then catch, but late and confusingly.
+  if [ "$SPAE_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 Dubai market pack assertions, only ${SPAE_PASSED} ran." >&2
+    suite_failed "Security Passport Dubai market pack (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Runs BEFORE the rollback chain, and creates the data the chain would destroy.
+# db-test.sh executes every rollback, which proves they RUN — it cannot prove
+# they REFUSE, because by then every suite has cleaned up and there is nothing
+# left to destroy. That is precisely how the blind DELETE survived review.
+echo "==> Running Security Passport rollback data-safety assertions"
+set +e
+SPRDS_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_rollback_data_safety_test.sql 2>&1)"
+SPRDS_RC=$?
+set -e
+
+echo "$SPRDS_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPRDS_PASSED="$(echo "$SPRDS_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPRDS_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the rollback data-safety suite exited with code ${SPRDS_RC}." >&2
+  echo "$SPRDS_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport rollback data safety"
+else
+  echo "    ok  ${SPRDS_PASSED} rollback data-safety assertions passed"
+  if [ "$SPRDS_PASSED" -lt 7 ]; then
+    echo "FAIL: expected at least 7 rollback data-safety assertions, only ${SPRDS_PASSED} ran." >&2
+    suite_failed "Security Passport rollback data safety (assertion shortfall: floor 7)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport scope disclosure boundary assertions"
+set +e
+SPSDB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_scope_disclosure_boundary_test.sql 2>&1)"
+SPSDB_RC=$?
+set -e
+
+# "ok  4." is listed explicitly: 4.1 and 4.2 are the two named mandatory
+# assertions, and only 4.2's text happens to contain the word GROUP. Without
+# this, a passing 4.1 is invisible in the log while 4.2 is shown, which reads
+# like the boundary assertion was skipped.
+echo "$SPSDB_OUT" | grep -E "GROUP |ok  4\.|ASSERTION FAILED|NOT COVERED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPSDB_PASSED="$(echo "$SPSDB_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPSDB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the scope disclosure boundary suite exited with code ${SPSDB_RC}." >&2
+  echo "$SPSDB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport scope disclosure boundary"
+else
+  echo "    ok  ${SPSDB_PASSED} scope disclosure boundary assertions passed"
+
+  # A skipped assertion must never be mistaken for a passing one. The suite
+  # itself no longer emits "NOT COVERED", but asserting it here too means a
+  # future edit cannot reintroduce the escape hatch quietly.
+  if echo "$SPSDB_OUT" | grep -q "NOT COVERED"; then
+    echo "FAIL: the scope boundary suite reported NOT COVERED. An untested privacy" >&2
+    echo "      boundary must fail, not emit a line beginning \"ok\"." >&2
+    suite_failed "Security Passport scope disclosure boundary (NOT COVERED path)"
+  fi
+
+  # 4.1 and 4.2 are the assertions that distinguish an application disclosure
+  # from a link share — the whole point of the boundary. Named explicitly so a
+  # run that skipped exactly those two cannot pass on count alone.
+  for REQUIRED in \
+    "4.1 an application disclosure carries the scope on the SAME package" \
+    "4.2 which GROUP 2 proved withholds it when shared by link"; do
+    if ! echo "$SPSDB_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory application-scope assertion did not run: ${REQUIRED}" >&2
+      suite_failed "Security Passport scope disclosure boundary (missing: ${REQUIRED})"
+    fi
+  done
+
+  # Every exclusion is paired with the inclusion proving the payload COULD have
+  # carried the scope. A short run means those contrasts did not execute, which
+  # reads exactly like a boundary that holds.
+  if [ "$SPSDB_PASSED" -lt 12 ]; then
+    echo "FAIL: expected at least 12 scope boundary assertions, only ${SPSDB_PASSED} ran." >&2
+    suite_failed "Security Passport scope disclosure boundary (assertion shortfall: floor 12)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport legacy scope correction assertions"
+set +e
+SPLSC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_legacy_scope_correction_test.sql 2>&1)"
+SPLSC_RC=$?
+set -e
+
+echo "$SPLSC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPLSC_PASSED="$(echo "$SPLSC_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPLSC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the legacy scope correction suite exited with code ${SPLSC_RC}." >&2
+  echo "$SPLSC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport legacy scope correction"
+else
+  echo "    ok  ${SPLSC_PASSED} legacy scope correction assertions passed"
+  # This suite exists because one production row was frozen: readable,
+  # withdrawable, uncorrectable. A short run means the correction attempts did
+  # not happen, which reads exactly like a fixed defect.
+  if [ "$SPLSC_PASSED" -lt 14 ]; then
+    echo "FAIL: expected at least 14 legacy scope assertions, only ${SPLSC_PASSED} ran." >&2
+    suite_failed "Security Passport legacy scope correction (assertion shortfall: floor 14)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# Independently of the suite above: the replayed database must never end with
+# an unreviewed market switched on. Asserted here rather than only inside the
+# suite, because a suite that aborted early cannot assert its own cleanup.
+echo "==> Verifying no unreviewed market pack is active"
+psql_q -d "$TEST_DB" -c "
+DO \$mp\$
+DECLARE _bad text;
+BEGIN
+  SELECT string_agg(code, ', ') INTO _bad FROM public.sp_market_packs
+   WHERE is_active AND legal_review_state NOT IN ('approved', 'grandfathered');
+  IF _bad IS NOT NULL THEN
+    RAISE EXCEPTION 'unreviewed market pack(s) are ACTIVE: %', _bad;
+  END IF;
+END \$mp\$;" >/dev/null
+echo "    ok  every active market pack has a recorded review state"
+
+echo "==> Verifying the disclosure scope boundary rollback"
+set +e
+SPSDBRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908092000_sp_disclosure_scope_boundary_rollback.sql 2>&1)"
+SPSDBRB_RC=$?
+set -e
+
+if [ "$SPSDBRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the disclosure scope boundary rollback exited with code ${SPSDBRB_RC}." >&2
+  echo "$SPSDBRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "disclosure scope boundary rollback"
+else
+  echo "    ok  the disclosure scope boundary rolls back cleanly"
+fi
+
+# Reverse migration order: 20260908092000 above, then this, then
+# 20260908090000 below. It touches only two label columns, but running the
+# chain in anything other than reverse order is how an ordering assumption
+# stops being tested.
+echo "==> Verifying the title label rollback"
+set +e
+SPTLRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908091000_sp_title_country_and_training_label_rollback.sql 2>&1)"
+SPTLRB_RC=$?
+set -e
+
+if [ "$SPTLRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the title label rollback exited with code ${SPTLRB_RC}." >&2
+  echo "$SPTLRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "title label rollback"
+else
+  # Executing without error proves nothing about whether it put the labels
+  # back. Assert the values it claims to restore.
+  set +e
+  SPTLRB_CHECK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "
+    DO \$tl\$
+    DECLARE _v text; _o text; _n integer;
+    BEGIN
+      SELECT name_en INTO _v FROM public.sp_professional_titles
+       WHERE code = 'SE_VAKTARE_COMPETENCE';
+      IF _v IS DISTINCT FROM 'Security Guard · Sweden' THEN
+        RAISE EXCEPTION 'label not restored: SE_VAKTARE_COMPETENCE is %', _v;
+      END IF;
+
+      SELECT name_en INTO _o FROM public.sp_professional_titles
+       WHERE code = 'SE_ORDNINGSVAKT_TITLE';
+      IF _o IS DISTINCT FROM 'Public Order Guard (Ordningsvakt) · Sweden' THEN
+        RAISE EXCEPTION 'label not restored: SE_ORDNINGSVAKT_TITLE is %', _o;
+      END IF;
+
+      -- The whole point of the forward migration was that the country printed
+      -- twice. Rolling back must bring the suffixes back on every pack, or the
+      -- rollback is only partially reversing what it claims to reverse.
+      SELECT count(*) INTO _n FROM public.sp_professional_titles
+       WHERE name_en ~ '(Sweden|United Kingdom|UAE)\\s*\$';
+      IF _n < 10 THEN
+        RAISE EXCEPTION 'only % title(s) regained a country suffix; expected at least 10', _n;
+      END IF;
+    END \$tl\$;" 2>&1)"
+  SPTLRB_CHECK_RC=$?
+  set -e
+
+  if [ "$SPTLRB_CHECK_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the title label rollback ran but did not restore the labels." >&2
+    echo "$SPTLRB_CHECK" | grep -iE "ERROR:|FEL:" | head -5 >&2
+    suite_failed "title label rollback (labels not restored)"
+  else
+    echo "    ok  the title labels roll back, and the previous values are restored"
+  fi
+fi
+
+# The legacy-scope rollback runs first of all: it restores the trigger to the
+# version the UK pack left, which the Dubai/UK/Sweden chain below then unwinds
+# in turn.
+echo "==> Verifying the legacy scope correction rollback"
+set +e
+SPLSCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908090000_sp_legacy_scope_correctable_rollback.sql 2>&1)"
+SPLSCRB_RC=$?
+set -e
+
+if [ "$SPLSCRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the legacy scope rollback exited with code ${SPLSCRB_RC}." >&2
+  echo "$SPLSCRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "legacy scope correction rollback"
+else
+  echo "    ok  the legacy scope correction rolls back cleanly"
+fi
+
+# Dubai first. The Swedish rollback restores a 16-character limit on credential
+# codes and AE_DU_PEOPLE_OF_DETERMINATION is 30 -- so running these out of
+# order aborts with ROLLBACK BLOCKED rather than corrupting anything, which is
+# how the ordering was established in the first place.
+echo "==> Verifying the Dubai market pack rollback"
+set +e
+SPAERB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907093000_sp_uae_dubai_market_pack_rollback.sql 2>&1)"
+SPAERB_RC=$?
+set -e
+
+if [ "$SPAERB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Dubai market pack rollback exited with code ${SPAERB_RC}." >&2
+  echo "$SPAERB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Dubai market pack rollback"
+else
+  echo "    ok  the Dubai market pack rolls back cleanly, Sweden and the UK intact"
+fi
+
+# The UK rollback runs before the Swedish one, which runs before the
+# three-market one. Each restores the claim trigger to the version the previous
+# migration left, so the chain only unwinds correctly in this order.
+echo "==> Verifying the UK market pack rollback"
+set +e
+SPUKRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907092000_sp_uk_market_pack_rollback.sql 2>&1)"
+SPUKRB_RC=$?
+set -e
+
+if [ "$SPUKRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK market pack rollback exited with code ${SPUKRB_RC}." >&2
+  echo "$SPUKRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "UK market pack rollback"
+else
+  echo "    ok  the UK market pack rolls back cleanly, Sweden untouched"
+fi
+
+# The Swedish rollback must run FIRST: it restores the claim trigger to the
+# three-market version that the next step then replaces with the pre-market
+# one. The other order leaves a trigger describing a schema that is gone.
+echo "==> Verifying the Swedish truth model rollback"
+set +e
+# The Swedish rollback REFUSES while any holder row records what an
+# authorisation is limited to — dropping authorisation_scope would erase every
+# one of them silently. Suite fixtures leave such rows behind, so the refusal
+# fires here, correctly.
+#
+# This database is disposable and recreated from empty on every run, so the
+# destruction is both intended and harmless. The override is set explicitly
+# rather than by weakening the guard, because that is exactly what it is for:
+# a conscious act, visible in the script, rather than a silent side effect.
+#
+# The refusal itself is proven separately, against real data, by
+# supabase/tests/security_passport_rollback_data_safety_test.sql above.
+SPSERB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -c "SET sp.rollback_may_delete_holder_claims = 'yes';" \
+  -f supabase/rollback/20260907091000_sp_sweden_truth_model_rollback.sql 2>&1)"
+SPSERB_RC=$?
+set -e
+
+if [ "$SPSERB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Swedish truth model rollback exited with code ${SPSERB_RC}." >&2
+  echo "$SPSERB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Swedish truth model rollback"
+else
+  echo "    ok  the Swedish truth model rolls back cleanly, launch credentials intact"
+fi
+
+echo "==> Verifying the three-market rollback"
+set +e
+SP3MRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907090000_sp_three_market_foundation_rollback.sql 2>&1)"
+SP3MRB_RC=$?
+set -e
+
+if [ "$SP3MRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the three-market rollback exited with code ${SP3MRB_RC}." >&2
+  echo "$SP3MRB_OUT" | grep -iE "ROLLBACK INCOMPLETE|ROLLBACK DAMAGED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "three-market rollback"
+else
+  echo "    ok  the three-market foundation rolls back cleanly, Sweden intact"
+  # And a Swedish credential still writes afterwards -- the rollback restored a
+  # working trigger, not merely a syntactically valid one.
+  set +e
+  psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "
+    DO \$rb\$
+    DECLARE _h uuid := '00000000-0000-0000-0000-00000000fb01';
+    BEGIN
+      INSERT INTO auth.users (id) VALUES (_h) ON CONFLICT DO NOTHING;
+      INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
+      VALUES (_h, 'training', 'VU1 after rollback', 'VU1');
+      DELETE FROM public.sp_claims WHERE holder_user_id = _h;
+    END \$rb\$;" >/dev/null 2>&1
+  SP3MRB_WRITE_RC=$?
+  set -e
+  if [ "$SP3MRB_WRITE_RC" -ne 0 ]; then
+    echo "FAIL: after rollback a Swedish VU1 can no longer be written." >&2
+    suite_failed "three-market rollback (post-rollback write)"
+  else
+    echo "    ok  a Swedish VU1 still writes through the restored trigger"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
@@ -1552,5 +1986,12 @@ echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
-echo "              ${STDR_PASSED} standard recruitment availability assertions"
+echo "              ${STDR_PASSED} standard recruitment availability assertions,"
+echo "              ${SP3M_PASSED} three-market foundation assertions,"
+echo "              ${SPSE_PASSED} Swedish truth model assertions,"
+echo "              ${SPUK_PASSED} UK market pack assertions,"
+echo "              ${SPAE_PASSED} Dubai market pack assertions,"
+echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
+echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
+echo "              ${SPRDS_PASSED} rollback data-safety assertions"
 echo "===================================================="

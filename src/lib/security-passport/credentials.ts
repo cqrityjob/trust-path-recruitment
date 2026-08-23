@@ -30,6 +30,27 @@ import type { PassportCopyKey } from "./i18n";
  *  union exists only so the UI can be explicit about what it ships today. */
 export type CredentialCode = "VU1" | "VU2" | "OV" | "SV";
 
+/**
+ * The longest credential code the database will accept.
+ *
+ * ── WHY THIS IS A CONSTANT AND NOT A LITERAL ───────────────────────────
+ *
+ * `sp_credential_types_code_check` is `^[A-Z0-9_]{2,48}$`, relaxed from the
+ * original 16 by 20260907091000 because `SE_PERSONNEL_APPROVAL` is 21
+ * characters and `AE_DU_PEOPLE_OF_DETERMINATION` is 29.
+ *
+ * The Zod schemas that guard the write paths kept the old 16. The result was
+ * not theoretical: `SE_PERSONNEL_APPROVAL` ships ACTIVE in Sweden, so a
+ * credential the product offers could not be recorded — the client refused it
+ * before the database ever saw it. Every UK and UAE code would have hit the
+ * same wall.
+ *
+ * One exported constant, used by every layer, and
+ * `scripts/passport-credential-form-check.ts` parses the CHECK out of the
+ * migration and fails the build if the two ever disagree again.
+ */
+export const CREDENTIAL_CODE_MAX_LENGTH = 48;
+
 export type CredentialCategory = "qualification" | "appointment";
 
 /** One row of `sp_credential_types`, in domain terms.
@@ -47,6 +68,15 @@ export interface CredentialType {
   readonly symbolLabel: string;
   readonly requiresValidUntil: boolean;
   readonly requiresIssuer: boolean;
+  /** The authorisation is limited to an employer, principal or protected
+   *  object. A skyddsvakt approval shown without one reads as a general
+   *  national licence. */
+  readonly requiresScope: boolean;
+  /** The credential may only ever carry a controlled result: no holder note,
+   *  and the taxonomy's own label as the title. For facts whose underlying
+   *  material — a register check, a fitness certificate — must never enter the
+   *  Passport at all. */
+  readonly narrowResultOnly: boolean;
 }
 
 /** What the holder types. Every field is optional at this stage — a draft is
@@ -62,6 +92,7 @@ export interface CredentialDraft {
   readonly validUntil: string | null;
   readonly credentialReference: string;
   readonly holderNote: string;
+  readonly authorisationScope: string;
 }
 
 export function emptyCredentialDraft(): CredentialDraft {
@@ -75,6 +106,7 @@ export function emptyCredentialDraft(): CredentialDraft {
     validUntil: null,
     credentialReference: "",
     holderNote: "",
+    authorisationScope: "",
   };
 }
 
@@ -90,6 +122,13 @@ export interface FieldVisibility {
   readonly validFrom: boolean;
   readonly validUntil: boolean;
   readonly reference: boolean;
+  /** What the authorisation is limited to. */
+  readonly scope: boolean;
+  /** A narrow-result credential asks for neither, and the database refuses
+   *  both. Hiding them is not cosmetic: a form that offers a note the server
+   *  will reject teaches the holder to write one. */
+  readonly title: boolean;
+  readonly note: boolean;
 }
 
 export function fieldsFor(type: CredentialType): FieldVisibility {
@@ -103,6 +142,54 @@ export function fieldsFor(type: CredentialType): FieldVisibility {
     // Shown whenever the credential can expire at all. Required separately.
     validUntil: isAppointment || type.requiresValidUntil,
     reference: true,
+    scope: type.requiresScope,
+    title: !type.narrowResultOnly,
+    note: !type.narrowResultOnly,
+  };
+}
+
+/**
+ * Drops every value the chosen credential does not ask for.
+ *
+ * ── WHY A HIDDEN FIELD IS NOT AN EMPTY ONE ─────────────────────────────
+ *
+ * `fieldsFor` decides what the form SHOWS. It does not decide what the draft
+ * CARRIES, and until this existed those were different things: a holder who
+ * filled in a skyddsvakt scope and an end date, then changed their mind and
+ * picked VU1, still had both in the draft. The scope field was hidden. The
+ * value was submitted.
+ *
+ * The consequences were not cosmetic. A VU1 would have been written with a
+ * `valid_until` — a fabricated expiry on a course that has none — and with an
+ * `authorisation_scope` describing an authorisation it is not. Switching to a
+ * narrow-result credential was worse: the retained note is refused by both the
+ * validator and the database, so the holder saw an error about a field the
+ * form was no longer showing them.
+ *
+ * Applied on the switch AND again on the server before the write, so a stale
+ * value cannot reach the database through a caller that skipped the form.
+ */
+export function clearIncompatible(draft: CredentialDraft, type: CredentialType): CredentialDraft {
+  const fields = fieldsFor(type);
+  return {
+    ...draft,
+    issuerName: fields.issuer ? draft.issuerName : "",
+    issuedOn: fields.issuedOn ? draft.issuedOn : null,
+    validFrom: fields.validFrom ? draft.validFrom : null,
+    validUntil: fields.validUntil ? draft.validUntil : null,
+    credentialReference: fields.reference ? draft.credentialReference : "",
+    authorisationScope: fields.scope ? draft.authorisationScope : "",
+    holderNote: fields.note ? draft.holderNote : "",
+    // A narrow-result credential's title is not the holder's to choose, so
+    // switching to one SETS the controlled label rather than blanking it or
+    // leaving the previous credential's name behind.
+    //
+    // The first version left it alone, reasoning that the write path supplies
+    // the label anyway. It does — but `validateCredential` runs first and
+    // refuses a title that is not the controlled one, so a switch away from
+    // Skyddsvaktsförordnande produced SP_CREDENTIAL_INVALID on a field the
+    // form was no longer showing. The guard caught it.
+    title: fields.title ? draft.title : type.nameSv,
   };
 }
 
@@ -180,6 +267,24 @@ export function validateCredential(
     errors.push({ field: "validUntil", messageKey: "cred.error.endBeforeStart" });
   }
 
+  // The narrow-result rules are checked BEFORE the draft exemption, because
+  // the database checks them on a draft too — a draft that has already stored
+  // register commentary has already done the harm. Validating them only at
+  // submit would mean the form accepts a note the server then refuses, which
+  // is how a holder learns to write one.
+  if (type?.narrowResultOnly) {
+    if (!isBlank(draft.holderNote)) {
+      errors.push({ field: "holderNote", messageKey: "cred.error.noNoteAllowed" });
+    }
+    if (
+      !isBlank(draft.title) &&
+      draft.title.trim() !== type.nameSv &&
+      draft.title.trim() !== type.nameEn
+    ) {
+      errors.push({ field: "title", messageKey: "cred.error.controlledLabelOnly" });
+    }
+  }
+
   if (mode === "draft") return errors;
 
   if (!type) {
@@ -187,7 +292,7 @@ export function validateCredential(
     return errors;
   }
 
-  if (isBlank(draft.title)) {
+  if (isBlank(draft.title) && !type.narrowResultOnly) {
     errors.push({ field: "title", messageKey: "cred.error.titleRequired" });
   }
   if (isBlank(draft.jurisdictionCode)) {
@@ -203,6 +308,9 @@ export function validateCredential(
   }
   if (type.requiresValidUntil && !draft.validUntil) {
     errors.push({ field: "validUntil", messageKey: "cred.error.validUntilRequired" });
+  }
+  if (type.requiresScope && isBlank(draft.authorisationScope)) {
+    errors.push({ field: "authorisationScope", messageKey: "cred.error.scopeRequired" });
   }
 
   return errors;
