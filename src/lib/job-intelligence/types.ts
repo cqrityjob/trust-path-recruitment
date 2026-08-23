@@ -20,12 +20,19 @@ export type JobAuditAction =
   | "created"
   | "updated"
   | "submitted"
+  | "approved"
   | "published"
   | "rejected"
   | "expired"
   | "archived"
+  | "restored"
+  | "duplicated"
   | "duplicate_marked"
-  | "deleted";
+  | "duplicated_from"
+  | "deleted"
+  | "changes_requested"
+  | "resubmitted"
+  | "closed";
 
 export type ImportSourceKind = "manual" | "employer" | "feed";
 
