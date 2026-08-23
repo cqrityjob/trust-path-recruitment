@@ -42,12 +42,22 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/workforce/")({
   ssr: false,
+  // `?add` opens the add form this page already owns. Oversikt needed a way to
+  // start "lagg till medarbetare" in one click, and the alternative -- a second
+  // creation form on the dashboard -- would have been two places to keep
+  // correct and two places for validation to drift.
+  //
+  // Optional rather than defaulted: a defaulted search param becomes a required
+  // prop on every existing <Link> to this route.
+  validateSearch: (search: Record<string, unknown>): { add?: true } =>
+    search.add === true || search.add === "true" || search.add === "" ? { add: true } : {},
   component: EmployerWorkforcePage,
   errorComponent: EmployerErrorState,
 });
 
 function EmployerWorkforcePage() {
   const { employerSlug } = Route.useParams();
+  const { add } = Route.useSearch();
   const { t } = useT();
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
   const workspacesQuery = useQuery({
@@ -89,6 +99,7 @@ function EmployerWorkforcePage() {
       role={workspace.role}
       status={workspace.employerStatus}
       hasMultipleWorkspaces={(workspacesQuery.data?.length ?? 0) > 1}
+      openAddOnLoad={add === true}
     />
   );
 }
@@ -118,6 +129,7 @@ function WorkforceDirectory({
   role,
   status,
   hasMultipleWorkspaces,
+  openAddOnLoad,
 }: {
   employerId: string;
   employerSlug: string;
@@ -125,6 +137,7 @@ function WorkforceDirectory({
   role: EmployerRole;
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
+  openAddOnLoad: boolean;
 }) {
   const { t, lang } = useT();
   const qc = useQueryClient();
@@ -133,7 +146,7 @@ function WorkforceDirectory({
   const updateFn = useServerFn(updateEmployerEmployee);
   const setStatusFn = useServerFn(setEmployerEmployeeStatus);
 
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(openAddOnLoad);
   const [addForm, setAddForm] = useState<FormValues>(EMPTY_FORM);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormValues>(EMPTY_FORM);

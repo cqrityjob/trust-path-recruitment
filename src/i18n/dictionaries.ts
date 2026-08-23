@@ -1659,6 +1659,8 @@ export const dictionaries = {
       "Kandidaten har valt att dela följande med er för den här ansökan.",
     "employer.candidate.passport.sharedNote":
       "Endast verifierade uppgifter ingår. Kandidaten kan återkalla delningen när som helst, och sidan visar då inget.",
+    "employer.candidate.passport.liveSource":
+      "Kortet visar läget just nu. En skärmbild av det gör inte det.",
 
     "employer.candidate.passport.authorisedAt": "Delad av kandidaten",
     "employer.candidate.passport.open": "Öppna verifierat Passport",
@@ -3056,6 +3058,12 @@ export const dictionaries = {
     "academy.decision.failed": "Beslutet kunde inte sparas.",
     "academy.decision.notAuthorised": "Du har inte behörighet att registrera beslut.",
     "academy.decision.beforeRelease": "Ett beslut kan registreras först när underlaget har delats.",
+    "academy.decision.attemptNotFound":
+      "Bedömningen finns inte längre, eller tillhör inte er organisation. Ladda om sidan.",
+    "academy.decision.supersedesForeign":
+      "Beslutet du försöker rätta hör till en annan organisation och kan inte ersättas härifrån.",
+    "academy.decision.failedWithCode":
+      "Beslutet kunde inte sparas. Försök igen om en stund. Händer det igen, kontakta CQrityjob och uppge felkod {code}.",
     "academy.decision.actionConversation": "Uppföljande samtal",
     "academy.decision.actionDevelopment": "Tilldela utvecklingsinsats",
     "academy.decision.actionMoreEvidence": "Komplettera underlaget",
@@ -3294,6 +3302,8 @@ export const dictionaries = {
     "decision.competencies.lede":
       "Varje område bedömningen berörde, med mönstret svaren visade och — där intervjuguiden valt en fråga för området — vad du tar vidare i samtalet. Starkast stöd först, därefter det som behöver följas upp, sist det som berördes för lite.",
     "decision.method.title": "Om bedömningsunderlaget",
+    "decision.method.show": "Visa hur underlaget togs fram",
+    "decision.method.hide": "Dölj hur underlaget togs fram",
     "decision.method.basis": "Vad underlaget omfattar",
     "decision.method.selfReportCount": "Utöver det {n} självrapporterade svar.",
     "decision.method.oneOccasion": "Underlagets bredd",
@@ -5048,6 +5058,8 @@ export const dictionaries = {
       "The candidate has chosen to share the following with your organisation for this application.",
     "employer.candidate.passport.sharedNote":
       "Only verified records are included. The candidate can withdraw this at any time, and the page will then show nothing.",
+    "employer.candidate.passport.liveSource":
+      "This card shows the current state. A screenshot of it does not.",
 
     "employer.candidate.passport.authorisedAt": "Shared by the candidate",
     "employer.candidate.passport.open": "Open verified Passport",
@@ -6440,6 +6452,12 @@ export const dictionaries = {
     "academy.decision.notAuthorised": "You do not have permission to record decisions.",
     "academy.decision.beforeRelease":
       "A decision can only be recorded once the material has been shared.",
+    "academy.decision.attemptNotFound":
+      "This assessment no longer exists, or does not belong to your organisation. Reload the page.",
+    "academy.decision.supersedesForeign":
+      "The decision you are correcting belongs to another organisation and cannot be replaced from here.",
+    "academy.decision.failedWithCode":
+      "The decision could not be saved. Try again shortly. If it happens again, contact CQrityjob and quote error code {code}.",
     "academy.decision.actionConversation": "Follow-up conversation",
     "academy.decision.actionDevelopment": "Assign development activity",
     "academy.decision.actionMoreEvidence": "Gather more evidence",
@@ -6669,6 +6687,8 @@ export const dictionaries = {
     "decision.competencies.lede":
       "Every area the assessment touched, with the pattern the responses showed and — where the interview guide selected a question for that area — what to take into the conversation. Strongest support first, then what needs following up, then what was barely touched.",
     "decision.method.title": "About this assessment evidence",
+    "decision.method.show": "Show how this material was produced",
+    "decision.method.hide": "Hide how this material was produced",
     "decision.method.basis": "What the evidence covers",
     "decision.method.selfReportCount": "Alongside that, {n} self-reported responses.",
     "decision.method.oneOccasion": "Breadth of the evidence",
