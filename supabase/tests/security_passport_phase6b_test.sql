@@ -203,12 +203,18 @@ DECLARE
   _v uuid := 'f6b00000-0000-0000-0000-000000000009';
   _old uuid; _new uuid; _r public.sp_claims%ROWTYPE;
 BEGIN
+  -- authorisation_scope arrived with the Swedish truth model (20260907091000).
+  -- Carrying it here is not incidental to this suite: the correction below
+  -- does not pass a scope, so it also proves the scope is carried FORWARD
+  -- rather than dropped — which is what would otherwise make correcting a
+  -- skyddsvakt approval impossible.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     credential_reference, holder_note, valid_until,
+     credential_reference, holder_note, valid_until, authorisation_scope,
      assertion_level, verified_by_user_id, verified_at)
   VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Polismyndigheten',
           'DNR-5005', 'första anteckning', DATE '2028-01-31',
+          'Skyddsobjekt: Syntetisk anläggning',
           'verified', _v, now())
   RETURNING id INTO _old;
 
@@ -229,6 +235,8 @@ BEGIN
     '4.2 a surviving verified level still names who decided it and when');
   PERFORM pg_temp.ok(_r.holder_note = 'omskriven anteckning',
     '4.3 the note itself is updated');
+  PERFORM pg_temp.ok(_r.authorisation_scope = 'Skyddsobjekt: Syntetisk anläggning',
+    '4.4 the scope is carried forward by a correction that did not mention it');
 END $$;
 
 -- =============================================================================

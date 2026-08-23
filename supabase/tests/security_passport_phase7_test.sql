@@ -129,11 +129,16 @@ BEGIN
   -- An appointment must carry an end date (Phase 6 trigger), so this fixture
   -- is complete in every respect EXCEPT being verified. That is the point:
   -- completeness must not be mistaken for verification.
+  -- authorisation_scope arrived with the Swedish truth model
+  -- (20260907091000): a skyddsvakt approval is limited to an employer,
+  -- principal or protected object, and without one it reads as a general
+  -- national licence. What this fixture is FOR is unchanged.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     issued_on, valid_until, assertion_level)
+     issued_on, valid_until, assertion_level, authorisation_scope)
   VALUES (_h, 'licence', 'P7 Dokumenterad SV', 'SV', 'Fiktiva Myndigheten',
-          DATE '2025-07-01', DATE '2028-06-30', 'document_provided');
+          DATE '2025-07-01', DATE '2028-06-30', 'document_provided',
+          'Skyddsobjekt: Fiktiv anläggning');
 
   -- Periods carry no verifier-attribution columns; the decision lives in
   -- sp_verification_decisions. The level is what the disclosure filters on.
@@ -178,9 +183,11 @@ DECLARE
 BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     issued_on, valid_until, assertion_level, verified_by_user_id, verified_at)
+     issued_on, valid_until, assertion_level, verified_by_user_id, verified_at,
+     authorisation_scope)
   VALUES (_o, 'licence', 'P7 ANNAN INNEHAVARE Skyddsvakt', 'SV', 'Fiktiva Myndigheten',
-          DATE '2025-02-02', DATE '2028-02-01', 'verified', _v, now());
+          DATE '2025-02-02', DATE '2028-02-01', 'verified', _v, now(),
+          'Skyddsobjekt: Fiktiv anläggning');
 END $$;
 
 -- =============================================================================

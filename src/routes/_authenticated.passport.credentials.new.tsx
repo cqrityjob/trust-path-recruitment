@@ -25,9 +25,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { CredentialDraft, CredentialType } from "@/lib/security-passport/credentials";
+import type { SelectableMarket } from "@/lib/security-passport/credentials.functions";
 import {
   discardCredentialDraft,
   listCredentialTypes,
+  listSelectableMarkets,
   listMyCredentialDrafts,
   saveCredential,
   type DraftCredential,
@@ -55,11 +57,13 @@ function NewCredentialRoute() {
   const search = Route.useSearch();
 
   const loadTypes = useServerFn(listCredentialTypes);
+  const loadMarkets = useServerFn(listSelectableMarkets);
   const loadDrafts = useServerFn(listMyCredentialDrafts);
   const doSave = useServerFn(saveCredential);
   const doDiscard = useServerFn(discardCredentialDraft);
 
   const [types, setTypes] = useState<readonly CredentialType[] | null>(null);
+  const [markets, setMarkets] = useState<readonly SelectableMarket[]>([]);
   const [drafts, setDrafts] = useState<readonly DraftCredential[]>([]);
   const [claimId, setClaimId] = useState<string | null>(search.draft ?? null);
   const [busy, setBusy] = useState(false);
@@ -69,19 +73,21 @@ function NewCredentialRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const [t, d] = await Promise.all([
+      const [t, d, m] = await Promise.all([
         loadTypes({ data: undefined }),
         loadDrafts({ data: undefined }),
+        loadMarkets({ data: undefined }),
       ]);
       setTypes(t);
       setDrafts(d);
+      setMarkets(m);
     } catch (err) {
       console.error("[passport] credential form load failed", err);
       setError(pt("common.error"));
     } finally {
       setLoaded(true);
     }
-  }, [loadTypes, loadDrafts, pt]);
+  }, [loadTypes, loadDrafts, loadMarkets, pt]);
 
   useEffect(() => {
     void refresh();
@@ -241,6 +247,7 @@ function NewCredentialRoute() {
           // state always matches what the heading above it claims.
           key={resumed?.id ?? "new"}
           types={types}
+          markets={markets}
           initial={resumed ? { ...toFormDraft(resumed), id: resumed.id } : null}
           preselectCode={search.code ?? null}
           busy={busy}
@@ -268,5 +275,6 @@ function toFormDraft(d: DraftCredential): CredentialDraft {
     validUntil: d.validUntil,
     credentialReference: d.credentialReference,
     holderNote: d.holderNote,
+    authorisationScope: d.authorisationScope,
   };
 }

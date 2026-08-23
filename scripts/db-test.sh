@@ -1347,6 +1347,32 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport three-market foundation assertions"
+set +e
+SP3M_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_three_market_foundation_test.sql 2>&1)"
+SP3M_RC=$?
+set -e
+
+echo "$SP3M_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SP3M_PASSED="$(echo "$SP3M_OUT" | grep -c "ok  " || true)"
+
+if [ "$SP3M_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Security Passport three-market foundation suite exited with code ${SP3M_RC}." >&2
+  echo "$SP3M_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport three-market foundation"
+else
+  echo "    ok  ${SP3M_PASSED} three-market foundation assertions passed"
+  # Every market rule is asserted by mutation and paired with a positive
+  # control, so a short run means the suite stopped attempting the things the
+  # schema is supposed to refuse -- which reads identically to success.
+  if [ "$SP3M_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 three-market assertions, only ${SP3M_PASSED} ran." >&2
+    suite_failed "Security Passport three-market foundation (assertion shortfall: floor 30)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running Security Passport Phase 6 assertions"
 set +e
 SP6_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_phase6_test.sql 2>&1)"
@@ -1498,6 +1524,94 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running Security Passport Swedish truth model assertions"
+set +e
+SPSE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_sweden_truth_model_test.sql 2>&1)"
+SPSE_RC=$?
+set -e
+
+echo "$SPSE_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPSE_PASSED="$(echo "$SPSE_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPSE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Swedish truth model suite exited with code ${SPSE_RC}." >&2
+  echo "$SPSE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport Swedish truth model"
+else
+  echo "    ok  ${SPSE_PASSED} Swedish truth model assertions passed"
+  # The narrow-result and scope rules are asserted by attempting the forbidden
+  # write. A short run means those attempts did not happen, which reads exactly
+  # like a schema that forbids nothing.
+  if [ "$SPSE_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 Swedish truth model assertions, only ${SPSE_PASSED} ran." >&2
+    suite_failed "Security Passport Swedish truth model (assertion shortfall: floor 18)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6b. The three-market rollback actually reverses the three-market migration
+# ---------------------------------------------------------------------------
+# Runs LAST, after every Passport suite, because it is destructive: it drops
+# the eight foundation tables and the columns they added. A rollback file that
+# has never been executed is a hope, not a procedure -- and the one property
+# that matters is asserted inside it, namely that Sweden survives.
+# The Swedish rollback must run FIRST: it restores the claim trigger to the
+# three-market version that the next step then replaces with the pre-market
+# one. The other order leaves a trigger describing a schema that is gone.
+echo "==> Verifying the Swedish truth model rollback"
+set +e
+SPSERB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907091000_sp_sweden_truth_model_rollback.sql 2>&1)"
+SPSERB_RC=$?
+set -e
+
+if [ "$SPSERB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Swedish truth model rollback exited with code ${SPSERB_RC}." >&2
+  echo "$SPSERB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Swedish truth model rollback"
+else
+  echo "    ok  the Swedish truth model rolls back cleanly, launch credentials intact"
+fi
+
+echo "==> Verifying the three-market rollback"
+set +e
+SP3MRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907090000_sp_three_market_foundation_rollback.sql 2>&1)"
+SP3MRB_RC=$?
+set -e
+
+if [ "$SP3MRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the three-market rollback exited with code ${SP3MRB_RC}." >&2
+  echo "$SP3MRB_OUT" | grep -iE "ROLLBACK INCOMPLETE|ROLLBACK DAMAGED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "three-market rollback"
+else
+  echo "    ok  the three-market foundation rolls back cleanly, Sweden intact"
+  # And a Swedish credential still writes afterwards -- the rollback restored a
+  # working trigger, not merely a syntactically valid one.
+  set +e
+  psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "
+    DO \$rb\$
+    DECLARE _h uuid := '00000000-0000-0000-0000-00000000fb01';
+    BEGIN
+      INSERT INTO auth.users (id) VALUES (_h) ON CONFLICT DO NOTHING;
+      INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
+      VALUES (_h, 'training', 'VU1 after rollback', 'VU1');
+      DELETE FROM public.sp_claims WHERE holder_user_id = _h;
+    END \$rb\$;" >/dev/null 2>&1
+  SP3MRB_WRITE_RC=$?
+  set -e
+  if [ "$SP3MRB_WRITE_RC" -ne 0 ]; then
+    echo "FAIL: after rollback a Swedish VU1 can no longer be written." >&2
+    suite_failed "three-market rollback (post-rollback write)"
+  else
+    echo "    ok  a Swedish VU1 still writes through the restored trigger"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Tidy up
 # ---------------------------------------------------------------------------
 if [ "${KEEP_TEST_DB:-0}" = "1" ]; then
@@ -1552,5 +1666,7 @@ echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
-echo "              ${STDR_PASSED} standard recruitment availability assertions"
+echo "              ${STDR_PASSED} standard recruitment availability assertions,"
+echo "              ${SP3M_PASSED} three-market foundation assertions,"
+echo "              ${SPSE_PASSED} Swedish truth model assertions"
 echo "===================================================="

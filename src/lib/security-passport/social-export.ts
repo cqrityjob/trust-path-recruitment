@@ -131,7 +131,6 @@ export function buildSocialSvg(
   const compact = format === "compact" || format === "og";
   const pad = Math.round(W * (compact ? 0.055 : 0.085));
 
-  const profession = lang === "sv" ? model.professionTitleSv : model.professionTitleEn;
   const mStyle = milestoneStyle(model.milestoneYears);
 
   const scale = compact ? W / 1200 : W / 1080;

@@ -9,6 +9,7 @@
 // content of their own. A direction that wanted to omit a lifecycle word
 // would have to change this file, where the omission would be obvious.
 
+import { professionLine } from "@/lib/security-passport/identity/presentation";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import {
@@ -141,7 +142,7 @@ export function useCardContent(
   return {
     brandLabel: pt("card.brand"),
     holderName: card.holderDisplayName,
-    profession: lang === "sv" ? card.professionTitleSv : card.professionTitleEn,
+    profession: professionLine(card.identity, lang, pt("identity.none")),
     jurisdiction: card.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : card.jurisdictionCode,
     milestone,
     credentials,

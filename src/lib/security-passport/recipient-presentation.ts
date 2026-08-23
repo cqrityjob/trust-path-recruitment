@@ -28,10 +28,14 @@
 // to every disclosed claim, so a lapsed authorisation is presented as
 // expired on the page AND in the image, rather than as currently verified.
 
+import { deriveVerifiedIdentity } from "./identity/visibility";
+import { toPublicTitles } from "./identity/presentation";
+import { MIRRORED_TITLE_RULES } from "./identity/market-rules";
+import type { PublicTitle, TitleRule } from "./identity/types";
 import { credentialPresentation } from "./design/credential-symbols";
 import type { CredentialPresentationState } from "./design/credential-symbols";
 import type { RecipientPayloadActive } from "./packages";
-import type { AssertionLevel, IsoDate, LifecycleState } from "./types";
+import type { AssertionLevel, Claim, IsoDate, LifecycleState } from "./types";
 import { validityOf } from "./validity";
 
 export interface RecipientCredential {
@@ -68,6 +72,14 @@ export interface RecipientPresentation {
   readonly holderLabel: string | null;
   readonly privacyMode: string;
   readonly professionSlug: string | null;
+  /** What the DISCLOSED credentials support, derived here by the same engine
+   *  the holder's own Passport uses.
+   *
+   *  The page used to print a fixed "Väktare" for anybody whose
+   *  `profession_slug` was non-null — to a stranger, on a public URL, on
+   *  evidence that was never checked. The slug is still carried above because
+   *  other things read it, but nothing renders a title from it any more. */
+  readonly titles: readonly PublicTitle[];
   readonly jurisdiction: string;
   readonly packageCode: string;
   /** "credential" when the holder shared exactly one credential. */
@@ -90,9 +102,46 @@ export interface RecipientPresentation {
 /** Interprets one disclosure payload. Pure: no network, no clock of its own
  *  — the reading date is passed in so the same payload renders identically
  *  on the page and in the exported image. */
+/** One disclosed credential, in the shape the derivation engine reads.
+ *
+ *  The recipient payload is deliberately narrower than a `Claim` — it carries
+ *  no holder note, no version lineage and no private reference — so the unused
+ *  fields are filled with the values that mean "not disclosed". None of them
+ *  affects derivation: the engine reads the code, the jurisdiction, the
+ *  evidence and the dates, all four of which the payload does carry. */
+function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number]): Claim {
+  return {
+    id: c.id,
+    claimType: c.type as Claim["claimType"],
+    credentialCode: c.credential_code,
+    skillCode: null,
+    skillLevel: null,
+    titleSv: c.title,
+    titleEn: c.title,
+    issuerName: c.issuer ?? "—",
+    jurisdictionCode: c.jurisdiction,
+    subJurisdictionCode: null,
+    authorisationScope: null,
+    issuedOn: c.issued_on,
+    validFrom: null,
+    validUntil: c.valid_until,
+    assertionLevel: c.assertion as AssertionLevel,
+    lifecycleState: c.lifecycle as LifecycleState,
+    verifierName: c.verifier_organisation,
+    limitationSv: null,
+    limitationEn: null,
+    versionNo: 1,
+    supersedesClaimId: null,
+  };
+}
+
 export function buildRecipientPresentation(
   payload: RecipientPayloadActive,
   evaluationOn: IsoDate,
+  /** The derivation rules. Defaults to the mirrored set because the public
+   *  recipient page renders without a session and cannot query the rules
+   *  table; a caller that HAS them should pass them. */
+  rules: readonly TitleRule[] = MIRRORED_TITLE_RULES,
 ): RecipientPresentation {
   const credentials: RecipientCredential[] = payload.verified_claims.map((c) => {
     const assertion = c.assertion as AssertionLevel;
@@ -124,10 +173,20 @@ export function buildRecipientPresentation(
     jurisdiction: e.jurisdiction,
   }));
 
+  // Derived from the disclosed claims alone. A recipient sees a title exactly
+  // when the credentials in front of them support it — never because the
+  // holder's profile said so, and never for a credential the package withheld.
+  const identity = deriveVerifiedIdentity(
+    payload.verified_claims.map(toDomainClaim),
+    rules,
+    evaluationOn,
+  );
+
   return {
     holderLabel: payload.holder,
     privacyMode: payload.privacy_mode,
     professionSlug: payload.profession_slug,
+    titles: toPublicTitles(identity),
     jurisdiction: payload.jurisdiction,
     packageCode: payload.package,
     focus: payload.focus ?? "passport",

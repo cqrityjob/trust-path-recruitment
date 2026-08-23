@@ -16,6 +16,7 @@
 // platforms may retain published or cached images after the link is
 // withdrawn, which is exactly why the image says "verify at source".
 
+import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useState } from "react";
 import { Copy, Download, ExternalLink, Linkedin } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -50,7 +51,7 @@ export function LinkedInShareSection({
         lang,
         {
           brand: pt("card.brand"),
-          professionLine: `${lang === "sv" ? model.professionTitleSv : model.professionTitleEn} · ${model.jurisdictionCode}`,
+          professionLine: `${joinTitles(model.titles, lang, pt("identity.none"))} · ${model.jurisdictionCode}`,
           verifiedLabel: pt("assertion.verified"),
           yearsLabel: pt("recognition.years"),
           verifyAtSource: pt("card.verifyAtSource"),

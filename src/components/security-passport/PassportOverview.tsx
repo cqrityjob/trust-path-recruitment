@@ -14,6 +14,7 @@
 // history before it has earned any trust; saying plainly who can see the
 // answer is the cheapest way to earn some.
 
+import { professionLine } from "@/lib/security-passport/identity/presentation";
 import { Lock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -94,7 +95,10 @@ export function PassportOverview({
     claims: liveClaims.filter((c: Claim) => c.claimType === type),
   })).filter((g) => g.claims.length > 0);
 
-  const profession = lang === "sv" ? holder.professionTitleSv : holder.professionTitleEn;
+  // The holder's own view, so a self-declared title may appear — labelled.
+  // `holder.identity` is whatever the caller derived; the marker below is
+  // what stops a previewed title from reading as a checked one.
+  const profession = professionLine(holder.identity, lang, pt("identity.none"));
 
   return (
     <div className={cn("mx-auto w-full max-w-3xl space-y-6", className)}>

@@ -20,6 +20,8 @@
 // expired licence is less trustworthy than one that shows it expired.
 
 import { totalsByEvidenceLevel } from "./experience";
+import { withoutSelfDeclared } from "./identity/visibility";
+import type { ProfessionalIdentity } from "./identity/types";
 import { recognitionFor, type RecognitionState } from "./recognition";
 import { validityOf } from "./validity";
 import type {
@@ -67,8 +69,12 @@ export interface CardCredential {
 
 export interface PassportCardModel {
   readonly holderDisplayName: string;
-  readonly professionTitleSv: string;
-  readonly professionTitleEn: string;
+  /** Derived, never stored. The card used to print a string the server set to
+   *  "Väktare" for everybody; it now prints what this person's own verified
+   *  credentials actually support, recomputed on the evaluation date. A lapsed
+   *  appointment is therefore already absent from the card that a reader
+   *  screenshots, with nothing scheduled that could have failed to run. */
+  readonly identity: ProfessionalIdentity;
   readonly jurisdictionCode: string;
   readonly state: PassportCardState;
   /** Null unless the whole qualifying threshold is verified. */
@@ -167,8 +173,10 @@ export function buildPassportCard(
 
   return {
     holderDisplayName: holder.displayName,
-    professionTitleSv: holder.professionTitleSv,
-    professionTitleEn: holder.professionTitleEn,
+    // Stripped of self-declared titles regardless of what the caller derived.
+    // The card is the artefact people screenshot and send onward; belt and
+    // braces is proportionate for the one surface that leaves the product.
+    identity: withoutSelfDeclared(holder.identity),
     jurisdictionCode: holder.jurisdictionCode,
     state: deriveState(holder.periods, holder.claims),
     recognition,

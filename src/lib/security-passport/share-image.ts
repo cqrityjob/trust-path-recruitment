@@ -10,6 +10,7 @@
 // here can widen it. This module only renders what that model already
 // contains.
 
+import { joinTitles } from "./identity/presentation";
 import { buildSocialSvg, svgToPngBlob } from "./social-export";
 import { shareFormat, type ShareFormat } from "./design/trust-system";
 import type { SocialCardModel } from "./social";
@@ -33,7 +34,7 @@ export async function renderShareImage(
     lang,
     {
       brand: pt("card.brand"),
-      professionLine: `${lang === "sv" ? model.professionTitleSv : model.professionTitleEn} · ${model.jurisdictionCode}`,
+      professionLine: `${joinTitles(model.titles, lang, pt("identity.none"))} · ${model.jurisdictionCode}`,
       verifiedLabel: pt("assertion.verified"),
       yearsLabel: pt("recognition.years"),
       verifyAtSource: pt("card.verifyAtSource"),

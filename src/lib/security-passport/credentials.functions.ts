@@ -28,6 +28,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
+  clearIncompatible,
   validateCredential,
   type CredentialCategory,
   type CredentialDraft,
@@ -37,6 +38,55 @@ import {
 /* ------------------------------------------------------------------ */
 /* Taxonomy                                                            */
 /* ------------------------------------------------------------------ */
+
+/** One market a holder may actually record a credential in.
+ *
+ *  ── WHY THIS REPLACED A CONSTANT ───────────────────────────────────────
+ *
+ *  The form used to offer `["SE", "NO", "DK", "FI", "DE"]` from a literal in
+ *  the component. Only the first existed in `sp_jurisdictions`, so four of the
+ *  five options produced a raw foreign-key error — a controlled vocabulary
+ *  whose control was a list nobody had reconciled with the database.
+ *
+ *  Read from the market packs instead, so the form can only ever offer what
+ *  the database will accept: an unreviewed market is absent because the pack
+ *  is inactive, and a new market appears the day its pack is switched on. */
+export interface SelectableMarket {
+  readonly marketPackCode: string;
+  readonly jurisdictionCode: string;
+  /** Present only where the regulator is sub-national — an emirate. Recorded
+   *  on the claim so a Dubai credential is never stored as UAE-wide. */
+  readonly subJurisdictionCode: string | null;
+  readonly nameSv: string;
+  readonly nameEn: string;
+}
+
+/** Every market a holder may currently record a credential in.
+ *
+ *  Deliberately filtered on `is_active`, which by the
+ *  sp_market_pack_active_needs_review constraint cannot be true while the
+ *  pack's regulatory content is unreviewed. So an unreviewed market is not
+ *  merely discouraged in the UI — it is not offered, and would be refused by
+ *  the claim trigger if it were. */
+export const listSelectableMarkets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly SelectableMarket[]> => {
+    const { data, error } = await context.supabase
+      .from("sp_market_packs")
+      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en")
+      .eq("is_active", true)
+      .is("superseded_on", null)
+      .order("code", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map((r) => ({
+      marketPackCode: r.code,
+      jurisdictionCode: r.jurisdiction_code,
+      subJurisdictionCode: r.sub_jurisdiction_code,
+      nameSv: r.name_sv,
+      nameEn: r.name_en,
+    }));
+  });
 
 /** The supported credentials, straight from the database.
  *
@@ -48,7 +98,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("sp_credential_types")
       .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer",
+        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
       )
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
@@ -63,6 +113,8 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
       symbolLabel: r.symbol_label,
       requiresValidUntil: r.requires_valid_until,
       requiresIssuer: r.requires_issuer,
+      requiresScope: r.requires_scope,
+      narrowResultOnly: r.narrow_result_only,
     }));
   });
 
@@ -91,6 +143,9 @@ const draftInput = z.object({
     .nullable(),
   credentialReference: z.string().max(120),
   holderNote: z.string().max(2000),
+  // Bounded to match the column's own CHECK, so an over-long scope is refused
+  // here with a field message rather than by the database with a 23514.
+  authorisationScope: z.string().max(200),
   /** `true` promotes the draft into the Passport. The database refuses an
    *  incomplete one, and `validateCredential` refuses it first. */
   activate: z.boolean(),
@@ -109,6 +164,7 @@ function toDomainDraft(data: DraftInput): CredentialDraft {
     validUntil: data.validUntil,
     credentialReference: data.credentialReference,
     holderNote: data.holderNote,
+    authorisationScope: data.authorisationScope,
   };
 }
 
@@ -146,7 +202,7 @@ export const saveCredential = createServerFn({ method: "POST" })
       const { data: row, error } = await supabase
         .from("sp_credential_types")
         .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer",
+          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
         )
         .eq("code", data.credentialCode)
         .maybeSingle();
@@ -161,11 +217,21 @@ export const saveCredential = createServerFn({ method: "POST" })
         symbolLabel: row.symbol_label,
         requiresValidUntil: row.requires_valid_until,
         requiresIssuer: row.requires_issuer,
+        requiresScope: row.requires_scope,
+        narrowResultOnly: row.narrow_result_only,
       };
     }
 
     const mode = data.activate ? "active" : "draft";
-    const problems = validateCredential(toDomainDraft(data), type, mode);
+
+    // Drop anything the chosen credential does not ask for, BEFORE validating
+    // and before writing. The form does this on the type switch too, but this
+    // is the guarantee: a caller that skipped the form — or a form left open
+    // across a deploy that changed the taxonomy — cannot write a scope onto a
+    // course or an expiry onto a credential that has none.
+    const draft = type ? clearIncompatible(toDomainDraft(data), type) : toDomainDraft(data);
+
+    const problems = validateCredential(draft, type, mode);
     if (problems.length > 0) {
       // The field-level messages are already on the client, which validated
       // the same way from the same module. This is the server refusing, so it
@@ -179,14 +245,22 @@ export const saveCredential = createServerFn({ method: "POST" })
     const fields = {
       claim_type: type.claimType,
       credential_code: type.code,
-      title: nullIfBlank(data.title) ?? type.nameSv,
-      claimed_issuer_name: nullIfBlank(data.issuerName),
-      jurisdiction_code: nullIfBlank(data.jurisdictionCode),
-      issued_on: data.issuedOn,
-      valid_from: data.validFrom ?? data.issuedOn,
-      valid_until: data.validUntil,
-      credential_reference: nullIfBlank(data.credentialReference),
-      holder_note: nullIfBlank(data.holderNote),
+      // A narrow-result credential takes the taxonomy's own label, whatever
+      // arrived. The database refuses anything else for every caller, so
+      // passing the holder's text through would only turn a rule into an
+      // error message.
+      title: type.narrowResultOnly ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
+      claimed_issuer_name: nullIfBlank(draft.issuerName),
+      jurisdiction_code: nullIfBlank(draft.jurisdictionCode),
+      issued_on: draft.issuedOn,
+      valid_from: draft.validFrom ?? draft.issuedOn,
+      valid_until: draft.validUntil,
+      credential_reference: nullIfBlank(draft.credentialReference),
+      // Same reasoning, and this one matters more: a note on a narrow-result
+      // credential is where register contents or a medical finding would
+      // arrive. Dropped here as well as refused there.
+      holder_note: type.narrowResultOnly ? null : nullIfBlank(draft.holderNote),
+      authorisation_scope: nullIfBlank(draft.authorisationScope),
       lifecycle_state: mode,
     };
 
@@ -256,7 +330,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("sp_claims")
       .select(
-        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, updated_at",
+        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, authorisation_scope, updated_at",
       )
       .eq("holder_user_id", userId)
       .eq("lifecycle_state", "draft")
@@ -274,6 +348,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
       validUntil: r.valid_until,
       credentialReference: r.credential_reference ?? "",
       holderNote: r.holder_note ?? "",
+      authorisationScope: r.authorisation_scope ?? "",
       updatedAt: r.updated_at,
     }));
   });

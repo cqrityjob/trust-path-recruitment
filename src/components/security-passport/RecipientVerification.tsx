@@ -20,6 +20,7 @@
 // own limits is misleading by omission, and this one is read by people
 // making employment decisions.
 
+import { professionLine } from "@/lib/security-passport/identity/presentation";
 import { ShieldCheck, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -46,7 +47,10 @@ export function DisclosurePayloadView({
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
-  const profession = lang === "sv" ? payload.professionTitleSv : payload.professionTitleEn;
+  // A recipient sees only what the holder's VERIFIED credentials support.
+  // `buildDisclosurePayload` already stripped self-declared titles; this
+  // renders the same derivation the holder saw, in the reader's language.
+  const profession = professionLine(payload.identity, lang, pt("identity.none"));
   const jurisdiction =
     payload.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : payload.jurisdictionCode;
 
