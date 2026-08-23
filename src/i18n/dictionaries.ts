@@ -3260,10 +3260,12 @@ export const dictionaries = {
     "decision.why.readyForInterview":
       "Underlaget räcker för att förbereda ett strukturerat samtal. Använd intervjuguiden nedan — frågorna är valda utifrån just de här svaren.",
     "decision.panel.strongest": "Starkast stöd i underlaget",
-    "decision.panel.followUp": "Viktigast att följa upp",
+    "decision.panel.followUp": "Följ upp i intervju",
     "decision.panel.safety": "Säkerhetskritisk uppföljning",
     "decision.panel.safetyNote":
       "Visas oavsett hur underlaget ser ut i övrigt. Ett starkt underlag tar aldrig bort en säkerhetskritisk notering.",
+    "decision.panel.safetyNone":
+      "Inga säkerhetskritiska observationer identifierades i det här underlaget.",
     "decision.panel.uncertain": "Begränsat underlag",
     "decision.strip.observed": "Observerade svar",
     "decision.strip.selfReported": "Självrapporterade svar",
@@ -3325,6 +3327,13 @@ export const dictionaries = {
     "decision.actions.lede":
       "Statusen på ansökan ändras där ansökan hanteras, så att processen har ett enda ställe.",
     "decision.actions.backToCandidate": "Tillbaka till kandidaten",
+    "decision.questions.title": "Frågor till intervjun",
+    "decision.questions.lede":
+      "Valda utifrån det här underlaget — inte en allmän intervjumall. Hela guiden med vad du ska lyssna efter finns under detaljerna.",
+    "decision.detail.show": "Visa detaljer per kompetens",
+    "decision.detail.hide": "Dölj detaljer per kompetens",
+    "decision.detail.lede":
+      "Kompetens för kompetens, med vad underlaget bygger på och hela intervjuguiden.",
 
     // Library.
     "library.tag.recruitment": "Rekrytering",
@@ -6648,10 +6657,12 @@ export const dictionaries = {
     "decision.why.readyForInterview":
       "There is enough here to prepare a structured conversation. Use the interview guide below — the questions were selected from these specific responses.",
     "decision.panel.strongest": "Strongest support in the evidence",
-    "decision.panel.followUp": "Most important to follow up",
+    "decision.panel.followUp": "Follow up in interview",
     "decision.panel.safety": "Safety-critical follow-up",
     "decision.panel.safetyNote":
       "Shown whatever the rest of the evidence looks like. Strong evidence elsewhere never removes a safety-critical note.",
+    "decision.panel.safetyNone":
+      "No safety-critical observations were identified in this material.",
     "decision.panel.uncertain": "Limited evidence",
     "decision.strip.observed": "Observed responses",
     "decision.strip.selfReported": "Self-reported responses",
@@ -6710,6 +6721,13 @@ export const dictionaries = {
     "decision.actions.lede":
       "The application's status is changed where the application is handled, so the process has a single place.",
     "decision.actions.backToCandidate": "Back to the candidate",
+    "decision.questions.title": "Questions for the interview",
+    "decision.questions.lede":
+      "Chosen from this material — not a generic interview template. The full guide, including what to listen for, is under the details.",
+    "decision.detail.show": "Show detail per competency",
+    "decision.detail.hide": "Hide detail per competency",
+    "decision.detail.lede":
+      "Competency by competency, with what the material rests on and the full interview guide.",
 
     "library.tag.recruitment": "Recruitment",
     "library.tag.recruitmentTitle":
