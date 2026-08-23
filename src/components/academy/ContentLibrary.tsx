@@ -112,13 +112,44 @@ function sectionsFor(area: LibraryArea): readonly SectionKey[] {
  *
  *  Recruitment is a purpose, not a content type: an assessment appears there
  *  only if the governed `designed_for` says it was written for recruitment.
- *  Everything the workforce area owns is a training programme. */
+ *  Everything the workforce area owns is a training programme.
+ *
+ *  `purpose` is deliberately not consulted. It reads 'development_programme'
+ *  on every definition in the system INCLUDING the recruitment assessment --
+ *  it is the family's product type wearing a misleading name, and placing UI
+ *  on it would put the flagship in the wrong area. `designed_for` is the
+ *  canonical placement discriminator and the only one.
+ *
+ *  ── THE FIXTURE CLAUSE, AND WHY IT IS NOT A HOLE ──────────────────────
+ *
+ *  Internal test fixtures are a separate concern from what content was
+ *  written for, and collapsing them into the recruitment question is what
+ *  broke: `fixture-delivery-e2e` is competence_development, so the purpose
+ *  filter hid the delivery-pipeline fixture from the closed-test organisation
+ *  that uses it. It is not customer recruitment content and it was never
+ *  claiming to be -- it simply is not what this filter is about.
+ *
+ *  The exception is safe because the row would not be here otherwise.
+ *  scp_employer_content_library gates fixtures server-side:
+ *
+ *      AND (NOT d.is_test_fixture OR _may_see_fixtures)
+ *
+ *  where _may_see_fixtures is an EXISTS against scp_fixture_access for this
+ *  employer. A fixture row reaching this function has therefore already
+ *  passed the authorised fixture gate -- `isTestFixture` in the client is
+ *  evidence of that grant, not a bypass of it. A normal employer never holds
+ *  such a row, so this clause can never make one appear for them.
+ *
+ *  It also does not widen recruitment: sectionOf() sends every fixture to the
+ *  "internal" section, so it lands in Internt material exactly where it did
+ *  before, never among the assessments a recruiter chooses from. */
 export type LibraryArea = "recruitment" | "workforce";
 
 export function belongsToArea(area: LibraryArea, e: ContentLibraryEntry): boolean {
-  return area === "recruitment"
-    ? e.libraryKind === "assessment" && e.designedFor === "recruitment_support"
-    : e.libraryKind === "training";
+  if (area === "workforce") return e.libraryKind === "training";
+  if (e.libraryKind !== "assessment") return false;
+  // Two separate questions, answered separately.
+  return e.designedFor === "recruitment_support" || e.isTestFixture;
 }
 
 export function ContentLibrary({

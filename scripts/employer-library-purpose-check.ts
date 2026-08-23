@@ -66,6 +66,54 @@ const en = dictionaries.en as Record<string, string>;
     `A: belongsToArea() no longer names the recruitment_support purpose.`,
   );
 
+  // `purpose` reads 'development_programme' on every definition including the
+  // recruitment assessment. Placing UI on it puts the flagship in the wrong
+  // area, so designed_for is the only placement discriminator.
+  expect(
+    !/\bpurpose\b/.test(body),
+    `A: belongsToArea() consults "purpose". That field is the family product ` +
+      `type -- it reads 'development_programme' on the recruitment assessment ` +
+      `too -- so placing on it hides the flagship. Use designed_for.`,
+  );
+
+  // ── The fixture exception rides on the server gate ────────────────────
+  //
+  // A fixture row only reaches the client when the employer holds a
+  // scp_fixture_access grant; the read model refuses it otherwise. So the
+  // client clause is evidence of that grant, not a bypass -- but ONLY while
+  // the server still gates it. If that WHERE clause is ever dropped, this
+  // exception silently becomes a hole that shows internal test content to
+  // every customer, and nothing else in the codebase would notice.
+  const readModel = read(
+    "supabase/migrations/20260902090000_scp_library_assessment_area_count.sql",
+  );
+  expect(
+    /NOT\s+d\.is_test_fixture\s+OR\s+_may_see_fixtures/i.test(readModel),
+    `A: scp_employer_content_library no longer gates fixtures on ` +
+      `_may_see_fixtures. belongsToArea() admits is_test_fixture rows on the ` +
+      `strength of that gate, so without it internal test content becomes ` +
+      `visible to every employer. Fix the read model, or drop the client clause.`,
+  );
+  expect(
+    /scp_fixture_access/.test(readModel),
+    `A: the read model no longer resolves _may_see_fixtures from ` +
+      `scp_fixture_access -- the grant the client clause depends on.`,
+  );
+
+  // The exception must be narrow: fixtures are admitted, the purpose rule is
+  // not weakened for real content.
+  expect(
+    /isTestFixture/.test(body),
+    `A: belongsToArea() no longer admits fixtures, so the closed-test ` +
+      `organisation loses the delivery-pipeline fixture it already had.`,
+  );
+  expect(
+    !/designedFor\s*!==/.test(body),
+    `A: belongsToArea() has been inverted to exclude rather than include. The ` +
+      `recruitment area must name what it admits, so new content is hidden by ` +
+      `default rather than exposed by default.`,
+  );
+
   // A title or slug in this file means somebody hard-coded the catalogue.
   const HARDCODED = [
     "sg-access-control",
@@ -107,6 +155,27 @@ const en = dictionaries.en as Record<string, string>;
     !/area="recruitment"/.test(programmesRoute),
     `A: Utvecklingsprogram is rendering the recruitment area. Development ` +
       `programmes would disappear from Kompetensutveckling.`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// A2. A fixture is internal material wherever it is rendered.
+// ---------------------------------------------------------------------------
+//
+// The clause above lets an authorised fixture through the recruitment filter.
+// sectionOf() is what keeps it out of the recruitment catalogue proper: every
+// fixture is routed to the "internal" section regardless of kind. If that ever
+// stopped being true, an authorised org would see test content sitting among
+// the assessments a recruiter picks from.
+
+{
+  const src = stripComments(read("src/components/academy/ContentLibrary.tsx"));
+  const fn = src.slice(src.indexOf("function sectionOf"));
+  const body = fn.slice(0, fn.indexOf("\n}") + 2);
+  expect(
+    /isTestFixture/.test(body) && /"internal"/.test(body),
+    `A2: sectionOf() no longer routes fixtures to the internal section. An ` +
+      `authorised fixture would render as ordinary recruitment content.`,
   );
 }
 
