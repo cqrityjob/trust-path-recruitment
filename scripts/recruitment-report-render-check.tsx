@@ -15,6 +15,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
+import { dictionaries } from "../src/i18n/dictionaries";
 import { DecisionSupportSummary } from "../src/components/academy/DecisionSupportSummary";
 import {
   CompetencyOverviewSection,
@@ -336,6 +337,41 @@ console.log("\n12. Nothing on the page states a verdict");
       html.toLowerCase().includes(word) && !html.includes("inte ett besked om anställning");
     check(`"${word}" is not asserted`, !bad);
   }
+}
+
+console.log("\n13. The methodology fold is screen-only, so print keeps everything");
+{
+  // A customer said the brief was far too long, and these six paragraphs were
+  // most of it. They are now folded -- but ReportMethodSection's own header
+  // records why they must never be behind a toggle: a published report has to
+  // carry its limitations, and it has to print them.
+  //
+  // The reconciliation is that the fold is CSS inside `@media screen`, so the
+  // content stays in the DOM and print never sees the rule. That only holds
+  // while the markup keeps rendering it, which is what this asserts: the
+  // server-rendered HTML -- exactly what a printed page is made from --
+  // contains every limitation with the section closed.
+  check(
+    "the fold renders closed by default",
+    html.includes('data-open="false"'),
+    "no collapsed .screen-fold found",
+  );
+  check(
+    "limitations are still in the DOM while closed",
+    html.includes("En bedömning är ett underlag inför samtal."),
+  );
+  for (const key of ["oneOccasionBody", "selfReportBody", "thinEvidenceBody"]) {
+    check(
+      `method text "${key}" survives the fold`,
+      html.includes(dictionaries.sv[`decision.method.${key}`]),
+    );
+  }
+  check(
+    "the employer-decides sentence is NOT inside the fold",
+    html.indexOf(dictionaries.sv["decision.method.decisionBody"]) <
+      html.indexOf('data-open="false"'),
+    "it must stay visible with the section closed",
+  );
 }
 
 if (failures.length > 0) {

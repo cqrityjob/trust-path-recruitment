@@ -49,7 +49,10 @@ export function RecipientPassportCard({
   className = "",
 }: {
   presentation: RecipientPresentation;
-  verifyUrl: string;
+  /** A PUBLIC verification address, when one exists for this presentation.
+   *  Optional on purpose: a surface that has no public link must omit it
+   *  rather than substitute whatever address it happens to be rendered at. */
+  verifyUrl?: string;
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
@@ -211,18 +214,20 @@ export function RecipientPassportCard({
         <div className="flex-1" />
 
         {/* ── Verification footer ───────────────────────────────────── */}
-        <footer className="mt-6">
-          <EngravedRule tone={`${rim}44`} />
-          <p className="mt-3 text-[10px] leading-snug" style={{ color: TRUST_PALETTE.inkMuted }}>
-            {pt("card.verifyAtSource")}
-          </p>
-          <p
-            className="mt-1 break-all text-[10px] leading-snug"
-            style={{ color: TRUST_PALETTE.inkFaint }}
-          >
-            {verifyUrl}
-          </p>
-        </footer>
+        {verifyUrl && (
+          <footer className="mt-6">
+            <EngravedRule tone={`${rim}44`} />
+            <p className="mt-3 text-[10px] leading-snug" style={{ color: TRUST_PALETTE.inkMuted }}>
+              {pt("card.verifyAtSource")}
+            </p>
+            <p
+              className="mt-1 break-all text-[10px] leading-snug"
+              style={{ color: TRUST_PALETTE.inkFaint }}
+            >
+              {verifyUrl}
+            </p>
+          </footer>
+        )}
       </div>
     </article>
   );

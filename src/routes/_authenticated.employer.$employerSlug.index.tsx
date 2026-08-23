@@ -680,6 +680,18 @@ function EmployerOverview({
               label: t("employer.overview.card.people.action.openWorkforce"),
               linkProps: { to: "/employer/$employerSlug/workforce", params: { employerSlug } },
             },
+            // Adding the first colleague was three clicks from here and none of
+            // them said so: open Medarbetare, find the button, then the form.
+            // `?add` opens the form the workforce page already owns rather than
+            // putting a second creation flow on the dashboard.
+            {
+              label: t("employer.workforce.action.add"),
+              linkProps: {
+                to: "/employer/$employerSlug/workforce",
+                params: { employerSlug },
+                search: { add: true as const },
+              },
+            },
           ]}
         />
 

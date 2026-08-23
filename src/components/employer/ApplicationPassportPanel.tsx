@@ -88,17 +88,32 @@ export function ApplicationPassportPanel({ applicationId }: { applicationId: str
   }
 
   const meta = LIVE_PACKAGES.find((p) => p.code === presentation.packageCode);
-  // This page is the live source: a card read here is current, and a
-  // screenshot of it is not.
-  const verifyUrl = typeof window !== "undefined" ? window.location.href : "";
 
+  // ── NO ADDRESS ON THIS CARD ───────────────────────────────────────────
+  //
+  // `verifyUrl` is a PUBLIC verification address -- /p/<token>, the thing a
+  // stranger can open to check a Passport is real. This panel used to pass
+  // window.location.href instead, so the card printed the employer's own
+  // internal deep link, application id and all, in small type across the
+  // bottom of a card built to be looked at and screenshotted.
+  //
+  // It was wrong twice over: the address means nothing to somebody already
+  // standing on that page, and it put an application id into a picture. A
+  // per-application share has no public verification address -- that is the
+  // point of scoping it to one application -- so the card omits the line
+  // rather than inventing an address for it. The intent the old code was
+  // reaching for is stated in words below the card instead.
   return (
     <div className="mt-4">
       <p className="text-sm text-muted-foreground">{t("employer.candidate.passport.shared")}</p>
 
       <div className="mt-4 max-w-sm">
-        <RecipientPassportCard presentation={presentation} verifyUrl={verifyUrl} />
+        <RecipientPassportCard presentation={presentation} />
       </div>
+
+      <p className="mt-2 max-w-sm text-[12px] leading-relaxed text-muted-foreground">
+        {t("employer.candidate.passport.liveSource")}
+      </p>
 
       {meta ? (
         <div className="mt-4">

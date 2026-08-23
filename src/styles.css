@@ -72,34 +72,36 @@
    *   Text primary   #101828   text secondary   #475467
    *   Borders        #D8E1EA   gold accent      #B79255
    */
-  --background: oklch(0.988 0.003 95);     /* #FCFCFA warm white */
-  --foreground: oklch(0.208 0.036 265);    /* #101828 */
+  --background: oklch(0.988 0.003 95); /* #FCFCFA warm white */
+  --foreground: oklch(0.208 0.036 265); /* #101828 */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.208 0.036 265);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.208 0.036 265);
-  --primary: oklch(0.235 0.055 258);       /* #0B1F3A deep navy */
+  --primary: oklch(0.235 0.055 258); /* #0B1F3A deep navy */
   --primary-foreground: oklch(0.988 0.003 95);
-  --primary-hover: oklch(0.185 0.05 260);  /* #07172D */
-  --secondary: oklch(0.965 0.012 245);     /* #F2F7FB pale blue */
+  --primary-hover: oklch(0.185 0.05 260); /* #07172D */
+  --secondary: oklch(0.965 0.012 245); /* #F2F7FB pale blue */
   --secondary-foreground: oklch(0.235 0.055 258);
   --muted: oklch(0.965 0.012 245);
   --muted-foreground: oklch(0.48 0.026 258); /* #475467 */
-  --accent: oklch(0.492 0.115 245);        /* #1769AA trust blue */
+  --accent: oklch(0.492 0.115 245); /* #1769AA trust blue */
   --accent-foreground: oklch(0.988 0.003 95);
-  --accent-hover: oklch(0.43 0.108 246);   /* #12568C */
-  --gold: oklch(0.72 0.075 78);            /* #B79255 restrained gold */
+  --accent-hover: oklch(0.43 0.108 246); /* #12568C */
+  --gold: oklch(0.72 0.075 78); /* #B79255 restrained gold */
   --surface-subtle: oklch(0.965 0.012 245);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.895 0.014 245);        /* #D8E1EA */
+  --border: oklch(0.895 0.014 245); /* #D8E1EA */
   --input: oklch(0.895 0.014 245);
   --ring: oklch(0.492 0.115 245);
   /* Layered soft shadows, restrained B2B feel */
   --shadow-xs: 0 1px 2px 0 oklch(0.235 0.055 258 / 0.04);
   --shadow-sm: 0 1px 2px 0 oklch(0.235 0.055 258 / 0.05), 0 1px 3px 0 oklch(0.235 0.055 258 / 0.04);
-  --shadow-md: 0 4px 12px -2px oklch(0.235 0.055 258 / 0.06), 0 2px 4px -2px oklch(0.235 0.055 258 / 0.04);
-  --shadow-lg: 0 12px 32px -8px oklch(0.235 0.055 258 / 0.10), 0 4px 8px -4px oklch(0.235 0.055 258 / 0.05);
+  --shadow-md:
+    0 4px 12px -2px oklch(0.235 0.055 258 / 0.06), 0 2px 4px -2px oklch(0.235 0.055 258 / 0.04);
+  --shadow-lg:
+    0 12px 32px -8px oklch(0.235 0.055 258 / 0.1), 0 4px 8px -4px oklch(0.235 0.055 258 / 0.05);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -161,14 +163,23 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     letter-spacing: -0.022em;
     font-weight: 600;
     color: var(--color-foreground);
   }
-  h1 { letter-spacing: -0.028em; }
-  p { line-height: 1.65; }
+  h1 {
+    letter-spacing: -0.028em;
+  }
+  p {
+    line-height: 1.65;
+  }
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
@@ -176,7 +187,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -223,10 +236,26 @@
     display: block;
   }
 
+  /* Folded on screen, whole on paper.
+   *
+   * The methodology and limitations section is deliberately not behind a
+   * toggle: a published report template has to carry its limitations. But on
+   * screen it is six paragraphs a recruiter reads once and then scrolls past
+   * on every candidate, which is what made the page feel endless.
+   *
+   * So the fold is a SCREEN-ONLY affordance. The content is always in the DOM
+   * and the rule that hides it lives in `@media screen`, so print never sees
+   * it -- the printed report is byte-for-byte what it was. */
+  .screen-fold {
+    display: block !important;
+  }
+
   /* Avoid a heading being stranded at the bottom of a page, separated
    * from the content that follows it, and avoid splitting a report card
    * awkwardly across a page break where reasonably possible. */
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     break-after: avoid;
     page-break-after: avoid;
   }
@@ -237,13 +266,18 @@
    * final page that only contained the disclaimer. Allow the browser to split
    * long cards; keep the guarantee only for small self-contained blocks.
    */
-  li, tr, figure, .avoid-break {
+  li,
+  tr,
+  figure,
+  .avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   /* Native form controls collapse to their static print-only siblings. */
-  select { display: none !important; }
+  select {
+    display: none !important;
+  }
 
   /* Prevent a trailing blank page.
    *
@@ -257,7 +291,8 @@
    *    page boundary.
    *
    * Neutralise both for print only. Screen behaviour is unchanged. */
-  html, body {
+  html,
+  body {
     min-height: 0 !important;
     height: auto !important;
   }
@@ -281,5 +316,13 @@
     break-after: avoid-page !important;
     page-break-after: avoid !important;
     margin-bottom: 0 !important;
+  }
+}
+
+@media screen {
+  /* Paired with `.screen-fold` in the print block above. Hiding happens here
+   * and only here, so a printed page cannot inherit a collapsed section. */
+  .screen-fold[data-open="false"] {
+    display: none;
   }
 }

@@ -27,6 +27,27 @@ import {
   type EmployerDecisionReason,
 } from "@/lib/security-competency/academy-employer.functions";
 
+// ── WHY THE FAILURE MESSAGE CARRIES A CODE ────────────────────────────
+//
+// A customer reported that saving a decision failed, and the report could not
+// be acted on, because the interface had collapsed every possible cause into
+// one sentence -- "Beslutet kunde inte sparas." -- and thrown the code away.
+// Two of the four refusals scp_record_employer_decision can raise had a
+// specific message; everything else, including every infrastructure fault,
+// rendered as that sentence with nothing logged in the browser either.
+//
+// So the four governed refusals each say what actually happened and what to do
+// about it, and anything unrecognised names its code so the person reporting it
+// has something to quote. The code is a stable SCP_* identifier or the server's
+// own fallback -- never the database message, which fail() has already replaced
+// and which can carry table and column names.
+const DECISION_ERROR_COPY: Record<string, TranslationKey> = {
+  SCP_NOT_AUTHORISED_TO_DECIDE: "academy.decision.notAuthorised",
+  SCP_DECISION_BEFORE_RELEASE: "academy.decision.beforeRelease",
+  SCP_ATTEMPT_NOT_FOUND: "academy.decision.attemptNotFound",
+  SCP_DECISION_SUPERSEDES_FOREIGN: "academy.decision.supersedesForeign",
+};
+
 const ACTIONS: EmployerDecisionAction[] = [
   "follow_up_conversation",
   "assign_development",
@@ -124,12 +145,15 @@ export function EmployerDecisionPanel({
     },
     onError: (e: unknown) => {
       const code = (e as { code?: string }).code ?? "";
+      const known = DECISION_ERROR_COPY[code];
+      // Deliberately the code and nothing else. e.message may still carry the
+      // database's own wording, which belongs in the server log fail() already
+      // writes, not in the browser console of whoever is being refused.
+      if (!known) console.error("[employer-decision] save refused", { code: code || "unknown" });
       setError(
-        code === "SCP_NOT_AUTHORISED_TO_DECIDE"
-          ? t("academy.decision.notAuthorised")
-          : code === "SCP_DECISION_BEFORE_RELEASE"
-            ? t("academy.decision.beforeRelease")
-            : t("academy.decision.failed"),
+        known
+          ? t(known)
+          : t("academy.decision.failedWithCode").replace("{code}", code || "UNKNOWN"),
       );
     },
   });
