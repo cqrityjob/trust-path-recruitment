@@ -707,6 +707,105 @@ BEGIN
 END $$;
 
 
+-- ── Making a version publishable (publication quality gates, 20260907092000) ──
+--
+-- Publishing an assessment version now requires that every review is cleared,
+-- that the preferred answer is not always the same key or the same position,
+-- and that it is not systematically the longest option. That is the whole
+-- point of those gates, and it means a test can no longer publish content by
+-- writing content_status = 'published' over unreviewed, unbalanced items.
+--
+-- This helper builds the state a genuinely publishable assessment would be in.
+-- It runs inside this suite's transaction, which ends in ROLLBACK, so it
+-- changes no authored content: it is scaffolding for the assertions that come
+-- AFTER publication, which are what this file is actually about.
+CREATE OR REPLACE FUNCTION pg_temp.make_publishable(_ver uuid)
+RETURNS void LANGUAGE plpgsql AS $mp$
+BEGIN
+  -- 1. Every review cleared, on every item of every form of the version.
+  --
+  -- The immutability guard is stood down for exactly this write. Once an item
+  -- version is published, scp_guard_published_immutable refuses any change to
+  -- its review columns -- correctly, because in production those reviews are
+  -- completed BEFORE publication, never after. A test fixture reaches the two
+  -- states in whichever order the assertions need, so the scaffolding has to be
+  -- able to describe a published item as the reviewed item it is standing in
+  -- for. The guard goes straight back on.
+  ALTER TABLE public.scp_item_versions DISABLE TRIGGER USER;
+
+  UPDATE public.scp_item_versions iv
+     SET sme_review_status         = 'approved',
+         sme_reviewer_count        = 2,
+         bias_review_status        = 'approved',
+         cognitive_review_status   = 'passed',
+         language_review_status    = 'passed',
+         accessibility_review_status = 'passed'
+    -- Legal review is deliberately NOT touched. Several groups construct a
+    -- specific legal state -- pending, lapsed, approved -- and assert on what
+    -- the assignability gate does with it. Scaffolding that quietly approved
+    -- legal review would erase the very state those assertions are about.
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = iv.id AND f.assessment_version_id = _ver;
+
+  ALTER TABLE public.scp_item_versions ENABLE TRIGGER USER;
+
+  UPDATE public.scp_review_requirements rr SET status = 'cleared'
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE rr.item_version_id = fi.item_version_id AND f.assessment_version_id = _ver;
+
+  -- 2. Any constructed response needs a published rubric.
+  UPDATE public.scp_rubric_versions rv
+     SET content_status = 'published', published_at = now()
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE rv.item_version_id = fi.item_version_id
+     AND f.assessment_version_id = _ver
+     AND rv.content_status <> 'published';
+
+  -- 3. Spread the preferred key and the preferred position across the form,
+  --    instead of every item answering 'a' in first place.
+  UPDATE public.scp_item_options o SET option_key = 'zz' || o.option_key
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = o.item_version_id AND f.assessment_version_id = _ver;
+  UPDATE public.scp_item_options o SET display_order = o.display_order + 20
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = o.item_version_id AND f.assessment_version_id = _ver;
+
+  -- Rotate by the item's ordinal on the form, so consecutive items put the
+  -- preferred option on a different key and in a different place.
+  UPDATE public.scp_item_options o
+     SET option_key    = chr(96 + s.slot),
+         display_order = s.slot
+    FROM (
+      SELECT o2.id,
+             1 + ((row_number() OVER (PARTITION BY o2.item_version_id
+                                      ORDER BY o2.is_preferred DESC, o2.display_order)
+                   - 1 + it.rank) % it.n)::int AS slot
+        FROM public.scp_item_options o2
+        JOIN (SELECT fi.item_version_id,
+                     row_number() OVER (ORDER BY fi.display_order)::int AS rank,
+                     (SELECT count(*) FROM public.scp_item_options x
+                       WHERE x.item_version_id = fi.item_version_id)::int AS n
+                FROM public.scp_form_items fi
+                JOIN public.scp_forms f ON f.id = fi.form_id
+               WHERE f.assessment_version_id = _ver) it
+          ON it.item_version_id = o2.item_version_id) s
+   WHERE o.id = s.id;
+
+  -- 4. Equal-length labels, so no option can be picked out by being longest.
+  --    The wording is irrelevant to every assertion downstream of publication.
+  UPDATE public.scp_item_option_texts ot
+     SET label = rpad('Alternativ ' || o.option_key || ' ', 60, '.')
+    FROM public.scp_item_options o
+    JOIN public.scp_form_items fi ON fi.item_version_id = o.item_version_id
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE ot.item_option_id = o.id AND f.assessment_version_id = _ver;
+END $mp$;
+
 -- ###########################################################################
 -- GROUP 12 -- Owner decision B: nothing unapproved reaches a real candidate
 -- ###########################################################################
@@ -771,6 +870,16 @@ BEGIN
     VALUES (_core_iv, 'sv-SE', 'source', 'Karnscenario.', 'Vad gor du forst?');
   INSERT INTO public.scp_form_items (form_id, item_version_id, display_order)
   VALUES (_core_form, _core_iv, 1);
+  -- Publication now requires cleared reviews and a non-predictable answer key
+  -- (publication quality gates, 20260907092000). This suite is about
+  -- assignability, which sits downstream of publication, so the content is put
+  -- into the state a genuinely publishable assessment would be in first.
+  --
+  -- It runs BEFORE anything is published: once an item version is published,
+  -- scp_guard_published_immutable stops its review status being written at all.
+  PERFORM pg_temp.make_publishable(_core_ver);
+  PERFORM pg_temp.make_publishable(_mod_ver);
+
   UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
     WHERE id = _core_iv;
 
@@ -1082,6 +1191,8 @@ BEGIN
 
   UPDATE public.scp_item_versions SET content_status = 'published', published_at = now()
     WHERE id IN (_iv1, _iv2);
+  PERFORM pg_temp.make_publishable(_cv);
+  PERFORM pg_temp.make_publishable(_mv);
   UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now()
     WHERE id IN (_cv, _mv);
   UPDATE public.scp_scoring_versions SET content_status = 'published', published_at = now() WHERE id = _sv;
@@ -1099,6 +1210,9 @@ BEGIN
   UPDATE public.scp_bundle_versions SET content_status = 'draft' WHERE id = _bv;
   UPDATE public.scp_assessment_versions SET content_status = 'draft' WHERE id = _mv;
   INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_mform, _iv2, 1);
+  -- _iv2 has only now joined a form, so the version's review state has to be
+  -- re-established before it can be published again.
+  PERFORM pg_temp.make_publishable(_mv);
   UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
   UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
 
@@ -1326,11 +1440,13 @@ BEGIN
     'branch 3/16: draft core version -> blocked / CORE_VERSION_NOT_PUBLISHED');
 
   -- 4. Core published, module still draft -- the asymmetry group 12 missed.
+  PERFORM pg_temp.make_publishable(_cv);
   UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now() WHERE id = _cv;
   SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);
   PERFORM pg_temp.assert(_res.assignability = 'blocked' AND _res.reason = 'MODULE_VERSION_NOT_PUBLISHED',
     'branch 4/16: draft module version -> blocked / MODULE_VERSION_NOT_PUBLISHED');
 
+  PERFORM pg_temp.make_publishable(_mv);
   UPDATE public.scp_assessment_versions SET content_status = 'published', published_at = now() WHERE id = _mv;
 
   -- 5. No scoring version pinned at all.
@@ -1367,6 +1483,7 @@ BEGIN
     VALUES (_civ, 'sv-SE', 'source', 'Karnscenario.', 'Vad gor du?');
   INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_cform, _civ, 1);
   UPDATE public.scp_item_versions SET content_status = 'published', published_at = now() WHERE id = _civ;
+  PERFORM pg_temp.make_publishable(_cv);
   UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _cv;
   UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
 
@@ -1384,6 +1501,7 @@ BEGIN
   VALUES (_mi, 1, 'sjt_best_response', _comp, 'controls access', 'weigh authorisation')
   RETURNING id INTO _miv;
   INSERT INTO public.scp_form_items (form_id, item_version_id, display_order) VALUES (_mform, _miv, 1);
+  PERFORM pg_temp.make_publishable(_mv);
   UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
   UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
 
@@ -1426,7 +1544,15 @@ BEGIN
   UPDATE public.scp_item_versions SET legal_review_status = 'pending' WHERE id = _liv;
   ALTER TABLE public.scp_item_versions ENABLE TRIGGER scp_item_versions_immutable;
 
+  -- The publication quality gate would refuse this too, and rightly: an item
+  -- with legal review pending has no business on a published version. It is
+  -- stood down here for the same reason the immutability trigger just was --
+  -- the point of the branch is that the assignability check catches the state
+  -- INDEPENDENTLY, so the state has to be constructed even though every gate
+  -- upstream of it would have prevented it.
+  ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER scp_assessment_versions_quality_gate;
   UPDATE public.scp_assessment_versions SET content_status = 'published' WHERE id = _mv;
+  ALTER TABLE public.scp_assessment_versions ENABLE TRIGGER scp_assessment_versions_quality_gate;
   UPDATE public.scp_bundle_versions SET content_status = 'published' WHERE id = _bv;
 
   SELECT * INTO _res FROM public.scp_bundle_version_assignability(_bv);

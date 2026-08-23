@@ -266,8 +266,128 @@ SELECT pg_temp.must_fail(format(
 
 RESET ROLE; RESET request.jwt.claim.sub;
 
+-- ── Making a version publishable (publication quality gates, 20260907092000) ──
+--
+-- Publishing an assessment version now requires that every review is cleared,
+-- that the preferred answer is not always the same key or the same position,
+-- and that it is not systematically the longest option. That is the whole
+-- point of those gates, and it means a test can no longer publish content by
+-- writing content_status = 'published' over unreviewed, unbalanced items.
+--
+-- This helper builds the state a genuinely publishable assessment would be in.
+-- It runs inside this suite's transaction, which ends in ROLLBACK, so it
+-- changes no authored content: it is scaffolding for the assertions that come
+-- AFTER publication, which are what this file is actually about.
+CREATE OR REPLACE FUNCTION pg_temp.make_publishable(_ver uuid)
+RETURNS void LANGUAGE plpgsql AS $mp$
+BEGIN
+  -- 1. Every review cleared, on every item of every form of the version.
+  --
+  -- The immutability guard is stood down for exactly this write. Once an item
+  -- version is published, scp_guard_published_immutable refuses any change to
+  -- its review columns -- correctly, because in production those reviews are
+  -- completed BEFORE publication, never after. A test fixture reaches the two
+  -- states in whichever order the assertions need, so the scaffolding has to be
+  -- able to describe a published item as the reviewed item it is standing in
+  -- for. The guard goes straight back on.
+  ALTER TABLE public.scp_item_versions DISABLE TRIGGER USER;
+
+  UPDATE public.scp_item_versions iv
+     SET sme_review_status         = 'approved',
+         sme_reviewer_count        = 2,
+         bias_review_status        = 'approved',
+         cognitive_review_status   = 'passed',
+         language_review_status    = 'passed',
+         accessibility_review_status = 'passed'
+    -- Legal review is deliberately NOT touched. Several groups construct a
+    -- specific legal state -- pending, lapsed, approved -- and assert on what
+    -- the assignability gate does with it. Scaffolding that quietly approved
+    -- legal review would erase the very state those assertions are about.
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = iv.id AND f.assessment_version_id = _ver;
+
+  ALTER TABLE public.scp_item_versions ENABLE TRIGGER USER;
+
+  UPDATE public.scp_review_requirements rr SET status = 'cleared'
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE rr.item_version_id = fi.item_version_id AND f.assessment_version_id = _ver;
+
+  -- 2. Any constructed response needs a published rubric.
+  UPDATE public.scp_rubric_versions rv
+     SET content_status = 'published', published_at = now()
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE rv.item_version_id = fi.item_version_id
+     AND f.assessment_version_id = _ver
+     AND rv.content_status <> 'published';
+
+  -- 3. Spread the preferred key and the preferred position across the form,
+  --    instead of every item answering 'a' in first place.
+  UPDATE public.scp_item_options o SET option_key = 'zz' || o.option_key
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = o.item_version_id AND f.assessment_version_id = _ver;
+  UPDATE public.scp_item_options o SET display_order = o.display_order + 20
+    FROM public.scp_form_items fi
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE fi.item_version_id = o.item_version_id AND f.assessment_version_id = _ver;
+
+  -- Rotate by the item's ordinal on the form, so consecutive items put the
+  -- preferred option on a different key and in a different place.
+  UPDATE public.scp_item_options o
+     SET option_key    = chr(96 + s.slot),
+         display_order = s.slot
+    FROM (
+      SELECT o2.id,
+             1 + ((row_number() OVER (PARTITION BY o2.item_version_id
+                                      ORDER BY o2.is_preferred DESC, o2.display_order)
+                   - 1 + it.rank) % it.n)::int AS slot
+        FROM public.scp_item_options o2
+        JOIN (SELECT fi.item_version_id,
+                     row_number() OVER (ORDER BY fi.display_order)::int AS rank,
+                     (SELECT count(*) FROM public.scp_item_options x
+                       WHERE x.item_version_id = fi.item_version_id)::int AS n
+                FROM public.scp_form_items fi
+                JOIN public.scp_forms f ON f.id = fi.form_id
+               WHERE f.assessment_version_id = _ver) it
+          ON it.item_version_id = o2.item_version_id) s
+   WHERE o.id = s.id;
+
+  -- 4. Equal-length labels, so no option can be picked out by being longest.
+  --    The wording is irrelevant to every assertion downstream of publication.
+  UPDATE public.scp_item_option_texts ot
+     SET label = rpad('Alternativ ' || o.option_key || ' ', 60, '.')
+    FROM public.scp_item_options o
+    JOIN public.scp_form_items fi ON fi.item_version_id = o.item_version_id
+    JOIN public.scp_forms f ON f.id = fi.form_id
+   WHERE ot.item_option_id = o.id AND f.assessment_version_id = _ver;
+END $mp$;
+
 -- Now make the content genuinely selection-grade, so the governance gate opens
 -- and the purpose gate is the only thing left.
+SELECT pg_temp.make_publishable((SELECT version_id FROM pg_ver));
+
+-- Six of sg-operational-baseline's eighteen items rest on a legal basis, and
+-- the publication gate will not let a version go out with legal review
+-- pending. make_publishable deliberately leaves legal review alone, because
+-- other suites assert on specific legal states -- so this one records it
+-- explicitly. This file has no legal-state assertion of its own; it is about
+-- the PURPOSE gate, which sits further downstream.
+ALTER TABLE public.scp_item_versions DISABLE TRIGGER USER;
+UPDATE public.scp_item_versions iv
+   SET legal_review_status = 'approved',
+       legal_source        = coalesce(iv.legal_source, 'purpose-governance test scaffolding'),
+       legal_reviewed_by   = coalesce(iv.legal_reviewed_by, 'purpose-governance test scaffolding'),
+       legal_reviewed_at   = coalesce(iv.legal_reviewed_at, now())
+  FROM public.scp_form_items fi
+  JOIN public.scp_forms f ON f.id = fi.form_id
+ WHERE fi.item_version_id = iv.id
+   AND f.assessment_version_id = (SELECT version_id FROM pg_ver)
+   AND iv.legal_basis_required;
+ALTER TABLE public.scp_item_versions ENABLE TRIGGER USER;
+
 UPDATE public.scp_assessment_versions
    SET content_status = 'published', validation_status = 'operational-selection'
  WHERE id = (SELECT version_id FROM pg_ver);

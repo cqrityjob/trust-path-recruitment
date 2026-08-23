@@ -439,6 +439,30 @@ ALTER TABLE public.scp_assessment_versions DROP COLUMN IF EXISTS program_version
 -- delete it -- it has to unpublish first. That friction is the guard working,
 -- not an obstacle to route around, and it is exactly what a real retirement
 -- would encounter. The triggers come off explicitly and go straight back on.
+
+-- The assessment-foundation objects (20260907090000..094000) come off FIRST.
+-- The evidence-freeze triggers fire on DELETE from the item and option tables
+-- this rollback is about to empty, and their function reads
+-- scp_attempts.governance_mode -- a column later steps drop. A guard that
+-- outlives the table it interrogates turns a clean rollback into an error
+-- about a missing column, which says nothing about whether the rollback works.
+DROP TRIGGER   IF EXISTS scp_assessment_versions_quality_gate ON public.scp_assessment_versions;
+DROP FUNCTION  IF EXISTS public.scp_guard_publication_quality()          CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_assessment_version_publication_readiness(uuid) CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_form_option_length_report(uuid)      CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_form_balance_items(uuid)             CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_guard_evidenced_content_frozen()     CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_version_has_operational_evidence(uuid) CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_guard_rubric_detail_frozen()         CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_guard_self_report_construct()        CASCADE;
+DROP VIEW      IF EXISTS public.scp_item_pilot_stats                     CASCADE;
+-- The option-order functions are standalone: their triggers go with
+-- scp_attempts, but the functions themselves outlive the table.
+DROP FUNCTION  IF EXISTS public.scp_assign_option_order_seed()           CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_guard_option_order_seed_immutable()  CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_option_order_key(integer, uuid, uuid) CASCADE;
+DROP FUNCTION  IF EXISTS public.scp_item_order_is_meaningful(text)       CASCADE;
+
 ALTER TABLE public.scp_item_versions       DISABLE TRIGGER USER;
 ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER USER;
 

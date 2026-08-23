@@ -525,13 +525,18 @@ SELECT pg_temp.ok(
       AND c.persona='C' AND c.audience='employer'),
   'RB4.4 ...and their observed sections are not. "I say I do this" never became "I demonstrated this"');
 
--- The structural half. Twenty-six observed items exist and twenty-four
+-- The structural half. Thirty-two observed items exist and twenty-four
 -- self-report items exist; the observed lines must account for exactly the
--- twenty-six.
+-- thirty-two.
+--
+-- It was twenty-six until 20260907093000 added six observed items to close the
+-- SCC-04 and SCC-07 evidence gap. The number is asserted rather than derived on
+-- purpose: an observed count that drifts silently is how a self-report item
+-- would leak into the observed section without anybody noticing.
 SELECT pg_temp.ok(
   (SELECT sum((o->>'items')::int) FROM briefs, jsonb_array_elements(brief->'observed') o
-    WHERE persona = 'C' AND audience = 'employer') = 26,
-  'RB4.5 the observed section counts exactly the 26 observed items — no self-report leaked in');
+    WHERE persona = 'C' AND audience = 'employer') = 32,
+  'RB4.5 the observed section counts exactly the 32 observed items — no self-report leaked in');
 
 SELECT pg_temp.ok(
   (SELECT sum((s->>'items')::int) FROM briefs, jsonb_array_elements(brief->'self_reported') s
@@ -540,7 +545,7 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.ok(
   (SELECT sum((x->>'observations')::int) FROM briefs, jsonb_array_elements(payload) x
-    WHERE persona = 'C' AND audience = 'employer') = 26,
+    WHERE persona = 'C' AND audience = 'employer') = 32,
   'RB4.7 the competency payload counts observations the same way the brief does');
 
 -- And in the ledger itself, which is where a future reader will look.
@@ -668,7 +673,7 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_competency_evidence e
      JOIN public.scp_candidate_responses r ON r.id = e.source_ref
-    WHERE r.attempt_id = (SELECT attempt_id FROM runs WHERE persona='B')) = 50,
+    WHERE r.attempt_id = (SELECT attempt_id FROM runs WHERE persona='B')) = 56,
   'RB6.3 recording interview evidence wrote NOTHING to the competency ledger');
 
 -- Two independent locks, asserted separately because they fail differently and

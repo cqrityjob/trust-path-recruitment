@@ -95,7 +95,13 @@ psql_q -d "$TEST_DB" -f supabase/tests/00_bootstrap.sql >/dev/null
 # ---------------------------------------------------------------------------
 echo "==> Verifying Security Competency migration ordering"
 # Portable across bash 3.2 (macOS) and 4+ (CI) -- no mapfile/readarray.
-SCP_MIGRATION_LIST="$(ls supabase/migrations/*_scp_a*.sql | sort)"
+# The glob is *_scp_a[0-9]_* rather than *_scp_a*, which is what it used to be.
+# The looser pattern captured any migration whose name merely STARTED with
+# "scp_a" -- scp_attempt_*, scp_assessment_*, scp_access_* -- and then failed
+# the run because that file was not named scp_aN. That is a false failure about
+# a filename, not a real ordering problem. The a-series is a1..a4 and the
+# tightened glob matches exactly it.
+SCP_MIGRATION_LIST="$(ls supabase/migrations/*_scp_a[0-9]_*.sql | sort)"
 SCP_MIGRATION_COUNT="$(printf '%s\n' "$SCP_MIGRATION_LIST" | grep -c . || true)"
 if [ "$SCP_MIGRATION_COUNT" -lt 2 ]; then
   echo "FAIL: expected at least 2 scp migrations, found $SCP_MIGRATION_COUNT" >&2
@@ -1044,6 +1050,38 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Assessment foundation -- option order, publication gates, content, lifecycle.
+#
+# The suite the answer-mechanics defect earned. Every guard is mutated to prove
+# it refuses what it exists to refuse: an all-first-key form, a
+# preferred-always-first form and a preferred-always-longest form each have to
+# turn a gate red, and one legitimately long option has to NOT.
+#
+# Runs BEFORE the rollback step: it reads the SCP content spine, which the
+# rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running assessment foundation assertions"
+set +e
+AFND_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_assessment_foundation_test.sql 2>&1)"
+AFND_RC=$?
+set -e
+
+AFND_PASSED="$(echo "$AFND_OUT" | grep -c "ok  " || true)"
+
+if [ "$AFND_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the assessment foundation suite exited with code ${AFND_RC}." >&2
+  echo "$AFND_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "assessment foundation"
+else
+  echo "    ok  ${AFND_PASSED} assessment foundation assertions passed"
+  if [ "$AFND_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 assessment foundation assertions, only ${AFND_PASSED} ran." >&2
+    suite_failed "assessment foundation (assertion shortfall: floor 45)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Running content library and maturity-isolation assertions"
 set +e
 LIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_content_library_test.sql 2>&1)"
@@ -1552,5 +1590,6 @@ echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
-echo "              ${STDR_PASSED} standard recruitment availability assertions"
+echo "              ${STDR_PASSED} standard recruitment availability assertions,"
+echo "              ${AFND_PASSED} assessment foundation assertions"
 echo "===================================================="
