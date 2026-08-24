@@ -588,7 +588,26 @@
       "divergenceOpen": true,
       "doNotReExecute": true,
       "reason": "Phase A migration 3 of 7, applied hosted on owner approval as 20260824082256. Migration 3 must never be executed hosted again. The generated file is NOT deleted, because it is the only readable record of what production actually ran and it differs from the canonical file; it is PARKED under supabase/archive/parked-migrations/ so a clean replay cannot reach it while the evidence is preserved.",
-      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824082256';"
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824082256';",
+      "divergenceRepairedBy": {
+        "canonicalFile": "20260907092500_sp_uk_title_rules_correction.sql",
+        "hostedVersion": "20260824092449",
+        "note": "The hosted END STATE is now repaired: the correction restored the canonical 19 GB title rules. This entry stays equivalenceVerified:false and divergenceOpen:true on purpose -- they describe THIS migration's generated SQL, which was and remains historically non-equivalent. Flipping them would erase the record that production once ran different SQL from the reviewed file."
+      }
+    },
+    {
+      "canonicalFile": "20260907092500_sp_uk_title_rules_correction.sql",
+      "canonicalVersion": "20260907092500",
+      "hostedVersion": "20260824092449",
+      "hostedName": "3e7ebbfb-ee86-4932-a0d2-bd4e155b148f",
+      "appliedAt": "2026-08-24T09:24:49Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824092449_3e7ebbfb-ee86-4932-a0d2-bd4e155b148f.sql",
+      "sqlEquivalence": "Verified from main 0cb18c66: the generated file is a strict byte prefix of the canonical file, differing only by a missing trailing newline after COMMIT; -- canonical == generated + '\\n'. Generated 11941 bytes / 196 lines, canonical 11942 bytes / 197 lines. Comment-stripped: 0 differing lines across 124, and identical after rstrip. Whitespace-normalised: identical (sha256 prefix ad3da7528f06cd7d). Statement targets identical (sp_professional_titles only). Executable SQL is therefore identical; the one byte is not executable content.",
+      "equivalenceVerified": true,
+      "doNotReExecute": true,
+      "reason": "The UK title-rule correction, applied hosted as 20260824092449; ledger 156 -> 157. It repairs the Migration 3 divergence recorded below: hosted now holds the canonical 19 GB professional-title rules. Unlike that entry, this generated copy IS exactly equivalent to its canonical file, so it is deleted from the active path rather than parked -- git history and this mapping preserve the traceability. It is removed because version 20260824092449 sorts BEFORE the canonical slot 20260907092500 and before migrations already in the ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824092449';"
     }
   ],
   "canonicalProject": {

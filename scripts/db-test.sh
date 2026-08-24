@@ -1606,9 +1606,9 @@ if [ "$SPUKT_RC" -ne 0 ]; then
   echo "FAIL: the UK title rule contract suite exited with code ${SPUKT_RC}." >&2
   echo "$SPUKT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Security Passport UK title rule contract"
-elif [ "$SPUKT_PASSED" -lt 13 ]; then
-  echo "FAIL: expected at least 13 UK title rule assertions, only ${SPUKT_PASSED} ran." >&2
-  suite_failed "Security Passport UK title rule contract (assertion shortfall: floor 13)"
+elif [ "$SPUKT_PASSED" -lt 15 ]; then
+  echo "FAIL: expected at least 15 UK title rule assertions, only ${SPUKT_PASSED} ran." >&2
+  suite_failed "Security Passport UK title rule contract (assertion shortfall: floor 15)"
 fi
 
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
