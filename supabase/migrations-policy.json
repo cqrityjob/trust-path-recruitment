@@ -636,6 +636,20 @@
       "doNotReExecute": true,
       "reason": "Phase A migration 5 of 7, the legacy scope correction, applied hosted on owner approval; ledger 158 -> 159. It replaces the sp_claims_credential_rules trigger function so a claim recorded before the authorisation_scope column existed can still be corrected by its holder instead of being frozen by the newer requirement -- the rule itself is not removed. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked; git history and this mapping preserve traceability. Removed because 20260824115108 sorts BEFORE the canonical slot 20260908090000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 5 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824115108';"
+    },
+    {
+      "canonicalFile": "20260908091000_sp_title_country_and_training_label.sql",
+      "canonicalVersion": "20260908091000",
+      "hostedVersion": "20260824120603",
+      "hostedName": "d7637351-7bdd-45f7-bb15-9ddebb6430c4",
+      "appliedAt": "2026-08-24T12:06:03Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824120603_d7637351-7bdd-45f7-bb15-9ddebb6430c4.sql",
+      "sqlEquivalence": "Verified from main e6ab9dd on six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (6983 vs 6984 bytes) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 85. (3) Whitespace-normalised: identical, sha256 prefix 54dc749322164d4f. (4) Statement order: identical, 24 statements both sides. (5) Statement targets and WHERE codes identical across all 25. (6) All 24 label strings byte-identical -- the decisive check for this migration, because the exact wording of every label IS the reviewed product decision. Hosted postconditions confirm it: SE_VAKTARE_COMPETENCE now reads 'Väktarutbildning (VU1 + VU2)' / 'Security Guard Training (VU1 + VU2)', 0 titles end in a country name, all three Dubai active titles keep '· Dubai', 0 active titles derive from a training credential, 0 blank SV/EN labels, and titles_total stayed 41 (labels only, no rows inserted or deleted).",
+      "equivalenceVerified": true,
+      "doNotReExecute": true,
+      "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '· Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'Väktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824120603';"
     }
   ],
   "canonicalProject": {
