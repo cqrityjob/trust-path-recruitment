@@ -650,6 +650,20 @@
       "doNotReExecute": true,
       "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '· Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'Väktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824120603';"
+    },
+    {
+      "canonicalFile": "20260908092000_sp_disclosure_scope_boundary.sql",
+      "canonicalVersion": "20260908092000",
+      "hostedVersion": "20260824130836",
+      "hostedName": "b0f1929b-2bba-4444-83a1-531f5ef9c555",
+      "appliedAt": "2026-08-24T13:08:36Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824130836_b0f1929b-2bba-4444-83a1-531f5ef9c555.sql",
+      "sqlEquivalence": "Verified from main 9b5d16f on eight comparisons -- four standard, four privacy-critical, because this migration decides which audience may see a credential's exact authorisation scope. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (8030 vs 8031 bytes), the one differing byte being the trailing newline after COMMIT;. (2) Comment-stripped: identical after rstrip, 0 differing lines across 101. (3) Whitespace-normalised: identical, sha256 prefix 128533017b745876. (4) Statement order: identical, 13 statements both sides. (5) Function signature identical: sp_disclosure_payload(_disclosure_id uuid). (6) GRANT/REVOKE identical: the single REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon. (7) SECURITY DEFINER count and search_path identical ('public', 'pg_temp'). (8) All 23 payload keys identical, including authorisation_scope, scope_limited, privacy_mode and holder. Hosted behavioural check across all 17 existing disclosures: 0 payloads outside an application-scoped disclosure or the employer_review / full_verification packages expose authorisation_scope, 0 payloads contain holder_note, and scope_limited is present on both the employer_review and public_card surfaces.",
+      "equivalenceVerified": true,
+      "doNotReExecute": true,
+      "reason": "Phase A migration 7 of 7 -- the final one -- applied hosted on owner approval; ledger 160 -> 161, which closes the expected 153 + 8 (seven Phase A migrations plus the UK corrective migration). It replaces sp_disclosure_payload so a credential's exact authorisation_scope reaches only the audiences the holder authorised, while every other surface receives a scope_limited boolean instead of the protected object. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824130836 sorts BEFORE the canonical slot 20260908092000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 7 must never be executed hosted again.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824130836';"
     }
   ],
   "canonicalProject": {
