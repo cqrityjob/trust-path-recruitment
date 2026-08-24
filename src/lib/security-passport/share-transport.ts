@@ -115,12 +115,18 @@ export function shareTokenFromPath(pathname: string): string | null {
  * somewhere else — an email, a message, a job application — and `Strict` would
  * withhold the cookie on exactly that navigation.
  *
- * `Path=/p` keeps it off every other request the app makes.
+ * `Path=/` and NOT `Path=/p`, which was the first attempt and was wrong. The
+ * recipient page reads its payload through a server function, and server
+ * functions are POSTed to `/_serverFn/<hash>` — a path outside `/p`. A cookie
+ * scoped to `/p` is therefore not sent with the very request that needs it, so
+ * every share rendered as "This link is not available" while the redirect and
+ * the cookie both looked correct. Caught by opening a real share link end to
+ * end; nothing else would have found it.
  */
 export function buildShareCookie(token: string, secure: boolean): string {
   const parts = [
     `${SHARE_COOKIE_NAME}=${token}`,
-    "Path=/p",
+    "Path=/",
     "HttpOnly",
     "SameSite=Lax",
     `Max-Age=${SHARE_COOKIE_MAX_AGE_SECONDS}`,

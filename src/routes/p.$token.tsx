@@ -190,7 +190,18 @@ function RecipientRoute() {
   // `presentation` is non-null whenever the payload is active; the guard
   // keeps TypeScript honest without a cast.
   if (!presentation) return null;
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  // The canonical site address, NOT this page's own URL.
+  //
+  // It used to be `window.location.href`, which was the share link itself —
+  // and that link is a bearer capability, printed onto a card a recipient can
+  // screenshot and forward. Since the token moved out of the URL it would now
+  // read `/p/view`, which is worse than useless: it grants nothing AND leads a
+  // reader who tries it to "this link is not available".
+  //
+  // So it names where the record lives. A recipient returns through the link
+  // they were sent — the page is re-read on every open, which is the property
+  // the footer is claiming — and nothing printed here is a credential.
+  const shareUrl = publicShareOrigin();
 
   // A single-credential share is a different object from a Passport, so it
   // gets its own presentation rather than the Passport page with one row.

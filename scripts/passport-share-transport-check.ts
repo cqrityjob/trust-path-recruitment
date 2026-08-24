@@ -89,7 +89,15 @@ assert(
   /SameSite=Lax/.test(cookie),
   "SameSite=Lax, so following the link from an email still works",
 );
-assert(/Path=\/p/.test(cookie), "the cookie is scoped to /p and rides no other request");
+// Path=/ and not Path=/p. The recipient page reads its payload through a
+// server function, which is POSTed to /_serverFn/<hash> — outside /p. Scoping
+// the cookie to /p meant it was never sent with the one request that needed
+// it, and every share rendered as "This link is not available" while the
+// redirect and the Set-Cookie both looked correct.
+assert(
+  /Path=\/;/.test(`${cookie};`),
+  "the cookie is scoped to / so it reaches the server function that reads it",
+);
 assert(/Max-Age=\d+/.test(cookie), "the cookie expires on its own");
 assert(/Secure/.test(cookie), "https gets Secure");
 // A developer stack is plain http, where a Secure cookie is silently dropped
