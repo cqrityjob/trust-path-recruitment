@@ -36,6 +36,7 @@
     "regulatory-sources:check": "bun run scripts/regulatory-source-monitor.ts",
     "passport-title-derivation:check": "bun run scripts/passport-title-derivation-check.ts",
     "passport-identity-engine:check": "bun run scripts/passport-identity-engine-check.ts",
+    "passport-persona-journey:check": "bun run scripts/passport-persona-journey-check.ts",
     "passport-credential-form:check": "bun run scripts/passport-credential-form-check.ts",
     "scripts:typecheck": "tsc -p tsconfig.scripts.json --noEmit",
     "passport-regulatory-claim:check": "bun run scripts/passport-regulatory-claim-check.ts",
