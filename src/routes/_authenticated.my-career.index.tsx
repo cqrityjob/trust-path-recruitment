@@ -336,7 +336,15 @@ function MyCareerPage() {
             {displayName ? `, ${displayName}` : ""}.
           </h1>
           <p className="mt-3 text-muted-foreground">
-            {hasProfile
+            {/* `activeIsDiscovery ||`, not `hasProfile` alone.
+                `hasProfile` is the LEGACY v2.1 career profile, which a
+                candidate whose only assessment is v3 never has. So a tester who
+                had just finished all 28 questions was told "Complete the
+                assessment to unlock recommendations" directly above a card
+                reading "Your new report is ready" — the same legacy-era signal
+                deciding a v3-era question that hid the #career-profile
+                anchor. */}
+            {activeIsDiscovery || hasProfile
               ? L(
                   c(
                     "Här är din personliga karriärsöversikt — din profil, rekommenderade yrken och relevanta jobb.",

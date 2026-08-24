@@ -109,6 +109,23 @@ assert(
   "the quick action can render as unavailable rather than as a dead link",
 );
 
+console.log("\nGROUP 3b -- a completed v3 assessment is not judged by legacy signals");
+
+// `hasProfile` is the LEGACY v2.1 career profile, which a candidate whose only
+// assessment is v3 never has. Keying the page subtitle on it alone told a
+// tester who had just finished all 28 questions to "Complete the assessment to
+// unlock recommendations" — directly above a card reading "Your new report is
+// ready". Same shape as the regression that hid the #career-profile anchor: a
+// legacy-era signal answering a v3-era question.
+assert(
+  /activeIsDiscovery \|\| hasProfile/.test(src),
+  "the overview subtitle counts a v3 report, not only a legacy profile",
+);
+assert(
+  !/\{hasProfile\s*\n?\s*\?/.test(src),
+  "no surface decides 'has a career overview' from the legacy profile alone",
+);
+
 console.log("\nGROUP 4 -- the closed state explains itself and offers a way on");
 
 // A refusal with no reason and nowhere to go is the dead end by another name.
