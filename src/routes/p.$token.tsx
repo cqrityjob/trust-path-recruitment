@@ -30,7 +30,7 @@
 import { CredentialScopeLine } from "@/components/security-passport/live/CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { BadgeCheck, ExternalLink, ShieldAlert, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -117,17 +117,20 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function RecipientRoute() {
   const { pt, lang } = usePassportCopy();
-  // The token is DELIBERATELY not read from the URL.
+  // The param here is a NAVIGATION ID, never a token.
   //
-  // src/server.ts turns `/p/<token>` into a 302 to `/p/view` carrying the token
-  // in an HttpOnly cookie, before any document exists, because the host injects
-  // an analytics script that reports window.location.href on every full page
-  // load — and the token is a bearer capability. So by the time this component
-  // runs, the address bar holds a constant that grants nothing, and the token
-  // is somewhere no page script can read. See share-transport.ts.
+  // src/server.ts answers `/p/<token>` with a 302 to `/p/<navigationId>` and
+  // puts the token in an HttpOnly cookie named after that id, before any
+  // document exists — because the host injects an analytics script that reports
+  // window.location.href on every full page load, and the token is a bearer
+  // capability. By the time this component runs, the address bar holds a
+  // one-way hash that authorises nothing.
   //
-  // Reading the param here instead would quietly restore the leak the moment
-  // anything served a document at the token URL, so it is not read at all.
+  // It IS read, and must be: it names which share this tab is on. Two open
+  // shares hold two differently-named cookies, and without the id the server
+  // could not tell them apart — which is exactly the substitution bug the
+  // single-cookie version had. See share-transport.ts.
+  const { token: navigationId } = useParams({ from: "/p/$token" });
   const read = useServerFn(getPublicDisclosureFromCookie);
 
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
@@ -143,7 +146,7 @@ function RecipientRoute() {
 
   useEffect(() => {
     let alive = true;
-    void read()
+    void read({ data: { navigationId } })
       .then((result) => {
         if (!alive) return;
         setPayload(result);
@@ -157,7 +160,7 @@ function RecipientRoute() {
     return () => {
       alive = false;
     };
-  }, [read]);
+  }, [read, navigationId]);
 
   if (!payload) {
     return (

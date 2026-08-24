@@ -43,16 +43,25 @@ export const getPublicDisclosure = createServerFn({ method: "POST" })
  * No validator: there is no input. A caller cannot substitute a token here,
  * which is the point.
  */
-export const getPublicDisclosureFromCookie = createServerFn({ method: "POST" }).handler(
-  async (): Promise<RecipientPayload> => {
-    const token = shareTokenFromCookieHeader(getRequest()?.headers?.get("cookie"));
-    // Absent, malformed or expired cookie renders exactly as a revoked token, a
-    // guessed token and a throttled request do. A recipient whose cookie has
-    // lapsed re-opens their link and gets a fresh one.
+export const getPublicDisclosureFromCookie = createServerFn({ method: "POST" })
+  // The navigation id names WHICH share the tab is on. It is not a capability:
+  // it is a one-way hash, and the cookie it selects is one the caller's browser
+  // already holds. Naming a share you have no cookie for resolves nothing.
+  //
+  // It has to be an input, because it is the only thing that keeps two open
+  // shares apart — see share-transport.ts for the substitution this prevents.
+  .validator((data: unknown) => z.object({ navigationId: z.string().max(64) }).parse(data))
+  .handler(async ({ data }): Promise<RecipientPayload> => {
+    const token = shareTokenFromCookieHeader(
+      getRequest()?.headers?.get("cookie"),
+      data.navigationId,
+    );
+    // Absent, malformed, mismatched or expired cookie renders exactly as a
+    // revoked token, a guessed token and a throttled request do. A recipient
+    // whose cookie has lapsed reopens their link and gets a fresh one.
     if (!token) return { status: "unavailable" };
     return readForToken(token);
-  },
-);
+  });
 
 async function readForToken(token: string): Promise<RecipientPayload> {
   const request = getRequest();

@@ -8,94 +8,132 @@
 //     <script defer src="/~flock.js" data-proxy-url="/~api/analytics"></script>
 //
 // It is absent from the build output and from @lovable.dev/vite-tanstack-config
-// — it is added to the response by the hosting layer, so no application change
-// can remove or configure it. On load it posts a `page_hit` event carrying, in
-// full:
-//
-//     { "user-agent", locale, location, referrer,
-//       pathname: window.location.pathname,
-//       href:     window.location.href }
+// — the hosting layer adds it to the response, so no application change can
+// remove or configure it, and it offers no opt-out of its own. On load it posts
+// a `page_hit` carrying, in full, `window.location.pathname` and
+// `window.location.href`.
 //
 // A share link was `/p/<token>`, and that token is a BEARER CAPABILITY: anyone
 // holding it can read the disclosed Passport. So every view of a shared
-// Passport copied a working credential into a general analytics event store —
-// a different retention and access domain from the Passport tables, where
-// anyone who can read analytics could replay it.
+// Passport copied a working credential into a general analytics event store.
 //
-// ── WHY THE FIX IS A SERVER REDIRECT AND NOT URL SCRUBBING ─────────────
+// ── WHY A SERVER REDIRECT, AND NOT URL SCRUBBING ───────────────────────
 //
-// The script is `defer` and sends `page_hit` from a `setTimeout(…, 300)`. That
-// invites a client-side `history.replaceState` before the timer fires, and that
-// is a race, not a fix: it depends on winning a 300ms window in someone else's
-// code, on every browser, forever. Scrubbing after the fact is worse still —
-// by then the value has already been read.
+// The script is `defer` and sends from a `setTimeout(…, 300)`, which invites a
+// client-side `history.replaceState` before the timer fires. That is a race,
+// not a fix. What the script does NOT do is fire on client-side navigation: it
+// reports FULL PAGE LOADS only. So if the browser never loads a document at a
+// URL containing the token, no script on the page can observe it, whatever it
+// reads and whenever it runs.
 //
-// The script also never fires on client-side navigation. It only reports a
-// FULL PAGE LOAD. That is the property this design uses: if the browser never
-// loads a document at a URL containing the token, no script on the page can
-// observe it, whatever it reads and whenever it runs.
+// `/p/<token>` is therefore answered in src/server.ts, ahead of the SSR
+// handler, with a 302. A 302 has no body, so nothing is injected into it and
+// no script runs.
 //
-// So the token is taken out of the rendered URL entirely, by the server, before
-// any HTML exists:
+// ── WHY THE REDIRECT TARGET IS PER-SHARE AND NOT A CONSTANT ────────────
 //
-//   1. `/p/<token>` is intercepted in src/server.ts, ahead of the SSR handler.
-//   2. The server replies 302 to `/p/view` and sets the token in an HttpOnly
-//      cookie. A 302 has no body, so nothing is injected into it and no script
-//      runs.
-//   3. The browser loads `/p/view`. That is the only document that exists, and
-//      the only URL analytics can see. It is a constant: identical for every
-//      share, for every holder, and it grants nothing on its own.
+// The first version of this redirected every share to a single constant path
+// and stored the token in one cookie named `sp_share`. That closed the
+// analytics leak and introduced a worse bug, which a security review caught and
+// a two-share reproduction confirmed:
 //
-// The cookie is HttpOnly, so page scripts cannot read it either.
+//     open Share A   ->  sp_share = <token A>
+//     open Share B   ->  sp_share = <token B>     (same name, overwritten)
+//     refresh Tab A  ->  resolves SHARE B
+//
+// One recipient, two links, and the first tab silently starts showing the other
+// holder's Passport. A share is addressed to one reader about one person;
+// substituting a different person's record is a trust failure well beyond the
+// leak the redirect was fixing.
+//
+// The fix is to make the TAB self-identifying. The redirect target carries a
+// per-share NAVIGATION ID, and the cookie is named after it, so two shares
+// produce two differently-named cookies that coexist. The server resolves the
+// share named by the URL the tab is actually on, so Tab A resolves A however
+// many other shares the same browser has open.
+//
+// ── WHY THE NAVIGATION ID IS A HASH AND NOT A RANDOM VALUE ─────────────
+//
+// A fresh random id per visit would isolate tabs equally well, but every reopen
+// of the same link would mint another cookie, and browsers cap cookies per
+// domain — a recipient who checks a link repeatedly would eventually evict
+// their own. Deriving the id from the token instead makes reopening idempotent:
+// same link, same id, same cookie.
+//
+// It is `sha256("sp-nav:" + token)`, NOT `sha256(token)`, and the domain
+// separator is load-bearing. `sp_disclosures.token_hash` is exactly
+// `encode(digest(token,'sha256'),'hex')`, so an undomained hash would put the
+// database's stored lookup key straight into the URL bar and into analytics.
+// The prefix guarantees the two values can never collide.
+//
+// The id is one-way and useless alone: it names WHICH share a tab means, and
+// authorises nothing. Reading the Passport still requires the cookie, and the
+// cookie still carries the real token to the same throttled boundary as before.
+//
+// ── WHY THE COOKIE IS SCOPED TO THE SERVER-FUNCTION PATH ───────────────
+//
+// `HttpOnly` stops scripts READING the cookie; it does nothing to stop the
+// browser SENDING it. At `Path=/`, the token rode every same-origin request —
+// including `/~api/analytics`, the very endpoint this whole design exists to
+// keep it away from.
+//
+// The only thing that needs the token is the disclosure server function, which
+// is POSTed to `/_serverFn/<hash>`. So that is the path the cookie is scoped
+// to. A capability should travel only to the boundary that validates it.
 //
 // ── WHAT THIS DELIBERATELY DOES NOT CLAIM ──────────────────────────────
 //
-// The token is still in the first HTTP request line, so it is still visible to
+// The token is still in the first HTTP request line, so it remains visible to
 // the host's own request/edge logs. That is unavoidable for ANY link-borne
-// capability — it is what a link is — and it is a different surface from
-// general page analytics, with different access. This module closes the
-// analytics path, which is the one that was putting live credentials in front
-// of product dashboards. It does not pretend to close request logging.
-//
-// ── WHY THE COOKIE CARRIES THE TOKEN ITSELF ────────────────────────────
-//
-// Not an opaque session id, because a session id would need a table to resolve
-// — a migration, and a second source of truth about who may read what. The
-// token in the cookie means the recipient page re-validates the REAL token on
-// every render, through the same throttled server boundary as before, so
-// revocation, expiry, rate limiting and the indistinguishable-failure property
-// all keep working exactly as they did. Nothing about the trust model moves;
-// only the transport does.
+// capability — it is what a link is — and it is a different surface, with
+// different access, from the product analytics this closes.
 
-/** The path the recipient's browser actually loads. A constant, so the value
- *  analytics records is the same for every share in the product. */
-export const SHARE_VIEW_PATH = "/p/view";
+import { createHash } from "node:crypto";
 
-/** The `$token` param value at SHARE_VIEW_PATH. Cannot collide with a real
- *  token: tokens are 64 hex characters. */
-export const SHARE_VIEW_PARAM = "view";
+/** Where the disclosure server function lives. The cookie is scoped here and
+ *  nowhere else, so no other request carries the token. */
+export const SHARE_COOKIE_PATH = "/_serverFn";
 
-/** HttpOnly, so no page script — injected or otherwise — can read it. */
-export const SHARE_COOKIE_NAME = "sp_share";
+/** Cookie name for one share. Suffixed with the navigation id so two open
+ *  shares hold two cookies rather than overwriting each other. */
+export function shareCookieName(navigationId: string): string {
+  return `sp_share_${navigationId}`;
+}
 
 /** Long enough to read a Passport and reload it, short enough that a shared
- *  machine does not keep a working capability for the rest of the day. Every
- *  fresh open of the link renews it. */
+ *  machine does not keep a working capability all day. Reopening renews it. */
 export const SHARE_COOKIE_MAX_AGE_SECONDS = 1800;
 
-/** A token is 32 random bytes as hex. The same shape the server boundary
- *  already enforces; checked here too so a malformed path is refused before it
- *  becomes a redirect or a cookie. */
+/** A token is 32 random bytes as hex. */
 const TOKEN_RE = /^[0-9a-f]{64}$/;
+/** A navigation id is the first 32 hex characters of a domain-separated hash.
+ *  Deliberately a different LENGTH from a token, so the two can never be
+ *  confused by a path matcher. */
+const NAV_RE = /^[0-9a-f]{32}$/;
 
 export function isShareToken(value: string): boolean {
   return TOKEN_RE.test(value);
 }
 
+export function isNavigationId(value: string): boolean {
+  return NAV_RE.test(value);
+}
+
 /**
- * The token in `/p/<token>`, or null for anything else — including
- * SHARE_VIEW_PATH itself, which must fall through to the page rather than
- * redirect to itself forever.
+ * The public, per-share identifier a recipient's address bar may hold.
+ *
+ * One-way, so it grants nothing on its own; stable, so reopening one link does
+ * not mint a second cookie; and domain-separated from `sp_disclosures.
+ * token_hash`, which is the undomained sha256 of the same token.
+ */
+export function navigationIdFor(token: string): string {
+  return createHash("sha256").update(`sp-nav:${token}`).digest("hex").slice(0, 32);
+}
+
+/**
+ * The token in `/p/<token>`, or null for anything else — including a path that
+ * already carries a navigation id, which must fall through to the page rather
+ * than redirect to itself forever.
  */
 export function shareTokenFromPath(pathname: string): string | null {
   const match = /^\/p\/([^/?#]+)\/?$/.exec(pathname);
@@ -104,29 +142,27 @@ export function shareTokenFromPath(pathname: string): string | null {
   return isShareToken(candidate) ? candidate : null;
 }
 
+/** Where `/p/<token>` sends the browser. Same route, different param: a
+ *  navigation id is 32 hex and a token is 64, so this never re-redirects. */
+export function shareViewPath(navigationId: string): string {
+  return `/p/${navigationId}`;
+}
+
 /**
- * The Set-Cookie value carrying a token to the recipient page.
+ * The Set-Cookie carrying one share's token to the server function.
  *
  * `Secure` is conditional because a developer stack is plain http, where a
- * Secure cookie is silently dropped and every share link would appear broken.
- * Production is https, so production always gets it.
+ * Secure cookie is silently dropped and every share link would appear broken
+ * for reasons nothing reports. Production is https and always gets it.
  *
- * `SameSite=Lax` because the recipient arrives by following a link from
- * somewhere else — an email, a message, a job application — and `Strict` would
+ * `SameSite=Lax` because a recipient arrives by following a link from
+ * somewhere else — an email, a message, an application — and `Strict` would
  * withhold the cookie on exactly that navigation.
- *
- * `Path=/` and NOT `Path=/p`, which was the first attempt and was wrong. The
- * recipient page reads its payload through a server function, and server
- * functions are POSTed to `/_serverFn/<hash>` — a path outside `/p`. A cookie
- * scoped to `/p` is therefore not sent with the very request that needs it, so
- * every share rendered as "This link is not available" while the redirect and
- * the cookie both looked correct. Caught by opening a real share link end to
- * end; nothing else would have found it.
  */
 export function buildShareCookie(token: string, secure: boolean): string {
   const parts = [
-    `${SHARE_COOKIE_NAME}=${token}`,
-    "Path=/",
+    `${shareCookieName(navigationIdFor(token))}=${token}`,
+    `Path=${SHARE_COOKIE_PATH}`,
     "HttpOnly",
     "SameSite=Lax",
     `Max-Age=${SHARE_COOKIE_MAX_AGE_SECONDS}`,
@@ -135,22 +171,36 @@ export function buildShareCookie(token: string, secure: boolean): string {
   return parts.join("; ");
 }
 
-/** The token a request carries, or null. Tolerates the whole Cookie header,
- *  including other cookies and inconsistent spacing. */
-export function shareTokenFromCookieHeader(header: string | null | undefined): string | null {
-  if (!header) return null;
+/**
+ * The token this request carries FOR THE SHARE THE TAB IS ON.
+ *
+ * Keyed by navigation id, which is why two open shares cannot substitute for
+ * one another: the browser sends both cookies, and this reads the one the
+ * caller's URL names. A caller can only ever name a share whose cookie it
+ * already holds, so accepting the id as input grants nothing.
+ */
+export function shareTokenFromCookieHeader(
+  header: string | null | undefined,
+  navigationId: string,
+): string | null {
+  if (!header || !isNavigationId(navigationId)) return null;
+  const wanted = shareCookieName(navigationId);
   for (const pair of header.split(";")) {
     const eq = pair.indexOf("=");
     if (eq === -1) continue;
-    if (pair.slice(0, eq).trim() !== SHARE_COOKIE_NAME) continue;
+    if (pair.slice(0, eq).trim() !== wanted) continue;
     const value = pair.slice(eq + 1).trim();
-    return isShareToken(value) ? value : null;
+    if (!isShareToken(value)) return null;
+    // Belt and braces: the cookie is named after the hash of the token it
+    // holds, so a mismatch means the pair was tampered with or crossed. Refuse
+    // rather than resolve a share the id does not actually name.
+    return navigationIdFor(value) === navigationId ? value : null;
   }
   return null;
 }
 
 /**
- * The 302 that moves the token out of the URL and into the cookie.
+ * The 302 that moves the token out of the URL and into a per-share cookie.
  *
  * `Cache-Control: no-store` because this response carries a credential in a
  * header; a shared cache holding it would hand one recipient's capability to
@@ -160,13 +210,13 @@ export function buildShareRedirect(token: string, secure: boolean): Response {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: SHARE_VIEW_PATH,
+      Location: shareViewPath(navigationIdFor(token)),
       "Set-Cookie": buildShareCookie(token, secure),
       "Cache-Control": "no-store",
       // A share link is private correspondence; it was already noindex on the
-      // page, and the redirect says so too rather than relying on the hop.
+      // page, and the hop says so too rather than relying on the destination.
       "X-Robots-Tag": "noindex, nofollow",
-      // Nothing downstream of this response should carry the token onward.
+      // Nothing downstream of this response carries the token onward.
       "Referrer-Policy": "no-referrer",
     },
   });

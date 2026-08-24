@@ -1,7 +1,8 @@
 /**
- * Security Passport — a share token must never reach a rendered document.
+ * Security Passport — a share token must never reach a rendered document, and
+ * two open shares must never resolve to each other.
  *
- * ── THE DEFECT THIS DEFENDS ────────────────────────────────────────────
+ * ── DEFECT 1: THE TOKEN WAS IN THE URL ─────────────────────────────────
  *
  * The published site is served with a platform analytics script injected into
  * the HTML by the HOST, not by this repository:
@@ -11,34 +12,48 @@
  * On every full page load it posts a `page_hit` carrying `window.location.href`
  * and `window.location.pathname`. Share links were `/p/<token>`, and that token
  * is a bearer capability — so every view of a shared Passport copied a working
- * credential into a general analytics store, where anyone who could read
- * analytics could replay it.
+ * credential into a general analytics store.
  *
- * The fix is transport-only: src/server.ts answers `/p/<token>` with a 302 to a
- * constant `/p/view` and puts the token in an HttpOnly cookie, before any
- * document exists. A 302 has no body, so nothing is injected into it and no
- * script runs. What analytics can observe is therefore a constant that grants
- * nothing.
+ * ── DEFECT 2: THE FIRST FIX SUBSTITUTED SHARES ─────────────────────────
  *
- * These assertions hold that shape. They are deliberately about the SHAPE of
- * the transport rather than about analytics, because the script is outside this
- * repository and cannot be asserted against — the invariant that survives is
- * "no document is ever served at a URL containing a token".
+ * The first version redirected every share to one constant path and stored the
+ * token in a single cookie named `sp_share`. Reproduced against a running
+ * stack, in one cookie jar:
+ *
+ *     open Share A   ->  sp_share = <token A>
+ *     open Share B   ->  sp_share = <token B>   (same name, overwritten)
+ *     refresh Tab A  ->  resolves SHARE B
+ *
+ * One recipient, two links, and the first tab silently showed the other
+ * holder's Passport. So the redirect target now carries a per-share NAVIGATION
+ * ID and the cookie is named after it: two shares, two cookies, no collision,
+ * and the tab's own URL says which share it means.
+ *
+ * ── DEFECT 3: THE COOKIE RODE EVERY REQUEST ────────────────────────────
+ *
+ * `HttpOnly` stops scripts READING a cookie; it does nothing to stop the
+ * browser SENDING it. At `Path=/` the token was attached to every same-origin
+ * request — including `/~api/analytics`, the exact endpoint the redirect exists
+ * to keep it away from. It is now scoped to `/_serverFn`, the only boundary
+ * that validates it.
  *
  * Run: bun run passport-share-transport:check
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  SHARE_COOKIE_NAME,
-  SHARE_VIEW_PARAM,
-  SHARE_VIEW_PATH,
+  SHARE_COOKIE_PATH,
   buildShareCookie,
   buildShareRedirect,
+  isNavigationId,
   isShareToken,
+  navigationIdFor,
+  shareCookieName,
   shareTokenFromCookieHeader,
   shareTokenFromPath,
+  shareViewPath,
 } from "../src/lib/security-passport/share-transport";
 
 const ROOT = join(import.meta.dir, "..");
@@ -55,68 +70,119 @@ function assert(condition: boolean, label: string) {
   }
 }
 
-const TOKEN = "a".repeat(64);
-const OTHER = "b".repeat(64);
+const A = "a".repeat(64);
+const B = "b".repeat(64);
+const NAV_A = navigationIdFor(A);
+const NAV_B = navigationIdFor(B);
 
 console.log("passport-share-transport-check\n");
 
 console.log("GROUP 1 -- a token in the path is recognised, and nothing else is");
 
-assert(shareTokenFromPath(`/p/${TOKEN}`) === TOKEN, "a 64-hex token is extracted from /p/<token>");
-assert(shareTokenFromPath(`/p/${TOKEN}/`) === TOKEN, "a trailing slash does not hide it");
-// The constant the redirect points AT must never itself redirect, or the
-// recipient loops forever instead of reading a Passport.
-assert(shareTokenFromPath(SHARE_VIEW_PATH) === null, "the view path is not treated as a token");
-assert(!isShareToken(SHARE_VIEW_PARAM), "the view sentinel can never collide with a real token");
+assert(shareTokenFromPath(`/p/${A}`) === A, "a 64-hex token is extracted from /p/<token>");
+assert(shareTokenFromPath(`/p/${A}/`) === A, "a trailing slash does not hide it");
+// The redirect TARGET must never redirect again, or the recipient loops
+// forever instead of reading a Passport. A navigation id is 32 hex and a token
+// is 64, so the two can never be confused by the path matcher.
+assert(
+  shareTokenFromPath(shareViewPath(NAV_A)) === null,
+  "the redirect target is not itself treated as a token",
+);
+assert(!isShareToken(NAV_A), "a navigation id can never be mistaken for a token");
 for (const path of [
   "/p",
   "/p/",
   "/passport",
   "/p/short",
-  `/p/${TOKEN}/extra`,
+  `/p/${A}/extra`,
   `/p/${"A".repeat(64)}`,
 ]) {
   assert(shareTokenFromPath(path) === null, `no token is invented for ${path}`);
 }
 
-console.log("\nGROUP 2 -- the cookie is unreadable by page scripts and unshared by caches");
+console.log("\nGROUP 2 -- the navigation id is public, one-way, and NOT the database's key");
 
-const cookie = buildShareCookie(TOKEN, true);
-// HttpOnly is the property that keeps the token away from ANY script on the
-// page, including one the host injects. It is the whole point.
+assert(isNavigationId(NAV_A), "a navigation id is 32 hex characters");
+assert(NAV_A !== NAV_B, "different shares get different ids");
+assert(
+  navigationIdFor(A) === NAV_A,
+  "the same share always gets the same id, so reopening is idempotent",
+);
+// THE load-bearing one. sp_disclosures.token_hash is
+// encode(digest(token,'sha256'),'hex'); an undomained hash would put the
+// database's stored lookup key straight into the URL bar and into analytics.
+const undomained = createHash("sha256").update(A).digest("hex");
+assert(
+  !undomained.startsWith(NAV_A) && undomained.slice(0, 32) !== NAV_A,
+  "the id is domain-separated from sp_disclosures.token_hash",
+);
+assert(!NAV_A.includes(A.slice(0, 16)), "the id contains no fragment of the token");
+
+console.log("\nGROUP 3 -- the cookie travels ONLY to the boundary that validates it");
+
+const cookie = buildShareCookie(A, true);
+// HttpOnly keeps scripts out. The PATH is what keeps the browser from sending
+// it to /~api/analytics, assets and every other same-origin request.
 assert(/HttpOnly/.test(cookie), "the cookie is HttpOnly, so no page script can read it");
+assert(
+  new RegExp(`Path=${SHARE_COOKIE_PATH}(;|$)`).test(cookie),
+  `the cookie is scoped to ${SHARE_COOKIE_PATH} and rides no other request`,
+);
+assert(SHARE_COOKIE_PATH !== "/", "the cookie is NOT scoped to the whole origin");
 assert(
   /SameSite=Lax/.test(cookie),
   "SameSite=Lax, so following the link from an email still works",
-);
-// Path=/ and not Path=/p. The recipient page reads its payload through a
-// server function, which is POSTed to /_serverFn/<hash> — outside /p. Scoping
-// the cookie to /p meant it was never sent with the one request that needed
-// it, and every share rendered as "This link is not available" while the
-// redirect and the Set-Cookie both looked correct.
-assert(
-  /Path=\/;/.test(`${cookie};`),
-  "the cookie is scoped to / so it reaches the server function that reads it",
 );
 assert(/Max-Age=\d+/.test(cookie), "the cookie expires on its own");
 assert(/Secure/.test(cookie), "https gets Secure");
 // A developer stack is plain http, where a Secure cookie is silently dropped
 // and every share link would look broken for reasons nothing reports.
+assert(!/Secure/.test(buildShareCookie(A, false)), "plain http omits Secure so dev still works");
 assert(
-  !/Secure/.test(buildShareCookie(TOKEN, false)),
-  "plain http omits Secure so dev still works",
+  cookie.startsWith(`${shareCookieName(NAV_A)}=`),
+  "the cookie is NAMED after the share, not a shared global",
 );
 
-console.log("\nGROUP 3 -- the redirect carries the token OUT of the URL");
+console.log("\nGROUP 4 -- two open shares cannot substitute for one another");
 
-const redirect = buildShareRedirect(TOKEN, true);
+// The exact reproduction that condemned the single-cookie design: one browser,
+// both cookies present, in the order the second one would have overwritten the
+// first.
+const bothCookies = `${shareCookieName(NAV_A)}=${A}; ${shareCookieName(NAV_B)}=${B}`;
+assert(
+  shareTokenFromCookieHeader(bothCookies, NAV_A) === A,
+  "with both shares open, tab A resolves share A",
+);
+assert(
+  shareTokenFromCookieHeader(bothCookies, NAV_B) === B,
+  "with both shares open, tab B resolves share B",
+);
+assert(
+  shareCookieName(NAV_A) !== shareCookieName(NAV_B),
+  "the two cookies have different names, so neither overwrites the other",
+);
+// A tab may only name a share whose cookie it already holds.
+assert(
+  shareTokenFromCookieHeader(`${shareCookieName(NAV_A)}=${A}`, NAV_B) === null,
+  "naming a share you hold no cookie for resolves nothing",
+);
+// Defence in depth: the cookie is named after the hash of the token it holds,
+// so a crossed or tampered pair is refused rather than resolved.
+assert(
+  shareTokenFromCookieHeader(`${shareCookieName(NAV_A)}=${B}`, NAV_A) === null,
+  "a cookie whose token does not match its own name is refused",
+);
+
+console.log("\nGROUP 5 -- the redirect carries the token OUT of the URL");
+
+const redirect = buildShareRedirect(A, true);
 assert(redirect.status === 302, "the response is a redirect");
 assert(
-  redirect.headers.get("location") === SHARE_VIEW_PATH,
-  "it points at the constant view path, identical for every share",
+  redirect.headers.get("location") === shareViewPath(NAV_A),
+  "it points at the share's navigation id",
 );
 assert(
-  !(redirect.headers.get("location") ?? "").includes(TOKEN),
+  !(redirect.headers.get("location") ?? "").includes(A),
   "the Location header carries no token",
 );
 // A 302 has no body, so there is nothing for the host to inject a script into.
@@ -134,32 +200,30 @@ assert(
   "the hop is noindex, like the page it leads to",
 );
 
-console.log("\nGROUP 4 -- the cookie is the ONLY way the page learns a token");
+console.log("\nGROUP 6 -- malformed, missing and crossed inputs all fail the same way");
 
+assert(shareTokenFromCookieHeader(null, NAV_A) === null, "no cookie header yields no token");
+assert(shareTokenFromCookieHeader("", NAV_A) === null, "an empty cookie header yields no token");
 assert(
-  shareTokenFromCookieHeader(`${SHARE_COOKIE_NAME}=${TOKEN}`) === TOKEN,
-  "the token is read back from the cookie header",
-);
-assert(
-  shareTokenFromCookieHeader(`other=1; ${SHARE_COOKIE_NAME}=${TOKEN}; another=2`) === TOKEN,
-  "and found among other cookies",
-);
-assert(shareTokenFromCookieHeader(null) === null, "no cookie header yields no token");
-assert(shareTokenFromCookieHeader("") === null, "an empty cookie header yields no token");
-assert(
-  shareTokenFromCookieHeader(`${SHARE_COOKIE_NAME}=not-a-token`) === null,
+  shareTokenFromCookieHeader(`${shareCookieName(NAV_A)}=not-a-token`, NAV_A) === null,
   "a malformed cookie value is refused before it reaches the database",
 );
 assert(
-  shareTokenFromCookieHeader(`sp_share_other=${TOKEN}`) === null,
-  "a similarly named cookie is not mistaken for ours",
+  shareTokenFromCookieHeader(`other=1; ${shareCookieName(NAV_A)}=${A}; another=2`, NAV_A) === A,
+  "the right cookie is found among unrelated ones",
 );
 assert(
-  shareTokenFromCookieHeader(`${SHARE_COOKIE_NAME}=${OTHER}`) === OTHER,
-  "a second share replaces the first rather than merging",
+  shareTokenFromCookieHeader(`sp_share_${NAV_A}x=${A}`, NAV_A) === null,
+  "a similarly named cookie is not mistaken for ours",
 );
+for (const bad of ["", "nope", NAV_A.slice(0, 8), A]) {
+  assert(
+    shareTokenFromCookieHeader(bothCookies, bad) === null,
+    `a malformed navigation id (${bad.slice(0, 10) || "empty"}) resolves nothing`,
+  );
+}
 
-console.log("\nGROUP 5 -- the wiring cannot be quietly undone");
+console.log("\nGROUP 7 -- the wiring cannot be quietly undone");
 
 {
   const server = readFileSync(join(ROOT, "src/server.ts"), "utf8");
@@ -169,23 +233,28 @@ console.log("\nGROUP 5 -- the wiring cannot be quietly undone");
   );
 
   const page = readFileSync(join(ROOT, "src/routes/p.$token.tsx"), "utf8");
-  // Reading the param again would restore the leak the moment anything served
-  // a document at the token URL, which is exactly the state this replaced.
-  assert(!page.includes("useParams"), "the recipient page never reads the token from the URL");
+  // The param is now a navigation id, so it IS read — but it must be passed as
+  // one, never used as a token.
+  assert(
+    page.includes("token: navigationId"),
+    "the recipient page treats its param as a navigation id, not a token",
+  );
   assert(
     page.includes("getPublicDisclosureFromCookie"),
-    "the recipient page reads its token from the cookie instead",
+    "the recipient page reads its token from the cookie",
+  );
+  assert(
+    !/readDisclosureByToken|getPublicDisclosure\b/.test(page),
+    "the page never reaches the token boundary directly",
   );
 
   const fns = readFileSync(
     join(ROOT, "src/lib/security-passport/public-disclosure.functions.ts"),
     "utf8",
   );
-  // No validator, so there is no input a caller could substitute a token into.
   assert(
-    /getPublicDisclosureFromCookie[\s\S]*?\.handler\(/.test(fns) &&
-      !/getPublicDisclosureFromCookie[\s\S]{0,200}\.validator\(/.test(fns),
-    "the cookie-backed server function accepts no caller-supplied token",
+    fns.includes("navigationId"),
+    "the cookie-backed server function is told which share the tab means",
   );
   // The throttle and the single indistinguishable failure payload are the
   // properties the transport change must not have moved.
@@ -195,7 +264,7 @@ console.log("\nGROUP 5 -- the wiring cannot be quietly undone");
   );
   assert(
     (fns.match(/status: "unavailable"/g) ?? []).length >= 2,
-    "an absent or malformed cookie fails into the same payload as a bad token",
+    "an absent, malformed or crossed cookie fails into the same payload as a bad token",
   );
 }
 
