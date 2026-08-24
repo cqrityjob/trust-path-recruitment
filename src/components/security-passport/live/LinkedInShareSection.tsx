@@ -23,6 +23,7 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { SocialCardModel } from "@/lib/security-passport/social";
 import { buildSocialSvg, svgToPngBlob } from "@/lib/security-passport/social-export";
 import { shareFormat } from "@/lib/security-passport/design/trust-system";
+import { formatJurisdiction } from "@/lib/security-passport/format";
 import { SocialFrame } from "../social/SocialFrame";
 
 export function LinkedInShareSection({
@@ -51,7 +52,7 @@ export function LinkedInShareSection({
         lang,
         {
           brand: pt("card.brand"),
-          professionLine: `${joinTitles(model.titles, lang, pt("identity.none"))} · ${model.jurisdictionCode}`,
+          professionLine: `${joinTitles(model.titles, lang, pt("identity.none"))} · ${formatJurisdiction(model.jurisdictionCode, lang)}`,
           verifiedLabel: pt("assertion.verified"),
           yearsLabel: pt("recognition.years"),
           verifyAtSource: pt("card.verifyAtSource"),

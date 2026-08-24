@@ -29,7 +29,7 @@ import {
 import { Ban, Clock, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatExpiry, formatNameList } from "@/lib/security-passport/format";
+import { formatExpiry, formatJurisdiction, formatNameList } from "@/lib/security-passport/format";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
 import { AssertionChip } from "./AssertionChip";
@@ -76,8 +76,7 @@ export function PassportCard({
   // One derivation, one renderer. The card never decides what somebody may
   // be called; it prints what the engine derived from their verified claims.
   const profession = professionLine(card.identity, lang, pt("identity.none"));
-  const jurisdiction =
-    card.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : card.jurisdictionCode;
+  const jurisdiction = formatJurisdiction(card.jurisdictionCode, lang);
 
   return (
     <article

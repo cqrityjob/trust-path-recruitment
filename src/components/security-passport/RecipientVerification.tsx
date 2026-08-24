@@ -24,7 +24,7 @@ import { professionLine } from "@/lib/security-passport/identity/presentation";
 import { ShieldCheck, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDuration } from "@/lib/security-passport/format";
+import { formatDuration, formatJurisdiction } from "@/lib/security-passport/format";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { DisclosurePayload } from "@/lib/security-passport/disclosure";
 import type { PassportCardModel } from "@/lib/security-passport/card";
@@ -51,8 +51,7 @@ export function DisclosurePayloadView({
   // `buildDisclosurePayload` already stripped self-declared titles; this
   // renders the same derivation the holder saw, in the reader's language.
   const profession = professionLine(payload.identity, lang, pt("identity.none"));
-  const jurisdiction =
-    payload.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : payload.jurisdictionCode;
+  const jurisdiction = formatJurisdiction(payload.jurisdictionCode, lang);
 
   return (
     <div className={cn("space-y-4", className)}>

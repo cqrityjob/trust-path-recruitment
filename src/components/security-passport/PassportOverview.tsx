@@ -28,6 +28,7 @@ import { AssertionLegend } from "./AssertionChip";
 import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
 import { ExperienceTimeline } from "./ExperienceTimeline";
+import { formatJurisdiction } from "@/lib/security-passport/format";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
 import { RecognitionPanel } from "./RecognitionBadges";
@@ -119,8 +120,7 @@ export function PassportOverview({
           {pt("overview.title")}
         </h2>
         <p className="mt-2 text-sm text-foreground">
-          {holder.displayName} · {profession} ·{" "}
-          {holder.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : holder.jurisdictionCode}
+          {holder.displayName} · {profession} · {formatJurisdiction(holder.jurisdictionCode, lang)}
         </p>
 
         {/* The holder's own view derives with derivePreviewIdentity, which
