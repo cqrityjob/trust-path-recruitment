@@ -31,7 +31,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
-import { headlineTitles, professionLine } from "../src/lib/security-passport/identity/presentation";
+import {
+  eligibilityTitles,
+  headlineTitles,
+  professionLine,
+  toPublicEligibility,
+} from "../src/lib/security-passport/identity/presentation";
 import { formatJurisdiction } from "../src/lib/security-passport/format";
 import { passportCopy } from "../src/lib/security-passport/i18n";
 import { ONBOARDING_STEPS } from "../src/lib/security-passport/onboarding";
@@ -154,6 +159,128 @@ console.log("\nPERSONA 1 -- Sweden");
   assert(
     h.id.localEligibility.length === 1,
     "1C personnel approval IS derived as current local eligibility",
+  );
+}
+
+/* -- GAP 1: training and current eligibility are SEPARATE facts ------ */
+
+// VU1 + VU2 only -> training shown, NO current eligibility.
+{
+  const h = headlineFor([claim("VU1"), claim("VU2")]);
+  assert(
+    eligibilityTitles(h.id).length === 0,
+    "1B-elig VU1+VU2 alone produces NO current eligibility line",
+  );
+  assert(
+    /Training|utbildning/i.test(h.en + h.sv),
+    "1B-elig and the training is still shown, as training",
+  );
+}
+
+// VU1 + VU2 + verified personnel approval -> BOTH, separately, no title.
+{
+  const claims = [claim("VU1"), claim("VU2"), claim("SE_PERSONNEL_APPROVAL")];
+  const h = headlineFor(claims);
+  const elig = eligibilityTitles(h.id);
+
+  assert(elig.length === 1, "1C-elig a verified personnel approval DOES produce an eligibility");
+  assert(
+    elig[0].nameEn === "Personnel approval checked",
+    "1C-elig and it is named as a CHECK, not as a title",
+  );
+  assert(
+    /Training|utbildning/i.test(h.en + h.sv),
+    "1C-elig the headline still shows the TRAINING, separately",
+  );
+  assert(
+    h.id.activeTitles.length === 0,
+    "1C-elig and no appointment, licence or active title is invented",
+  );
+  assert(
+    !APPOINTMENT_WORDS.some((w) => elig.some((e) => e.nameEn === w || e.nameLocal === w)),
+    "1C-elig the eligibility line never carries an appointment word",
+  );
+  const pub = toPublicEligibility(h.id);
+  for (const key of [
+    "expiresOn",
+    "sourceClaimIds",
+    "scopeRestriction",
+    "evidence",
+    "selfDeclared",
+  ]) {
+    assert(
+      pub.every((t) => !(key in t)),
+      "1C-elig public eligibility carries no '" + key + "'",
+    );
+  }
+}
+
+// A dead approval must never read as current eligibility.
+for (const st of ["expired", "revoked", "disputed", "superseded", "draft"] as LifecycleState[]) {
+  const h = headlineFor([
+    claim("VU1"),
+    claim("VU2"),
+    claim("SE_PERSONNEL_APPROVAL", { lifecycle: st }),
+  ]);
+  assert(
+    eligibilityTitles(h.id).length === 0,
+    "1C-elig a '" + st + "' approval shows NO current eligibility",
+  );
+}
+{
+  const h = headlineFor([
+    claim("VU1"),
+    claim("VU2"),
+    claim("SE_PERSONNEL_APPROVAL", { validUntil: "2026-01-01" }),
+  ]);
+  assert(
+    eligibilityTitles(h.id).length === 0,
+    "1C-elig an approval that simply ran out shows NO current eligibility",
+  );
+}
+{
+  const h = headlineFor([
+    claim("VU1"),
+    claim("VU2"),
+    claim("SE_PERSONNEL_APPROVAL", { assertion: "self_declared" }),
+  ]);
+  assert(
+    eligibilityTitles(h.id).length === 0,
+    "1C-elig a self-declared approval is NOT current eligibility to a recipient",
+  );
+}
+
+// The eligibility line must actually be rendered, on the surfaces that may.
+{
+  const RENDERS = [
+    "src/components/security-passport/PassportOverview.tsx",
+    "src/components/security-passport/PassportCard.tsx",
+    "src/components/security-passport/RecipientVerification.tsx",
+    "src/components/security-passport/live/RecipientPassportCard.tsx",
+  ];
+  for (const rel of RENDERS) {
+    // `<EligibilityLine`, not merely the import: deleting the JSX and leaving
+    // the import behind is exactly the regression an includes() check misses.
+    assert(
+      /<EligibilityLine[\s/>]/.test(readFileSync(join(ROOT, rel), "utf8")),
+      rel + " renders the eligibility line",
+    );
+  }
+  assert(
+    readFileSync(join(ROOT, "src/routes/p.$token.tsx"), "utf8").includes(
+      'pt("identity.eligibility")',
+    ),
+    "the public token page renders the eligibility row",
+  );
+  const social = readFileSync(join(ROOT, "src/lib/security-passport/social.ts"), "utf8");
+  const socialCode = social.replace(/\/\/[^\n]*/g, "");
+  assert(
+    !/eligibility/i.test(socialCode),
+    "the social image publishes NO eligibility outside its explanatory comment",
+  );
+  assert(
+    /ELIGIBILITY IS DELIBERATELY ABSENT/.test(social),
+    "and records that omission as a decision rather than leaving it a gap",
   );
 }
 
@@ -287,6 +414,9 @@ const SURFACES = [
   "src/components/security-passport/social/SocialFrame.tsx",
   "src/components/security-passport/live/LinkedInShareSection.tsx",
   "src/lib/security-passport/share-image.ts",
+  // The public token page was missed on the first pass and carried its own
+  // copy of the ternary; it is in the list now so it cannot drift again.
+  "src/routes/p.$token.tsx",
 ];
 for (const rel of SURFACES) {
   const src = readFileSync(join(ROOT, rel), "utf8");
@@ -333,6 +463,66 @@ assert(
   ),
   "and so does the credential form's country field",
 );
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE WRITE PATH ACTUALLY REACHES THE SERVER
+   ══════════════════════════════════════════════════════════════════════ */
+console.log("\nWRITE PATH -- the save payload cannot desync from the schema");
+
+// The regression this defends is the one that made the product unusable:
+// `submit()` hand-copied ten named draft fields into the server call and
+// `authorisationScope` was not among them. The validator requires it as a
+// string, so EVERY save — every credential, every holder — failed schema
+// validation and surfaced as "Something went wrong. Please try again."
+//
+// Nothing caught it. The browser suite drives the fixture harness, which does
+// not use this route, and the guards are static. So the assertion is made
+// here, on the two files that have to agree.
+{
+  const route = readFileSync(
+    join(ROOT, "src/routes/_authenticated.passport.credentials.new.tsx"),
+    "utf8",
+  );
+  const domain = readFileSync(join(ROOT, "src/lib/security-passport/credentials.ts"), "utf8");
+  const server = readFileSync(
+    join(ROOT, "src/lib/security-passport/credentials.functions.ts"),
+    "utf8",
+  );
+
+  assert(
+    /doSave\(\{\s*data:\s*\{[^}]*\.\.\.draft/.test(route),
+    "the route SPREADS the draft into the save payload",
+  );
+
+  // Every field the draft carries must exist in the server's input schema.
+  // A field in one and not the other is the desync itself.
+  const draftBlock = domain.slice(
+    domain.indexOf("export interface CredentialDraft"),
+    domain.indexOf("export function emptyCredentialDraft"),
+  );
+  const draftFields = Array.from(draftBlock.matchAll(/readonly (\w+):/g)).map((m) => m[1]);
+  assert(draftFields.length >= 10, "the draft's fields were found to check");
+  for (const f of draftFields) {
+    assert(
+      new RegExp(`\\b${f}:\\s*z\\b`).test(server),
+      `the server input schema accepts draft field '${f}'`,
+    );
+  }
+
+  // And the route must not go back to enumerating them: a hand-copied list is
+  // how the field went missing, and it type-checks perfectly while doing it.
+  const submitBlock = route.slice(
+    route.indexOf("async function submit"),
+    route.indexOf("if (activate)"),
+  );
+  const enumerated = draftFields.filter((f) => new RegExp(`${f}:\\s*draft\\.`).test(submitBlock));
+  assert(
+    enumerated.length === 0,
+    "and does not re-enumerate draft fields by hand (found: " +
+      (enumerated.join(", ") || "none") +
+      ")",
+  );
+}
 
 /* ------------------------------------------------------------------ */
 console.log(`\n${checks} assertions, ${failures.length} failed`);
