@@ -2,13 +2,18 @@
 //
 // Run via `bun run employer-hire-continuity:check`.
 //
-// ── WHAT WAS BROKEN ────────────────────────────────────────────────────
+// ── WHAT THIS GUARDS, AND A CORRECTION ─────────────────────────────────
 //
-// "Markera som anställd" moved job_applications.status to 'hired' and stopped.
-// The person stayed a candidate forever, never appeared under Medarbetare, and
-// an employer who wanted them there re-typed their name into the employee form
-// -- producing a second record of one human being with no link to the
-// application, the assessment history or the Passport.
+// The continuity was already built: 20260903092000 added
+// scp_employment_from_application() and made set_application_status() call it
+// in the SAME transaction on a hire. I initially missed it and wrote a second
+// bridge, because I audited the local database -- which was two migrations
+// behind -- instead of the migration set. The duplicate is gone; this file
+// guards the real one.
+//
+// What was genuinely missing was smaller: nothing told the employer the person
+// had arrived under Medarbetare, or offered the way there, so the next move
+// was still to re-type the name into the employee form.
 //
 // ── WHAT MUST STAY TRUE ────────────────────────────────────────────────
 //
@@ -25,7 +30,7 @@
 // assessment history to another. Neither throws, and neither is visible in a
 // screenshot until the wrong report is open in front of the wrong person.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dictionaries } from "../src/i18n/dictionaries";
 
 const errors: string[] = [];
@@ -41,7 +46,7 @@ const stripComments = (src: string) =>
     .replace(/^\s*--.*$/gm, "")
     .replace(/^\s*\/\/.*$/gm, "");
 
-const MIGRATION = "supabase/migrations/20260909091000_jobs_hire_applicant_continuity.sql";
+const MIGRATION = "supabase/migrations/20260903092000_scp_hired_becomes_employee.sql";
 const APPLICATIONS = "src/lib/job-intelligence/applications.functions.ts";
 const CANDIDATE =
   "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx";
@@ -55,8 +60,16 @@ const CANDIDATE =
 
   expect(
     /scp_subject_identities/.test(sql),
-    `A: jobs_hire_applicant() no longer resolves through scp_subject_identities. ` +
-      `That table IS the canonical person; anything else is a second identity model.`,
+    `A: scp_employment_from_application() no longer resolves through ` +
+      `scp_subject_identities. That table IS the canonical person; anything ` +
+      `else is a second identity model.`,
+  );
+  // The reason I got this wrong once: a second bridge is easy to write and
+  // looks like progress. There must be exactly one.
+  expect(
+    !/jobs_hire_applicant/.test(sql),
+    `A: a second hire bridge has appeared. scp_employment_from_application() ` +
+      `is the one, and set_application_status() calls it in-transaction.`,
   );
   expect(
     /employees[\s\S]{0,200}subject_id/.test(sql),
@@ -79,29 +92,38 @@ const CANDIDATE =
 {
   const sql = stripComments(read(MIGRATION));
 
-  // The lookup handles the ordinary repeat.
+  // Reuse before create, so re-hiring a former employee reactivates their
+  // record and their history rather than forking it.
+  // Reuse before create: the resolver is asked first, and the row it returns
+  // is updated rather than a new one inserted. Re-hiring a former employee
+  // reactivates their record and their history instead of forking it.
   expect(
-    /SELECT e\.id INTO _employee[\s\S]{0,240}RETURN _employee;/.test(sql),
-    `B: jobs_hire_applicant() no longer returns an existing employment record ` +
-      `before inserting. Pressing the button twice would create two people.`,
-  );
-  // The index handles what the lookup cannot: two concurrent hires.
-  expect(
-    /CREATE UNIQUE INDEX[\s\S]{0,200}employees[\s\S]{0,120}\(employer_id, subject_id\)/.test(sql),
-    `B: the unique index on (employer_id, subject_id) is gone. The lookup alone ` +
-      `loses a race between two concurrent hires, and the duplicate it leaves ` +
-      `behind is a second record of one human being.`,
-  );
-  expect(
-    /WHERE subject_id IS NOT NULL/.test(sql),
-    `B: the index is no longer partial. subject_id is NULLable on purpose -- an ` +
-      `employer may add employees who have no account, and several of those ` +
-      `must stay legal.`,
+    /_employee := public\.scp_resolve_employment_for_assignment[\s\S]{0,400}IF _employee IS NOT NULL THEN[\s\S]{0,400}UPDATE public\.employees/.test(
+      sql,
+    ),
+    `B: the bridge no longer reuses the employment record the resolver finds, ` +
+      `so re-hiring a former employee would fork their history.`,
   );
   expect(
-    /ON CONFLICT[\s\S]{0,120}DO NOTHING/.test(sql),
-    `B: the insert no longer tolerates the race it is guarded against, so a ` +
-      `concurrent hire raises instead of returning the other transaction's row.`,
+    /employment_status\s*=\s*'active'/.test(sql),
+    `B: re-hiring no longer reactivates an inactive record, so a returning ` +
+      `employee would be hired into a record that still reads inactive.`,
+  );
+  // #51's unique index is what makes two concurrent hires impossible. It was
+  // added by an earlier migration, not this one, so the assertion looks for it
+  // across the migration set rather than in this file. (I created a duplicate
+  // of it before finding the original -- hence checking, rather than adding.)
+  const allMigrations = readdirSync(new URL("supabase/migrations", root))
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => read(`supabase/migrations/${f}`))
+    .join("\n");
+  expect(
+    /CREATE UNIQUE INDEX[\s\S]{0,160}employees[\s\S]{0,160}\(employer_id, subject_id\)/.test(
+      allMigrations,
+    ),
+    `B: nothing in the migration set makes (employer_id, subject_id) unique on ` +
+      `employees. Without it two concurrent hires each find nothing and each ` +
+      `insert, leaving two employment records for one human being.`,
   );
 }
 
@@ -113,24 +135,35 @@ const CANDIDATE =
   const sql = stripComments(read(MIGRATION));
 
   expect(
-    /_app\.status <> 'hired'/.test(sql),
-    `C: jobs_hire_applicant() no longer requires the application to be hired. ` +
-      `It could then manufacture an employee for somebody who was not hired.`,
+    /_new_status = 'hired'[\s\S]{0,200}scp_employment_from_application/.test(sql),
+    `C: set_application_status() no longer bridges a hire into the workforce, ` +
+      `so "Markera som anställd" would once again move a status and stop.`,
   );
   expect(
-    /employer_memberships[\s\S]{0,200}auth\.uid\(\)[\s\S]{0,120}'active'/.test(sql),
-    `C: the membership check is gone or no longer requires active membership.`,
+    /has_employer_role\(auth\.uid\(\), _app\.employer_id/.test(sql),
+    `C: the bridge no longer checks the caller's role in the organisation that ` +
+      `owns the application.`,
+  );
+
+  // In-transaction by construction: a plain PERFORM inside the status
+  // function, with no transaction control of its own. A hire that could
+  // half-apply would leave a person hired and invisible.
+  expect(
+    /PERFORM public\.scp_employment_from_application\(_application_id\);/.test(sql),
+    `C: the bridge is no longer a plain PERFORM inside set_application_status(). ` +
+      `Anything else can half-apply a hire.`,
   );
   expect(
-    /a\.employer_id = _employer_id/.test(sql),
-    `C: the application is no longer loaded scoped to the employer, so an ` +
-      `application id from another tenant could be hired.`,
+    !/\bCOMMIT\b/.test(sql),
+    `C: the migration commits mid-function, so the hire and the employment ` +
+      `record are no longer one atomic act.`,
   );
-  // set_application_status owns the lifecycle; this must not move a status.
+  // The migration ships its own self-check. If that goes, the next refactor of
+  // set_application_status() can quietly drop the bridge.
   expect(
-    !/UPDATE public\.job_applications/.test(sql),
-    `C: jobs_hire_applicant() writes to job_applications. set_application_status() ` +
-      `is the single authority on the recruitment lifecycle.`,
+    /SCP_HIRE_NOT_BRIDGED/.test(sql),
+    `C: the migration's own assertion that a hire still reaches the workforce ` +
+      `has been removed.`,
   );
   // A Passport belongs to its holder. Being employed is not consent.
   expect(
@@ -149,20 +182,33 @@ const CANDIDATE =
 // somebody else, which is the most serious thing in this file.
 
 {
-  const sql = stripComments(read(MIGRATION));
+  // The hire does not implement matching. It delegates to the resolver the
+  // assignment path already uses, so "do we already have this person on file"
+  // has one rule in the product rather than two that agree until they don't.
+  const hire = stripComments(read(MIGRATION));
   expect(
-    /_matches = 1/.test(sql),
-    `D: the email match no longer requires exactly one candidate row. Two ` +
-      `people sharing an address would bind one person's history to the other.`,
+    /scp_resolve_employment_for_assignment/.test(hire),
+    `D: the hire has grown its own matching rule instead of delegating to ` +
+      `scp_resolve_employment_for_assignment. Two rules for one question is how ` +
+      `they drift, and the drift attaches one person's history to another.`,
+  );
+
+  const resolver = stripComments(
+    read("supabase/migrations/20260829097000_scp_bind_known_employee_on_assign.sql"),
   );
   expect(
-    /subject_id IS NULL/.test(sql),
-    `D: the email match no longer restricts itself to unbound records, so it ` +
-      `could re-point an employment record that already belongs to someone.`,
+    /_matches <> 1/.test(resolver),
+    `D: the resolver no longer requires exactly one candidate row. Two people ` +
+      `sharing an address would bind one person's history to the other.`,
   );
   expect(
-    !/first_name[\s\S]{0,60}=[\s\S]{0,60}display_name|lower\(btrim\(e\.first_name\)\)/.test(sql),
-    `D: a name-based match has appeared. Names are not identifiers.`,
+    /subject_id IS NULL/.test(resolver),
+    `D: the resolver no longer restricts itself to unbound records, so it could ` +
+      `re-point an employment record that already belongs to someone.`,
+  );
+  expect(
+    !/first_name|display_name/.test(resolver),
+    `D: a name-based match has appeared in the resolver. Names are not identifiers.`,
   );
 }
 
@@ -175,39 +221,26 @@ const CANDIDATE =
   // explains why the failure is not rethrown, and measuring a window across
   // prose makes the assertion fail on correct code.
   const app = stripComments(read(APPLICATIONS));
+  // The surface must READ the result, never re-perform it: the bridge already
+  // ran inside set_application_status()'s transaction.
   expect(
-    /rpc\("jobs_hire_applicant"/.test(app),
-    `E: updateApplicationStatusAsEmployer no longer calls jobs_hire_applicant, ` +
-      `so hiring is back to moving a status and stopping.`,
+    /hired_from_application_id/.test(app),
+    `E: the surface no longer reads back which employment record the hire ` +
+      `produced, so it cannot offer the way to it.`,
   );
   expect(
-    /status === "hired"/.test(app),
-    `E: the bridge is no longer conditional on the hired transition.`,
+    !/rpc\("jobs_hire_applicant"|rpc\("scp_employment_from_application"/.test(app),
+    `E: the surface calls the hire bridge itself. set_application_status() ` +
+      `already did, in the same transaction -- a second call is a second path.`,
   );
   // A swallowed failure leaves an employer believing somebody is under
   // Medarbetare who is not.
-  // The flag has to be SET, not merely declared. Checking for the identifier
-  // passed while the assignment inside the error branch had been removed --
-  // which is exactly the silent-swallow this assertion exists to catch.
-  expect(
-    /hireErr\)[\s\S]{0,320}continuityFailed = true/.test(app),
-    `E: a failed workforce link no longer sets continuityFailed, so the employer ` +
-      `would believe the person is under Medarbetare when they are not.`,
-  );
-  expect(
-    /return \{[\s\S]{0,400}continuityFailed,/.test(app),
-    `E: continuityFailed is no longer returned to the surface that reports it.`,
-  );
 
   const page = read(CANDIDATE);
   expect(
     /hiredEmployeeId/.test(page) && /workforce\/\$personId/.test(page),
     `E: the candidate page no longer offers the way to the new employment ` +
       `record, which is what stops an employer re-typing the name.`,
-  );
-  expect(
-    /employer\.applications\.error\.hireContinuity/.test(page),
-    `E: the candidate page no longer surfaces a failed workforce link.`,
   );
 }
 
@@ -221,21 +254,10 @@ const CANDIDATE =
   for (const key of [
     "employer.candidate.decision.nowEmployee",
     "employer.candidate.decision.openEmployee",
-    "employer.applications.error.hireContinuity",
   ]) {
     if (!sv[key]) errors.push(`F: dictionaries.sv is missing "${key}".`);
     if (!en[key]) errors.push(`F: dictionaries.en is missing "${key}".`);
   }
-  // Retrying is the fix, so the message has to say so.
-  expect(
-    /igen/i.test(sv["employer.applications.error.hireContinuity"] ?? ""),
-    `F: the sv continuity failure does not tell the employer to try again, ` +
-      `which is the whole reason the action was made idempotent.`,
-  );
-  expect(
-    /again/i.test(en["employer.applications.error.hireContinuity"] ?? ""),
-    `F: the en continuity failure does not tell the employer to try again.`,
-  );
 }
 
 if (errors.length > 0) {

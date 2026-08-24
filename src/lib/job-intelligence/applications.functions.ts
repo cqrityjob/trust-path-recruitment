@@ -350,48 +350,36 @@ export const updateApplicationStatusAsEmployer = createServerFn({ method: "POST"
     const row = Array.isArray(result) ? result[0] : result;
     const status = row.new_status as ApplicationStatus;
 
-    // ── HIRED MEANS THE SAME PERSON CONTINUES ─────────────────────────
+    // ── HIRED ALREADY CONTINUES THE PERSON ────────────────────────────
     //
-    // Until now "Markera som anställd" moved a status and stopped, so the
-    // person stayed a candidate forever and an employer who wanted them under
-    // Medarbetare re-typed their name into the employee form -- a second
-    // record of one human being, with no link to the application, the
-    // assessment history or the Passport.
+    // set_application_status() calls scp_employment_from_application() in the
+    // SAME transaction when the status becomes 'hired' (migration
+    // 20260903092000). It resolves the canonical scp_subjects identity, reuses
+    // an existing employment record, binds a single unbound one by confirmed
+    // address, or creates one -- and if it cannot, the whole hire rolls back
+    // rather than half-happening.
     //
-    // jobs_hire_applicant() resolves the canonical scp_subjects identity the
-    // application already carries and links or creates the employment record
-    // against it. Two calls rather than one transaction, deliberately: the
-    // status change is the employer's decision and stands on its own, and the
-    // bridge is idempotent, so a failure here leaves something safe to retry
-    // rather than a half-applied hire.
+    // So there is nothing to call here, and calling anything would be a second
+    // path to one outcome. What this does is read back WHICH employment record
+    // the hire produced, through employees.hired_from_application_id, so the
+    // candidate page can offer the way there instead of leaving the employer
+    // to re-type the name.
     let employeeId: string | null = null;
-    let continuityFailed = false;
     if (status === "hired") {
-      const app = await loadApplication(ctx, data.applicationId);
-      const { data: id, error: hireErr } = await ctx.supabase.rpc("jobs_hire_applicant", {
-        _employer_id: app.employer_id,
-        _application_id: data.applicationId,
-      });
-      if (hireErr) {
-        // Not rethrown. The candidate IS hired -- that is recorded and true --
-        // and hiding that behind a failure of the workforce link would be the
-        // worse of the two wrong answers. The surface says what did and did
-        // not happen, and the action is safe to repeat.
-        console.error("[applications] hire continuity failed", hireErr.message);
-        continuityFailed = true;
-      } else {
-        employeeId = id ? String(id) : null;
-      }
+      const { data: emp } = await ctx.supabase
+        .from("employees")
+        .select("id")
+        .eq("hired_from_application_id", data.applicationId)
+        .maybeSingle();
+      employeeId = emp?.id ? String(emp.id) : null;
     }
 
     return {
       ok: true,
       previousStatus: row.previous_status as ApplicationStatus,
       status,
-      /** The employment record this hire linked or created, when it did. */
+      /** The employment record the hire linked or created, when it did. */
       employeeId,
-      /** Hired, but not yet visible under Medarbetare. Retrying is safe. */
-      continuityFailed,
     };
   });
 

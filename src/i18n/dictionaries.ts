@@ -1627,8 +1627,6 @@ export const dictionaries = {
     "employer.applications.action.downloadCv": "Ladda ner CV",
     "employer.applications.error.load": "Kunde inte hämta ansökningar.",
     "employer.applications.error.statusUpdate": "Kunde inte uppdatera ansökans status.",
-    "employer.applications.error.hireContinuity":
-      "Kandidaten är markerad som anställd, men kunde inte läggas till bland medarbetarna. Försök igen — åtgärden skapar inga dubbletter.",
     "employer.applications.error.cvDownload": "Kunde inte hämta CV.",
 
     // Candidate 360 — the application opened as the person who made it.
@@ -5084,8 +5082,6 @@ export const dictionaries = {
     "employer.applications.action.downloadCv": "Download CV",
     "employer.applications.error.load": "Could not load applications.",
     "employer.applications.error.statusUpdate": "Could not update the application status.",
-    "employer.applications.error.hireContinuity":
-      "The candidate is marked as hired, but could not be added to your employees. Try again — the action does not create duplicates.",
     "employer.applications.error.cvDownload": "Could not retrieve the CV.",
 
     // Candidate 360 — the application opened as the person who made it.

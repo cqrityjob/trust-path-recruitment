@@ -134,10 +134,6 @@ function Candidate360({
     onSuccess: (r) => {
       setActionError(null);
       setHiredEmployeeId(r.employeeId ?? null);
-      // Hired, but the workforce link did not land. Saying so is the point:
-      // the alternative is a person the employer believes is under Medarbetare
-      // and is not. The action is idempotent, so pressing it again is the fix.
-      if (r.continuityFailed) setActionError(t("employer.applications.error.hireContinuity"));
       qc.invalidateQueries({ queryKey: candidateKey });
       // The list this page was opened from shows the same status.
       qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
