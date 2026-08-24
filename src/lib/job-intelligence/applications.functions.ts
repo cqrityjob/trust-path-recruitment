@@ -374,8 +374,30 @@ export const updateApplicationStatusAsEmployer = createServerFn({ method: "POST"
       employeeId = emp?.id ? String(emp.id) : null;
     }
 
+    // ── TELLING THE CANDIDATE ─────────────────────────────────────────
+    //
+    // Three transitions, and deliberately not four. 'reviewing' means somebody
+    // at the employer opened the application: it tells the candidate nothing
+    // they can act on, arrives at whatever hour a recruiter happened to click,
+    // and teaches people to ignore mail from us. jase_notification_payload()
+    // returns no row for it, so it cannot be sent even by a caller that asks.
+    //
+    // Deduplication is the event row, not this code: one transition is one
+    // event, and the payload function refuses an event already notified. So a
+    // double-submitted form cannot send twice even if it reaches here twice.
+    //
+    // A send failure is not rethrown. The status change is the employer's
+    // decision and it happened; failing the whole action because an address
+    // bounced would be the worse of the two wrong answers. The attempt is
+    // recorded, which is what makes it retryable.
+    let notified: "sent" | "skipped" | "failed" | "not_applicable" = "not_applicable";
+    if (status === "interview" || status === "rejected" || status === "hired") {
+      notified = await notifyCandidate(ctx, data.applicationId);
+    }
+
     return {
       ok: true,
+      notified,
       previousStatus: row.previous_status as ApplicationStatus,
       status,
       /** The employment record the hire linked or created, when it did. */
@@ -541,3 +563,61 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
     }
     return { url: signed.signedUrl, expiresInSeconds: 300 };
   });
+
+/** Sends the one message this transition owes the candidate, and records it.
+ *
+ *  Returns what happened rather than throwing: the caller has already changed
+ *  the status, and that stands whatever the mail provider does.
+ *
+ *  The recipient's address is read by jase_notification_payload() on the
+ *  server and used here. It is never returned to the browser -- the caller
+ *  gets "sent" or "failed", and nothing that identifies who was written to. */
+async function notifyCandidate(
+  ctx: Ctx,
+  applicationId: string,
+): Promise<"sent" | "skipped" | "failed" | "not_applicable"> {
+  // The newest employer event for this application is the transition just
+  // made. set_application_status() writes exactly one.
+  const { data: ev } = await ctx.supabase
+    .from("job_application_status_events")
+    .select("id")
+    .eq("application_id", applicationId)
+    .eq("actor_role", "employer")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ev?.id) return "not_applicable";
+
+  const { data: rows } = await ctx.supabase.rpc("jase_notification_payload", {
+    _event_id: ev.id,
+  });
+  const payload = Array.isArray(rows) ? rows[0] : rows;
+  // No row means: an internal transition, already notified, no address, or a
+  // caller outside the organisation. All of them mean "send nothing".
+  if (!payload) return "not_applicable";
+
+  const { sendApplicationStatusEmail } =
+    await import("@/lib/email/send-application-status-email.server");
+  const result = await sendApplicationStatusEmail({
+    recipientEmail: String(payload.recipient_email),
+    language: String(payload.language).toLowerCase().startsWith("en") ? "en" : "sv",
+    status: payload.new_status as "interview" | "rejected" | "hired",
+    employerName: String(payload.employer_name ?? ""),
+    jobTitle: String(payload.job_title ?? ""),
+    siteOrigin: process.env.SITE_ORIGIN ?? "https://cqrityjob.com",
+  });
+
+  if ("skipped" in result && result.skipped) {
+    // No provider configured. Deliberately NOT recorded as an attempt: the
+    // message is still owed, and counting this would burn the retry budget on
+    // an environment that was never going to send anything.
+    return "skipped";
+  }
+
+  await ctx.supabase.rpc("jase_record_notification", {
+    _event_id: ev.id,
+    _ok: result.ok,
+    _error: result.ok ? null : ((result as { error?: string }).error ?? "UNKNOWN"),
+  });
+  return result.ok ? "sent" : "failed";
+}

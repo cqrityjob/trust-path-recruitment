@@ -129,3 +129,76 @@ COMMENT ON FUNCTION public.jase_record_notification(uuid, boolean, text) IS
   'Records whether the candidate notification for one status transition was '
   'delivered. Idempotent: a delivered event stays delivered, so a racing retry '
   'cannot overwrite success with a failure.';
+
+-- ---------------------------------------------------------------------------
+-- What to send, without disclosing it to the browser
+-- ---------------------------------------------------------------------------
+--
+-- The message needs the candidate's address, which no employer surface may
+-- read: the whole disclosure model rests on an employer seeing a name on an
+-- application and nothing more until the person chooses otherwise.
+--
+-- So this returns the payload to the SERVER, which renders and sends. The
+-- address is never part of a response the client receives -- the server
+-- function that calls this returns only whether a message went out.
+--
+-- Scoped to the three candidate-facing transitions. 'reviewing' is internal:
+-- it means somebody opened the application, which tells the candidate nothing
+-- they can act on, so it returns no row and no email can be sent for it even
+-- by a caller that asks.
+
+CREATE OR REPLACE FUNCTION public.jase_notification_payload(_event_id uuid)
+RETURNS TABLE(
+  event_id        uuid,
+  new_status      text,
+  recipient_email text,
+  employer_name   text,
+  job_title       text,
+  language        text)
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE _employer uuid;
+BEGIN
+  SELECT a.employer_id INTO _employer
+    FROM public.job_application_status_events e
+    JOIN public.job_applications a ON a.id = e.application_id
+   WHERE e.id = _event_id;
+  IF _employer IS NULL THEN RETURN; END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.employer_memberships m
+     WHERE m.user_id = auth.uid() AND m.employer_id = _employer AND m.status = 'active'
+  ) THEN RETURN; END IF;
+
+  RETURN QUERY
+  SELECT e.id,
+         e.new_status,
+         u.email::text,
+         emp.name,
+         coalesce(j.title_sv, j.title_en),
+         -- The candidate's own language preference, not the employer's. A
+         -- rejection is not the moment to make somebody read a second language.
+         coalesce(nullif(p.locale, ''), 'sv')
+    FROM public.job_application_status_events e
+    JOIN public.job_applications a  ON a.id = e.application_id
+    JOIN public.employers        emp ON emp.id = a.employer_id
+    LEFT JOIN public.jobs        j   ON j.id = a.job_id
+    JOIN auth.users              u   ON u.id = a.applicant_user_id
+    LEFT JOIN public.profiles    p   ON p.id = a.applicant_user_id
+   WHERE e.id = _event_id
+     AND e.notified_at IS NULL
+     AND e.actor_role = 'employer'
+     AND e.new_status IN ('interview', 'rejected', 'hired')
+     AND u.email IS NOT NULL;
+END; $function$;
+
+REVOKE ALL ON FUNCTION public.jase_notification_payload(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.jase_notification_payload(uuid) TO authenticated;
+
+COMMENT ON FUNCTION public.jase_notification_payload(uuid) IS
+  'What one candidate notification needs, for the server that sends it. '
+  'Returns no row for an internal transition, an already-notified event, or a '
+  'caller outside the organisation. The address it returns must never be '
+  'included in a response to a browser.';
