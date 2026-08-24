@@ -1584,6 +1584,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# The UK title-rule contract. Migration 3 was rewritten by Lovable on its way
+# to the hosted project, dropping six local_eligibility rules; the correction
+# 20260907092500 restores the canonical 19. This suite asserts the shape of
+# that contract and proves, by installing the generated set, that it actually
+# fails against the defect.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport UK title rule contract assertions"
+set +e
+SPUKT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/security_passport_uk_title_rules_test.sql 2>&1)"
+SPUKT_RC=$?
+set -e
+
+echo "$SPUKT_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPUKT_PASSED="$(echo "$SPUKT_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPUKT_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK title rule contract suite exited with code ${SPUKT_RC}." >&2
+  echo "$SPUKT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport UK title rule contract"
+elif [ "$SPUKT_PASSED" -lt 13 ]; then
+  echo "FAIL: expected at least 13 UK title rule assertions, only ${SPUKT_PASSED} ran." >&2
+  suite_failed "Security Passport UK title rule contract (assertion shortfall: floor 13)"
+fi
+
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
 set +e
 SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
@@ -1750,6 +1777,26 @@ if [ "$SPRCB_RC" -ne 0 ]; then
   echo "FAIL: the correction path is broken BEFORE any rollback ran (code ${SPRCB_RC})." >&2
   echo "$SPRCB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Security Passport rollback correction (before)"
+fi
+
+# The UK title-rule correction is versioned between migrations 3 and 4, so in
+# reverse order it unwinds before them. It restores the pre-correction hosted
+# rule set on purpose: a rollback puts back what was there, not what should
+# have been.
+echo "==> Verifying the UK title rule correction rollback"
+set +e
+SPUKTRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260907092500_sp_uk_title_rules_correction_rollback.sql 2>&1)"
+SPUKTRB_RC=$?
+set -e
+
+if [ "$SPUKTRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK title rule correction rollback exited with code ${SPUKTRB_RC}." >&2
+  echo "$SPUKTRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "UK title rule correction rollback"
+else
+  echo "    ok  the UK title rule correction rolls back to the pre-correction set"
 fi
 
 echo "==> Verifying the disclosure scope boundary rollback"
@@ -2036,6 +2083,7 @@ echo "              ${STDR_PASSED} standard recruitment availability assertions,
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"
+echo "              ${SPUKT_PASSED} UK title rule assertions,"
 echo "              ${SPAE_PASSED} Dubai market pack assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
