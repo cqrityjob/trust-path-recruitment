@@ -44,6 +44,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CircleDashed, ExternalLink, Users } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { JobsPage } from "@/components/academy/AcademyWorkspace";
 import { translateJobServerError } from "@/components/employer/EmployerJobForm";
@@ -53,7 +54,7 @@ import {
   getEmployerJob,
   submitEmployerJob,
   closeEmployerJob,
-  archiveEmployerJob,
+  deleteEmployerJob,
   restoreEmployerJob,
   duplicateEmployerJob,
 } from "@/lib/job-intelligence/employer-jobs.functions";
@@ -131,11 +132,12 @@ function JobHub({
   const listApplicationsFn = useServerFn(listApplicationsForEmployer);
   const submitFn = useServerFn(submitEmployerJob);
   const closeFn = useServerFn(closeEmployerJob);
-  const archiveFn = useServerFn(archiveEmployerJob);
+  const deleteFn = useServerFn(deleteEmployerJob);
   const restoreFn = useServerFn(restoreEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
 
   const jobQuery = useQuery({
     queryKey: ["employer", employerId, "job", jobId],
@@ -175,8 +177,8 @@ function JobHub({
     mutationFn: () => closeFn({ data: { employerId, jobId } }),
     ...mutationOptions,
   });
-  const archiveMutation = useMutation({
-    mutationFn: () => archiveFn({ data: { employerId, jobId } }),
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteFn({ data: { employerId, jobId } }),
     ...mutationOptions,
   });
   const restoreMutation = useMutation({
@@ -236,12 +238,15 @@ function JobHub({
   const editable = status === "draft" || status === "rejected";
   const submittable = editable;
   const closeable = status === "published";
-  const archivable = status === "draft" || status === "rejected";
+  // Same rule as the list: never published means it can go, anything that was
+  // ever live gets closed instead. See jobs.index.tsx for why published_at and
+  // not status decides.
+  const deletable = job !== null && job.status !== "archived" && job.published_at === null;
   const restorable = status === "archived";
   const busy =
     submitMutation.isPending ||
     closeMutation.isPending ||
-    archiveMutation.isPending ||
+    deleteMutation.isPending ||
     restoreMutation.isPending ||
     dupMutation.isPending;
 
@@ -320,10 +325,8 @@ function JobHub({
             type="button"
             disabled={busy}
             onClick={() => {
-              if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
-                setActionError(null);
-                dupMutation.mutate();
-              }
+              setActionError(null);
+              setPending({ kind: "duplicate", id: jobId });
             }}
             className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
@@ -342,30 +345,65 @@ function JobHub({
               {t("employer.jobs.list.restore")}
             </button>
           )}
-          {archivable && (
+          {deletable && (
             <button
               type="button"
               disabled={busy}
               onClick={() => {
-                if (window.confirm(t("employer.jobs.list.confirmArchive"))) {
-                  setActionError(null);
-                  archiveMutation.mutate();
-                }
+                setActionError(null);
+                setPending({ kind: "delete", id: jobId });
               }}
               className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              {t("employer.jobs.list.archive")}
+              {t("employer.jobs.list.delete")}
             </button>
+          )}
+          {pending && (
+            <ConfirmAction
+              open
+              onOpenChange={(o) => {
+                if (!o) setPending(null);
+              }}
+              tone={pending.kind === "delete" ? "destructive" : "default"}
+              busy={busy}
+              title={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.confirm.delete.title"
+                  : pending.kind === "close"
+                    ? "employer.jobs.confirm.close.title"
+                    : "employer.jobs.confirm.duplicate.title",
+              )}
+              consequence={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.confirm.delete.body"
+                  : pending.kind === "close"
+                    ? "employer.jobs.confirm.close.body"
+                    : "employer.jobs.confirm.duplicate.body",
+              )}
+              confirmLabel={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.list.delete"
+                  : pending.kind === "close"
+                    ? "employer.jobs.list.close"
+                    : "employer.jobs.list.duplicate",
+              )}
+              cancelLabel={t("employer.workforce.form.cancel")}
+              onConfirm={() => {
+                const { kind } = pending;
+                setPending(null);
+                if (kind === "delete") deleteMutation.mutate();
+                else if (kind === "close") closeMutation.mutate();
+                else dupMutation.mutate();
+              }}
+            />
           )}
           {closeable && (
             <button
               type="button"
               disabled={busy}
               onClick={() => {
-                if (window.confirm(t("employer.jobs.list.confirmClose"))) {
-                  setActionError(null);
-                  closeMutation.mutate();
-                }
+                setActionError(null);
+                setPending({ kind: "close", id: jobId });
               }}
               className="inline-flex min-h-[36px] items-center rounded-md border border-destructive/60 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >

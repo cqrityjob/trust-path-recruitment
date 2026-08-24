@@ -988,16 +988,34 @@ export const dictionaries = {
     "employer.jobs.list.view": "Öppna",
     "employer.jobs.list.searchLabel": "Sök på titel eller id",
     "employer.jobs.list.filterActive": "Aktiva",
-    "employer.jobs.list.filterArchived": "Arkiverade",
+    "employer.jobs.list.filterArchived": "Avslutade annonser",
     "employer.jobs.list.archive": "Arkivera",
     "employer.jobs.list.restore": "Återställ",
     "employer.jobs.list.confirmArchive":
       "Arkivera annonsen? Den försvinner från listan men raderas inte, och kan återställas som utkast.",
     "employer.jobs.list.untitled": "(utan titel)",
-    "employer.jobs.list.emptyArchived": "Inga arkiverade annonser.",
+    "employer.jobs.list.emptyArchived": "Inga avslutade annonser.",
     "employer.jobs.list.emptySearch": "Ingen annons matchar sökningen.",
     "employer.jobs.list.duplicate": "Duplicera",
-    "employer.jobs.list.close": "Stäng",
+    "employer.jobs.list.close": "Avsluta annons",
+    "employer.jobs.list.delete": "Ta bort annons",
+    "employer.jobs.confirm.delete.title": "Ta bort annonsen?",
+    "employer.jobs.confirm.delete.body":
+      "Annonsen tas bort permanent. Den har aldrig varit publicerad, så inga ansökningar eller historik påverkas.",
+    "employer.jobs.confirm.close.title": "Avsluta annonsen?",
+    "employer.jobs.confirm.close.body":
+      "Annonsen stängs för nya ansökningar och flyttas till Avslutade annonser. Befintliga ansökningar och historik sparas.",
+    "employer.jobs.confirm.duplicate.title": "Duplicera annonsen?",
+    "employer.jobs.confirm.duplicate.body":
+      "En kopia skapas som nytt utkast. Originalet påverkas inte.",
+    "employer.jobs.error.hasApplications":
+      "Annonsen har ansökningar och kan inte tas bort. Avsluta den i stället — då sparas ansökningarna.",
+    "employer.jobs.error.notDeletable":
+      "Bara ett utkast som aldrig publicerats kan tas bort. Avsluta annonsen i stället.",
+    "employer.jobs.error.hasAssignments":
+      "Tester har tilldelats från den här annonsen och kan inte tas bort. Avsluta annonsen i stället.",
+    "employer.jobs.error.notAuthorised":
+      "Du har inte behörighet att göra det här i den här organisationen.",
     "employer.jobs.list.updated": "Uppdaterad",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Går ut",
@@ -4405,16 +4423,34 @@ export const dictionaries = {
     "employer.jobs.list.view": "Open",
     "employer.jobs.list.searchLabel": "Search by title or id",
     "employer.jobs.list.filterActive": "Active",
-    "employer.jobs.list.filterArchived": "Archived",
+    "employer.jobs.list.filterArchived": "Closed jobs",
     "employer.jobs.list.archive": "Archive",
     "employer.jobs.list.restore": "Restore",
     "employer.jobs.list.confirmArchive":
       "Archive this advertisement? It leaves the list but is not deleted, and can be restored as a draft.",
     "employer.jobs.list.untitled": "(untitled)",
-    "employer.jobs.list.emptyArchived": "No archived advertisements.",
+    "employer.jobs.list.emptyArchived": "No closed job ads.",
     "employer.jobs.list.emptySearch": "No advertisement matches that search.",
     "employer.jobs.list.duplicate": "Duplicate",
-    "employer.jobs.list.close": "Close",
+    "employer.jobs.list.close": "Close job",
+    "employer.jobs.list.delete": "Delete job",
+    "employer.jobs.confirm.delete.title": "Delete this job ad?",
+    "employer.jobs.confirm.delete.body":
+      "The ad is deleted permanently. It was never published, so no applications or history are affected.",
+    "employer.jobs.confirm.close.title": "Close this job ad?",
+    "employer.jobs.confirm.close.body":
+      "The ad stops accepting new applications and moves to Closed jobs. Existing applications and history are kept.",
+    "employer.jobs.confirm.duplicate.title": "Duplicate this job ad?",
+    "employer.jobs.confirm.duplicate.body":
+      "A copy is created as a new draft. The original is unchanged.",
+    "employer.jobs.error.hasApplications":
+      "This ad has applications and cannot be deleted. Close it instead — that keeps the applications.",
+    "employer.jobs.error.notDeletable":
+      "Only a draft that was never published can be deleted. Close the ad instead.",
+    "employer.jobs.error.hasAssignments":
+      "Tests were assigned from this ad, so it cannot be deleted. Close it instead.",
+    "employer.jobs.error.notAuthorised":
+      "You do not have permission to do that in this organisation.",
     "employer.jobs.list.updated": "Updated",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Expires",

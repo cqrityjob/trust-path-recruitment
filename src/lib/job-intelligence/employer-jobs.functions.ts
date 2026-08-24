@@ -591,57 +591,17 @@ const archiveSchema = z.object({
   jobId: z.string().uuid(),
 });
 
-export const archiveEmployerJob = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => archiveSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const ctx = context as Ctx;
-    await assertActiveMembership(ctx, data.employerId);
+// archiveEmployerJob is gone. It set status='archived' -- exactly what
+// closeEmployerJob sets -- so the interface offered "Stäng" and "Arkivera" as
+// two buttons with two confirmations and one outcome, and a customer pressed
+// one and went looking for where the advertisement had gone. The real
+// distinction it was standing in for is now honest: a never-published draft is
+// deleted (deleteEmployerJob, guarded in the database), and anything that was
+// ever live is closed (closeEmployerJob), which keeps its applications.
+//
+// Nothing called it once the buttons were removed, and leaving an unused
+// second path to the same state is how the two drift back apart.
 
-    const { data: before, error: bErr } = await ctx.supabase
-      .from("jobs")
-      .select("*")
-      .eq("id", data.jobId)
-      .eq("employer_id", data.employerId)
-      .maybeSingle();
-    if (bErr) throw new Error("LOAD_JOB_FAILED");
-    if (!before) throw new Error("JOB_NOT_FOUND");
-
-    // pending_review is deliberately absent: it belongs to a moderator until
-    // they are done with it. The database enforces this too — this check only
-    // exists so the message is specific instead of a policy silently matching
-    // zero rows.
-    if (!["draft", "rejected", "published"].includes(before.status as string)) {
-      throw new Error("JOB_NOT_ARCHIVABLE");
-    }
-
-    const { error: uErr } = await ctx.supabase
-      .from("jobs")
-      .update({ status: "archived", updated_at: new Date().toISOString() })
-      .eq("id", data.jobId)
-      .eq("employer_id", data.employerId);
-    if (uErr) throw sanitizeJobWriteError(uErr, "archiveEmployerJob update", "ARCHIVE_JOB_FAILED");
-
-    await writeAudit({
-      jobId: data.jobId,
-      slugSnapshot: before.slug,
-      actorId: ctx.userId,
-      action: "archived",
-      before,
-      after: { ...before, status: "archived" },
-    });
-    return { id: data.jobId, status: "archived" as const };
-  });
-
-// -------------------- DELETE (never-published draft only) --------------------
-
-/** Discarding a draft, which is the only advertisement that may actually go.
- *
- *  The work is all in jobs_delete_draft(): job_applications cascades from
- *  jobs, so "delete" without a guard is "delete this and everyone who applied
- *  to it". The function refuses anything that was ever published, has an
- *  application, an assignment or an invitation, and this wrapper does not
- *  re-implement any of that -- it would be a second copy of a safety rule. */
 export const deleteEmployerJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => archiveSchema.parse(d))

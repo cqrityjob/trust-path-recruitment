@@ -506,6 +506,14 @@ export const PUBLICATION_MODEL: PublicationModel = "direct";
 // -----------------------------------------------------------------------------
 
 export const SERVER_ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
+  // The lifecycle refusals. jobs_delete_draft() names the rule that stopped
+  // it, and each one has a different thing for the employer to do next --
+  // which is the whole reason the function raises four codes instead of one.
+  JOB_HAS_APPLICATIONS: "employer.jobs.error.hasApplications",
+  JOB_HAS_ASSIGNMENTS: "employer.jobs.error.hasAssignments",
+  JOB_HAS_INVITATIONS: "employer.jobs.error.hasAssignments",
+  JOB_NOT_DELETABLE: "employer.jobs.error.notDeletable",
+  JOB_NOT_AUTHORISED: "employer.jobs.error.notAuthorised",
   ACCESS_NOT_AVAILABLE: "employer.jobs.form.error.accessNotAvailable",
   LOAD_JOBS_FAILED: "employer.jobs.form.error.loadJobsFailed",
   LOAD_JOB_FAILED: "employer.jobs.form.error.loadJobFailed",

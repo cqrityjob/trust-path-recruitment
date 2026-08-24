@@ -47,6 +47,7 @@
     "employer-journey:check": "bun run scripts/employer-journey-guard-check.ts",
     "employer-library-purpose:check": "bun run scripts/employer-library-purpose-check.ts",
     "employer-decision-error:check": "bun run scripts/employer-decision-error-check.ts",
+    "employer-job-lifecycle:check": "bun run scripts/employer-job-lifecycle-check.ts",
     "passport-recipient-card:check": "bun run scripts/passport-recipient-card-check.tsx",
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
