@@ -59,6 +59,8 @@ export function PassportOverview({
   holder,
   evaluationOn,
   viewingJurisdiction,
+  needsWorkLocation,
+  onConfirmWorkLocation,
   onContinue,
   onOpenCard,
   onShare,
@@ -78,6 +80,10 @@ export function PassportOverview({
   /** The country the READER is in. NULL when unknown — no cross-border
    *  comparison is made rather than one against an assumed country. */
   viewingJurisdiction: string | null;
+  /** True while nobody has confirmed where this holder works — a new Passport,
+   *  or a legacy row carrying the old `DEFAULT 'SE'` that was never chosen. */
+  needsWorkLocation?: boolean;
+  onConfirmWorkLocation?: () => void;
   onContinue: () => void;
   onOpenCard: () => void;
   onShare: () => void;
@@ -139,6 +145,26 @@ export function PassportOverview({
             .filter((part): part is string => Boolean(part))
             .join(" · ")}
         </p>
+
+        {/* The product does not know where this person works, and says so
+            rather than showing a country nobody stated. A legacy holder whose
+            row still reads 'SE' from the old DEFAULT lands here too: the
+            stored value is kept for them to correct, and withheld from every
+            reader until they do. */}
+        {needsWorkLocation && onConfirmWorkLocation ? (
+          <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-3">
+            <p className="text-sm leading-relaxed text-foreground">
+              {pt("jurisdiction.confirmPrompt")}
+            </p>
+            <button
+              type="button"
+              onClick={onConfirmWorkLocation}
+              className="mt-2 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("jurisdiction.confirmAction")}
+            </button>
+          </div>
+        ) : null}
 
         {/* What an authority currently PERMITS, separate from what the
             holder may be called and separate from what they have completed.

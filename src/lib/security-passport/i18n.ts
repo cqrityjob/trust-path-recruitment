@@ -450,6 +450,12 @@ const sv = {
   // in one breath so a UK or UAE holder can answer truthfully and still knows,
   // before they go looking, that no credential for that country can be added
   // yet. Dateless for the same reason as the key above.
+  // Shown to a holder whose work location nobody has confirmed. Covers the new
+  // Passport and the legacy row still carrying the old DEFAULT 'SE' — the same
+  // sentence for both, because the product genuinely does not know either way.
+  "jurisdiction.confirmPrompt":
+    "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
+  "jurisdiction.confirmAction": "Ange var jag arbetar",
   "jurisdiction.workCountryAvailability":
     "Ange det land där du arbetar. Reglerade behörigheter kan i dag endast registreras för Sverige — Storbritannien och Dubai är under förberedelse. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
   "jurisdiction.title": "Land och behörighet",
@@ -1593,6 +1599,9 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
     "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+  "jurisdiction.confirmPrompt":
+    "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
+  "jurisdiction.confirmAction": "Tell us where I work",
   "jurisdiction.workCountryAvailability":
     "Tell us the country where you work. Regulated authorisations can currently only be recorded for Sweden — the United Kingdom and Dubai are being prepared. You can state your country now even if its authorisations are not supported yet.",
   "jurisdiction.title": "Country and eligibility",

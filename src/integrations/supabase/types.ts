@@ -8815,6 +8815,7 @@ export type Database = {
           question_version: string
           recognition_policy_version: string
           updated_at: string
+          work_location_confirmed_at: string | null
         }
         Insert: {
           cig_profession_slug?: string | null
@@ -8834,6 +8835,7 @@ export type Database = {
           question_version?: string
           recognition_policy_version?: string
           updated_at?: string
+          work_location_confirmed_at?: string | null
         }
         Update: {
           cig_profession_slug?: string | null
@@ -8853,6 +8855,7 @@ export type Database = {
           question_version?: string
           recognition_policy_version?: string
           updated_at?: string
+          work_location_confirmed_at?: string | null
         }
         Relationships: [
           {

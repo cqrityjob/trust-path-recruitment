@@ -25,7 +25,16 @@
 BEGIN;
 
 ALTER TABLE public.sp_passport_profiles
+  DROP CONSTRAINT IF EXISTS sp_profile_confirmed_needs_country;
+
+ALTER TABLE public.sp_passport_profiles
   DROP CONSTRAINT IF EXISTS sp_profile_sub_matches_country;
+
+-- Provenance is lost with the column. After this, a confirmed Swedish holder
+-- and a legacy row that was never asked are indistinguishable again — which is
+-- the pre-migration state, and the reason the column was added.
+ALTER TABLE public.sp_passport_profiles
+  DROP COLUMN IF EXISTS work_location_confirmed_at;
 
 ALTER TABLE public.sp_passport_profiles
   DROP COLUMN IF EXISTS sub_jurisdiction_code;

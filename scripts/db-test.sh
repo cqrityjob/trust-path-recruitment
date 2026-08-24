@@ -1627,9 +1627,9 @@ if [ "$SPWC_RC" -ne 0 ]; then
   suite_failed "Security Passport work country"
 else
   echo "    ok  ${SPWC_PASSED} work country assertions passed"
-  if [ "$SPWC_PASSED" -lt 11 ]; then
-    echo "FAIL: expected at least 11 work country assertions, only ${SPWC_PASSED} ran." >&2
-    suite_failed "Security Passport work country (assertion shortfall: floor 11)"
+  if [ "$SPWC_PASSED" -lt 15 ]; then
+    echo "FAIL: expected at least 15 work country assertions, only ${SPWC_PASSED} ran." >&2
+    suite_failed "Security Passport work country (assertion shortfall: floor 15)"
   fi
 fi
 

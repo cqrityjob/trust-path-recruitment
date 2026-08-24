@@ -16,6 +16,7 @@ DECLARE
   _ae uuid := '00000000-0000-0000-0000-00000000fc02';
   _txt text;
   _n   integer;
+  _ts  timestamptz;
 BEGIN
   INSERT INTO auth.users (id) VALUES (_se), (_ae) ON CONFLICT DO NOTHING;
 
@@ -134,6 +135,57 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 4.1 a stated Swedish country did not survive';
   END IF;
   RAISE NOTICE 'ok  4.1 a holder who states Sweden still reads Sweden';
+
+  -- =====================================================================
+  RAISE NOTICE 'GROUP 5 -- a stored country is not a confirmed one';
+  -- =====================================================================
+
+  -- The legacy shape: 'SE' present, confirmation absent. This is the row the
+  -- old DEFAULT produced for holders who were never asked, and it must be
+  -- distinguishable from a holder who chose Sweden.
+  UPDATE public.sp_passport_profiles
+     SET jurisdiction_code = 'SE', work_location_confirmed_at = NULL
+   WHERE holder_user_id = _se;
+
+  SELECT work_location_confirmed_at INTO _ts
+    FROM public.sp_passport_profiles WHERE holder_user_id = _se;
+  IF _ts IS NOT NULL THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.1 a legacy row arrived pre-confirmed';
+  END IF;
+  RAISE NOTICE 'ok  5.1 a legacy SE row carries no confirmation';
+
+  -- The column must be able to hold the distinction, not merely exist.
+  UPDATE public.sp_passport_profiles
+     SET work_location_confirmed_at = now()
+   WHERE holder_user_id = _se;
+  SELECT work_location_confirmed_at INTO _ts
+    FROM public.sp_passport_profiles WHERE holder_user_id = _se;
+  IF _ts IS NULL THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.2 a confirmation could not be recorded';
+  END IF;
+  RAISE NOTICE 'ok  5.2 a holder who states Sweden is recorded as having stated it';
+
+  -- A confirmation standing over no country would be provenance for nothing,
+  -- and would let a row claim it had been answered when it had not.
+  BEGIN
+    UPDATE public.sp_passport_profiles
+       SET jurisdiction_code = NULL, work_location_confirmed_at = now()
+     WHERE holder_user_id = _se;
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.3 a confirmation was accepted with no country';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'ok  5.3 a confirmation cannot stand over an absent country';
+  END;
+
+  -- Provenance is orthogonal to market availability: confirming Dubai must not
+  -- open Dubai.
+  UPDATE public.sp_passport_profiles
+     SET jurisdiction_code = 'AE', sub_jurisdiction_code = 'AE-DU',
+         work_location_confirmed_at = now()
+   WHERE holder_user_id = _ae;
+  IF (SELECT is_active FROM public.sp_market_packs WHERE code = 'AE-DU') THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.4 confirming Dubai opened the Dubai market';
+  END IF;
+  RAISE NOTICE 'ok  5.4 a CONFIRMED Dubai holder still has no Dubai market';
 
   DELETE FROM public.sp_passport_profiles WHERE holder_user_id IN (_se, _ae);
   DELETE FROM auth.users WHERE id IN (_se, _ae);

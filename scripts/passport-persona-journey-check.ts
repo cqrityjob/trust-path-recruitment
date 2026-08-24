@@ -39,7 +39,12 @@ import {
 } from "../src/lib/security-passport/identity/presentation";
 import { formatJurisdiction } from "../src/lib/security-passport/format";
 import { passportCopy } from "../src/lib/security-passport/i18n";
-import { ONBOARDING_STEPS, splitWorkCountry } from "../src/lib/security-passport/onboarding";
+import {
+  ONBOARDING_STEPS,
+  confirmedWorkLocation,
+  needsWorkLocationConfirmation,
+  splitWorkCountry,
+} from "../src/lib/security-passport/onboarding";
 import type { Claim, LifecycleState, AssertionLevel } from "../src/lib/security-passport/types";
 
 const TODAY = "2026-08-24";
@@ -575,6 +580,55 @@ assert(
     splitWorkCountry(undefined).jurisdictionCode === null,
   "no answer yields no country, rather than a default",
 );
+
+/* ══════════════════════════════════════════════════════════════════════
+   A STORED COUNTRY IS NOT A CONFIRMED ONE
+   ══════════════════════════════════════════════════════════════════════
+
+   `jurisdiction_code` carries two facts that look identical: a country the
+   holder chose, and the `DEFAULT 'SE'` written before they were ever asked.
+   Presenting the second as the first is the same false assertion the default
+   was making, so every reader goes through `confirmedWorkLocation`.        */
+console.log("\nWORK LOCATION PROVENANCE -- unconfirmed is not shown");
+
+{
+  const legacy = {
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    workLocationConfirmedAt: null,
+  };
+  assert(
+    confirmedWorkLocation(legacy).jurisdictionCode === null,
+    "a legacy SE row nobody confirmed reads as NOT STATED, never as Sweden",
+  );
+  assert(needsWorkLocationConfirmation(legacy), "and the holder is asked where they work");
+
+  const confirmed = { ...legacy, workLocationConfirmedAt: "2026-08-24T00:00:00Z" };
+  assert(
+    confirmedWorkLocation(confirmed).jurisdictionCode === "SE",
+    "a holder who states Sweden gets Sweden",
+  );
+  assert(!needsWorkLocationConfirmation(confirmed), "and is not asked again");
+
+  const dubai = {
+    jurisdictionCode: "AE",
+    subJurisdictionCode: "AE-DU",
+    workLocationConfirmedAt: "2026-08-24T00:00:00Z",
+  };
+  const shown = confirmedWorkLocation(dubai);
+  assert(
+    shown.jurisdictionCode === "AE" && shown.subJurisdictionCode === "AE-DU",
+    "a confirmed Dubai holder keeps the emirate through the gate",
+  );
+  // A confirmation cannot conjure a country, and an unconfirmed emirate must
+  // not survive on its own either.
+  assert(
+    confirmedWorkLocation({ ...dubai, workLocationConfirmedAt: null }).subJurisdictionCode === null,
+    "an unconfirmed emirate is withheld with its country",
+  );
+  assert(confirmedWorkLocation(null).jurisdictionCode === null, "no profile yields no country");
+  assert(needsWorkLocationConfirmation(null), "and a holder with no profile is asked");
+}
 
 for (const lang of ["sv", "en"] as const) {
   const copy = passportCopy[lang]["jurisdiction.workCountryAvailability"];

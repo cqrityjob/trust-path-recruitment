@@ -206,3 +206,41 @@ export function splitWorkCountry(answer: string | null | undefined): {
   if (dash === -1) return { jurisdictionCode: value, subJurisdictionCode: null };
   return { jurisdictionCode: value.slice(0, dash), subJurisdictionCode: value };
 }
+
+/** A holder's work location, as it may be SHOWN to anyone.
+ *
+ * Reading `jurisdiction_code` directly is the bug this exists to prevent. The
+ * column carries two different facts that look identical: a country the holder
+ * chose, and the `DEFAULT 'SE'` that was written before they were ever asked.
+ * `work_location_confirmed_at` is what separates them, and every surface has to
+ * respect it or the old false assertion simply reappears one layer up.
+ *
+ * Unconfirmed reads as "not stated" — the same as a brand-new Passport — while
+ * the stored value stays on the profile for the holder to confirm or correct.
+ */
+export function confirmedWorkLocation(
+  profile: {
+    readonly jurisdictionCode: string | null;
+    readonly subJurisdictionCode: string | null;
+    readonly workLocationConfirmedAt: string | null;
+  } | null,
+): { readonly jurisdictionCode: string | null; readonly subJurisdictionCode: string | null } {
+  if (!profile?.workLocationConfirmedAt || !profile.jurisdictionCode) {
+    return { jurisdictionCode: null, subJurisdictionCode: null };
+  }
+  return {
+    jurisdictionCode: profile.jurisdictionCode,
+    subJurisdictionCode: profile.subJurisdictionCode,
+  };
+}
+
+/** True when the holder should be asked where they work.
+ *
+ *  Covers both the new Passport with no country and the legacy row whose 'SE'
+ *  nobody chose — deliberately the same prompt, because they are the same
+ *  question. */
+export function needsWorkLocationConfirmation(
+  profile: { readonly workLocationConfirmedAt: string | null } | null,
+): boolean {
+  return !profile?.workLocationConfirmedAt;
+}

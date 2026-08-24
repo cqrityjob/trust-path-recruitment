@@ -128,7 +128,9 @@ assert(
   new RegExp(`Path=${SHARE_COOKIE_PATH}(;|$)`).test(cookie),
   `the cookie is scoped to ${SHARE_COOKIE_PATH} and rides no other request`,
 );
-assert(SHARE_COOKIE_PATH !== "/", "the cookie is NOT scoped to the whole origin");
+// Widened deliberately: the constant is a literal type, and comparing it
+// directly would be a compile-time tautology rather than a runtime guard.
+assert((SHARE_COOKIE_PATH as string) !== "/", "the cookie is NOT scoped to the whole origin");
 assert(
   /SameSite=Lax/.test(cookie),
   "SameSite=Lax, so following the link from an email still works",

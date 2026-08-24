@@ -39,20 +39,45 @@
 -- jurisdiction list from the ACTIVE packs alone. A holder may now say they
 -- work in Dubai and will still find no Dubai credential to record.
 --
--- ── LEGACY ROWS ARE NOT REWRITTEN ──────────────────────────────────────
+-- ── LEGACY ROWS ARE NOT REWRITTEN, AND NOT BELIEVED EITHER ─────────────
 --
 -- Every existing profile reads 'SE'. Some of those holders chose Sweden; the
 -- rest never got the chance, because the onboarding step offered nothing else.
--- The two are INDISTINGUISHABLE in the data — there is no timestamp, no answer
--- record and no audit row that separates them.
+-- The two are INDISTINGUISHABLE in the stored value.
 --
--- So they are left exactly as they are. Setting them to NULL would erase the
+-- Rewriting them is not an option — setting them all to NULL would erase the
 -- real choices of Swedish holders, who are the overwhelming majority and the
--- only market that is open; keeping them as 'SE' at worst leaves a Swedish
--- label on a holder who has not yet said otherwise, which they can correct in
--- onboarding. Guessing in either direction would be inventing data, and the
--- honest option — asking again — is a product decision and not a migration's
--- to make. New profiles start NULL and are asked.
+-- only open market, and guessing the other way invents data. But LEAVING them
+-- and continuing to present them as the holder's confirmed current work
+-- country is not honest either: that is the same assertion the DEFAULT was
+-- making, just made once instead of continuously.
+--
+-- So a third column records PROVENANCE rather than value:
+--
+--     work_location_confirmed_at
+--
+-- NULL means "nobody has confirmed this is where they work". Legacy rows keep
+-- their 'SE' and get NULL, so the value survives for correction while no
+-- surface may present it as current truth. A holder who answers the country
+-- step — from a list that now has more than one entry, so the answer means
+-- something — gets a timestamp, and only then does the location display.
+--
+-- ── WHY A NEW COLUMN AND NOT AN EXISTING ONE ───────────────────────────
+--
+-- Two candidates were checked against real rows before adding anything:
+--
+--   `declared_accurate_at` — set when a holder declares their profile accurate
+--     at the end of onboarding. A local row exists with declared_accurate_at
+--     SET and no country answer at all, which is exactly the case this must
+--     catch. It answers a different question.
+--
+--   `onboarding_answers ->> 'jurisdiction.jurisdiction'` — present for anyone
+--     who completed the old step. But that step offered ONE option, so its
+--     presence proves the holder clicked, not that they chose. It cannot
+--     distinguish a real answer from the only answer available.
+--
+-- Neither is trustworthy for this question, so provenance is recorded
+-- explicitly.
 --
 -- Reversible: see supabase/rollback/20260908093000_sp_profile_work_country_rollback.sql
 
@@ -70,7 +95,14 @@ ALTER TABLE public.sp_passport_profiles
   ADD COLUMN IF NOT EXISTS sub_jurisdiction_code text
     REFERENCES public.sp_sub_jurisdictions(code);
 
--- 3. The two must agree. -------------------------------------------------
+-- 3. Provenance: has the HOLDER said this is where they work? ------------
+--
+-- NULL for every existing row, including the Swedish ones, because none of
+-- them was asked a question with more than one answer.
+ALTER TABLE public.sp_passport_profiles
+  ADD COLUMN IF NOT EXISTS work_location_confirmed_at timestamptz;
+
+-- 4. The two must agree. -------------------------------------------------
 --
 -- A sub-jurisdiction with no country, or belonging to a different one, would
 -- let a profile say "Dubai" while claiming Sweden. Named and added
@@ -94,6 +126,21 @@ BEGIN
   END IF;
 END $$;
 
+-- A confirmation with nothing to confirm is meaningless, and would let a row
+-- claim provenance for a country it does not have.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.sp_passport_profiles'::regclass
+      AND conname  = 'sp_profile_confirmed_needs_country'
+  ) THEN
+    ALTER TABLE public.sp_passport_profiles
+      ADD CONSTRAINT sp_profile_confirmed_needs_country
+      CHECK (work_location_confirmed_at IS NULL OR jurisdiction_code IS NOT NULL);
+  END IF;
+END $$;
+
 COMMENT ON COLUMN public.sp_passport_profiles.jurisdiction_code IS
   'ISO 3166-1 alpha-2 country where the holder works. NULL means not yet '
   'stated — never assume a country. Independent of sp_market_packs.is_active, '
@@ -103,5 +150,11 @@ COMMENT ON COLUMN public.sp_passport_profiles.sub_jurisdiction_code IS
   'Optional sub-jurisdiction of jurisdiction_code, e.g. AE-DU for Dubai. '
   'Recorded so an emirate is never flattened into its country; carries no '
   'market entitlement of any kind.';
+
+COMMENT ON COLUMN public.sp_passport_profiles.work_location_confirmed_at IS
+  'When the HOLDER confirmed jurisdiction_code is where they work. NULL means '
+  'the stored value is unconfirmed provenance - legacy rows carry SE from the '
+  'old DEFAULT and must not be presented as the holder''s current work country '
+  'until they answer. Never back-filled.';
 
 COMMIT;

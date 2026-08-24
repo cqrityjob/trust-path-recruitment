@@ -34,7 +34,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { orNull } from "./rpc";
-import { splitWorkCountry } from "./onboarding";
+import { confirmedWorkLocation, splitWorkCountry } from "./onboarding";
 import type { Claim, ClaimType, ExperiencePeriod, PassportHolder } from "./types";
 
 /** The question set these answers were given against. Bumped when the
@@ -52,6 +52,10 @@ export interface PassportProfile {
   /** NULL until the holder states one. Never defaulted to a country. */
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
+  /** When the HOLDER confirmed the two above are where they work. NULL means
+   *  the stored value is unconfirmed provenance — a legacy row carrying 'SE'
+   *  from the old DEFAULT, which no surface may present as current truth. */
+  readonly workLocationConfirmedAt: string | null;
   readonly privacyMode: PrivacyMode;
   readonly onboardingState: OnboardingState;
   readonly onboardingStep: number;
@@ -78,6 +82,7 @@ type ProfileRow = {
   cig_profession_slug: string | null;
   jurisdiction_code: string | null;
   sub_jurisdiction_code: string | null;
+  work_location_confirmed_at: string | null;
   privacy_mode: string;
   onboarding_state: string;
   onboarding_step: number;
@@ -132,6 +137,7 @@ function toProfile(row: ProfileRow | null): PassportProfile | null {
     cigProfessionSlug: row.cig_profession_slug,
     jurisdictionCode: row.jurisdiction_code,
     subJurisdictionCode: row.sub_jurisdiction_code,
+    workLocationConfirmedAt: row.work_location_confirmed_at,
     privacyMode: row.privacy_mode as PrivacyMode,
     onboardingState: row.onboarding_state as OnboardingState,
     onboardingStep: row.onboarding_step,
@@ -250,7 +256,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
       db
         .from("sp_passport_profiles")
         .select(
-          "display_name, headline, cig_profession_slug, jurisdiction_code, sub_jurisdiction_code, privacy_mode, onboarding_state, onboarding_step, onboarding_answers, question_version, declared_accurate_at, recognition_policy_version, updated_at",
+          "display_name, headline, cig_profession_slug, jurisdiction_code, sub_jurisdiction_code, work_location_confirmed_at, privacy_mode, onboarding_state, onboarding_step, onboarding_answers, question_version, declared_accurate_at, recognition_policy_version, updated_at",
         )
         .eq("holder_user_id", userId)
         .maybeSingle(),
@@ -302,6 +308,11 @@ export const getMyPassport = createServerFn({ method: "GET" })
     if (rulesRes.error) throw new Error(rulesRes.error.message);
     const rules = toTitleRules(rulesRes.data ?? []);
 
+    // Provenance gate. `work_location_confirmed_at` is NULL for every row that
+    // predates the country question having more than one answer, so those keep
+    // their stored value without it being shown as current truth.
+    const workLocation = confirmedWorkLocation(profile);
+
     const holder: PassportHolder = {
       id: userId,
       displayName: profile?.displayName ?? "",
@@ -327,10 +338,18 @@ export const getMyPassport = createServerFn({ method: "GET" })
       // buildPassportCard, buildDisclosurePayload and buildSocialCard each
       // strip self-declared titles on the way out.
       identity: derivePreviewIdentity(claims, rules, todayIso()),
-      // No fallback. A holder who has not stated a country has none, and the
-      // surfaces render "not stated" rather than inventing Sweden.
-      jurisdictionCode: profile?.jurisdictionCode ?? null,
-      subJurisdictionCode: profile?.subJurisdictionCode ?? null,
+      // CONFIRMED work location only, decided here so all seven rendering
+      // surfaces inherit it and none can form its own opinion.
+      //
+      // A stored country is not the same fact as a country the holder has
+      // stated. Legacy rows carry 'SE' from the old `DEFAULT 'SE'`, and
+      // presenting that as their current work country is the same false
+      // assertion the default was making — just made once instead of
+      // continuously. So an unconfirmed value is withheld from every reader,
+      // including the holder's own card, and the raw value stays on `profile`
+      // for the onboarding form to pre-fill and for the holder to correct.
+      jurisdictionCode: workLocation.jurisdictionCode,
+      subJurisdictionCode: workLocation.subJurisdictionCode,
       periods: periods.filter((p) => p.lifecycleState !== "superseded"),
       claims,
       // Career Discovery is a separate product. Phase 2 stores no reference
@@ -416,12 +435,19 @@ export const saveOnboardingProgress = createServerFn({ method: "POST" })
     if (data.displayName !== undefined) patch.display_name = data.displayName;
     if (data.headline !== undefined) patch.headline = data.headline;
     if (data.professionSlug !== undefined) patch.cig_profession_slug = data.professionSlug;
-    // One answer, two columns, split in exactly one place. An empty answer
-    // clears BOTH rather than leaving a stale emirate beside a new country.
+    // One answer, three columns, split in exactly one place. An empty answer
+    // clears ALL of them rather than leaving a stale emirate beside a new
+    // country, or a confirmation standing over a value nobody gave.
+    //
+    // The timestamp is what turns a stored code into a stated fact. It is set
+    // ONLY here, on a real answer from a list with real alternatives — never
+    // back-filled, because a legacy 'SE' that nobody chose is exactly what it
+    // exists to keep apart from a Sweden somebody did.
     if (data.jurisdictionCode !== undefined) {
       const work = splitWorkCountry(data.jurisdictionCode);
       patch.jurisdiction_code = work.jurisdictionCode;
       patch.sub_jurisdiction_code = work.subJurisdictionCode;
+      patch.work_location_confirmed_at = work.jurisdictionCode ? new Date().toISOString() : null;
     }
 
     const { data: row, error } = await db
@@ -463,7 +489,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
 
     const profileRes = await db
       .from("sp_passport_profiles")
-      .select("onboarding_answers, jurisdiction_code")
+      .select("onboarding_answers, jurisdiction_code, work_location_confirmed_at")
       .eq("holder_user_id", userId)
       .maybeSingle();
 
@@ -477,8 +503,15 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     // is `required: true`, so the wizard cannot reach here without one; if it
     // somehow does, refusing is correct. An employment record in a country
     // nobody named is not a record, it is a guess.
-    const jurisdiction =
-      (profileRes.data as { jurisdiction_code?: string | null } | null)?.jurisdiction_code ?? null;
+    // Confirmed, not merely stored: a legacy 'SE' nobody chose must not become
+    // the country on a new employment record either.
+    const profileRow = profileRes.data as {
+      jurisdiction_code?: string | null;
+      work_location_confirmed_at?: string | null;
+    } | null;
+    const jurisdiction = profileRow?.work_location_confirmed_at
+      ? (profileRow.jurisdiction_code ?? null)
+      : null;
     if (!jurisdiction) throw new Error("SP_WORK_COUNTRY_REQUIRED");
 
     const employer = (answers["currentRole.employer"] ?? "").trim();
