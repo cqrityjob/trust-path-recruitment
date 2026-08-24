@@ -15,6 +15,7 @@
 // answer is the cheapest way to earn some.
 
 import {
+  eligibilityTitles,
   headlineIsSelfDeclared,
   professionLine,
 } from "@/lib/security-passport/identity/presentation";
@@ -29,6 +30,7 @@ import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
 import { ExperienceTimeline } from "./ExperienceTimeline";
 import { formatJurisdiction } from "@/lib/security-passport/format";
+import { EligibilityLine } from "./EligibilityLine";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
 import { RecognitionPanel } from "./RecognitionBadges";
@@ -122,6 +124,12 @@ export function PassportOverview({
         <p className="mt-2 text-sm text-foreground">
           {holder.displayName} · {profession} · {formatJurisdiction(holder.jurisdictionCode, lang)}
         </p>
+
+        {/* What an authority currently PERMITS, separate from what the
+            holder may be called and separate from what they have completed.
+            Derived from the same claims; shown here because the holder needs
+            to see that recording an approval actually registered. */}
+        <EligibilityLine titles={eligibilityTitles(holder.identity)} className="mt-3" />
 
         {/* The holder's own view derives with derivePreviewIdentity, which
             admits self-declared evidence deliberately — seeing what

@@ -88,6 +88,56 @@ export function headlineTitles(identity: ProfessionalIdentity): readonly Derived
 }
 
 /**
+ * What an authority currently PERMITS — never what the holder may be called.
+ *
+ * ── WHY THIS IS NOT PART OF THE HEADLINE ───────────────────────────────
+ *
+ * `headlineTitles` answers a NAMING question: the strongest thing this person
+ * may currently be called. "Personalgodkännande kontrollerat" is not a name,
+ * and putting it in the slot under somebody's photograph would be a category
+ * error — it would read as a job title, which is the one thing it is not.
+ *
+ * So eligibility gets its own accessor and its own labelled line. That is also
+ * why the tier was invisible before: it is genuinely not headline material,
+ * and excluding it from the cascade was right. Rendering it NOWHERE was not.
+ *
+ * ── WHY IT MATTERS THAT IT IS SEPARATE ─────────────────────────────────
+ *
+ * A Swedish väktare with VU1, VU2 and a current personnel approval is the
+ * ordinary case this product exists for. Before this, their Passport showed
+ * only the training line, and the one fact an employer actually needs — that
+ * an authority has checked them and currently permits the work — was derived,
+ * sanitised, and shown to nobody.
+ *
+ * It stays separate from training because collapsing them is the exact
+ * misreading the four-output model was built to prevent: completing a course
+ * is not being approved, and being approved is not holding an appointment.
+ */
+export function eligibilityTitles(identity: ProfessionalIdentity): readonly DerivedTitle[] {
+  return identity.localEligibility;
+}
+
+/**
+ * Eligibility reduced to what may cross a trust boundary.
+ *
+ * The same reduction `toPublicTitles` applies, and for the same reason: no
+ * dates, no source claim ids, no scope text. The credential row beside it
+ * carries the validity; a second date here could disagree with it, and two
+ * dates that disagree about when an approval lapses is worse than one.
+ */
+export function toPublicEligibility(identity: ProfessionalIdentity): readonly PublicTitle[] {
+  return eligibilityTitles(identity).map((t) => ({
+    ruleCode: t.ruleCode,
+    outputKind: t.outputKind,
+    nameLocal: t.nameLocal,
+    nameEn: t.nameEn,
+    nameAr: t.nameAr,
+    jurisdictionCode: t.jurisdictionCode,
+    marketPackCode: t.marketPackCode,
+  }));
+}
+
+/**
  * The headline as one line.
  *
  * Several simultaneous titles are joined, never collapsed: somebody who is

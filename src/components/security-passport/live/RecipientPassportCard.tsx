@@ -22,6 +22,7 @@
 
 import { CredentialScopeLine } from "./CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
+import { EligibilityLine } from "../EligibilityLine";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
@@ -95,6 +96,8 @@ export function RecipientPassportCard({
             <span style={{ color: TRUST_PALETTE.ink }}>{jurisdiction}</span>
           </p>
         </header>
+
+        <EligibilityLine titles={presentation.eligibility} withNote={false} className="mt-4" />
 
         <div className="relative mt-5">
           <EngravedRule tone={`${rim}99`} />

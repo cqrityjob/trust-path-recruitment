@@ -29,7 +29,7 @@
 // expired on the page AND in the image, rather than as currently verified.
 
 import { deriveVerifiedIdentity } from "./identity/visibility";
-import { toPublicTitles } from "./identity/presentation";
+import { toPublicEligibility, toPublicTitles } from "./identity/presentation";
 import { MIRRORED_TITLE_RULES } from "./identity/market-rules";
 import type { PublicTitle, TitleRule } from "./identity/types";
 import { credentialPresentation } from "./design/credential-symbols";
@@ -87,6 +87,10 @@ export interface RecipientPresentation {
    *  evidence that was never checked. The slug is still carried above because
    *  other things read it, but nothing renders a title from it any more. */
   readonly titles: readonly PublicTitle[];
+  /** What an authority currently PERMITS, as distinct from what the holder may
+   *  be called. Reduced exactly like `titles`: no dates, no scope, no claim
+   *  ids — the credential row beside it carries the validity. */
+  readonly eligibility: readonly PublicTitle[];
   readonly jurisdiction: string;
   readonly packageCode: string;
   /** "credential" when the holder shared exactly one credential. */
@@ -199,6 +203,11 @@ export function buildRecipientPresentation(
     privacyMode: payload.privacy_mode,
     professionSlug: payload.profession_slug,
     titles: toPublicTitles(identity),
+    // Derived from `payload.verified_claims` — the claims this package already
+    // chose to disclose — so this adds NOTHING to the payload and widens no
+    // permission. A package that withholds the approval claim derives no
+    // eligibility, automatically and without a second rule to keep in step.
+    eligibility: toPublicEligibility(identity),
     jurisdiction: payload.jurisdiction,
     packageCode: payload.package,
     focus: payload.focus ?? "passport",

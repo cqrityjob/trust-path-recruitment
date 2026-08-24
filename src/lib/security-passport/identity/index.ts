@@ -6,6 +6,8 @@ export {
   headlineIsSelfDeclared,
   headlineJurisdictions,
   headlineTitles,
+  eligibilityTitles,
+  toPublicEligibility,
   labelFor,
   professionLine,
 } from "./presentation";

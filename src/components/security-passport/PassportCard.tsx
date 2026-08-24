@@ -23,6 +23,7 @@
 // convention.
 
 import {
+  eligibilityTitles,
   headlineIsSelfDeclared,
   professionLine,
 } from "@/lib/security-passport/identity/presentation";
@@ -30,6 +31,7 @@ import { Ban, Clock, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatExpiry, formatJurisdiction, formatNameList } from "@/lib/security-passport/format";
+import { EligibilityLine } from "./EligibilityLine";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
 import { AssertionChip } from "./AssertionChip";
@@ -125,6 +127,16 @@ export function PassportCard({
               </p>
             ) : null}
           </div>
+
+          {/* buildPassportCard derives with deriveVerifiedIdentity, so an
+              eligibility shown here rests on evidence somebody checked. The
+              note is dropped on the card face only: the record beneath it
+              gives the reader the same context at more length. */}
+          <EligibilityLine
+            titles={eligibilityTitles(card.identity)}
+            withNote={false}
+            className="mt-4"
+          />
 
           {mayShowBadge(card.recognition) ? (
             <div className="mt-4">

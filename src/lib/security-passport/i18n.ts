@@ -790,7 +790,13 @@ const sv = {
     "Titeln bygger på uppgifter du själv har lämnat och som ingen har kontrollerat. Den visas bara för dig.",
   "identity.education": "Genomförd utbildning",
   "identity.competence": "Yrkeskompetens",
-  "identity.eligibility": "Lokal behörighet",
+  // "Nuvarande" rather than "Lokal": the operative fact for a reader is that
+  // the approval is current, not that it is local. The note is not decoration
+  // — it names the three things this is NOT, because an approval in the same
+  // visual weight as an appointment invites exactly that misreading.
+  "identity.eligibility": "Nuvarande behörighet",
+  "identity.eligibilityNote":
+    "Verifierat underlag för att en behörig myndighet eller arbetsgivare för närvarande godkänner personen. Det är inte en yrkestitel, ett förordnande eller en licens.",
   "identity.activeTitle": "Aktiv yrkestitel",
   "rec.cardTitle": "Delat Security Passport",
   "rec.detailsTitle": "Uppgifter i delningen",
@@ -1919,7 +1925,9 @@ const en: Record<PassportCopyKey, string> = {
     "This title rests on information you provided yourself, which nobody has checked. Only you can see it.",
   "identity.education": "Completed education",
   "identity.competence": "Professional competence",
-  "identity.eligibility": "Local eligibility",
+  "identity.eligibility": "Current eligibility",
+  "identity.eligibilityNote":
+    "Verified evidence that a competent authority or employer currently approves this person. It is not a professional title, an appointment or a licence.",
   "identity.activeTitle": "Active professional title",
   "rec.cardTitle": "Shared Security Passport",
   "rec.detailsTitle": "What this share contains",
