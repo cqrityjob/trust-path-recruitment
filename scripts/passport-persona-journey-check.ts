@@ -483,16 +483,79 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-const jurisdictionStep = ONBOARDING_STEPS.find((s) => s.id === "jurisdiction");
-assert(
-  jurisdictionStep?.bodyKey === "jurisdiction.marketAvailability",
-  "the onboarding country step explains why the list is short",
-);
 assert(
   readFileSync(join(ROOT, "src/components/security-passport/CredentialForm.tsx"), "utf8").includes(
     'pt("jurisdiction.marketAvailability")',
   ),
-  "and so does the credential form's country field",
+  "the credential form's country field says a closed market is closed",
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   WHERE A PERSON WORKS IS NOT WHICH CREDENTIALS ARE SUPPORTED
+   ══════════════════════════════════════════════════════════════════════
+
+   The defect this defends: the onboarding country step offered Sweden and
+   nothing else, because it was built from the ACTIVE market packs. A holder
+   working in Dubai could not say so, `sp_passport_profiles.jurisdiction_code`
+   kept its `DEFAULT 'SE'`, and their Passport Card then told every reader they
+   were in Sweden — the product asserting a false country about a real person.
+
+   The two questions are independent and must stay that way:
+
+     * the WORK COUNTRY list is the countries `sp_jurisdictions` holds, which
+       is what the profile column's foreign key accepts;
+     * CREDENTIAL availability remains the ACTIVE market packs alone.
+
+   Widening the first must never widen the second.                        */
+console.log("\nWORK COUNTRY -- stated truthfully, and grants no market");
+
+const jurisdictionStep = ONBOARDING_STEPS.find((s) => s.id === "jurisdiction");
+assert(
+  jurisdictionStep?.bodyKey === "jurisdiction.workCountryAvailability",
+  "the onboarding country step separates work country from credential support",
+);
+
+const workCountries = (jurisdictionStep?.fields[0]?.options ?? []).map((o) => o.value);
+// Exactly sp_jurisdictions. Not a subset — a holder outside Sweden must be
+// able to answer — and not a superset, because the column is a FK and an
+// unknown code would fail the write.
+for (const code of ["SE", "GB", "AE"]) {
+  assert(workCountries.includes(code), `a holder working in ${code} can say so`);
+}
+assert(
+  workCountries.length === 3,
+  "and the list is exactly the countries the profile FK accepts",
+);
+// The emirate is deliberately absent: the profile column is a COUNTRY key, and
+// offering "AE-DU" here would fail the foreign key on save.
+assert(
+  !workCountries.includes("AE-DU"),
+  "the sub-jurisdiction is not offered where a country is required",
+);
+
+for (const lang of ["sv", "en"] as const) {
+  const copy = passportCopy[lang]["jurisdiction.workCountryAvailability"];
+  assert(Boolean(copy && copy.length > 40), `${lang}: the work-country note exists`);
+  assert(
+    /(Sverige|Sweden)/.test(copy),
+    `${lang}: it names the one market whose credentials ARE supported`,
+  );
+  assert(
+    !/\b20\d\d\b/.test(copy),
+    `${lang}: and promises no date, because no launch date is known`,
+  );
+}
+
+// The load-bearing one. Offering GB and AE as work countries must not have
+// leaked into the credential path: that select is still built from the markets
+// the server hands it, which are the ACTIVE packs.
+const credentialForm = readFileSync(
+  join(ROOT, "src/components/security-passport/CredentialForm.tsx"),
+  "utf8",
+);
+assert(
+  !/options=\{?\[/.test(credentialForm) && credentialForm.includes("markets.map("),
+  "the credential country select is still driven by ACTIVE market packs, not a literal list",
 );
 
 /* ══════════════════════════════════════════════════════════════════════

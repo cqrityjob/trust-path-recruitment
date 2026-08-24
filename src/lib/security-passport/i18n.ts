@@ -445,6 +445,13 @@ const sv = {
   // because none is known.
   "jurisdiction.marketAvailability":
     "Sverige är tillgängligt i dag. Andra marknader, däribland Storbritannien och Dubai, är under förberedelse och kan ännu inte väljas. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
+  // Shown where the person states WHERE THEY WORK, which is a different
+  // question from which regulated credentials the product supports. Says both
+  // in one breath so a UK or UAE holder can answer truthfully and still knows,
+  // before they go looking, that no credential for that country can be added
+  // yet. Dateless for the same reason as the key above.
+  "jurisdiction.workCountryAvailability":
+    "Ange det land där du arbetar. Reglerade behörigheter kan i dag endast registreras för Sverige — Storbritannien och Dubai är under förberedelse. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
   "jurisdiction.title": "Land och behörighet",
   "jurisdiction.crossBorderTitle": "Gäller i Sverige",
   "jurisdiction.crossBorderBody":
@@ -1586,6 +1593,8 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
     "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+  "jurisdiction.workCountryAvailability":
+    "Tell us the country where you work. Regulated authorisations can currently only be recorded for Sweden — the United Kingdom and Dubai are being prepared. You can state your country now even if its authorisations are not supported yet.",
   "jurisdiction.title": "Country and eligibility",
   "jurisdiction.crossBorderTitle": "Applies in Sweden",
   "jurisdiction.crossBorderBody":

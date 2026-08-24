@@ -97,12 +97,30 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "jurisdiction",
     titleKey: "onboarding.jurisdiction.title",
     whyKey: "onboarding.jurisdiction.why",
-    // The select below offers exactly the ACTIVE market packs, which today
-    // means Sweden alone. Without this the step is a one-option dropdown with
-    // no explanation, and a UK or Dubai worker is left to guess whether the
-    // product forgot their country or refuses it. It refuses it, on purpose,
-    // and says so.
-    bodyKey: "jurisdiction.marketAvailability",
+    // ── WHERE YOU WORK IS NOT WHICH CREDENTIALS WE SUPPORT ──────────────
+    //
+    // This select used to offer Sweden and nothing else, because it was built
+    // from the ACTIVE market packs. That silently conflated two independent
+    // facts, and the conflation was not harmless: a holder working in Dubai
+    // had no way to say so, `sp_passport_profiles.jurisdiction_code` kept its
+    // `DEFAULT 'SE'`, and their Passport Card then told every reader they were
+    // in Sweden. The product asserted a false country about a real person.
+    //
+    // The two questions are now answered separately:
+    //
+    //   * THIS step asks the person's country of work. Its options are the
+    //     countries in `sp_jurisdictions` — SE, GB and AE — which the profile
+    //     column's foreign key already accepts, so no schema change is needed.
+    //
+    //   * CREDENTIAL availability stays exactly where it was: the credential
+    //     form still builds its own jurisdiction select from the ACTIVE market
+    //     packs alone, so choosing GB or AE here grants nothing. A closed
+    //     market is still closed, and no unsupported regulated claim can be
+    //     recorded.
+    //
+    // The body copy states that split rather than implying the country list
+    // is a list of open markets.
+    bodyKey: "jurisdiction.workCountryAvailability",
     required: true,
     createsClaim: false,
     fields: [
@@ -111,7 +129,15 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         labelKey: "onboarding.jurisdiction.field",
         type: "select",
         required: true,
-        options: [{ value: "SE", label: "Sverige / Sweden" }],
+        // Mirrors sp_jurisdictions. Sub-jurisdictions (AE-DU) are deliberately
+        // absent: the profile column is a country FK, and naming the emirate
+        // would need a column that does not exist yet. "United Arab Emirates"
+        // is true for a Dubai worker; "Sweden" was not.
+        options: [
+          { value: "SE", label: "Sverige / Sweden" },
+          { value: "GB", label: "Storbritannien / United Kingdom" },
+          { value: "AE", label: "Förenade Arabemiraten / United Arab Emirates" },
+        ],
       },
     ],
   },
