@@ -8332,9 +8332,6 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only: boolean
-          reference_label_en: string | null
-          reference_label_local: string | null
-          reference_pattern: string | null
           regulated_role_id: string | null
           requires_issuer: boolean
           requires_scope: boolean
@@ -8342,7 +8339,6 @@ export type Database = {
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
-          typical_validity_months: number | null
         }
         Insert: {
           authority_id?: string | null
@@ -8359,9 +8355,6 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only?: boolean
-          reference_label_en?: string | null
-          reference_label_local?: string | null
-          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
           requires_scope?: boolean
@@ -8369,7 +8362,6 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
-          typical_validity_months?: number | null
         }
         Update: {
           authority_id?: string | null
@@ -8386,9 +8378,6 @@ export type Database = {
           name_en?: string
           name_sv?: string
           narrow_result_only?: boolean
-          reference_label_en?: string | null
-          reference_label_local?: string | null
-          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
           requires_scope?: boolean
@@ -8396,7 +8385,6 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
-          typical_validity_months?: number | null
         }
         Relationships: [
           {
