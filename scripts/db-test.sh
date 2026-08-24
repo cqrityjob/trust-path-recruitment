@@ -1611,6 +1611,28 @@ elif [ "$SPUKT_PASSED" -lt 15 ]; then
   suite_failed "Security Passport UK title rule contract (assertion shortfall: floor 15)"
 fi
 
+echo "==> Running Security Passport work country assertions"
+set +e
+SPWC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_profile_work_country_test.sql 2>&1)"
+SPWC_RC=$?
+set -e
+
+echo "$SPWC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPWC_PASSED="$(echo "$SPWC_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPWC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the work country suite exited with code ${SPWC_RC}." >&2
+  echo "$SPWC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport work country"
+else
+  echo "    ok  ${SPWC_PASSED} work country assertions passed"
+  if [ "$SPWC_PASSED" -lt 11 ]; then
+    echo "FAIL: expected at least 11 work country assertions, only ${SPWC_PASSED} ran." >&2
+    suite_failed "Security Passport work country (assertion shortfall: floor 11)"
+  fi
+fi
+
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
 set +e
 SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
@@ -1797,6 +1819,29 @@ if [ "$SPUKTRB_RC" -ne 0 ]; then
   suite_failed "UK title rule correction rollback"
 else
   echo "    ok  the UK title rule correction rolls back to the pre-correction set"
+fi
+
+# FIRST in the chain, because it is the newest migration. It adds
+# sp_passport_profiles.sub_jurisdiction_code with a foreign key to
+# sp_sub_jurisdictions, and the three-market rollback at the far end of this
+# chain DROPS that table — so leaving this one out made the whole chain fail
+# with "cannot drop table sp_sub_jurisdictions because other objects depend on
+# it". Reverse migration order is not a stylistic preference here; it is what
+# makes the chain reversible at all.
+echo "==> Verifying the profile work country rollback"
+set +e
+SPPWCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908093000_sp_profile_work_country_rollback.sql 2>&1)"
+SPPWCRB_RC=$?
+set -e
+
+if [ "$SPPWCRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the profile work country rollback exited with code ${SPPWCRB_RC}." >&2
+  echo "$SPPWCRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "profile work country rollback"
+else
+  echo "    ok  the profile work country rolls back cleanly"
 fi
 
 echo "==> Verifying the disclosure scope boundary rollback"
