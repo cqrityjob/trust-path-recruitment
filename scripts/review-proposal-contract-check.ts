@@ -28,6 +28,7 @@
 // scan now reads keys and the two fields the model writes in its own voice,
 // and the case is asserted below so it cannot come back.
 
+import { readFileSync } from "node:fs";
 import { validateProposal, deriveOutcome } from "../src/lib/security-competency/review-proposal";
 import { dictionaries } from "../src/i18n/dictionaries";
 import type { RubricDimension } from "../src/lib/security-competency/academy-employer.functions";
@@ -230,10 +231,10 @@ console.log("\n8. The reviewer reads descriptions, and the numbers stay undernea
     ck(`level ${level}'s name is not just the digit`, (sv[key] ?? "") !== String(level));
   }
   // The question "Utfall / Fastställs / Justeras / Ändras" is gone from the UI.
-  const ui = require("node:fs").readFileSync(
+  const ui = readFileSync(
     new URL("../src/components/academy/ReviewQueue.tsx", import.meta.url),
     "utf8",
-  ) as string;
+  );
   const code = ui.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   ck(
     "the reviewer is no longer asked to classify an outcome",
