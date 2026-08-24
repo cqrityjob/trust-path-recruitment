@@ -58,60 +58,62 @@ type Copy = { subject: string; body: string; cta: string | null };
  *  Every sentence a candidate receives about a recruitment decision is worth
  *  being able to read in one place, in the language it will arrive in. A
  *  template engine here would mean nobody ever reads the rejection. */
-const COPY: Record<"sv" | "en", Record<NotifiableStatus, (p: ApplicationStatusEmailParams) => Copy>> =
-  {
-    sv: {
-      interview: (p) => ({
-        subject: `${p.employerName} vill träffa dig — ${p.jobTitle}`,
-        body:
-          `${p.employerName} har gått vidare med din ansökan till ${p.jobTitle} och vill boka en intervju. ` +
-          `De kontaktar dig direkt för att komma överens om en tid.`,
-        cta: "Se din ansökan",
-      }),
-      rejected: (p) => ({
-        subject: `Din ansökan till ${p.jobTitle}`,
-        // No reason, and no reason derived from an assessment. This is the
-        // same sentence for everybody, which is what keeps it from becoming a
-        // comparison between people.
-        body:
-          `Tack för din ansökan till ${p.jobTitle} hos ${p.employerName}. ` +
-          `Arbetsgivaren har valt att gå vidare med andra kandidater i den här rekryteringen. ` +
-          `Dina uppgifter och ditt Security Passport tillhör dig och finns kvar på CQrityjob.`,
-        cta: "Se fler jobb",
-      }),
-      hired: (p) => ({
-        subject: `Grattis — ${p.jobTitle} hos ${p.employerName}`,
-        body:
-          `${p.employerName} har registrerat dig som anställd för ${p.jobTitle}. ` +
-          `Din kommande arbetsgivare kontaktar dig om nästa steg.`,
-        cta: "Se din ansökan",
-      }),
-    },
-    en: {
-      interview: (p) => ({
-        subject: `${p.employerName} would like to meet you — ${p.jobTitle}`,
-        body:
-          `${p.employerName} has taken your application for ${p.jobTitle} forward and would like to arrange an interview. ` +
-          `They will contact you directly to agree a time.`,
-        cta: "View your application",
-      }),
-      rejected: (p) => ({
-        subject: `Your application for ${p.jobTitle}`,
-        body:
-          `Thank you for your application for ${p.jobTitle} at ${p.employerName}. ` +
-          `The employer has chosen to proceed with other candidates in this recruitment. ` +
-          `Your details and your Security Passport belong to you and remain on CQrityjob.`,
-        cta: "See more jobs",
-      }),
-      hired: (p) => ({
-        subject: `Congratulations — ${p.jobTitle} at ${p.employerName}`,
-        body:
-          `${p.employerName} has recorded you as hired for ${p.jobTitle}. ` +
-          `Your new employer will be in touch about next steps.`,
-        cta: "View your application",
-      }),
-    },
-  };
+const COPY: Record<
+  "sv" | "en",
+  Record<NotifiableStatus, (p: ApplicationStatusEmailParams) => Copy>
+> = {
+  sv: {
+    interview: (p) => ({
+      subject: `${p.employerName} vill träffa dig — ${p.jobTitle}`,
+      body:
+        `${p.employerName} har gått vidare med din ansökan till ${p.jobTitle} och vill boka en intervju. ` +
+        `De kontaktar dig direkt för att komma överens om en tid.`,
+      cta: "Se din ansökan",
+    }),
+    rejected: (p) => ({
+      subject: `Din ansökan till ${p.jobTitle}`,
+      // No reason, and no reason derived from an assessment. This is the
+      // same sentence for everybody, which is what keeps it from becoming a
+      // comparison between people.
+      body:
+        `Tack för din ansökan till ${p.jobTitle} hos ${p.employerName}. ` +
+        `Arbetsgivaren har valt att gå vidare med andra kandidater i den här rekryteringen. ` +
+        `Dina uppgifter och ditt Security Passport tillhör dig och finns kvar på CQrityjob.`,
+      cta: "Se fler jobb",
+    }),
+    hired: (p) => ({
+      subject: `Grattis — ${p.jobTitle} hos ${p.employerName}`,
+      body:
+        `${p.employerName} har registrerat dig som anställd för ${p.jobTitle}. ` +
+        `Din kommande arbetsgivare kontaktar dig om nästa steg.`,
+      cta: "Se din ansökan",
+    }),
+  },
+  en: {
+    interview: (p) => ({
+      subject: `${p.employerName} would like to meet you — ${p.jobTitle}`,
+      body:
+        `${p.employerName} has taken your application for ${p.jobTitle} forward and would like to arrange an interview. ` +
+        `They will contact you directly to agree a time.`,
+      cta: "View your application",
+    }),
+    rejected: (p) => ({
+      subject: `Your application for ${p.jobTitle}`,
+      body:
+        `Thank you for your application for ${p.jobTitle} at ${p.employerName}. ` +
+        `The employer has chosen to proceed with other candidates in this recruitment. ` +
+        `Your details and your Security Passport belong to you and remain on CQrityjob.`,
+      cta: "See more jobs",
+    }),
+    hired: (p) => ({
+      subject: `Congratulations — ${p.jobTitle} at ${p.employerName}`,
+      body:
+        `${p.employerName} has recorded you as hired for ${p.jobTitle}. ` +
+        `Your new employer will be in touch about next steps.`,
+      cta: "View your application",
+    }),
+  },
+};
 
 const CTA_PATH: Record<NotifiableStatus, string> = {
   interview: "/my-career/applications",
