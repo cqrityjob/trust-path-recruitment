@@ -27,7 +27,7 @@
  * Run: bun run passport-persona-journey:check
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
@@ -406,6 +406,37 @@ assert(formatJurisdiction("ZZ", "en") === "ZZ", "an unreviewed code returns ITSE
 
 // The regression that motivated the formatter: the surfaces must not carry
 // their own copy of the mapping, and the two EXPORT paths must use it.
+// A WHOLE-TREE sweep, not a list.
+//
+// The first version of this check named seven files. Four more surfaces were
+// carrying their own copy of the ternary — useCardContent, RecipientPassportCard
+// and p.$token twice — and a fixed list cannot find the one nobody remembered
+// to add. Walking the tree means a NEW surface with a private mapping fails
+// this check on the day it is written.
+{
+  const dirs = ["src/components/security-passport", "src/lib/security-passport", "src/routes"];
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (/\.tsx?$/.test(e.name)) files.push(rel);
+    }
+  };
+  for (const d of dirs) walk(d);
+
+  const offenders = files.filter((rel) =>
+    /jurisdiction[A-Za-z]*\s*===\s*"[A-Z]{2}"\s*\?/.test(readFileSync(join(ROOT, rel), "utf8")),
+  );
+  assert(
+    offenders.length === 0,
+    "no Passport surface maps a jurisdiction code by hand (found: " +
+      (offenders.join(", ") || "none") +
+      ")",
+  );
+  assert(files.length > 50, `the sweep actually walked the tree (${files.length} files)`);
+}
+
 const SURFACES = [
   "src/components/security-passport/PassportCard.tsx",
   "src/components/security-passport/PassportOverview.tsx",

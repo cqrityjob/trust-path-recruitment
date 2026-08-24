@@ -198,9 +198,7 @@ function RecipientRoute() {
           <CredentialVerificationPage
             credential={presentation.credentials[0]}
             holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
-            jurisdiction={
-              presentation.jurisdiction === "SE" ? pt("jurisdiction.SE") : presentation.jurisdiction
-            }
+            jurisdiction={formatJurisdiction(presentation.jurisdiction, lang)}
             verifyUrl={shareUrl}
           />
         </div>
@@ -374,7 +372,7 @@ function RecipientRoute() {
                   {c.jurisdiction ? (
                     <Row
                       label={pt("rec.jurisdiction")}
-                      value={c.jurisdiction === "SE" ? pt("jurisdiction.SE") : c.jurisdiction}
+                      value={formatJurisdiction(c.jurisdiction, lang)}
                     />
                   ) : null}
                 </dl>
