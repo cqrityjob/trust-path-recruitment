@@ -105,7 +105,7 @@ export const listCredentialTypes = createServerFn({ method: "GET" })
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
+    return ((data ?? []) as any[]).map((r: any) => ({
       code: r.code,
       category: r.category as CredentialCategory,
       claimType: r.claim_type,
@@ -209,17 +209,18 @@ export const saveCredential = createServerFn({ method: "POST" })
         .maybeSingle();
       if (error) throw new Error(error.message);
       if (!row) throw new Error("SP_CREDENTIAL_CODE_UNKNOWN");
+      const row2: any = row;
       type = {
-        code: row.code,
-        category: row.category as CredentialCategory,
-        claimType: row.claim_type,
-        nameSv: row.name_sv,
-        nameEn: row.name_en,
-        symbolLabel: row.symbol_label,
-        requiresValidUntil: row.requires_valid_until,
-        requiresIssuer: row.requires_issuer,
-        requiresScope: row.requires_scope,
-        narrowResultOnly: row.narrow_result_only,
+        code: row2.code,
+        category: row2.category as CredentialCategory,
+        claimType: row2.claim_type,
+        nameSv: row2.name_sv,
+        nameEn: row2.name_en,
+        symbolLabel: row2.symbol_label,
+        requiresValidUntil: row2.requires_valid_until,
+        requiresIssuer: row2.requires_issuer,
+        requiresScope: row2.requires_scope,
+        narrowResultOnly: row2.narrow_result_only,
       };
     }
 
@@ -338,7 +339,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
       .order("updated_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
+    return ((data ?? []) as any[]).map((r: any) => ({
       id: r.id,
       credentialCode: r.credential_code,
       title: r.title,

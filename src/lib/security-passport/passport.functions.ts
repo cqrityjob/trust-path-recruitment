@@ -285,7 +285,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
     const periods = ((periodsRes.data ?? []) as PeriodRow[]).map(toPeriod);
     // Superseded and withdrawn entries stay in the database as history but
     // are not part of the current Passport view.
-    const claims = ((claimsRes.data ?? []) as ClaimRow[])
+    const claims = ((claimsRes.data ?? []) as unknown as ClaimRow[])
       .filter((r) => r.lifecycle_state !== "superseded" && r.lifecycle_state !== "withdrawn")
       .map(toClaim);
 
