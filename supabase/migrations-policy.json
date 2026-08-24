@@ -555,6 +555,19 @@
       "doNotReExecute": true,
       "reason": "Phase A migration 1 of 7, applied through the Lovable tracked-migration mechanism on owner approval; hosted ledger 153 -> 154. The generated copy is removed from supabase/migrations because its version 20260823223323 sorts BEFORE the canonical slot 20260907090000 and before five migrations already in the hosted ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. The canonical file is preserved and replays correctly. Migration 1 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260823223323';"
+    },
+    {
+      "canonicalFile": "20260907091000_sp_sweden_truth_model.sql",
+      "canonicalVersion": "20260907091000",
+      "hostedVersion": "20260824075531",
+      "hostedName": "43ad4fe6-e759-4bd1-a122-158ad4aa478b",
+      "appliedAt": "2026-08-24T07:55:31Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824075531_43ad4fe6-e759-4bd1-a122-158ad4aa478b.sql",
+      "sqlEquivalence": "Verified from current main: the generated file is a strict byte prefix of the canonical file, differing only by a missing trailing newline (canonical == generated + '\\n'); 28469 vs 28470 bytes. Comment-stripped: 0 differing lines across 429. Whitespace-normalised: identical (sha256 prefix ac842f0ede4f7d59). Objects identical (3). ALTER TABLE targets identical (sp_claims, sp_credential_types). Hosted verification: ledger 154 -> 155, sp_credential_types 4 -> 8, sp_professional_titles 0 -> 11, sp_claims.authorisation_scope added, requires_scope and narrow_result_only added, code CHECK widened to 48 chars, sp_correct_claim now solely 15-arg, trigger sp_claims_credential_rules_trg enabled with the Migration 2 definition.",
+      "doNotReExecute": true,
+      "reason": "Phase A migration 2 of 7, applied through the Lovable tracked-migration mechanism on owner approval. The generated copy is removed because its version 20260824075531 sorts BEFORE the canonical slot 20260907091000 and before migrations already in the hosted ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. The canonical file is preserved and replays correctly. Migration 2 must never be executed hosted again.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824075531';"
     }
   ],
   "canonicalProject": {
