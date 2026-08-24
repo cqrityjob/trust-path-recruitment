@@ -153,9 +153,15 @@ BEGIN
   RAISE NOTICE 'GROUP 6 -- MUTATION: these assertions fail against the generated set';
 END $uktr$;
 
--- Installs exactly what Lovable's rewrite produced, re-runs the GROUP 1 checks,
--- and requires them to fail. Wrapped in a savepoint so the canonical set is
--- restored whatever happens.
+-- Installs exactly what Lovable's rewrite produced -- all 13 rows of it: the
+-- six active_title rules it reproduced correctly, the single
+-- GB_SIA_ELIGIBLE_NFL it substituted for seven eligibility rules, and the six
+-- renamed GB_SIA_EDU_* education rules. An earlier version of this fixture
+-- built only 7 rows, which left assertion 1.3 -- "no GB_SIA_EDU_* survive" --
+-- with nothing to catch. A mutation that does not reproduce the defect cannot
+-- prove the assertions detect it.
+--
+-- Wrapped in a savepoint so the canonical set is restored whatever happens.
 BEGIN;
 SAVEPOINT before_mutation;
 
@@ -165,24 +171,61 @@ DELETE FROM public.sp_professional_titles
 INSERT INTO public.sp_professional_titles
   (code, market_pack_code, profession_family_code, output_kind, name_local, name_en,
    requires_credential_codes, requires_assertion_level, requires_current_validity, is_active, priority)
-VALUES ('GB_SIA_ELIGIBLE_NFL','GB','SECURITY_GUARD','local_eligibility',
-        'SIA Non-Front-Line licence held · United Kingdom','SIA Non-Front-Line licence held · United Kingdom',
-        ARRAY['UK_SIA_LICENCE_NFL']::text[], 'verified', true, false, 210)
+SELECT v.code, 'GB', 'SECURITY_GUARD', v.output_kind, v.name, v.name,
+       ARRAY[v.cred]::text[], 'verified', true, false, v.priority
+FROM (VALUES
+  ('GB_SIA_ELIGIBLE_NFL', 'local_eligibility',   'SIA Non-Front-Line licence held · United Kingdom',           'UK_SIA_LICENCE_NFL', 210),
+  ('GB_SIA_EDU_SG',       'education_completed', 'Licence-linked qualification — Security Guarding',           'UK_SIA_QUAL_SG',     310),
+  ('GB_SIA_EDU_DS',       'education_completed', 'Licence-linked qualification — Door Supervision',            'UK_SIA_QUAL_DS',     320),
+  ('GB_SIA_EDU_CCTV',     'education_completed', 'Licence-linked qualification — Public Space Surveillance',   'UK_SIA_QUAL_CCTV',   330),
+  ('GB_SIA_EDU_CP',       'education_completed', 'Licence-linked qualification — Close Protection',            'UK_SIA_QUAL_CP',     340),
+  ('GB_SIA_EDU_CVIT',     'education_completed', 'Licence-linked qualification — Cash and Valuables in Transit','UK_SIA_QUAL_CVIT',  350),
+  ('GB_SIA_EDU_TOP_UP',   'education_completed', 'SIA top-up / refresher training completed',                  'UK_SIA_TOP_UP',      360)
+) AS v(code, output_kind, name, cred, priority)
 ON CONFLICT (code) DO NOTHING;
 
 DO $mut$
-DECLARE _n integer; _fired boolean := false;
+DECLARE
+  _total integer; _title integer; _elig integer; _edu integer; _stray integer;
+  _missed text[] := ARRAY[]::text[];
 BEGIN
-  SELECT count(*) INTO _n FROM public.sp_professional_titles
+  SELECT count(*) INTO _total FROM public.sp_professional_titles WHERE market_pack_code='GB';
+  SELECT count(*) INTO _title FROM public.sp_professional_titles
+   WHERE market_pack_code='GB' AND output_kind='active_title';
+  SELECT count(*) INTO _elig FROM public.sp_professional_titles
    WHERE market_pack_code='GB' AND output_kind='local_eligibility';
-  IF _n <> 7 THEN _fired := true; END IF;
+  SELECT count(*) INTO _edu FROM public.sp_professional_titles
+   WHERE market_pack_code='GB' AND output_kind='education_completed';
+  SELECT count(*) INTO _stray FROM public.sp_professional_titles
+   WHERE market_pack_code='GB' AND (code LIKE 'GB\_SIA\_EDU\_%' OR code='GB_SIA_ELIGIBLE_NFL');
 
-  IF NOT _fired THEN
+  -- The fixture must actually be Lovable's set before anything is concluded
+  -- from it. 13 rows, split 6/1/6.
+  IF _total <> 13 OR _title <> 6 OR _elig <> 1 OR _edu <> 6 THEN
     RAISE EXCEPTION
-      'ASSERTION FAILED: the generated rule set did NOT trip the contract check. '
-      'This suite cannot detect the defect it exists to prevent.';
+      'ASSERTION FAILED: the mutation fixture is not Lovable''s 13-rule set '
+      '(found %/%/%/% for total/title/eligibility/education). The mutation proof '
+      'is meaningless unless it reproduces the real defect.',
+      _total, _title, _elig, _edu;
   END IF;
-  RAISE NOTICE '    ok  6.1 the generated 13-rule set is rejected by GROUP 1 (found % eligibility rules, not 7)', _n;
+
+  -- Each GROUP 1 assertion is required to trip. One firing is not enough: the
+  -- earlier 7-row fixture tripped the eligibility count while leaving the
+  -- GB_SIA_EDU_* check unexercised.
+  IF _total = 19 THEN _missed := _missed || 'total-is-19'; END IF;
+  IF _title = 6 AND _elig = 7 AND _edu = 6 THEN _missed := _missed || 'split-is-6/7/6'; END IF;
+  IF _stray = 0 THEN _missed := _missed || 'no-GB_SIA_EDU_*-or-ELIGIBLE_NFL-present'; END IF;
+
+  IF cardinality(_missed) > 0 THEN
+    RAISE EXCEPTION
+      'ASSERTION FAILED: the generated rule set did NOT trip every contract check. '
+      'Undetected: %. This suite cannot detect the defect it exists to prevent.',
+      array_to_string(_missed, ', ');
+  END IF;
+
+  RAISE NOTICE '    ok  6.1 the generated 13-rule set trips the total (% <> 19)', _total;
+  RAISE NOTICE '    ok  6.2 and the split (%/%/% <> 6/7/6)', _title, _elig, _edu;
+  RAISE NOTICE '    ok  6.3 and the non-canonical code check (% GB_SIA_EDU_*/ELIGIBLE_NFL rows present)', _stray;
 END $mut$;
 
 ROLLBACK TO SAVEPOINT before_mutation;
@@ -195,6 +238,6 @@ BEGIN
   IF _n <> 19 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: the canonical set was not restored after the mutation (found %)', _n;
   END IF;
-  RAISE NOTICE '    ok  6.2 the canonical 19-rule set is restored after the mutation';
-  RAISE NOTICE '    ok  13 UK title rule assertions passed';
+  RAISE NOTICE '    ok  6.4 the canonical 19-rule set is restored after the mutation';
+  RAISE NOTICE '    ok  15 UK title rule assertions passed';
 END $restored$;
