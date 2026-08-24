@@ -622,6 +622,20 @@
       "doNotReExecute": true,
       "reason": "Phase A migration 4 of 7, the Dubai (SIRA) market pack, applied hosted on owner approval; ledger 157 -> 158. The generated copy is exactly equivalent to its canonical file, so it is deleted from the active path rather than parked -- git history and this mapping preserve the traceability. It is removed because version 20260824113332 sorts BEFORE the canonical slot 20260907093000 and before migrations already in the ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 4 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824113332';"
+    },
+    {
+      "canonicalFile": "20260908090000_sp_legacy_scope_correctable.sql",
+      "canonicalVersion": "20260908090000",
+      "hostedVersion": "20260824115108",
+      "hostedName": "cc709581-6d3a-4149-becb-297004b222bd",
+      "appliedAt": "2026-08-24T11:51:08Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824115108_cc709581-6d3a-4149-becb-297004b222bd.sql",
+      "sqlEquivalence": "Verified from main 7dd1b67 on all six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (9134 vs 9135 bytes, 225 vs 226 lines) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 177. (3) Whitespace-normalised: identical, sha256 prefix f0fb7bcc18bb978d. (4) Statement order: identical, 60 statements both sides. (5) Object/function targets identical -- public.sp_claims_credential_rules only. (6) Hosted postconditions match the canonical intent: the trigger function carries the grandfather branch while still raising SP_CREDENTIAL_REQUIRES_SCOPE, search_path=public, not SECURITY DEFINER, trigger sp_claims_credential_rules_trg enabled, sp_correct_claim still 15-arg, and no stored claim was rewritten (16 claims all active, 0 carrying a backfilled scope).",
+      "equivalenceVerified": true,
+      "doNotReExecute": true,
+      "reason": "Phase A migration 5 of 7, the legacy scope correction, applied hosted on owner approval; ledger 158 -> 159. It replaces the sp_claims_credential_rules trigger function so a claim recorded before the authorisation_scope column existed can still be corrected by its holder instead of being frozen by the newer requirement -- the rule itself is not removed. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked; git history and this mapping preserve traceability. Removed because 20260824115108 sorts BEFORE the canonical slot 20260908090000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 5 must never be executed hosted again.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824115108';"
     }
   ],
   "canonicalProject": {
