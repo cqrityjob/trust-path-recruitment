@@ -608,6 +608,20 @@
       "doNotReExecute": true,
       "reason": "The UK title-rule correction, applied hosted as 20260824092449; ledger 156 -> 157. It repairs the Migration 3 divergence recorded below: hosted now holds the canonical 19 GB professional-title rules. Unlike that entry, this generated copy IS exactly equivalent to its canonical file, so it is deleted from the active path rather than parked -- git history and this mapping preserve the traceability. It is removed because version 20260824092449 sorts BEFORE the canonical slot 20260907092500 and before migrations already in the ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824092449';"
+    },
+    {
+      "canonicalFile": "20260907093000_sp_uae_dubai_market_pack.sql",
+      "canonicalVersion": "20260907093000",
+      "hostedVersion": "20260824113332",
+      "hostedName": "ac507810-2847-442b-8f8d-e1a7a419c4cf",
+      "appliedAt": "2026-08-24T11:33:32Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824113332_ac507810-2847-442b-8f8d-e1a7a419c4cf.sql",
+      "sqlEquivalence": "Verified from main 1cf8abe on all six comparisons. (1) Strict byte: the generated file is a strict byte prefix of the canonical one; canonical == generated + '\\n'. Generated 15641 bytes / 276 lines, canonical 15642 / 277 -- the single differing byte is the trailing newline after COMMIT;, which is not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 155. (3) Whitespace-normalised: identical, sha256 prefix b1f3edf5621b0a18. (4) Statement order: identical, 15 statements on both sides. (5) Object/row targets: identical -- sp_credential_types, sp_regulated_roles, sp_professional_titles, plus COMMENT ON sp_credential_types.typical_validity_months and sp_claims.holder_note. (6) Hosted postconditions match the canonical intent: typical_validity_months added, 9 AE-DU credential types, 3 AE-DU regulated roles, 11 AE-DU title rules split 3 active_title / 3 local_eligibility / 5 education_completed, narrow_result_only = 2, AE-DU pack still is_active=false/pending with every AE-DU credential and rule individually is_active=false.",
+      "equivalenceVerified": true,
+      "doNotReExecute": true,
+      "reason": "Phase A migration 4 of 7, the Dubai (SIRA) market pack, applied hosted on owner approval; ledger 157 -> 158. The generated copy is exactly equivalent to its canonical file, so it is deleted from the active path rather than parked -- git history and this mapping preserve the traceability. It is removed because version 20260824113332 sorts BEFORE the canonical slot 20260907093000 and before migrations already in the ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 4 must never be executed hosted again.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824113332';"
     }
   ],
   "canonicalProject": {

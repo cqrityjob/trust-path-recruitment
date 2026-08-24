@@ -144,6 +144,47 @@ PGPASSWORD=postgres LC_ALL=C PGPORT=54322 PGUSER=postgres bash scripts/db-test.s
 `LC_ALL=C` gives English error messages; without it psql reports in Swedish and
 the suites' error-matching becomes hard to read.
 
+## Which checks gate a release
+
+Owner decision, 2026-08-24. Recorded here so it is not re-litigated on every
+migration.
+
+**The canonical hosted backend is `zrahptwsnjcdyzfywbeh`**, via the Lovable
+Cloud project. `mlvzmiutmyyqeuvjglco` is not the production backend for this
+workstream and is not a release dependency. Do not migrate to it, test against
+it or propose moving to it as part of ordinary feature work.
+
+**Two repository-controlled CI jobs are the blocking gates on `main`:**
+
+- `CI › Lint, typecheck and deterministic checks`
+- `CI › Migration replay, RLS and rollback tests`
+
+plus whatever mandatory Passport gates the current work order names.
+
+**`Supabase / Supabase Preview` is not a blocking gate**, and its standing
+failure is expected rather than a defect:
+
+> Remote migration versions not found in local migrations directory
+
+That is the tracked-migration model working as designed. Canonical migrations
+live under their reviewed filenames; Lovable applies them hosted under its own
+generated version and UUID name; the hosted identity is recorded in
+`appliedThroughLovable` in `supabase/migrations-policy.json`; and the generated
+duplicate is removed from the active path **only after executable SQL
+equivalence has been proven**. Keeping those generated files would reintroduce
+the replay-ordering defect that broke CI in PR #55 and PR #61 — their versions
+sort before the canonical slots they duplicate. The Supabase Preview
+integration does not read `appliedThroughLovable`, so it reports every hosted
+version as missing locally.
+
+So: do not stop a release for that message, do not restore generated
+duplicates to satisfy it, do not rewrite canonical migration history, do not
+hand-edit the hosted ledger, and do not run `supabase db push`.
+
+**A Supabase Preview failure for any OTHER reason is still a real signal** and
+must be investigated and reported separately. The exemption is for the
+remote-version/local-file mismatch only.
+
 ## Applying to a hosted project
 
 **Not done by this work.** Every PR is labelled
