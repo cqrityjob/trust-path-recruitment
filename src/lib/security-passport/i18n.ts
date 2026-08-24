@@ -918,7 +918,7 @@ const sv = {
   "cred.error.controlledLabelOnly":
     "Den här uppgiften har en fast benämning och kan inte skrivas om.",
   "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
-  "cred.error.endBeforeStart": "Slutdatumet kan inte vara före startdatumet.",
+  "cred.error.endBeforeStart": "Slutdatumet måste vara efter startdatumet.",
   "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
   "cred.error.noteTooLong": "Anteckningen är för lång (max 2000 tecken).",
   "cred.error.incompleteForActive":
@@ -2042,7 +2042,7 @@ const en: Record<PassportCopyKey, string> = {
     "This entry cannot carry a note. Only the fact of the check is recorded.",
   "cred.error.controlledLabelOnly": "This entry has a fixed label and cannot be reworded.",
   "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
-  "cred.error.endBeforeStart": "The end date cannot be before the start date.",
+  "cred.error.endBeforeStart": "The end date must be after the start date.",
   "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",
   "cred.error.noteTooLong": "That note is too long (2000 characters maximum).",
   "cred.error.incompleteForActive": "Fill in the required fields before adding this entry.",

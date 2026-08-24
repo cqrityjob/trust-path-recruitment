@@ -465,6 +465,25 @@ for (const rel of SURFACES) {
   );
 }
 
+// An identity line is assembled from parts that can legitimately be absent —
+// `displayName` is `?? ""` upstream, and a jurisdiction nobody has stated
+// renders as "not stated". Interpolating those between literal "·" produced a
+// line opening with a dangling separator, which reads as a value that failed
+// to load rather than one nobody has given yet. Joining a filtered list cannot
+// produce a leading, trailing or doubled separator for ANY combination.
+{
+  const rel = "src/components/security-passport/PassportOverview.tsx";
+  const src = readFileSync(join(ROOT, rel), "utf8");
+  assert(
+    !/\{holder\.displayName\}\s*·/.test(src),
+    `${rel} does not interpolate the display name against a literal separator`,
+  );
+  assert(
+    /\.join\(" · "\)/.test(src),
+    `${rel} builds the identity line by joining the parts that exist`,
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    A CLOSED MARKET IS STATED, NOT MERELY OMITTED
    ══════════════════════════════════════════════════════════════════════ */
@@ -522,10 +541,7 @@ const workCountries = (jurisdictionStep?.fields[0]?.options ?? []).map((o) => o.
 for (const code of ["SE", "GB", "AE"]) {
   assert(workCountries.includes(code), `a holder working in ${code} can say so`);
 }
-assert(
-  workCountries.length === 3,
-  "and the list is exactly the countries the profile FK accepts",
-);
+assert(workCountries.length === 3, "and the list is exactly the countries the profile FK accepts");
 // The emirate is deliberately absent: the profile column is a COUNTRY key, and
 // offering "AE-DU" here would fail the foreign key on save.
 assert(

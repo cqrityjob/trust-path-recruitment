@@ -121,8 +121,17 @@ export function PassportOverview({
         >
           {pt("overview.title")}
         </h2>
+        {/* Joined, never interpolated with literal separators. `displayName`
+            is `?? ""` upstream, so a holder who has not reached the identity
+            step rendered a line that opened with a dangling "· ", which reads
+            as a missing value rather than an absent one. The same applies to a
+            jurisdiction nobody has stated yet — see formatJurisdiction, which
+            returns "not stated" for null rather than guessing a country. */}
         <p className="mt-2 text-sm text-foreground">
-          {holder.displayName} · {profession} · {formatJurisdiction(holder.jurisdictionCode, lang)}
+          {[holder.displayName, profession, formatJurisdiction(holder.jurisdictionCode, lang)]
+            .map((part) => part?.trim())
+            .filter((part): part is string => Boolean(part))
+            .join(" · ")}
         </p>
 
         {/* What an authority currently PERMITS, separate from what the
