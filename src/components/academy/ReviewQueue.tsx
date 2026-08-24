@@ -45,6 +45,11 @@ import {
   listReviewQueue,
   type RubricDimension,
 } from "@/lib/security-competency/academy-employer.functions";
+import {
+  deriveOutcome,
+  RUBRIC_LEVEL_LABEL_KEY,
+  type ReviewProposal,
+} from "@/lib/security-competency/review-proposal";
 
 export type ReviewQueueRow = {
   reviewId: string;
@@ -126,11 +131,12 @@ const TRIGGER_WHY: Record<string, TranslationKey> = {
   participant_requested: "academy.reviews.whyRequested",
 };
 
-const OUTCOME_LABEL: Record<"upheld" | "adjusted" | "overturned", TranslationKey> = {
-  upheld: "academy.reviews.outcomeUpheld",
-  adjusted: "academy.reviews.outcomeAdjusted",
-  overturned: "academy.reviews.outcomeOverturned",
-};
+// OUTCOME_LABEL is gone with the question it labelled. "Utfall: Fastställs /
+// Justeras / Ändras" described what a reviewer was doing to a machine
+// proposal, and with no provider enabled there was no proposal to uphold or
+// adjust -- so a security manager was asked to classify her relationship to
+// something that did not exist. deriveOutcome() records what actually
+// happened instead, which is both simpler to use and impossible to mislabel.
 
 // A safety-critical ITEM does not make a response a safety concern. Twelve of
 // the eighteen items are classified safety-critical, so without `no_concern`
@@ -271,7 +277,14 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
   const qc = useQueryClient();
   const complete = useServerFn(completeReview);
   const [rationale, setRationale] = useState("");
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // Today this is always null: scp_ai_providers has 'anthropic' registered and
+  // disabled, so getReviewProposal() has nothing to return. The workspace
+  // below is written to work identically either way -- which is the whole
+  // point of building the seam before the provider.
+  const [showMethod, setShowMethod] = useState(false);
+  const proposal = null as ReviewProposal | null;
+  const proposalFor = (key: string) =>
+    proposal === null ? null : (proposal.levels.find((l) => l.dimensionKey === key) ?? null);
   const [finding, setFinding] = useState<Finding | null>(null);
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -301,15 +314,20 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
   // after the reviewer has already written their reasoning.
   const missingFinding = review.findingRequired && finding === null;
   const missingLevels = needsRubric && rubric.some((d) => levels[d.dimension_key] === undefined);
-  const incomplete =
-    rubricMissing || outcome === null || rationale.trim() === "" || missingFinding || missingLevels;
+  const incomplete = rubricMissing || rationale.trim() === "" || missingFinding || missingLevels;
 
   const m = useMutation({
     mutationFn: () =>
       complete({
         data: {
           reviewId: review.reviewId,
-          outcome: outcome as Outcome,
+          // Derived, never asked. A safety finding of concern against a
+          // proposal is an overturn whatever the levels say.
+          outcome: deriveOutcome(
+            proposal,
+            levels,
+            proposal !== null && finding !== null && finding !== "no_concern",
+          ),
           rationale,
           // No contribution. The reviewer states a judgement; the number is
           // derived server-side from the item's own governed scoring, or from
@@ -451,9 +469,28 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
             <legend className="px-1 text-xs font-medium text-foreground">
               {t("academy.reviews.rubricLegend")}
             </legend>
-            <p className="text-[12px] leading-relaxed text-muted-foreground">
-              {t("academy.reviews.rubricHint")}
+            {/* What the reviewer is actually being asked, in words a security
+                manager uses. The methodology framing that used to open this
+                block -- "Sätt en nivå per dimension. Poängen räknas fram ur
+                dina nivåer" -- described the machinery to somebody who wanted
+                to know what to look for. It is still available, one click
+                down, for whoever wants it. */}
+            <p className="text-[13px] leading-relaxed text-foreground">
+              {t("academy.reviews.whatToAssess")}
             </p>
+            <button
+              type="button"
+              onClick={() => setShowMethod((v) => !v)}
+              aria-expanded={showMethod}
+              className="text-[12px] font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t(showMethod ? "academy.reviews.hideMethod" : "academy.reviews.showMethod")}
+            </button>
+            {showMethod && (
+              <p className="text-[12px] leading-relaxed text-muted-foreground">
+                {t("academy.reviews.rubricHint")}
+              </p>
+            )}
             {rubric.map((d) => (
               <div key={d.dimension_key} className="border-t border-border pt-3 first:border-t-0">
                 <p className="text-[13px] font-medium text-foreground">
@@ -469,17 +506,27 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
                     {d.criterion}
                   </p>
                 )}
-                <ChoiceGroup<string>
-                  legend={t("academy.reviews.rubricLevel")}
+                {/* ── THE DESCRIPTOR LEADS, NOT THE NUMBER ────────────
+                 *
+                 *  This was five radios reading "0 — Inget underlag i svaret
+                 *  för denna dimension.", and a customer said she could not
+                 *  tell what she was choosing between. She was right: the
+                 *  only thing that scanned was the digit, so the control
+                 *  asked a security manager to pick a number and hope.
+                 *
+                 *  The governed descriptor is unchanged and still shown. What
+                 *  changed is the order: the level's short name is what the
+                 *  eye lands on, the authored sentence sits under it, and the
+                 *  numeric value the database stores is carried in state
+                 *  exactly as before. Nothing about scoring moved. */}
+                <RubricLevelChoice
                   name={`rubric-${review.reviewId}-${d.dimension_key}`}
-                  value={
-                    levels[d.dimension_key] === undefined ? null : String(levels[d.dimension_key])
-                  }
-                  onChange={(v) => setLevels((prev) => ({ ...prev, [d.dimension_key]: Number(v) }))}
-                  options={(d.levels ?? []).map((l) => ({
-                    value: String(l.level),
-                    label: `${l.level} — ${l.descriptor ?? ""}`,
-                  }))}
+                  legend={t("academy.reviews.rubricLevel")}
+                  levels={d.levels ?? []}
+                  value={levels[d.dimension_key] ?? null}
+                  proposed={proposalFor(d.dimension_key)}
+                  onChange={(n) => setLevels((prev) => ({ ...prev, [d.dimension_key]: n }))}
+                  t={t}
                 />
               </div>
             ))}
@@ -499,17 +546,6 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
             }))}
           />
         )}
-
-        <ChoiceGroup<Outcome>
-          legend={t("academy.reviews.outcome")}
-          name={`outcome-${review.reviewId}`}
-          value={outcome}
-          onChange={setOutcome}
-          options={(["upheld", "adjusted", "overturned"] as const).map((o) => ({
-            value: o,
-            label: t(OUTCOME_LABEL[o]),
-          }))}
-        />
 
         <div>
           <label
@@ -558,5 +594,81 @@ export function ReviewCard({ review }: { review: ReviewQueueRow }) {
         )}
       </form>
     </article>
+  );
+}
+
+/** One rubric dimension's level, chosen by reading rather than by number.
+ *
+ *  The governed descriptor is rendered verbatim under a short level name. The
+ *  number is still what the form submits and what the database stores; it is
+ *  simply no longer the thing a reviewer has to decode. Where an AI proposal
+ *  exists the proposed level is marked, and marked as a proposal -- never
+ *  pre-selected, because a pre-filled radio is a confirmation nobody made. */
+function RubricLevelChoice({
+  name,
+  legend,
+  levels,
+  value,
+  proposed,
+  onChange,
+  t,
+}: {
+  name: string;
+  legend: string;
+  levels: { level: number; descriptor: string | null }[];
+  value: number | null;
+  proposed: { level: number; uncertain: boolean; evidenceQuote: string | null } | null;
+  onChange: (level: number) => void;
+  t: (k: TranslationKey) => string;
+}) {
+  return (
+    <fieldset className="mt-2">
+      <legend className="sr-only">{legend}</legend>
+      <div className="space-y-1.5">
+        {levels.map((l) => {
+          const isProposed = proposed?.level === l.level;
+          const selected = value === l.level;
+          return (
+            <label
+              key={l.level}
+              className={`flex cursor-pointer items-start gap-2.5 rounded-[10px] border px-3 py-2 transition-colors ${
+                selected ? "border-accent bg-accent/5" : "border-border hover:bg-muted/40"
+              }`}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={l.level}
+                checked={selected}
+                onChange={() => onChange(l.level)}
+                className="mt-[3px] h-4 w-4 shrink-0"
+              />
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-[13px] font-semibold text-foreground">
+                    {t(RUBRIC_LEVEL_LABEL_KEY[l.level] as TranslationKey)}
+                  </span>
+                  {isProposed && (
+                    <span className="rounded-[6px] border border-accent/50 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      {t("academy.reviews.proposalTag")}
+                    </span>
+                  )}
+                  {isProposed && proposed?.uncertain && (
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {t("academy.reviews.proposalUncertain")}
+                    </span>
+                  )}
+                </span>
+                {l.descriptor && (
+                  <span className="mt-0.5 block text-[12px] leading-relaxed text-muted-foreground">
+                    {l.descriptor}
+                  </span>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }

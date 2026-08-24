@@ -2938,6 +2938,22 @@ export const dictionaries = {
     "academy.reviews.alreadyCompleted":
       "Granskningen är redan slutförd, sannolikt av en kollega. Uppdatera kön.",
     "academy.reviews.rubricLegend": "Bedömningsmatris",
+    "academy.reviews.whatToAssess":
+      "Läs kandidatens svar och välj den beskrivning som stämmer bäst för varje del. Du bedömer svaret, inte personen.",
+    "academy.reviews.showMethod": "Visa hur bedömningen räknas",
+    "academy.reviews.hideMethod": "Dölj hur bedömningen räknas",
+    "academy.reviews.level.0": "Inget underlag",
+    "academy.reviews.level.1": "Enstaka inslag",
+    "academy.reviews.level.2": "Delvis uppfyllt",
+    "academy.reviews.level.3": "Uppfyllt",
+    "academy.reviews.level.4": "Uppfyllt genomgående",
+    "academy.reviews.proposalTag": "AI-förslag",
+    "academy.reviews.proposalUncertain": "osäkert",
+    "academy.reviews.proposalHeading": "AI-förslag att bekräfta eller ändra",
+    "academy.reviews.proposalLede":
+      "Ett förslag, inte en bedömning. Ingenting sparas förrän du bekräftar eller ändrar det, och det är din bedömning som registreras.",
+    "academy.reviews.proposalDisabled":
+      "AI-stöd är inte aktiverat. Du gör bedömningen själv — arbetsytan är densamma.",
     "academy.reviews.rubricHint":
       "Sätt en nivå per dimension. Poängen räknas fram ur dina nivåer — du anger aldrig ett slutbetyg själv.",
     "academy.reviews.rubricLevel": "Nivå",
@@ -6368,6 +6384,22 @@ export const dictionaries = {
     "academy.reviews.alreadyCompleted":
       "This review is already completed, most likely by a colleague. Refresh the queue.",
     "academy.reviews.rubricLegend": "Rubric",
+    "academy.reviews.whatToAssess":
+      "Read the candidate's answer and choose the description that fits best for each part. You are assessing the answer, not the person.",
+    "academy.reviews.showMethod": "Show how the assessment is calculated",
+    "academy.reviews.hideMethod": "Hide how the assessment is calculated",
+    "academy.reviews.level.0": "No evidence",
+    "academy.reviews.level.1": "Isolated elements",
+    "academy.reviews.level.2": "Partly met",
+    "academy.reviews.level.3": "Met",
+    "academy.reviews.level.4": "Met throughout",
+    "academy.reviews.proposalTag": "AI proposal",
+    "academy.reviews.proposalUncertain": "uncertain",
+    "academy.reviews.proposalHeading": "AI proposal to confirm or change",
+    "academy.reviews.proposalLede":
+      "A proposal, not an assessment. Nothing is saved until you confirm or change it, and it is your assessment that is recorded.",
+    "academy.reviews.proposalDisabled":
+      "AI assistance is not enabled. You make the assessment yourself — the workspace is the same.",
     "academy.reviews.rubricHint":
       "Set one level per dimension. The score is derived from your levels — you never enter a final number yourself.",
     "academy.reviews.rubricLevel": "Level",

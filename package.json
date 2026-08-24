@@ -50,6 +50,7 @@
     "employer-job-lifecycle:check": "bun run scripts/employer-job-lifecycle-check.ts",
     "employer-hire-continuity:check": "bun run scripts/employer-hire-continuity-check.ts",
     "employer-other-taxonomy:check": "bun run scripts/employer-other-taxonomy-check.ts",
+    "review-proposal-contract:check": "bun run scripts/review-proposal-contract-check.ts",
     "passport-recipient-card:check": "bun run scripts/passport-recipient-card-check.tsx",
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
