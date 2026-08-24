@@ -39,7 +39,7 @@ import {
 } from "../src/lib/security-passport/identity/presentation";
 import { formatJurisdiction } from "../src/lib/security-passport/format";
 import { passportCopy } from "../src/lib/security-passport/i18n";
-import { ONBOARDING_STEPS } from "../src/lib/security-passport/onboarding";
+import { ONBOARDING_STEPS, splitWorkCountry } from "../src/lib/security-passport/onboarding";
 import type { Claim, LifecycleState, AssertionLevel } from "../src/lib/security-passport/types";
 
 const TODAY = "2026-08-24";
@@ -451,9 +451,12 @@ const SURFACES = [
 ];
 for (const rel of SURFACES) {
   const src = readFileSync(join(ROOT, rel), "utf8");
+  // `formatWorkLocation` counts: it is the shared formatter for a HOLDER's
+  // work location and delegates to `formatJurisdiction` for both halves. What
+  // must never come back is a surface formatting a jurisdiction by itself.
   assert(
-    src.includes("formatJurisdiction("),
-    `${rel} renders the jurisdiction through the shared formatter`,
+    src.includes("formatJurisdiction(") || src.includes("formatWorkLocation("),
+    `${rel} renders the jurisdiction through a shared formatter`,
   );
   assert(
     !/jurisdictionCode\s*===\s*"SE"\s*\?/.test(src),
@@ -535,18 +538,42 @@ assert(
 );
 
 const workCountries = (jurisdictionStep?.fields[0]?.options ?? []).map((o) => o.value);
-// Exactly sp_jurisdictions. Not a subset — a holder outside Sweden must be
-// able to answer — and not a superset, because the column is a FK and an
-// unknown code would fail the write.
+// Every market the product names must be answerable, or a holder in it has no
+// way to be described except by somebody else's country.
 for (const code of ["SE", "GB", "AE"]) {
   assert(workCountries.includes(code), `a holder working in ${code} can say so`);
 }
-assert(workCountries.length === 3, "and the list is exactly the countries the profile FK accepts");
-// The emirate is deliberately absent: the profile column is a COUNTRY key, and
-// offering "AE-DU" here would fail the foreign key on save.
+// Dubai is its own answer. SIRA licenses the emirate and not the country, so a
+// product that can only record "United Arab Emirates" has already made the
+// UAE-wide claim the market pack exists to refuse.
 assert(
-  !workCountries.includes("AE-DU"),
-  "the sub-jurisdiction is not offered where a country is required",
+  workCountries.includes("AE-DU"),
+  "a holder working in Dubai can say Dubai, not merely 'the UAE'",
+);
+
+// The answer is one string; the profile stores two columns, and
+// `sp_profile_sub_matches_country` requires them to agree. Every option must
+// therefore split into a country the FK accepts, with its emirate attached to
+// the right one.
+for (const answer of workCountries) {
+  const split = splitWorkCountry(answer);
+  assert(
+    split.jurisdictionCode !== null && ["SE", "GB", "AE"].includes(split.jurisdictionCode),
+    `${answer} splits into a country sp_jurisdictions holds (${split.jurisdictionCode})`,
+  );
+  assert(
+    split.subJurisdictionCode === null ||
+      split.subJurisdictionCode.slice(0, 2) === split.jurisdictionCode,
+    `${answer} keeps its sub-jurisdiction under its own country`,
+  );
+}
+// An unanswered step must stay unanswered. The whole defect was a country
+// appearing where nobody had stated one.
+assert(
+  splitWorkCountry("").jurisdictionCode === null &&
+    splitWorkCountry(null).jurisdictionCode === null &&
+    splitWorkCountry(undefined).jurisdictionCode === null,
+  "no answer yields no country, rather than a default",
 );
 
 for (const lang of ["sv", "en"] as const) {

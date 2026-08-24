@@ -75,7 +75,9 @@ export interface PassportCardModel {
    *  appointment is therefore already absent from the card that a reader
    *  screenshots, with nothing scheduled that could have failed to run. */
   readonly identity: ProfessionalIdentity;
-  readonly jurisdictionCode: string;
+  /** NULL when the holder has not stated a work country. Rendered as "not
+   *  stated" by formatJurisdiction — never silently as a country. */
+  readonly jurisdictionCode: string | null;
   readonly state: PassportCardState;
   /** Null unless the whole qualifying threshold is verified. */
   readonly recognition: RecognitionState;

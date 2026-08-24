@@ -29,7 +29,7 @@ import { AssertionLegend } from "./AssertionChip";
 import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
 import { ExperienceTimeline } from "./ExperienceTimeline";
-import { formatJurisdiction } from "@/lib/security-passport/format";
+import { formatWorkLocation } from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
@@ -75,7 +75,9 @@ export function PassportOverview({
 }: {
   holder: PassportHolder;
   evaluationOn: string;
-  viewingJurisdiction: string;
+  /** The country the READER is in. NULL when unknown — no cross-border
+   *  comparison is made rather than one against an assumed country. */
+  viewingJurisdiction: string | null;
   onContinue: () => void;
   onOpenCard: () => void;
   onShare: () => void;
@@ -128,7 +130,11 @@ export function PassportOverview({
             jurisdiction nobody has stated yet — see formatJurisdiction, which
             returns "not stated" for null rather than guessing a country. */}
         <p className="mt-2 text-sm text-foreground">
-          {[holder.displayName, profession, formatJurisdiction(holder.jurisdictionCode, lang)]
+          {[
+            holder.displayName,
+            profession,
+            formatWorkLocation(holder.jurisdictionCode, holder.subJurisdictionCode, lang),
+          ]
             .map((part) => part?.trim())
             .filter((part): part is string => Boolean(part))
             .join(" · ")}

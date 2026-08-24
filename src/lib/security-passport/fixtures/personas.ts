@@ -339,10 +339,15 @@ function identityFor(claims: readonly Claim[]): ProfessionalIdentity {
 /** A persona as it is written down: everything except the one field nobody
  *  may write. `persona()` supplies `identity` by derivation, so the type
  *  system itself refuses a fixture that states its own title. */
-type PersonaSeed = Omit<PassportHolder, "identity">;
+// Seeds omit `subJurisdictionCode`: only a persona in a country WITH sub-
+// jurisdictions needs one, and defaulting it in `persona()` keeps 24 Swedish
+// fixtures from each carrying an explicit null.
+type PersonaSeed = Omit<PassportHolder, "identity" | "subJurisdictionCode"> & {
+  readonly subJurisdictionCode?: string | null;
+};
 
 function persona(seed: PersonaSeed): PassportHolder {
-  return { ...seed, identity: identityFor(seed.claims) };
+  return { subJurisdictionCode: null, ...seed, identity: identityFor(seed.claims) };
 }
 
 function credentialPersona(
@@ -356,6 +361,7 @@ function credentialPersona(
     professionSlug: "vaktare",
     identity: identityFor(claims),
     jurisdictionCode: "SE",
+    subJurisdictionCode: null,
     periods: [],
     claims,
     hasCareerDiscoveryResult: false,

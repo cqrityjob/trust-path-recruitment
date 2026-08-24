@@ -8805,12 +8805,13 @@ export type Database = {
           headline: string | null
           holder_user_id: string
           is_private: boolean
-          jurisdiction_code: string
+          jurisdiction_code: string | null
           onboarding_answers: Json
           onboarding_state: string
           onboarding_step: number
           privacy_mode: string
           profession_family: string | null
+          sub_jurisdiction_code: string | null
           question_version: string
           recognition_policy_version: string
           updated_at: string
@@ -8823,12 +8824,13 @@ export type Database = {
           headline?: string | null
           holder_user_id: string
           is_private?: boolean
-          jurisdiction_code?: string
+          jurisdiction_code?: string | null
           onboarding_answers?: Json
           onboarding_state?: string
           onboarding_step?: number
           privacy_mode?: string
           profession_family?: string | null
+          sub_jurisdiction_code?: string | null
           question_version?: string
           recognition_policy_version?: string
           updated_at?: string
@@ -8841,12 +8843,13 @@ export type Database = {
           headline?: string | null
           holder_user_id?: string
           is_private?: boolean
-          jurisdiction_code?: string
+          jurisdiction_code?: string | null
           onboarding_answers?: Json
           onboarding_state?: string
           onboarding_step?: number
           privacy_mode?: string
           profession_family?: string | null
+          sub_jurisdiction_code?: string | null
           question_version?: string
           recognition_policy_version?: string
           updated_at?: string

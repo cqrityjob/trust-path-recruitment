@@ -108,9 +108,9 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     //
     // The two questions are now answered separately:
     //
-    //   * THIS step asks the person's country of work. Its options are the
-    //     countries in `sp_jurisdictions` — SE, GB and AE — which the profile
-    //     column's foreign key already accepts, so no schema change is needed.
+    //   * THIS step asks where the person works: the countries in
+    //     `sp_jurisdictions`, plus Dubai, which is a sub-jurisdiction and gets
+    //     its own answer so an emirate is never flattened into its country.
     //
     //   * CREDENTIAL availability stays exactly where it was: the credential
     //     form still builds its own jurisdiction select from the ACTIVE market
@@ -129,14 +129,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         labelKey: "onboarding.jurisdiction.field",
         type: "select",
         required: true,
-        // Mirrors sp_jurisdictions. Sub-jurisdictions (AE-DU) are deliberately
-        // absent: the profile column is a country FK, and naming the emirate
-        // would need a column that does not exist yet. "United Arab Emirates"
-        // is true for a Dubai worker; "Sweden" was not.
+        // The countries in `sp_jurisdictions`, plus Dubai as its own answer.
+        //
+        // Dubai is listed separately rather than folded into "United Arab
+        // Emirates" because SIRA licenses the emirate and not the country, and
+        // a product that records a Dubai worker as "UAE" has already made the
+        // UAE-wide claim its market pack exists to refuse. The value carries
+        // the sub-jurisdiction code; `splitWorkCountry` below turns it into the
+        // country and emirate the profile stores in separate columns.
         options: [
           { value: "SE", label: "Sverige / Sweden" },
           { value: "GB", label: "Storbritannien / United Kingdom" },
-          { value: "AE", label: "Förenade Arabemiraten / United Arab Emirates" },
+          { value: "AE-DU", label: "Dubai, Förenade Arabemiraten / Dubai, United Arab Emirates" },
+          { value: "AE", label: "Förenade Arabemiraten (övriga) / United Arab Emirates (other)" },
         ],
       },
     ],
@@ -177,3 +182,27 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 ] as const;
 
 export const ONBOARDING_STEP_COUNT = ONBOARDING_STEPS.length;
+
+/**
+ * One onboarding answer → the two columns the profile stores.
+ *
+ * The country step offers Dubai as its own option because SIRA licenses the
+ * emirate and not the country, so "AE-DU" has to be a thing a holder can
+ * actually say. The profile keeps country and sub-jurisdiction apart —
+ * `sp_profile_sub_matches_country` enforces that they agree — so the answer is
+ * split here, in one place, rather than at each call site.
+ *
+ * An empty answer stays empty: a holder who has not chosen has no country, and
+ * inventing one is the whole defect this replaced.
+ */
+export function splitWorkCountry(answer: string | null | undefined): {
+  readonly jurisdictionCode: string | null;
+  readonly subJurisdictionCode: string | null;
+} {
+  const value = (answer ?? "").trim();
+  if (!value) return { jurisdictionCode: null, subJurisdictionCode: null };
+  // "AE-DU" -> country AE, emirate AE-DU. A bare country has no emirate.
+  const dash = value.indexOf("-");
+  if (dash === -1) return { jurisdictionCode: value, subJurisdictionCode: null };
+  return { jurisdictionCode: value.slice(0, dash), subJurisdictionCode: value };
+}

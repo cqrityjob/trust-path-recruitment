@@ -168,7 +168,20 @@ export interface PassportHolder {
    *  field rather than fixing the string is what makes that unrepeatable: a
    *  component cannot render a title nobody derived if there is none to read. */
   readonly identity: ProfessionalIdentity;
-  readonly jurisdictionCode: JurisdictionCode;
+  /** The country this holder WORKS in, as they stated it. `null` means they
+   *  have not stated one yet, and must render as "not stated" — never as a
+   *  country. The column used to be `NOT NULL DEFAULT 'SE'`, so a holder in
+   *  Dubai carried a Passport that told every reader they were in Sweden.
+   *
+   *  Independent of which markets are open: see `sp_market_packs.is_active`,
+   *  which alone decides whether a country's regulated credentials can be
+   *  recorded. Stating a country grants nothing. */
+  readonly jurisdictionCode: JurisdictionCode | null;
+  /** The sub-jurisdiction within that country, e.g. `AE-DU` for Dubai. Kept
+   *  beside the country rather than folded into it because SIRA licenses
+   *  Dubai and not the UAE, and a Passport that flattens the emirate into the
+   *  country makes precisely the claim this product refuses. */
+  readonly subJurisdictionCode: string | null;
   readonly periods: readonly ExperiencePeriod[];
   readonly claims: readonly Claim[];
   /** Whether this fictional person also has a Career Discovery result.
