@@ -9,6 +9,12 @@
       "file": "20260720180000_h4_1_assessment_blueprint_engine_phase1.sql",
       "reason": "Blueprint Engine Phase 1 (26 tables, 33 functions). Parked by owner decision F, Phase 0C: not applied to hosted production and the product does not depend on it. Physically outside supabase/migrations so no db push, CLI or replay can reach it. Its one load-bearing object, public.assessment_run_reports, was extracted to 20260720180001_assessment_run_reports_canonical_home.sql.",
       "decidedIn": "docs/technical/phase-0c-canonical-baseline-repair.md"
+    },
+    {
+      "version": "20260824082256",
+      "file": "20260824082256_ef3fa7cb-f983-41e4-bc40-bb104bce485f.sql",
+      "reason": "Lovable's generated copy of Phase A migration 3. Parked rather than deleted because it is NOT equivalent to the canonical 20260907092000_sp_uk_market_pack.sql -- it drops six GB local_eligibility title rules and renames the education_completed ones -- so it is the only record of what the hosted database actually contains. Deleting it would erase that evidence; leaving it in the active path would replay it out of canonical order. See the matching appliedThroughLovable entry.",
+      "decidedIn": "Phase A migration 3 reconciliation"
     }
   ],
   "neverReplay": [
@@ -568,6 +574,21 @@
       "doNotReExecute": true,
       "reason": "Phase A migration 2 of 7, applied through the Lovable tracked-migration mechanism on owner approval. The generated copy is removed because its version 20260824075531 sorts BEFORE the canonical slot 20260907091000 and before migrations already in the hosted ledger, so replaying in filename order would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. The canonical file is preserved and replays correctly. Migration 2 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824075531';"
+    },
+    {
+      "canonicalFile": "20260907092000_sp_uk_market_pack.sql",
+      "canonicalVersion": "20260907092000",
+      "hostedVersion": "20260824082256",
+      "hostedName": "ef3fa7cb-f983-41e4-bc40-bb104bce485f",
+      "appliedAt": "2026-08-24T08:22:56Z",
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
+      "generatedFileOnMain": "supabase/migrations/20260824082256_ef3fa7cb-f983-41e4-bc40-bb104bce485f.sql",
+      "sqlEquivalence": "NOT EQUIVALENT -- this is the one entry in this list where equivalence FAILED. Lovable rewrote the reviewed file instead of executing it verbatim. Generated 19957 bytes vs canonical 21366; not a byte prefix; 13 differing lines across 275 comment-stripped lines; whitespace-normalised forms differ. Substantively, the generated version seeds 13 GB title rules where the canonical file defines 19: it DROPS six local_eligibility rules (GB_SIA_ELIG_SG, _DS, _CCTV, _CP, _CVIT, _KH), keeping only GB_SIA_ELIGIBLE_NFL, and it renames the education_completed rules GB_SIA_QUAL_{SG,DS,CCTV,CP,CVIT}/GB_SIA_TOP_UP to GB_SIA_EDU_{SG,DS,CCTV,CP,CVIT,TOP_UP} with different display text. It also edited a function comment. Hosted therefore holds a UK derivation contract that is NOT the reviewed one: an active SIA licence in security guarding, door supervision, CCTV, close protection, CVIT or key holding derives NO local_eligibility. The other postconditions of migration 3 are correct and verified (reference_pattern added, sp_credential_types 8 -> 21, 7 GB regulated roles, GB pack still is_active=false/pending, holder data untouched). This divergence is NOT resolved by this PR and requires a forward-only corrective migration plus an owner decision on which naming is canonical.",
+      "equivalenceVerified": false,
+      "divergenceOpen": true,
+      "doNotReExecute": true,
+      "reason": "Phase A migration 3 of 7, applied hosted on owner approval as 20260824082256. Migration 3 must never be executed hosted again. The generated file is NOT deleted, because it is the only readable record of what production actually ran and it differs from the canonical file; it is PARKED under supabase/archive/parked-migrations/ so a clean replay cannot reach it while the evidence is preserved.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824082256';"
     }
   ],
   "canonicalProject": {
