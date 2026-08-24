@@ -348,10 +348,50 @@ export const updateApplicationStatusAsEmployer = createServerFn({ method: "POST"
       throw new Error("STATUS_UPDATE_FAILED");
     }
     const row = Array.isArray(result) ? result[0] : result;
+    const status = row.new_status as ApplicationStatus;
+
+    // ── HIRED MEANS THE SAME PERSON CONTINUES ─────────────────────────
+    //
+    // Until now "Markera som anställd" moved a status and stopped, so the
+    // person stayed a candidate forever and an employer who wanted them under
+    // Medarbetare re-typed their name into the employee form -- a second
+    // record of one human being, with no link to the application, the
+    // assessment history or the Passport.
+    //
+    // jobs_hire_applicant() resolves the canonical scp_subjects identity the
+    // application already carries and links or creates the employment record
+    // against it. Two calls rather than one transaction, deliberately: the
+    // status change is the employer's decision and stands on its own, and the
+    // bridge is idempotent, so a failure here leaves something safe to retry
+    // rather than a half-applied hire.
+    let employeeId: string | null = null;
+    let continuityFailed = false;
+    if (status === "hired") {
+      const app = await loadApplication(ctx, data.applicationId);
+      const { data: id, error: hireErr } = await ctx.supabase.rpc("jobs_hire_applicant", {
+        _employer_id: app.employer_id,
+        _application_id: data.applicationId,
+      });
+      if (hireErr) {
+        // Not rethrown. The candidate IS hired -- that is recorded and true --
+        // and hiding that behind a failure of the workforce link would be the
+        // worse of the two wrong answers. The surface says what did and did
+        // not happen, and the action is safe to repeat.
+        console.error("[applications] hire continuity failed", hireErr.message);
+        continuityFailed = true;
+      } else {
+        employeeId = id ? String(id) : null;
+      }
+    }
+
     return {
       ok: true,
       previousStatus: row.previous_status as ApplicationStatus,
-      status: row.new_status as ApplicationStatus,
+      status,
+      /** The employment record this hire linked or created, when it did. */
+      employeeId,
+      /** Hired, but not yet visible under Medarbetare. Retrying is safe. */
+      continuityFailed,
     };
   });
 

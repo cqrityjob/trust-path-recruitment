@@ -52,7 +52,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, ClipboardList, FileText, MessagesSquare } from "lucide-react";
+import { ArrowLeft, ClipboardList, FileText, MessagesSquare, UserCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -125,14 +125,25 @@ function Candidate360({
     queryFn: () => candidateFn({ data: { applicationId } }),
   });
 
+  /** Where the hired person now lives, so the page can offer the way there. */
+  const [hiredEmployeeId, setHiredEmployeeId] = useState<string | null>(null);
+
   const setStatus = useMutation({
     mutationFn: (newStatus: EmployerSettableStatus) =>
       setStatusFn({ data: { applicationId, newStatus } }),
-    onSuccess: () => {
+    onSuccess: (r) => {
       setActionError(null);
+      setHiredEmployeeId(r.employeeId ?? null);
+      // Hired, but the workforce link did not land. Saying so is the point:
+      // the alternative is a person the employer believes is under Medarbetare
+      // and is not. The action is idempotent, so pressing it again is the fix.
+      if (r.continuityFailed) setActionError(t("employer.applications.error.hireContinuity"));
       qc.invalidateQueries({ queryKey: candidateKey });
       // The list this page was opened from shows the same status.
       qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+      // Medarbetare has one more person in it, and Översikt counts them.
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "employees"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "workforce-summary"] });
     },
     onError: () => setActionError(t("employer.applications.error.statusUpdate")),
   });
@@ -432,6 +443,24 @@ function Candidate360({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Hiring used to end here, with a status and nowhere to go. The same
+            person is now in Medarbetare, so the page says so and offers the
+            door -- otherwise an employer's next move is to re-type the name
+            into the employee form and create a second record of one human. */}
+        {hiredEmployeeId && (
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
+            <UserCheck className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+            {t("employer.candidate.decision.nowEmployee")}
+            <Link
+              to="/employer/$employerSlug/workforce/$personId"
+              params={{ employerSlug, personId: hiredEmployeeId }}
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              {t("employer.candidate.decision.openEmployee")}
+            </Link>
+          </p>
         )}
       </section>
 

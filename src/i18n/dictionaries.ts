@@ -1622,6 +1622,8 @@ export const dictionaries = {
     "employer.applications.action.downloadCv": "Ladda ner CV",
     "employer.applications.error.load": "Kunde inte hämta ansökningar.",
     "employer.applications.error.statusUpdate": "Kunde inte uppdatera ansökans status.",
+    "employer.applications.error.hireContinuity":
+      "Kandidaten är markerad som anställd, men kunde inte läggas till bland medarbetarna. Försök igen — åtgärden skapar inga dubbletter.",
     "employer.applications.error.cvDownload": "Kunde inte hämta CV.",
 
     // Candidate 360 — the application opened as the person who made it.
@@ -1656,6 +1658,8 @@ export const dictionaries = {
     "employer.candidate.decision.lede":
       "Ni avgör hur ansökan går vidare. Plattformen rangordnar inte kandidater och rekommenderar inte anställning.",
     "employer.candidate.decision.closed": "Ansökan är avslutad och har inga fler steg.",
+    "employer.candidate.decision.nowEmployee": "Personen finns nu bland era medarbetare.",
+    "employer.candidate.decision.openEmployee": "Öppna medarbetaren",
     "employer.candidate.history.heading": "Tidigare ansökningar",
     "employer.candidate.history.lede":
       "Andra ansökningar som samma person har skickat till er organisation.",
@@ -5053,6 +5057,8 @@ export const dictionaries = {
     "employer.applications.action.downloadCv": "Download CV",
     "employer.applications.error.load": "Could not load applications.",
     "employer.applications.error.statusUpdate": "Could not update the application status.",
+    "employer.applications.error.hireContinuity":
+      "The candidate is marked as hired, but could not be added to your employees. Try again — the action does not create duplicates.",
     "employer.applications.error.cvDownload": "Could not retrieve the CV.",
 
     // Candidate 360 — the application opened as the person who made it.
@@ -5087,6 +5093,8 @@ export const dictionaries = {
     "employer.candidate.decision.lede":
       "You decide how the application proceeds. The platform does not rank candidates and does not recommend hiring.",
     "employer.candidate.decision.closed": "This application is closed and has no further steps.",
+    "employer.candidate.decision.nowEmployee": "This person is now one of your employees.",
+    "employer.candidate.decision.openEmployee": "Open the employee",
     "employer.candidate.history.heading": "Earlier applications",
     "employer.candidate.history.lede":
       "Other applications the same person has sent to your organisation.",
