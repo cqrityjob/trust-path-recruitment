@@ -1120,6 +1120,11 @@ export const dictionaries = {
     "employer.jobs.form.orgPendingNotice":
       "Er organisation väntar fortfarande på godkännande hos CQrityjob. Ni kan skriva och spara annonser nu, men de kan publiceras först när organisationen är godkänd.",
     "employer.jobs.form.option.none": "Ej angivet",
+    "employer.jobs.form.option.other": "Annat",
+    "employer.jobs.form.field.familyOther": "Ange yrkesområde",
+    "employer.jobs.form.placeholder.familyOther": "T.ex. Säkerhetsteknik för sjukvård",
+    "employer.jobs.form.field.professionOther": "Ange yrkesroll",
+    "employer.jobs.form.placeholder.professionOther": "T.ex. Larmtekniker med jour",
     "employer.jobs.form.lang.addEnglish": "+ Lägg till engelsk version (valfritt)",
     "employer.jobs.form.lang.addSwedish": "+ Lägg till svensk version (valfritt)",
     "employer.jobs.form.field.title": "Jobbtitel",
@@ -4558,6 +4563,12 @@ export const dictionaries = {
     "employer.jobs.form.orgPendingNotice":
       "Your organisation is still awaiting approval from CQrityjob. You can write and save job ads now, but they can only be published once the organisation has been approved.",
     "employer.jobs.form.option.none": "Not specified",
+    "employer.jobs.form.option.other": "Other",
+    "employer.jobs.form.field.familyOther": "Specify the career area",
+    "employer.jobs.form.placeholder.familyOther": "For example: Security technology for healthcare",
+    "employer.jobs.form.field.professionOther": "Specify the role",
+    "employer.jobs.form.placeholder.professionOther":
+      "For example: Alarm technician with on-call duty",
     "employer.jobs.form.lang.addEnglish": "+ Add English version (optional)",
     "employer.jobs.form.lang.addSwedish": "+ Add Swedish version (optional)",
     "employer.jobs.form.field.title": "Job title",

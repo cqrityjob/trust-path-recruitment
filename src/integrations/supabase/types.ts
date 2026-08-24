@@ -3756,6 +3756,8 @@ export type Database = {
           experience_level: string | null
           expires_at: string | null
           family_id: string | null
+          family_other: boolean
+          family_other_text: string | null
           formal_requirement_ids: string[]
           id: string
           inference_method: string | null
@@ -3767,6 +3769,8 @@ export type Database = {
           model_version: string | null
           night_work: boolean | null
           preferred_skill_ids: string[]
+          profession_other: boolean
+          profession_other_text: string | null
           profession_slug: string | null
           published_at: string | null
           region: string | null
@@ -3821,6 +3825,8 @@ export type Database = {
           experience_level?: string | null
           expires_at?: string | null
           family_id?: string | null
+          family_other?: boolean
+          family_other_text?: string | null
           formal_requirement_ids?: string[]
           id?: string
           inference_method?: string | null
@@ -3832,6 +3838,8 @@ export type Database = {
           model_version?: string | null
           night_work?: boolean | null
           preferred_skill_ids?: string[]
+          profession_other?: boolean
+          profession_other_text?: string | null
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
@@ -3886,6 +3894,8 @@ export type Database = {
           experience_level?: string | null
           expires_at?: string | null
           family_id?: string | null
+          family_other?: boolean
+          family_other_text?: string | null
           formal_requirement_ids?: string[]
           id?: string
           inference_method?: string | null
@@ -3897,6 +3907,8 @@ export type Database = {
           model_version?: string | null
           night_work?: boolean | null
           preferred_skill_ids?: string[]
+          profession_other?: boolean
+          profession_other_text?: string | null
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
