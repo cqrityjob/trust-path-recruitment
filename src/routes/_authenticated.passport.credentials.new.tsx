@@ -102,20 +102,20 @@ function NewCredentialRoute() {
     setBusy(true);
     setError(null);
     try {
+      // SPREAD, never a hand-copied field list.
+      //
+      // This was ten named fields, and `authorisationScope` was not among
+      // them. The server validator requires it as a string, so the payload
+      // failed schema validation before it reached any Passport logic — and
+      // because the field list is the same for every credential, EVERY save
+      // failed, for every holder, with the generic "something went wrong".
+      //
+      // A hand-maintained list that has to stay in step with a Zod schema it
+      // shares no type with will drift again the next time the draft gains a
+      // field. `CredentialDraft` is exactly the schema's input minus `claimId`
+      // and `activate`, so spreading it makes the two impossible to desync.
       const saved = await doSave({
-        data: {
-          claimId,
-          credentialCode: draft.credentialCode,
-          title: draft.title,
-          issuerName: draft.issuerName,
-          jurisdictionCode: draft.jurisdictionCode,
-          issuedOn: draft.issuedOn,
-          validFrom: draft.validFrom,
-          validUntil: draft.validUntil,
-          credentialReference: draft.credentialReference,
-          holderNote: draft.holderNote,
-          activate,
-        },
+        data: { claimId, ...draft, activate },
       });
       if (activate) {
         void navigate({

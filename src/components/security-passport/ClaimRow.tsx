@@ -13,7 +13,7 @@
 
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDate, formatExpiry } from "@/lib/security-passport/format";
+import { formatDate, formatExpiry, formatJurisdiction } from "@/lib/security-passport/format";
 import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import type { Claim } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
@@ -96,7 +96,7 @@ export function ClaimRow({
         {claim.jurisdictionCode ? (
           <Field
             label={pt("claims.jurisdiction")}
-            value={claim.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : claim.jurisdictionCode}
+            value={formatJurisdiction(claim.jurisdictionCode, lang)}
           />
         ) : null}
         <Field label={pt("claims.issuedOn")} value={formatDate(claim.issuedOn, lang)} />

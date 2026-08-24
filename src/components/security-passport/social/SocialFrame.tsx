@@ -34,6 +34,7 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import { milestoneStyle } from "@/lib/security-passport/design/trust-system";
 import type { SocialCardModel } from "@/lib/security-passport/social";
+import { formatJurisdiction } from "@/lib/security-passport/format";
 import {
   BrandMark,
   EngravedField,
@@ -48,7 +49,7 @@ function useSocialStrings(model: SocialCardModel) {
   return {
     brand: pt("card.brand"),
     profession: joinTitles(model.titles, lang, pt("identity.none")),
-    jurisdiction: model.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : model.jurisdictionCode,
+    jurisdiction: formatJurisdiction(model.jurisdictionCode, lang),
     yearsLabel:
       (model.milestoneYears ?? 0) >= 20
         ? pt("recognition.yearsPlus")

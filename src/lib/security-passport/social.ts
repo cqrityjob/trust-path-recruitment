@@ -187,6 +187,21 @@ export function buildSocialCard(
     holderLabel: holderLabelFor(holder, options.privacyMode, options.anonymousLabel),
     privacyMode: options.privacyMode,
     titles: toPublicTitles(withoutSelfDeclared(holder.identity)),
+    // -- ELIGIBILITY IS DELIBERATELY ABSENT HERE ----------------------
+    //
+    // Every other surface that can show "currently permitted" is LIVE: the
+    // holder's own view, the recipient page and the public token page are all
+    // re-derived on each read, so an approval that lapses stops being claimed.
+    //
+    // A social image is not. It is a PNG that platforms fetch, cache and
+    // cannot be told to forget, and it outlives the record it depicts. That is
+    // already why an expired credential is never published here and why
+    // PublicTitle carries no dates. "Currently approved" is a statement about
+    // TODAY, and today is exactly what a cached image cannot keep saying
+    // truthfully.
+    //
+    // So this is a judgement about the medium, not about sensitivity, and it
+    // must stay a deliberate omission rather than a gap somebody fills in.
     jurisdictionCode: holder.jurisdictionCode,
     milestoneYears: recognition.earnedYears,
     verifiedCredentials,

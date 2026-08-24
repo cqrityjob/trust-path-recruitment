@@ -97,6 +97,12 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "jurisdiction",
     titleKey: "onboarding.jurisdiction.title",
     whyKey: "onboarding.jurisdiction.why",
+    // The select below offers exactly the ACTIVE market packs, which today
+    // means Sweden alone. Without this the step is a one-option dropdown with
+    // no explanation, and a UK or Dubai worker is left to guess whether the
+    // product forgot their country or refuses it. It refuses it, on purpose,
+    // and says so.
+    bodyKey: "jurisdiction.marketAvailability",
     required: true,
     createsClaim: false,
     fields: [

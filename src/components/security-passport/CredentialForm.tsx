@@ -366,6 +366,14 @@ export function CredentialForm({
                 id={`${fieldId("jurisdictionCode")}-error`}
                 message={errorFor("jurisdictionCode")}
               />
+              {/* `markets` is the ACTIVE market packs and nothing else, so an
+                  unreviewed market is not merely discouraged here — it is not
+                  in the list, and the claim trigger would refuse it anyway.
+                  Saying which markets exist but are closed is what stops the
+                  short list reading as an oversight. */}
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {pt("jurisdiction.marketAvailability")}
+              </p>
             </div>
           </section>
 

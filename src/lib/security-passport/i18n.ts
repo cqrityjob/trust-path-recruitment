@@ -426,7 +426,25 @@ const sv = {
   "recipient.expiresOn": "Upphör",
 
   // ── Jurisdiction ─────────────────────────────────────────────────────
+  //
+  // One entry per COUNTRY the taxonomy can produce, so no surface ever falls
+  // back to printing a bare ISO code. `formatJurisdiction` resolves these; see
+  // the note there for why the fallback is the code rather than a guess.
   "jurisdiction.SE": "Sverige",
+  "jurisdiction.GB": "Storbritannien",
+  "jurisdiction.AE": "Förenade Arabemiraten",
+  // The emirate, not the country. Named separately because a SIRA credential
+  // that renders as its country alone reads as UAE-wide, which SIRA does not
+  // claim and neither does this product.
+  "jurisdiction.AE-DU": "Dubai",
+  // Stated wherever a country is chosen. Truthful and DATELESS on purpose: the
+  // GB and AE-DU packs are authored but not legally reviewed, and
+  // sp_market_pack_active_needs_review means they cannot be switched on until
+  // they are. A market that cannot be entered must say so rather than appear
+  // as a one-option list with no explanation. No launch date is promised
+  // because none is known.
+  "jurisdiction.marketAvailability":
+    "Sverige är tillgängligt i dag. Andra marknader, däribland Storbritannien och Dubai, är under förberedelse och kan ännu inte väljas. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
   "jurisdiction.title": "Land och behörighet",
   "jurisdiction.crossBorderTitle": "Gäller i Sverige",
   "jurisdiction.crossBorderBody":
@@ -772,7 +790,13 @@ const sv = {
     "Titeln bygger på uppgifter du själv har lämnat och som ingen har kontrollerat. Den visas bara för dig.",
   "identity.education": "Genomförd utbildning",
   "identity.competence": "Yrkeskompetens",
-  "identity.eligibility": "Lokal behörighet",
+  // "Nuvarande" rather than "Lokal": the operative fact for a reader is that
+  // the approval is current, not that it is local. The note is not decoration
+  // — it names the three things this is NOT, because an approval in the same
+  // visual weight as an appointment invites exactly that misreading.
+  "identity.eligibility": "Nuvarande behörighet",
+  "identity.eligibilityNote":
+    "Verifierat underlag för att en behörig myndighet eller arbetsgivare för närvarande godkänner personen. Det är inte en yrkestitel, ett förordnande eller en licens.",
   "identity.activeTitle": "Aktiv yrkestitel",
   "rec.cardTitle": "Delat Security Passport",
   "rec.detailsTitle": "Uppgifter i delningen",
@@ -1557,6 +1581,11 @@ const en: Record<PassportCopyKey, string> = {
   "recipient.expiresOn": "Expires",
 
   "jurisdiction.SE": "Sweden",
+  "jurisdiction.GB": "United Kingdom",
+  "jurisdiction.AE": "United Arab Emirates",
+  "jurisdiction.AE-DU": "Dubai",
+  "jurisdiction.marketAvailability":
+    "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
   "jurisdiction.title": "Country and eligibility",
   "jurisdiction.crossBorderTitle": "Applies in Sweden",
   "jurisdiction.crossBorderBody":
@@ -1896,7 +1925,9 @@ const en: Record<PassportCopyKey, string> = {
     "This title rests on information you provided yourself, which nobody has checked. Only you can see it.",
   "identity.education": "Completed education",
   "identity.competence": "Professional competence",
-  "identity.eligibility": "Local eligibility",
+  "identity.eligibility": "Current eligibility",
+  "identity.eligibilityNote":
+    "Verified evidence that a competent authority or employer currently approves this person. It is not a professional title, an appointment or a licence.",
   "identity.activeTitle": "Active professional title",
   "rec.cardTitle": "Shared Security Passport",
   "rec.detailsTitle": "What this share contains",

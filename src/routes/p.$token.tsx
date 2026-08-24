@@ -36,7 +36,12 @@ import { BadgeCheck, ExternalLink, ShieldAlert, ShieldCheck } from "lucide-react
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getPublicDisclosure } from "@/lib/security-passport/public-disclosure.functions";
 import { LIVE_PACKAGES, type RecipientPayload } from "@/lib/security-passport/packages";
-import { formatDuration, formatExpiry, formatPeriodRange } from "@/lib/security-passport/format";
+import {
+  formatDuration,
+  formatExpiry,
+  formatJurisdiction,
+  formatPeriodRange,
+} from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
@@ -193,9 +198,7 @@ function RecipientRoute() {
           <CredentialVerificationPage
             credential={presentation.credentials[0]}
             holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
-            jurisdiction={
-              presentation.jurisdiction === "SE" ? pt("jurisdiction.SE") : presentation.jurisdiction
-            }
+            jurisdiction={formatJurisdiction(presentation.jurisdiction, lang)}
             verifyUrl={shareUrl}
           />
         </div>
@@ -259,11 +262,18 @@ function RecipientRoute() {
             label={pt("rec.profession")}
             value={joinTitles(presentation.titles, lang, pt("common.notStated"))}
           />
+          {/* Separate from `rec.profession` deliberately: one says what this
+              person may be CALLED, the other says what an authority currently
+              PERMITS, and a public reader must not merge them. */}
+          {presentation.eligibility.length > 0 ? (
+            <Row
+              label={pt("identity.eligibility")}
+              value={joinTitles(presentation.eligibility, lang, pt("common.notStated"))}
+            />
+          ) : null}
           <Row
             label={pt("rec.jurisdiction")}
-            value={
-              presentation.jurisdiction === "SE" ? pt("jurisdiction.SE") : presentation.jurisdiction
-            }
+            value={formatJurisdiction(presentation.jurisdiction, lang)}
           />
           {presentation.purpose ? (
             <Row label={pt("rec.purpose")} value={presentation.purpose} />
@@ -362,7 +372,7 @@ function RecipientRoute() {
                   {c.jurisdiction ? (
                     <Row
                       label={pt("rec.jurisdiction")}
-                      value={c.jurisdiction === "SE" ? pt("jurisdiction.SE") : c.jurisdiction}
+                      value={formatJurisdiction(c.jurisdiction, lang)}
                     />
                   ) : null}
                 </dl>

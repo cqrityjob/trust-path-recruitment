@@ -256,6 +256,17 @@ const CRED_NAMES: Record<string, { sv: string; en: string; type: Claim["claimTyp
     type: "training",
   },
   OV: { sv: "Ordningsvaktsförordnande", en: "Public Order Guard Appointment", type: "licence" },
+  // Not an appointment and not a qualification: the employer-side check that a
+  // väktare may actually be put to work. It is the ordinary Swedish case and
+  // the reason the eligibility tier exists at all.
+  SE_PERSONNEL_APPROVAL: {
+    sv: "Personalgodkännande",
+    en: "Personnel approval",
+    // 'licence' to match sp_credential_types, which files it that way. The
+    // claim TYPE is a storage fact; what it may DERIVE is decided by the title
+    // rules, and there it is local_eligibility and nothing else.
+    type: "licence",
+  },
   SV: {
     sv: "Skyddsvaktsförordnande",
     en: "Protective Security Guard Appointment",
@@ -265,7 +276,7 @@ const CRED_NAMES: Record<string, { sv: string; en: string; type: Claim["claimTyp
 
 function credentialClaim(c: {
   id: string;
-  code: "VU1" | "VU2" | "OV" | "SV";
+  code: "VU1" | "VU2" | "OV" | "SV" | "SE_PERSONNEL_APPROVAL";
   assertionLevel: Claim["assertionLevel"];
   lifecycleState: Claim["lifecycleState"];
   issuedOn: string | null;
@@ -277,13 +288,20 @@ function credentialClaim(c: {
 }): Claim {
   const names = CRED_NAMES[c.code];
   const isAppointment = c.code === "OV" || c.code === "SV";
+  const isApproval = c.code === "SE_PERSONNEL_APPROVAL";
   return claim({
     id: c.id,
     claimType: names.type,
     credentialCode: c.code,
     titleSv: names.sv,
     titleEn: names.en,
-    issuerName: c.issuer ?? (isAppointment ? "Fiktiva Myndigheten" : "Väktarskolan Fiktiv AB"),
+    issuerName:
+      c.issuer ??
+      (isApproval
+        ? "Fiktiva Bevakning AB"
+        : isAppointment
+          ? "Fiktiva Myndigheten"
+          : "Väktarskolan Fiktiv AB"),
     jurisdictionCode: "SE",
     issuedOn: c.issuedOn,
     validFrom: c.issuedOn,
@@ -291,9 +309,11 @@ function credentialClaim(c: {
     assertionLevel: c.assertionLevel,
     lifecycleState: c.lifecycleState,
     verifierName: c.verifier ?? null,
-    limitationSv: isAppointment
-      ? "Ett förordnande är tidsbegränsat och gäller enligt beslutet."
-      : "En genomförd utbildning är inte ett gällande förordnande.",
+    limitationSv: isApproval
+      ? "Ett personalgodkännande är inte ett förordnande och ger ingen yrkestitel."
+      : isAppointment
+        ? "Ett förordnande är tidsbegränsat och gäller enligt beslutet."
+        : "En genomförd utbildning är inte ett gällande förordnande.",
     limitationEn: isAppointment
       ? "An appointment is time-limited and applies as decided."
       : "Completed training is not a current appointment.",
@@ -390,6 +410,75 @@ const CREDENTIAL_PERSONAS: readonly PassportHolder[] = [
       lifecycleState: "active",
       issuedOn: "2024-09-02",
       verifier: "Väktarskolan Fiktiv AB",
+    }),
+  ]),
+  // ── The ordinary working väktare ─────────────────────────────────────
+  //
+  // Both training steps AND a current personnel approval. This is the most
+  // common real Swedish case and the one that read wrongly for longest: the
+  // Passport showed the training line and nothing else, so the single fact an
+  // employer is trying to establish — that somebody has checked this person
+  // and currently permits the work — was derived and shown to nobody.
+  //
+  // Training and eligibility must appear as TWO separate facts here, and
+  // neither may become the title "Väktare".
+  credentialPersona("cred-vaktare-approved", "Elsa Fiktivsson", [
+    credentialClaim({
+      id: "c-appr-vu1",
+      code: "VU1",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2023-02-14",
+      verifier: "Väktarskolan Fiktiv AB",
+    }),
+    credentialClaim({
+      id: "c-appr-vu2",
+      code: "VU2",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2023-08-21",
+      verifier: "Väktarskolan Fiktiv AB",
+    }),
+    credentialClaim({
+      id: "c-appr-personnel",
+      code: "SE_PERSONNEL_APPROVAL",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2023-09-01",
+      validUntil: "2027-09-01",
+      verifier: "Fiktiva Bevakning AB",
+    }),
+  ]),
+  // The same person after the approval ran out. The training is unchanged and
+  // still shown; the eligibility must simply be gone, with nothing having
+  // written to the record to make that happen.
+  credentialPersona("cred-vaktare-approval-lapsed", "Arvid Provsson", [
+    credentialClaim({
+      id: "c-lapse-vu1",
+      code: "VU1",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2021-02-14",
+      verifier: "Väktarskolan Fiktiv AB",
+    }),
+    credentialClaim({
+      id: "c-lapse-vu2",
+      code: "VU2",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2021-08-21",
+      verifier: "Väktarskolan Fiktiv AB",
+    }),
+    credentialClaim({
+      id: "c-lapse-personnel",
+      code: "SE_PERSONNEL_APPROVAL",
+      assertionLevel: "verified",
+      lifecycleState: "active",
+      issuedOn: "2021-09-01",
+      // Stored ACTIVE on purpose: only the calendar ends it, and the engine
+      // must notice without a sweep job.
+      validUntil: "2025-09-01",
+      verifier: "Fiktiva Bevakning AB",
     }),
   ]),
   // Completed training beside a merely claimed appointment: the combination

@@ -27,6 +27,51 @@ export function formatDate(date: IsoDate | null, lang: PassportLang): string {
   return date;
 }
 
+/**
+ * A jurisdiction or sub-jurisdiction code → the name a reader recognises.
+ *
+ * ── WHY THIS IS A FUNCTION AND NOT A TERNARY ───────────────────────────
+ *
+ * It was a ternary. `code === "SE" ? pt("jurisdiction.SE") : code`, written
+ * out five times — PassportCard, PassportOverview, RecipientVerification,
+ * ClaimRow and SocialFrame — and omitted entirely by the two paths that
+ * EXPORT: `renderShareImage` and the LinkedIn section both interpolated the
+ * raw code.
+ *
+ * So the social frame on screen said "Sverige" and the PNG rendered from the
+ * same model said "SE": one artefact, two strings, and the divergent one is
+ * the copy that leaves the product and cannot be corrected afterwards.
+ *
+ * A ternary per surface also meant every market after Sweden printed as a bare
+ * code by construction. GB and AE-DU are authored and inactive today, so no
+ * holder can reach them yet — but the surfaces would have been ready to print
+ * "AE" over a Dubai credential, which is the UAE-wide reading the market pack
+ * exists to refuse.
+ *
+ * ── THE FALLBACK IS THE CODE, DELIBERATELY ─────────────────────────────
+ *
+ * An unknown code returns itself rather than a guess or an empty string. A
+ * jurisdiction is a legal claim about where something applies; inventing a
+ * name for a code nobody has reviewed would be exactly the kind of invention
+ * this module exists to prevent. A visible "XX" is a bug report. A plausible
+ * wrong country is not.
+ */
+export function formatJurisdiction(code: string | null, lang: PassportLang): string {
+  if (!code) return passportT("common.notStated", lang);
+  switch (code) {
+    case "SE":
+      return passportT("jurisdiction.SE", lang);
+    case "GB":
+      return passportT("jurisdiction.GB", lang);
+    case "AE":
+      return passportT("jurisdiction.AE", lang);
+    case "AE-DU":
+      return passportT("jurisdiction.AE-DU", lang);
+    default:
+      return code;
+  }
+}
+
 /** Days → "2 år 4 månader" / "2 years 4 months".
  *
  *  Anything above zero but below a month is reported as such rather than as

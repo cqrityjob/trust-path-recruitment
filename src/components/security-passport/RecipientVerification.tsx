@@ -20,11 +20,12 @@
 // own limits is misleading by omission, and this one is read by people
 // making employment decisions.
 
-import { professionLine } from "@/lib/security-passport/identity/presentation";
+import { eligibilityTitles, professionLine } from "@/lib/security-passport/identity/presentation";
+import { EligibilityLine } from "./EligibilityLine";
 import { ShieldCheck, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDuration } from "@/lib/security-passport/format";
+import { formatDuration, formatJurisdiction } from "@/lib/security-passport/format";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { DisclosurePayload } from "@/lib/security-passport/disclosure";
 import type { PassportCardModel } from "@/lib/security-passport/card";
@@ -51,8 +52,7 @@ export function DisclosurePayloadView({
   // `buildDisclosurePayload` already stripped self-declared titles; this
   // renders the same derivation the holder saw, in the reader's language.
   const profession = professionLine(payload.identity, lang, pt("identity.none"));
-  const jurisdiction =
-    payload.jurisdictionCode === "SE" ? pt("jurisdiction.SE") : payload.jurisdictionCode;
+  const jurisdiction = formatJurisdiction(payload.jurisdictionCode, lang);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -69,6 +69,12 @@ export function DisclosurePayloadView({
         <p className="mt-1 text-sm text-foreground">
           {profession} · {jurisdiction}
         </p>
+        {/* The one fact an employer is actually trying to establish, stated
+            separately from the training line above it. Derived from the
+            disclosed claims, so a package that withheld the approval shows
+            nothing here. */}
+        <EligibilityLine titles={eligibilityTitles(payload.identity)} className="mt-3" />
+
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 sm:grid-cols-3">
           <div>
             <dt className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
