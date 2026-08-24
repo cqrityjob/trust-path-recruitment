@@ -8202,7 +8202,6 @@ export type Database = {
       sp_claims: {
         Row: {
           assertion_level: string
-          authorisation_scope: string | null
           claim_type: string
           claimed_issuer_name: string | null
           created_at: string
@@ -8228,7 +8227,6 @@ export type Database = {
         }
         Insert: {
           assertion_level?: string
-          authorisation_scope?: string | null
           claim_type: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8254,7 +8252,6 @@ export type Database = {
         }
         Update: {
           assertion_level?: string
-          authorisation_scope?: string | null
           claim_type?: string
           claimed_issuer_name?: string | null
           created_at?: string
@@ -8331,18 +8328,12 @@ export type Database = {
           name_ar: string | null
           name_en: string
           name_sv: string
-          narrow_result_only: boolean
-          reference_label_en: string | null
-          reference_label_local: string | null
-          reference_pattern: string | null
           regulated_role_id: string | null
           requires_issuer: boolean
-          requires_scope: boolean
           requires_valid_until: boolean
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
-          typical_validity_months: number | null
         }
         Insert: {
           authority_id?: string | null
@@ -8358,18 +8349,12 @@ export type Database = {
           name_ar?: string | null
           name_en: string
           name_sv: string
-          narrow_result_only?: boolean
-          reference_label_en?: string | null
-          reference_label_local?: string | null
-          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
-          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
-          typical_validity_months?: number | null
         }
         Update: {
           authority_id?: string | null
@@ -8385,18 +8370,12 @@ export type Database = {
           name_ar?: string | null
           name_en?: string
           name_sv?: string
-          narrow_result_only?: boolean
-          reference_label_en?: string | null
-          reference_label_local?: string | null
-          reference_pattern?: string | null
           regulated_role_id?: string | null
           requires_issuer?: boolean
-          requires_scope?: boolean
           requires_valid_until?: boolean
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
-          typical_validity_months?: number | null
         }
         Relationships: [
           {
@@ -10880,7 +10859,6 @@ export type Database = {
       }
       sp_correct_claim: {
         Args: {
-          _authorisation_scope?: string
           _claim_id: string
           _claimed_issuer_name: string
           _credential_code: string
@@ -10891,7 +10869,6 @@ export type Database = {
           _reason: string
           _skill_code?: string
           _skill_level?: string
-          _sub_jurisdiction_code?: string
           _title: string
           _valid_from: string
           _valid_until: string
