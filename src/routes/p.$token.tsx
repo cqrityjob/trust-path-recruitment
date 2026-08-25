@@ -41,6 +41,7 @@ import {
   formatExpiry,
   formatJurisdiction,
   formatPeriodRange,
+  formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { buildRecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
@@ -222,7 +223,11 @@ function RecipientRoute() {
           <CredentialVerificationPage
             credential={presentation.credentials[0]}
             holderLabel={presentation.holderLabel ?? pt("rec.anonymousHolder")}
-            jurisdiction={formatJurisdiction(presentation.jurisdiction, lang)}
+            jurisdiction={formatWorkLocation(
+              presentation.jurisdiction,
+              presentation.subJurisdiction,
+              lang,
+            )}
             verifyUrl={shareUrl}
           />
         </div>
@@ -297,7 +302,11 @@ function RecipientRoute() {
           ) : null}
           <Row
             label={pt("rec.jurisdiction")}
-            value={formatJurisdiction(presentation.jurisdiction, lang)}
+            value={formatWorkLocation(
+              presentation.jurisdiction,
+              presentation.subJurisdiction,
+              lang,
+            )}
           />
           {presentation.purpose ? (
             <Row label={pt("rec.purpose")} value={presentation.purpose} />

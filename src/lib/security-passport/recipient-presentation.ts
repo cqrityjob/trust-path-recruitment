@@ -91,7 +91,14 @@ export interface RecipientPresentation {
    *  be called. Reduced exactly like `titles`: no dates, no scope, no claim
    *  ids — the credential row beside it carries the validity. */
   readonly eligibility: readonly PublicTitle[];
+  /** Where the HOLDER works. Never a credential's jurisdiction — each
+   *  credential below carries its own, so a Swedish authorisation still reads
+   *  Sweden however far from Sweden its holder now works. */
   readonly jurisdiction: string;
+  /** The emirate, where there is one. Carried so a Dubai holder is not
+   *  flattened into "United Arab Emirates" on the one surface a stranger
+   *  sees — which is the UAE-wide reading the Dubai pack refuses. */
+  readonly subJurisdiction: string | null;
   readonly packageCode: string;
   /** "credential" when the holder shared exactly one credential. */
   readonly focus: "passport" | "credential";
@@ -209,6 +216,7 @@ export function buildRecipientPresentation(
     // eligibility, automatically and without a second rule to keep in step.
     eligibility: toPublicEligibility(identity),
     jurisdiction: payload.jurisdiction,
+    subJurisdiction: payload.sub_jurisdiction ?? null,
     packageCode: payload.package,
     focus: payload.focus ?? "passport",
     purpose: payload.purpose,

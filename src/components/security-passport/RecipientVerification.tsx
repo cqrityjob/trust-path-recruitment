@@ -178,9 +178,12 @@ export function DisclosurePayloadView({
         })}
       </section>
 
+      {/* The HOLDER's work country. Each credential below states its own
+          jurisdiction on the credential itself, so a Swedish authorisation
+          still reads Sweden however far from Sweden its holder now works. */}
       <JurisdictionNotice
-        credentialJurisdiction={payload.jurisdictionCode}
-        viewingJurisdiction={viewingJurisdiction}
+        workCountry={payload.jurisdictionCode}
+        subJurisdiction={payload.subJurisdictionCode ?? null}
       />
 
       <section className="grid gap-4 md:grid-cols-2">

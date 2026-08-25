@@ -1611,6 +1611,28 @@ elif [ "$SPUKT_PASSED" -lt 15 ]; then
   suite_failed "Security Passport UK title rule contract (assertion shortfall: floor 15)"
 fi
 
+echo "==> Running Security Passport disclosure holder jurisdiction assertions"
+set +e
+SPDHJ_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_disclosure_holder_jurisdiction_test.sql 2>&1)"
+SPDHJ_RC=$?
+set -e
+
+echo "$SPDHJ_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPDHJ_PASSED="$(echo "$SPDHJ_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPDHJ_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the disclosure holder jurisdiction suite exited with code ${SPDHJ_RC}." >&2
+  echo "$SPDHJ_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport disclosure holder jurisdiction"
+else
+  echo "    ok  ${SPDHJ_PASSED} disclosure holder jurisdiction assertions passed"
+  if [ "$SPDHJ_PASSED" -lt 11 ]; then
+    echo "FAIL: expected at least 11 disclosure holder jurisdiction assertions, only ${SPDHJ_PASSED} ran." >&2
+    suite_failed "Security Passport disclosure holder jurisdiction (assertion shortfall: floor 11)"
+  fi
+fi
+
 echo "==> Running Security Passport work country assertions"
 set +e
 SPWC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_profile_work_country_test.sql 2>&1)"
@@ -1828,6 +1850,25 @@ fi
 # with "cannot drop table sp_sub_jurisdictions because other objects depend on
 # it". Reverse migration order is not a stylistic preference here; it is what
 # makes the chain reversible at all.
+# FIRST in the chain: 20260908094000 is the newest migration, and the chain runs
+# in reverse migration order so each rollback sees the schema its forward
+# migration left behind.
+echo "==> Verifying the disclosure holder jurisdiction rollback"
+set +e
+SPDHJRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260908094000_sp_disclosure_holder_sub_jurisdiction_rollback.sql 2>&1)"
+SPDHJRB_RC=$?
+set -e
+
+if [ "$SPDHJRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the disclosure holder jurisdiction rollback exited with code ${SPDHJRB_RC}." >&2
+  echo "$SPDHJRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "disclosure holder jurisdiction rollback"
+else
+  echo "    ok  the disclosure holder jurisdiction rolls back cleanly"
+fi
+
 echo "==> Verifying the profile work country rollback"
 set +e
 SPPWCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \

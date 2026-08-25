@@ -116,7 +116,7 @@ export function WorkCountryCard({
           <option value="">—</option>
           {WORK_COUNTRY_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {o.labelKey ? pt(o.labelKey) : o.label}
             </option>
           ))}
         </select>
