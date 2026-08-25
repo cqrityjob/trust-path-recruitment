@@ -47,13 +47,25 @@ import {
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CredentialSymbol } from "./CredentialSymbol";
 
-/** The jurisdictions the select offers. ISO 3166-1 alpha-2; Sweden first
- *  because the launch taxonomy is Swedish, never because others are less. */
-/** One market the form may offer.
+/** The market the holder has already chosen, resolved.
  *
- *  Structural rather than imported from the server module, so this component
- *  stays free of any database dependency — the same reason `CredentialType` is
- *  declared this way. The dev harness supplies its own list. */
+ *  ── WHY THIS IS ONE MARKET AND NOT A LIST ──────────────────────────────
+ *
+ *  This prop used to be `markets: readonly FormMarket[]`, and the form
+ *  rendered a country `<select>` from it in the "about the credential"
+ *  section — BELOW the credential radio group. The credential list above it
+ *  came from `listCredentialTypes`, which has no jurisdiction filter at all.
+ *
+ *  So the country field did not choose the catalogue; it annotated it. A
+ *  holder picked Ordningsvaktsförordnande and then told the form it was
+ *  British, and nothing in the form disagreed. Only the database did, at the
+ *  end, in a language the holder does not read.
+ *
+ *  The market is now decided BEFORE this component renders, by
+ *  JurisdictionPicker, and the credential list this form receives is the
+ *  catalogue for that market and no other. The market is shown here so the
+ *  holder can see what they are recording against, and changed by going back
+ *  to the picker — never by a field buried in a later section. */
 export interface FormMarket {
   readonly marketPackCode: string;
   readonly jurisdictionCode: string;
@@ -65,14 +77,12 @@ export interface FormMarket {
 export interface CredentialFormProps {
   /** The taxonomy, from sp_credential_types (or fixtures in the harness). */
   readonly types: readonly CredentialType[];
-  /** The markets a holder may record in, from the ACTIVE market packs.
-   *
-   *  This used to be a literal `["SE", "NO", "DK", "FI", "DE"]` in this file.
-   *  Only the first existed in sp_jurisdictions, so four of the five options
-   *  produced a foreign-key error — a controlled vocabulary whose control was
-   *  a list nobody had reconciled with the database. Reading it from the packs
-   *  means the form can only offer what the database will accept. */
-  readonly markets: readonly FormMarket[];
+  /** The market these `types` belong to. Already chosen, already resolved,
+   *  and already known to be supported — this component never renders for a
+   *  pending or unsupported market, because there is nothing to offer. */
+  readonly market: FormMarket;
+  /** Back to the jurisdiction picker. */
+  onChangeMarket: () => void;
   /** Resumed draft, or null for a fresh form. */
   readonly initial?: (CredentialDraft & { readonly id: string }) | null;
   /** Preselected credential code (e.g. arriving from an overview action). */
@@ -90,6 +100,13 @@ export interface CredentialFormProps {
 
 function fieldId(name: string): string {
   return `sp-cred-${name}`;
+}
+
+/** The taxonomy's own name for this credential's reference number, in the
+ *  reader's language, or null when it has none. */
+function referenceLabel(type: CredentialType, lang: string): string | null {
+  const label = lang === "sv" ? type.referenceLabelLocal : type.referenceLabelEn;
+  return label && label.trim().length > 0 ? label : null;
 }
 
 const inputClass =
@@ -128,7 +145,7 @@ function FieldError({ id, message }: { id: string; message: string | null }) {
 
 export function CredentialForm({
   types,
-  markets,
+  market,
   initial = null,
   preselectCode = null,
   busy,
@@ -138,13 +155,21 @@ export function CredentialForm({
   onActivate,
   onDiscard,
   onCancel,
+  onChangeMarket,
 }: CredentialFormProps) {
   const { pt, lang } = usePassportCopy();
 
   const [draft, setDraft] = useState<CredentialDraft>(() => {
-    if (initial) return initial;
-    const empty = emptyCredentialDraft();
-    return preselectCode ? { ...empty, credentialCode: preselectCode } : empty;
+    // The market is not a field the holder fills in here; it is the decision
+    // that produced this form's `types`. Stamping it on the draft keeps the
+    // two from ever disagreeing.
+    const base = initial ?? emptyCredentialDraft();
+    return {
+      ...base,
+      jurisdictionCode: market.jurisdictionCode,
+      subJurisdictionCode: market.subJurisdictionCode,
+      credentialCode: initial ? base.credentialCode : (preselectCode ?? base.credentialCode),
+    };
   });
   const [errors, setErrors] = useState<readonly CredentialFieldError[]>([]);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -344,24 +369,26 @@ export function CredentialForm({
               </div>
             ) : null}
 
-            <div>
-              <FieldLabel htmlFor={fieldId("jurisdictionCode")}>
-                {pt("cred.field.jurisdiction")}
-              </FieldLabel>
-              <select
-                id={fieldId("jurisdictionCode")}
-                value={draft.jurisdictionCode}
-                aria-invalid={errorFor("jurisdictionCode") ? true : undefined}
-                aria-describedby={describedBy("jurisdictionCode")}
-                onChange={(e) => set("jurisdictionCode", e.target.value)}
-                className={cn(inputClass, "sm:w-64")}
-              >
-                {markets.map((m) => (
-                  <option key={m.marketPackCode} value={m.jurisdictionCode}>
-                    {lang === "sv" ? m.nameSv : m.nameEn}
-                  </option>
-                ))}
-              </select>
+            {/* The market, stated rather than asked.
+                It was a <select> here until the jurisdiction-first flow, which
+                meant the holder could pick a Swedish credential above and then
+                tell the form it was British — a contradiction the form
+                accepted and the database rejected. Now it is the decision this
+                whole screen rests on, so it is shown, not offered. */}
+            <div className="rounded-lg border border-border bg-secondary/40 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {pt("cred.market.selected")}
+              </p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-foreground">
+                {lang === "sv" ? market.nameSv : market.nameEn}
+                <button
+                  type="button"
+                  onClick={onChangeMarket}
+                  className="text-sm font-medium text-accent underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {pt("cred.market.change")}
+                </button>
+              </p>
               <FieldError
                 id={`${fieldId("jurisdictionCode")}-error`}
                 message={errorFor("jurisdictionCode")}
@@ -490,7 +517,12 @@ export function CredentialForm({
                   optional
                   optionalLabel={pt("common.optional")}
                 >
-                  {pt("cred.field.reference")}
+                  {/* "Licence number (16 digits)" and "Certificate number"
+                      are different questions, and asking the wrong one gets
+                      the wrong number typed in. The taxonomy row carries the
+                      label where it has one; the generic copy key is the
+                      fallback, not the default. */}
+                  {referenceLabel(type, lang) ?? pt("cred.field.reference")}
                 </FieldLabel>
                 <input
                   id={fieldId("credentialReference")}

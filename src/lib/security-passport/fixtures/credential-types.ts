@@ -20,6 +20,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   {
     code: "VU2",
@@ -32,6 +40,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   {
     code: "OV",
@@ -44,6 +60,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: true,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   {
     code: "SV",
@@ -60,6 +84,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     // database refuses a new one that does not say.
     requiresScope: true,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
 
   // ── Added by the Swedish truth model (20260907091000) ─────────────────
@@ -77,6 +109,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   {
     code: "OV_REFRESHER",
@@ -89,6 +129,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   {
     code: "OV_TRANSPORT",
@@ -101,6 +149,14 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
   // The narrow result. Nothing about the police register behind it may enter
   // the Passport, so the form hides the note and title fields and the database
@@ -116,5 +172,13 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: true,
     requiresScope: false,
     narrowResultOnly: true,
+    // Every fixture row is Swedish, and now says so explicitly. The live
+    // catalogue is partitioned by market pack, so a fixture without a
+    // jurisdiction would be the one credential in the harness that belongs
+    // nowhere.
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    referenceLabelEn: null,
+    referenceLabelLocal: null,
   },
 ] as const;

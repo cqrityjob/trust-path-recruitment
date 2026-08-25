@@ -849,6 +849,30 @@ const sv = {
   "cred.field.appointingAuthority": "Förordnande myndighet",
   "cred.field.authorityHelp": "Myndigheten som fattade beslutet, till exempel Polismyndigheten.",
   "cred.field.jurisdiction": "Land",
+  // ── Jurisdiction-first credential flow ────────────────────────────
+  // The country is asked FIRST, and these strings carry the reason. A holder
+  // who sees the credential list change when they change country must be able
+  // to read why, or the change looks like a bug.
+  "cred.market.step1": "Var gäller behörigheten eller utbildningen?",
+  "cred.market.countryLabel": "Land",
+  "cred.market.choose": "Välj …",
+  "cred.market.why":
+    "Behörigheter och regler skiljer sig mellan länder. Vi visar endast de säkerhetsbehörigheter som gäller för den jurisdiktion du valt.",
+  "cred.market.regionQuestion": "Vilken region utfärdade eller reglerar behörigheten?",
+  "cred.market.emirateQuestion": "Vilket emirat utfärdade eller reglerar behörigheten?",
+  "cred.market.emirateNotice":
+    "Regleringen av privata säkerhetsroller skiljer sig mellan emiraten. Välj emirat för att visa rätt behörigheter.",
+  "cred.market.nationalOption": "Nationellt (hela landet)",
+  "cred.market.selected": "Vald jurisdiktion",
+  "cred.market.change": "Ändra",
+  "cred.market.pending":
+    "Behörighetskatalogen för den här marknaden är framtagen men ännu inte juridiskt granskad. Du kan därför inte registrera reglerade säkerhetsbehörigheter här än.",
+  "cred.market.unsupportedEmirate":
+    "CQrityjob stödjer ännu inte registrering av reglerade säkerhetsbehörigheter för detta emirat.",
+  "cred.market.unsupportedCountry":
+    "CQrityjob stödjer ännu inte registrering av reglerade säkerhetsbehörigheter för detta land.",
+  "cred.market.chooseAnother": "Välj en annan jurisdiktion för att fortsätta.",
+  "cred.market.noCredentials": "Inga behörigheter är tillgängliga för den valda jurisdiktionen.",
   "cred.field.completedOn": "Slutfört datum",
   "cred.field.decidedOn": "Beslutsdatum",
   "cred.field.validFrom": "Gäller från",
@@ -878,6 +902,11 @@ const sv = {
   "cred.error.selectCredential": "Välj vilken behörighet du lägger till.",
   "cred.error.titleRequired": "Ange en benämning.",
   "cred.error.jurisdictionRequired": "Ange land.",
+  "cred.error.wrongJurisdiction":
+    "Den här behörigheten hör till ett annat land. Välj en behörighet som gäller i den jurisdiktion du valt.",
+  "cred.error.wrongSubJurisdiction":
+    "Den här behörigheten är utfärdad i en annan region eller ett annat emirat och gäller inte där du valt.",
+  "cred.error.marketRequired": "Välj var behörigheten gäller.",
   "cred.error.authorityRequired": "Ange vilken myndighet som förordnade dig.",
   "cred.error.validUntilRequired": "Ett förordnande måste ha ett slutdatum.",
   "cred.error.scopeRequired":
@@ -1965,6 +1994,27 @@ const en: Record<PassportCopyKey, string> = {
   "cred.field.authorityHelp":
     "The authority that made the decision, for example the Swedish Police Authority.",
   "cred.field.jurisdiction": "Country",
+  // ── Jurisdiction-first credential flow ────────────────────────────
+  "cred.market.step1": "Where is this credential valid?",
+  "cred.market.countryLabel": "Country",
+  "cred.market.choose": "Select …",
+  "cred.market.why":
+    "Security credentials and regulatory requirements differ by jurisdiction. Only credentials supported for your selected jurisdiction are shown.",
+  "cred.market.regionQuestion": "Which region issued or regulates this credential?",
+  "cred.market.emirateQuestion": "Which emirate issued or regulates this credential?",
+  "cred.market.emirateNotice":
+    "Regulation of private security roles differs between the emirates. Choose an emirate to see the right credentials.",
+  "cred.market.nationalOption": "National (whole country)",
+  "cred.market.selected": "Selected jurisdiction",
+  "cred.market.change": "Change",
+  "cred.market.pending":
+    "The credential catalogue for this market has been prepared but not yet legally reviewed, so regulated security credentials cannot be registered here yet.",
+  "cred.market.unsupportedEmirate":
+    "CQrityjob does not yet support registration of regulated security credentials for this emirate.",
+  "cred.market.unsupportedCountry":
+    "CQrityjob does not yet support registration of regulated security credentials for this country.",
+  "cred.market.chooseAnother": "Choose another jurisdiction to continue.",
+  "cred.market.noCredentials": "No credentials are available for the selected jurisdiction.",
   "cred.field.completedOn": "Completed on",
   "cred.field.decidedOn": "Decision date",
   "cred.field.validFrom": "Valid from",
@@ -1994,6 +2044,11 @@ const en: Record<PassportCopyKey, string> = {
   "cred.error.selectCredential": "Choose which credential you are adding.",
   "cred.error.titleRequired": "Enter a name.",
   "cred.error.jurisdictionRequired": "Enter a country.",
+  "cred.error.wrongJurisdiction":
+    "This credential belongs to another country. Choose one that is valid in the jurisdiction you selected.",
+  "cred.error.wrongSubJurisdiction":
+    "This credential is issued in a different region or emirate and is not valid where you selected.",
+  "cred.error.marketRequired": "Select where this credential is valid.",
   "cred.error.authorityRequired": "Enter the authority that appointed you.",
   "cred.error.validUntilRequired": "An appointment must have an end date.",
   "cred.error.scopeRequired":

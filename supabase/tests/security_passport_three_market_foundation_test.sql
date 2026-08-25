@@ -213,17 +213,39 @@ BEGIN
     RAISE NOTICE 'ok  5.1 a UAE claim without an emirate is refused, not stored as national';
   END;
 
+  -- Sharjah has no pack at all: no authority read, no catalogue authored. It
+  -- is the emirate that proves the "we have never reviewed this place" branch
+  -- still exists and still fails closed.
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, jurisdiction_code, sub_jurisdiction_code)
-    VALUES (_h1, 'licence', 'Abu Dhabi card', 'AE', 'AE-AZ');
+    VALUES (_h1, 'licence', 'Sharjah card', 'AE', 'AE-SH');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 an unsupported emirate was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
     IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2 wrong error for an unsupported emirate: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  5.2 Abu Dhabi is refused as "not supported yet", not as a bad country';
+    RAISE NOTICE 'ok  5.2 Sharjah is refused as "not supported yet", not as a bad country';
+  END;
+
+  -- Abu Dhabi USED to take the branch above. 20260908096000 authored its
+  -- Ministry of Interior / PSBD catalogue, so it now has a pack — pending
+  -- legal review and inactive. The refusal therefore moves from "never heard
+  -- of it" to "authored, not approved", which is a different true sentence
+  -- and the one the UI should render. It must NOT become an acceptance, and
+  -- it must NOT start answering with Dubai's catalogue.
+  BEGIN
+    INSERT INTO public.sp_claims
+      (holder_user_id, claim_type, title, jurisdiction_code, sub_jurisdiction_code)
+    VALUES (_h1, 'licence', 'Abu Dhabi licence', 'AE', 'AE-AZ');
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.2b an unreviewed Abu Dhabi pack accepted a claim';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
+    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: 5.2b wrong error for Abu Dhabi: %', _txt;
+    END IF;
+    RAISE NOTICE 'ok  5.2b Abu Dhabi is refused as "pending legal review", never as Dubai';
   END;
 
   -- Dubai is registered but its pack is unreviewed, so it too is refused —

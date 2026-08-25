@@ -40,83 +40,309 @@ import {
 /* Taxonomy                                                            */
 /* ------------------------------------------------------------------ */
 
-/** One market a holder may actually record a credential in.
+/** How far a market has actually got.
  *
- *  ── WHY THIS REPLACED A CONSTANT ───────────────────────────────────────
+ *  Three states, because "you cannot record a credential here" has three
+ *  different reasons and they are not interchangeable:
  *
- *  The form used to offer `["SE", "NO", "DK", "FI", "DE"]` from a literal in
- *  the component. Only the first existed in `sp_jurisdictions`, so four of the
- *  five options produced a raw foreign-key error — a controlled vocabulary
- *  whose control was a list nobody had reconciled with the database.
+ *    supported      — the pack is reviewed and switched on. Record away.
+ *    pending_review — a catalogue exists, authored from official sources, and
+ *                     nobody has signed it off. The country is real, the
+ *                     credentials are real, and they are not offered yet.
+ *    not_supported  — there is no pack. Nobody here has read this place's
+ *                     regulatory framework, and nothing is being guessed.
  *
- *  Read from the market packs instead, so the form can only ever offer what
- *  the database will accept: an unreviewed market is absent because the pack
- *  is inactive, and a new market appears the day its pack is switched on. */
-export interface SelectableMarket {
-  readonly marketPackCode: string;
-  readonly jurisdictionCode: string;
-  /** Present only where the regulator is sub-national — an emirate. Recorded
-   *  on the claim so a Dubai credential is never stored as UAE-wide. */
-  readonly subJurisdictionCode: string | null;
+ *  Collapsing the last two into one "unavailable" would tell an Abu Dhabi
+ *  holder the same thing it tells a Fujairah holder, and those are different
+ *  facts about how close the product is to serving them. */
+export type MarketSupportState = "supported" | "pending_review" | "not_supported";
+
+/** One sub-national licensing territory: an emirate, or Northern Ireland. */
+export interface SubJurisdictionChoice {
+  readonly code: string;
   readonly nameSv: string;
   readonly nameEn: string;
+  readonly supportState: MarketSupportState;
 }
 
-/** Every market a holder may currently record a credential in.
+/** One country the holder may pick, and everything the picker needs to render
+ *  it honestly without a second round trip. */
+export interface JurisdictionChoice {
+  readonly jurisdictionCode: string;
+  readonly nameSv: string;
+  readonly nameEn: string;
+  /** The state of the country-level pack. `not_supported` when the country has
+   *  no national pack at all — which is the UAE's situation, not a gap. */
+  readonly nationalState: MarketSupportState;
+  /** True when there is NO national pack, so a credential cannot be recorded
+   *  against the country alone and the region question is mandatory.
+   *
+   *  The UAE is true: SIRA licenses Dubai and the other emirates have their
+   *  own authorities, so "a UAE security licence" is not a thing that exists.
+   *  The UK is FALSE even though it has a Northern Ireland pack — the seven
+   *  Great Britain licence sectors resolve against the national pack, and
+   *  asking every British holder which region they mean would be inventing a
+   *  question to serve one licence. */
+  readonly requiresSubJurisdiction: boolean;
+  readonly subJurisdictions: readonly SubJurisdictionChoice[];
+}
+
+/** Every country and region the picker may offer, each with its true state.
  *
- *  Deliberately filtered on `is_active`, which by the
- *  sp_market_pack_active_needs_review constraint cannot be true while the
- *  pack's regulatory content is unreviewed. So an unreviewed market is not
- *  merely discouraged in the UI — it is not offered, and would be refused by
- *  the claim trigger if it were. */
-export const listSelectableMarkets = createServerFn({ method: "GET" })
+ *  ── WHY THIS REPLACED `listSelectableMarkets` ──────────────────────────
+ *
+ *  That function returned ACTIVE packs only. With Sweden the only active pack,
+ *  it returned exactly one country — so the form's country select had one
+ *  option, every holder was Swedish by construction, and the credential list
+ *  shown underneath it was the Swedish one. A holder working in the UK saw
+ *  VU1, VU2, Ordningsvakt and Skyddsvakt, because the product had no way to
+ *  say "the United Kingdom exists and we are not ready for it".
+ *
+ *  Filtering the unreviewed markets out of the UI did not make them
+ *  unavailable. It made them INVISIBLE, and invisible reads as Sweden.
+ *
+ *  So this returns every country the registry knows, with its state attached,
+ *  and the caller renders the state. Nothing unreviewed becomes selectable —
+ *  `listCredentialCatalogue` still refuses to return credentials for a market
+ *  that is not `supported`, and `sp_claims_credential_rules` still refuses the
+ *  write. What changes is that the holder is told the truth instead of being
+ *  shown somebody else's country. */
+export const listJurisdictionChoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<readonly SelectableMarket[]> => {
-    const { data, error } = await context.supabase
+  .handler(async ({ context }): Promise<readonly JurisdictionChoice[]> => {
+    const { supabase } = context;
+
+    const [countries, packs, subs] = await Promise.all([
+      supabase.from("sp_jurisdictions").select("code, name_sv, name_en").order("code"),
+      supabase
+        .from("sp_market_packs")
+        .select("code, jurisdiction_code, sub_jurisdiction_code, is_active")
+        .is("superseded_on", null),
+      supabase
+        .from("sp_sub_jurisdictions")
+        .select("code, jurisdiction_code, name_sv, name_en")
+        .order("code"),
+    ]);
+    if (countries.error) throw new Error(countries.error.message);
+    if (packs.error) throw new Error(packs.error.message);
+    if (subs.error) throw new Error(subs.error.message);
+
+    const packRows = packs.data ?? [];
+
+    // A pack that exists but is inactive is pending review — the
+    // sp_market_pack_active_needs_review constraint means is_active cannot be
+    // true while the regulatory content is unreviewed, so "inactive" and
+    // "unreviewed" are the same set and this mapping is exact rather than
+    // approximate.
+    const stateOf = (
+      jurisdictionCode: string,
+      subJurisdictionCode: string | null,
+    ): MarketSupportState => {
+      const pack = packRows.find(
+        (p) =>
+          p.jurisdiction_code === jurisdictionCode &&
+          (p.sub_jurisdiction_code ?? null) === subJurisdictionCode,
+      );
+      if (!pack) return "not_supported";
+      return pack.is_active ? "supported" : "pending_review";
+    };
+
+    return (countries.data ?? []).map((c) => {
+      const mySubs = (subs.data ?? []).filter((sj) => sj.jurisdiction_code === c.code);
+      const hasNationalPack = packRows.some(
+        (p) => p.jurisdiction_code === c.code && p.sub_jurisdiction_code === null,
+      );
+
+      return {
+        jurisdictionCode: c.code,
+        nameSv: c.name_sv,
+        nameEn: c.name_en,
+        nationalState: stateOf(c.code, null),
+        // Mandatory only when the country cannot be resolved on its own.
+        requiresSubJurisdiction: !hasNationalPack && mySubs.length > 0,
+        subJurisdictions: mySubs.map((sj) => ({
+          code: sj.code,
+          nameSv: sj.name_sv,
+          nameEn: sj.name_en,
+          supportState: stateOf(c.code, sj.code),
+        })),
+      };
+    });
+  });
+
+/** The credentials that may be recorded in ONE market, and nothing else. */
+export interface CredentialCatalogue {
+  readonly marketPackCode: string | null;
+  readonly supportState: MarketSupportState;
+  readonly nameSv: string | null;
+  readonly nameEn: string | null;
+  /** Empty unless `supportState` is `supported`. Never a fallback list. */
+  readonly credentials: readonly CredentialType[];
+}
+
+const marketInput = z.object({
+  jurisdictionCode: z.string().regex(/^[A-Z]{2}$/),
+  subJurisdictionCode: z
+    .string()
+    .regex(/^[A-Z]{2}-[A-Z0-9]{2,3}$/)
+    .nullable(),
+});
+
+const CREDENTIAL_COLUMNS =
+  "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, " +
+  "requires_issuer, requires_scope, narrow_result_only, jurisdiction_code, " +
+  "sub_jurisdiction_code, reference_label_en, reference_label_local";
+
+interface CredentialRow {
+  code: string;
+  category: string;
+  claim_type: string;
+  name_sv: string;
+  name_en: string;
+  symbol_label: string;
+  requires_valid_until: boolean;
+  requires_issuer: boolean;
+  requires_scope: boolean;
+  narrow_result_only: boolean;
+  jurisdiction_code: string | null;
+  sub_jurisdiction_code: string | null;
+  reference_label_en: string | null;
+  reference_label_local: string | null;
+}
+
+function toCredentialType(r: CredentialRow): CredentialType {
+  return {
+    code: r.code,
+    category: r.category as CredentialCategory,
+    claimType: r.claim_type,
+    nameSv: r.name_sv,
+    nameEn: r.name_en,
+    symbolLabel: r.symbol_label,
+    requiresValidUntil: r.requires_valid_until,
+    requiresIssuer: r.requires_issuer,
+    requiresScope: r.requires_scope,
+    narrowResultOnly: r.narrow_result_only,
+    jurisdictionCode: r.jurisdiction_code,
+    subJurisdictionCode: r.sub_jurisdiction_code,
+    referenceLabelEn: r.reference_label_en,
+    referenceLabelLocal: r.reference_label_local,
+  };
+}
+
+/**
+ * The credential catalogue for one jurisdiction, and ONLY that jurisdiction.
+ *
+ * ── THE DEFECT THIS FUNCTION EXISTS TO CLOSE ───────────────────────────
+ *
+ * `listCredentialTypes` selects every active credential in the database with
+ * no jurisdiction filter of any kind. It is the correct query for LABELLING an
+ * existing claim — a holder must be able to read an entry whatever market it
+ * came from — and it is the wrong query for OFFERING one. Used as the
+ * add-credential list, it means the vocabulary a holder may choose from is
+ * "whatever is switched on globally", and the only reason a British holder was
+ * not shown a Dubai cadre card is that the Dubai pack happens to be off.
+ *
+ * That is not a jurisdiction rule. It is a coincidence that reads like one.
+ *
+ * Here the market is resolved FIRST, from the pack registry, and the
+ * credentials are those belonging to that pack. A credential belongs to
+ * exactly one market pack, so the partition is total: there is no query
+ * parameter, no flag and no empty-result path by which a Swedish credential
+ * can be returned for a British market.
+ *
+ * ── AND IT IS STILL NOT THE GUARANTEE ──────────────────────────────────
+ *
+ * A caller that skips this function entirely and POSTs to the write path meets
+ * `sp_claims_credential_rules`, which refuses a cross-market credential for
+ * every caller including service_role. This function decides what a holder is
+ * OFFERED; the trigger decides what can be STORED. Both are required, and only
+ * the second is load-bearing.
+ */
+export const listCredentialCatalogue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => marketInput.parse(data))
+  .handler(async ({ context, data }): Promise<CredentialCatalogue> => {
+    const { supabase } = context;
+
+    const { data: pack, error: packError } = await supabase
       .from("sp_market_packs")
-      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en")
-      .eq("is_active", true)
+      .select("code, name_sv, name_en, is_active")
+      .eq("jurisdiction_code", data.jurisdictionCode)
       .is("superseded_on", null)
-      .order("code", { ascending: true });
+      .filter(
+        "sub_jurisdiction_code",
+        data.subJurisdictionCode === null ? "is" : "eq",
+        data.subJurisdictionCode === null ? null : data.subJurisdictionCode,
+      )
+      .maybeSingle();
+    if (packError) throw new Error(packError.message);
+
+    // No pack: nobody has read this market's regulatory framework. The honest
+    // answer is an empty catalogue and a state the UI can name — never another
+    // market's list.
+    if (!pack) {
+      return {
+        marketPackCode: null,
+        supportState: "not_supported",
+        nameSv: null,
+        nameEn: null,
+        credentials: [],
+      };
+    }
+
+    if (!pack.is_active) {
+      // Authored, unreviewed. The credentials exist and are deliberately not
+      // returned: showing them greyed out would be showing regulatory content
+      // no lawyer has approved, which is the thing the review gate is for.
+      return {
+        marketPackCode: pack.code,
+        supportState: "pending_review",
+        nameSv: pack.name_sv,
+        nameEn: pack.name_en,
+        credentials: [],
+      };
+    }
+
+    const { data: rows, error } = await supabase
+      .from("sp_credential_types")
+      .select(CREDENTIAL_COLUMNS)
+      .eq("market_pack_code", pack.code)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
-      marketPackCode: r.code,
-      jurisdictionCode: r.jurisdiction_code,
-      subJurisdictionCode: r.sub_jurisdiction_code,
-      nameSv: r.name_sv,
-      nameEn: r.name_en,
-    }));
+    return {
+      marketPackCode: pack.code,
+      supportState: "supported",
+      nameSv: pack.name_sv,
+      nameEn: pack.name_en,
+      credentials: (rows ?? []).map((r) => toCredentialType(r as unknown as CredentialRow)),
+    };
   });
 
 /** The supported credentials, straight from the database.
  *
- *  Not a constant in the bundle: the taxonomy is data, and a fifth credential
- *  must appear in the form without a deploy. */
+ *  ── THIS IS THE LABELLING VOCABULARY, NOT THE PICKER ───────────────────
+ *
+ *  Deliberately unfiltered by jurisdiction, and that is correct HERE: an entry
+ *  detail page must be able to name the credential it is showing whatever
+ *  market it belongs to, including one whose pack has since been switched off.
+ *  Filtering this by the viewer's market would blank the label on a real entry.
+ *
+ *  It must NOT be used to populate an add-credential list. That is what
+ *  `listCredentialCatalogue` is for, and using this instead is precisely the
+ *  defect that showed Swedish credentials to holders in other countries. */
 export const listCredentialTypes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly CredentialType[]> => {
     const { data, error } = await context.supabase
       .from("sp_credential_types")
-      .select(
-        "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
-      )
+      .select(CREDENTIAL_COLUMNS)
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
-      code: r.code,
-      category: r.category as CredentialCategory,
-      claimType: r.claim_type,
-      nameSv: r.name_sv,
-      nameEn: r.name_en,
-      symbolLabel: r.symbol_label,
-      requiresValidUntil: r.requires_valid_until,
-      requiresIssuer: r.requires_issuer,
-      requiresScope: r.requires_scope,
-      narrowResultOnly: r.narrow_result_only,
-    }));
+    return (data ?? []).map((r) => toCredentialType(r as unknown as CredentialRow));
   });
 
 /* ------------------------------------------------------------------ */
@@ -130,6 +356,16 @@ const draftInput = z.object({
   title: z.string().max(200),
   issuerName: z.string().max(160),
   jurisdictionCode: z.string().max(2),
+  /** The emirate or devolved region, where the regulator is sub-national.
+   *
+   *  Absent from this schema until now, which meant a Dubai claim could not be
+   *  written AT ALL through this path: `sp_claims_credential_rules` refuses a
+   *  UAE claim with no emirate (SP_SUB_JURISDICTION_REQUIRED), and there was
+   *  no parameter that could have supplied one. */
+  subJurisdictionCode: z
+    .string()
+    .regex(/^[A-Z]{2}-[A-Z0-9]{2,3}$/)
+    .nullable(),
   issuedOn: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -160,6 +396,7 @@ function toDomainDraft(data: DraftInput): CredentialDraft {
     title: data.title,
     issuerName: data.issuerName,
     jurisdictionCode: data.jurisdictionCode,
+    subJurisdictionCode: data.subJurisdictionCode,
     issuedOn: data.issuedOn,
     validFrom: data.validFrom,
     validUntil: data.validUntil,
@@ -202,25 +439,12 @@ export const saveCredential = createServerFn({ method: "POST" })
     if (data.credentialCode) {
       const { data: row, error } = await supabase
         .from("sp_credential_types")
-        .select(
-          "code, category, claim_type, name_sv, name_en, symbol_label, requires_valid_until, requires_issuer, requires_scope, narrow_result_only",
-        )
+        .select(CREDENTIAL_COLUMNS)
         .eq("code", data.credentialCode)
         .maybeSingle();
       if (error) throw new Error(error.message);
       if (!row) throw new Error("SP_CREDENTIAL_CODE_UNKNOWN");
-      type = {
-        code: row.code,
-        category: row.category as CredentialCategory,
-        claimType: row.claim_type,
-        nameSv: row.name_sv,
-        nameEn: row.name_en,
-        symbolLabel: row.symbol_label,
-        requiresValidUntil: row.requires_valid_until,
-        requiresIssuer: row.requires_issuer,
-        requiresScope: row.requires_scope,
-        narrowResultOnly: row.narrow_result_only,
-      };
+      type = toCredentialType(row as unknown as CredentialRow);
     }
 
     const mode = data.activate ? "active" : "draft";
@@ -253,6 +477,15 @@ export const saveCredential = createServerFn({ method: "POST" })
       title: type.narrowResultOnly ? type.nameSv : (nullIfBlank(draft.title) ?? type.nameSv),
       claimed_issuer_name: nullIfBlank(draft.issuerName),
       jurisdiction_code: nullIfBlank(draft.jurisdictionCode),
+      // Taken from the credential's own row when it has one, and from the
+      // holder's choice otherwise.
+      //
+      // The taxonomy wins deliberately: a SIRA cadre card IS a Dubai
+      // credential and a vehicle immobilisation licence IS a Northern Ireland
+      // one, so neither can be filed anywhere else whatever arrived here. The
+      // trigger refuses the mismatch either way; preferring the row means the
+      // holder is never refused for a field the form derived on their behalf.
+      sub_jurisdiction_code: type.subJurisdictionCode ?? draft.subJurisdictionCode,
       issued_on: draft.issuedOn,
       valid_from: draft.validFrom ?? draft.issuedOn,
       valid_until: draft.validUntil,
@@ -331,7 +564,7 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("sp_claims")
       .select(
-        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, authorisation_scope, updated_at",
+        "id, credential_code, title, claimed_issuer_name, jurisdiction_code, sub_jurisdiction_code, issued_on, valid_from, valid_until, credential_reference, holder_note, authorisation_scope, updated_at",
       )
       .eq("holder_user_id", userId)
       .eq("lifecycle_state", "draft")
@@ -343,7 +576,11 @@ export const listMyCredentialDrafts = createServerFn({ method: "GET" })
       credentialCode: r.credential_code,
       title: r.title,
       issuerName: r.claimed_issuer_name ?? "",
-      jurisdictionCode: r.jurisdiction_code ?? "SE",
+      // No coalesce to "SE". A draft saved before the holder chose a country
+      // has no country, and answering "Sweden" would put a jurisdiction on
+      // their record that they never stated.
+      jurisdictionCode: r.jurisdiction_code ?? "",
+      subJurisdictionCode: r.sub_jurisdiction_code,
       issuedOn: r.issued_on,
       validFrom: r.valid_from,
       validUntil: r.valid_until,

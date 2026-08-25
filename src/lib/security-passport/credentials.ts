@@ -77,6 +77,30 @@ export interface CredentialType {
    *  material — a register check, a fitness certificate — must never enter the
    *  Passport at all. */
   readonly narrowResultOnly: boolean;
+
+  /** The country that regulates this credential, from `sp_credential_types`.
+   *
+   *  Present so the client can refuse a mismatch it can SEE, rather than
+   *  discovering it as a 23514 from the trigger. It is not the guarantee —
+   *  `sp_claims_credential_rules` is, for every caller — but a form that lets
+   *  a holder fill in three minutes of detail before telling them the
+   *  credential does not belong to the market they picked is a form that
+   *  wastes their time to prove a point. */
+  readonly jurisdictionCode: string | null;
+
+  /** The sub-national regulator's territory, where there is one: 'AE-DU' for
+   *  a SIRA cadre card, 'GB-NI' for a vehicle immobilisation licence.
+   *
+   *  NULL means the credential is national, NOT that it is valid everywhere in
+   *  the country — those are different statements and only the first is
+   *  storable here. */
+  readonly subJurisdictionCode: string | null;
+
+  /** What to call the reference in the form. "Licence number" and
+   *  "Certificate number" are different questions, and asking the wrong one
+   *  gets the wrong number typed in. NULL falls back to the generic label. */
+  readonly referenceLabelEn: string | null;
+  readonly referenceLabelLocal: string | null;
 }
 
 /** What the holder types. Every field is optional at this stage — a draft is
@@ -86,7 +110,15 @@ export interface CredentialDraft {
   readonly credentialCode: string | null;
   readonly title: string;
   readonly issuerName: string;
+  /** The country the holder is recording this credential in. Empty until they
+   *  say — see `emptyCredentialDraft`. */
   readonly jurisdictionCode: string;
+  /** The emirate, devolved region or other sub-national licensing territory.
+   *
+   *  NULL is a real answer for Sweden and for Great Britain, and an INVALID
+   *  one for the UAE, which has no national pack. The difference is decided by
+   *  the market packs, not by this type. */
+  readonly subJurisdictionCode: string | null;
   readonly issuedOn: string | null;
   readonly validFrom: string | null;
   readonly validUntil: string | null;
@@ -100,7 +132,15 @@ export function emptyCredentialDraft(): CredentialDraft {
     credentialCode: null,
     title: "",
     issuerName: "",
-    jurisdictionCode: "SE",
+    // Deliberately EMPTY rather than "SE".
+    //
+    // A default country is a claim about where a credential is valid, made on
+    // the holder's behalf before they have said anything. It was harmless
+    // while Sweden was the only market and actively wrong the moment a second
+    // one existed: the jurisdiction-first flow asks the country FIRST, and a
+    // pre-filled answer is not a question.
+    jurisdictionCode: "",
+    subJurisdictionCode: null,
     issuedOn: null,
     validFrom: null,
     validUntil: null,
@@ -297,6 +337,24 @@ export function validateCredential(
   }
   if (isBlank(draft.jurisdictionCode)) {
     errors.push({ field: "jurisdictionCode", messageKey: "cred.error.jurisdictionRequired" });
+  }
+
+  // The client half of the cross-jurisdiction refusal.
+  //
+  // `sp_claims_credential_rules` refuses these for every caller and is the
+  // actual guarantee; this exists so the holder is told in their own language,
+  // against the field that is wrong, instead of receiving a database error for
+  // a combination the form should never have assembled. If this check and the
+  // trigger ever disagree, the trigger is right.
+  if (
+    type.jurisdictionCode &&
+    !isBlank(draft.jurisdictionCode) &&
+    type.jurisdictionCode !== draft.jurisdictionCode
+  ) {
+    errors.push({ field: "credentialCode", messageKey: "cred.error.wrongJurisdiction" });
+  }
+  if (type.subJurisdictionCode && type.subJurisdictionCode !== draft.subJurisdictionCode) {
+    errors.push({ field: "credentialCode", messageKey: "cred.error.wrongSubJurisdiction" });
   }
 
   // Straight from the taxonomy row, not from a list in this file.
