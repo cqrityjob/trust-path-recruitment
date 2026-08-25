@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -3548,9 +3548,6 @@ export type Database = {
           job_id: string
           new_status: string
           note: string | null
-          notified_at: string | null
-          notify_attempts: number
-          notify_error: string | null
           previous_status: string
         }
         Insert: {
@@ -3563,9 +3560,6 @@ export type Database = {
           job_id: string
           new_status: string
           note?: string | null
-          notified_at?: string | null
-          notify_attempts?: number
-          notify_error?: string | null
           previous_status: string
         }
         Update: {
@@ -3578,9 +3572,6 @@ export type Database = {
           job_id?: string
           new_status?: string
           note?: string | null
-          notified_at?: string | null
-          notify_attempts?: number
-          notify_error?: string | null
           previous_status?: string
         }
         Relationships: [
@@ -8363,7 +8354,6 @@ export type Database = {
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
-          title_is_holder_written: boolean
           typical_validity_months: number | null
         }
         Insert: {
@@ -8391,7 +8381,6 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
-          title_is_holder_written?: boolean
           typical_validity_months?: number | null
         }
         Update: {
@@ -8419,7 +8408,6 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
-          title_is_holder_written?: boolean
           typical_validity_months?: number | null
         }
         Relationships: [
@@ -9991,21 +9979,6 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
-      jase_notification_payload: {
-        Args: { _event_id: string }
-        Returns: {
-          employer_name: string
-          event_id: string
-          job_title: string
-          language: string
-          new_status: string
-          recipient_email: string
-        }[]
-      }
-      jase_record_notification: {
-        Args: { _error?: string; _event_id: string; _ok: boolean }
-        Returns: undefined
-      }
       job_is_active: {
         Args: {
           p_deadline_at: string
@@ -10014,10 +9987,6 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
-      }
-      jobs_delete_draft: {
-        Args: { _employer_id: string; _job_id: string }
-        Returns: string
       }
       moderate_employer: {
         Args: { _action: string; _employer_id: string; _note?: string }
@@ -10922,10 +10891,6 @@ export type Database = {
         Args: { _application_id: string }
         Returns: Json
       }
-      sp_archive_claim: {
-        Args: { _claim_id: string; _reason: string }
-        Returns: undefined
-      }
       sp_attach_evidence: {
         Args: {
           _claim_id: string
@@ -10977,7 +10942,6 @@ export type Database = {
         Returns: string
       }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
-      sp_dispute_queue: { Args: Record<PropertyKey, never>; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }
         Returns: Json
@@ -11002,15 +10966,6 @@ export type Database = {
       }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
-        Returns: undefined
-      }
-      sp_resolve_dispute: {
-        Args: {
-          _claim_id: string
-          _note: string
-          _outcome: string
-          _period_id: string
-        }
         Returns: undefined
       }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
