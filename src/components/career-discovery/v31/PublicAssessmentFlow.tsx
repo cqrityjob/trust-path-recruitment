@@ -70,6 +70,7 @@ import {
   clearCareerContext,
   EMPTY_CAREER_CONTEXT,
   isCareerContextComplete,
+  parseCareerContext,
   readCareerContext,
   shouldCollectCareerContext,
   writeCareerContext,
@@ -92,12 +93,15 @@ import {
 } from "@/lib/career-discovery/v31/snapshot";
 import {
   clearBuffer,
+  clearPendingClaim,
   contextStatusOf,
   isComplete,
   markComplete,
   readBuffer,
+  readPendingClaim,
   recordAnswer,
   sessionItemIds,
+  stageClaim,
   startBuffer,
   type PublicBuffer,
 } from "@/lib/career-discovery/v31-public-buffer";
@@ -221,6 +225,32 @@ export function PublicAssessmentFlow() {
             return;
           }
         }
+        // ── RECOVER A STAGED CLAIM ────────────────────────────────────
+        //
+        // The candidate finished, asked to save, created an account, and
+        // came back through the confirmation link — which is a DIFFERENT
+        // TAB, so this tab's sessionStorage buffer does not exist. The
+        // staged copy does, and the token in the return URL is what
+        // authorises replaying it here (see v31-public-buffer.ts).
+        //
+        // Ahead of readBuffer() deliberately: a claim token names a
+        // specific finished run, and it must win over whatever half-run
+        // this tab happens to be holding.
+        const claimToken = new URLSearchParams(window.location.search).get("claim");
+        const claimed = readPendingClaim(claimToken);
+        if (claimed) {
+          const recoveredContext = parseCareerContext(claimed.careerContext);
+          setBuffer(claimed.buffer);
+          setCareerContext(recoveredContext);
+          // Mirror it back into this tab's own storage so the rest of the
+          // flow — which reads and writes sessionStorage — sees the same
+          // context the candidate answered, not an empty one.
+          writeCareerContext(recoveredContext);
+          setIndex(sessionItemIds(contextStatusOf(claimed.buffer)).length - 1);
+          setPhase("result");
+          return;
+        }
+
         // Resume an in-flight run if this tab has one.
         const existing = readBuffer();
         const resumedCareerContext = readCareerContext();
@@ -275,8 +305,35 @@ export function PublicAssessmentFlow() {
 
   const answerFor = (id: string) => buffer?.answers.find((a) => a.itemId === id);
 
+  /** Record an answer and move on.
+   *
+   *  ── REVISITS MOVE ONE STEP, FIRST PASSES JUMP TO THE GAP ─────────────
+   *
+   *  On a first pass the right target is "the first question still without
+   *  an answer", which is the next one and stays the next one all the way
+   *  down the run. On a REVISIT it is not: somebody who stepped back four
+   *  questions to reconsider one of them wants the fourth-from-last, not to
+   *  be catapulted to wherever the run had got to — and if the buffer is
+   *  already complete, the old rule sent them straight to the result page
+   *  the instant they touched an answer, ending the review they had just
+   *  started. `wasAnswered` tells the two apart. */
   const advance = useCallback(
-    (next: PublicBuffer) => {
+    (next: PublicBuffer, wasAnswered: boolean) => {
+      // Recomputed from `next`, not from `itemIds`: answering C1 decides the
+      // path, which is what makes the last four questions exist at all.
+      const ids = sessionItemIds(contextStatusOf(next));
+      const answered = new Set(next.answers.map((a) => a.itemId));
+      const last = ids.length - 1;
+
+      // A revisit that is not the final question steps forward by one and
+      // stays in the questions phase. Completion is decided below only when
+      // there is genuinely nowhere further to go.
+      if (wasAnswered && index < last) {
+        setBuffer(next);
+        setIndex(index + 1);
+        return;
+      }
+
       if (isComplete(next)) {
         // Frozen exactly once here — the moment completion actually happens
         // — so the result view and, later, the saved report agree on when
@@ -287,15 +344,38 @@ export function PublicAssessmentFlow() {
         return;
       }
       setBuffer(next);
-      // Recomputed from `next`, not from `itemIds`: answering C1 decides the
-      // path, which is what makes the last four questions exist at all.
-      const ids = sessionItemIds(contextStatusOf(next));
-      const answered = new Set(next.answers.map((a) => a.itemId));
       const nextIndex = ids.findIndex((id) => !answered.has(id));
-      setIndex(nextIndex === -1 ? Math.min(index + 1, ids.length - 1) : nextIndex);
+      setIndex(nextIndex === -1 ? Math.min(index + 1, last) : nextIndex);
     },
     [index, track, careerContext, phaseAfterQuestions],
   );
+
+  /** Move on WITHOUT touching the answer.
+   *
+   *  ── THE DEFECT THIS CLOSES ───────────────────────────────────────────
+   *
+   *  There was no forward control on an answered question at all: the only
+   *  way onward was to select an option, and re-selecting the option that
+   *  is already selected fires no change event on a radio group. So a
+   *  candidate who stepped back to check an answer and was happy with it
+   *  had no way forward — Back worked, Forward did not exist, and the run
+   *  was stuck until they changed an answer they did not want to change.
+   *
+   *  Nothing here writes to the buffer. An unchanged answer stays exactly
+   *  the answer it was, with its original ordering and its original
+   *  routing. */
+  const continueForward = useCallback(() => {
+    if (!buffer) return;
+    const ids = sessionItemIds(contextStatusOf(buffer));
+    if (index < ids.length - 1) {
+      setIndex(index + 1);
+      return;
+    }
+    if (isComplete(buffer)) {
+      setBuffer(markComplete(buffer, new Date().toISOString()));
+      setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext));
+    }
+  }, [buffer, index, careerContext, phaseAfterQuestions]);
 
   async function onSaveAndSignIn() {
     if (!buffer) return;
@@ -311,11 +391,29 @@ export function PublicAssessmentFlow() {
     if (persistingRef.current) return;
     track("save_journey_clicked");
     if (!signedIn) {
-      // Return here after login. The buffer is untouched and survives the hop.
-      navigate({
-        to: "/candidate/login",
-        search: { redirect: "/security-career-assessment" } as never,
-      });
+      // ── CARRYING THE RESULT ACROSS THE ACCOUNT HOP ────────────────────
+      //
+      // This used to send the candidate to /candidate/login and rely on the
+      // sessionStorage buffer being here when they came back. For an
+      // EXISTING user in the same tab that worked. For a NEW user — the
+      // whole point of the screen — it could not: signing up requires
+      // confirming an email address, the confirmation link opens in a
+      // different tab, and sessionStorage is per-tab. The result was
+      // destroyed by the act of creating the account to save it.
+      //
+      // The finished run is now staged for claiming (localStorage, token,
+      // seven-day expiry — see v31-public-buffer.ts for the full security
+      // argument) and the token travels in the return URL, which means it
+      // travels inside the confirmation email's own link.
+      const token = stageClaim(buffer, careerContext);
+      const back = token
+        ? `/security-career-assessment?claim=${encodeURIComponent(token)}`
+        : "/security-career-assessment";
+      // Registration, not login. A first-time anonymous candidate who has
+      // just finished the assessment does not have an account — offering
+      // "log in" as the primary route asks them to do the one thing they
+      // cannot. The register page links to login for everybody else.
+      navigate({ to: "/candidate/register", search: { redirect: back } as never });
       return;
     }
     persistingRef.current = true;
@@ -336,6 +434,9 @@ export function PublicAssessmentFlow() {
       // candidate's answers with nothing stored in exchange.
       clearBuffer();
       clearCareerContext();
+      // Claimed exactly once: the staged copy goes at the same moment the
+      // buffer does, and only after a confirmed write.
+      clearPendingClaim();
       track("result_claimed");
       navigate({
         to: "/security-career-assessment/report/$snapshotId",
@@ -353,6 +454,21 @@ export function PublicAssessmentFlow() {
       persistingRef.current = false;
       setPhase("failed");
     }
+  }
+
+  /** The secondary route for somebody who already has an account.
+   *
+   *  Stages the same claim and carries the same token — the difference is
+   *  only which auth page they land on. Without this, "log in" would be the
+   *  one path that silently dropped the finished result. */
+  function onSignInInstead() {
+    if (!buffer) return;
+    track("save_journey_clicked");
+    const token = stageClaim(buffer, careerContext);
+    const back = token
+      ? `/security-career-assessment?claim=${encodeURIComponent(token)}`
+      : "/security-career-assessment";
+    navigate({ to: "/candidate/login", search: { redirect: back } as never });
   }
 
   /** DOWNLOAD — Final Candidate Result Delivery & Save Flow Fix, section 2.
@@ -585,6 +701,7 @@ export function PublicAssessmentFlow() {
                             format: "personal",
                             value: o.value,
                           }),
+                          current !== undefined,
                         )
                       }
                     >
@@ -598,7 +715,10 @@ export function PublicAssessmentFlow() {
                     name={itemId}
                     value={current?.format === "scale" ? current.value : undefined}
                     onSelect={(v) =>
-                      advance(recordAnswer(buffer, { itemId, format: "scale", value: v }))
+                      advance(
+                        recordAnswer(buffer, { itemId, format: "scale", value: v }),
+                        current !== undefined,
+                      )
                     }
                     instruction={t("cd.public.scaleInstruction")}
                     lowLabel={t("cd.public.scaleLow")}
@@ -620,6 +740,7 @@ export function PublicAssessmentFlow() {
                             format: "single_choice",
                             optionId: o.id,
                           }),
+                          current !== undefined,
                         )
                       }
                     >
@@ -631,17 +752,27 @@ export function PublicAssessmentFlow() {
             </fieldset>
           </div>
 
+          {/* Forward is offered whenever this question already HAS an answer
+              — not only once the whole run is complete, which is what left a
+              candidate stranded on a question they had stepped back to and
+              were happy with (see continueForward). On the final question of
+              a complete run it still says "see your result"; anywhere else it
+              says "next", because that is where it goes. */}
           <AssessmentNavigation
             onBack={() => setIndex((i) => Math.max(0, i - 1))}
             backDisabled={index === 0}
             forward={
-              isComplete(buffer)
-                ? {
-                    label: t("cd.public.toResult"),
-                    onClick: () =>
-                      setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext)),
-                  }
-                : undefined
+              index === itemIds.length - 1
+                ? isComplete(buffer)
+                  ? {
+                      label: t("cd.public.toResult"),
+                      onClick: () =>
+                        setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext)),
+                    }
+                  : undefined
+                : current !== undefined
+                  ? { label: t("cd.public.next"), onClick: continueForward }
+                  : undefined
             }
           />
         </AssessmentCard>
@@ -763,13 +894,29 @@ export function PublicAssessmentFlow() {
       <p className="mx-auto mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
         {t("cd.public.doneBody")}
       </p>
+      {/* PRIMARY: create an account. Somebody who has just finished the
+          assessment anonymously most likely does not have one — leading with
+          "log in", as this did, asked them to do the one thing they could
+          not. Signing in stays available immediately below, and both routes
+          carry the same claim token, so an existing user loses nothing. */}
       <button
         type="button"
         onClick={() => void onSaveAndSignIn()}
         className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto motion-reduce:transition-none"
       >
-        {signedIn ? t("cd.public.saveNow") : t("cd.public.signInToSave")}
+        {signedIn ? t("cd.public.saveNow") : t("cd.public.createAccountToSave")}
       </button>
+      {!signedIn && (
+        <p className="mt-4">
+          <button
+            type="button"
+            onClick={() => onSignInInstead()}
+            className="text-sm font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("cd.public.haveAccount")}
+          </button>
+        </p>
+      )}
       <p className="mt-4 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
     </AssessmentPanel>
   );

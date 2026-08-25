@@ -366,6 +366,9 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
           .object({
             currentProfessionStatus: z.enum(["selected", "not_listed", "prefer_not_to_say"]),
             currentProfessionSlug: z.string().nullable(),
+            // Free text, bounded here as well as by the column's CHECK — the
+            // client bound is a courtesy, this one is the boundary.
+            currentProfessionOther: z.string().max(120).nullable().optional(),
             experienceBand: z.enum(["under_1y", "1_3y", "4_7y", "8_plus_y"]).nullable(),
           })
           .optional(),
@@ -543,6 +546,14 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         current_profession_slug:
           data.careerContext?.currentProfessionStatus === "selected"
             ? (data.careerContext.currentProfessionSlug ?? null)
+            : null,
+        // Only when they actually said "not listed". Never alongside a
+        // selected canonical profession, which is also what the column's
+        // CHECK refuses — this makes the refusal impossible to reach rather
+        // than relying on it.
+        current_profession_other:
+          data.careerContext?.currentProfessionStatus === "not_listed"
+            ? data.careerContext.currentProfessionOther?.trim() || null
             : null,
         current_experience_band: data.careerContext?.experienceBand ?? null,
       })

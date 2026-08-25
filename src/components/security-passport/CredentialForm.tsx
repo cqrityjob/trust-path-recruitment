@@ -49,6 +49,7 @@
 // be exercised and reviewed against fixtures with no database.
 
 import { useMemo, useRef, useState } from "react";
+import { MAX_DATE_ATTR, MIN_DATE_ATTR } from "@/lib/security-passport/dates";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -496,6 +497,8 @@ export function CredentialForm({
                 <input
                   id={fieldId("issuedOn")}
                   type="date"
+                  min={MIN_DATE_ATTR}
+                  max={MAX_DATE_ATTR}
                   value={draft.issuedOn ?? ""}
                   aria-invalid={errorFor("issuedOn") ? true : undefined}
                   aria-describedby={describedBy("issuedOn")}
@@ -517,6 +520,8 @@ export function CredentialForm({
                   <input
                     id={fieldId("validFrom")}
                     type="date"
+                    min={MIN_DATE_ATTR}
+                    max={MAX_DATE_ATTR}
                     value={draft.validFrom ?? ""}
                     aria-invalid={errorFor("validFrom") ? true : undefined}
                     aria-describedby={describedBy("validFrom", `${fieldId("validFrom")}-help`)}
@@ -546,6 +551,8 @@ export function CredentialForm({
                   <input
                     id={fieldId("validUntil")}
                     type="date"
+                    min={MIN_DATE_ATTR}
+                    max={MAX_DATE_ATTR}
                     value={draft.validUntil ?? ""}
                     aria-invalid={errorFor("validUntil") ? true : undefined}
                     aria-describedby={describedBy("validUntil")}
@@ -710,8 +717,17 @@ export function CredentialForm({
       {/* No actions when there is nothing to act on. A disabled "Add to my
           Passport" under a paragraph explaining that this market is not open
           invites the holder to keep trying it. */}
+      {/* WHICH BUTTON DOES WHAT. Two actions that both look like "save" is
+          how an entry ends up sitting as a draft the holder believes is in
+          their Passport. The distinction is stated, once, next to them. */}
       {closedMarket ? null : (
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <p className="border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
+          {pt("cred.action.lifecycleNote")}
+        </p>
+      )}
+
+      {closedMarket ? null : (
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={busy || !type}

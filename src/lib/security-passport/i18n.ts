@@ -503,6 +503,10 @@ const sv = {
   "privacy.sharesTitle": "Aktiva delningar",
   "privacy.exportTitle": "Exportera dina uppgifter",
   "privacy.exportBody": "Du kan när som helst få ut allt du har lagt in.",
+  // Neither card carries a control, and both look like the actionable cards
+  // elsewhere in the product. This chip says outright how the right is
+  // exercised, so nothing reads as a self-service button that does nothing.
+  "privacy.handledOnRequest": "Sker på begäran",
   "privacy.deleteTitle": "Radera ditt Passport",
   "privacy.deleteBody":
     "Aktiva delningar återkallas först. Bekräftelser som en arbetsgivare har lämnat behålls i avidentifierad form.",
@@ -985,6 +989,23 @@ const sv = {
   "cred.action.uploadEvidence": "Ladda upp underlag",
   "cred.action.correct": "Rätta uppgift",
   "cred.action.discard": "Ta bort utkast",
+  // ── SAVE VS FINALISE, IN WORDS ────────────────────────────────────────
+  // "Spara utkast" keeps the entry as a draft and asks nothing of it.
+  // "Lägg till i passet" is the step that makes it real, and it needs the
+  // obligatoriska fälten. Saying which is which next to the buttons is what
+  // stops "sparat" reading as "klart".
+  "cred.action.lifecycleNote":
+    "Spara utkast behåller uppgiften som utkast — bara du ser den. Lägg till i passet gör den aktiv i ditt Passport och kräver att de obligatoriska fälten är ifyllda.",
+  "cred.action.draftKept":
+    "Sparat som utkast. Den ligger kvar tills du lägger till den i ditt Passport.",
+  // Specific refusals from the server. The generic "Något gick fel" was
+  // shown for every one of these, including the ones the holder could act on.
+  "cred.error.serverIncomplete":
+    "Något obligatoriskt fält saknas eller är fel ifyllt. Kontrollera fälten ovan och försök igen.",
+  "cred.error.serverInvalid":
+    "Uppgiften kunde inte sparas som utkast. Kontrollera fälten ovan och försök igen.",
+  "cred.error.serverUnknownCode":
+    "Den här behörigheten går inte att registrera längre. Välj en annan i listan.",
 
   "cred.error.selectCredential": "Välj vilken behörighet du lägger till.",
   "cred.error.titleRequired": "Ange en benämning.",
@@ -997,7 +1018,10 @@ const sv = {
     "Den här uppgiften kan inte ha någon anteckning. Endast själva kontrollen registreras.",
   "cred.error.controlledLabelOnly":
     "Den här uppgiften har en fast benämning och kan inte skrivas om.",
-  "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
+  // "Format" was never the whole rule -- the shape check accepted
+  // 2026-13-45. The message now says what a valid answer is.
+  "cred.error.dateFormat": "Ange ett giltigt datum (ÅÅÅÅ-MM-DD).",
+  "cred.error.dateFuture": "Datumet kan inte ligga i framtiden.",
   "cred.error.endBeforeStart": "Slutdatumet måste vara efter startdatumet.",
   "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
   "cred.error.noteTooLong": "Anteckningen är för lång (max 2000 tecken).",
@@ -1760,6 +1784,7 @@ const en: Record<PassportCopyKey, string> = {
   "privacy.sharesTitle": "Active disclosures",
   "privacy.exportTitle": "Export your information",
   "privacy.exportBody": "You can get everything you have entered at any time.",
+  "privacy.handledOnRequest": "Handled on request",
   "privacy.deleteTitle": "Delete your Passport",
   "privacy.deleteBody":
     "Active disclosures are revoked first. Confirmations given by an employer are retained in unlinked form.",
@@ -2206,6 +2231,15 @@ const en: Record<PassportCopyKey, string> = {
   "cred.action.uploadEvidence": "Upload documentation",
   "cred.action.correct": "Correct this entry",
   "cred.action.discard": "Delete draft",
+  "cred.action.lifecycleNote":
+    "Save draft keeps the entry as a draft — only you can see it. Add to my Passport makes it active in your Passport and requires the mandatory fields to be filled in.",
+  "cred.action.draftKept": "Saved as a draft. It stays here until you add it to your Passport.",
+  "cred.error.serverIncomplete":
+    "A mandatory field is missing or incorrectly filled in. Check the fields above and try again.",
+  "cred.error.serverInvalid":
+    "The entry could not be saved as a draft. Check the fields above and try again.",
+  "cred.error.serverUnknownCode":
+    "This credential can no longer be registered. Choose another one from the list.",
 
   "cred.error.selectCredential": "Choose which credential you are adding.",
   "cred.error.titleRequired": "Enter a name.",
@@ -2217,7 +2251,8 @@ const en: Record<PassportCopyKey, string> = {
   "cred.error.noNoteAllowed":
     "This entry cannot carry a note. Only the fact of the check is recorded.",
   "cred.error.controlledLabelOnly": "This entry has a fixed label and cannot be reworded.",
-  "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
+  "cred.error.dateFormat": "Enter a valid date (YYYY-MM-DD).",
+  "cred.error.dateFuture": "This date cannot be in the future.",
   "cred.error.endBeforeStart": "The end date must be after the start date.",
   "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",
   "cred.error.noteTooLong": "That note is too long (2000 characters maximum).",

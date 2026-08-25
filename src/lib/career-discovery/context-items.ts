@@ -1,5 +1,25 @@
-// The two context questions. Wording and stable values are OWNER-LOCKED —
-// transcribed verbatim from the implementation directive §3 and §4.
+// The two context questions. The stable VALUES are OWNER-LOCKED — they are
+// the adaptive path (C1) and the report framing (C2), they are persisted on
+// every session, and nothing here may change them.
+//
+// ── CONTEXT AND INTENT ARE DIFFERENT QUESTIONS (v3.2 wording, C1) ──────
+//
+// C1 asks about the candidate's SITUATION. C2 asks what they want out of
+// Career Discovery. One option had drifted across that line: C1's
+// `security_leader` read "I am a manager and want to understand my strengths
+// better", which is a situation and a goal welded together — and the goal
+// half was, word for word, one of C2's own options ("Understand my
+// strengths"). A candidate met the same statement twice, two questions
+// apart, and could reasonably conclude the instrument was not listening.
+//
+// The fix is WORDING ONLY. `security_leader` now describes the situation and
+// nothing else, and `exploring_security` says plainly that arriving from
+// another industry counts, which is the transition case people were reading
+// past. Every option VALUE, the option order, the adaptive path mapping and
+// the scoring independence of both questions are untouched — the labels are
+// the only thing that moved, which is why this is a CONTENT_VERSION bump
+// (v3.1-draft-4 -> v3.1-draft-5) and nothing else. Neither question has ever
+// been scored and neither is scored now.
 //
 // Neither is scored. Together they carry the entire personalisation surface
 // of the product:
@@ -50,8 +70,10 @@ export const CONTEXT_STATUS_ITEM: DiscoveryItem = {
   itemVersion: 1,
   evidenceClass: "contextual_self_report",
   prompt: {
-    sv: "Vilket påstående beskriver dig bäst just nu?",
-    en: "Which statement best describes where you are right now?",
+    // "Situation", not "statement": the question is about where the
+    // candidate IS, and saying so is what keeps it out of C2's territory.
+    sv: "Vilken situation beskriver dig bäst just nu?",
+    en: "Which situation best describes you right now?",
   },
   axes: [],
   estimatedSeconds: 15,
@@ -59,8 +81,8 @@ export const CONTEXT_STATUS_ITEM: DiscoveryItem = {
     {
       value: "exploring_security",
       label: {
-        sv: "Jag funderar på att börja inom säkerhetsbranschen",
-        en: "I am considering starting a career in security",
+        sv: "Jag är på väg in i säkerhetsbranschen — ny, eller på väg från en annan bransch",
+        en: "I am moving into the security industry — new to it, or coming from another industry",
       },
     },
     {
@@ -87,8 +109,10 @@ export const CONTEXT_STATUS_ITEM: DiscoveryItem = {
     {
       value: "security_leader",
       label: {
-        sv: "Jag är chef och vill förstå mina styrkor bättre",
-        en: "I am a manager and want to understand my strengths better",
+        // Situation only. The old wording ("...and want to understand my
+        // strengths better") repeated C2's own `understand_strengths` option.
+        sv: "Jag leder andra inom säkerhet",
+        en: "I lead others within security",
       },
     },
   ],
@@ -104,6 +128,8 @@ export const DISCOVERY_GOAL_ITEM: DiscoveryItem = {
   itemVersion: 1,
   evidenceClass: "contextual_self_report",
   prompt: {
+    // Unchanged. C2 was always the outcome question; it was C1 that had
+    // drifted into it.
     sv: "Vad hoppas du främst få ut av Career Discovery?",
     en: "What do you most hope to get from Career Discovery?",
   },

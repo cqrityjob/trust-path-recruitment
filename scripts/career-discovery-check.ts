@@ -546,9 +546,21 @@ for (const v of [...CONTEXT_STATUS_VALUES, ...DISCOVERY_GOAL_VALUES]) {
 // misinterpreted -- and bumping it would mean editing the already-applied
 // phase-1 migration this same file asserts against, which is a far worse
 // trade than an unbumped version on a version nobody can sit.
+// C1's wording was re-locked again under the context/intent separation
+// (CONTENT_VERSION v3.1-draft-4 -> v3.1-draft-5). C1 asks about the
+// candidate's SITUATION and C2 asks what they want out of Career Discovery,
+// and one C1 option had welded the two together using C2's own words -- "I am
+// a manager and want to understand my strengths better", two questions before
+// C2 offered "Understand my strengths". The prompt now names the situation.
+// Same discipline as the C2 re-lock: the item id, the five option VALUES,
+// their order and the adaptive path mapping are untouched; only labels moved,
+// and the change is recorded against CONTENT_VERSION. The structural rule
+// behind it -- no C1 option may restate a C2 option -- is asserted in
+// scripts/career-discovery-v32-content-check.ts, which is the check that
+// would catch a paraphrase reintroducing the overlap.
 const LOCKED: Array<[string, string]> = [
-  ["C1 prompt sv", "Vilket påstående beskriver dig bäst just nu?"],
-  ["C1 prompt en", "Which statement best describes where you are right now?"],
+  ["C1 prompt sv", "Vilken situation beskriver dig bäst just nu?"],
+  ["C1 prompt en", "Which situation best describes you right now?"],
   ["C2 prompt sv", "Vad hoppas du främst få ut av Career Discovery?"],
   ["C2 prompt en", "What do you most hope to get from Career Discovery?"],
 ];

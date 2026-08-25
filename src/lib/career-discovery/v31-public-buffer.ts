@@ -281,3 +281,175 @@ export function remainingItemIds(buffer: PublicBuffer | null): string[] {
   const answered = new Set((buffer?.answers ?? []).map((a) => a.itemId));
   return sessionItemIds(contextStatusOf(buffer)).filter((id) => !answered.has(id));
 }
+
+// =========================================================================
+// PENDING CLAIM — carrying a finished result across the account hop
+// =========================================================================
+//
+// ── THE DEFECT ─────────────────────────────────────────────────────────
+//
+// The buffer above lives in sessionStorage, deliberately (see the file
+// header): an abandoned half-finished assessment must not resurface days
+// later on a shared computer. That reasoning is about an IN-PROGRESS run and
+// it still holds.
+//
+// It does not hold for a FINISHED result the candidate has explicitly asked
+// to save — and applying it there broke the single most important journey in
+// the product. Creating an account requires confirming an email address, the
+// confirmation link opens from a mail client, and that is a different TAB.
+// sessionStorage is per-tab. So the result was destroyed by the very act of
+// creating the account whose entire purpose was to keep it: the candidate
+// signed in, landed on their dashboard, and their report was simply not
+// there. Nothing had failed loudly; there was nothing to see.
+//
+// ── WHAT IS STORED, AND WHY IT IS STILL SAFE ───────────────────────────
+//
+// Only after the candidate presses "save", and only the completed run. It
+// holds their ANSWERS and their optional career context — no name, no email,
+// no identity of any kind, and still no database row: `anon` continues to
+// hold nothing on any cd_ table, no RLS policy is keyed on anything a
+// browser holds, and there remains no orphan report to leak or
+// garbage-collect. The anonymous flow's security argument is unchanged; what
+// changed is which browser store a candidate's own answers survive in
+// between pressing save and finishing signup.
+//
+// ── WHY THERE IS A TOKEN ───────────────────────────────────────────────
+//
+// So that "whoever signs in on this browser next" is not the same thing as
+// "the person who took this assessment". The token is minted when the
+// candidate asks to save, and travels ONLY in the return URL handed to the
+// auth flow — which, for email signup, means it travels inside the
+// confirmation link sent to their own address. A different person signing in
+// at /candidate/login arrives with no token and claims nothing, and a token
+// that does not match the stored record claims nothing either.
+//
+// It is not a credential and grants no access: it authorises replaying
+// answers that are already sitting in this browser, into whichever account
+// completes the flow. The server-side write path is unchanged and still
+// creates the session under a real user_id from the first insert.
+//
+// ── EXPIRY ─────────────────────────────────────────────────────────────
+//
+// Seven days, checked on read, and cleared the instant a claim succeeds. The
+// shared-computer concern the sessionStorage choice was made for is answered
+// by the token (another person cannot claim it) and by the expiry (it does
+// not linger indefinitely), not by making the journey fail.
+
+const CLAIM_KEY = "cqj:discovery:v31:pending-claim:v1";
+const CLAIM_VERSION = 1;
+
+/** Seven days. Long enough for "I'll confirm that email tomorrow", short
+ *  enough that an abandoned result does not sit in a browser forever. */
+const CLAIM_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export interface PendingClaim {
+  readonly claimVersion: number;
+  readonly claimToken: string;
+  readonly expiresAt: string;
+  readonly buffer: PublicBuffer;
+  /** The optional career-context answers, carried alongside so the claimed
+   *  report is the same report the candidate saw — not a version of it that
+   *  quietly lost its "you are here". */
+  readonly careerContext: unknown;
+}
+
+function claimStore(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    // Storage disabled. The candidate can still save in this tab; they just
+    // do not get the cross-tab hop. Never throws into the flow.
+    return null;
+  }
+}
+
+/** Stage a finished result for claiming, and return the token that will be
+ *  required to claim it. Overwrites any previous pending claim: there is one
+ *  candidate per browser and the newest finished run is the one they asked
+ *  to save. */
+export function stageClaim(buffer: PublicBuffer, careerContext: unknown): string | null {
+  const store = claimStore();
+  if (!store) return null;
+  if (!isComplete(buffer)) return null;
+  const token =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const record: PendingClaim = {
+    claimVersion: CLAIM_VERSION,
+    claimToken: token,
+    expiresAt: new Date(Date.now() + CLAIM_TTL_MS).toISOString(),
+    buffer,
+    careerContext,
+  };
+  try {
+    store.setItem(CLAIM_KEY, JSON.stringify(record));
+  } catch {
+    return null;
+  }
+  return token;
+}
+
+/** The staged result, IF this caller presented the matching token and the
+ *  record is still valid.
+ *
+ *  Returns null — never a partial or unverified record — for a missing
+ *  token, a mismatched token, an expired record, a record from a different
+ *  buffer/claim version, or a run that is not actually complete. Replaying
+ *  half of somebody's answers, or somebody else's, is worse than asking them
+ *  to start again. */
+export function readPendingClaim(token: string | null | undefined): PendingClaim | null {
+  const store = claimStore();
+  if (!store || !token) return null;
+  try {
+    const raw = store.getItem(CLAIM_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingClaim;
+    if (parsed.claimVersion !== CLAIM_VERSION) return null;
+    // Constant-time comparison is not the point here — the token is not a
+    // server-side secret and the attacker would already have to be sitting
+    // at this browser. What matters is that a mismatch claims nothing.
+    if (typeof parsed.claimToken !== "string" || parsed.claimToken !== token) return null;
+    if (!parsed.expiresAt || Date.parse(parsed.expiresAt) <= Date.now()) {
+      clearPendingClaim();
+      return null;
+    }
+    const buffer = parsed.buffer;
+    if (!buffer || buffer.bufferVersion !== BUFFER_VERSION) return null;
+    if (buffer.definitionVersion !== DEFINITION_VERSION) return null;
+    if (buffer.contentVersion !== CONTENT_VERSION) return null;
+    if (!isComplete(buffer)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a pending claim exists at all, without needing the token.
+ *
+ *  Deliberately returns nothing but a boolean: it is used only to decide
+ *  whether it is worth telling the candidate that a saved-but-unclaimed
+ *  result is waiting. It can never be used to read or claim one. */
+export function hasPendingClaim(): boolean {
+  const store = claimStore();
+  if (!store) return false;
+  try {
+    const raw = store.getItem(CLAIM_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as PendingClaim;
+    return parsed.claimVersion === CLAIM_VERSION && Date.parse(parsed.expiresAt) > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+export function clearPendingClaim(): void {
+  const store = claimStore();
+  if (!store) return;
+  try {
+    store.removeItem(CLAIM_KEY);
+  } catch {
+    /* nothing to clear */
+  }
+}

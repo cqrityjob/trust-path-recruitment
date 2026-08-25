@@ -110,6 +110,13 @@ export function SecurityCareerProfileForm({
 
   return (
     <div className="space-y-10">
+      {/* CAREER PROFILE, NOT SECURITY PASSPORT. Two products with different
+          evidentiary weight, and the difference decides what an employer may
+          rely on. Stated at the top of the form somebody is about to type
+          into, not only on the Passport pages they may never open. */}
+      <p className="rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3 text-sm leading-relaxed text-muted-foreground">
+        {t("sca.scp.notPassport")}
+      </p>
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-widest text-accent">
           {t("sca.scp.status.title")}

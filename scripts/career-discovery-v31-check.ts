@@ -596,6 +596,18 @@ eq(
 // any of them alters a hash, and the only correct response is to bump the
 // version strings below and re-freeze deliberately.
 const FROZEN: Record<string, string> = {
+  // Re-frozen for CONTENT_VERSION v3.1-draft-5 (context/intent separation:
+  // C1's prompt and two option LABELS). Same isolation proof as the draft-4
+  // re-freeze below, repeated for this change: with the new wording in place
+  // and CONTENT_VERSION temporarily held at 'v3.1-draft-4', this entire
+  // script passed on the draft-4 hashes, which puts the whole delta on the
+  // version string. career-discovery-v32-equivalence-check.ts makes the same
+  // proof permanent and field-by-field against a pre-refinement baseline.
+  //
+  //   Previous, for v3.1-draft-4:
+  //     CP01 bb2f32de2fc387ff · CP05 c1dba7bea78d40aa
+  //     CP10 876216ef55816099 · balanced c61524c2bdd054d0
+  //
   // Re-frozen for CONTENT_VERSION v3.1-draft-4 (Question Refinement v3.2).
   //
   // READ THIS BEFORE ASSUMING SCORING MOVED. These hashes cover the whole
@@ -617,10 +629,10 @@ const FROZEN: Record<string, string> = {
   // Mandate: CID17 + CQ21/CQ22, CP06's central set swapped CID09 -> CID17):
   //   CP01 a4bd2d5eca8df52f · CP05 a03c8fa82f6ee383
   //   CP10 38257685f6e4d28d · balanced 1df068a88a4af70a
-  CP01: "bb2f32de2fc387ff",
-  CP05: "c1dba7bea78d40aa",
-  CP10: "876216ef55816099",
-  balanced: "c61524c2bdd054d0",
+  CP01: "8d0af056239ef3d7",
+  CP05: "675bf0eeba27d21e",
+  CP10: "7abd375d851f47e7",
+  balanced: "28295d6985dba563",
 };
 
 const fixtureHashes: Record<string, string> = {
@@ -645,7 +657,7 @@ if (process.env.FREEZE_FIXTURES === "1") {
 }
 
 // The version strings the fixtures are pinned to.
-eq(CONTENT_VERSION, "v3.1-draft-4", "9.4 content version is pinned");
+eq(CONTENT_VERSION, "v3.1-draft-5", "9.4 content version is pinned");
 eq(SCORING_VERSION, "v3.1-draft-3", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-2", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-3", "9.7 pattern definition version is pinned");
@@ -857,23 +869,26 @@ ok(
 // cd_guard_snapshot_derive_versions() copies the database's value onto every
 // new snapshot while the payload carries the constant -- if these two drift,
 // each new report row disagrees with itself about which wording produced it.
-const contentV3MigrationPath = path.join(
+// The LATEST content migration is the one that must agree with the code
+// constant -- the earlier ones are history and carry the versions they
+// carried. draft-5 is the context/intent separation (C1 wording).
+const contentV4MigrationPath = path.join(
   process.cwd(),
-  "supabase/migrations/20260910091000_cd_v31_content_v3_question_refinement.sql",
+  "supabase/migrations/20260913090000_cd_v31_content_v4_context_intent_separation.sql",
 );
-const contentV3Migration = readFileSync(contentV3MigrationPath, "utf8");
+const contentV4Migration = readFileSync(contentV4MigrationPath, "utf8");
 
 ok(
-  contentV3Migration.includes(`'${CONTENT_VERSION}'`),
-  "11.8c the content-v3 migration carries the same content version",
+  contentV4Migration.includes(`'${CONTENT_VERSION}'`),
+  "11.8c the latest content migration carries the same content version",
 );
 ok(
-  !/scoring_version\s*=/.test(contentV3Migration),
-  "11.8d the content-v3 migration never assigns scoring_version",
+  !/scoring_version\s*=/.test(contentV4Migration),
+  "11.8d the latest content migration never assigns scoring_version",
 );
 ok(
-  !/pattern_definition_version\s*=/.test(contentV3Migration),
-  "11.8e the content-v3 migration never assigns pattern_definition_version",
+  !/pattern_definition_version\s*=/.test(contentV4Migration),
+  "11.8e the latest content migration never assigns pattern_definition_version",
 );
 
 // CQ21 + CQ22 are registered against the existing definition_version_id in

@@ -27,6 +27,7 @@
 // this is the same rule stated where the writes happen.
 
 import { CREDENTIAL_CODE_MAX_LENGTH } from "./credentials";
+import { isCalendarDate } from "./dates";
 import { createServerFn } from "@tanstack/react-start";
 import { derivePreviewIdentity } from "./identity/visibility";
 import type { TitleRule } from "./identity/types";
@@ -519,7 +520,7 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     const startedOn = (answers["currentRole.startedOn"] ?? "").trim();
 
     let createdPeriod = false;
-    if (employer && role && /^\d{4}-\d{2}-\d{2}$/.test(startedOn)) {
+    if (employer && role && isCalendarDate(startedOn)) {
       const existing = await db
         .from("sp_experience_periods")
         .select("id")
@@ -617,11 +618,8 @@ const experienceInput = z.object({
   fteFraction: z.number().min(0.01).max(1),
   securityRelevance: z.enum(["primary", "partial", "none"]),
   securityFraction: z.number().min(0).max(1),
-  startedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endedOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  startedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }),
+  endedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
 });
 
 export const addExperiencePeriod = createServerFn({ method: "POST" })
@@ -678,14 +676,8 @@ const claimInput = z.object({
   title: z.string().min(1).max(200),
   claimedIssuerName: z.string().max(160).nullable(),
   jurisdictionCode: z.string().length(2).nullable(),
-  issuedOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  validUntil: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  issuedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
 });
 
 export const addClaim = createServerFn({ method: "POST" })
@@ -729,14 +721,8 @@ const correctionInput = z.object({
   title: z.string().min(1).max(200),
   claimedIssuerName: z.string().max(160).nullable(),
   jurisdictionCode: z.string().length(2).nullable(),
-  issuedOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  validUntil: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  issuedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
   reason: z.string().max(300),
   /** Phase 11. Material like every other replacement field: B1 and C2 are
    *  different assertions about the same person, so correcting the level

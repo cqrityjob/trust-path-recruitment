@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Search } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { CURRENT_PROFESSION_OTHER_MAX } from "@/lib/career-discovery/career-context";
 import { AssessmentCard } from "@/components/career-discovery/v31/shell/QuestionCard";
 import {
   EXPERIENCE_BAND_LABEL,
@@ -96,6 +97,7 @@ export function CareerContextStep({
                   ...value,
                   currentProfessionStatus: null,
                   currentProfessionSlug: null,
+                  currentProfessionOther: null,
                   currentProfessionTitleSv: null,
                   currentProfessionTitleEn: null,
                 })
@@ -107,27 +109,67 @@ export function CareerContextStep({
           </div>
         ) : value.currentProfessionStatus === "not_listed" ||
           value.currentProfessionStatus === "prefer_not_to_say" ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-[12px] border border-border bg-muted/40 px-4 py-3">
-            <span className="text-sm font-medium text-foreground">
-              {value.currentProfessionStatus === "not_listed"
-                ? t("cd.careerContext.roleNotListed")
-                : t("cd.careerContext.roleSkip")}
-            </span>
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...value,
-                  currentProfessionStatus: null,
-                  currentProfessionSlug: null,
-                  currentProfessionTitleSv: null,
-                  currentProfessionTitleEn: null,
-                })
-              }
-              className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
-            >
-              {t("cd.careerContext.changeRole")}
-            </button>
+          <div className="mt-3 rounded-[12px] border border-border bg-muted/40 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-foreground">
+                {value.currentProfessionStatus === "not_listed"
+                  ? t("cd.careerContext.roleNotListed")
+                  : t("cd.careerContext.roleSkip")}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    currentProfessionStatus: null,
+                    currentProfessionSlug: null,
+                    currentProfessionOther: null,
+                    currentProfessionTitleSv: null,
+                    currentProfessionTitleEn: null,
+                  })
+                }
+                className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {t("cd.careerContext.changeRole")}
+              </button>
+            </div>
+
+            {/* ── SAY WHAT THE JOB ACTUALLY IS ──────────────────────────
+                Telling the product its catalogue is missing your job, and
+                then having nowhere to say what the job is, is a control that
+                looks like it works and loses the answer. Optional, bounded,
+                and explicitly NOT canonical: it is stored as free text on the
+                session, never joined to the profession catalogue and never
+                used for matching — see career-context.ts and migration
+                20260913091000. */}
+            {value.currentProfessionStatus === "not_listed" && (
+              <div className="mt-3">
+                <label
+                  htmlFor="career-context-role-other"
+                  className="block text-xs font-medium text-muted-foreground"
+                >
+                  {t("cd.careerContext.roleOtherLabel")}
+                </label>
+                <input
+                  id="career-context-role-other"
+                  type="text"
+                  maxLength={CURRENT_PROFESSION_OTHER_MAX}
+                  value={value.currentProfessionOther ?? ""}
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      currentProfessionOther:
+                        e.target.value.slice(0, CURRENT_PROFESSION_OTHER_MAX) || null,
+                    })
+                  }
+                  placeholder={t("cd.careerContext.roleOtherPlaceholder")}
+                  className="mt-1.5 h-11 w-full rounded-[10px] border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {t("cd.careerContext.roleOtherNote")}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="mt-3">
@@ -157,6 +199,7 @@ export function CareerContextStep({
                           ...value,
                           currentProfessionStatus: "selected",
                           currentProfessionSlug: p.slug,
+                          currentProfessionOther: null,
                           // Real-world defect fix: captured here, at
                           // selection time, from the picker's own already-
                           // fetched list -- no extra query needed. Without
@@ -199,6 +242,7 @@ export function CareerContextStep({
                     ...value,
                     currentProfessionStatus: "prefer_not_to_say",
                     currentProfessionSlug: null,
+                    currentProfessionOther: null,
                     currentProfessionTitleSv: null,
                     currentProfessionTitleEn: null,
                   })

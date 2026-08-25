@@ -145,7 +145,32 @@ function profileOf(p: EquivalencePersona) {
   });
 
   // The version tuple is the one field expected to move — see the header.
-  const { versions: _versions, ...snapshotWithoutVersions } = snapshot;
+  const { versions: _versions, ...snapshotRest } = snapshot;
+
+  // ── professions.ranked IS EXCLUDED, AND WHY THAT IS NOT A LOOPHOLE ────
+  //
+  // `ranked` (the always-present top-3 occupational recommendation) is a
+  // NEW output field. It did not exist when this baseline was frozen, so
+  // there is no historical value to compare it against and including it
+  // would fail every persona for the one reason that is correct — exactly
+  // the argument the header already makes for excluding CONTENT_VERSION.
+  //
+  // Excluding it costs this script nothing it claims. Its claim is "the same
+  // responses still produce the same SCORING", and `ranked` is derived from
+  // the same fitScore/centralZ/priorityScore surfaces that ARE compared
+  // above, per-field and at full precision, and which are all still frozen.
+  // If any of those moved, this file fails on them by name before the
+  // snapshot digest is reached.
+  //
+  // What `ranked` itself must satisfy — determinism, a stable rank 1/2/3,
+  // and materially different personas receiving materially different top
+  // professions — is proven directly by
+  // scripts/career-discovery-recommendation-check.ts, which is the right
+  // place for a claim about a new output rather than about an old one.
+  const snapshotWithoutVersions = {
+    ...snapshotRest,
+    professions: stripRanked(snapshotRest.professions),
+  };
 
   return {
     scaleRange: [SCALE_MIN, SCALE_MAX],
@@ -284,6 +309,13 @@ const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as {
   frozenAgainst: Record<string, string>;
   personas: Record<string, unknown>;
 };
+
+/** The stored professions block as it existed when the baseline was frozen.
+ *  See the call site for why `ranked` is excluded rather than re-frozen. */
+function stripRanked(professions: Record<string, unknown>): Record<string, unknown> {
+  const { ranked: _ranked, ...rest } = professions;
+  return rest;
+}
 
 group("1 · Persona coverage");
 

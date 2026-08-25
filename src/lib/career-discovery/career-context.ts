@@ -32,12 +32,13 @@ export const EXPERIENCE_BAND_VALUES: readonly ExperienceBand[] = [
   "8_plus_y",
 ];
 
-export const EXPERIENCE_BAND_LABEL: Readonly<Record<ExperienceBand, Record<"sv" | "en", string>>> = {
-  under_1y: { sv: "Mindre än 1 år", en: "Under 1 year" },
-  "1_3y": { sv: "1-3 år", en: "1-3 years" },
-  "4_7y": { sv: "4-7 år", en: "4-7 years" },
-  "8_plus_y": { sv: "8+ år", en: "8+ years" },
-};
+export const EXPERIENCE_BAND_LABEL: Readonly<Record<ExperienceBand, Record<"sv" | "en", string>>> =
+  {
+    under_1y: { sv: "Mindre än 1 år", en: "Under 1 year" },
+    "1_3y": { sv: "1-3 år", en: "1-3 years" },
+    "4_7y": { sv: "4-7 år", en: "4-7 years" },
+    "8_plus_y": { sv: "8+ år", en: "8+ years" },
+  };
 
 export type CurrentProfessionStatus = "selected" | "not_listed" | "prefer_not_to_say";
 
@@ -59,14 +60,30 @@ export interface CareerContext {
    *  currentProfessionStatus === "selected"; null otherwise. */
   readonly currentProfessionTitleSv: string | null;
   readonly currentProfessionTitleEn: string | null;
+  /** What the candidate typed when they said their profession is not in the
+   *  catalogue. Set ONLY when currentProfessionStatus === "not_listed".
+   *
+   *  Free text, and it stays free text: never joined to cig_professions,
+   *  never promoted into the canonical vocabulary, never scored, and never
+   *  an input to profession matching or to the recommendation — exactly the
+   *  contract cd_sessions.current_profession_other carries at the database
+   *  level (20260913091000). Before it existed the control recorded the
+   *  FACT that the catalogue was missing their job and threw away what the
+   *  job was. Bounded to 120 characters, matching the column's CHECK. */
+  readonly currentProfessionOther: string | null;
   readonly experienceBand: ExperienceBand | null;
 }
+
+/** The bound the database enforces, stated once so the form, the validator
+ *  and the column cannot drift apart. */
+export const CURRENT_PROFESSION_OTHER_MAX = 120;
 
 export const EMPTY_CAREER_CONTEXT: CareerContext = {
   currentProfessionStatus: null,
   currentProfessionSlug: null,
   currentProfessionTitleSv: null,
   currentProfessionTitleEn: null,
+  currentProfessionOther: null,
   experienceBand: null,
 };
 
@@ -110,29 +127,45 @@ function isCurrentProfessionStatus(v: unknown): v is CurrentProfessionStatus {
   return v === "selected" || v === "not_listed" || v === "prefer_not_to_say";
 }
 
+/** Validate an untrusted value into a CareerContext.
+ *
+ *  Split out of readCareerContext so the same validation covers a record
+ *  recovered from a staged claim (v31-public-buffer.ts) as covers one read
+ *  back from sessionStorage. Anything that does not validate degrades to the
+ *  empty context field by field — this is optional, unscored, self-reported
+ *  context, and a half-trusted version of it must never reach the report. */
+export function parseCareerContext(value: unknown): CareerContext {
+  if (!value || typeof value !== "object") return EMPTY_CAREER_CONTEXT;
+  const parsed = value as Partial<CareerContext>;
+  const status = isCurrentProfessionStatus(parsed.currentProfessionStatus)
+    ? parsed.currentProfessionStatus
+    : null;
+  const hasSlug = status === "selected" && typeof parsed.currentProfessionSlug === "string";
+  return {
+    currentProfessionStatus: status,
+    currentProfessionSlug: hasSlug ? (parsed.currentProfessionSlug as string) : null,
+    currentProfessionTitleSv:
+      hasSlug && typeof parsed.currentProfessionTitleSv === "string"
+        ? parsed.currentProfessionTitleSv
+        : null,
+    currentProfessionTitleEn:
+      hasSlug && typeof parsed.currentProfessionTitleEn === "string"
+        ? parsed.currentProfessionTitleEn
+        : null,
+    currentProfessionOther:
+      status === "not_listed" && typeof parsed.currentProfessionOther === "string"
+        ? parsed.currentProfessionOther.trim().slice(0, CURRENT_PROFESSION_OTHER_MAX) || null
+        : null,
+    experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
+  };
+}
+
 export function readCareerContext(): CareerContext {
   if (!isBrowser()) return EMPTY_CAREER_CONTEXT;
   try {
     const raw = window.sessionStorage.getItem(KEY);
     if (!raw) return EMPTY_CAREER_CONTEXT;
-    const parsed = JSON.parse(raw) as Partial<CareerContext>;
-    const status = isCurrentProfessionStatus(parsed.currentProfessionStatus)
-      ? parsed.currentProfessionStatus
-      : null;
-    const hasSlug = status === "selected" && typeof parsed.currentProfessionSlug === "string";
-    return {
-      currentProfessionStatus: status,
-      currentProfessionSlug: hasSlug ? (parsed.currentProfessionSlug as string) : null,
-      currentProfessionTitleSv:
-        hasSlug && typeof parsed.currentProfessionTitleSv === "string"
-          ? parsed.currentProfessionTitleSv
-          : null,
-      currentProfessionTitleEn:
-        hasSlug && typeof parsed.currentProfessionTitleEn === "string"
-          ? parsed.currentProfessionTitleEn
-          : null,
-      experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
-    };
+    return parseCareerContext(JSON.parse(raw));
   } catch {
     return EMPTY_CAREER_CONTEXT;
   }

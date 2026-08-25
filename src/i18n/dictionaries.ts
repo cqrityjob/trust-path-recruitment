@@ -440,6 +440,11 @@ export const dictionaries = {
       "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
+    // Shown only when the return path is an organisation invitation. Says
+    // that the invitation is why they are here; names nothing about the
+    // organisation, which a non-member cannot read anyway.
+    "auth.invite.organisationContext":
+      "Du har blivit inbjuden till en organisation. Logga in eller skapa ett arbetsgivarkonto — sedan kommer du tillbaka till inbjudan.",
     "auth.name": "Namn (valfritt)",
     "auth.email": "E-post",
     "auth.password": "Lösenord",
@@ -633,8 +638,23 @@ export const dictionaries = {
     "careerDiscovery.report.v31.areasThinEvidence":
       "Underlaget för områdesrankningen är tunt. Läs den som en riktning, inte ett facit.",
     "careerDiscovery.report.v31.alignedWith": "Bygger på",
+    // Shown ONLY when the approved profession catalogue is genuinely empty.
+    // It used to be shown whenever nothing cleared the fit gates, which said
+    // "matching is not included" about a report where matching had run and
+    // excluded everything -- and left the candidate with no direction at all.
     "careerDiscovery.report.v31.professionsPending":
       "Yrkesmatchning ingår inte i den här versionen av rapporten. Den läggs till när yrkesprofilerna är kalibrerade och granskade.",
+    // ── The always-present occupational recommendation ──────────────────
+    "careerDiscovery.report.v31.rec.title": "Din rekommenderade yrkesinriktning",
+    "careerDiscovery.report.v31.rec.lede":
+      "Utifrån dina svar ligger de här yrkena närmast, i ordning. Din Security Career DNA nedan är underlaget som ger den här ordningen.",
+    "careerDiscovery.report.v31.rec.rank1": "Starkaste rekommendation",
+    "careerDiscovery.report.v31.rec.traitsLabel": "Det här i din Career DNA bidrar mest",
+    "careerDiscovery.report.v31.rec.alternativesTitle": "Näst starkaste alternativ",
+    "careerDiscovery.report.v31.rec.indicativeNote":
+      "Dina svar pekar inte ut ett tydligt starkast yrke. Ordningen nedan visar vilka yrken som ligger närmast dina svar — läs den som en riktning att utforska, inte som ett besked om att du passar eller inte passar.",
+    "careerDiscovery.report.v31.rec.boundary":
+      "Career Discovery är ett vägledningsunderlag om hur du arbetar. Det mäter inte din kompetens, är inget prov och används inte för att anställa eller välja bort någon.",
     "careerDiscovery.report.v31.youAreHereEyebrow": "DU ÄR HÄR",
     "careerDiscovery.report.v31.youAreHereBody":
       "Det här är din nuvarande roll, så som du själv angav den. Riktningarna nedan utgår från var du är idag.",
@@ -798,13 +818,23 @@ export const dictionaries = {
     "cd.public.scaleLow": "Stämmer inte alls på mig",
     "cd.public.scaleHigh": "Stämmer helt på mig",
     "cd.public.back": "Tillbaka",
+    // Offered on any question that already has an answer, so stepping back to
+    // review one does not require changing it to get out again.
+    "cd.public.next": "Nästa",
     "cd.public.toResult": "Till resultatet",
     "cd.public.doneTitle": "Alla frågor är besvarade",
+    // Account creation is the PRIMARY route here, not login. Somebody who has
+    // just finished the assessment anonymously is, by definition, most likely
+    // not to have an account yet -- leading with "log in" asked them to do
+    // the one thing they could not.
     "cd.public.doneBody":
-      "Logga in eller skapa ett konto för att lägga till det här resultatet i din karriärresa och kunna öppna det igen senare. Dina svar ligger kvar medan du gör det.",
+      "Skapa ett kandidatkonto för att spara resultatet och fortsätta bygga din karriärprofil. Dina svar ligger kvar medan du gör det.",
+    "cd.public.createAccountToSave": "Skapa konto och spara resultatet",
+    "cd.public.haveAccount": "Har du redan ett konto? Logga in",
     "cd.public.signInToSave": "Spara din karriärresa",
     "cd.public.saveNow": "Spara i din karriärresa",
-    "cd.public.answersKept": "Dina svar finns kvar i den här fliken tills rapporten är sparad.",
+    "cd.public.answersKept":
+      "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
     "cd.public.downloadResult": "Ladda ner resultat",
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
@@ -837,6 +867,12 @@ export const dictionaries = {
     "cd.careerContext.roleLabel": "Vilken roll har du idag?",
     "cd.careerContext.roleSearchPlaceholder": "Sök yrke...",
     "cd.careerContext.roleNotListed": "Mitt yrke finns inte listat",
+    // Telling the product its catalogue is missing your job and having
+    // nowhere to say what the job is is a control that loses the answer.
+    "cd.careerContext.roleOtherLabel": "Vad heter din roll? (valfritt)",
+    "cd.careerContext.roleOtherPlaceholder": "T.ex. Säkerhetsskyddschef",
+    "cd.careerContext.roleOtherNote":
+      "Sparas som din egen beskrivning. Den läggs inte till i yrkeslistan och påverkar inte ditt resultat.",
     "cd.careerContext.roleSkip": "Jag vill inte ange det",
     "cd.careerContext.experienceLabel": "Hur länge har du arbetat i den rollen?",
     "cd.careerContext.continue": "Fortsätt till din rapport",
@@ -896,6 +932,18 @@ export const dictionaries = {
     "sca.scp.loading": "Laddar…",
     "sca.scp.card.body":
       "Denna profil är kontextuell information om dig — den påverkar aldrig testresultat eller yrkesmatchning. Du kan redigera den när som helst.",
+    // ── CAREER PROFILE IS NOT THE SECURITY PASSPORT ──────────────────────
+    //
+    // Two products, one candidate, and the difference decides what an
+    // employer may rely on. Anything a person writes about themselves is
+    // career-profile information; a Passport entry becomes VERIFIED only
+    // through the Passport's own verification process, carried out by
+    // CQrityjob or by an employer with direct knowledge — never by entering
+    // it, and never by uploading a document. Said here, where the typing
+    // happens, rather than only on the Passport pages somebody may not
+    // visit.
+    "sca.scp.notPassport":
+      "Uppgifterna här sparas i din karriärprofil. De blir inte verifierade uppgifter i ditt Security Passport — det sker bara genom Passportets verifieringsprocess.",
     "sca.scp.save": "Spara",
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
@@ -2550,6 +2598,18 @@ export const dictionaries = {
       "Du kommer att få ett antal situationer från arbetsvardagen. Det finns inget tidsstopp, och du kan pausa och återuppta när du vill — dina svar sparas medan du arbetar.",
     "academy.intro.purpose":
       "Underlaget används för kompetensutveckling. Det är inte ett prov, det ger inget godkänt eller underkänt, och det rangordnar dig inte mot någon annan.",
+    // ── PURPOSE-AWARE WORDING (recruitment vs employee) ─────────────────
+    //
+    // The keys above describe an assessment an EMPLOYER asked of their own
+    // EMPLOYEE, for competence development. Presenting the same words to a
+    // job APPLICANT was a purpose conflict: it called the hiring organisation
+    // "your employer", called a selection instrument "competence development",
+    // and implied the result would not inform the decision. The recruitment
+    // variants below say what is actually true — decision support, released to
+    // the organisation that requested it, decided by a person.
+    "academy.eyebrowRecruitment": "Rekrytering",
+    "academy.intro.purposeRecruitment":
+      "Underlaget används som beslutsstöd i rekryteringen hos den arbetsgivare som begärde bedömningen. Det är inte ett prov och ger inget automatiskt godkänt eller underkänt — en person hos arbetsgivaren fattar beslutet.",
     "academy.start": "Börja",
     "academy.resume": "Fortsätt där du slutade",
     "academy.loading": "Hämtar dina frågor …",
@@ -2597,6 +2657,16 @@ export const dictionaries = {
     "academy.error.retrying": "Försöker …",
     "academy.error.notFound": "Vi hittar ingen pågående bedömning för dig på den här länken.",
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
+    // A FAILED SUBMISSION is not a failed load. academy.error.title says the
+    // assessment could not be opened, which is false and alarming after
+    // somebody has answered every question -- and it was what they were shown.
+    "academy.submitFailed.title": "Inlämningen gick inte igenom",
+    "academy.submitFailed.body":
+      "Dina svar är sparade och ingenting har gått förlorat. Försök lämna in igen.",
+    "academy.submitFailed.incomplete":
+      "Något svar saknas fortfarande. Gå tillbaka och fyll i det som är kvar, och lämna sedan in igen. Dina övriga svar är sparade.",
+    "academy.submitFailed.retry": "Lämna in igen",
+    "academy.submitFailed.review": "Gå tillbaka till frågorna",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tester & bedömningar",
@@ -2812,6 +2882,20 @@ export const dictionaries = {
     "academy.participants.releaseFailed": "Underlaget kunde inte delas.",
     "academy.participants.openReport": "Öppna rapport",
     "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
+    // The release confirmation. releaseExplain has always ended "Steget går
+    // inte att ångra" -- and the click ran straight through it.
+    "academy.participants.releaseConfirmTitle": "Dela underlaget?",
+    "academy.participants.releaseConfirmTitleRecruitment": "Dela kandidatunderlaget?",
+    "academy.participants.releaseConfirmBody":
+      "Underlaget låses som en oföränderlig version, blir läsbart för behöriga i din organisation och personen får sin egen kopia. Det går inte att ta tillbaka.",
+    "academy.participants.releaseConfirmBodyRecruitment":
+      "Kandidatunderlaget låses som en oföränderlig version, blir läsbart för behöriga i din organisation och kandidaten får sin egen kopia. Det går inte att ta tillbaka.",
+    "academy.participants.releaseConfirmResponsibility":
+      "Du gör delningen som granskare. Underlaget är ett beslutsstöd — beslutet fattas av en person hos er.",
+    "academy.participants.releaseConfirmAction": "Ja, dela underlaget",
+    "academy.participants.releaseConfirmActionRecruitment": "Ja, dela kandidatunderlaget",
+    "academy.participants.releaseConfirmCancel": "Avbryt",
+    "academy.participants.releaseConfirmPending": "Delar …",
     "academy.participants.releaseExplain":
       "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger personen sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
     "academy.participants.openReportRecruitment": "Öppna kandidatunderlag",
@@ -3160,6 +3244,18 @@ export const dictionaries = {
     "academy.home.purposeFallback": "Kompetensutveckling.",
     "academy.home.privacy":
       "Dina svar lagras hos CQrityjob. Arbetsgivaren ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+    // Recruitment variants. See the academy.intro.purposeRecruitment comment
+    // for why the employee wording above may not be shown to an applicant.
+    "academy.home.titleRecruitment": "Mina bedömningar",
+    "academy.home.ledeRecruitment":
+      "Här samlas de bedömningar du blivit ombedd att göra och de rapporter som frisläppts till dig.",
+    "academy.home.assessmentLedeRecruitment":
+      "Bedömningar som en arbetsgivare begärt som en del av din ansökan. Resultatet frisläpps till den arbetsgivare som begärde bedömningen.",
+    "academy.home.purposeFallbackRecruitment": "Beslutsstöd i rekrytering.",
+    "academy.home.privacyRecruitment":
+      "Dina svar lagras hos CQrityjob. Den arbetsgivare som begärde bedömningen ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+    "academy.home.recruitmentDecision":
+      "Bedömningen är ett underlag i rekryteringen. Den avgör ingenting på egen hand — en person hos arbetsgivaren fattar beslutet.",
     "academy.home.noneTitle": "Inget tilldelat just nu",
     "academy.home.noneBody": "När din arbetsgivare tilldelar ett program dyker det upp här.",
     "academy.home.openReport": "Öppna rapport",
@@ -4078,6 +4174,8 @@ export const dictionaries = {
       "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
+    "auth.invite.organisationContext":
+      "You have been invited to an organisation. Sign in or create an employer account — you will be returned to the invitation.",
     "auth.name": "Name (optional)",
     "auth.email": "Email",
     "auth.password": "Password",
@@ -4273,6 +4371,16 @@ export const dictionaries = {
     "careerDiscovery.report.v31.alignedWith": "Based on",
     "careerDiscovery.report.v31.professionsPending":
       "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
+    "careerDiscovery.report.v31.rec.title": "Your recommended career direction",
+    "careerDiscovery.report.v31.rec.lede":
+      "Based on your answers these professions are the closest, in order. Your Security Career DNA below is the evidence that produced that order.",
+    "careerDiscovery.report.v31.rec.rank1": "Strongest recommendation",
+    "careerDiscovery.report.v31.rec.traitsLabel": "What in your Career DNA contributes most",
+    "careerDiscovery.report.v31.rec.alternativesTitle": "Next strongest alternatives",
+    "careerDiscovery.report.v31.rec.indicativeNote":
+      "Your answers do not single out one clearly strongest profession. The order below shows which professions sit closest to your answers — read it as a direction to explore, not as a verdict on whether you are suited to them.",
+    "careerDiscovery.report.v31.rec.boundary":
+      "Career Discovery is orientation evidence about how you work. It does not measure your competence, it is not an exam, and it is not used to hire or reject anybody.",
     "careerDiscovery.report.v31.youAreHereEyebrow": "YOU ARE HERE",
     "careerDiscovery.report.v31.youAreHereBody":
       "This is your current role, as you reported it. The directions below start from where you are today.",
@@ -4437,13 +4545,17 @@ export const dictionaries = {
     "cd.public.scaleLow": "Does not describe me at all",
     "cd.public.scaleHigh": "Describes me completely",
     "cd.public.back": "Back",
+    "cd.public.next": "Next",
     "cd.public.toResult": "To the result",
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":
-      "Sign in or create an account to add this result to your Career Journey and reopen it later. Your answers stay put while you do.",
+      "Create a candidate account to save your result and continue building your career profile. Your answers stay put while you do.",
+    "cd.public.createAccountToSave": "Create account and save my result",
+    "cd.public.haveAccount": "Already have an account? Log in",
     "cd.public.signInToSave": "Save your Career Journey",
     "cd.public.saveNow": "Save to your Career Journey",
-    "cd.public.answersKept": "Your answers stay in this tab until the report is saved.",
+    "cd.public.answersKept":
+      "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
     "cd.public.downloadResult": "Download result",
     "cd.public.shareResult": "Share result",
     "cd.public.shareTitle": "My Security Career DNA",
@@ -4475,6 +4587,10 @@ export const dictionaries = {
     "cd.careerContext.roleLabel": "What's your role today?",
     "cd.careerContext.roleSearchPlaceholder": "Search for a profession...",
     "cd.careerContext.roleNotListed": "My role isn't listed",
+    "cd.careerContext.roleOtherLabel": "What is your role called? (optional)",
+    "cd.careerContext.roleOtherPlaceholder": "e.g. Head of Protective Security",
+    "cd.careerContext.roleOtherNote":
+      "Saved as your own description. It is not added to the profession list and does not affect your result.",
     "cd.careerContext.roleSkip": "I'd rather not say",
     "cd.careerContext.experienceLabel": "How long have you been in that role?",
     "cd.careerContext.continue": "Continue to your report",
@@ -4534,6 +4650,8 @@ export const dictionaries = {
     "sca.scp.loading": "Loading…",
     "sca.scp.card.body":
       "This profile is contextual information about you — it never affects your test result or profession matching. You can edit it at any time.",
+    "sca.scp.notPassport":
+      "Information here is stored in your career profile. It does not become verified information in your Security Passport unless it goes through the Passport verification process.",
     "sca.scp.save": "Save",
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",
@@ -6172,6 +6290,9 @@ export const dictionaries = {
       "You will be given a number of situations from everyday working life. There is no time limit, and you can pause and pick up again whenever you like — your answers are saved as you go.",
     "academy.intro.purpose":
       "This is used for competence development. It is not an exam, it produces no pass or fail, and it does not rank you against anybody else.",
+    "academy.eyebrowRecruitment": "Recruitment",
+    "academy.intro.purposeRecruitment":
+      "This is used as decision support in recruitment by the organisation that requested it. It is not an exam and produces no automatic pass or fail — a person at the organisation makes the decision.",
     "academy.start": "Begin",
     "academy.resume": "Pick up where you left off",
     "academy.loading": "Loading your questions …",
@@ -6219,6 +6340,13 @@ export const dictionaries = {
     "academy.error.retrying": "Trying …",
     "academy.error.notFound": "We cannot find an assessment of yours at this link.",
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
+    "academy.submitFailed.title": "Your submission did not go through",
+    "academy.submitFailed.body":
+      "Your answers are saved and nothing has been lost. Try submitting again.",
+    "academy.submitFailed.incomplete":
+      "An answer is still missing. Go back and complete what is left, then submit again. Your other answers are saved.",
+    "academy.submitFailed.retry": "Submit again",
+    "academy.submitFailed.review": "Back to the questions",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tests & assessments",
@@ -6434,6 +6562,18 @@ export const dictionaries = {
     "academy.participants.releaseFailed": "The material could not be shared.",
     "academy.participants.openReport": "Open report",
     "academy.participants.releaseRecruitment": "Share the candidate brief",
+    "academy.participants.releaseConfirmTitle": "Share the material?",
+    "academy.participants.releaseConfirmTitleRecruitment": "Share the candidate brief?",
+    "academy.participants.releaseConfirmBody":
+      "The material is frozen as an immutable version, becomes readable by authorised people in your organisation, and the person gets their own copy. This cannot be taken back.",
+    "academy.participants.releaseConfirmBodyRecruitment":
+      "The candidate brief is frozen as an immutable version, becomes readable by authorised people in your organisation, and the candidate gets their own copy. This cannot be taken back.",
+    "academy.participants.releaseConfirmResponsibility":
+      "You are releasing this as the reviewer. The material is decision support — the decision is made by a person at your organisation.",
+    "academy.participants.releaseConfirmAction": "Yes, share the material",
+    "academy.participants.releaseConfirmActionRecruitment": "Yes, share the candidate brief",
+    "academy.participants.releaseConfirmCancel": "Cancel",
+    "academy.participants.releaseConfirmPending": "Sharing …",
     "academy.participants.releaseExplain":
       "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the person their own copy, and allows the person's identity to be requested. The step cannot be undone.",
     "academy.participants.openReportRecruitment": "Open candidate brief",
@@ -6785,6 +6925,16 @@ export const dictionaries = {
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
       "Your answers are stored by CQrityjob. Your employer sees a competency profile once it is released — never your individual answers.",
+    "academy.home.titleRecruitment": "My assessments",
+    "academy.home.ledeRecruitment":
+      "Everything you have been asked to complete, and the reports that have been released to you.",
+    "academy.home.assessmentLedeRecruitment":
+      "Assessments an organisation requested as part of your application. The result is released to the organisation that requested it.",
+    "academy.home.purposeFallbackRecruitment": "Decision support in recruitment.",
+    "academy.home.privacyRecruitment":
+      "Your answers are stored by CQrityjob. The organisation that requested the assessment sees a competence profile once it has been released — never your individual answers.",
+    "academy.home.recruitmentDecision":
+      "This assessment is evidence used in recruitment. It decides nothing on its own — a person at the organisation makes the decision.",
     "academy.home.noneTitle": "Nothing assigned right now",
     "academy.home.noneBody": "When your employer assigns a programme it will appear here.",
     "academy.home.openReport": "Open report",

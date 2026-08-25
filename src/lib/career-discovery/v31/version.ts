@@ -54,7 +54,22 @@ export const DEFINITION_VERSION = "2026-scd-v3.1.0" as const;
  *  0.60 dominance cap -- see core-items.ts). Same definition_version_id as
  *  before -- this is a same-generation content change, not a new
  *  product-level instrument (see DEFINITION_VERSION). */
-export const CONTENT_VERSION = "v3.1-draft-4" as const;
+/** Bumped to draft-5 (context/intent separation, v3.2 wording pass 2):
+ *  C1's prompt and two of its five option labels were rephrased so the
+ *  question describes the candidate's SITUATION only. `security_leader` had
+ *  read "I am a manager and want to understand my strengths better" — a
+ *  situation and a goal welded together, whose goal half was word-for-word
+ *  one of C2's own options — and `exploring_security` now says plainly that
+ *  arriving from another industry counts.
+ *
+ *  Wording and nothing else, again: no option value, no option order, no
+ *  adaptive path mapping, no item, no loading, no weight. SCORING_VERSION,
+ *  OPTION_MATRIX_VERSION and PATTERN_DEFINITION_VERSION are all deliberately
+ *  unchanged below, and career-discovery-v32-equivalence-check.ts proves
+ *  per-field against a baseline frozen on pre-refinement main that the same
+ *  responses still produce the same dimensions, Career Areas, profession fit
+ *  scores and ordering. */
+export const CONTENT_VERSION = "v3.1-draft-5" as const;
 
 /** How answers become dimension scores: role weights, option loadings,
  *  aggregation and confidence. Bumped when any of those change. Bumped to

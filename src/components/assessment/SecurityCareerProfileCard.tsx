@@ -63,6 +63,11 @@ export function SecurityCareerProfileCard() {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{t("sca.scp.card.body")}</p>
+      {/* The Career Profile / Security Passport boundary, stated where the
+          candidate is actually entering things about themselves. Self-reported
+          profile information is not Passport evidence and never becomes it by
+          being typed here — see sca.scp.notPassport. */}
+      <p className="mt-2 text-sm text-muted-foreground">{t("sca.scp.notPassport")}</p>
       <div className="mt-5">
         <SecurityCareerProfileForm value={draft} onChange={setDraft} />
       </div>

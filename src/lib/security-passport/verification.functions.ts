@@ -21,6 +21,7 @@
 // here decides who may verify. Both live in the database.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isCalendarDate } from "./dates";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { classifyDecisionError, DECISION_ERROR_PREFIX } from "./decision-errors";
@@ -397,14 +398,8 @@ const decideInput = z.object({
   decisionNote: z.string().max(2000).nullable(),
   /** What the holder reads. */
   holderMessage: z.string().max(2000).nullable(),
-  validFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  validUntil: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  validFrom: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
 });
 
 /** The single decision entry point, shared by the CQrityjob verifier and the

@@ -13,6 +13,7 @@
 // passport.functions.ts). Pure component; the route wires the server.
 
 import { useRef, useState } from "react";
+import { MAX_DATE_ATTR, MIN_DATE_ATTR } from "@/lib/security-passport/dates";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -152,6 +153,8 @@ export function CredentialCorrectionForm({
           <input
             id="sp-corr-issued"
             type="date"
+            min={MIN_DATE_ATTR}
+            max={MAX_DATE_ATTR}
             value={values.issuedOn ?? ""}
             onChange={(e) => set("issuedOn", e.target.value || null)}
             className={inputClass}
@@ -164,6 +167,8 @@ export function CredentialCorrectionForm({
           <input
             id="sp-corr-until"
             type="date"
+            min={MIN_DATE_ATTR}
+            max={MAX_DATE_ATTR}
             value={values.validUntil ?? ""}
             onChange={(e) => set("validUntil", e.target.value || null)}
             className={inputClass}
