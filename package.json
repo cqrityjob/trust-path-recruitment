@@ -39,6 +39,8 @@
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
     "migrations:check": "bun run scripts/migration-safety-check.ts",
+    "release-parity:check": "bun run scripts/release-parity-check.ts",
+    "release-parity:gate": "bun run scripts/release-parity-check.ts --release",
     "regulatory-sources:check": "bun run scripts/regulatory-source-monitor.ts",
     "passport-title-derivation:check": "bun run scripts/passport-title-derivation-check.ts",
     "passport-identity-engine:check": "bun run scripts/passport-identity-engine-check.ts",
