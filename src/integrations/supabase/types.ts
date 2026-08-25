@@ -8805,7 +8805,7 @@ export type Database = {
           headline: string | null
           holder_user_id: string
           is_private: boolean
-          jurisdiction_code: string
+          jurisdiction_code: string | null
           onboarding_answers: Json
           onboarding_state: string
           onboarding_step: number
@@ -8813,7 +8813,9 @@ export type Database = {
           profession_family: string | null
           question_version: string
           recognition_policy_version: string
+          sub_jurisdiction_code: string | null
           updated_at: string
+          work_location_confirmed_at: string | null
         }
         Insert: {
           cig_profession_slug?: string | null
@@ -8823,7 +8825,7 @@ export type Database = {
           headline?: string | null
           holder_user_id: string
           is_private?: boolean
-          jurisdiction_code?: string
+          jurisdiction_code?: string | null
           onboarding_answers?: Json
           onboarding_state?: string
           onboarding_step?: number
@@ -8831,7 +8833,9 @@ export type Database = {
           profession_family?: string | null
           question_version?: string
           recognition_policy_version?: string
+          sub_jurisdiction_code?: string | null
           updated_at?: string
+          work_location_confirmed_at?: string | null
         }
         Update: {
           cig_profession_slug?: string | null
@@ -8841,7 +8845,7 @@ export type Database = {
           headline?: string | null
           holder_user_id?: string
           is_private?: boolean
-          jurisdiction_code?: string
+          jurisdiction_code?: string | null
           onboarding_answers?: Json
           onboarding_state?: string
           onboarding_step?: number
@@ -8849,7 +8853,9 @@ export type Database = {
           profession_family?: string | null
           question_version?: string
           recognition_policy_version?: string
+          sub_jurisdiction_code?: string | null
           updated_at?: string
+          work_location_confirmed_at?: string | null
         }
         Relationships: [
           {
@@ -8865,6 +8871,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_recognition_policies"
             referencedColumns: ["version"]
+          },
+          {
+            foreignKeyName: "sp_passport_profiles_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
           },
         ]
       }
