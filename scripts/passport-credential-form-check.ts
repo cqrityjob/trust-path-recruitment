@@ -27,6 +27,7 @@ import {
   clearIncompatible,
   emptyCredentialDraft,
   fieldsFor,
+  titleIsControlled,
   validateCredential,
   type CredentialDraft,
   type CredentialType,
@@ -307,11 +308,14 @@ for (const type of FIXTURE_CREDENTIAL_TYPES) {
     ok(!fields.scope, `${type.code}: no scope field is shown for an unscoped credential`);
   }
 
+  // ── The note: narrow-result credentials only ─────────────────────────
+  //
+  // A note on a register check is where the contents of the register would
+  // arrive. Every other credential may carry one.
   if (type.narrowResultOnly) {
     ok(!fields.note, `${type.code}: the note field is hidden`);
-    ok(!fields.title, `${type.code}: the title field is hidden`);
 
-    // Both bind a DRAFT, exactly as the database does. A draft that has
+    // Binds a DRAFT too, exactly as the database does. A draft that has
     // already stored register commentary has already done the harm.
     for (const mode of ["draft", "active"] as const) {
       ok(
@@ -319,6 +323,34 @@ for (const type of FIXTURE_CREDENTIAL_TYPES) {
           "cred.error.noNoteAllowed",
         ),
         `${type.code}: a note is refused in ${mode} mode`,
+      );
+    }
+  } else {
+    ok(fields.note, `${type.code}: an ordinary credential still offers a note`);
+  }
+
+  // ── The title: EVERY governed credential ─────────────────────────────
+  //
+  // This block used to sit inside the narrow-result branch, and that was the
+  // defect. A pilot tester chose Skyddsvaktsförordnande — which is not a
+  // narrow result — typed "Bajskorv" into Benämning and saved it. Six of the
+  // eight Swedish credentials had a freely writable name.
+  //
+  // `titleIsControlled` is the rule now, and it is asked of every type in the
+  // fixture set rather than of a subset, so a credential added later cannot
+  // quietly fall outside it: the column DEFAULTs to controlled and this
+  // asserts what that means in the form.
+  if (titleIsControlled(type)) {
+    ok(!fields.title, `${type.code}: the title is not an input`);
+
+    // THE REGRESSION, by name. Both modes: a draft holding a renamed
+    // authorisation has already recorded the wrong thing.
+    for (const mode of ["draft", "active"] as const) {
+      ok(
+        keysFor(type, { ...completeDraft(type), title: "Bajskorv" }, mode).includes(
+          "cred.error.controlledLabelOnly",
+        ),
+        `${type.code}: an arbitrary title is refused in ${mode} mode`,
       );
     }
     ok(
@@ -331,16 +363,40 @@ for (const type of FIXTURE_CREDENTIAL_TYPES) {
       keysFor(type, { ...completeDraft(type), title: type.nameEn }, "active").length === 0,
       `${type.code}: POSITIVE CONTROL its own English label is accepted`,
     );
+    ok(
+      keysFor(type, { ...completeDraft(type), title: type.nameSv }, "active").length === 0,
+      `${type.code}: POSITIVE CONTROL its own Swedish label is accepted`,
+    );
+    // A controlled title is never the holder's to supply, so it is never
+    // theirs to be missing either — demanding one would demand it of a field
+    // the form does not offer.
+    ok(
+      !keysFor(type, { ...completeDraft(type), title: "" }, "active").includes(
+        "cred.error.titleRequired",
+      ),
+      `${type.code}: a blank controlled title is not reported as a missing field`,
+    );
   } else {
-    ok(fields.note, `${type.code}: an ordinary credential still offers a note`);
+    ok(fields.title, `${type.code}: a holder-written title is an input`);
     ok(
       keysFor(type, { ...completeDraft(type), title: "" }, "active").includes(
         "cred.error.titleRequired",
       ),
-      `${type.code}: an ordinary credential still requires a title`,
+      `${type.code}: a holder-written title is still required`,
     );
   }
 }
+
+// ── The whole shipped vocabulary is controlled ─────────────────────────
+//
+// The per-type assertions above are conditional, so a fixture set that
+// accidentally set `titleIsHolderWritten: true` everywhere would take the
+// other branch and still pass. This is the unconditional statement: nothing
+// CQrityjob ships today lets a holder name a regulated authorisation.
+ok(
+  FIXTURE_CREDENTIAL_TYPES.every((t) => titleIsControlled(t)),
+  `every shipped credential is named by its definition (${FIXTURE_CREDENTIAL_TYPES.length} checked)`,
+);
 
 console.log("\nGROUP 3 -- switching credential type drops what no longer applies");
 

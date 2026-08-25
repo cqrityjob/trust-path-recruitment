@@ -62,11 +62,11 @@ BEGIN
   RAISE NOTICE 'GROUP 2 -- qualifications record honestly';
 
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h1, 'training', 'VU1', 'VU1');
+  VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1');
   RAISE NOTICE 'ok  2.1 VU1 accepted with no valid_until';
 
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h1, 'training', 'VU2', 'VU2');
+  VALUES (_h1, 'training', 'Väktarutbildning 2 (VU2)', 'VU2');
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h1 AND credential_code IN ('VU1', 'VU2');
   IF _n <> 2 THEN
@@ -79,7 +79,7 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, claimed_issuer_name)
-    VALUES (_h1, 'licence', 'OV', 'OV', 'Polismyndigheten');
+    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten');
     RAISE EXCEPTION 'ASSERTION FAILED: 3.1 an appointment was accepted with no end date';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  3.1 a time-limited appointment is refused without valid_until';
@@ -88,7 +88,7 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, valid_until)
-    VALUES (_h1, 'licence', 'OV', 'OV', '2027-01-01');
+    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', '2027-01-01');
     RAISE EXCEPTION 'ASSERTION FAILED: 3.2 an appointment was accepted with no authority';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  3.2 an appointment is refused without an appointing authority';
@@ -96,7 +96,7 @@ BEGIN
 
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until)
-  VALUES (_h1, 'licence', 'OV', 'OV', 'Polismyndigheten', '2027-01-01');
+  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten', '2027-01-01');
   RAISE NOTICE 'ok  3.3 a complete appointment is accepted';
 
   -- authorisation_scope arrived with the Swedish truth model (20260907091000):
@@ -107,7 +107,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until,
      authorisation_scope)
-  VALUES (_h1, 'licence', 'SV', 'SV', 'Polismyndigheten', '2027-06-30',
+  VALUES (_h1, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Polismyndigheten', '2027-06-30',
           'Skyddsobjekt: Syntetisk anläggning');
   RAISE NOTICE 'ok  3.4 skyddsvakt is a separate appointment claim from ordningsvakt';
 
@@ -116,13 +116,13 @@ BEGIN
   -- Save-and-resume would be impossible if the rules bound a draft.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, lifecycle_state)
-  VALUES (_h1, 'licence', 'OV in progress', 'OV', 'draft');
+  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'draft');
   RAISE NOTICE 'ok  4.1 a draft appointment saves without the mandatory fields';
 
   -- ...but promoting that draft to a real claim must still be refused.
   BEGIN
     UPDATE public.sp_claims SET lifecycle_state = 'active'
-     WHERE holder_user_id = _h1 AND title = 'OV in progress';
+     WHERE holder_user_id = _h1 AND lifecycle_state = 'draft';
     RAISE EXCEPTION 'ASSERTION FAILED: 4.2 an incomplete draft was promoted to active';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  4.2 an incomplete draft cannot be promoted to a real claim';
@@ -132,7 +132,7 @@ BEGIN
 
   BEGIN
     INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-    VALUES (_h1, 'licence', 'VU1 filed as a licence', 'VU1');
+    VALUES (_h1, 'licence', 'Väktarutbildning 1 (VU1)', 'VU1');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.1 VU1 was accepted under the wrong claim_type';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  5.1 a credential cannot be filed under the wrong claim_type';
@@ -157,7 +157,7 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, assertion_level)
-    VALUES (_h1, 'training', 'self-declared verified', 'VU1', 'verified');
+    VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'verified');
     RAISE EXCEPTION 'ASSERTION FAILED: 6.1 a holder self-asserted VERIFIED on a coded claim';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  6.1 a coded claim still cannot be born VERIFIED';
@@ -195,7 +195,7 @@ BEGIN
   RAISE NOTICE 'GROUP 8 -- cross-holder isolation is unchanged';
 
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h2, 'training', 'VU1', 'VU1');
+  VALUES (_h2, 'training', 'Väktarutbildning 1 (VU1)', 'VU1');
   SELECT count(*) INTO _n FROM public.sp_claims WHERE holder_user_id = _h2;
   IF _n <> 1 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 8.1 second holder sees % rows, expected 1', _n;

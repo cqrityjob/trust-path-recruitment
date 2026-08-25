@@ -31,13 +31,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FileText, Inbox, ShieldCheck } from "lucide-react";
+import { AlertTriangle, FileText, Inbox, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { formatWorkLocation } from "@/lib/security-passport/format";
 import {
   decideVerification,
   getVerifierRequestDetail,
+  listDisputeQueue,
   listVerifierQueue,
   passportVerifierWhoAmI,
+  resolveDispute,
+  type DisputeQueueItem,
   type VerifierQueueItem,
   type VerifierRequestDetail,
 } from "@/lib/security-passport/verification.functions";
@@ -623,6 +627,219 @@ function PassportVerificationQueue() {
           ))}
         </ul>
       )}
+
+      <DisputeQueue />
     </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE DISPUTE QUEUE
+   ══════════════════════════════════════════════════════════════════════
+
+   The defect: a holder pressed "Anmäl att uppgiften är fel", the entry became
+   Bestridd, and it appeared nowhere. `sp_raise_dispute` writes a lifecycle
+   state and an audit event; `sp_verifier_queue` reads verification REQUESTS,
+   of which a dispute creates none. The pilot tester went looking in admin for
+   what they had just reported and was right that it was not there.
+
+   It lives on this page rather than behind a route of its own because this is
+   already the Passport reviewer's destination, it is already inside the
+   platform-admin layout gate, and a dispute queue nobody can find is the
+   defect being fixed, not a smaller version of it.
+
+   ── WHAT A REVIEWER CAN DO HERE ─────────────────────────────────────────
+
+   Exactly two things, both decisions by a person: restore the entry, or take
+   it out of the holder's active Passport. Neither touches assertion_level — a
+   dispute is not a route to verification, and `sp_resolve_dispute` has no
+   parameter that could make it one. Nothing is resolved automatically.
+
+   Own state, own error, own refresh: the verification queue above must not go
+   red because a dispute failed to load, which is the exact failure mode this
+   page was already repaired for once.
+   ══════════════════════════════════════════════════════════════════════ */
+function DisputeQueue() {
+  const { pt, lang } = usePassportCopy();
+  const loadDisputes = useServerFn(listDisputeQueue);
+  const resolve = useServerFn(resolveDispute);
+
+  const [rows, setRows] = useState<readonly DisputeQueueItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  // Named for the operation, not for the page. The verification queue above
+  // owns four separate error states for the same reason: one shared string is
+  // how a working queue came to sit under a red banner about something else.
+  const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notes, setNotes] = useState<Readonly<Record<string, string>>>({});
+
+  const refresh = useCallback(async () => {
+    try {
+      setRows(await loadDisputes({ data: undefined }));
+      setDisputeError(null);
+    } catch (err) {
+      console.error("[passport] dispute queue failed", err);
+      setDisputeError(pt("vq.error.queue"));
+    } finally {
+      setLoaded(true);
+    }
+  }, [loadDisputes, pt]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function decide(item: DisputeQueueItem, outcome: "restored" | "withdrawn") {
+    setBusy(item.subjectId);
+    setDisputeError(null);
+    setNotice(null);
+    try {
+      await resolve({
+        data: {
+          claimId: item.subjectType === "claim" ? item.subjectId : null,
+          periodId: item.subjectType === "experience" ? item.subjectId : null,
+          outcome,
+          note: notes[item.subjectId] ?? "",
+        },
+      });
+      setNotice(pt("vq.dispute.resolved"));
+      await refresh();
+    } catch (err) {
+      console.error("[passport] dispute resolution failed", err);
+      setDisputeError(pt("vq.error.queue"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="mt-10 border-t border-border pt-8">
+      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+        <AlertTriangle aria-hidden="true" className="h-5 w-5" />
+        {pt("vq.dispute.title")}
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        {pt("vq.dispute.lead")}
+      </p>
+
+      {notice ? (
+        <p role="status" className="mt-4 text-sm font-medium text-foreground">
+          {notice}
+        </p>
+      ) : null}
+      {disputeError ? (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {disputeError}
+        </p>
+      ) : null}
+
+      {!loaded ? (
+        <p className="mt-4 text-sm text-muted-foreground">{pt("common.loading")}</p>
+      ) : rows.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">{pt("vq.dispute.empty")}</p>
+      ) : (
+        <ul className="mt-5 space-y-3">
+          {rows.map((item) => (
+            <li key={item.subjectId} className="rounded-xl border border-border bg-card p-4">
+              <p className="text-sm font-medium text-foreground">
+                {item.title ?? item.credentialCode ?? item.skillCode ?? item.subjectId}
+              </p>
+              <dl className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                <div className="flex gap-1">
+                  <dt>{pt("vq.dispute.holder")}:</dt>
+                  <dd className="text-foreground">{item.holderName || "—"}</dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{pt("vq.dispute.reported")}:</dt>
+                  <dd className="tabular-nums text-foreground">
+                    {item.disputedAt ? item.disputedAt.slice(0, 10) : "—"}
+                  </dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{pt("claim.trustState")}:</dt>
+                  <dd className="text-foreground">
+                    {item.assertion ?? "—"} · {item.lifecycle ?? "—"}
+                  </dd>
+                </div>
+                <div className="flex gap-1">
+                  <dt>{pt("cred.field.credentialCountry")}:</dt>
+                  <dd className="text-foreground">
+                    {formatWorkLocation(item.jurisdiction, item.subJurisdiction, lang)}
+                  </dd>
+                </div>
+              </dl>
+
+              <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {pt("vq.dispute.reason")}
+              </p>
+              <p className="mt-0.5 max-w-[70ch] text-sm leading-relaxed text-foreground">
+                {item.reason && item.reason.trim() !== "" ? item.reason : pt("vq.dispute.noReason")}
+              </p>
+
+              <p className="mt-2 text-xs text-muted-foreground">
+                {item.evidenceCount} {pt("vq.dispute.evidence")}
+              </p>
+
+              {/* Same bar as sp_verifier_decide, and answered by the database
+                  from auth.uid() rather than inferred here: nobody rules on
+                  their own dispute. */}
+              {item.isSelf ? (
+                <p className="mt-3 text-sm text-muted-foreground">{pt("vq.dispute.self")}</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label
+                      htmlFor={`sp-dispute-note-${item.subjectId}`}
+                      className="block text-sm font-medium text-foreground"
+                    >
+                      {pt("vq.dispute.note")}
+                    </label>
+                    <textarea
+                      id={`sp-dispute-note-${item.subjectId}`}
+                      rows={2}
+                      maxLength={300}
+                      value={notes[item.subjectId] ?? ""}
+                      onChange={(e) =>
+                        setNotes((n) => ({ ...n, [item.subjectId]: e.target.value }))
+                      }
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => void decide(item, "restored")}
+                      className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {busy === item.subjectId
+                        ? pt("vq.dispute.resolving")
+                        : pt("vq.dispute.restore")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => void decide(item, "withdrawn")}
+                      className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-4 text-sm font-medium text-destructive hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {pt("vq.dispute.withdraw")}
+                    </button>
+                  </div>
+
+                  <p className="max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                    {pt("vq.dispute.restoreHelp")}
+                  </p>
+                  <p className="max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                    {pt("vq.dispute.withdrawHelp")}
+                  </p>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -15,9 +15,21 @@
 // server for a five-minute signed link at that moment. A preview would mean
 // evidence bytes sitting in a React tree, which is a copy of a private
 // document living somewhere nobody decided it should live.
+//
+// ── THE FIVE MINUTES BELONG TO THE LINK, NOT THE DOCUMENT ──────────────
+//
+// A pilot tester uploaded a document, read "Länken gäller i fem minuter"
+// underneath it, and could not tell whether the file had been saved at all.
+// Both facts were true and the panel had joined them into a false one: the
+// signed URL expires in five minutes, the stored object does not.
+//
+// So the five minutes now sits beside the Open button that mints one — the
+// only place it is about anything — and an upload says, in words, that the
+// document is saved and stays saved. The signed-URL lifetime is unchanged;
+// this is a copy and placement fix, not a weakening of evidence privacy.
 
 import { useRef, useState } from "react";
-import { FileText, Paperclip, Trash2 } from "lucide-react";
+import { CheckCircle2, FileText, Paperclip, RefreshCw, Trash2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { EvidenceRecord } from "@/lib/security-passport/evidence.functions";
 
@@ -67,9 +79,18 @@ export function EvidencePanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<null | "upload" | string>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Set after a successful upload so the holder is told it worked. Cleared on
+   *  the next attempt, so a stale success never sits above a fresh failure. */
+  const [saved, setSaved] = useState(false);
+  /** The document a chosen file should REPLACE, or null for a plain add.
+   *  Replacement is upload-then-withdraw in that order: if the second call
+   *  fails the holder is left with both documents, which is visible and
+   *  fixable. The other order can lose the only copy. */
+  const [replacing, setReplacing] = useState<string | null>(null);
 
   async function handleFile(file: File) {
     setError(null);
+    setSaved(false);
 
     // Checked here for a fast, plain-language answer; checked again in the
     // server function, in the bucket configuration and in a CHECK
@@ -84,14 +105,18 @@ export function EvidencePanel({
     }
 
     setBusy("upload");
+    const supersedes = replacing;
     try {
       const contentBase64 = await readAsBase64(file);
       await onUpload({ fileName: file.name, mimeType: file.type, contentBase64 });
+      if (supersedes) await onWithdraw(supersedes);
+      setSaved(true);
     } catch (err) {
       console.error("[passport] evidence upload failed", err);
       setError(pt("ev.failed"));
     } finally {
       setBusy(null);
+      setReplacing(null);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -140,7 +165,30 @@ export function EvidencePanel({
                 <button
                   type="button"
                   onClick={() => {
+                    if (!window.confirm(pt("ev.replaceConfirm"))) return;
+                    // Arms the picker rather than opening it directly: the file
+                    // dialog must be opened by the input, and the id is what
+                    // tells `handleFile` this is a replacement and not an add.
+                    setReplacing(item.id);
+                    setError(null);
+                    setSaved(false);
+                    inputRef.current?.click();
+                  }}
+                  disabled={busy !== null}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
+                  {replacing === item.id && busy === "upload"
+                    ? pt("ev.replacing")
+                    : pt("ev.replace")}
+                </button>
+              ) : null}
+              {canModify ? (
+                <button
+                  type="button"
+                  onClick={() => {
                     if (!window.confirm(pt("ev.withdrawConfirm"))) return;
+                    setSaved(false);
                     setBusy(item.id);
                     void onWithdraw(item.id).finally(() => setBusy(null));
                   }}
@@ -156,7 +204,25 @@ export function EvidencePanel({
         </ul>
       )}
 
-      <p className="mt-2 text-xs text-muted-foreground">{pt("ev.linkShort")}</p>
+      {/* The two sentences that were one. "Stored until you remove it" is about
+          the DOCUMENT; the five minutes is about the link Open mints, and is
+          stated as such directly beneath the buttons that mint one. */}
+      {evidence.length > 0 ? (
+        <>
+          <p className="mt-2 text-xs text-muted-foreground">{pt("ev.stored")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{pt("ev.linkShort")}</p>
+        </>
+      ) : null}
+
+      {saved ? (
+        <p
+          role="status"
+          className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm font-medium text-foreground"
+        >
+          <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {pt("ev.saved")}
+        </p>
+      ) : null}
 
       {canModify ? (
         <div className="mt-4">

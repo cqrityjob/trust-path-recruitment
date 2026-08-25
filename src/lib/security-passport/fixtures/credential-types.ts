@@ -8,6 +8,14 @@
 
 import type { CredentialType } from "../credentials";
 
+// `titleIsHolderWritten: false` and `jurisdictionCode: "SE"` on every row below
+// are not boilerplate. The first is the rule a tester broke by naming a
+// skyddsvakt appointment "Bajskorv": the definition owns the name, and the
+// column exists only so a future "other training" type can say otherwise.
+// The second is what keeps a Swedish credential Swedish for a holder who has
+// moved — the form STATES the jurisdiction from the definition rather than
+// asking anybody to choose one.
+
 export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
   {
     code: "VU1",
@@ -20,6 +28,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   {
     code: "VU2",
@@ -32,6 +43,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   {
     code: "OV",
@@ -44,6 +58,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: true,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   {
     code: "SV",
@@ -60,6 +77,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     // database refuses a new one that does not say.
     requiresScope: true,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
 
   // ── Added by the Swedish truth model (20260907091000) ─────────────────
@@ -77,6 +97,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   {
     code: "OV_REFRESHER",
@@ -89,6 +112,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   {
     code: "OV_TRANSPORT",
@@ -101,6 +127,9 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: false,
     requiresScope: false,
     narrowResultOnly: false,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
   // The narrow result. Nothing about the police register behind it may enter
   // the Passport, so the form hides the note and title fields and the database
@@ -116,5 +145,8 @@ export const FIXTURE_CREDENTIAL_TYPES: readonly CredentialType[] = [
     requiresIssuer: true,
     requiresScope: false,
     narrowResultOnly: true,
+    titleIsHolderWritten: false,
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
   },
 ] as const;

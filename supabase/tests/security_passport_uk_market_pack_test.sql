@@ -46,7 +46,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'SIA Door Supervisor', 'UK_SIA_LICENCE_DS', 'GB',
+    VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'GB',
             'Security Industry Authority', current_date + 365, '1234567812345678');
     RAISE EXCEPTION 'ASSERTION FAILED: 1.5 an unreviewed market accepted a claim';
   EXCEPTION WHEN check_violation THEN
@@ -151,7 +151,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'SIA Door Supervisor', 'UK_SIA_LICENCE_DS', 'GB',
+    VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'GB',
             'Security Industry Authority', current_date + 365, '12345');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.1 a five-digit licence number was accepted';
   EXCEPTION WHEN check_violation THEN
@@ -168,7 +168,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        credential_reference, lifecycle_state)
-    VALUES (_h, 'licence', 'SIA Door Supervisor', 'UK_SIA_LICENCE_DS', 'GB',
+    VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'GB',
             'ABCD567812345678', 'draft');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.2 a non-numeric licence number was accepted in a draft';
   EXCEPTION WHEN check_violation THEN
@@ -178,7 +178,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, valid_until, credential_reference)
-  VALUES (_h, 'licence', 'SIA Door Supervisor', 'UK_SIA_LICENCE_DS', 'GB',
+  VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'GB',
           'Security Industry Authority', current_date + 365, '1234567812345678');
   RAISE NOTICE 'ok  4.3 POSITIVE CONTROL a real sixteen-digit licence number stores';
 
@@ -187,7 +187,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, credential_reference)
-  VALUES (_h, 'training', 'Level 2 Award for Door Supervisors', 'UK_SIA_QUAL_DS', 'GB',
+  VALUES (_h, 'training', 'Licence-linked qualification — Door Supervision', 'UK_SIA_QUAL_DS', 'GB',
           'Approved Training Provider Ltd', 'AO/2026/DS/00417');
   RAISE NOTICE 'ok  4.4 a qualification certificate number is not forced into that shape';
 
@@ -199,7 +199,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'SIA licence in Sweden', 'UK_SIA_LICENCE_DS', 'SE',
+    VALUES (_h, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS', 'SE',
             'Security Industry Authority', current_date + 365, '1234567812345678');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.1 a British licence was filed as Swedish';
   EXCEPTION WHEN check_violation THEN
@@ -209,7 +209,7 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-    VALUES (_h, 'training', 'VU1 in Britain', 'VU1', 'GB');
+    VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'GB');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 a Swedish credential was filed as British';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  5.2 and a Swedish credential cannot be recorded in the UK';

@@ -140,13 +140,13 @@ BEGIN
   -- =====================================================================
 
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-  VALUES (_h1, 'training', 'VU1', 'VU1', 'SE');
+  VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'SE');
   RAISE NOTICE 'ok  3.1 a Swedish VU1 still saves exactly as before';
 
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, valid_until)
-  VALUES (_h1, 'licence', 'Ordningsvakt', 'OV', 'SE', 'Polismyndigheten',
+  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'SE', 'Polismyndigheten',
           current_date + 200);
   RAISE NOTICE 'ok  3.2 a Swedish OV appointment still saves';
 
@@ -155,7 +155,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        claimed_issuer_name)
-    VALUES (_h1, 'licence', 'OV utan slutdatum', 'OV', 'SE', 'Polismyndigheten');
+    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'SE', 'Polismyndigheten');
     RAISE EXCEPTION 'ASSERTION FAILED: 3.3 an open-ended appointment was accepted';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  3.3 a time-limited appointment still needs an end date';
@@ -182,12 +182,23 @@ BEGIN
       RAISE NOTICE 'ok  4.1 an unregistered country is refused by the market gate';
   END;
 
-  -- GB is a known country with an authored but UNREVIEWED pack. It must be
-  -- refused, and distinguishably so: "not available yet" is a different
-  -- message from "no such place".
+  -- GB is a known country with an authored but UNREVIEWED pack. A REGULATED
+  -- credential in it must be refused, and distinguishably so: "not available
+  -- yet" is a different message from "no such place".
+  --
+  -- The claim names a credential_code, and from 20260910090000 that is
+  -- load-bearing rather than incidental. The market pack governs which
+  -- REGULATED credentials may be registered. It used to run on every claim
+  -- carrying a jurisdiction at all, which is how a British DRIVING LICENCE —
+  -- nothing to do with security regulation — became unrecordable because the
+  -- UK security pack is unreviewed. 4.3 below is the other half of that pair,
+  -- and the two are only meaningful together.
   BEGIN
-    INSERT INTO public.sp_claims (holder_user_id, claim_type, title, jurisdiction_code)
-    VALUES (_h1, 'licence', 'SIA licence', 'GB');
+    INSERT INTO public.sp_claims
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       claimed_issuer_name, valid_until, credential_reference)
+    VALUES (_h1, 'licence', 'SIA Licence — Door Supervision', 'UK_SIA_LICENCE_DS',
+            'GB', 'Security Industry Authority', current_date + 365, '1234567812345678');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.2 an unreviewed market accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
@@ -197,13 +208,30 @@ BEGIN
     RAISE NOTICE 'ok  4.2 an inactive market pack is refused as SP_MARKET_PACK_NOT_ACTIVE';
   END;
 
+  -- ...and the same country, on a claim that names no regulated credential, is
+  -- NOT refused. A driving licence, a first-aid certificate or a language
+  -- qualification carries its jurisdiction as PROVENANCE — where the thing
+  -- came from — which is a fact about the holder's history, not a request to
+  -- register a regulated authorisation in a closed market.
+  INSERT INTO public.sp_claims
+    (holder_user_id, claim_type, skill_code, skill_level, title, jurisdiction_code)
+  VALUES (_h1, 'practical_skill', 'driving_licence', 'B', 'Körkort', 'GB');
+  RAISE NOTICE 'ok  4.3 but a portable credential from that country records normally';
+
   -- =====================================================================
   RAISE NOTICE 'GROUP 5 -- the UAE is never one undifferentiated jurisdiction';
   -- =====================================================================
 
+  -- Each probe below names a credential_code, because from 20260910090000 the
+  -- market gate is scoped to REGULATED credentials. That scoping is what lets a
+  -- UAE driving licence be recorded without inventing an emirate for it; what
+  -- it must not touch is any of the three refusals in this group, and does not.
   BEGIN
-    INSERT INTO public.sp_claims (holder_user_id, claim_type, title, jurisdiction_code)
-    VALUES (_h1, 'licence', 'SIRA card', 'AE');
+    INSERT INTO public.sp_claims
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       claimed_issuer_name, valid_until, authorisation_scope)
+    VALUES (_h1, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE',
+            'SIRA', current_date + 700, 'Fictional Security Services LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.1 a UAE-wide claim was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
@@ -215,8 +243,10 @@ BEGIN
 
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, jurisdiction_code, sub_jurisdiction_code)
-    VALUES (_h1, 'licence', 'Abu Dhabi card', 'AE', 'AE-AZ');
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
+    VALUES (_h1, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE', 'AE-AZ',
+            'SIRA', current_date + 700, 'Fictional Security Services LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 an unsupported emirate was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
@@ -231,8 +261,10 @@ BEGIN
   -- was the review state that stopped it.
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, jurisdiction_code, sub_jurisdiction_code)
-    VALUES (_h1, 'licence', 'Dubai cadre card', 'AE', 'AE-DU');
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
+    VALUES (_h1, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE', 'AE-DU',
+            'SIRA', current_date + 700, 'Fictional Security Services LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.3 an unreviewed Dubai pack accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
@@ -251,7 +283,7 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-    VALUES (_h1, 'training', 'VU1 in Britain', 'VU1', 'GB');
+    VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'GB');
     RAISE EXCEPTION 'ASSERTION FAILED: 6.1 a Swedish credential was filed as British';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  6.1 a Swedish credential cannot be recorded in another market';

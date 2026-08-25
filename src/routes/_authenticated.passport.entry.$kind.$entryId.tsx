@@ -43,6 +43,7 @@ import { correctClaim } from "@/lib/security-passport/passport.functions";
 import {
   getCredentialPrivateFields,
   listClaimVersions,
+  archiveCredential,
   listCredentialTypes,
   type ClaimVersion,
 } from "@/lib/security-passport/credentials.functions";
@@ -59,6 +60,12 @@ import { CredentialShareActions } from "@/components/security-passport/live/Cred
 import { createCredentialDisclosure } from "@/lib/security-passport/disclosure.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
+
+/** The lifecycle states `sp_archive_claim` accepts. Mirrored here so the
+ *  control is absent rather than present-and-refused; the database remains the
+ *  authority, and `disputed` is deliberately NOT in the set — a disputed entry
+ *  is resolved by a reviewer, not archived out from under one. */
+const ARCHIVABLE: ReadonlySet<string> = new Set(["active", "expired", "draft"]);
 
 export const Route = createFileRoute("/_authenticated/passport/entry/$kind/$entryId")({
   ssr: false,
@@ -85,6 +92,7 @@ function PassportEntryRoute() {
   const doSubmit = useServerFn(submitForVerification);
   const doWithdrawRequest = useServerFn(withdrawVerificationRequest);
   const doDispute = useServerFn(raiseDispute);
+  const doArchive = useServerFn(archiveCredential);
   const doShareCredential = useServerFn(createCredentialDisclosure);
   const doCorrect = useServerFn(correctClaim);
   const loadVersions = useServerFn(listClaimVersions);
@@ -108,6 +116,8 @@ function PassportEntryRoute() {
   } | null>(null);
   const [correctionBusy, setCorrectionBusy] = useState(false);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -225,6 +235,9 @@ function PassportEntryRoute() {
           requiresIssuer: false,
           requiresScope: false,
           narrowResultOnly: false,
+          titleIsHolderWritten: false,
+          jurisdictionCode: null,
+          subJurisdictionCode: null,
         },
       ).scope ?? false)
     : false;
@@ -502,6 +515,86 @@ function PassportEntryRoute() {
           await navigate({ to: "/passport" });
         }}
       />
+
+      {/* ── Disputed: what happens next, said to the holder ─────────────
+          The tester pressed "Anmäl att uppgiften är fel", watched the chip
+          change to Bestridd and had no idea whether anything would come of it.
+          It now says: somebody is going to look at this. */}
+      {subject.lifecycleState === "disputed" ? (
+        <p
+          role="status"
+          className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground"
+        >
+          {pt("claim.dispute.pending")}
+        </p>
+      ) : null}
+
+      {/* ── Remove from the active Passport ─────────────────────────────
+          "How do I remove an appointment?" had no answer for anything that was
+          not a draft: the holder's UPDATE policy refuses every write to a
+          verified claim, correctly, and that took the archive with it.
+
+          Deliberately placed AFTER the dispute control and worded against it.
+          These are two different statements — "this is wrong" goes to a
+          reviewer, "I do not want this shown" is the holder's own decision —
+          and a product that offers only the first teaches holders to dispute
+          things they do not actually contest. */}
+      {claim && ARCHIVABLE.has(subject.lifecycleState) ? (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-base font-semibold tracking-tight text-foreground">
+            {pt("claim.archive.title")}
+          </h3>
+          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("claim.archive.lead")}
+          </p>
+          <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("claim.archive.notDispute")}
+          </p>
+
+          {openRequest !== null ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {pt("claim.archive.blockedReview")}
+            </p>
+          ) : (
+            <button
+              type="button"
+              disabled={archiveBusy}
+              onClick={() => {
+                if (!window.confirm(pt("claim.archive.confirm"))) return;
+                setArchiveBusy(true);
+                setArchiveError(null);
+                void doArchive({ data: { claimId: entryId, reason: "" } })
+                  .then(() => navigate({ to: "/passport" }))
+                  .catch((err: unknown) => {
+                    console.error("[passport] archive failed", err);
+                    // Its own error state, never the page-wide one: a failed
+                    // archive must not blank an unrelated panel, and an
+                    // unrelated failure must not accuse this one.
+                    setArchiveError(pt("common.error"));
+                  })
+                  .finally(() => setArchiveBusy(false));
+              }}
+              className="mt-4 inline-flex h-11 items-center rounded-md border border-destructive/40 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {archiveBusy ? pt("claim.archive.working") : pt("claim.archive.action")}
+            </button>
+          )}
+
+          {archiveError ? (
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {archiveError}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* A disputed entry is in front of a reviewer, so the holder cannot take
+          its subject away — said here rather than left as a missing button. */}
+      {claim && subject.lifecycleState === "disputed" ? (
+        <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-muted-foreground">
+          {pt("claim.archive.blockedDisputed")}
+        </p>
+      ) : null}
 
       {/* Documentation ≠ approval, beside the panels where both happen. */}
       <p className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground">

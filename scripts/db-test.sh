@@ -620,7 +620,7 @@ else
   echo "    ok  ${CONT_PASSED} content assertions passed"
   if [ "$CONT_PASSED" -lt 50 ]; then
     echo "FAIL: expected at least 50 content assertions, only ${CONT_PASSED} ran." >&2
-    suite_failed "Phase 1F content (assertion shortfall: floor 50)"
+    suite_failed "Phase 1F content (assertion shortfall: floor 45)"
   fi
 fi
 
@@ -819,7 +819,7 @@ else
   echo "    ok  ${RBRIEF_PASSED} recruitment brief assertions passed"
   if [ "$RBRIEF_PASSED" -lt 50 ]; then
     echo "FAIL: expected at least 50 recruitment brief assertions, only ${RBRIEF_PASSED} ran." >&2
-    suite_failed "Recruitment brief (assertion shortfall: floor 50)"
+    suite_failed "Recruitment brief (assertion shortfall: floor 45)"
   fi
 fi
 
@@ -1660,6 +1660,31 @@ else
   fi
 fi
 
+echo "==> Running Security Passport pilot bug fix #1 assertions"
+set +e
+SPBF1_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_pilot_bugfix_1_test.sql 2>&1)"
+SPBF1_RC=$?
+set -e
+
+echo "$SPBF1_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPBF1_PASSED="$(echo "$SPBF1_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPBF1_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot bug fix #1 suite exited with code ${SPBF1_RC}." >&2
+  echo "$SPBF1_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport pilot bug fix #1"
+else
+  echo "    ok  ${SPBF1_PASSED} pilot bug fix #1 assertions passed"
+  # One floor per defect plus the two "what this did not do" groups. A suite
+  # that silently stops running half its cases is a suite that stopped
+  # defending four real, reported failures.
+  if [ "$SPBF1_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 pilot bug fix #1 assertions, only ${SPBF1_PASSED} ran." >&2
+    suite_failed "Security Passport pilot bug fix #1 (assertion shortfall: floor 45)"
+  fi
+fi
+
 echo "==> Running Security Passport work country assertions"
 set +e
 SPWC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_profile_work_country_test.sql 2>&1)"
@@ -1877,9 +1902,61 @@ fi
 # with "cannot drop table sp_sub_jurisdictions because other objects depend on
 # it". Reverse migration order is not a stylistic preference here; it is what
 # makes the chain reversible at all.
-# FIRST in the chain: 20260908094000 is the newest migration, and the chain runs
+# FIRST in the chain: 20260910090000 is the newest migration, and the chain runs
 # in reverse migration order so each rollback sees the schema its forward
 # migration left behind.
+echo "==> Verifying the pilot bug fix #1 rollback"
+set +e
+SPBF1RB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260910090000_sp_pilot_bugfix_1_rollback.sql 2>&1)"
+SPBF1RB_RC=$?
+set -e
+
+if [ "$SPBF1RB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the pilot bug fix #1 rollback exited with code ${SPBF1RB_RC}." >&2
+  echo "$SPBF1RB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "pilot bug fix #1 rollback"
+else
+  echo "    ok  the pilot bug fix #1 rolls back cleanly"
+fi
+
+# And it is a REVERSAL, not a demolition. The three functions go; the data the
+# feature wrote stays, including entries archived through sp_archive_claim and
+# disputes closed through sp_resolve_dispute -- both of which land in lifecycle
+# states the schema has understood since Phase 2.
+set +e
+SPBF1RBQ="$(psql -tAq -d "$TEST_DB" -c "
+  SELECT
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN ('sp_dispute_queue','sp_resolve_dispute','sp_archive_claim'))
+    || '|' ||
+    (SELECT count(*) FROM public.sp_claims
+      WHERE holder_user_id = 'bf100000-0000-0000-0000-000000000001')
+    || '|' ||
+    (SELECT count(*) FROM public.sp_passport_events
+      WHERE event_type = 'dispute_resolved')" 2>&1)"
+set -e
+SPBF1RB_FUNCS="${SPBF1RBQ%%|*}"
+SPBF1RB_REST="${SPBF1RBQ#*|}"
+SPBF1RB_CLAIMS="${SPBF1RB_REST%%|*}"
+SPBF1RB_EVENTS="${SPBF1RB_REST##*|}"
+
+if [ "$SPBF1RB_FUNCS" != "0" ]; then
+  echo "FAIL: the pilot bug fix #1 rollback left ${SPBF1RB_FUNCS} of its functions behind." >&2
+  suite_failed "pilot bug fix #1 rollback (functions not removed)"
+else
+  echo "    ok  all three new functions are gone after the rollback"
+fi
+
+if [ "${SPBF1RB_CLAIMS:-0}" -lt 1 ] || [ "${SPBF1RB_EVENTS:-0}" -lt 1 ]; then
+  echo "FAIL: the rollback destroyed data (claims=${SPBF1RB_CLAIMS}, dispute events=${SPBF1RB_EVENTS})." >&2
+  suite_failed "pilot bug fix #1 rollback (data loss)"
+else
+  echo "    ok  every claim and every dispute-resolution event survived the rollback"
+fi
+
 echo "==> Verifying the disclosure holder jurisdiction rollback"
 set +e
 SPDHJRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -2202,5 +2279,6 @@ echo "              ${SPAE_PASSED} Dubai market pack assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"
+echo "              ${SPBF1_PASSED} pilot bug fix #1 assertions,"
 echo "              ${SPRC_PASSED} rollback correction assertions"
 echo "===================================================="

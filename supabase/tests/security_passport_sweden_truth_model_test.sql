@@ -44,7 +44,7 @@ BEGIN
 
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-  VALUES (_h, 'training', 'Ordningsvaktsutbildning', 'OV_TRAINING', 'SE');
+  VALUES (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE');
   RAISE NOTICE 'ok  1.4 somebody who has done the course can now record exactly that';
 
   -- The whole point: the course carries no eligibility and no title.
@@ -166,7 +166,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, valid_until, authorisation_scope, lifecycle_state)
-  VALUES (_h, 'licence', 'Gammalt skyddsvaktsförordnande', 'SV', 'SE',
+  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
           'Länsstyrelsen', current_date + 300, NULL, 'draft');
 
   UPDATE public.sp_claims

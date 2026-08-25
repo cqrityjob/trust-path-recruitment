@@ -600,7 +600,18 @@ const sv = {
   "ev.failed": "Uppladdningen misslyckades. Försök igen.",
   "ev.view": "Öppna",
   "ev.opening": "Öppnar …",
-  "ev.linkShort": "Länken gäller i fem minuter.",
+  // The defect: this sentence sat under the document list, on its own, right
+  // after an upload — so "Länken gäller i fem minuter" was read as "your
+  // document disappears in five minutes". The five minutes is correct and
+  // stays; what changed is that it now says WHICH link, next to the button
+  // that makes one, and that the document says separately that it is stored.
+  "ev.saved": "Dokument uppladdat och sparat.",
+  "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
+  "ev.linkShort":
+    "Öppna-länken skapas när du klickar och slutar gälla efter fem minuter. Dokumentet påverkas inte.",
+  "ev.replace": "Ersätt",
+  "ev.replacing": "Ersätter …",
+  "ev.replaceConfirm": "Välj den nya filen. Den gamla tas bort när den nya har sparats.",
   "ev.withdraw": "Ta bort",
   "ev.withdrawing": "Tar bort …",
   "ev.withdrawConfirm":
@@ -663,6 +674,31 @@ const sv = {
   "claim.back": "Tillbaka till Passport",
   "claim.notFound": "Uppgiften finns inte, eller tillhör inte dig.",
   "claim.trustState": "Underlag och status",
+  // ── Archive, and why it is not dispute (pilot fix #1) ────────────────
+  //
+  // The tester asked how to remove an appointment and there was no answer for
+  // anything that was not a draft: the holder's UPDATE policy refuses every
+  // write to a verified claim, correctly, and that took the archive with it.
+  // Archiving deletes nothing — the wording says so, because a holder who
+  // believes it erases the record will use the dispute button instead.
+  "claim.archive.title": "Ta bort från mitt aktiva Passport",
+  "claim.archive.lead":
+    "Uppgiften visas inte längre som aktuell och delas inte i nya utlämnanden. Den raderas inte: historik, dokumentation och eventuell verifiering finns kvar.",
+  "claim.archive.action": "Arkivera uppgiften",
+  "claim.archive.working": "Arkiverar …",
+  "claim.archive.confirm":
+    "Vill du ta bort uppgiften från ditt aktiva Passport? Den raderas inte, men du kan inte själv göra den aktuell igen.",
+  "claim.archive.done": "Uppgiften är borttagen från ditt aktiva Passport.",
+  // The line that keeps the two controls apart. Dispute is for information
+  // that is WRONG and goes to en granskare; archive is the holder's own
+  // decision about what their Passport presents.
+  "claim.archive.notDispute":
+    "Stämmer uppgiften inte? Anmäl den som fel i stället — då granskas den. Arkivering är för uppgifter som stämmer men som du inte vill visa.",
+  "claim.archive.blockedDisputed":
+    "Uppgiften är anmäld som fel och väntar på granskning. Den kan inte arkiveras förrän granskningen är klar.",
+  "claim.archive.blockedReview": "En granskning pågår. Dra tillbaka begäran om verifiering först.",
+  "claim.dispute.pending":
+    "Uppgiften är markerad som bestridd och väntar på granskning. Den visas inte som aktuell och delas inte förrän någon har tittat på den.",
   "claim.correct": "Rätta uppgiften",
   "claim.correctLead":
     "En rättelse skapar en ny version. Den gamla versionen sparas i historiken — den raderas inte.",
@@ -910,7 +946,8 @@ const sv = {
   "cred.section.evidence": "Underlag och anteckning",
 
   "cred.field.title": "Benämning",
-  "cred.field.titleHelp": "Namnet som står på beviset eller beslutet.",
+  "cred.field.titleHelp":
+    "Benämningen bestäms av behörigheten du valde och kan inte ändras. Den ska stämma med beslutet eller beviset.",
   "cred.field.trainingProvider": "Utbildningsanordnare",
   // What a scoped authorisation is limited to. A skyddsvakt approval shown
   // without it reads as a general national licence, which is not what was
@@ -968,7 +1005,33 @@ const sv = {
     "Fyll i de obligatoriska fälten innan du lägger till uppgiften.",
   "cred.error.incompleteForVerification":
     "Uppgiften måste vara komplett innan den skickas för kontroll.",
-  "cred.errorSummary": "Kontrollera fälten nedan.",
+  // "nedan" was a lie about the layout. The summary renders after the fields,
+  // so everything it referred to was ABOVE it — a tester read the sentence,
+  // looked below it and found the buttons. Neutral wording is correct wherever
+  // the summary happens to sit, and the invalid fields carry their own
+  // field-level message and aria-invalid regardless.
+  "cred.errorSummary": "Kontrollera de markerade fälten.",
+
+  // ── Which regulated credentials this holder may register (pilot fix #1) ──
+  //
+  // The selector used to show every ACTIVE credential type, which is the eight
+  // Swedish ones — to everybody, including a holder who had told the product
+  // they work in Dubai. These are the sentences that replace that list when
+  // the holder's own market is not open, and they name the market, because
+  // "nothing available" without saying which market is the kind of vagueness a
+  // holder reads as a fault in their own Passport. The per-country sentence
+  // itself is `workCountry.support.*`, reused rather than restated.
+  "cred.market.unavailableTitle": "Inga reglerade behörigheter att registrera ännu",
+  "cred.market.stillPossible":
+    "Du kan fortfarande lägga till språk, körkort och andra intyg under Mina uppgifter. De hör inte till en reglerad marknad och påverkas inte av det här.",
+  "cred.market.keepsExisting":
+    "Behörigheter du redan har registrerat finns kvar, med sitt eget land och sin status. De ändras inte av att du byter arbetsland.",
+  "cred.market.noWorkCountry":
+    "Ange först var du arbetar. Vilka reglerade behörigheter som kan registreras beror på arbetslandet.",
+  "cred.market.setWorkCountry": "Ange arbetsland",
+  "cred.field.credentialCountry": "Behörighetens land",
+  "cred.field.credentialCountryHelp":
+    "Behörigheten hör till det här landet, oavsett var du arbetar i dag. Den ändras inte om du byter arbetsland.",
 
   // ── Structured entry (Phase 8) ───────────────────────────────────────
   "entry.save": "Spara",
@@ -1066,6 +1129,32 @@ const sv = {
   "vq.decline.entry_not_active":
     "Uppgiften har ändrats sedan granskningen öppnades och går inte längre att besluta om. Ladda om sidan.",
   "vq.decline.unknown": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
+
+  // ── The dispute queue (pilot fix #1) ─────────────────────────────────
+  //
+  // A holder pressed "Anmäl att uppgiften är fel", the entry became Bestridd,
+  // and it appeared in no queue anywhere — sp_verifier_queue reads
+  // verification REQUESTS, and a dispute creates none. This is the destination
+  // the tester went looking for and did not find.
+  "vq.dispute.title": "Bestridda uppgifter",
+  "vq.dispute.lead":
+    "Uppgifter som innehavaren har anmält som felaktiga. Varje ärende avgörs av en människa — ingenting avgörs automatiskt.",
+  "vq.dispute.empty": "Inga bestridda uppgifter just nu.",
+  "vq.dispute.holder": "Innehavare",
+  "vq.dispute.reported": "Anmäld",
+  "vq.dispute.reason": "Innehavarens motivering",
+  "vq.dispute.noReason": "Ingen motivering registrerad.",
+  "vq.dispute.evidence": "dokument",
+  "vq.dispute.note": "Anteckning (valfri)",
+  "vq.dispute.restore": "Uppgiften stämmer — återställ",
+  "vq.dispute.withdraw": "Uppgiften stämmer inte — ta bort",
+  "vq.dispute.resolving": "Avgör …",
+  "vq.dispute.resolved": "Ärendet är avgjort.",
+  "vq.dispute.self": "Du kan inte avgöra en anmälan om din egen uppgift.",
+  "vq.dispute.restoreHelp":
+    "Uppgiften blir aktuell igen, oförändrad. Verifieringsnivån påverkas inte.",
+  "vq.dispute.withdrawHelp":
+    "Uppgiften tas bort från innehavarens aktiva Passport. Ingenting raderas och ingen verifiering rivs upp — det görs i så fall separat.",
   // The self-review notice, shown before anything is filled in.
   "vq.selfBadge": "Din egen ansökan",
   "vq.selfNotice":
@@ -1761,7 +1850,13 @@ const en: Record<PassportCopyKey, string> = {
   "ev.failed": "The upload failed. Please try again.",
   "ev.view": "Open",
   "ev.opening": "Opening …",
-  "ev.linkShort": "The link is valid for five minutes.",
+  "ev.saved": "Document uploaded and saved.",
+  "ev.stored": "The document stays in your Passport until you remove it.",
+  "ev.linkShort":
+    "The link to open a document is created when you click and stops working after five minutes. The document itself is unaffected.",
+  "ev.replace": "Replace",
+  "ev.replacing": "Replacing …",
+  "ev.replaceConfirm": "Choose the new file. The old one is removed once the new one is saved.",
   "ev.withdraw": "Remove",
   "ev.withdrawing": "Removing …",
   "ev.withdrawConfirm":
@@ -1823,6 +1918,22 @@ const en: Record<PassportCopyKey, string> = {
   "claim.back": "Back to Passport",
   "claim.notFound": "That entry does not exist, or does not belong to you.",
   "claim.trustState": "Backing and status",
+  "claim.archive.title": "Remove from my active Passport",
+  "claim.archive.lead":
+    "The entry is no longer presented as current and is not included in new disclosures. It is not deleted: its history, its documentation and any verification stay exactly where they are.",
+  "claim.archive.action": "Archive this entry",
+  "claim.archive.working": "Archiving …",
+  "claim.archive.confirm":
+    "Remove this entry from your active Passport? It is not deleted, but you cannot make it current again yourself.",
+  "claim.archive.done": "The entry has been removed from your active Passport.",
+  "claim.archive.notDispute":
+    "Is the information wrong? Report it as incorrect instead — that gets it reviewed. Archiving is for entries that are correct but that you do not want to show.",
+  "claim.archive.blockedDisputed":
+    "This entry has been reported as incorrect and is waiting to be reviewed. It cannot be archived until the review is finished.",
+  "claim.archive.blockedReview":
+    "A review is in progress. Withdraw the verification request first.",
+  "claim.dispute.pending":
+    "This entry is marked as disputed and is waiting to be reviewed. It is not presented as current and is not shared until somebody has looked at it.",
   "claim.correct": "Correct this entry",
   "claim.correctLead":
     "A correction creates a new version. The old version is kept in the history — it is not deleted.",
@@ -2058,7 +2169,8 @@ const en: Record<PassportCopyKey, string> = {
   "cred.section.evidence": "Documentation and note",
 
   "cred.field.title": "Name",
-  "cred.field.titleHelp": "The name as it appears on the certificate or decision.",
+  "cred.field.titleHelp":
+    "The name comes from the credential you chose and cannot be changed. It matches the decision or certificate.",
   "cred.field.trainingProvider": "Training provider",
   "cred.field.scope": "Scope",
   "cred.field.scopeHelp":
@@ -2112,7 +2224,19 @@ const en: Record<PassportCopyKey, string> = {
   "cred.error.incompleteForActive": "Fill in the required fields before adding this entry.",
   "cred.error.incompleteForVerification":
     "This entry must be complete before it is submitted for checking.",
-  "cred.errorSummary": "Please check the fields below.",
+  "cred.errorSummary": "Check the highlighted fields.",
+
+  "cred.market.unavailableTitle": "No regulated credentials to register yet",
+  "cred.market.stillPossible":
+    "You can still add languages, driving licences and other certificates under My information. They do not belong to a regulated market and are not affected by this.",
+  "cred.market.keepsExisting":
+    "Credentials you have already registered stay where they are, with their own country and their own status. Changing your work country does not change them.",
+  "cred.market.noWorkCountry":
+    "Tell us where you work first. Which regulated credentials can be registered depends on the work country.",
+  "cred.market.setWorkCountry": "Set work country",
+  "cred.field.credentialCountry": "Credential's country",
+  "cred.field.credentialCountryHelp":
+    "The credential belongs to this country whatever country you work in today. Changing your work country does not change it.",
 
   "entry.save": "Save",
   "entry.saving": "Saving …",
@@ -2206,6 +2330,26 @@ const en: Record<PassportCopyKey, string> = {
   "vq.decline.entry_not_active":
     "The entry changed after this review was opened and can no longer be decided. Reload the page.",
   "vq.decline.unknown": "The decision could not be saved. Your entries are still here — try again.",
+
+  "vq.dispute.title": "Disputed entries",
+  "vq.dispute.lead":
+    "Entries the holder has reported as incorrect. Every case is decided by a person — nothing here is decided automatically.",
+  "vq.dispute.empty": "No disputed entries right now.",
+  "vq.dispute.holder": "Holder",
+  "vq.dispute.reported": "Reported",
+  "vq.dispute.reason": "What the holder said",
+  "vq.dispute.noReason": "No reason recorded.",
+  "vq.dispute.evidence": "documents",
+  "vq.dispute.note": "Note (optional)",
+  "vq.dispute.restore": "The entry is correct — restore it",
+  "vq.dispute.withdraw": "The entry is not correct — remove it",
+  "vq.dispute.resolving": "Deciding …",
+  "vq.dispute.resolved": "The case is closed.",
+  "vq.dispute.self": "You cannot decide a dispute about your own entry.",
+  "vq.dispute.restoreHelp":
+    "The entry becomes current again, unchanged. Its verification level is not affected.",
+  "vq.dispute.withdrawHelp":
+    "The entry leaves the holder's active Passport. Nothing is deleted and no verification is undone — that is a separate act.",
   "vq.selfBadge": "Your own request",
   "vq.selfNotice":
     "This is your own request. Nobody may verify their own record, so the decision form is switched off here. Another reviewer has to decide it.",

@@ -8363,6 +8363,7 @@ export type Database = {
           sort_order: number
           sub_jurisdiction_code: string | null
           symbol_label: string
+          title_is_holder_written: boolean
           typical_validity_months: number | null
         }
         Insert: {
@@ -8390,6 +8391,7 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label: string
+          title_is_holder_written?: boolean
           typical_validity_months?: number | null
         }
         Update: {
@@ -8417,6 +8419,7 @@ export type Database = {
           sort_order?: number
           sub_jurisdiction_code?: string | null
           symbol_label?: string
+          title_is_holder_written?: boolean
           typical_validity_months?: number | null
         }
         Relationships: [
@@ -10919,6 +10922,10 @@ export type Database = {
         Args: { _application_id: string }
         Returns: Json
       }
+      sp_archive_claim: {
+        Args: { _claim_id: string; _reason: string }
+        Returns: undefined
+      }
       sp_attach_evidence: {
         Args: {
           _claim_id: string
@@ -10970,6 +10977,7 @@ export type Database = {
         Returns: string
       }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
+      sp_dispute_queue: { Args: Record<PropertyKey, never>; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }
         Returns: Json
@@ -10994,6 +11002,15 @@ export type Database = {
       }
       sp_raise_dispute: {
         Args: { _claim_id: string; _period_id: string; _reason: string }
+        Returns: undefined
+      }
+      sp_resolve_dispute: {
+        Args: {
+          _claim_id: string
+          _note: string
+          _outcome: string
+          _period_id: string
+        }
         Returns: undefined
       }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }

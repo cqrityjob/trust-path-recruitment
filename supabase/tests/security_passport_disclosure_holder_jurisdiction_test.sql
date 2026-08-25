@@ -39,7 +39,7 @@ BEGIN
     id, holder_user_id, claim_type, credential_code, title,
     claimed_issuer_name, jurisdiction_code, issued_on, assertion_level,
     lifecycle_state, verified_by_user_id, verified_at)
-  VALUES (gen_random_uuid(), _h, 'training', 'VU1', 'Väktarutbildning 1',
+  VALUES (gen_random_uuid(), _h, 'training', 'VU1', 'Väktarutbildning 1 (VU1)',
           'BYA', 'SE', '2025-01-01', 'verified', 'active',
           _v, now())
   RETURNING id INTO _c;
