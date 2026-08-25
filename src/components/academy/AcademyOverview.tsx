@@ -51,6 +51,14 @@ export function AcademyOverview({
     queryFn: () => pressureFn({ data: { employerId } }),
   });
 
+  // ── A NUMBER YOU DO NOT HAVE YET IS NOT ZERO ─────────────────────────
+  //
+  // These tiles rendered `data ?? []` straight into a count, so for the second
+  // or so before the query resolved every card read 0 -- and then silently
+  // changed. "Väntar på granskning: 0" is not a slow answer, it is a wrong
+  // one, and it is the answer an employer glancing at the page actually took
+  // away. While either query is in flight the tiles show a dash instead.
+  const loading = participants.isPending || pressure.isPending;
   const rows = participants.data ?? [];
   const active = rows.filter(
     (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
@@ -103,6 +111,7 @@ export function AcademyOverview({
           icon={Users}
           label="academy.overview.active"
           value={active}
+          loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
           search={{ state: "active" as const }}
@@ -114,6 +123,7 @@ export function AcademyOverview({
           icon={Hourglass}
           label="academy.overview.awaitingReviewUnified"
           value={attemptsAwaitingReview}
+          loading={loading}
           detail={
             awaitingReview > 0
               ? `${awaitingReview} ${tp("academy.overview.awaitingReviewDetail", awaitingReview)}`
@@ -130,6 +140,7 @@ export function AcademyOverview({
           icon={Send}
           label="academy.overview.readyToRelease"
           value={readyToRelease}
+          loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
           search={{ state: "ready_to_release" as const }}
@@ -138,6 +149,7 @@ export function AcademyOverview({
           icon={ClipboardCheck}
           label="academy.overview.released"
           value={released}
+          loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
           search={{ state: "result_available" as const }}
@@ -188,6 +200,7 @@ function StatLink<S extends Record<string, string>>({
   label,
   value,
   detail,
+  loading,
   employerSlug,
   to,
   search,
@@ -195,6 +208,7 @@ function StatLink<S extends Record<string, string>>({
   icon: typeof Users;
   label: TranslationKey;
   value: number;
+  loading?: boolean;
   /** Optional second line: the same work, measured the way the engine counts
    *  it. Supporting information, never a competing headline. */
   detail?: string;
@@ -210,7 +224,7 @@ function StatLink<S extends Record<string, string>>({
       search={search}
       className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
     >
-      <StatBody icon={Icon} label={t(label)} value={value} detail={detail} />
+      <StatBody icon={Icon} label={t(label)} value={value} detail={detail} loading={loading} />
     </Link>
   );
 }
@@ -220,11 +234,13 @@ function StatBody({
   label,
   value,
   detail,
+  loading,
 }: {
   icon: typeof Users;
   label: string;
   value: number;
   detail?: string;
+  loading?: boolean;
 }) {
   return (
     <>
@@ -232,8 +248,10 @@ function StatBody({
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
         {label}
       </p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
-      {detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+        {loading ? <span className="text-muted-foreground/50">&mdash;</span> : value}
+      </p>
+      {!loading && detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
     </>
   );
 }

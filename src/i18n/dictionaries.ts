@@ -2608,7 +2608,7 @@ export const dictionaries = {
     "academy.cancel": "Avbryt",
     "academy.overview.competenceTitle": "Bedömningar och underlag",
     "academy.overview.competenceLede":
-      "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
+      "Här ser ni bedömningar ni tilldelat kandidater och medarbetare, och var varje bedömning står. Resultatet beskriver vad personen har visat i arbetsnära uppgifter och uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
     "academy.overview.released": "Slutförda bedömningar",
     "academy.overview.awaitingReview": "Svar att granska",
@@ -2685,7 +2685,7 @@ export const dictionaries = {
     "training.nav.participants": "Tilldelade utbildningar",
     "training.overview.title": "Kompetensutveckling",
     "training.overview.lede":
-      "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit. Genomförd utbildning registreras som utvecklingsaktivitet — den ändrar inte uppmätt kompetensmognad.",
+      "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit.",
     "training.overview.stat.active": "Pågående",
     "training.overview.stat.completed": "Slutförda",
     "training.overview.stat.available": "Program att tilldela",
@@ -6071,7 +6071,7 @@ export const dictionaries = {
     "academy.cancel": "Cancel",
     "academy.overview.competenceTitle": "Assessments and evidence",
     "academy.overview.competenceLede":
-      "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
+      "The assessments you have assigned to candidates and employees, and where each one has got to. A result describes what the person demonstrated in work-like tasks, expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
     "academy.overview.released": "Completed assessments",
     "academy.overview.awaitingReview": "Responses to review",
@@ -6148,7 +6148,7 @@ export const dictionaries = {
     "training.nav.participants": "Assigned training",
     "training.overview.title": "Competence development",
     "training.overview.lede":
-      "Development programmes your organisation has assigned, and how far the employees have got. Completed training is recorded as development activity — it does not change measured competence maturity.",
+      "Development programmes your organisation has assigned, and how far the employees have got.",
     "training.overview.stat.active": "In progress",
     "training.overview.stat.completed": "Completed",
     "training.overview.stat.available": "Programmes to assign",
