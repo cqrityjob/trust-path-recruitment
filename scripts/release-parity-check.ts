@@ -72,6 +72,10 @@ interface FrontierEntry {
   file: string;
   hostedState: HostedState;
   introduces: IntroducedObject[];
+  /** How "applied" is known. Required for that state — see the check below. */
+  evidenceSource?: string;
+  /** A query that re-establishes the claim against the hosted database. */
+  verify?: string;
   note?: string;
 }
 
@@ -149,6 +153,23 @@ for (const entry of state.frontier) {
   if (!["applied", "pending", "unverified"].includes(entry.hostedState)) {
     fail(`${entry.file}: unknown hostedState "${entry.hostedState}"`);
   }
+  // ── AN "APPLIED" CLAIM MUST SAY HOW IT IS KNOWN ────────────────────────
+  //
+  // This is the rule that keeps the file from drifting back into fiction.
+  // "applied" is a statement about production made in a text file, and the
+  // only thing separating it from a guess is the evidence beside it. The
+  // stale entries this reconciliation corrected were not wrong because
+  // somebody lied; they were wrong because a migration was applied hosted
+  // during UAT and the repository was never told. An entry that cannot say
+  // how it knows is exactly the entry that goes stale next.
+  if (entry.hostedState === "applied" && !entry.evidenceSource) {
+    fail(
+      `${entry.file}: declared "applied" with no evidenceSource.\n` +
+        `    Say how that is known -- a recorded appliedThroughLovable mapping, or a direct\n` +
+        `    owner verification of the hosted schema, with what was actually observed.`,
+    );
+  }
+
   if (entry.introduces.length === 0 && !entry.note) {
     fail(
       `${entry.file}: declares no introduced objects and gives no reason.\n` +

@@ -1,13 +1,13 @@
 {
   "states": {
-    "applied": "Applied on the hosted database, with evidence recorded (here or in migrations-policy.json's appliedThroughLovable).", 
+    "applied": "Applied on the hosted database. REQUIRES an evidenceSource naming how that was established -- a recorded appliedThroughLovable mapping, or a direct owner verification of the hosted schema. release-parity-check refuses an applied entry without one.", 
     "unverified": "No evidence either way in this repository. Must be confirmed by the owner before release; treated as NOT applied by the guard.", 
     "pending": "Known NOT to be applied on the hosted database yet."
   }, 
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
-      "note": "Work-country / sub-jurisdiction on the Passport profile. Believed applied hosted under a Lovable-generated version, but this repository holds no appliedThroughLovable record for it, so it is not asserted here. Confirm before release.", 
+      "note": "Previously declared unverified: this repository held no appliedThroughLovable record for it and none has been produced, so the hosted generated version and UUID for this migration remain unknown. The APPLIED state rests on the owner's direct observation of the schema, which is recorded above rather than inferred.", 
       "introduces": [
         {
           "table": "sp_passport_profiles", 
@@ -20,19 +20,23 @@
           "kind": "column"
         }
       ], 
-      "hostedState": "unverified", 
-      "file": "20260908093000_sp_profile_work_country.sql"
+      "hostedState": "applied", 
+      "file": "20260908093000_sp_profile_work_country.sql", 
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: sp_passport_profiles.sub_jurisdiction_code EXISTS and sp_passport_profiles.work_location_confirmed_at EXISTS. Both columns are added by this migration and by no other, so their presence establishes it directly.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sp_passport_profiles' AND column_name IN ('sub_jurisdiction_code','work_location_confirmed_at');"
     }, 
     {
-      "note": "Replaces sp_disclosure_payload so a disclosure renders the HOLDER's sub-jurisdiction. Same evidence gap as the migration above; confirm together with it.", 
+      "note": "Previously declared unverified. The hosted generated version and UUID remain unknown, so no appliedThroughLovable mapping is claimed for it.", 
       "introduces": [
         {
           "object": "sp_disclosure_payload", 
           "kind": "function"
         }
       ], 
-      "hostedState": "unverified", 
-      "file": "20260908094000_sp_disclosure_holder_sub_jurisdiction.sql"
+      "hostedState": "applied", 
+      "file": "20260908094000_sp_disclosure_holder_sub_jurisdiction.sql", 
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: public.sp_disclosure_payload EXISTS. NOTE THE LIMIT OF THAT OBSERVATION -- this migration REPLACES an existing function rather than creating a new one (it is created by 20260903091000 and replaced again by 20260904090000 and 20260908092000, the last of which is inside the evidence baseline). Existence therefore does not by itself distinguish this body from the previous one. The APPLIED state rests on the owner's verification; the query below makes it decisive by testing for a token that only this version's body contains.", 
+      "verify": "SELECT pg_get_functiondef(p.oid) LIKE '%_p.sub_jurisdiction_code%' AS is_holder_body FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname='sp_disclosure_payload';"
     }, 
     {
       "introduces": [
@@ -45,7 +49,7 @@
       "file": "20260909090000_jobs_delete_unpublished_draft.sql"
     }, 
     {
-      "note": "THE MIGRATION THIS GUARD EXISTS FOR. Deployed application code expected these columns while the hosted schema did not have them, and employers could not save or publish a job at all. Kept here as the worked example, not as history.", 
+      "note": "THE MIGRATION THIS GUARD EXISTS FOR, now closed. Deployed application code expected these columns while the hosted schema did not have them, and employers could not save or publish a job at all. It was applied hosted during UAT to end the outage; this repository was never told, which is precisely the staleness release-parity-check exists to make impossible to leave in place. The hosted generated version and UUID for that application are not known here, so no appliedThroughLovable mapping is claimed.", 
       "introduces": [
         {
           "table": "jobs", 
@@ -68,8 +72,10 @@
           "kind": "column"
         }
       ], 
-      "hostedState": "pending", 
-      "file": "20260909092000_jobs_other_profession_selection.sql"
+      "hostedState": "applied", 
+      "file": "20260909092000_jobs_other_profession_selection.sql", 
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: jobs.profession_other EXISTS, and jobs.family_other / jobs.family_other_text / jobs.profession_other_text were applied through Lovable during the Fable UAT as the hotfix for the job-publishing outage. All four columns are added by this migration and by no other.", 
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='jobs' AND column_name IN ('profession_other','profession_other_text','family_other','family_other_text');"
     }, 
     {
       "introduces": [
@@ -136,7 +142,9 @@
       ], 
       "hostedState": "applied", 
       "file": "20260910090000_sp_pilot_bugfix_1.sql", 
-      "note": "Applied hosted through the tracked Lovable route; the generated copy (20260825171344_7f6e501f-...) was left in the active migration path and is what broke clean full-history replay on origin/main. It is now recorded in migrations-policy.json's appliedThroughLovable and removed from the active path."
+      "note": "Applied hosted through the tracked Lovable route. Its generated copy was left in the active migration path and is what broke clean full-history replay on origin/main; that copy is now removed and mapped in migrations-policy.json's appliedThroughLovable.", 
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed in the hosted ledger as version 20260825171344, name 7f6e501f-fdc5-4150-aa2d-fa22a536703c -- which confirms the appliedThroughLovable mapping recorded in supabase/migrations-policy.json, independently of this branch.", 
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260825171344';"
     }, 
     {
       "note": "cd_definition_versions.content_version -> v3.1-draft-4. No new object, but NOT inert: the database stamps every new report snapshot from this row while the payload carries version.ts's CONTENT_VERSION, so shipping the code without this makes each new report disagree with itself about which wording the candidate read.", 
@@ -241,7 +249,7 @@
   "activeDirectory": "supabase/migrations", 
   "evidenceBaseline": {
     "source": "supabase/migrations-policy.json appliedThroughLovable", 
-    "note": "Every canonical migration at or below this version has a recorded hosted application in migrations-policy.json and is therefore treated as applied without needing an entry below. Nothing above it is assumed.", 
+    "note": "Every canonical migration at or below this version has a recorded hosted application in migrations-policy.json and is therefore treated as applied without needing an entry below. Nothing above it is assumed: a migration above the baseline is applied only if it says so AND says how that is known.", 
     "throughVersion": "20260908092000"
   }
 }
