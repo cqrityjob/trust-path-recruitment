@@ -1156,6 +1156,33 @@ fi
 # ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
+echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"
+set +e
+LIFE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_job_lifecycle_test.sql 2>&1)"
+LIFE_RC=$?
+set -e
+
+LIFE_PASSED="$(echo "$LIFE_OUT" | grep -c "ok  " || true)"
+
+if [ "$LIFE_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the employer job lifecycle suite exited with code ${LIFE_RC}." >&2
+  echo "$LIFE_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "employer job lifecycle"
+else
+  echo "    ok  ${LIFE_PASSED} job lifecycle assertions passed"
+  if [ "$LIFE_PASSED" -lt 28 ]; then
+    echo "FAIL: expected at least 28 job lifecycle assertions, only ${LIFE_PASSED} ran." >&2
+    suite_failed "employer job lifecycle (assertion shortfall: floor 28)"
+  fi
+fi
+
+# NOTE ON PLACEMENT: this suite runs BEFORE the rollback verification on
+# purpose. jobs_delete_draft() reads public.scp_assessment_invitations, and the
+# documented rollback removes the scp_ schema -- so after that point the
+# function raises "relation does not exist" and the suite would be testing the
+# teardown rather than the product.
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"
@@ -2165,6 +2192,7 @@ echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
+echo "              ${LIFE_PASSED} job lifecycle + notification assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
 echo "              ${SP3M_PASSED} three-market foundation assertions,"
 echo "              ${SPSE_PASSED} Swedish truth model assertions,"

@@ -126,6 +126,49 @@ jobs:
       - name: Passport error-scope check
         run: bun run passport-error-scope:check
 
+      # ── THE EMPLOYER UAT GUARDS ──────────────────────────────────────────
+      #
+      # Twelve findings from one customer, closed across five subsystems. Each
+      # fix has a guard; none of them ran anywhere but a developer's machine,
+      # which is how a fix gets quietly undone by somebody who never saw the
+      # feedback. The reconciliation check is the index over the other five and
+      # fails if any of them stops being registered.
+
+      # "Stäng" and "Arkivera" both set status='archived'. Asserts the
+      # duplicate path stays gone, that a delete goes through
+      # jobs_delete_draft() rather than the jobs table, and that no employer
+      # surface is back to window.confirm().
+      - name: Employer job lifecycle check
+        run: bun run employer-job-lifecycle:check
+
+      # There is one hire bridge, it lives in set_application_status(), and a
+      # second one must never appear. A duplicate bridge is how one human
+      # becomes two employment records.
+      - name: Employer hire continuity check
+        run: bun run employer-hire-continuity:check
+
+      # "Annat" and "Ej angivet" are different answers, and neither may reach
+      # family_id or profession_slug -- both are exact-match filters on the
+      # public job search.
+      - name: Employer Other/Annat taxonomy check
+        run: bun run employer-other-taxonomy:check
+
+      # The AI proposal contract, and the fact that nothing executes it. Fails
+      # if a provider call or credential appears: enabling AI review is an
+      # owner decision with a calibration step, not a code change.
+      - name: Review proposal contract check
+        run: bun run review-proposal-contract:check
+
+      # What a candidate is told, and what they are never told: no score, no
+      # assessment content, no reason derived from an assessment, and nothing
+      # at all for the internal "under review" state.
+      - name: Candidate notification check
+        run: bun run candidate-notification:check
+
+      # The index over all twelve points and the nine guards they delegate to.
+      - name: Employer UAT reconciliation check
+        run: bun run emma-uat:check
+
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.

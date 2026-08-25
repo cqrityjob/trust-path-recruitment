@@ -75,6 +75,7 @@ import {
   todayDateInput,
   toServerPayload,
   translateJobServerError,
+  OTHER_OPTION,
   type Blocker,
   type DraftFieldErrors,
   type EmployerJobFormValues,
@@ -643,7 +644,28 @@ export function EmployerJobForm({
                   {f.name[lang]}
                 </option>
               ))}
+              {/* Last, after the real answers. "Annat" is not one of the
+                  fourteen -- it is the employer telling us the fourteen do
+                  not cover them, which is worth hearing and is a different
+                  statement from "Ej angivet". */}
+              <option value={OTHER_OPTION}>{t("employer.jobs.form.option.other")}</option>
             </select>
+            {values.family_id === OTHER_OPTION && (
+              <div className="mt-2">
+                <label htmlFor="job-family-other" className="text-sm text-muted-foreground">
+                  {t("employer.jobs.form.field.familyOther")}
+                </label>
+                <input
+                  id="job-family-other"
+                  type="text"
+                  maxLength={120}
+                  className={inputCls}
+                  value={values.family_other_text}
+                  onChange={(e) => set("family_other_text", e.target.value)}
+                  placeholder={t("employer.jobs.form.placeholder.familyOther")}
+                />
+              </div>
+            )}
           </div>
           <div>
             <label htmlFor="job-profession" className="text-sm text-muted-foreground">
@@ -662,7 +684,24 @@ export function EmployerJobForm({
                   {professionLabel(p)}
                 </option>
               ))}
+              <option value={OTHER_OPTION}>{t("employer.jobs.form.option.other")}</option>
             </select>
+            {values.profession_slug === OTHER_OPTION && (
+              <div className="mt-2">
+                <label htmlFor="job-profession-other" className="text-sm text-muted-foreground">
+                  {t("employer.jobs.form.field.professionOther")}
+                </label>
+                <input
+                  id="job-profession-other"
+                  type="text"
+                  maxLength={120}
+                  className={inputCls}
+                  value={values.profession_other_text}
+                  onChange={(e) => set("profession_other_text", e.target.value)}
+                  placeholder={t("employer.jobs.form.placeholder.professionOther")}
+                />
+              </div>
+            )}
             {professionsQuery.isLoading && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {t("employer.jobs.form.profession.loading")}

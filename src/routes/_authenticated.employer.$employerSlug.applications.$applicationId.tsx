@@ -52,7 +52,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, ClipboardList, FileText, MessagesSquare } from "lucide-react";
+import { ArrowLeft, ClipboardList, FileText, MessagesSquare, UserCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -62,6 +62,7 @@ import { ApplicationPassportPanel } from "@/components/employer/ApplicationPassp
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   getApplicationCvSignedUrl,
+  getHiredEmployeeForApplication,
   updateApplicationStatusAsEmployer,
 } from "@/lib/job-intelligence/applications.functions";
 import {
@@ -116,6 +117,7 @@ function Candidate360({
   const candidateFn = useServerFn(getApplicationCandidate);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
+  const hiredEmployeeFn = useServerFn(getHiredEmployeeForApplication);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const candidateKey = ["employer", employerId, "application", applicationId, "candidate"];
@@ -125,14 +127,37 @@ function Candidate360({
     queryFn: () => candidateFn({ data: { applicationId } }),
   });
 
+  // ── WHERE THE HIRED PERSON NOW LIVES ──────────────────────────────────
+  //
+  // Queried, not just remembered from the mutation. An employer who hires and
+  // then comes back tomorrow gets the same door as the one who hired thirty
+  // seconds ago -- otherwise the only way from an application to the employee
+  // it produced is to re-type the name, which is how one human becomes two
+  // records. `hiredNow` is the mutation's own answer, used until the query
+  // catches up so the link appears the instant the hire lands.
+  const [hiredNow, setHiredNow] = useState<string | null>(null);
+  const hiredEmployeeQuery = useQuery({
+    queryKey: ["employer", employerId, "application", applicationId, "hired-employee"],
+    queryFn: () => hiredEmployeeFn({ data: { applicationId } }),
+    enabled: query.data?.applicationStatus === "hired",
+  });
+  const hiredEmployeeId = hiredNow ?? hiredEmployeeQuery.data?.employeeId ?? null;
+
   const setStatus = useMutation({
     mutationFn: (newStatus: EmployerSettableStatus) =>
       setStatusFn({ data: { applicationId, newStatus } }),
-    onSuccess: () => {
+    onSuccess: (r) => {
       setActionError(null);
+      setHiredNow(r.employeeId ?? null);
       qc.invalidateQueries({ queryKey: candidateKey });
       // The list this page was opened from shows the same status.
       qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+      // Medarbetare has one more person in it, and Översikt counts them.
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "employees"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "workforce-summary"] });
+      qc.invalidateQueries({
+        queryKey: ["employer", employerId, "application", applicationId, "hired-employee"],
+      });
     },
     onError: () => setActionError(t("employer.applications.error.statusUpdate")),
   });
@@ -432,6 +457,24 @@ function Candidate360({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Hiring used to end here, with a status and nowhere to go. The same
+            person is now in Medarbetare, so the page says so and offers the
+            door -- otherwise an employer's next move is to re-type the name
+            into the employee form and create a second record of one human. */}
+        {hiredEmployeeId && (
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
+            <UserCheck className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+            {t("employer.candidate.decision.nowEmployee")}
+            <Link
+              to="/employer/$employerSlug/workforce/$personId"
+              params={{ employerSlug, personId: hiredEmployeeId }}
+              className="font-medium text-accent underline-offset-2 hover:underline"
+            >
+              {t("employer.candidate.decision.openEmployee")}
+            </Link>
+          </p>
         )}
       </section>
 

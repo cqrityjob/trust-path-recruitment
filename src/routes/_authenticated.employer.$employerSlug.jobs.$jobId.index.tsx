@@ -37,13 +37,14 @@
 // route: the slug is a lookup key, re-verified through
 // listMyEmployerWorkspaces() by the shared frame on every load.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CircleDashed, ExternalLink, Users } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { JobsPage } from "@/components/academy/AcademyWorkspace";
 import { translateJobServerError } from "@/components/employer/EmployerJobForm";
@@ -53,9 +54,11 @@ import {
   getEmployerJob,
   submitEmployerJob,
   closeEmployerJob,
-  archiveEmployerJob,
+  deleteEmployerJob,
   restoreEmployerJob,
   duplicateEmployerJob,
+  CLOSEABLE_STATUSES,
+  DELETE_REFUSED_CODES,
 } from "@/lib/job-intelligence/employer-jobs.functions";
 import {
   listApplicationsForEmployer,
@@ -127,15 +130,21 @@ function JobHub({
 }) {
   const { t, lang } = useT();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const getFn = useServerFn(getEmployerJob);
   const listApplicationsFn = useServerFn(listApplicationsForEmployer);
   const submitFn = useServerFn(submitEmployerJob);
   const closeFn = useServerFn(closeEmployerJob);
-  const archiveFn = useServerFn(archiveEmployerJob);
+  const deleteFn = useServerFn(deleteEmployerJob);
   const restoreFn = useServerFn(restoreEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
+  // Set when jobs_delete_draft() refuses. This page cannot see whether a draft
+  // has assignments or invitations attached; only the database can, so it
+  // stops offering the delete and offers the close instead. See jobs.index.tsx.
+  const [deleteRefused, setDeleteRefused] = useState(false);
 
   const jobQuery = useQuery({
     queryKey: ["employer", employerId, "job", jobId],
@@ -175,9 +184,22 @@ function JobHub({
     mutationFn: () => closeFn({ data: { employerId, jobId } }),
     ...mutationOptions,
   });
-  const archiveMutation = useMutation({
-    mutationFn: () => archiveFn({ data: { employerId, jobId } }),
-    ...mutationOptions,
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteFn({ data: { employerId, jobId } }),
+    // Not mutationOptions: this page's subject no longer exists. Refetching it
+    // would replace a completed action with JOB_NOT_FOUND, which reads as a
+    // failure. The list is where a deleted advertisement leaves you.
+    onSuccess: () => {
+      setActionError(null);
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+      void navigate({ to: "/employer/$employerSlug/jobs", params: { employerSlug } });
+    },
+    onError: (e: unknown) => {
+      const code = (e as { message?: string })?.message ?? "DELETE_JOB_FAILED";
+      setActionError(code);
+      if (DELETE_REFUSED_CODES.includes(code)) setDeleteRefused(true);
+    },
   });
   const restoreMutation = useMutation({
     mutationFn: () => restoreFn({ data: { employerId, jobId } }),
@@ -235,13 +257,17 @@ function JobHub({
 
   const editable = status === "draft" || status === "rejected";
   const submittable = editable;
-  const closeable = status === "published";
-  const archivable = status === "draft" || status === "rejected";
+  // Same rule as the list, from the same constants the server enforces: a
+  // never-published draft with nothing attached can go, and anything else that
+  // was ever live is closed instead. See jobs.index.tsx.
+  const deletable =
+    job !== null && status === "draft" && job.published_at === null && !deleteRefused;
+  const closeable = !deletable && CLOSEABLE_STATUSES.includes(status);
   const restorable = status === "archived";
   const busy =
     submitMutation.isPending ||
     closeMutation.isPending ||
-    archiveMutation.isPending ||
+    deleteMutation.isPending ||
     restoreMutation.isPending ||
     dupMutation.isPending;
 
@@ -320,10 +346,8 @@ function JobHub({
             type="button"
             disabled={busy}
             onClick={() => {
-              if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
-                setActionError(null);
-                dupMutation.mutate();
-              }
+              setActionError(null);
+              setPending({ kind: "duplicate", id: jobId });
             }}
             className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
@@ -342,30 +366,65 @@ function JobHub({
               {t("employer.jobs.list.restore")}
             </button>
           )}
-          {archivable && (
+          {deletable && (
             <button
               type="button"
               disabled={busy}
               onClick={() => {
-                if (window.confirm(t("employer.jobs.list.confirmArchive"))) {
-                  setActionError(null);
-                  archiveMutation.mutate();
-                }
+                setActionError(null);
+                setPending({ kind: "delete", id: jobId });
               }}
               className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              {t("employer.jobs.list.archive")}
+              {t("employer.jobs.list.delete")}
             </button>
+          )}
+          {pending && (
+            <ConfirmAction
+              open
+              onOpenChange={(o) => {
+                if (!o) setPending(null);
+              }}
+              tone={pending.kind === "delete" ? "destructive" : "default"}
+              busy={busy}
+              title={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.confirm.delete.title"
+                  : pending.kind === "close"
+                    ? "employer.jobs.confirm.close.title"
+                    : "employer.jobs.confirm.duplicate.title",
+              )}
+              consequence={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.confirm.delete.body"
+                  : pending.kind === "close"
+                    ? "employer.jobs.confirm.close.body"
+                    : "employer.jobs.confirm.duplicate.body",
+              )}
+              confirmLabel={t(
+                pending.kind === "delete"
+                  ? "employer.jobs.list.delete"
+                  : pending.kind === "close"
+                    ? "employer.jobs.list.close"
+                    : "employer.jobs.list.duplicate",
+              )}
+              cancelLabel={t("employer.workforce.form.cancel")}
+              onConfirm={() => {
+                const { kind } = pending;
+                setPending(null);
+                if (kind === "delete") deleteMutation.mutate();
+                else if (kind === "close") closeMutation.mutate();
+                else dupMutation.mutate();
+              }}
+            />
           )}
           {closeable && (
             <button
               type="button"
               disabled={busy}
               onClick={() => {
-                if (window.confirm(t("employer.jobs.list.confirmClose"))) {
-                  setActionError(null);
-                  closeMutation.mutate();
-                }
+                setActionError(null);
+                setPending({ kind: "close", id: jobId });
               }}
               className="inline-flex min-h-[36px] items-center rounded-md border border-destructive/60 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
