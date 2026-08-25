@@ -8,7 +8,7 @@
 // -- this page's own gating is a friendly UX convenience, not the
 // enforcement.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -24,7 +24,16 @@ import {
   adminSetPlatformRole,
 } from "@/lib/job-intelligence/admin-users-roles.functions";
 import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
-import { formatDateTime } from "@/lib/job-intelligence/date-format";
+import {
+  adminGetPersonOverview,
+  adminGetUserDeletionImpact,
+  adminSetUserDisabled,
+  adminAnonymiseUser,
+  adminDeleteUser,
+} from "@/lib/job-intelligence/admin-lifecycle.functions";
+import { DangerZone, DeletionImpactPreview } from "@/components/admin/DangerZone";
+import { blockerLabelKey, lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
+import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/users/$userId")({
   ssr: false,
@@ -55,6 +64,87 @@ function AdminUserDetailPage() {
     queryKey: ["admin", "whoami"],
     queryFn: () => whoAmIFn(),
   });
+
+  // The canonical person view: one governed read that spans the account, the
+  // pseudonymous subject, employment, applications, assessment history and
+  // Passport. It reports COUNTS for everything evidential -- an administrator
+  // learns that three claims exist, never what they assert.
+  const overviewFn = useServerFn(adminGetPersonOverview);
+  const overview = useQuery({
+    queryKey: ["admin", "person-overview", userId],
+    queryFn: () => overviewFn({ data: { userId } }),
+    retry: false,
+  });
+
+  const impactFn = useServerFn(adminGetUserDeletionImpact);
+  const impact = useQuery({
+    queryKey: ["admin", "user-deletion-impact", userId],
+    queryFn: () => impactFn({ data: { userId } }),
+    retry: false,
+  });
+
+  const navigate = useNavigate();
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [lifecycleDone, setLifecycleDone] = useState(false);
+
+  function refreshPerson() {
+    setLifecycleError(null);
+    setLifecycleDone(true);
+    qc.invalidateQueries({ queryKey: ["admin", "person-overview", userId] });
+    qc.invalidateQueries({ queryKey: ["admin", "user-deletion-impact", userId] });
+    qc.invalidateQueries({ queryKey: ["admin", "user-detail", userId] });
+    qc.invalidateQueries({ queryKey: ["admin", "users"] });
+  }
+
+  const setDisabledFn = useServerFn(adminSetUserDisabled);
+  const setDisabled = useMutation({
+    mutationFn: (vars: { disabled: boolean; reason: string }) =>
+      setDisabledFn({ data: { userId, disabled: vars.disabled, reason: vars.reason } }),
+    onSuccess: refreshPerson,
+    onError: (e: Error) => {
+      setLifecycleDone(false);
+      setLifecycleError(e.message);
+    },
+  });
+
+  const anonymiseFn = useServerFn(adminAnonymiseUser);
+  const anonymise = useMutation({
+    mutationFn: (vars: { reason: string }) =>
+      anonymiseFn({
+        data: {
+          userId,
+          reason: vars.reason,
+          confirmEmail: overview.data?.account.email ?? "",
+        },
+      }),
+    onSuccess: refreshPerson,
+    onError: (e: Error) => {
+      setLifecycleDone(false);
+      setLifecycleError(e.message);
+    },
+  });
+
+  const deleteUserFn = useServerFn(adminDeleteUser);
+  const deleteUser = useMutation({
+    mutationFn: (vars: { reason: string }) =>
+      deleteUserFn({
+        data: {
+          userId,
+          reason: vars.reason,
+          confirmEmail: overview.data?.account.email ?? "",
+        },
+      }),
+    onSuccess: () => {
+      refreshPerson();
+      navigate({ to: "/admin/users" });
+    },
+    onError: (e: Error) => {
+      setLifecycleDone(false);
+      setLifecycleError(e.message);
+    },
+  });
+
+  const lifecyclePending = setDisabled.isPending || anonymise.isPending || deleteUser.isPending;
 
   const setRole = useMutation({
     mutationFn: (vars: { role: "admin" | "superadmin"; grant: boolean }) =>
@@ -237,7 +327,244 @@ function AdminUserDetailPage() {
             </div>
           </section>
         )}
+        {overview.data && (
+          <>
+            <section className="mt-6 rounded-lg border border-border bg-background p-5">
+              <h2 className="text-sm font-semibold text-foreground">
+                {t("admin.lifecycle.person.section.identity")}
+              </h2>
+              <dl className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("admin.lifecycle.person.field.subject")}
+                  </dt>
+                  <dd className="text-foreground">
+                    {overview.data.subjectId ? (
+                      <code className="text-xs">{overview.data.subjectId}</code>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {t("admin.lifecycle.person.field.noSubject")}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("admin.lifecycle.person.section.account")}
+                  </dt>
+                  <dd
+                    className={
+                      overview.data.account.disabled ? "text-destructive" : "text-foreground"
+                    }
+                  >
+                    {overview.data.account.disabled
+                      ? t("admin.lifecycle.person.field.disabled")
+                      : t("admin.lifecycle.person.field.active")}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            {overview.data.employment.length > 0 && (
+              <section className="mt-6 rounded-lg border border-border bg-background p-5">
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t("admin.lifecycle.person.section.employment")}
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm">
+                  {overview.data.employment.map((e) => (
+                    <li key={e.employeeId} className="flex flex-wrap justify-between gap-2">
+                      <Link
+                        to="/admin/employers/$employerId"
+                        params={{ employerId: e.employerId }}
+                        className="text-accent hover:underline"
+                      >
+                        {e.employerName}
+                      </Link>
+                      <span className="text-muted-foreground">{e.employmentStatus}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {overview.data.applications.length > 0 && (
+              <section className="mt-6 rounded-lg border border-border bg-background p-5">
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t("admin.lifecycle.person.section.applications")}
+                </h2>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="py-1.5 pr-4">{t("employer.jobs.list.title")}</th>
+                        <th className="py-1.5 pr-4">{t("admin.users.detail.column.employer")}</th>
+                        <th className="py-1.5 pr-4">{t("admin.users.detail.column.status")}</th>
+                        <th className="py-1.5 pr-4">{t("admin.employers.detail.field.created")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {overview.data.applications.map((a) => (
+                        <tr key={a.id}>
+                          <td className="py-1.5 pr-4">
+                            <Link
+                              to="/admin/applications/$applicationId"
+                              params={{ applicationId: a.id }}
+                              className="text-accent hover:underline"
+                            >
+                              {a.titleSv || a.titleEn || "—"}
+                            </Link>
+                          </td>
+                          <td className="py-1.5 pr-4">{a.employerName}</td>
+                          <td className="py-1.5 pr-4">{a.status}</td>
+                          <td className="py-1.5 pr-4 text-xs text-muted-foreground">
+                            {formatDate(a.createdAt, lang)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <section className="rounded-lg border border-border bg-background p-5">
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t("admin.lifecycle.person.section.assessments")}
+                </h2>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <Count
+                    label={t("admin.lifecycle.person.counts.assignments")}
+                    value={overview.data.assessments.assignments}
+                  />
+                  <Count
+                    label={t("admin.lifecycle.person.counts.runs")}
+                    value={overview.data.assessments.runs}
+                  />
+                  <Count
+                    label={t("admin.lifecycle.person.counts.attempts")}
+                    value={overview.data.assessments.attempts}
+                  />
+                  <Count
+                    label={t("admin.lifecycle.person.counts.releasedReports")}
+                    value={overview.data.assessments.releasedReports}
+                  />
+                </dl>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {t("admin.lifecycle.person.evidenceNote")}
+                </p>
+              </section>
+
+              <section className="rounded-lg border border-border bg-background p-5">
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t("admin.lifecycle.person.section.passport")}
+                </h2>
+                {overview.data.passport.hasProfile ? (
+                  <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <Count
+                      label={t("admin.lifecycle.person.counts.claims")}
+                      value={overview.data.passport.claims}
+                    />
+                    <Count
+                      label={t("admin.lifecycle.person.counts.evidence")}
+                      value={overview.data.passport.evidence}
+                    />
+                    <Count
+                      label={t("admin.lifecycle.person.counts.activeDisclosures")}
+                      value={overview.data.passport.activeDisclosures}
+                    />
+                    <Count
+                      label={t("admin.lifecycle.person.counts.verificationRequests")}
+                      value={overview.data.passport.verificationRequests}
+                    />
+                  </dl>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t("admin.lifecycle.person.passport.none")}
+                  </p>
+                )}
+              </section>
+            </div>
+
+            <DangerZone
+              title={t("admin.lifecycle.person.dangerTitle")}
+              description={t("admin.lifecycle.person.dangerDescription")}
+              pending={lifecyclePending}
+              errorMessage={lifecycleError ? t(lifecycleErrorKey(lifecycleError)) : null}
+              successMessage={lifecycleDone ? t("admin.lifecycle.person.action.success") : null}
+              actions={[
+                overview.data.account.disabled
+                  ? {
+                      key: "enable",
+                      label: t("admin.lifecycle.person.enable.label"),
+                      consequence: t("admin.lifecycle.person.enable.consequence"),
+                      variant: "default" as const,
+                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      onConfirm: ({ reason }: { reason: string }) =>
+                        setDisabled.mutate({ disabled: false, reason }),
+                    }
+                  : {
+                      key: "disable",
+                      label: t("admin.lifecycle.person.disable.label"),
+                      consequence: t("admin.lifecycle.person.disable.consequence"),
+                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      onConfirm: ({ reason }: { reason: string }) =>
+                        setDisabled.mutate({ disabled: true, reason }),
+                    },
+                {
+                  key: "anonymise",
+                  label: t("admin.lifecycle.person.anonymise.label"),
+                  consequence: t("admin.lifecycle.person.anonymise.consequence"),
+                  confirmPhrase: overview.data.account.email,
+                  confirmPhraseLabel: t("admin.lifecycle.person.delete.confirmPhraseLabel"),
+                  impact: (
+                    <p className="text-sm text-muted-foreground">
+                      {t("admin.lifecycle.person.anonymise.retained")}
+                    </p>
+                  ),
+                  blockedReason: !whoAmI.data?.isSuperadmin
+                    ? t("admin.lifecycle.person.delete.blockedSuperadmin")
+                    : isSelf
+                      ? t("admin.lifecycle.error.selfAction")
+                      : null,
+                  onConfirm: ({ reason }: { reason: string }) => anonymise.mutate({ reason }),
+                },
+                {
+                  key: "delete",
+                  label: t("admin.lifecycle.person.delete.label"),
+                  consequence: t("admin.lifecycle.person.delete.consequence"),
+                  confirmPhrase: overview.data.account.email,
+                  confirmPhraseLabel: t("admin.lifecycle.person.delete.confirmPhraseLabel"),
+                  impact: impact.data ? (
+                    <DeletionImpactPreview
+                      blockers={impact.data.blockers}
+                      removed={impact.data.removedOnDelete}
+                      translateBlocker={(code) => t(blockerLabelKey(code))}
+                    />
+                  ) : null,
+                  blockedReason: !whoAmI.data?.isSuperadmin
+                    ? t("admin.lifecycle.person.delete.blockedSuperadmin")
+                    : isSelf
+                      ? t("admin.lifecycle.error.selfAction")
+                      : impact.data && !impact.data.deletable
+                        ? t("admin.lifecycle.person.delete.blockedData")
+                        : null,
+                  onConfirm: ({ reason }: { reason: string }) => deleteUser.mutate({ reason }),
+                },
+              ]}
+            />
+          </>
+        )}
       </AdminShellChrome>
     </SiteLayout>
+  );
+}
+
+function Count({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-semibold tabular-nums text-foreground">{value}</dd>
+    </div>
   );
 }

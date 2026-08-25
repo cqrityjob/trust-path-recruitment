@@ -42,6 +42,8 @@ export type AdminNavSection =
   | "results"
   | "workforce"
   | "feedback"
+  | "audit"
+  | "data"
   | "passportVerification";
 
 export interface AdminShellChromeProps {
@@ -100,6 +102,8 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
     { key: "results", labelKey: "admin.nav.results", to: "/admin/results" },
     { key: "workforce", labelKey: "admin.nav.workforce", to: "/admin/workforce" },
     { key: "feedback", labelKey: "admin.nav.feedback", to: "/admin/feedback" },
+    { key: "audit", labelKey: "admin.nav.audit", to: "/admin/audit" },
+    { key: "data", labelKey: "admin.nav.data", to: "/admin/data" },
     {
       key: "passportVerification",
       labelKey: "admin.nav.passportVerification",
