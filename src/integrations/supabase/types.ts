@@ -8811,9 +8811,9 @@ export type Database = {
           onboarding_step: number
           privacy_mode: string
           profession_family: string | null
-          sub_jurisdiction_code: string | null
           question_version: string
           recognition_policy_version: string
+          sub_jurisdiction_code: string | null
           updated_at: string
           work_location_confirmed_at: string | null
         }
@@ -8831,9 +8831,9 @@ export type Database = {
           onboarding_step?: number
           privacy_mode?: string
           profession_family?: string | null
-          sub_jurisdiction_code?: string | null
           question_version?: string
           recognition_policy_version?: string
+          sub_jurisdiction_code?: string | null
           updated_at?: string
           work_location_confirmed_at?: string | null
         }
@@ -8851,9 +8851,9 @@ export type Database = {
           onboarding_step?: number
           privacy_mode?: string
           profession_family?: string | null
-          sub_jurisdiction_code?: string | null
           question_version?: string
           recognition_policy_version?: string
+          sub_jurisdiction_code?: string | null
           updated_at?: string
           work_location_confirmed_at?: string | null
         }
@@ -8871,6 +8871,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_recognition_policies"
             referencedColumns: ["version"]
+          },
+          {
+            foreignKeyName: "sp_passport_profiles_sub_jurisdiction_code_fkey"
+            columns: ["sub_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
           },
         ]
       }
