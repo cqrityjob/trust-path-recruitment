@@ -32,12 +32,13 @@ export const EXPERIENCE_BAND_VALUES: readonly ExperienceBand[] = [
   "8_plus_y",
 ];
 
-export const EXPERIENCE_BAND_LABEL: Readonly<Record<ExperienceBand, Record<"sv" | "en", string>>> = {
-  under_1y: { sv: "Mindre än 1 år", en: "Under 1 year" },
-  "1_3y": { sv: "1-3 år", en: "1-3 years" },
-  "4_7y": { sv: "4-7 år", en: "4-7 years" },
-  "8_plus_y": { sv: "8+ år", en: "8+ years" },
-};
+export const EXPERIENCE_BAND_LABEL: Readonly<Record<ExperienceBand, Record<"sv" | "en", string>>> =
+  {
+    under_1y: { sv: "Mindre än 1 år", en: "Under 1 year" },
+    "1_3y": { sv: "1-3 år", en: "1-3 years" },
+    "4_7y": { sv: "4-7 år", en: "4-7 years" },
+    "8_plus_y": { sv: "8+ år", en: "8+ years" },
+  };
 
 export type CurrentProfessionStatus = "selected" | "not_listed" | "prefer_not_to_say";
 

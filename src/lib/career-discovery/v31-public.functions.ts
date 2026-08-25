@@ -553,7 +553,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         // than relying on it.
         current_profession_other:
           data.careerContext?.currentProfessionStatus === "not_listed"
-            ? (data.careerContext.currentProfessionOther?.trim() || null)
+            ? data.careerContext.currentProfessionOther?.trim() || null
             : null,
         current_experience_band: data.careerContext?.experienceBand ?? null,
       })

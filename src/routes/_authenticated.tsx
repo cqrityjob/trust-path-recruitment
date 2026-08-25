@@ -55,7 +55,7 @@ function AuthenticatedLayout() {
             // session uuid on every login round trip.
             redirect: window.location.pathname + window.location.search,
             ...intentSearch(),
-          } as any,
+          } as never,
         });
       } else {
         setSignedIn(true);
@@ -75,7 +75,7 @@ function AuthenticatedLayout() {
           search: {
             redirect: window.location.pathname + window.location.search,
             ...intentSearch(),
-          } as any,
+          } as never,
         });
       }
     });

@@ -227,7 +227,11 @@ function PurposePanel({ purpose, recruitment }: { purpose: string | null; recrui
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
         {purpose ??
-          t(recruitment ? "academy.home.purposeFallbackRecruitment" : "academy.home.purposeFallback")}
+          t(
+            recruitment
+              ? "academy.home.purposeFallbackRecruitment"
+              : "academy.home.purposeFallback",
+          )}
       </p>
       {recruitment && (
         <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">

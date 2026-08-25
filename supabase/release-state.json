@@ -134,8 +134,9 @@
           "kind": "column"
         }
       ], 
-      "hostedState": "pending", 
-      "file": "20260910090000_sp_pilot_bugfix_1.sql"
+      "hostedState": "applied", 
+      "file": "20260910090000_sp_pilot_bugfix_1.sql", 
+      "note": "Applied hosted through the tracked Lovable route; the generated copy (20260825171344_7f6e501f-...) was left in the active migration path and is what broke clean full-history replay on origin/main. It is now recorded in migrations-policy.json's appliedThroughLovable and removed from the active path."
     }, 
     {
       "note": "cd_definition_versions.content_version -> v3.1-draft-4. No new object, but NOT inert: the database stamps every new report snapshot from this row while the payload carries version.ts's CONTENT_VERSION, so shipping the code without this makes each new report disagree with itself about which wording the candidate read.", 

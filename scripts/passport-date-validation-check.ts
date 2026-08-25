@@ -21,10 +21,7 @@ import {
   MIN_YEAR,
   todayIso,
 } from "../src/lib/security-passport/dates";
-import {
-  emptyCredentialDraft,
-  validateCredential,
-} from "../src/lib/security-passport/credentials";
+import { emptyCredentialDraft, validateCredential } from "../src/lib/security-passport/credentials";
 
 let failures = 0;
 let checks = 0;
@@ -159,11 +156,7 @@ const ROOTS = ["src/lib/security-passport", "src/components/security-passport"];
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory()
-      ? walk(join(dir, e.name))
-      : /\.tsx?$/.test(e.name)
-        ? [join(dir, e.name)]
-        : [],
+    e.isDirectory() ? walk(join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [join(dir, e.name)] : [],
   );
 }
 

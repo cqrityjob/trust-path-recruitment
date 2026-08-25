@@ -17,11 +17,7 @@
 // Career Areas.
 
 import { DIMENSIONS, type DimensionId } from "./dimensions";
-import type {
-  ProfessionMatch,
-  ProfessionStage,
-  RecommendationConfidence,
-} from "./professions";
+import type { ProfessionMatch, ProfessionStage, RecommendationConfidence } from "./professions";
 import type { Locale } from "./version";
 
 const STAGE_SENTENCE: Readonly<Record<ProfessionStage, Record<Locale, string>>> = {

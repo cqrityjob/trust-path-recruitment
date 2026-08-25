@@ -111,27 +111,27 @@ export function CareerContextStep({
           value.currentProfessionStatus === "prefer_not_to_say" ? (
           <div className="mt-3 rounded-[12px] border border-border bg-muted/40 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-            <span className="text-sm font-medium text-foreground">
-              {value.currentProfessionStatus === "not_listed"
-                ? t("cd.careerContext.roleNotListed")
-                : t("cd.careerContext.roleSkip")}
-            </span>
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...value,
-                  currentProfessionStatus: null,
-                  currentProfessionSlug: null,
-                  currentProfessionOther: null,
-                  currentProfessionTitleSv: null,
-                  currentProfessionTitleEn: null,
-                })
-              }
-              className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
-            >
-              {t("cd.careerContext.changeRole")}
-            </button>
+              <span className="text-sm font-medium text-foreground">
+                {value.currentProfessionStatus === "not_listed"
+                  ? t("cd.careerContext.roleNotListed")
+                  : t("cd.careerContext.roleSkip")}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    currentProfessionStatus: null,
+                    currentProfessionSlug: null,
+                    currentProfessionOther: null,
+                    currentProfessionTitleSv: null,
+                    currentProfessionTitleEn: null,
+                  })
+                }
+                className="shrink-0 text-xs font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {t("cd.careerContext.changeRole")}
+              </button>
             </div>
 
             {/* ── SAY WHAT THE JOB ACTUALLY IS ──────────────────────────

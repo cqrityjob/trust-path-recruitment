@@ -59,15 +59,11 @@ const {
   startBuffer,
 } = await import("../src/lib/career-discovery/v31-public-buffer");
 const { CORE_ITEMS } = await import("../src/lib/career-discovery/v31/core-items");
-const { OPTION_SET_BY_QUESTION } = await import(
-  "../src/lib/career-discovery/v31/option-matrix"
-);
-const { CONTENT_VERSION, DEFINITION_VERSION } = await import(
-  "../src/lib/career-discovery/v31/version"
-);
-const { isPersonalItemId, personalItem } = await import(
-  "../src/lib/career-discovery/v31/personal-layer"
-);
+const { OPTION_SET_BY_QUESTION } = await import("../src/lib/career-discovery/v31/option-matrix");
+const { CONTENT_VERSION, DEFINITION_VERSION } =
+  await import("../src/lib/career-discovery/v31/version");
+const { isPersonalItemId, personalItem } =
+  await import("../src/lib/career-discovery/v31/personal-layer");
 
 let failures = 0;
 let checks = 0;
@@ -158,7 +154,10 @@ ok(
   JSON.stringify(claimed?.careerContext) === JSON.stringify(CONTEXT),
   "1.6 the career context travels with it",
 );
-ok(claimed?.buffer.contentVersion === CONTENT_VERSION, "1.7 the instrument version travels with it");
+ok(
+  claimed?.buffer.contentVersion === CONTENT_VERSION,
+  "1.7 the instrument version travels with it",
+);
 ok(
   claimed?.buffer.definitionVersion === DEFINITION_VERSION,
   "1.8 the definition version travels with it",
@@ -187,10 +186,7 @@ ok(
   readPendingClaim("11111111-2222-3333-4444-555555555555") === null,
   "2.3 a different token claims nothing",
 );
-ok(
-  readPendingClaim(`${aliceToken}x`) === null,
-  "2.4 a token that is merely close claims nothing",
-);
+ok(readPendingClaim(`${aliceToken}x`) === null, "2.4 a token that is merely close claims nothing");
 ok(readPendingClaim(aliceToken) !== null, "2.5 the owner's own token still works");
 
 // =========================================================================

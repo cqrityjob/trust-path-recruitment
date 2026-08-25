@@ -39,10 +39,7 @@
 // same real first-wave calibration — not a second, diverging set authored
 // to make this file pass.
 
-import {
-  DIMENSION_IDS,
-  type DimensionId,
-} from "../src/lib/career-discovery/v31/dimensions";
+import { DIMENSION_IDS, type DimensionId } from "../src/lib/career-discovery/v31/dimensions";
 import { explainMatch } from "../src/lib/career-discovery/v31/profession-explanations";
 import { matchProfessions } from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
@@ -136,7 +133,10 @@ group("1 · Every completed run produces a recommendation");
 for (const p of GOLDEN_PERSONAS) {
   const r = run(p);
   ok(r.ranked.length > 0, `1.1 ${p.id}: a recommendation exists`);
-  ok(r.ranked.length === Math.min(3, FIRST_WAVE_CATALOG.length), `1.2 ${p.id}: three ranked professions`);
+  ok(
+    r.ranked.length === Math.min(3, FIRST_WAVE_CATALOG.length),
+    `1.2 ${p.id}: three ranked professions`,
+  );
   ok(
     r.ranked.every((x, i) => x.rank === i + 1),
     `1.3 ${p.id}: rank is 1, 2, 3 and agrees with the order`,
@@ -154,10 +154,7 @@ for (const id of balanced) {
   if (!p) continue;
   const r = run(p);
   ok(r.ranked.length === 3, `1.6 ${id}: a balanced/sparse profile still gets a top 3`);
-  ok(
-    r.ranked[0].match.titleSv.trim().length > 0,
-    `1.7 ${id}: rank 1 names an actual profession`,
-  );
+  ok(r.ranked[0].match.titleSv.trim().length > 0, `1.7 ${id}: rank 1 names an actual profession`);
 }
 
 // =========================================================================
@@ -189,9 +186,7 @@ for (const [label, id] of CLASSES) {
   if (!p) continue;
   const r = run(p);
   tops.set(label, r.ranked[0]?.match.professionId ?? "");
-  console.log(
-    `  ${label.padEnd(32)} -> ${r.ranked.map((x) => x.match.professionId).join(", ")}`,
-  );
+  console.log(`  ${label.padEnd(32)} -> ${r.ranked.map((x) => x.match.professionId).join(", ")}`);
 }
 
 ok(
@@ -214,7 +209,10 @@ ok(
 // The whole persona set, not just the six classes: if the ranking had
 // degenerated, this is where it would show as a single value.
 const allTops = new Set(GOLDEN_PERSONAS.map((p) => run(p).ranked[0]?.match.professionId));
-ok(allTops.size >= 5, `3.5 the full persona set spans at least five top professions (got ${allTops.size})`);
+ok(
+  allTops.size >= 5,
+  `3.5 the full persona set spans at least five top professions (got ${allTops.size})`,
+);
 
 // =========================================================================
 group("4 · Every recommendation is explained, in both locales");
