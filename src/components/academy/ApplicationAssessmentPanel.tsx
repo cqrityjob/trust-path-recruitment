@@ -337,11 +337,7 @@ function ReviewAction({
 // It renders NOTHING when there is no assessment: absence of a chip means "not
 // assigned", which the list's own column heading already says, and an
 // "inte tilldelad" badge on nineteen rows is noise rather than information.
-export function ApplicationAssessmentChip({
-  applicationId,
-}: {
-  applicationId: string;
-}) {
+export function ApplicationAssessmentChip({ applicationId }: { applicationId: string }) {
   const { t } = useT();
   const listFn = useServerFn(listApplicationAssessments);
 
@@ -358,7 +354,10 @@ export function ApplicationAssessmentChip({
   // The furthest-along attempt speaks for the row. A candidate with two
   // assessments is rare and the list is not where that is resolved -- the
   // candidate page shows every one of them.
-  const lead = rows.reduce((best, a) => (STAGE_RANK[stageOf(a)] > STAGE_RANK[stageOf(best)] ? a : best), rows[0]);
+  const lead = rows.reduce(
+    (best, a) => (STAGE_RANK[stageOf(a)] > STAGE_RANK[stageOf(best)] ? a : best),
+    rows[0],
+  );
   const needsReview = lead.reviewsOutstanding > 0;
 
   return (

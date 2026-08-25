@@ -183,12 +183,7 @@ function ApplicationsList({
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const listJobsFn = useServerFn(listEmployerJobs);
   const [actionError, setActionError] = useState<string | null>(null);
-  const {
-    job: jobFilter,
-    status: statusFilter,
-    q: searchTerm,
-    sort: sortKey,
-  } = Route.useSearch();
+  const { job: jobFilter, status: statusFilter, q: searchTerm, sort: sortKey } = Route.useSearch();
   const navigate = Route.useNavigate();
 
   // A terminal transition is confirmed; a progression is not. `hired` and
@@ -371,7 +366,9 @@ function ApplicationsList({
           <select
             value={sortKey ?? "newest"}
             onChange={(e) =>
-              setSearch({ sort: e.target.value === "newest" ? undefined : (e.target.value as SortKey) })
+              setSearch({
+                sort: e.target.value === "newest" ? undefined : (e.target.value as SortKey),
+              })
             }
             className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
