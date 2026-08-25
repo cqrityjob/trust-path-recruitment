@@ -3452,26 +3452,33 @@ export const dictionaries = {
 
     // ── Admin Control Center — lifecycle, danger zone, audit, data ──────────
     "admin.lifecycle.person.enable.label": "Öppna kontot igen",
-    "admin.lifecycle.person.delete.blockedSuperadmin": "Endast en superadmin kan radera eller anonymisera ett konto.",
+    "admin.lifecycle.person.delete.blockedSuperadmin":
+      "Endast en superadmin kan radera eller anonymisera ett konto.",
     "admin.danger.blockedHeading": "Det här hindrar åtgärden:",
-    "admin.lifecycle.employer.delete.blockedData": "Organisationen har historik som måste bevaras. Arkivera den i stället.",
+    "admin.lifecycle.employer.delete.blockedData":
+      "Organisationen har historik som måste bevaras. Arkivera den i stället.",
     "admin.audit.column.time": "Tidpunkt",
     "admin.audit.column.action": "Åtgärd",
     "admin.data.open": "Öppna",
     "admin.lifecycle.person.section.applications": "Ansökningar",
-    "admin.lifecycle.person.dangerDescription": "Åtgärder som påverkar personens konto. Historik som måste bevaras finns kvar även efter anonymisering.",
+    "admin.lifecycle.person.dangerDescription":
+      "Åtgärder som påverkar personens konto. Historik som måste bevaras finns kvar även efter anonymisering.",
     "admin.audit.filter.all": "Alla åtgärder",
     "admin.nav.audit": "Revisionslogg",
-    "admin.employers.action.confirmRestore.body": "Arbetsgivaren flyttas tillbaka till avstängd. Den behöver aktiveras separat innan den kan användas igen.",
+    "admin.employers.action.confirmRestore.body":
+      "Arbetsgivaren flyttas tillbaka till avstängd. Den behöver aktiveras separat innan den kan användas igen.",
     "admin.lifecycle.job.dangerTitle": "Radering",
     "admin.lifecycle.error.reasonRequired": "Ett skäl krävs.",
     "admin.lifecycle.blocker.userHoldsPlatformRole": "Personen har en plattformsroll",
     "admin.lifecycle.error.holdsRole": "Ta bort personens plattformsroll först.",
-    "admin.lifecycle.person.delete.blockedData": "Kontot har historik som måste bevaras. Stäng av eller anonymisera i stället.",
-    "admin.lifecycle.error.notDeletable": "Posten kan inte raderas eftersom historik måste bevaras.",
+    "admin.lifecycle.person.delete.blockedData":
+      "Kontot har historik som måste bevaras. Stäng av eller anonymisera i stället.",
+    "admin.lifecycle.error.notDeletable":
+      "Posten kan inte raderas eftersom historik måste bevaras.",
     "admin.lifecycle.person.field.noSubject": "Inget subjekt kopplat",
     "admin.lifecycle.person.section.account": "Konto",
-    "admin.employers.action.confirmArchive.body": "Arbetsgivaren kan inte längre använda plattformen. Inga nya jobb, medarbetare eller bedömningar kan skapas. Historik sparas och syns fortsatt för administratörer.",
+    "admin.employers.action.confirmArchive.body":
+      "Arbetsgivaren kan inte längre använda plattformen. Inga nya jobb, medarbetare eller bedömningar kan skapas. Historik sparas och syns fortsatt för administratörer.",
     "admin.data.section.users": "Konton utan historik",
     "admin.employers.action.restore": "Återöppna",
     "admin.lifecycle.person.section.employment": "Anställningar",
@@ -3484,37 +3491,43 @@ export const dictionaries = {
     "admin.lifecycle.job.delete.success": "Utkastet raderades.",
     "admin.lifecycle.error.forbidden": "Du saknar behörighet för den här åtgärden.",
     "admin.danger.reasonLabel": "Skäl (sparas i revisionsloggen)",
-    "admin.lifecycle.person.anonymise.retained": "Bevaras: bedömningsunderlag, Passport-intyg, anställningsposter, ansökningar och revisionslogg.",
+    "admin.lifecycle.person.anonymise.retained":
+      "Bevaras: bedömningsunderlag, Passport-intyg, anställningsposter, ansökningar och revisionslogg.",
     "admin.audit.heading": "Revisionslogg",
     "admin.lifecycle.blocker.userIsEmployee": "Personen är kopplad till en anställning",
     "admin.data.finding.duplicateEmployee": "Samma adress finns två gånger i organisationen",
-    "admin.lifecycle.person.delete.confirmPhraseLabel": "Skriv kontots e-postadress för att bekräfta",
+    "admin.lifecycle.person.delete.confirmPhraseLabel":
+      "Skriv kontots e-postadress för att bekräfta",
     "admin.lifecycle.person.empty": "Inget registrerat.",
     "admin.audit.column.reason": "Skäl",
     "admin.lifecycle.blocker.userHasAuditHistory": "Personen förekommer i revisionsloggen",
     "admin.lifecycle.blocker.unknown": "Okänt hinder",
     "admin.danger.error.reasonRequired": "Ett skäl krävs.",
     "admin.lifecycle.person.field.active": "Kontot är aktivt",
-    "admin.lifecycle.employer.dangerDescription": "Åtgärder som påverkar hela kundkontot. Arkivering bevarar all historik. Radering gör det inte.",
+    "admin.lifecycle.employer.dangerDescription":
+      "Åtgärder som påverkar hela kundkontot. Arkivering bevarar all historik. Radering gör det inte.",
     "admin.data.empty": "Inget att visa.",
     "admin.lifecycle.blocker.userHasPassportEvidence": "Personen har Security Passport-underlag",
     "admin.lifecycle.blocker.userHasEmployerMembership": "Personen är medlem i en organisation",
     "admin.danger.reasonPlaceholder": "Varför görs det här?",
-    "admin.lifecycle.job.dangerDescription": "Annonser stängs eller arkiveras. Radering finns bara för utkast som aldrig publicerats.",
+    "admin.lifecycle.job.dangerDescription":
+      "Annonser stängs eller arkiveras. Radering finns bara för utkast som aldrig publicerats.",
     "admin.lifecycle.person.field.subject": "Pseudonymt subjekt",
     "admin.lifecycle.blocker.employerHasWorkforce": "Organisationen har medarbetare",
     "admin.lifecycle.person.delete.label": "Radera kontot permanent",
     "admin.lifecycle.person.action.success": "Åtgärden genomfördes.",
     "admin.lifecycle.blocker.employerHasPublishedJobs": "Organisationen har publicerade annonser",
     "admin.employers.action.confirmRestore.title": "Återöppna arbetsgivaren?",
-    "admin.lifecycle.blocker.employerHasAuditHistory": "Organisationen har moderations- eller revisionshistorik",
+    "admin.lifecycle.blocker.employerHasAuditHistory":
+      "Organisationen har moderations- eller revisionshistorik",
     "admin.audit.column.subject": "Objekt",
     "admin.lifecycle.blocker.employerHasApplications": "Organisationen har ansökningar",
     "admin.audit.unknownActor": "Okänd",
     "admin.lifecycle.person.field.lastSignIn": "Senaste inloggning",
     "admin.lifecycle.person.counts.attempts": "Försök",
     "admin.danger.removedHeading": "Det här tas bort:",
-    "admin.lifecycle.person.disable.consequence": "Personen kan inte logga in igen. Ingen data ändras eller tas bort. En redan utfärdad session gäller tills den går ut.",
+    "admin.lifecycle.person.disable.consequence":
+      "Personen kan inte logga in igen. Ingen data ändras eller tas bort. En redan utfärdad session gäller tills den går ut.",
     "admin.lifecycle.error.activeMembership": "Ta bort personen från organisationen först.",
     "admin.lifecycle.person.field.disabled": "Kontot är avstängt",
     "admin.lifecycle.person.section.memberships": "Medlemskap",
@@ -3525,12 +3538,15 @@ export const dictionaries = {
     "admin.lifecycle.blocker.employerHasAssessmentHistory": "Organisationen har bedömningshistorik",
     "admin.lifecycle.person.counts.claims": "Intyg",
     "admin.employers.action.archive": "Arkivera",
-    "admin.lifecycle.person.evidenceNote": "Endast antal visas. Innehållet i någons bedömningssvar eller intyg är inte administratörsdata.",
+    "admin.lifecycle.person.evidenceNote":
+      "Endast antal visas. Innehållet i någons bedömningssvar eller intyg är inte administratörsdata.",
     "admin.lifecycle.person.disable.label": "Stäng av kontot",
-    "admin.lifecycle.blocker.employerHasAssessmentContent": "Organisationen äger bedömningsinnehåll",
+    "admin.lifecycle.blocker.employerHasAssessmentContent":
+      "Organisationen äger bedömningsinnehåll",
     "admin.danger.reasonHelp": "Skälet sparas tillsammans med ditt namn och tidpunkten.",
     "admin.lifecycle.person.counts.evidence": "Underlag",
-    "admin.lifecycle.employer.delete.blockedSuperadmin": "Endast en superadmin kan radera en organisation.",
+    "admin.lifecycle.employer.delete.blockedSuperadmin":
+      "Endast en superadmin kan radera en organisation.",
     "admin.lifecycle.employer.delete.label": "Radera arbetsgivaren permanent",
     "admin.data.finding.employeeNotBound": "Medarbetare med konto som aldrig kopplats",
     "admin.lifecycle.person.anonymise.label": "Anonymisera personuppgifter",
@@ -3542,36 +3558,49 @@ export const dictionaries = {
     "admin.lifecycle.error.lastSuperadmin": "Den sista aktiva superadmin kan inte stängas av.",
     "admin.audit.column.actor": "Administratör",
     "admin.lifecycle.person.dangerTitle": "Kontohantering",
-    "admin.lifecycle.person.anonymise.consequence": "Personuppgifter tas bort eller pseudonymiseras där det är tillåtet. Historik som måste bevaras finns kvar. Den här åtgärden kan inte ångras.",
-    "admin.lifecycle.job.delete.consequence": "Endast ett utkast som aldrig publicerats och saknar ansökningar, tilldelningar och inbjudningar kan raderas. Publicerade annonser arkiveras i stället.",
+    "admin.lifecycle.person.anonymise.consequence":
+      "Personuppgifter tas bort eller pseudonymiseras där det är tillåtet. Historik som måste bevaras finns kvar. Den här åtgärden kan inte ångras.",
+    "admin.lifecycle.job.delete.consequence":
+      "Endast ett utkast som aldrig publicerats och saknar ansökningar, tilldelningar och inbjudningar kan raderas. Publicerade annonser arkiveras i stället.",
     "admin.lifecycle.person.counts.assignments": "Tilldelningar",
-    "admin.lifecycle.employer.delete.confirmPhraseLabel": "Skriv organisationens namn för att bekräfta",
-    "admin.data.identityIntro": "Endast för granskning. Ingen automatisk sammanslagning görs — identiteter slås aldrig ihop maskinellt på den här plattformen.",
+    "admin.lifecycle.employer.delete.confirmPhraseLabel":
+      "Skriv organisationens namn för att bekräfta",
+    "admin.data.identityIntro":
+      "Endast för granskning. Ingen automatisk sammanslagning görs — identiteter slås aldrig ihop maskinellt på den här plattformen.",
     "admin.nav.data": "Datahantering",
     "admin.data.section.employers": "Organisationer utan historik",
     "admin.danger.irreversible": "Den här åtgärden kan inte ångras.",
-    "admin.data.noBulk": "Det finns ingen massradering. Varje post raderas var för sig, via sin egen sida, med samma kontroller som alla andra raderingar.",
-    "admin.lifecycle.error.employerNotOperational": "Organisationen är arkiverad eller avstängd och kan inte få nya poster.",
+    "admin.data.noBulk":
+      "Det finns ingen massradering. Varje post raderas var för sig, via sin egen sida, med samma kontroller som alla andra raderingar.",
+    "admin.lifecycle.error.employerNotOperational":
+      "Organisationen är arkiverad eller avstängd och kan inte få nya poster.",
     "admin.lifecycle.error.notFound": "Posten hittades inte.",
     "admin.lifecycle.person.counts.activeDisclosures": "Aktiva delningar",
     "admin.danger.confirmPhraseLabel": "Skriv exakt följande för att bekräfta",
     "admin.lifecycle.error.superadminRequired": "Åtgärden kräver superadmin.",
-    "admin.lifecycle.blocker.employerHasPassportRelationships": "Organisationen förekommer i någons Security Passport",
-    "admin.audit.intro": "Administrativa åtgärder från plattformens revisionslogg och arbetsgivarmoderering, sammanslagna. Endast åtgärd, part, objekt och skäl visas — aldrig innehållet i någons uppgifter.",
+    "admin.lifecycle.blocker.employerHasPassportRelationships":
+      "Organisationen förekommer i någons Security Passport",
+    "admin.audit.intro":
+      "Administrativa åtgärder från plattformens revisionslogg och arbetsgivarmoderering, sammanslagna. Endast åtgärd, part, objekt och skäl visas — aldrig innehållet i någons uppgifter.",
     "admin.danger.cancel": "Avbryt",
-    "admin.data.intro": "Poster som databasen räknar fram som helt utan operativ historik. Det finns ingen testflagga att sätta, och därför ingen att sätta fel: en post listas här bara om den saknar ansökningar, anställningar, bedömningsunderlag, Passport-kopplingar och revisionshistorik.",
-    "admin.data.finding.employeeSubjectMismatch": "Medarbetare kopplad till ett annat subjekt än kontots",
-    "admin.lifecycle.person.delete.consequence": "Den här åtgärden kan inte ångras. Endast ett konto helt utan historik kan raderas.",
+    "admin.data.intro":
+      "Poster som databasen räknar fram som helt utan operativ historik. Det finns ingen testflagga att sätta, och därför ingen att sätta fel: en post listas här bara om den saknar ansökningar, anställningar, bedömningsunderlag, Passport-kopplingar och revisionshistorik.",
+    "admin.data.finding.employeeSubjectMismatch":
+      "Medarbetare kopplad till ett annat subjekt än kontots",
+    "admin.lifecycle.person.delete.consequence":
+      "Den här åtgärden kan inte ångras. Endast ett konto helt utan historik kan raderas.",
     "admin.data.finding.unclaimedSubject": "Bedömningshistorik utan kopplat konto",
     "admin.lifecycle.person.passport.none": "Ingen Passport-data.",
-    "admin.lifecycle.employer.delete.consequence": "Den här åtgärden kan inte ångras. Endast en organisation utan ansökningar, medarbetare, bedömningshistorik, Passport-kopplingar eller moderationshistorik kan raderas.",
+    "admin.lifecycle.employer.delete.consequence":
+      "Den här åtgärden kan inte ångras. Endast en organisation utan ansökningar, medarbetare, bedömningshistorik, Passport-kopplingar eller moderationshistorik kan raderas.",
     "admin.data.heading": "Datahantering",
     "admin.lifecycle.error.selfAction": "Du kan inte utföra åtgärden på ditt eget konto.",
     "admin.lifecycle.error.confirmMismatch": "Bekräftelsetexten stämmer inte.",
     "admin.lifecycle.job.delete.label": "Radera utkastet",
     "admin.lifecycle.person.counts.releasedReports": "Delade rapporter",
     "admin.danger.impactHeading": "Konsekvens",
-    "admin.lifecycle.blocker.userHasActedOnRecords": "Personen har skapat poster som andra poster bygger på",
+    "admin.lifecycle.blocker.userHasActedOnRecords":
+      "Personen har skapat poster som andra poster bygger på",
     "admin.danger.removedNothing": "Ingenting är kopplat till posten.",
     "admin.lifecycle.error.generic": "Åtgärden kunde inte genomföras.",
     "admin.danger.confirm": "Bekräfta",
@@ -7007,26 +7036,33 @@ export const dictionaries = {
 
     // ── Admin Control Center — lifecycle, danger zone, audit, data ──────────
     "admin.lifecycle.person.enable.label": "Re-enable this account",
-    "admin.lifecycle.person.delete.blockedSuperadmin": "Only a superadmin can delete or anonymise an account.",
+    "admin.lifecycle.person.delete.blockedSuperadmin":
+      "Only a superadmin can delete or anonymise an account.",
     "admin.danger.blockedHeading": "This is what prevents the action:",
-    "admin.lifecycle.employer.delete.blockedData": "This organisation has history that must be preserved. Archive it instead.",
+    "admin.lifecycle.employer.delete.blockedData":
+      "This organisation has history that must be preserved. Archive it instead.",
     "admin.audit.column.time": "Time",
     "admin.audit.column.action": "Action",
     "admin.data.open": "Open",
     "admin.lifecycle.person.section.applications": "Applications",
-    "admin.lifecycle.person.dangerDescription": "Actions that affect this person's account. History that must be preserved remains in place even after anonymisation.",
+    "admin.lifecycle.person.dangerDescription":
+      "Actions that affect this person's account. History that must be preserved remains in place even after anonymisation.",
     "admin.audit.filter.all": "All actions",
     "admin.nav.audit": "Audit log",
-    "admin.employers.action.confirmRestore.body": "The employer moves back to suspended. It has to be reactivated separately before it can be used again.",
+    "admin.employers.action.confirmRestore.body":
+      "The employer moves back to suspended. It has to be reactivated separately before it can be used again.",
     "admin.lifecycle.job.dangerTitle": "Deletion",
     "admin.lifecycle.error.reasonRequired": "A reason is required.",
     "admin.lifecycle.blocker.userHoldsPlatformRole": "The person holds a platform role",
     "admin.lifecycle.error.holdsRole": "Revoke the person's platform role first.",
-    "admin.lifecycle.person.delete.blockedData": "This account has history that must be preserved. Disable or anonymise it instead.",
-    "admin.lifecycle.error.notDeletable": "This record cannot be deleted because history must be preserved.",
+    "admin.lifecycle.person.delete.blockedData":
+      "This account has history that must be preserved. Disable or anonymise it instead.",
+    "admin.lifecycle.error.notDeletable":
+      "This record cannot be deleted because history must be preserved.",
     "admin.lifecycle.person.field.noSubject": "No subject linked",
     "admin.lifecycle.person.section.account": "Account",
-    "admin.employers.action.confirmArchive.body": "The employer can no longer use the platform. No new jobs, employees or assessments can be created. History is preserved and stays visible to administrators.",
+    "admin.employers.action.confirmArchive.body":
+      "The employer can no longer use the platform. No new jobs, employees or assessments can be created. History is preserved and stays visible to administrators.",
     "admin.data.section.users": "Accounts with no history",
     "admin.employers.action.restore": "Restore",
     "admin.lifecycle.person.section.employment": "Employment",
@@ -7039,7 +7075,8 @@ export const dictionaries = {
     "admin.lifecycle.job.delete.success": "The draft was deleted.",
     "admin.lifecycle.error.forbidden": "You do not have permission for this action.",
     "admin.danger.reasonLabel": "Reason (recorded in the audit log)",
-    "admin.lifecycle.person.anonymise.retained": "Retained: assessment evidence, Passport claims, employment records, applications and the audit log.",
+    "admin.lifecycle.person.anonymise.retained":
+      "Retained: assessment evidence, Passport claims, employment records, applications and the audit log.",
     "admin.audit.heading": "Audit log",
     "admin.lifecycle.blocker.userIsEmployee": "The person is linked to an employment record",
     "admin.data.finding.duplicateEmployee": "The same address appears twice in the organisation",
@@ -7050,26 +7087,32 @@ export const dictionaries = {
     "admin.lifecycle.blocker.unknown": "Unknown blocker",
     "admin.danger.error.reasonRequired": "A reason is required.",
     "admin.lifecycle.person.field.active": "This account is active",
-    "admin.lifecycle.employer.dangerDescription": "Actions that affect the whole customer account. Archiving preserves all history. Deletion does not.",
+    "admin.lifecycle.employer.dangerDescription":
+      "Actions that affect the whole customer account. Archiving preserves all history. Deletion does not.",
     "admin.data.empty": "Nothing to show.",
     "admin.lifecycle.blocker.userHasPassportEvidence": "The person has Security Passport evidence",
-    "admin.lifecycle.blocker.userHasEmployerMembership": "The person is a member of an organisation",
+    "admin.lifecycle.blocker.userHasEmployerMembership":
+      "The person is a member of an organisation",
     "admin.danger.reasonPlaceholder": "Why is this being done?",
-    "admin.lifecycle.job.dangerDescription": "Advertisements are closed or archived. Deletion exists only for drafts that were never published.",
+    "admin.lifecycle.job.dangerDescription":
+      "Advertisements are closed or archived. Deletion exists only for drafts that were never published.",
     "admin.lifecycle.person.field.subject": "Pseudonymous subject",
     "admin.lifecycle.blocker.employerHasWorkforce": "The organisation has employees",
     "admin.lifecycle.person.delete.label": "Delete this account permanently",
     "admin.lifecycle.person.action.success": "The action was completed.",
-    "admin.lifecycle.blocker.employerHasPublishedJobs": "The organisation has published advertisements",
+    "admin.lifecycle.blocker.employerHasPublishedJobs":
+      "The organisation has published advertisements",
     "admin.employers.action.confirmRestore.title": "Restore this employer?",
-    "admin.lifecycle.blocker.employerHasAuditHistory": "The organisation has moderation or audit history",
+    "admin.lifecycle.blocker.employerHasAuditHistory":
+      "The organisation has moderation or audit history",
     "admin.audit.column.subject": "Subject",
     "admin.lifecycle.blocker.employerHasApplications": "The organisation has applications",
     "admin.audit.unknownActor": "Unknown",
     "admin.lifecycle.person.field.lastSignIn": "Last sign-in",
     "admin.lifecycle.person.counts.attempts": "Attempts",
     "admin.danger.removedHeading": "This is what will be removed:",
-    "admin.lifecycle.person.disable.consequence": "The person cannot sign in again. No data is changed or removed. An already-issued session stays valid until it expires.",
+    "admin.lifecycle.person.disable.consequence":
+      "The person cannot sign in again. No data is changed or removed. An already-issued session stays valid until it expires.",
     "admin.lifecycle.error.activeMembership": "Remove the person from their organisation first.",
     "admin.lifecycle.person.field.disabled": "This account is disabled",
     "admin.lifecycle.person.section.memberships": "Memberships",
@@ -7077,15 +7120,19 @@ export const dictionaries = {
     "admin.lifecycle.person.section.passport": "Security Passport",
     "admin.danger.submitting": "Working…",
     "admin.lifecycle.person.counts.runs": "Runs",
-    "admin.lifecycle.blocker.employerHasAssessmentHistory": "The organisation has assessment history",
+    "admin.lifecycle.blocker.employerHasAssessmentHistory":
+      "The organisation has assessment history",
     "admin.lifecycle.person.counts.claims": "Claims",
     "admin.employers.action.archive": "Archive",
-    "admin.lifecycle.person.evidenceNote": "Counts only. The contents of someone's assessment answers or credentials are not administrator data.",
+    "admin.lifecycle.person.evidenceNote":
+      "Counts only. The contents of someone's assessment answers or credentials are not administrator data.",
     "admin.lifecycle.person.disable.label": "Disable this account",
-    "admin.lifecycle.blocker.employerHasAssessmentContent": "The organisation owns assessment content",
+    "admin.lifecycle.blocker.employerHasAssessmentContent":
+      "The organisation owns assessment content",
     "admin.danger.reasonHelp": "The reason is stored together with your name and the time.",
     "admin.lifecycle.person.counts.evidence": "Evidence",
-    "admin.lifecycle.employer.delete.blockedSuperadmin": "Only a superadmin can delete an organisation.",
+    "admin.lifecycle.employer.delete.blockedSuperadmin":
+      "Only a superadmin can delete an organisation.",
     "admin.lifecycle.employer.delete.label": "Delete this employer permanently",
     "admin.data.finding.employeeNotBound": "Employee with an account that was never linked",
     "admin.lifecycle.person.anonymise.label": "Anonymise personal data",
@@ -7097,36 +7144,48 @@ export const dictionaries = {
     "admin.lifecycle.error.lastSuperadmin": "The last active superadmin cannot be disabled.",
     "admin.audit.column.actor": "Administrator",
     "admin.lifecycle.person.dangerTitle": "Account management",
-    "admin.lifecycle.person.anonymise.consequence": "Personal data is removed or pseudonymised where that is permitted. History that must be preserved remains. This action cannot be undone.",
-    "admin.lifecycle.job.delete.consequence": "Only a draft that was never published and has no applications, assignments or invitations can be deleted. A published advertisement is archived instead.",
+    "admin.lifecycle.person.anonymise.consequence":
+      "Personal data is removed or pseudonymised where that is permitted. History that must be preserved remains. This action cannot be undone.",
+    "admin.lifecycle.job.delete.consequence":
+      "Only a draft that was never published and has no applications, assignments or invitations can be deleted. A published advertisement is archived instead.",
     "admin.lifecycle.person.counts.assignments": "Assignments",
     "admin.lifecycle.employer.delete.confirmPhraseLabel": "Type the organisation name to confirm",
-    "admin.data.identityIntro": "For review only. No automatic merging is performed — identities are never merged mechanically on this platform.",
+    "admin.data.identityIntro":
+      "For review only. No automatic merging is performed — identities are never merged mechanically on this platform.",
     "admin.nav.data": "Data management",
     "admin.data.section.employers": "Organisations with no history",
     "admin.danger.irreversible": "This action cannot be undone.",
-    "admin.data.noBulk": "There is no bulk delete. Each record is deleted individually, from its own page, with the same controls as every other deletion.",
-    "admin.lifecycle.error.employerNotOperational": "The organisation is archived or suspended and cannot receive new records.",
+    "admin.data.noBulk":
+      "There is no bulk delete. Each record is deleted individually, from its own page, with the same controls as every other deletion.",
+    "admin.lifecycle.error.employerNotOperational":
+      "The organisation is archived or suspended and cannot receive new records.",
     "admin.lifecycle.error.notFound": "The record was not found.",
     "admin.lifecycle.person.counts.activeDisclosures": "Active shares",
     "admin.danger.confirmPhraseLabel": "Type the following exactly to confirm",
     "admin.lifecycle.error.superadminRequired": "This action requires superadmin.",
-    "admin.lifecycle.blocker.employerHasPassportRelationships": "The organisation appears in someone's Security Passport",
-    "admin.audit.intro": "Administrative actions from the platform audit log and employer moderation, merged. Only the action, the actor, the subject and the reason are shown — never the contents of anyone's data.",
+    "admin.lifecycle.blocker.employerHasPassportRelationships":
+      "The organisation appears in someone's Security Passport",
+    "admin.audit.intro":
+      "Administrative actions from the platform audit log and employer moderation, merged. Only the action, the actor, the subject and the reason are shown — never the contents of anyone's data.",
     "admin.danger.cancel": "Cancel",
-    "admin.data.intro": "Records the database itself computes as having no operational history. There is no test flag to set, and therefore none to set wrongly: a record is listed here only if it has no applications, employment, assessment evidence, Passport relationships or audit history.",
-    "admin.data.finding.employeeSubjectMismatch": "Employee linked to a different subject than the account's",
-    "admin.lifecycle.person.delete.consequence": "This action cannot be undone. Only an account with no history at all can be deleted.",
+    "admin.data.intro":
+      "Records the database itself computes as having no operational history. There is no test flag to set, and therefore none to set wrongly: a record is listed here only if it has no applications, employment, assessment evidence, Passport relationships or audit history.",
+    "admin.data.finding.employeeSubjectMismatch":
+      "Employee linked to a different subject than the account's",
+    "admin.lifecycle.person.delete.consequence":
+      "This action cannot be undone. Only an account with no history at all can be deleted.",
     "admin.data.finding.unclaimedSubject": "Assessment history with no account attached",
     "admin.lifecycle.person.passport.none": "No Passport data.",
-    "admin.lifecycle.employer.delete.consequence": "This action cannot be undone. Only an organisation with no applications, employees, assessment history, Passport relationships or moderation history can be deleted.",
+    "admin.lifecycle.employer.delete.consequence":
+      "This action cannot be undone. Only an organisation with no applications, employees, assessment history, Passport relationships or moderation history can be deleted.",
     "admin.data.heading": "Data management",
     "admin.lifecycle.error.selfAction": "You cannot perform this action on your own account.",
     "admin.lifecycle.error.confirmMismatch": "The confirmation text does not match.",
     "admin.lifecycle.job.delete.label": "Delete this draft",
     "admin.lifecycle.person.counts.releasedReports": "Released reports",
     "admin.danger.impactHeading": "Impact",
-    "admin.lifecycle.blocker.userHasActedOnRecords": "The person created records other records depend on",
+    "admin.lifecycle.blocker.userHasActedOnRecords":
+      "The person created records other records depend on",
     "admin.danger.removedNothing": "Nothing is attached to this record.",
     "admin.lifecycle.error.generic": "The action could not be completed.",
     "admin.danger.confirm": "Confirm",
