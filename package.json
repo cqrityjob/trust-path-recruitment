@@ -23,6 +23,7 @@
     "passport-fixture:check": "bun run scripts/passport-fixture-check.ts", 
     "career-discovery-v31-professions:check": "bun run scripts/career-discovery-v31-professions-check.ts", 
     "career-discovery-v31-golden-personas:check": "bun run scripts/career-discovery-v31-golden-personas.ts", 
+    "career-discovery-recommendation:check": "bun run scripts/career-discovery-recommendation-check.ts",
     "lint": "eslint .", 
     "academy-parity:check": "bun run scripts/academy-parity-check.ts", 
     "career-discovery-report:check": "bun run scripts/career-discovery-report-render-check.ts", 

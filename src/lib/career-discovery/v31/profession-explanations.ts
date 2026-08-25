@@ -17,7 +17,11 @@
 // Career Areas.
 
 import { DIMENSIONS, type DimensionId } from "./dimensions";
-import type { ProfessionMatch, ProfessionStage } from "./professions";
+import type {
+  ProfessionMatch,
+  ProfessionStage,
+  RecommendationConfidence,
+} from "./professions";
 import type { Locale } from "./version";
 
 const STAGE_SENTENCE: Readonly<Record<ProfessionStage, Record<Locale, string>>> = {
@@ -97,6 +101,23 @@ export const STAGE_LABEL: Readonly<Record<ProfessionStage, Record<Locale, string
 export const FIT_LABEL: Readonly<Record<"strong" | "moderate", Record<Locale, string>>> = {
   strong: { sv: "Stark matchning", en: "Strong match" },
   moderate: { sv: "Värd att utforska", en: "Worth exploring" },
+};
+
+/** The word attached to one entry of the always-present recommendation.
+ *
+ *  "strong" / "moderate" are FIT_LABEL's own words, because such an entry
+ *  cleared the same gates a tier card clears and has earned the same claim.
+ *  "indicative" deliberately does NOT reuse them: that entry is the closest
+ *  profession to these answers out of the calibrated catalogue, which is a
+ *  statement about ORDER and not about fit. Saying "worth exploring" there
+ *  would quietly promote an ordering into a match. See
+ *  professions.ts's RankedProfession. */
+export const RECOMMENDATION_CONFIDENCE_LABEL: Readonly<
+  Record<RecommendationConfidence, Record<Locale, string>>
+> = {
+  strong: FIT_LABEL.strong,
+  moderate: FIT_LABEL.moderate,
+  indicative: { sv: "Närmast dina svar", en: "Closest to your answers" },
 };
 
 export const TIER_HEADING: Readonly<

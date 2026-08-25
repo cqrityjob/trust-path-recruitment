@@ -519,8 +519,60 @@ export interface ProfessionMatch {
   readonly contextCorroborated: boolean;
 }
 
+/** How much the report is entitled to claim about one ranked profession.
+ *
+ *  "strong" / "moderate" mirror ProfessionMatch.fitTier and mean exactly
+ *  what they have always meant: this profession cleared every recommendation
+ *  gate. "indicative" is the new, deliberately weaker word — it means the
+ *  profession is the CLOSEST to the candidate's answers out of the whole
+ *  calibrated catalogue, and nothing more. It is an orientation signal, not
+ *  a fit claim, and the copy that renders it says so.
+ *
+ *  The distinction is the whole reason a recommendation can always exist
+ *  without the product overclaiming: the ordering is real and deterministic
+ *  in both cases; only the strength of the sentence around it changes. */
+export type RecommendationConfidence = "strong" | "moderate" | "indicative";
+
+/** One entry of the always-present top-3 occupational recommendation.
+ *
+ *  ── WHY THIS EXISTS ──────────────────────────────────────────────────
+ *
+ *  Every threshold in this file is an EXCLUSION: a profession the candidate
+ *  has no differentiated affinity with is dropped rather than shown weakly.
+ *  Applied to a genuinely balanced profile — several comparable strengths,
+ *  no dominant one, which is a real and common result and the one the report
+ *  calls "Bred profil" — every profession in the catalogue can fail on the
+ *  per-dimension miss floor or the neutral-baseline z, and the candidate
+ *  reaches the end of twenty-eight questions with no occupation named at
+ *  all. Career Discovery is an orientation product; producing no orientation
+ *  is not an acceptable outcome of completing it.
+ *
+ *  So ordering and eligibility are separated. The gated tiers above are
+ *  untouched and still decide what may be presented as a FIT. This ranking
+ *  answers the different, always-answerable question "of the calibrated
+ *  professions, which are closest to these answers, in what order" — same
+ *  scoring, same comparator, same determinism, weaker words. */
+export interface RankedProfession {
+  /** 1, 2, 3 — the presentation order, stated rather than implied by array
+   *  position so a consumer cannot re-sort it into a different claim. */
+  readonly rank: number;
+  readonly match: ProfessionMatch;
+  readonly confidence: RecommendationConfidence;
+}
+
+/** How many professions the recommendation names. Mirrors
+ *  STRONGEST_DIRECTIONS_MAX deliberately: the report already treats three as
+ *  the number of directions a person can hold in mind at once. */
+const RANKED_RECOMMENDATION_MAX = 3;
+
 export interface ProfessionMatchResult {
   readonly available: boolean;
+  /** The always-present top-3 occupational recommendation, rank 1 first.
+   *  Empty ONLY when the catalogue itself is empty or nothing in it could be
+   *  scored at all — never merely because nothing cleared the fit gates.
+   *  Entries may or may not also appear in `matches`; `confidence` says
+   *  which. See RankedProfession. */
+  readonly ranked: readonly RankedProfession[];
   /** Every profession that cleared PROFESSION_MIN_FIT and PROFESSION_MIN_COVERAGE,
    *  in no particular cross-tier order — group by `stage` to render. */
   readonly matches: readonly ProfessionMatch[];
@@ -721,6 +773,21 @@ function scoreProfession(
   dims: DimensionResult,
   baseline: StageRank,
   discoveryTags: readonly string[],
+  /** Whether the recommendation gates apply.
+   *
+   *  `true` (the default, and the only mode that feeds the tier buckets)
+   *  keeps every threshold below exactly as it was: a profession the
+   *  candidate has no real, differentiated affinity with is excluded
+   *  outright, and the report never claims a fit it cannot support.
+   *
+   *  `false` scores the same profession by the same formula and skips only
+   *  the EXCLUSION returns, so an affinity ORDER exists across the whole
+   *  catalogue even when nothing clears. That ordering is what the always-
+   *  present top-3 recommendation is built from, and it is presented with
+   *  its own, weaker confidence word — see RankedProfession. Structural
+   *  impossibilities (no weighted bands, nothing observed at all) still
+   *  return null in both modes: there is no honest ordering to give. */
+  gate = true,
 ): ScoredMatch | null {
   const weighted = entry.bands.filter(
     (b) => b.weight > 0 && MATCHABLE_DIMENSION_IDS.includes(b.dimensionId),
@@ -736,7 +803,10 @@ function scoreProfession(
 
   const observedWeight = central.observedWeight + supporting.observedWeight;
   const coverage = observedWeight / totalWeight;
-  if (coverage < PROFESSION_MIN_COVERAGE) return null;
+  // Nothing observed at all is a structural impossibility, not a threshold:
+  // there is no ordering to give, gated or not.
+  if (observedWeight <= 0) return null;
+  if (gate && coverage < PROFESSION_MIN_COVERAGE) return null;
 
   let centralZ: number | null = null;
   // A profession's central (defining) dimensions must themselves be both
@@ -745,14 +815,16 @@ function scoreProfession(
   // the file header for why the discriminator is centralZ, not fitScore.
   if (central.totalWeight > 0) {
     const centralCoverage = central.observedWeight / central.totalWeight;
-    if (centralCoverage < PROFESSION_MIN_CENTRAL_COVERAGE) return null;
-    if ((central.fitScore ?? 0) < PROFESSION_MIN_CENTRAL_FIT) return null;
+    if (gate && centralCoverage < PROFESSION_MIN_CENTRAL_COVERAGE) return null;
+    if (gate && (central.fitScore ?? 0) < PROFESSION_MIN_CENTRAL_FIT) return null;
     // Hard per-dimension floor — see CENTRAL_DIMENSION_MAX_MISS. Catches the
     // case the weighted average above cannot: one badly missed central
     // dimension diluted by others that were comfortably met.
-    if (central.worstMiss !== null && central.worstMiss > CENTRAL_DIMENSION_MAX_MISS) return null;
+    if (gate && central.worstMiss !== null && central.worstMiss > CENTRAL_DIMENSION_MAX_MISS) {
+      return null;
+    }
     centralZ = neutralBaselineCentralZ(centralBands, dims);
-    if (centralZ !== null && centralZ <= PROFESSION_MIN_CENTRAL_Z) return null;
+    if (gate && centralZ !== null && centralZ <= PROFESSION_MIN_CENTRAL_Z) return null;
   }
 
   // Combine central-dominant. A profession with no central dimensions at
@@ -771,7 +843,7 @@ function scoreProfession(
   // a profession with no central bands at all (falls back to supporting
   // fit alone, centralZ stays null) still cannot clear on trivial supporting
   // evidence alone.
-  if (fitScore < PROFESSION_MIN_FIT) return null;
+  if (gate && fitScore < PROFESSION_MIN_FIT) return null;
 
   const aligned = [...central.aligned, ...supporting.aligned];
   const distance = stageDistance(entry.careerStage, baseline);
@@ -964,6 +1036,7 @@ export function matchProfessions(
   if (catalog.length === 0) {
     return {
       available: false,
+      ranked: [],
       matches: [],
       strongestDirections: [],
       alsoWorthExploring: [],
@@ -982,6 +1055,23 @@ export function matchProfessions(
 
   const scored = catalog
     .map((entry) => scoreProfession(entry, dims, baseline, tags))
+    .filter((m): m is ScoredMatch => m !== null)
+    .map((m) => withPriorityScore(m, reachable))
+    .sort(
+      (a, b) =>
+        sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
+    );
+
+  // ── THE ALWAYS-PRESENT RANKING ──────────────────────────────────────
+  //
+  // The same catalogue, the same scoring, the same comparator — with the
+  // exclusion gates off, so an ORDER exists whether or not anything clears.
+  // Computed separately from `scored` rather than by loosening it: the tier
+  // buckets below must keep receiving exactly the gated set they always
+  // have, and the two lists must be visibly, structurally different things.
+  const gatedIds = new Set(scored.map((m) => m.match.professionId));
+  const rankedAll = catalog
+    .map((entry) => scoreProfession(entry, dims, baseline, tags, false))
     .filter((m): m is ScoredMatch => m !== null)
     .map((m) => withPriorityScore(m, reachable))
     .sort(
@@ -1025,12 +1115,33 @@ export function matchProfessions(
   const strongestDirections = exploreNow.slice(0, STRONGEST_DIRECTIONS_MAX);
   const alsoWorthExploring = [...exploreNow.slice(STRONGEST_DIRECTIONS_MAX), ...possibleNext];
 
+  // The recommendation. The candidate's OWN current profession is excluded
+  // for the same reason item 8 excludes it from every discovery bucket: it
+  // is where they already are, and naming it as the thing to move towards
+  // is not a recommendation. It still reaches the report through
+  // currentProfessionMatch / ReportSnapshot.currentProfession.
+  //
+  // `confidence` is read off the gated pass, not recomputed: a profession
+  // that cleared every gate keeps the exact fitTier it earned there, and one
+  // that did not is "indicative" no matter how high it ordered.
+  const ranked: readonly RankedProfession[] = rankedAll
+    .filter((m) => m.match.cigProfessionSlug !== (currentProfessionCigSlug ?? null))
+    .slice(0, RANKED_RECOMMENDATION_MAX)
+    .map((m, i) => ({
+      rank: i + 1,
+      match: m.match,
+      confidence: gatedIds.has(m.match.professionId)
+        ? (m.match.fitTier satisfies "strong" | "moderate")
+        : ("indicative" as const),
+    }));
+
   return {
     // A candidate whose ONLY clearing profession is their own current role
     // still gets a real report (§8: "YOU ARE HERE"), not the "pending"
     // placeholder -- `matches` being empty in that case just means there is
     // nothing new to recommend today, which the renderer shows honestly.
     available: matches.length > 0 || currentProfessionMatch !== null,
+    ranked,
     matches,
     strongestDirections,
     alsoWorthExploring,

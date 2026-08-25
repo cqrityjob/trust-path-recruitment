@@ -26,6 +26,7 @@ import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardC
 import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
 import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
 import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
+import { RecommendedProfessions } from "./RecommendedProfessions";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
 import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
@@ -227,14 +228,28 @@ export function V31ReportView({
       {/* 2 · YOUR CAREER DIRECTIONS — moved up from the report's tail
           (§26 Section 2): the useful career intelligence, immediately
           after the short DNA hero, not after three sections of prose. */}
-      {snapshot.professions?.available === false && (
-        <p
-          role="note"
-          className="mt-10 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
-        >
-          {t("careerDiscovery.report.v31.professionsPending")}
-        </p>
-      )}
+      {/* 2a · THE RECOMMENDATION — always present for a valid completion.
+          See RecommendedProfessions for why this is separate from the gated
+          tiers below, and why an empty result was not an acceptable end to
+          twenty-eight questions. */}
+      <RecommendedProfessions
+        ranked={snapshot.professions?.ranked ?? []}
+        locale={snapshot.locale === "en" ? "en" : "sv"}
+      />
+
+      {/* The "pending" note now means what it says: there is no approved
+          profession catalogue at all. It used to appear whenever nothing
+          cleared the fit gates, which told a candidate that matching was
+          "not included" in a report where matching had run. */}
+      {snapshot.professions?.available === false &&
+        (snapshot.professions.ranked ?? []).length === 0 && (
+          <p
+            role="note"
+            className="mt-10 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
+          >
+            {t("careerDiscovery.report.v31.professionsPending")}
+          </p>
+        )}
       {snapshot.professions?.available === true && (
         <>
           <h2 className="mt-14 text-xl font-semibold tracking-tight text-foreground md:text-2xl">

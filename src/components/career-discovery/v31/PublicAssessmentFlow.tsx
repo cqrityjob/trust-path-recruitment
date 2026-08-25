@@ -275,8 +275,35 @@ export function PublicAssessmentFlow() {
 
   const answerFor = (id: string) => buffer?.answers.find((a) => a.itemId === id);
 
+  /** Record an answer and move on.
+   *
+   *  ── REVISITS MOVE ONE STEP, FIRST PASSES JUMP TO THE GAP ─────────────
+   *
+   *  On a first pass the right target is "the first question still without
+   *  an answer", which is the next one and stays the next one all the way
+   *  down the run. On a REVISIT it is not: somebody who stepped back four
+   *  questions to reconsider one of them wants the fourth-from-last, not to
+   *  be catapulted to wherever the run had got to — and if the buffer is
+   *  already complete, the old rule sent them straight to the result page
+   *  the instant they touched an answer, ending the review they had just
+   *  started. `wasAnswered` tells the two apart. */
   const advance = useCallback(
-    (next: PublicBuffer) => {
+    (next: PublicBuffer, wasAnswered: boolean) => {
+      // Recomputed from `next`, not from `itemIds`: answering C1 decides the
+      // path, which is what makes the last four questions exist at all.
+      const ids = sessionItemIds(contextStatusOf(next));
+      const answered = new Set(next.answers.map((a) => a.itemId));
+      const last = ids.length - 1;
+
+      // A revisit that is not the final question steps forward by one and
+      // stays in the questions phase. Completion is decided below only when
+      // there is genuinely nowhere further to go.
+      if (wasAnswered && index < last) {
+        setBuffer(next);
+        setIndex(index + 1);
+        return;
+      }
+
       if (isComplete(next)) {
         // Frozen exactly once here — the moment completion actually happens
         // — so the result view and, later, the saved report agree on when
@@ -287,15 +314,38 @@ export function PublicAssessmentFlow() {
         return;
       }
       setBuffer(next);
-      // Recomputed from `next`, not from `itemIds`: answering C1 decides the
-      // path, which is what makes the last four questions exist at all.
-      const ids = sessionItemIds(contextStatusOf(next));
-      const answered = new Set(next.answers.map((a) => a.itemId));
       const nextIndex = ids.findIndex((id) => !answered.has(id));
-      setIndex(nextIndex === -1 ? Math.min(index + 1, ids.length - 1) : nextIndex);
+      setIndex(nextIndex === -1 ? Math.min(index + 1, last) : nextIndex);
     },
     [index, track, careerContext, phaseAfterQuestions],
   );
+
+  /** Move on WITHOUT touching the answer.
+   *
+   *  ── THE DEFECT THIS CLOSES ───────────────────────────────────────────
+   *
+   *  There was no forward control on an answered question at all: the only
+   *  way onward was to select an option, and re-selecting the option that
+   *  is already selected fires no change event on a radio group. So a
+   *  candidate who stepped back to check an answer and was happy with it
+   *  had no way forward — Back worked, Forward did not exist, and the run
+   *  was stuck until they changed an answer they did not want to change.
+   *
+   *  Nothing here writes to the buffer. An unchanged answer stays exactly
+   *  the answer it was, with its original ordering and its original
+   *  routing. */
+  const continueForward = useCallback(() => {
+    if (!buffer) return;
+    const ids = sessionItemIds(contextStatusOf(buffer));
+    if (index < ids.length - 1) {
+      setIndex(index + 1);
+      return;
+    }
+    if (isComplete(buffer)) {
+      setBuffer(markComplete(buffer, new Date().toISOString()));
+      setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext));
+    }
+  }, [buffer, index, careerContext, phaseAfterQuestions]);
 
   async function onSaveAndSignIn() {
     if (!buffer) return;
@@ -585,6 +635,7 @@ export function PublicAssessmentFlow() {
                             format: "personal",
                             value: o.value,
                           }),
+                          current !== undefined,
                         )
                       }
                     >
@@ -598,7 +649,10 @@ export function PublicAssessmentFlow() {
                     name={itemId}
                     value={current?.format === "scale" ? current.value : undefined}
                     onSelect={(v) =>
-                      advance(recordAnswer(buffer, { itemId, format: "scale", value: v }))
+                      advance(
+                        recordAnswer(buffer, { itemId, format: "scale", value: v }),
+                        current !== undefined,
+                      )
                     }
                     instruction={t("cd.public.scaleInstruction")}
                     lowLabel={t("cd.public.scaleLow")}
@@ -620,6 +674,7 @@ export function PublicAssessmentFlow() {
                             format: "single_choice",
                             optionId: o.id,
                           }),
+                          current !== undefined,
                         )
                       }
                     >
@@ -631,17 +686,27 @@ export function PublicAssessmentFlow() {
             </fieldset>
           </div>
 
+          {/* Forward is offered whenever this question already HAS an answer
+              — not only once the whole run is complete, which is what left a
+              candidate stranded on a question they had stepped back to and
+              were happy with (see continueForward). On the final question of
+              a complete run it still says "see your result"; anywhere else it
+              says "next", because that is where it goes. */}
           <AssessmentNavigation
             onBack={() => setIndex((i) => Math.max(0, i - 1))}
             backDisabled={index === 0}
             forward={
-              isComplete(buffer)
-                ? {
-                    label: t("cd.public.toResult"),
-                    onClick: () =>
-                      setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext)),
-                  }
-                : undefined
+              index === itemIds.length - 1
+                ? isComplete(buffer)
+                  ? {
+                      label: t("cd.public.toResult"),
+                      onClick: () =>
+                        setPhase(phaseAfterQuestions(contextStatusOf(buffer), careerContext)),
+                    }
+                  : undefined
+                : current !== undefined
+                  ? { label: t("cd.public.next"), onClick: continueForward }
+                  : undefined
             }
           />
         </AssessmentCard>

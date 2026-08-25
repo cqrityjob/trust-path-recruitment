@@ -638,8 +638,23 @@ export const dictionaries = {
     "careerDiscovery.report.v31.areasThinEvidence":
       "Underlaget för områdesrankningen är tunt. Läs den som en riktning, inte ett facit.",
     "careerDiscovery.report.v31.alignedWith": "Bygger på",
+    // Shown ONLY when the approved profession catalogue is genuinely empty.
+    // It used to be shown whenever nothing cleared the fit gates, which said
+    // "matching is not included" about a report where matching had run and
+    // excluded everything -- and left the candidate with no direction at all.
     "careerDiscovery.report.v31.professionsPending":
       "Yrkesmatchning ingår inte i den här versionen av rapporten. Den läggs till när yrkesprofilerna är kalibrerade och granskade.",
+    // ── The always-present occupational recommendation ──────────────────
+    "careerDiscovery.report.v31.rec.title": "Din rekommenderade yrkesinriktning",
+    "careerDiscovery.report.v31.rec.lede":
+      "Utifrån dina svar ligger de här yrkena närmast, i ordning. Din Security Career DNA nedan är underlaget som ger den här ordningen.",
+    "careerDiscovery.report.v31.rec.rank1": "Starkaste rekommendation",
+    "careerDiscovery.report.v31.rec.traitsLabel": "Det här i din Career DNA bidrar mest",
+    "careerDiscovery.report.v31.rec.alternativesTitle": "Näst starkaste alternativ",
+    "careerDiscovery.report.v31.rec.indicativeNote":
+      "Dina svar pekar inte ut ett tydligt starkast yrke. Ordningen nedan visar vilka yrken som ligger närmast dina svar — läs den som en riktning att utforska, inte som ett besked om att du passar eller inte passar.",
+    "careerDiscovery.report.v31.rec.boundary":
+      "Career Discovery är ett vägledningsunderlag om hur du arbetar. Det mäter inte din kompetens, är inget prov och används inte för att anställa eller välja bort någon.",
     "careerDiscovery.report.v31.youAreHereEyebrow": "DU ÄR HÄR",
     "careerDiscovery.report.v31.youAreHereBody":
       "Det här är din nuvarande roll, så som du själv angav den. Riktningarna nedan utgår från var du är idag.",
@@ -803,6 +818,9 @@ export const dictionaries = {
     "cd.public.scaleLow": "Stämmer inte alls på mig",
     "cd.public.scaleHigh": "Stämmer helt på mig",
     "cd.public.back": "Tillbaka",
+    // Offered on any question that already has an answer, so stepping back to
+    // review one does not require changing it to get out again.
+    "cd.public.next": "Nästa",
     "cd.public.toResult": "Till resultatet",
     "cd.public.doneTitle": "Alla frågor är besvarade",
     "cd.public.doneBody":
@@ -4328,6 +4346,16 @@ export const dictionaries = {
     "careerDiscovery.report.v31.alignedWith": "Based on",
     "careerDiscovery.report.v31.professionsPending":
       "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
+    "careerDiscovery.report.v31.rec.title": "Your recommended career direction",
+    "careerDiscovery.report.v31.rec.lede":
+      "Based on your answers these professions are the closest, in order. Your Security Career DNA below is the evidence that produced that order.",
+    "careerDiscovery.report.v31.rec.rank1": "Strongest recommendation",
+    "careerDiscovery.report.v31.rec.traitsLabel": "What in your Career DNA contributes most",
+    "careerDiscovery.report.v31.rec.alternativesTitle": "Next strongest alternatives",
+    "careerDiscovery.report.v31.rec.indicativeNote":
+      "Your answers do not single out one clearly strongest profession. The order below shows which professions sit closest to your answers — read it as a direction to explore, not as a verdict on whether you are suited to them.",
+    "careerDiscovery.report.v31.rec.boundary":
+      "Career Discovery is orientation evidence about how you work. It does not measure your competence, it is not an exam, and it is not used to hire or reject anybody.",
     "careerDiscovery.report.v31.youAreHereEyebrow": "YOU ARE HERE",
     "careerDiscovery.report.v31.youAreHereBody":
       "This is your current role, as you reported it. The directions below start from where you are today.",
@@ -4492,6 +4520,7 @@ export const dictionaries = {
     "cd.public.scaleLow": "Does not describe me at all",
     "cd.public.scaleHigh": "Describes me completely",
     "cd.public.back": "Back",
+    "cd.public.next": "Next",
     "cd.public.toResult": "To the result",
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":

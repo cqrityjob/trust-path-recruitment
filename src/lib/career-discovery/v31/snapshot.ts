@@ -26,6 +26,7 @@ import {
   matchProfessions,
   type ProfessionCatalogEntry,
   type ProfessionMatch,
+  type RankedProfession,
 } from "./professions";
 import { scoreDimensions, type Answer, type Confidence, type DimensionResult } from "./scoring";
 import {
@@ -143,6 +144,12 @@ export interface ProfessionOutputUnavailable {
   readonly available: false;
   readonly reason: "no_approved_professions";
   readonly matches: readonly never[];
+  /** The always-present top-3 recommendation. Present on the UNAVAILABLE
+   *  variant too, and that is the point: "nothing cleared the fit gates" and
+   *  "we cannot name a direction" are different facts, and only the first of
+   *  them was ever true. Optional so a snapshot frozen before the
+   *  recommendation existed still satisfies this type unchanged (§36). */
+  readonly ranked?: readonly RankedProfession[];
 }
 
 export interface ProfessionOutputAvailable {
@@ -163,6 +170,9 @@ export interface ProfessionOutputAvailable {
    *  full contract. Optional for the same frozen-snapshot backward-
    *  compatibility reason as careerPivots above. */
   readonly currentProfessionMatch?: ProfessionMatch | null;
+  /** See ProfessionOutputUnavailable.ranked. Optional for the same frozen-
+   *  snapshot backward-compatibility reason. */
+  readonly ranked?: readonly RankedProfession[];
 }
 
 export type ProfessionOutput = ProfessionOutputUnavailable | ProfessionOutputAvailable;
@@ -377,6 +387,7 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
     professions: professionResult.available
       ? {
           available: true,
+          ranked: professionResult.ranked,
           matches: professionResult.matches,
           strongestDirections: professionResult.strongestDirections,
           alsoWorthExploring: professionResult.alsoWorthExploring,
@@ -384,7 +395,12 @@ export function buildSnapshot(input: BuildSnapshotInput): ReportSnapshot {
           careerPivots: professionResult.careerPivots,
           currentProfessionMatch: professionResult.currentProfessionMatch,
         }
-      : { available: false, reason: "no_approved_professions", matches: [] },
+      : {
+          available: false,
+          reason: "no_approved_professions",
+          matches: [],
+          ranked: professionResult.ranked,
+        },
 
     currentProfession:
       currentProfessionCigSlug !== null && currentProfessionTitle !== null
@@ -542,6 +558,29 @@ export function validateSnapshot(snapshot: ReportSnapshot): ValidationFailure[] 
       code: "CD_PROFESSION_WITHOUT_CALIBRATION",
       detail: "professions marked available with no calibration version",
     });
+  }
+
+  // The ranking is a candidate-facing claim about calibrated professions, so
+  // it carries the same rule the matches do: no calibration version stamped,
+  // no ranking. Without this, the always-present recommendation would be the
+  // one place an unvetted catalogue could reach a report.
+  const ranked = snapshot.professions.ranked ?? [];
+  if (ranked.length > 0 && snapshot.versions.professionCalibrationVersion === null) {
+    failures.push({
+      code: "CD_UNAPPROVED_PROFESSION_RANKING",
+      detail: "ranked recommendation present with no calibration version recorded",
+    });
+  }
+  // Rank is stated, not implied by position (see RankedProfession), so the
+  // two must agree — a consumer that trusted `rank` while the array said
+  // something else would present a different order from the one computed.
+  for (const [i, r] of ranked.entries()) {
+    if (r.rank !== i + 1) {
+      failures.push({
+        code: "CD_RANKING_ORDER_INCONSISTENT",
+        detail: `ranked[${i}] declares rank ${r.rank}`,
+      });
+    }
   }
 
   return failures;
