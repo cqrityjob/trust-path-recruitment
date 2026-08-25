@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/select";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
+import { DangerZone } from "@/components/admin/DangerZone";
+import { adminDeleteJob } from "@/lib/job-intelligence/admin-lifecycle.functions";
+import { lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
@@ -128,6 +131,23 @@ function AdminJobEditor() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Deletion exists only for a draft that was never published. Everything else
+  // is closed or archived -- admin_delete_job_if_safe() enforces exactly that
+  // rule again server-side, including the applications / assignments /
+  // invitations guards this page cannot see.
+  const deleteJobFn = useServerFn(adminDeleteJob);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteJob = useMutation({
+    mutationFn: (vars: { reason: string }) =>
+      deleteJobFn({ data: { jobId: id, reason: vars.reason } }),
+    onSuccess: () => {
+      setDeleteError(null);
+      qc.invalidateQueries({ queryKey: ["admin", "jobs"] });
+      navigate({ to: "/admin/jobs" });
+    },
+    onError: (e: Error) => setDeleteError(e.message),
+  });
 
   useEffect(() => {
     if (jobQ.data) {
@@ -525,6 +545,28 @@ function AdminJobEditor() {
             </form>
           )}
         </div>
+
+        {!isNew && jobQ.data && (
+          <DangerZone
+            title={t("admin.lifecycle.job.dangerTitle")}
+            description={t("admin.lifecycle.job.dangerDescription")}
+            pending={deleteJob.isPending}
+            errorMessage={deleteError ? t(lifecycleErrorKey(deleteError)) : null}
+            actions={[
+              {
+                key: "delete-job",
+                label: t("admin.lifecycle.job.delete.label"),
+                consequence: t("admin.lifecycle.job.delete.consequence"),
+                blockedReason:
+                  currentStatus !== "draft" ||
+                  (jobQ.data.job as { published_at?: string | null }).published_at
+                    ? t("admin.lifecycle.job.delete.blocked")
+                    : null,
+                onConfirm: ({ reason }: { reason: string }) => deleteJob.mutate({ reason }),
+              },
+            ]}
+          />
+        )}
       </AdminShellChrome>
     </SiteLayout>
   );

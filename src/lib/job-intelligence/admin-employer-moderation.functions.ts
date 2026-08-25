@@ -504,7 +504,11 @@ export const adminGetEmployerForModeration = createServerFn({ method: "POST" })
 
 const moderateSchema = z.object({
   employerId: z.string().uuid(),
-  action: z.enum(["approved", "rejected", "suspended", "reactivated"]),
+  // archived/restored are the Admin Control Center's lifecycle additions.
+  // moderate_employer() remains the single place employers.status can change
+  // -- adding a second RPC for archiving would have created a second way past
+  // the transaction-local marker that guards that invariant.
+  action: z.enum(["approved", "rejected", "suspended", "reactivated", "archived", "restored"]),
   note: z.string().trim().max(2000).optional().nullable(),
 });
 
