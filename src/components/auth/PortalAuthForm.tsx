@@ -76,6 +76,19 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
     return safeReturnPath(params.get("redirect"), defaultDestination);
   }
 
+  /** Whether this arrival came from an organisation invitation.
+   *
+   *  Read from the already-validated return path, never from a separate
+   *  parameter a sender could set independently. It changes ONE sentence of
+   *  copy — enough that somebody who was invited recognises the page as part
+   *  of the invitation rather than an unrelated login wall — and nothing
+   *  else. No organisation name, id or any other detail is shown: a
+   *  non-member cannot read the employer row (employers_member_select), and
+   *  echoing a name out of the URL would be echoing a name the sender chose.
+   *  See _authenticated.tsx's intentSearch for the routing half. */
+  const fromOrganisationInvite =
+    typeof window !== "undefined" && resolveDestination().startsWith("/employer/join");
+
   /** Navigate to the return target, preserving its query string.
    *  `to` alone cannot carry one, and the Career Discovery session uuid
    *  lives there — dropping it produced a dead-end session page. */
@@ -215,6 +228,11 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
             {t(headingKey)}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">{t(introKey)}</p>
+          {fromOrganisationInvite && (
+            <p className="mt-3 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground">
+              {t("auth.invite.organisationContext")}
+            </p>
+          )}
 
           <div className="mt-8 space-y-4">
             <button

@@ -9,6 +9,33 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
+/** Which portal an unauthenticated arrival should be sent to.
+ *
+ *  ── WHY THIS IS NOT ALWAYS "CANDIDATE" ────────────────────────────────
+ *
+ *  The return path has always been preserved, so a signed-out person
+ *  following an ORGANISATION invitation (/employer/join?org=..., a reviewer
+ *  or colleague being brought into a workspace) did eventually get back to
+ *  the invite. What they saw first was "Log in as a candidate" -- a portal
+ *  for a different kind of account, with no indication that it had anything
+ *  to do with the invitation they had just been sent. Several people will
+ *  reasonably conclude the link is broken and stop there.
+ *
+ *  /admin already had this treatment (Phase H3.3). /employer now does too.
+ *  Nothing about the organisation is disclosed by this: the intent is
+ *  derived from the URL the person already has, it selects a login form and
+ *  nothing else, and /auth's own contract is that intent chooses a
+ *  destination and is never treated as a permission.
+ *
+ *  Everything outside /admin and /employer keeps the candidate default,
+ *  exactly as before. */
+function intentSearch(): { intent?: "admin" | "employer" } {
+  const path = window.location.pathname;
+  if (path.startsWith("/admin")) return { intent: "admin" };
+  if (path.startsWith("/employer")) return { intent: "employer" };
+  return {};
+}
+
 function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
@@ -20,11 +47,6 @@ function AuthenticatedLayout() {
       if (!mounted) return;
       const session = data.session;
       if (!session) {
-        // Phase H3.3 — an unauthenticated attempt at an /admin/* route
-        // goes through /auth?intent=admin, landing on /admin/login
-        // specifically rather than the candidate-oriented default;
-        // every other authenticated route is completely unaffected.
-        const isAdminPath = window.location.pathname.startsWith("/admin");
         navigate({
           to: "/auth",
           search: {
@@ -32,7 +54,7 @@ function AuthenticatedLayout() {
             // string, which silently destroyed the Career Discovery
             // session uuid on every login round trip.
             redirect: window.location.pathname + window.location.search,
-            ...(isAdminPath ? { intent: "admin" } : {}),
+            ...intentSearch(),
           } as any,
         });
       } else {
@@ -48,12 +70,11 @@ function AuthenticatedLayout() {
       // their query string. getSession() above is the authority for the
       // first decision; this handler only reacts to a real sign-out.
       if (!session && event !== "INITIAL_SESSION") {
-        const isAdminPath = window.location.pathname.startsWith("/admin");
         navigate({
           to: "/auth",
           search: {
             redirect: window.location.pathname + window.location.search,
-            ...(isAdminPath ? { intent: "admin" } : {}),
+            ...intentSearch(),
           } as any,
         });
       }

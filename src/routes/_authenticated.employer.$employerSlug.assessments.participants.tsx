@@ -306,6 +306,11 @@ function ParticipantCard({
   const [identity, setIdentity] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Releasing is irreversible and the copy under the button has always said
+  // so -- but the click ran straight through, so the sentence was a warning
+  // nobody had the chance to act on. Cancelling leaves everything exactly as
+  // it was: no state beyond this flag is touched until the confirm.
+  const [confirmRelease, setConfirmRelease] = useState(false);
 
   const programme = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
   // Candidate rows and employee rows are the same objects and not the same
@@ -319,8 +324,12 @@ function ParticipantCard({
 
   const releaseM = useMutation({
     mutationFn: () => release({ data: { attemptId: row.attemptId } }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["academy", "participants"] }),
+    onSuccess: () => {
+      setConfirmRelease(false);
+      void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
+    },
     onError: (e: unknown) => {
+      setConfirmRelease(false);
       const code = (e as { code?: string }).code ?? "";
       setNotice(
         code === "SCP_RELEASE_BEFORE_SCORED"
@@ -482,11 +491,14 @@ function ParticipantCard({
             gives the participant their own copy and unlocks the identity
             request, and because none of it can be undone, the sentence under it
             says so before the click rather than after. */}
-        {row.canRelease && (
+        {row.canRelease && !confirmRelease && (
           <div className="w-full">
             <button
               type="button"
-              onClick={() => releaseM.mutate()}
+              onClick={() => {
+                setNotice(null);
+                setConfirmRelease(true);
+              }}
               disabled={releaseM.isPending}
               className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
@@ -542,6 +554,58 @@ function ParticipantCard({
           </p>
         )}
       </div>
+
+      {/* The release confirmation. The sentence under the button already said
+          the step cannot be undone; this is the moment at which somebody can
+          act on having read it. It names the three things that happen at once,
+          says plainly that a person -- not the system -- is doing the
+          releasing, and Cancel changes nothing. */}
+      {confirmRelease && (
+        <div className="mt-4 rounded-[10px] border border-accent/40 bg-[color:var(--surface-subtle)] p-4">
+          <p className="text-[13px] font-semibold text-foreground">
+            {t(
+              recruitment
+                ? "academy.participants.releaseConfirmTitleRecruitment"
+                : "academy.participants.releaseConfirmTitle",
+            )}
+          </p>
+          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t(
+              recruitment
+                ? "academy.participants.releaseConfirmBodyRecruitment"
+                : "academy.participants.releaseConfirmBody",
+            )}
+          </p>
+          <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
+            {t("academy.participants.releaseConfirmResponsibility")}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => releaseM.mutate()}
+              disabled={releaseM.isPending}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              {releaseM.isPending
+                ? t("academy.participants.releaseConfirmPending")
+                : t(
+                    recruitment
+                      ? "academy.participants.releaseConfirmActionRecruitment"
+                      : "academy.participants.releaseConfirmAction",
+                  )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmRelease(false)}
+              disabled={releaseM.isPending}
+              className="inline-flex h-10 items-center rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.participants.releaseConfirmCancel")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Withdrawing an assignment is not destructive, but it does take work
           away from somebody who may already be part-way through it. The

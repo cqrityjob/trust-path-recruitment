@@ -440,6 +440,11 @@ export const dictionaries = {
       "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
+    // Shown only when the return path is an organisation invitation. Says
+    // that the invitation is why they are here; names nothing about the
+    // organisation, which a non-member cannot read anyway.
+    "auth.invite.organisationContext":
+      "Du har blivit inbjuden till en organisation. Logga in eller skapa ett arbetsgivarkonto — sedan kommer du tillbaka till inbjudan.",
     "auth.name": "Namn (valfritt)",
     "auth.email": "E-post",
     "auth.password": "Lösenord",
@@ -2834,6 +2839,20 @@ export const dictionaries = {
     "academy.participants.releaseFailed": "Underlaget kunde inte delas.",
     "academy.participants.openReport": "Öppna rapport",
     "academy.participants.releaseRecruitment": "Dela kandidatunderlaget",
+    // The release confirmation. releaseExplain has always ended "Steget går
+    // inte att ångra" -- and the click ran straight through it.
+    "academy.participants.releaseConfirmTitle": "Dela underlaget?",
+    "academy.participants.releaseConfirmTitleRecruitment": "Dela kandidatunderlaget?",
+    "academy.participants.releaseConfirmBody":
+      "Underlaget låses som en oföränderlig version, blir läsbart för behöriga i din organisation och personen får sin egen kopia. Det går inte att ta tillbaka.",
+    "academy.participants.releaseConfirmBodyRecruitment":
+      "Kandidatunderlaget låses som en oföränderlig version, blir läsbart för behöriga i din organisation och kandidaten får sin egen kopia. Det går inte att ta tillbaka.",
+    "academy.participants.releaseConfirmResponsibility":
+      "Du gör delningen som granskare. Underlaget är ett beslutsstöd — beslutet fattas av en person hos er.",
+    "academy.participants.releaseConfirmAction": "Ja, dela underlaget",
+    "academy.participants.releaseConfirmActionRecruitment": "Ja, dela kandidatunderlaget",
+    "academy.participants.releaseConfirmCancel": "Avbryt",
+    "academy.participants.releaseConfirmPending": "Delar …",
     "academy.participants.releaseExplain":
       "Granskningen är klar. Att dela låser underlaget som en oföränderlig version, gör det läsbart för behöriga i din organisation, ger personen sin egen kopia och gör det möjligt att be om personens identitet. Steget går inte att ångra.",
     "academy.participants.openReportRecruitment": "Öppna kandidatunderlag",
@@ -4112,6 +4131,8 @@ export const dictionaries = {
       "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
+    "auth.invite.organisationContext":
+      "You have been invited to an organisation. Sign in or create an employer account — you will be returned to the invitation.",
     "auth.name": "Name (optional)",
     "auth.email": "Email",
     "auth.password": "Password",
@@ -6478,6 +6499,18 @@ export const dictionaries = {
     "academy.participants.releaseFailed": "The material could not be shared.",
     "academy.participants.openReport": "Open report",
     "academy.participants.releaseRecruitment": "Share the candidate brief",
+    "academy.participants.releaseConfirmTitle": "Share the material?",
+    "academy.participants.releaseConfirmTitleRecruitment": "Share the candidate brief?",
+    "academy.participants.releaseConfirmBody":
+      "The material is frozen as an immutable version, becomes readable by authorised people in your organisation, and the person gets their own copy. This cannot be taken back.",
+    "academy.participants.releaseConfirmBodyRecruitment":
+      "The candidate brief is frozen as an immutable version, becomes readable by authorised people in your organisation, and the candidate gets their own copy. This cannot be taken back.",
+    "academy.participants.releaseConfirmResponsibility":
+      "You are releasing this as the reviewer. The material is decision support — the decision is made by a person at your organisation.",
+    "academy.participants.releaseConfirmAction": "Yes, share the material",
+    "academy.participants.releaseConfirmActionRecruitment": "Yes, share the candidate brief",
+    "academy.participants.releaseConfirmCancel": "Cancel",
+    "academy.participants.releaseConfirmPending": "Sharing …",
     "academy.participants.releaseExplain":
       "Review is complete. Sharing freezes the material as an immutable version, makes it readable by authorised people in your organisation, gives the person their own copy, and allows the person's identity to be requested. The step cannot be undone.",
     "academy.participants.openReportRecruitment": "Open candidate brief",
