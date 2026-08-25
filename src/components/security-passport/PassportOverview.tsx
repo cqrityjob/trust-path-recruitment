@@ -375,9 +375,11 @@ export function PassportOverview({
             )}
           </section>
 
+          {/* The holder's WORK COUNTRY — never a credential's jurisdiction.
+              Each credential states its own, on the credential. */}
           <JurisdictionNotice
-            credentialJurisdiction={holder.jurisdictionCode}
-            viewingJurisdiction={viewingJurisdiction}
+            workCountry={holder.jurisdictionCode}
+            subJurisdiction={holder.subJurisdictionCode}
           />
         </>
       ) : null}

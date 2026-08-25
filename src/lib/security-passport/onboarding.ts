@@ -21,8 +21,27 @@ export interface OnboardingField {
   readonly labelKey: PassportCopyKey;
   readonly type: "text" | "date" | "select" | "checkbox";
   readonly required: boolean;
-  /** Fixed options for `select`, as copy keys or literal display values. */
-  readonly options?: readonly { readonly value: string; readonly label: string }[];
+  /** Fixed options for `select`.
+   *
+   *  `labelKey` is preferred and `label` is the legacy literal. The two exist
+   *  side by side because they answer different questions:
+   *
+   *    * A COUNTRY is not a legal term. "Sweden" and "Sverige" are the same
+   *      place, so a reader should see it once, in their own language, and the
+   *      option carries a `labelKey`.
+   *
+   *    * A PROFESSION is a legal term. "Väktare" is what the Swedish
+   *      authorisation is called, and rendering it as "Security Officer" alone
+   *      would drop the word that appears on the credential — so those options
+   *      keep the bilingual literal on purpose, matching `labelFor` in
+   *      identity/presentation.ts.
+   *
+   *  A renderer prefers `labelKey` and falls back to `label`. */
+  readonly options?: readonly {
+    readonly value: string;
+    readonly label?: string;
+    readonly labelKey?: PassportCopyKey;
+  }[];
 }
 
 export interface OnboardingStep {
@@ -137,11 +156,16 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         // UAE-wide claim its market pack exists to refuse. The value carries
         // the sub-jurisdiction code; `splitWorkCountry` below turns it into the
         // country and emirate the profile stores in separate columns.
+        //
+        // Copy keys, not literals. These read as "Sverige / Sweden" in one
+        // option, which asked a Swedish reader to skip past English and an
+        // English reader to skip past Swedish. A country is not a legal term
+        // that has to be shown in its original — see the note on the type.
         options: [
-          { value: "SE", label: "Sverige / Sweden" },
-          { value: "GB", label: "Storbritannien / United Kingdom" },
-          { value: "AE-DU", label: "Dubai, Förenade Arabemiraten / Dubai, United Arab Emirates" },
-          { value: "AE", label: "Förenade Arabemiraten (övriga) / United Arab Emirates (other)" },
+          { value: "SE", labelKey: "jurisdiction.SE" },
+          { value: "GB", labelKey: "jurisdiction.GB" },
+          { value: "AE-DU", labelKey: "jurisdiction.option.AE-DU" },
+          { value: "AE", labelKey: "jurisdiction.option.AE" },
         ],
       },
     ],
