@@ -230,6 +230,10 @@ export interface RecipientPayloadActive {
   readonly privacy_mode: string;
   readonly profession_slug: string | null;
   readonly jurisdiction: string;
+  /** The holder's emirate, where they stated one. Optional because a payload
+   *  produced before 20260908094000 does not carry the key at all — an older
+   *  cached response must read as "no emirate", never as a broken share. */
+  readonly sub_jurisdiction?: string | null;
   readonly verified_claims: readonly RecipientClaim[];
   readonly verified_experience: readonly RecipientPeriod[];
   readonly verified_experience_days: number;

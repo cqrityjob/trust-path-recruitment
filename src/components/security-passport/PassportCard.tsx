@@ -30,7 +30,12 @@ import {
 import { Ban, Clock, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatExpiry, formatJurisdiction, formatNameList } from "@/lib/security-passport/format";
+import {
+  formatExpiry,
+  formatJurisdiction,
+  formatNameList,
+  formatWorkLocation,
+} from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
@@ -78,7 +83,9 @@ export function PassportCard({
   // One derivation, one renderer. The card never decides what somebody may
   // be called; it prints what the engine derived from their verified claims.
   const profession = professionLine(card.identity, lang, pt("identity.none"));
-  const jurisdiction = formatJurisdiction(card.jurisdictionCode, lang);
+  // Emirate included: the card is the artefact people screenshot and forward,
+  // so it must not be the one surface that still flattens Dubai into the UAE.
+  const jurisdiction = formatWorkLocation(card.jurisdictionCode, card.subJurisdictionCode, lang);
 
   return (
     <article
