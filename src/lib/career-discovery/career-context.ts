@@ -110,29 +110,41 @@ function isCurrentProfessionStatus(v: unknown): v is CurrentProfessionStatus {
   return v === "selected" || v === "not_listed" || v === "prefer_not_to_say";
 }
 
+/** Validate an untrusted value into a CareerContext.
+ *
+ *  Split out of readCareerContext so the same validation covers a record
+ *  recovered from a staged claim (v31-public-buffer.ts) as covers one read
+ *  back from sessionStorage. Anything that does not validate degrades to the
+ *  empty context field by field — this is optional, unscored, self-reported
+ *  context, and a half-trusted version of it must never reach the report. */
+export function parseCareerContext(value: unknown): CareerContext {
+  if (!value || typeof value !== "object") return EMPTY_CAREER_CONTEXT;
+  const parsed = value as Partial<CareerContext>;
+  const status = isCurrentProfessionStatus(parsed.currentProfessionStatus)
+    ? parsed.currentProfessionStatus
+    : null;
+  const hasSlug = status === "selected" && typeof parsed.currentProfessionSlug === "string";
+  return {
+    currentProfessionStatus: status,
+    currentProfessionSlug: hasSlug ? (parsed.currentProfessionSlug as string) : null,
+    currentProfessionTitleSv:
+      hasSlug && typeof parsed.currentProfessionTitleSv === "string"
+        ? parsed.currentProfessionTitleSv
+        : null,
+    currentProfessionTitleEn:
+      hasSlug && typeof parsed.currentProfessionTitleEn === "string"
+        ? parsed.currentProfessionTitleEn
+        : null,
+    experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
+  };
+}
+
 export function readCareerContext(): CareerContext {
   if (!isBrowser()) return EMPTY_CAREER_CONTEXT;
   try {
     const raw = window.sessionStorage.getItem(KEY);
     if (!raw) return EMPTY_CAREER_CONTEXT;
-    const parsed = JSON.parse(raw) as Partial<CareerContext>;
-    const status = isCurrentProfessionStatus(parsed.currentProfessionStatus)
-      ? parsed.currentProfessionStatus
-      : null;
-    const hasSlug = status === "selected" && typeof parsed.currentProfessionSlug === "string";
-    return {
-      currentProfessionStatus: status,
-      currentProfessionSlug: hasSlug ? (parsed.currentProfessionSlug as string) : null,
-      currentProfessionTitleSv:
-        hasSlug && typeof parsed.currentProfessionTitleSv === "string"
-          ? parsed.currentProfessionTitleSv
-          : null,
-      currentProfessionTitleEn:
-        hasSlug && typeof parsed.currentProfessionTitleEn === "string"
-          ? parsed.currentProfessionTitleEn
-          : null,
-      experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
-    };
+    return parseCareerContext(JSON.parse(raw));
   } catch {
     return EMPTY_CAREER_CONTEXT;
   }

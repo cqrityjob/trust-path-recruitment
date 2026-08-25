@@ -86,6 +86,16 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
    *  non-member cannot read the employer row (employers_member_select), and
    *  echoing a name out of the URL would be echoing a name the sender chose.
    *  See _authenticated.tsx's intentSearch for the routing half. */
+  /** The return path, carried onto the swap link when there is one to
+   *  carry. Empty object rather than `{ redirect: "" }` so a plain visit to
+   *  the page keeps its clean URL. */
+  const swapSearch: Record<string, string> =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("redirect") &&
+    resolveDestination() !== defaultDestination
+      ? { redirect: resolveDestination() }
+      : {};
+
   const fromOrganisationInvite =
     typeof window !== "undefined" && resolveDestination().startsWith("/employer/join");
 
@@ -131,11 +141,23 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
     setBusy(true);
     try {
       if (mode === "signup") {
+        // The confirmation link has to come back to where they were going,
+        // not to a generic landing page. This matters most for the anonymous
+        // Career Discovery journey: the return path carries the claim token
+        // for a finished result, so dropping it here means the candidate
+        // creates the account and the report it was created to save is never
+        // claimed. /auth already forwards a validated `redirect` onward.
+        const returnTo = resolveDestination();
         const { error: err } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin + "/auth?intent=" + portal,
+            emailRedirectTo:
+              window.location.origin +
+              "/auth?intent=" +
+              portal +
+              "&redirect=" +
+              encodeURIComponent(returnTo),
             // Carried in user metadata, not written to a table: there is no
             // session yet, so nothing can be inserted under this person's own
             // identity. The organisation is created from these values on their
@@ -331,8 +353,14 @@ export function PortalAuthForm(props: PortalAuthFormProps) {
 
             <div className="flex flex-col gap-2 text-xs">
               <div className="flex items-center justify-between">
+                {/* The return path travels with the swap. Somebody who
+                    already has an account and clicks through from register to
+                    sign-in must not silently lose where they were going --
+                    for the Career Discovery journey that is the claim token
+                    for a finished report. */}
                 <Link
                   to={swapModeTo}
+                  search={swapSearch as never}
                   className="text-muted-foreground underline-offset-2 hover:underline"
                 >
                   {t(

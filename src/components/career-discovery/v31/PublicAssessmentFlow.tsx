@@ -70,6 +70,7 @@ import {
   clearCareerContext,
   EMPTY_CAREER_CONTEXT,
   isCareerContextComplete,
+  parseCareerContext,
   readCareerContext,
   shouldCollectCareerContext,
   writeCareerContext,
@@ -92,12 +93,15 @@ import {
 } from "@/lib/career-discovery/v31/snapshot";
 import {
   clearBuffer,
+  clearPendingClaim,
   contextStatusOf,
   isComplete,
   markComplete,
   readBuffer,
+  readPendingClaim,
   recordAnswer,
   sessionItemIds,
+  stageClaim,
   startBuffer,
   type PublicBuffer,
 } from "@/lib/career-discovery/v31-public-buffer";
@@ -221,6 +225,32 @@ export function PublicAssessmentFlow() {
             return;
           }
         }
+        // ── RECOVER A STAGED CLAIM ────────────────────────────────────
+        //
+        // The candidate finished, asked to save, created an account, and
+        // came back through the confirmation link — which is a DIFFERENT
+        // TAB, so this tab's sessionStorage buffer does not exist. The
+        // staged copy does, and the token in the return URL is what
+        // authorises replaying it here (see v31-public-buffer.ts).
+        //
+        // Ahead of readBuffer() deliberately: a claim token names a
+        // specific finished run, and it must win over whatever half-run
+        // this tab happens to be holding.
+        const claimToken = new URLSearchParams(window.location.search).get("claim");
+        const claimed = readPendingClaim(claimToken);
+        if (claimed) {
+          const recoveredContext = parseCareerContext(claimed.careerContext);
+          setBuffer(claimed.buffer);
+          setCareerContext(recoveredContext);
+          // Mirror it back into this tab's own storage so the rest of the
+          // flow — which reads and writes sessionStorage — sees the same
+          // context the candidate answered, not an empty one.
+          writeCareerContext(recoveredContext);
+          setIndex(sessionItemIds(contextStatusOf(claimed.buffer)).length - 1);
+          setPhase("result");
+          return;
+        }
+
         // Resume an in-flight run if this tab has one.
         const existing = readBuffer();
         const resumedCareerContext = readCareerContext();
@@ -361,11 +391,29 @@ export function PublicAssessmentFlow() {
     if (persistingRef.current) return;
     track("save_journey_clicked");
     if (!signedIn) {
-      // Return here after login. The buffer is untouched and survives the hop.
-      navigate({
-        to: "/candidate/login",
-        search: { redirect: "/security-career-assessment" } as never,
-      });
+      // ── CARRYING THE RESULT ACROSS THE ACCOUNT HOP ────────────────────
+      //
+      // This used to send the candidate to /candidate/login and rely on the
+      // sessionStorage buffer being here when they came back. For an
+      // EXISTING user in the same tab that worked. For a NEW user — the
+      // whole point of the screen — it could not: signing up requires
+      // confirming an email address, the confirmation link opens in a
+      // different tab, and sessionStorage is per-tab. The result was
+      // destroyed by the act of creating the account to save it.
+      //
+      // The finished run is now staged for claiming (localStorage, token,
+      // seven-day expiry — see v31-public-buffer.ts for the full security
+      // argument) and the token travels in the return URL, which means it
+      // travels inside the confirmation email's own link.
+      const token = stageClaim(buffer, careerContext);
+      const back = token
+        ? `/security-career-assessment?claim=${encodeURIComponent(token)}`
+        : "/security-career-assessment";
+      // Registration, not login. A first-time anonymous candidate who has
+      // just finished the assessment does not have an account — offering
+      // "log in" as the primary route asks them to do the one thing they
+      // cannot. The register page links to login for everybody else.
+      navigate({ to: "/candidate/register", search: { redirect: back } as never });
       return;
     }
     persistingRef.current = true;
@@ -386,6 +434,9 @@ export function PublicAssessmentFlow() {
       // candidate's answers with nothing stored in exchange.
       clearBuffer();
       clearCareerContext();
+      // Claimed exactly once: the staged copy goes at the same moment the
+      // buffer does, and only after a confirmed write.
+      clearPendingClaim();
       track("result_claimed");
       navigate({
         to: "/security-career-assessment/report/$snapshotId",
@@ -403,6 +454,21 @@ export function PublicAssessmentFlow() {
       persistingRef.current = false;
       setPhase("failed");
     }
+  }
+
+  /** The secondary route for somebody who already has an account.
+   *
+   *  Stages the same claim and carries the same token — the difference is
+   *  only which auth page they land on. Without this, "log in" would be the
+   *  one path that silently dropped the finished result. */
+  function onSignInInstead() {
+    if (!buffer) return;
+    track("save_journey_clicked");
+    const token = stageClaim(buffer, careerContext);
+    const back = token
+      ? `/security-career-assessment?claim=${encodeURIComponent(token)}`
+      : "/security-career-assessment";
+    navigate({ to: "/candidate/login", search: { redirect: back } as never });
   }
 
   /** DOWNLOAD — Final Candidate Result Delivery & Save Flow Fix, section 2.
@@ -828,13 +894,29 @@ export function PublicAssessmentFlow() {
       <p className="mx-auto mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
         {t("cd.public.doneBody")}
       </p>
+      {/* PRIMARY: create an account. Somebody who has just finished the
+          assessment anonymously most likely does not have one — leading with
+          "log in", as this did, asked them to do the one thing they could
+          not. Signing in stays available immediately below, and both routes
+          carry the same claim token, so an existing user loses nothing. */}
       <button
         type="button"
         onClick={() => void onSaveAndSignIn()}
         className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto motion-reduce:transition-none"
       >
-        {signedIn ? t("cd.public.saveNow") : t("cd.public.signInToSave")}
+        {signedIn ? t("cd.public.saveNow") : t("cd.public.createAccountToSave")}
       </button>
+      {!signedIn && (
+        <p className="mt-4">
+          <button
+            type="button"
+            onClick={() => onSignInInstead()}
+            className="text-sm font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("cd.public.haveAccount")}
+          </button>
+        </p>
+      )}
       <p className="mt-4 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
     </AssessmentPanel>
   );

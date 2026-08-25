@@ -823,11 +823,18 @@ export const dictionaries = {
     "cd.public.next": "Nästa",
     "cd.public.toResult": "Till resultatet",
     "cd.public.doneTitle": "Alla frågor är besvarade",
+    // Account creation is the PRIMARY route here, not login. Somebody who has
+    // just finished the assessment anonymously is, by definition, most likely
+    // not to have an account yet -- leading with "log in" asked them to do
+    // the one thing they could not.
     "cd.public.doneBody":
-      "Logga in eller skapa ett konto för att lägga till det här resultatet i din karriärresa och kunna öppna det igen senare. Dina svar ligger kvar medan du gör det.",
+      "Skapa ett kandidatkonto för att spara resultatet och fortsätta bygga din karriärprofil. Dina svar ligger kvar medan du gör det.",
+    "cd.public.createAccountToSave": "Skapa konto och spara resultatet",
+    "cd.public.haveAccount": "Har du redan ett konto? Logga in",
     "cd.public.signInToSave": "Spara din karriärresa",
     "cd.public.saveNow": "Spara i din karriärresa",
-    "cd.public.answersKept": "Dina svar finns kvar i den här fliken tills rapporten är sparad.",
+    "cd.public.answersKept":
+      "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
     "cd.public.downloadResult": "Ladda ner resultat",
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
@@ -4524,10 +4531,13 @@ export const dictionaries = {
     "cd.public.toResult": "To the result",
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":
-      "Sign in or create an account to add this result to your Career Journey and reopen it later. Your answers stay put while you do.",
+      "Create a candidate account to save your result and continue building your career profile. Your answers stay put while you do.",
+    "cd.public.createAccountToSave": "Create account and save my result",
+    "cd.public.haveAccount": "Already have an account? Log in",
     "cd.public.signInToSave": "Save your Career Journey",
     "cd.public.saveNow": "Save to your Career Journey",
-    "cd.public.answersKept": "Your answers stay in this tab until the report is saved.",
+    "cd.public.answersKept":
+      "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
     "cd.public.downloadResult": "Download result",
     "cd.public.shareResult": "Share result",
     "cd.public.shareTitle": "My Security Career DNA",
