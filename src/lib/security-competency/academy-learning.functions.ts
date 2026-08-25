@@ -144,10 +144,49 @@ export const listLearningModules = createServerFn({ method: "GET" })
 /** The learning form a module practises on. Learning content is published, so
  *  this is a plain read; the mode check that matters happens when the attempt
  *  is started. */
+/** Whether practice may be offered to this caller at all.
+ *
+ *  True when they hold at least one EMPLOYEE-purpose item of work. A person
+ *  whose only relationship with the platform is a recruitment assessment gets
+ *  false — see getLearningFormForModule's header for why practice beside a
+ *  live selection instrument is a claim the product must not make.
+ *
+ *  Fails closed: a read that did not answer is not permission to practise. */
+async function practiceIsOpenTo(ctx: Ctx): Promise<boolean> {
+  const { data: work, error } = await ctx.supabase.rpc("scp_my_academy_work");
+  if (error) return false;
+  return (work ?? []).some((r: RpcRow) => String(r.use_case ?? "workforce") !== "recruitment");
+}
+
+/** The practice form, IF practice is open to this person at all.
+ *
+ *  ── PRACTICE IS AN EMPLOYEE AFFORDANCE, NOT A RECRUITMENT ONE ─────────
+ *
+ *  Learning Mode serves its own items and never the ones on a live
+ *  assessment, so there is no item-exposure route here. The problem is what
+ *  offering it MEANS. Beside a recruitment assessment, "practise / try
+ *  again" reads to a candidate as another attempt at the thing they are
+ *  being selected on — coaching on a live selection instrument, and an
+ *  implied unlimited retake. Neither is true, and neither may be implied.
+ *
+ *  So eligibility is a purpose question, and it is answered here rather
+ *  than only in the UI: a surface that merely hides a link still leaves the
+ *  route reachable by anybody who types it. Somebody whose ONLY relationship
+ *  with the platform is a recruitment assessment gets `null`, exactly as an
+ *  account with no subject identity already did — and
+ *  /academy/learning/$formId has nothing to open.
+ *
+ *  Employee-purpose work of ANY kind (assessment or training) opens
+ *  practice, including for a person who also happens to be a candidate
+ *  somewhere else. Being an applicant at one organisation does not remove
+ *  a development affordance you hold at another. */
 export const getLearningFormForModule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ formId: string } | null> => {
     const ctx = context as Ctx;
+
+    if (!(await practiceIsOpenTo(ctx))) return null;
+
     const { data: rows, error } = await ctx.supabase
       .from("scp_forms")
       .select("id, slug")
@@ -162,6 +201,13 @@ export const startLearningAttempt = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ formId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<{ attemptId: string }> => {
     const ctx = context as Ctx;
+    // The same purpose gate the form lookup applies. Hiding the link is not
+    // enough: /academy/learning/<formId> is a typeable URL, and a candidate
+    // whose only work is a recruitment assessment must not be able to start
+    // a practice run by reaching past the surface that declined to offer one.
+    if (!(await practiceIsOpenTo(ctx))) {
+      throw new AcademyLearningError("SCP_PRACTICE_NOT_AVAILABLE", "SCP_PRACTICE_NOT_AVAILABLE");
+    }
     const { data: id, error } = await ctx.supabase.rpc("scp_start_learning_attempt", {
       _form_id: data.formId,
     });

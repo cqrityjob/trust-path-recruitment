@@ -76,16 +76,33 @@ function AcademyHome() {
   const assessments = rows.filter((w) => w.workKind === "assessment");
   const training = rows.filter((w) => w.workKind === "training");
 
+  // ── PURPOSE DRIVES WORDING ────────────────────────────────────────────
+  //
+  // Everything on this page used to be phrased for an EMPLOYEE doing
+  // competence development: "My competence development", "released by your
+  // employer", a purpose of "Competence development". Shown to somebody who
+  // is a JOB APPLICANT and not an employee, that is three untrue statements
+  // at once -- the organisation is not their employer, a selection instrument
+  // is not development, and the result very much does inform the decision.
+  //
+  // `useCase` already travels on every row (scp_my_academy_work), so the page
+  // asks what this person actually has rather than assuming. A person can
+  // legitimately hold both at once (an employee of A applying to B), so this
+  // is not an either/or: the employee wording is used whenever any employee
+  // work exists, and the recruitment-only case gets its own.
+  const workforceWork = rows.filter((w) => w.useCase !== "recruitment");
+  const recruitmentOnly = rows.length > 0 && workforceWork.length === 0;
+
   return (
     <AssessmentShell wide>
       <h1
         className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        {t("academy.home.title")}
+        {t(recruitmentOnly ? "academy.home.titleRecruitment" : "academy.home.title")}
       </h1>
       <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-        {t("academy.home.lede")}
+        {t(recruitmentOnly ? "academy.home.ledeRecruitment" : "academy.home.lede")}
       </p>
 
       <AcademyQueryState
@@ -102,7 +119,11 @@ function AcademyHome() {
                 <SectionHeading
                   icon={ShieldCheck}
                   title={t("academy.home.assessmentHeading")}
-                  lede={t("academy.home.assessmentLede")}
+                  lede={t(
+                    assessments.every((a) => a.useCase === "recruitment")
+                      ? "academy.home.assessmentLedeRecruitment"
+                      : "academy.home.assessmentLede",
+                  )}
                 />
                 <div className="space-y-3">
                   {assessments.map((a) => (
@@ -138,8 +159,18 @@ function AcademyHome() {
       {/* Practice is only offered to somebody who actually has a competence
           profile. Learning Mode requires a subject identity, and this link used
           to be rendered for everyone -- including accounts that had never been
-          assigned anything, for whom it could only ever produce an error. */}
-      {rows.length > 0 && learningForm.data && (
+          assigned anything, for whom it could only ever produce an error.
+
+          It is also NOT offered on the strength of a recruitment assessment.
+          Practice is a development affordance; next to a live selection
+          instrument it reads as "have another go at the thing you are being
+          judged on", which is exactly the impression a recruitment assessment
+          must not give -- regardless of the fact that Learning Mode serves
+          different items. `workforceWork`, not `rows`: only employee-purpose
+          work opens practice. The server refuses independently
+          (getLearningFormForModule), so removing the link is the visible half
+          of the rule, not the whole of it. */}
+      {workforceWork.length > 0 && learningForm.data && (
         <section className="mt-10">
           <SectionHeading
             icon={BookOpen}
@@ -179,7 +210,14 @@ function SectionHeading({
   );
 }
 
-function PurposePanel({ purpose }: { purpose: string | null }) {
+/** Why this arrived and what happens to it.
+ *
+ *  `recruitment` is not a cosmetic variant. An applicant must not be told
+ *  that a selection instrument is "competence development", that the
+ *  organisation asking is "your employer", or anything that implies the
+ *  result is kept out of the decision. What they are told instead is the
+ *  truth: it is decision support, and a person decides. */
+function PurposePanel({ purpose, recruitment }: { purpose: string | null; recruitment: boolean }) {
   const { t } = useT();
   return (
     <div className="mt-3 rounded-[10px] bg-[color:var(--surface-subtle)] p-3">
@@ -188,10 +226,16 @@ function PurposePanel({ purpose }: { purpose: string | null }) {
         {t("academy.home.purpose")}
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-        {purpose ?? t("academy.home.purposeFallback")}
+        {purpose ??
+          t(recruitment ? "academy.home.purposeFallbackRecruitment" : "academy.home.purposeFallback")}
       </p>
+      {recruitment && (
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.home.recruitmentDecision")}
+        </p>
+      )}
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-        {t("academy.home.privacy")}
+        {t(recruitment ? "academy.home.privacyRecruitment" : "academy.home.privacy")}
       </p>
     </div>
   );
@@ -233,7 +277,7 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
         </span>
       </div>
 
-      <PurposePanel purpose={purpose} />
+      <PurposePanel purpose={purpose} recruitment={row.useCase === "recruitment"} />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {!done && (
@@ -312,7 +356,7 @@ function TrainingCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
       </div>
 
       <ProgressBar done={row.progressDone} total={row.progressTotal} />
-      <PurposePanel purpose={purpose} />
+      <PurposePanel purpose={purpose} recruitment={row.useCase === "recruitment"} />
 
       {/* The one thing a participant must not misunderstand about training. */}
       <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">

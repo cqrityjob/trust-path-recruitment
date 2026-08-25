@@ -19,7 +19,7 @@
 // employer's workspace, and putting their run inside the employer's navigation
 // would imply an access relationship that does not exist.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, MessageSquare, ShieldAlert } from "lucide-react";
@@ -44,12 +44,23 @@ import {
   type AcademyBlock,
   type AcademyItem,
 } from "@/lib/security-competency/academy-delivery.functions";
+import { listAcademyWork } from "@/lib/security-competency/academy-training.functions";
 
 export const Route = createFileRoute("/_authenticated/academy/$attemptId")({
   component: AcademyAttemptRoute,
 });
 
-type Phase = "loading" | "intro" | "section" | "running" | "submitting" | "done" | "error";
+type Phase =
+  | "loading"
+  | "intro"
+  | "section"
+  | "running"
+  | "submitting"
+  | "done"
+  | "error"
+  /** A final submission that did not go through. Deliberately NOT "error":
+   *  the run is intact and resumable, and the copy has to say so. */
+  | "submit-failed";
 
 /** Whether an item already carries a saved answer.
  *
@@ -69,6 +80,7 @@ function AcademyAttemptRoute() {
   const loadState = useServerFn(getAcademyAttemptState);
   const saveResponse = useServerFn(saveAcademyResponse);
   const submitAttempt = useServerFn(submitAcademyAttempt);
+  const loadWork = useServerFn(listAcademyWork);
 
   const [items, setItems] = useState<AcademyItem[]>([]);
   const [blocks, setBlocks] = useState<AcademyBlock[]>([]);
@@ -85,6 +97,32 @@ function AcademyAttemptRoute() {
   // can say "this is already in" rather than "thank you, just received".
   const [closedStatus, setClosedStatus] = useState<AcademyAttemptState["status"] | null>(null);
   const [text, setText] = useState("");
+  // Purpose. An assessment assigned in RECRUITMENT may not be introduced with
+  // the employee competence-development wording -- see academy.intro.purpose
+  // in the dictionaries for what was wrong with saying it to an applicant.
+  // Read from the participant's own work list (scp_my_academy_work already
+  // returns use_case, scoped to the caller) rather than inventing a second
+  // read model for one string.
+  const [useCase, setUseCase] = useState<"workforce" | "recruitment">("workforce");
+  const recruitment = useCase === "recruitment";
+
+  // ── FINAL SUBMISSION: SAVES FIRST, ONCE, AND HONESTLY ─────────────────
+  //
+  // Every answer is persisted with a fire-and-forget `void persist(...)`,
+  // which is right while the participant is working: it keeps the UI
+  // instant and a lost keystroke is recoverable. It is NOT right at the
+  // moment of submit. Answering the last question and immediately pressing
+  // "Submit" raced that in-flight POST, so scp_submit_attempt saw an
+  // unanswered item and raised SCP_INCOMPLETE_ATTEMPT -- which arrived here
+  // as an unmapped code, rendered the LOAD failure panel ("This assessment
+  // could not be opened"), and left a perfectly good attempt sitting in
+  // progress. That is the observed defect, exactly.
+  //
+  // `pending` tracks the writes still in the air so submit can wait for
+  // them; `submittingRef` makes the submit itself single-flight, because a
+  // second click during the round trip would run the RPC twice.
+  const pending = useRef<Set<Promise<unknown>>>(new Set());
+  const submittingRef = useRef(false);
 
   const lang = uiLang === "en" ? "en" : "sv";
 
@@ -92,14 +130,19 @@ function AcademyAttemptRoute() {
     let cancelled = false;
     void (async () => {
       try {
-        const [rows, blockRows, state] = await Promise.all([
+        const [rows, blockRows, state, work] = await Promise.all([
           loadItems({ data: { attemptId, locale: lang } }),
           loadBlocks({ data: { attemptId, locale: lang } }),
           loadState({ data: { attemptId } }),
+          // Purpose only. Never allowed to fail the page: if the work list is
+          // unavailable the run still opens, under the neutral default.
+          loadWork().catch(() => []),
         ]);
         if (cancelled) return;
         setItems(rows);
         setBlocks(blockRows);
+        const mine = work.find((w) => w.workId === attemptId);
+        if (mine) setUseCase(mine.useCase);
         // A closed run never re-enters the player. Reloading the page after
         // handing in used to offer "continue where you left off" and only
         // refuse at the very end, which reads as though the submission had
@@ -129,7 +172,7 @@ function AcademyAttemptRoute() {
     return () => {
       cancelled = true;
     };
-  }, [attemptId, lang, loadItems, loadBlocks, loadState]);
+  }, [attemptId, lang, loadItems, loadBlocks, loadState, loadWork]);
 
   const current = items[index];
   const answered = useMemo(() => items.filter(isAnswered).length, [items]);
@@ -187,32 +230,89 @@ function AcademyAttemptRoute() {
     responseText?: string | null;
   }) {
     if (!current) return;
+    const call = saveResponse({
+      data: {
+        attemptId,
+        itemVersionId: current.itemVersionId,
+        selectedOptionId: patch.selectedOptionId ?? null,
+        bestOptionId: patch.bestOptionId ?? null,
+        worstOptionId: patch.worstOptionId ?? null,
+        responseText: patch.responseText ?? null,
+      },
+    });
+    // Registered before it is awaited, so a submit that starts one tick later
+    // already sees it. Removed in `finally` whether it resolved or rejected —
+    // a failed save must not leave submit waiting on it forever.
+    pending.current.add(call);
     try {
-      await saveResponse({
-        data: {
-          attemptId,
-          itemVersionId: current.itemVersionId,
-          selectedOptionId: patch.selectedOptionId ?? null,
-          bestOptionId: patch.bestOptionId ?? null,
-          worstOptionId: patch.worstOptionId ?? null,
-          responseText: patch.responseText ?? null,
-        },
-      });
+      await call;
     } catch (e) {
       setErrorCode((e as { code?: string }).code ?? "save_failed");
       setPhase("error");
+    } finally {
+      pending.current.delete(call);
+    }
+  }
+
+  /** Wait for every answer still being written. Settled, not resolved: a save
+   *  that failed has already put the run into the error phase, and submit must
+   *  not hang on it. */
+  async function flushPendingSaves() {
+    while (pending.current.size > 0) {
+      await Promise.allSettled([...pending.current]);
     }
   }
 
   async function onSubmit() {
+    // Single-flight. A ref, not state: it updates synchronously, so a second
+    // click that lands before React re-renders still sees the flag — which a
+    // state flag would miss, and which would run scp_submit_attempt twice.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setPhase("submitting");
     try {
+      // The fix for the observed defect. The last answer's save may still be
+      // in flight when this runs; submitting past it makes the database
+      // correctly report an incomplete attempt for a run that is, a few
+      // hundred milliseconds later, complete.
+      await flushPendingSaves();
       const res = await submitAttempt({ data: { attemptId } });
       setOutcome({ reviewsOpened: res.reviewsOpened });
       setPhase("done");
     } catch (e) {
-      setErrorCode((e as { code?: string }).code ?? "submit_failed");
-      setPhase("error");
+      const code = (e as { code?: string }).code ?? "submit_failed";
+      // ── IDEMPOTENCY ────────────────────────────────────────────────────
+      //
+      // "not_open" means the attempt is no longer in progress, which after a
+      // submit means it is already IN. That is the success case arriving by
+      // an unusual route (a retry after a dropped response, a double click
+      // whose first call won), and telling the participant it failed would be
+      // false — and would invite them to try again at something that is done.
+      if (code === "not_open") {
+        setOutcome({ reviewsOpened: 0 });
+        setPhase("done");
+        return;
+      }
+      // Otherwise ask the server what actually happened before saying
+      // anything. A response lost on the wire looks identical to a refusal
+      // from here, and only one of those is a failure.
+      try {
+        const state = await loadState({ data: { attemptId } });
+        if (state && !state.isOpen) {
+          setClosedStatus(state.status);
+          setPhase("done");
+          return;
+        }
+      } catch {
+        // The state read is a courtesy. Its failure is not new information.
+      }
+      // A genuine refusal, with the attempt still open. NOT the load-failure
+      // panel: nothing is lost, the answers are all saved, and the run is
+      // resumable — so the participant is told that, and offered the button.
+      setErrorCode(code);
+      setPhase("submit-failed");
+    } finally {
+      submittingRef.current = false;
     }
   }
 
@@ -246,12 +346,52 @@ function AcademyAttemptRoute() {
     );
   }
 
+  // A submission that did not go through. Distinct from the load-failure panel
+  // above in every way that matters to the person reading it: the title does
+  // not claim the assessment could not be opened (it opened; they answered all
+  // of it), the body says the answers are saved, and there is a button.
+  if (phase === "submit-failed") {
+    const bodyKey =
+      errorCode === "incomplete" || errorCode === "incomplete_best_worst"
+        ? "academy.submitFailed.incomplete"
+        : "academy.submitFailed.body";
+    return (
+      <AssessmentShell>
+        <AssessmentPanel>
+          <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <AlertTriangle className="h-5 w-5 text-accent" aria-hidden="true" />
+            {t("academy.submitFailed.title")}
+          </h1>
+          <p className="mt-3 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+            {t(bodyKey)}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void onSubmit()}
+              className="inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.submitFailed.retry")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhase("running")}
+              className="inline-flex h-12 items-center justify-center rounded-[10px] border border-border px-6 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("academy.submitFailed.review")}
+            </button>
+          </div>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
   if (phase === "intro") {
     return (
       <AssessmentShell>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
-            {t("academy.eyebrow")}
+            {t(recruitment ? "academy.eyebrowRecruitment" : "academy.eyebrow")}
           </p>
           <h1
             className="mt-3 text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-foreground"
@@ -263,7 +403,7 @@ function AcademyAttemptRoute() {
             {t("academy.intro.body")}
           </p>
           <p className="mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
-            {t("academy.intro.purpose")}
+            {t(recruitment ? "academy.intro.purposeRecruitment" : "academy.intro.purpose")}
           </p>
           {/* What the run is made of, before it starts. Fifty questions with no
               visible structure reads as endless; five named sections reads as

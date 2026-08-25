@@ -2550,6 +2550,18 @@ export const dictionaries = {
       "Du kommer att få ett antal situationer från arbetsvardagen. Det finns inget tidsstopp, och du kan pausa och återuppta när du vill — dina svar sparas medan du arbetar.",
     "academy.intro.purpose":
       "Underlaget används för kompetensutveckling. Det är inte ett prov, det ger inget godkänt eller underkänt, och det rangordnar dig inte mot någon annan.",
+    // ── PURPOSE-AWARE WORDING (recruitment vs employee) ─────────────────
+    //
+    // The keys above describe an assessment an EMPLOYER asked of their own
+    // EMPLOYEE, for competence development. Presenting the same words to a
+    // job APPLICANT was a purpose conflict: it called the hiring organisation
+    // "your employer", called a selection instrument "competence development",
+    // and implied the result would not inform the decision. The recruitment
+    // variants below say what is actually true — decision support, released to
+    // the organisation that requested it, decided by a person.
+    "academy.eyebrowRecruitment": "Rekrytering",
+    "academy.intro.purposeRecruitment":
+      "Underlaget används som beslutsstöd i rekryteringen hos den arbetsgivare som begärde bedömningen. Det är inte ett prov och ger inget automatiskt godkänt eller underkänt — en person hos arbetsgivaren fattar beslutet.",
     "academy.start": "Börja",
     "academy.resume": "Fortsätt där du slutade",
     "academy.loading": "Hämtar dina frågor …",
@@ -2597,6 +2609,16 @@ export const dictionaries = {
     "academy.error.retrying": "Försöker …",
     "academy.error.notFound": "Vi hittar ingen pågående bedömning för dig på den här länken.",
     "academy.error.notOpen": "Den här bedömningen är redan inlämnad och kan inte ändras.",
+    // A FAILED SUBMISSION is not a failed load. academy.error.title says the
+    // assessment could not be opened, which is false and alarming after
+    // somebody has answered every question -- and it was what they were shown.
+    "academy.submitFailed.title": "Inlämningen gick inte igenom",
+    "academy.submitFailed.body":
+      "Dina svar är sparade och ingenting har gått förlorat. Försök lämna in igen.",
+    "academy.submitFailed.incomplete":
+      "Något svar saknas fortfarande. Gå tillbaka och fyll i det som är kvar, och lämna sedan in igen. Dina övriga svar är sparade.",
+    "academy.submitFailed.retry": "Lämna in igen",
+    "academy.submitFailed.review": "Gå tillbaka till frågorna",
     "academy.error.generic": "Något gick fel. Försök igen om en stund.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tester & bedömningar",
@@ -3160,6 +3182,18 @@ export const dictionaries = {
     "academy.home.purposeFallback": "Kompetensutveckling.",
     "academy.home.privacy":
       "Dina svar lagras hos CQrityjob. Arbetsgivaren ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+    // Recruitment variants. See the academy.intro.purposeRecruitment comment
+    // for why the employee wording above may not be shown to an applicant.
+    "academy.home.titleRecruitment": "Mina bedömningar",
+    "academy.home.ledeRecruitment":
+      "Här samlas de bedömningar du blivit ombedd att göra och de rapporter som frisläppts till dig.",
+    "academy.home.assessmentLedeRecruitment":
+      "Bedömningar som en arbetsgivare begärt som en del av din ansökan. Resultatet frisläpps till den arbetsgivare som begärde bedömningen.",
+    "academy.home.purposeFallbackRecruitment": "Beslutsstöd i rekrytering.",
+    "academy.home.privacyRecruitment":
+      "Dina svar lagras hos CQrityjob. Den arbetsgivare som begärde bedömningen ser en kompetensprofil när den frisläppts — aldrig dina enskilda svar.",
+    "academy.home.recruitmentDecision":
+      "Bedömningen är ett underlag i rekryteringen. Den avgör ingenting på egen hand — en person hos arbetsgivaren fattar beslutet.",
     "academy.home.noneTitle": "Inget tilldelat just nu",
     "academy.home.noneBody": "När din arbetsgivare tilldelar ett program dyker det upp här.",
     "academy.home.openReport": "Öppna rapport",
@@ -6172,6 +6206,9 @@ export const dictionaries = {
       "You will be given a number of situations from everyday working life. There is no time limit, and you can pause and pick up again whenever you like — your answers are saved as you go.",
     "academy.intro.purpose":
       "This is used for competence development. It is not an exam, it produces no pass or fail, and it does not rank you against anybody else.",
+    "academy.eyebrowRecruitment": "Recruitment",
+    "academy.intro.purposeRecruitment":
+      "This is used as decision support in recruitment by the organisation that requested it. It is not an exam and produces no automatic pass or fail — a person at the organisation makes the decision.",
     "academy.start": "Begin",
     "academy.resume": "Pick up where you left off",
     "academy.loading": "Loading your questions …",
@@ -6219,6 +6256,13 @@ export const dictionaries = {
     "academy.error.retrying": "Trying …",
     "academy.error.notFound": "We cannot find an assessment of yours at this link.",
     "academy.error.notOpen": "This assessment has already been submitted and cannot be changed.",
+    "academy.submitFailed.title": "Your submission did not go through",
+    "academy.submitFailed.body":
+      "Your answers are saved and nothing has been lost. Try submitting again.",
+    "academy.submitFailed.incomplete":
+      "An answer is still missing. Go back and complete what is left, then submit again. Your other answers are saved.",
+    "academy.submitFailed.retry": "Submit again",
+    "academy.submitFailed.review": "Back to the questions",
     "academy.error.generic": "Something went wrong. Please try again shortly.",
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tests & assessments",
@@ -6785,6 +6829,16 @@ export const dictionaries = {
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
       "Your answers are stored by CQrityjob. Your employer sees a competency profile once it is released — never your individual answers.",
+    "academy.home.titleRecruitment": "My assessments",
+    "academy.home.ledeRecruitment":
+      "Everything you have been asked to complete, and the reports that have been released to you.",
+    "academy.home.assessmentLedeRecruitment":
+      "Assessments an organisation requested as part of your application. The result is released to the organisation that requested it.",
+    "academy.home.purposeFallbackRecruitment": "Decision support in recruitment.",
+    "academy.home.privacyRecruitment":
+      "Your answers are stored by CQrityjob. The organisation that requested the assessment sees a competence profile once it has been released — never your individual answers.",
+    "academy.home.recruitmentDecision":
+      "This assessment is evidence used in recruitment. It decides nothing on its own — a person at the organisation makes the decision.",
     "academy.home.noneTitle": "Nothing assigned right now",
     "academy.home.noneBody": "When your employer assigns a programme it will appear here.",
     "academy.home.openReport": "Open report",
