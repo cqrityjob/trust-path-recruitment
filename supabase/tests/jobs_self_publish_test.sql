@@ -49,7 +49,12 @@ INSERT INTO auth.users (id, email) VALUES
 INSERT INTO public.employers (id, name, slug, status) VALUES
   ('5e1f0000-1111-0000-0000-000000000001','Publicera Aktiv AB','pub-aktiv','active'),
   ('5e1f0000-1111-0000-0000-000000000002','Publicera Väntar AB','pub-vantar','pending'),
-  ('5e1f0000-1111-0000-0000-000000000003','Publicera Stängd AB','pub-stangd','suspended'),
+  -- Inserted ACTIVE and suspended further down through moderate_employer(),
+  -- the way a real customer is suspended. Its draft below was created while
+  -- the organisation could still operate, which is the only way such a draft
+  -- can exist -- the Admin Control Center's operational guard refuses new
+  -- records for an organisation that is already suspended.
+  ('5e1f0000-1111-0000-0000-000000000003','Publicera Stängd AB','pub-stangd','active'),
   ('5e1f0000-1111-0000-0000-000000000004','Publicera Annan AB','pub-annan','active');
 
 -- The organisation whose only member is ALSO a platform admin. This is not a
@@ -142,6 +147,15 @@ VALUES
   ('5e1f0000-2222-0000-0000-00000000000d','5e1f0000-1111-0000-0000-000000000001',
    'pub-aktiv-epost-ok','pubaaa0013','Väktare Falun','En riktig beskrivning av rollen.',
    'draft','email',NULL,'jobb@exempel.invalid', now() + interval '30 days');
+
+-- Now that the suspended organisation's draft exists, suspend it the way the
+-- platform actually does: through moderate_employer(), which is the only path
+-- employers.status can change by. The platform admin created above is the
+-- caller. Every assertion below about "the suspended employer" is unchanged.
+SET LOCAL request.jwt.claim.sub = '5e1f0000-0000-0000-0000-000000000005';
+SELECT public.moderate_employer(
+  '5e1f0000-1111-0000-0000-000000000003','suspended','Fixture: kundrelationen pausad.');
+RESET request.jwt.claim.sub;
 
 -- P10 takes the moderated route, which is still open, and then stays there
 -- for the rest of the suite as the legacy advertisement nobody has cleared.

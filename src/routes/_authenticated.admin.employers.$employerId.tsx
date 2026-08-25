@@ -7,7 +7,7 @@
 // state, never a distinguishable error that would leak whether the id is
 // real.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -33,6 +33,13 @@ import {
   adminModerateEmployer,
   type AdminEmployerDetail,
 } from "@/lib/job-intelligence/admin-employer-moderation.functions";
+import {
+  adminGetEmployerDeletionImpact,
+  adminDeleteEmployer,
+} from "@/lib/job-intelligence/admin-lifecycle.functions";
+import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
+import { DangerZone, DeletionImpactPreview } from "@/components/admin/DangerZone";
+import { blockerLabelKey, lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/employers/$employerId")({
@@ -59,13 +66,21 @@ const STATUS_LABEL_KEY: Record<string, TranslationKey> = {
   archived: "admin.employers.status.archived",
 };
 
-type ModerationAction = "approved" | "rejected" | "suspended" | "reactivated";
+type ModerationAction =
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "reactivated"
+  | "archived"
+  | "restored";
 
 const ACTION_REQUIRES_NOTE: Record<ModerationAction, boolean> = {
   approved: false,
   rejected: true,
   suspended: true,
   reactivated: false,
+  archived: true,
+  restored: true,
 };
 
 const ACTION_LABEL_KEY: Record<ModerationAction, TranslationKey> = {
@@ -73,6 +88,8 @@ const ACTION_LABEL_KEY: Record<ModerationAction, TranslationKey> = {
   rejected: "admin.employers.action.reject",
   suspended: "admin.employers.action.suspend",
   reactivated: "admin.employers.action.reactivate",
+  archived: "admin.employers.action.archive",
+  restored: "admin.employers.action.restore",
 };
 
 const ACTION_CONFIRM_TITLE_KEY: Record<ModerationAction, TranslationKey> = {
@@ -80,6 +97,8 @@ const ACTION_CONFIRM_TITLE_KEY: Record<ModerationAction, TranslationKey> = {
   rejected: "admin.employers.action.confirmReject.title",
   suspended: "admin.employers.action.confirmSuspend.title",
   reactivated: "admin.employers.action.confirmReactivate.title",
+  archived: "admin.employers.action.confirmArchive.title",
+  restored: "admin.employers.action.confirmRestore.title",
 };
 
 const ACTION_CONFIRM_BODY_KEY: Record<ModerationAction, TranslationKey> = {
@@ -87,6 +106,8 @@ const ACTION_CONFIRM_BODY_KEY: Record<ModerationAction, TranslationKey> = {
   rejected: "admin.employers.action.confirmReject.body",
   suspended: "admin.employers.action.confirmSuspend.body",
   reactivated: "admin.employers.action.confirmReactivate.body",
+  archived: "admin.employers.action.confirmArchive.body",
+  restored: "admin.employers.action.confirmRestore.body",
 };
 
 // Which actions the current status makes available -- mirrors
@@ -94,9 +115,11 @@ const ACTION_CONFIRM_BODY_KEY: Record<ModerationAction, TranslationKey> = {
 // list is advisory only (a stale page can still only succeed against
 // whatever the RPC itself validates server-side).
 function availableActions(status: string): ModerationAction[] {
-  if (status === "pending") return ["approved", "rejected"];
-  if (status === "active") return ["suspended"];
-  if (status === "suspended") return ["reactivated"];
+  if (status === "pending") return ["approved", "rejected", "archived"];
+  if (status === "active") return ["suspended", "archived"];
+  if (status === "suspended") return ["reactivated", "archived"];
+  if (status === "draft" || status === "rejected") return ["archived"];
+  if (status === "archived") return ["restored"];
   return [];
 }
 
@@ -128,6 +151,38 @@ function AdminEmployerDetailPage() {
   const [note, setNote] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState(false);
+
+  // The danger zone needs two things this page did not previously ask for:
+  // whether the CURRENT administrator is a superadmin, and what the DATABASE
+  // says would happen if this organisation were deleted. Both are read fresh;
+  // neither is inferred from anything already on the page.
+  const whoAmIFn = useServerFn(adminWhoAmI);
+  const whoAmI = useQuery({ queryKey: ["admin", "whoami"], queryFn: () => whoAmIFn() });
+
+  const impactFn = useServerFn(adminGetEmployerDeletionImpact);
+  const impact = useQuery({
+    queryKey: ["admin", "employer-deletion-impact", employerId],
+    queryFn: () => impactFn({ data: { employerId } }),
+    retry: false,
+  });
+
+  const deleteFn = useServerFn(adminDeleteEmployer);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleted, setDeleted] = useState(false);
+  const navigate = useNavigate();
+
+  const deleteEmployer = useMutation({
+    mutationFn: (vars: { reason: string }) =>
+      deleteFn({ data: { employerId, reason: vars.reason, confirmName: q.data?.name ?? "" } }),
+    onSuccess: () => {
+      setDeleteError(null);
+      setDeleted(true);
+      qc.invalidateQueries({ queryKey: ["admin", "employers-moderation"] });
+      qc.invalidateQueries({ queryKey: ["admin", "disposable-records"] });
+      navigate({ to: "/admin/employers" });
+    },
+    onError: (e: Error) => setDeleteError(e.message),
+  });
 
   const moderate = useMutation({
     mutationFn: (action: ModerationAction) =>
@@ -525,6 +580,39 @@ function AdminEmployerDetailPage() {
             </ul>
           )}
         </section>
+        <DangerZone
+          title={t("admin.lifecycle.employer.dangerTitle")}
+          description={t("admin.lifecycle.employer.dangerDescription")}
+          pending={deleteEmployer.isPending}
+          errorMessage={deleteError ? t(lifecycleErrorKey(deleteError)) : null}
+          successMessage={deleted ? t("admin.lifecycle.employer.delete.success") : null}
+          actions={[
+            {
+              key: "delete-employer",
+              label: t("admin.lifecycle.employer.delete.label"),
+              consequence: t("admin.lifecycle.employer.delete.consequence"),
+              confirmPhrase: employer.name,
+              confirmPhraseLabel: t("admin.lifecycle.employer.delete.confirmPhraseLabel"),
+              blockedReason: !whoAmI.data?.isSuperadmin
+                ? t("admin.lifecycle.employer.delete.blockedSuperadmin")
+                : impact.data && !impact.data.deletable
+                  ? t("admin.lifecycle.employer.delete.blockedData")
+                  : null,
+              impact: impact.isLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("admin.lifecycle.employer.impactLoading")}
+                </p>
+              ) : impact.data ? (
+                <DeletionImpactPreview
+                  blockers={impact.data.blockers}
+                  removed={impact.data.removedOnDelete}
+                  translateBlocker={(code) => t(blockerLabelKey(code))}
+                />
+              ) : null,
+              onConfirm: ({ reason }) => deleteEmployer.mutate({ reason }),
+            },
+          ]}
+        />
       </AdminShellChrome>
 
       <Dialog open={openAction !== null} onOpenChange={(o) => !o && setOpenAction(null)}>

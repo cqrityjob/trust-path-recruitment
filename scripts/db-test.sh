@@ -1182,6 +1182,31 @@ fi
 # documented rollback removes the scp_ schema -- so after that point the
 # function raises "relation does not exist" and the suite would be testing the
 # teardown rather than the product.
+# NOTE ON PLACEMENT: this suite must run BEFORE the rollback suite below,
+# which really does DROP the Security Competency tables. Everything after
+# that point runs against a schema those tables no longer exist in.
+# ---------------------------------------------------------------------------
+echo "==> Verifying Admin Control Center lifecycle and safe data management"
+set +e
+ACC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/admin_lifecycle_test.sql 2>&1)"
+ACC_RC=$?
+set -e
+
+ACC_PASSED="$(echo "$ACC_OUT" | grep -c "ok  " || true)"
+
+if [ "$ACC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Admin Control Center suite exited with code ${ACC_RC}." >&2
+  echo "$ACC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Admin Control Center lifecycle"
+else
+  echo "    ok  ${ACC_PASSED} admin lifecycle assertions passed"
+  if [ "$ACC_PASSED" -lt 89 ]; then
+    echo "FAIL: expected at least 89 admin lifecycle assertions, only ${ACC_PASSED} ran." >&2
+    suite_failed "Admin Control Center lifecycle (assertion shortfall: floor 89)"
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
@@ -2269,6 +2294,7 @@ echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
 echo "              ${ARCH_PASSED} job archive assertions,"
+echo "              ${ACC_PASSED} admin lifecycle assertions,"
 echo "              ${LIFE_PASSED} job lifecycle + notification assertions,"
 echo "              ${STDR_PASSED} standard recruitment availability assertions,"
 echo "              ${SP3M_PASSED} three-market foundation assertions,"

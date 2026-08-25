@@ -42,8 +42,18 @@ CREATE TABLE IF NOT EXISTS auth.users (
   email text,
   raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
   email_confirmed_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  -- Supabase Auth's own ban column. Stubbed here for the same reason the
+  -- Storage tables are: the Admin Control Center's account-disable path is a
+  -- write to THIS column, so leaving it out would mean the suite asserted a
+  -- disable that never touched anything real.
+  banned_until timestamptz,
+  last_sign_in_at timestamptz
 );
+
+-- Idempotent for a database bootstrapped before these columns existed.
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS banned_until timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS last_sign_in_at timestamptz;
 
 -- auth.uid() resolves from a transaction-local setting, so a test can act as
 -- a specific user with SET LOCAL and have RLS evaluate exactly as it would
