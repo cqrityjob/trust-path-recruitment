@@ -193,8 +193,11 @@ export interface DisclosurePayload {
    *  titles cannot reach here: the payload is built for somebody else. */
   readonly identity: ProfessionalIdentity;
   /** NULL when the holder has not stated a work country. Rendered as "not
-   *  stated" by formatJurisdiction — never silently as a country. */
+   *  stated" — never silently as a country. */
   readonly jurisdictionCode: string | null;
+  /** The emirate, where there is one. Carried so a Dubai holder is not
+   *  flattened into "United Arab Emirates" on a disclosure. */
+  readonly subJurisdictionCode: string | null;
   readonly purposeKey: PassportCopyKey;
   readonly packageNameKey: PassportCopyKey;
   readonly recipientHint: string | null;
@@ -305,6 +308,7 @@ export function buildDisclosurePayload(
     holderDisplayName: holder.displayName,
     identity: withoutSelfDeclared(holder.identity),
     jurisdictionCode: holder.jurisdictionCode,
+    subJurisdictionCode: holder.subJurisdictionCode,
     purposeKey: pkg.purposeKey,
     packageNameKey: pkg.nameKey,
     recipientHint: request.recipientHint,

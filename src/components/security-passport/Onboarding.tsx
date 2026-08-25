@@ -234,7 +234,7 @@ export function Onboarding({
                       <option value="">—</option>
                       {field.options?.map((o) => (
                         <option key={o.value} value={o.value}>
-                          {o.label}
+                          {o.labelKey ? pt(o.labelKey) : o.label}
                         </option>
                       ))}
                     </select>

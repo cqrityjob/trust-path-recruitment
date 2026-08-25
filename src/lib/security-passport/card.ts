@@ -76,8 +76,13 @@ export interface PassportCardModel {
    *  screenshots, with nothing scheduled that could have failed to run. */
   readonly identity: ProfessionalIdentity;
   /** NULL when the holder has not stated a work country. Rendered as "not
-   *  stated" by formatJurisdiction — never silently as a country. */
+   *  stated" by formatWorkLocation — never silently as a country. */
   readonly jurisdictionCode: string | null;
+  /** Carried beside the country so the card can say "Dubai, Förenade
+   *  Arabemiraten" rather than flattening the emirate into the UAE. SIRA
+   *  licenses Dubai and not the country; a card that drops the emirate has
+   *  already made the UAE-wide claim the market pack exists to refuse. */
+  readonly subJurisdictionCode: string | null;
   readonly state: PassportCardState;
   /** Null unless the whole qualifying threshold is verified. */
   readonly recognition: RecognitionState;
@@ -180,6 +185,7 @@ export function buildPassportCard(
     // braces is proportionate for the one surface that leaves the product.
     identity: withoutSelfDeclared(holder.identity),
     jurisdictionCode: holder.jurisdictionCode,
+    subJurisdictionCode: holder.subJurisdictionCode,
     state: deriveState(holder.periods, holder.claims),
     recognition,
     verifiedExperienceDays: totals.verified.elapsedDays,

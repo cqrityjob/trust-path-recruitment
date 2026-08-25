@@ -460,6 +460,26 @@ const sv = {
   // The permanent work-country control on "My information". Named "arbetsland"
   // rather than "jurisdiktion": the holder is being asked where they work, not
   // to classify themselves legally.
+  // Work-country OPTIONS, one language each. The country keys above name the
+  // place; these name the CHOICE, which for the UAE has to distinguish the
+  // emirate the product models from the rest of the country it does not.
+  // Stated per country, because "not supported" without naming the market is
+  // the kind of vagueness a holder reads as a fault in their own Passport.
+  // Deliberately about REGISTRATION, never about the right to work: a work
+  // country is not an authorisation, and the note below says so.
+  "workCountry.regulated": "Reglerade behörigheter",
+  "workCountry.support.SE":
+    "Svenska reglerade behörigheter som Passport stöder kan registreras här.",
+  "workCountry.support.GB":
+    "CQrityjob stöder ännu inte registrering av brittiska reglerade behörigheter.",
+  "workCountry.support.AE":
+    "CQrityjob stöder ännu inte registrering av reglerade behörigheter i Förenade Arabemiraten.",
+  "workCountry.support.AE-DU":
+    "CQrityjob stöder ännu inte registrering av Dubai-reglerade behörigheter.",
+  "workCountry.notAuthorisation":
+    "Arbetsland är var du arbetar. Det är inte ett besked om att du får arbeta där — det avgörs av dina behörigheter och av myndigheterna i landet.",
+  "jurisdiction.option.AE-DU": "Dubai, Förenade Arabemiraten",
+  "jurisdiction.option.AE": "Förenade Arabemiraten (övriga)",
   "workCountry.title": "Arbetsland",
   "workCountry.current": "Nuvarande",
   "workCountry.save": "Spara arbetsland",
@@ -1616,6 +1636,19 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
     "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+  "workCountry.regulated": "Regulated credentials",
+  "workCountry.support.SE":
+    "Swedish regulated credential types supported by the Passport can be registered here.",
+  "workCountry.support.GB":
+    "CQrityjob does not yet support registration of UK-regulated credentials.",
+  "workCountry.support.AE":
+    "CQrityjob does not yet support registration of United Arab Emirates regulated credentials.",
+  "workCountry.support.AE-DU":
+    "CQrityjob does not yet support registration of Dubai-regulated credentials.",
+  "workCountry.notAuthorisation":
+    "Work country is where you work. It is not a statement that you may work there — that follows from your authorisations and from the authorities in that country.",
+  "jurisdiction.option.AE-DU": "Dubai, United Arab Emirates",
+  "jurisdiction.option.AE": "United Arab Emirates (other)",
   "workCountry.title": "Work country",
   "workCountry.current": "Current",
   "workCountry.save": "Save work country",

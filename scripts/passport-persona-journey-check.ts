@@ -582,6 +582,30 @@ assert(
 );
 
 /* ══════════════════════════════════════════════════════════════════════
+   LINKEDIN LEAVES THE APP, IT DOES NOT LOAD INSIDE IT
+   ══════════════════════════════════════════════════════════════════════
+
+   LinkedIn refuses to be framed, so an embedded preview shows
+   ERR_BLOCKED_BY_RESPONSE. The application is already correct — every LinkedIn
+   link is a top-level navigation — and these assertions keep it that way, so
+   the next person who sees that error in a preview does not "fix" a working
+   anchor by turning it into something that really would break.             */
+console.log("\nLINKEDIN -- top-level navigation, never an embed");
+
+for (const rel of [
+  "src/components/security-passport/live/LinkedInShareSection.tsx",
+  "src/components/security-passport/live/LinkedInProfileSection.tsx",
+  "src/components/security-passport/live/CredentialShareActions.tsx",
+]) {
+  const src = readFileSync(join(ROOT, rel), "utf8");
+  assert(/target="_blank"/.test(src), `${rel} opens LinkedIn in a new top-level tab`);
+  assert(/rel="noopener noreferrer"/.test(src), `${rel} opens it with noopener noreferrer`);
+  // An iframe or a script-driven same-frame navigation is the shape that would
+  // actually hit LinkedIn's frame refusal.
+  assert(!/<iframe/i.test(src), `${rel} never embeds LinkedIn`);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    A STORED COUNTRY IS NOT A CONFIRMED ONE
    ══════════════════════════════════════════════════════════════════════
 
