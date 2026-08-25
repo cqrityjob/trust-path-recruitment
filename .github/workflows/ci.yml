@@ -66,6 +66,25 @@ jobs:
       - name: Career Discovery v3 instrument check
         run: bun run career-discovery:check
 
+      # Question Refinement v3.2 rephrased twelve Career DNA stems, the C2
+      # context prompt and six adaptive prompts. These two guards are the
+      # halves of one claim and are worth nothing apart: the content check
+      # asserts the approved sentences verbatim, the locked structure (2 + 22
+      # + 4, 5 paths x 4), the option ids/loadings/role weights/report tags,
+      # and that the 22 common items reintroduce no experience-dependent term
+      # ("transaktion", "incident", "hela verksamheten", "compliance") that
+      # only someone already working in security could answer. The
+      # equivalence check replays nine fixed response sets through the whole
+      # engine and compares every scoring output field-by-field against a
+      # baseline frozen on pre-refinement main — so a wording edit that
+      # silently moved a dimension, a loading or a ranking fails here rather
+      # than reaching a candidate.
+      - name: Career Discovery v3.2 content and readability check
+        run: bun run career-discovery-v32-content:check
+
+      - name: Career Discovery v3.2 scoring equivalence check
+        run: bun run career-discovery-v32-equivalence:check
+
       # Asserts the EXACT payload persistPublicV31Run sends to cd_evidence.
       # A NOT NULL violation on answer_tags emptied every save in the live
       # environment while the SQL suite passed, because the suite wrote its own
