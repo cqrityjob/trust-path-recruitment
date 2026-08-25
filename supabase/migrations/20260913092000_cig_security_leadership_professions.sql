@@ -42,6 +42,23 @@
 -- not this table, is what profession matching ranks, and neither role is in
 -- it. Nothing here approves anything for ranking.
 --
+-- ── THE FAMILY IS RESOLVED AGAINST THE CANONICAL SET ─────────────────────
+--
+-- Not against the slugs the original 2026-07-17 seed used. Those families were
+-- archived and hard-deleted by 20260717172039, which narrowed the graph to
+-- fourteen canonical families with different slugs; a lookup on a legacy slug
+-- silently yields NULL. Caught by clean-replay, not by review -- the first
+-- version of this migration used 'corporate-security-leadership' and
+-- 'operational-security' and produced two rows with no family at all.
+--
+-- The two roles take the same families as their nearest canonical neighbours,
+-- which is what makes them findable in the same places:
+--   sakerhetsskyddschef -> security-leadership-governance (as sakerhetschef)
+--   bevakningschef      -> protective-operations          (as vaktare/skyddsvakt)
+--
+-- The assertion block below fails the migration if either lookup misses, so
+-- this cannot regress into a NULL family again.
+--
 -- Additive: two INSERTs, ON CONFLICT DO NOTHING, no existing row touched, no
 -- column, constraint, policy or grant changed.
 --
@@ -57,12 +74,12 @@ SELECT v.slug, v.canonical_key,
        v.title_sv, v.title_en, v.summary_sv, v.summary_en, v.disclaimer_sv, v.disclaimer_en,
        'cig-2026.09-leadership.1', now()
 FROM (VALUES
- ('sakerhetsskyddschef','se.security.sakerhetsskyddschef','corporate-security-leadership','C','draft',true,'SE','SE',
+ ('sakerhetsskyddschef','se.security.sakerhetsskyddschef','security-leadership-governance','C','draft',true,'SE','SE',
   'Säkerhetsskyddschef','Head of Protective Security',
   'Utsedd befattning enligt säkerhetsskyddslagen med ansvar för verksamhetens säkerhetsskyddsarbete.',
   'Appointed function under the Swedish Protective Security Act, responsible for the organisation''s protective security work.',
   NULL,NULL),
- ('bevakningschef','se.security.bevakningschef','operational-security','C','draft',false,'SE','SE',
+ ('bevakningschef','se.security.bevakningschef','protective-operations','C','draft',false,'SE','SE',
   'Bevakningschef','Guarding Operations Manager',
   'Operativt chefsansvar för bevakningsverksamhet inom auktoriserat bevakningsföretag.',
   'Operational management responsibility for guarding services within an authorised guarding company.',
