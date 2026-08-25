@@ -268,8 +268,8 @@ const PATH_B: DiscoveryItem[] = [
   adaptive(
     "ADAPT_WORKING_03",
     {
-      sv: "När du ser något som inte fungerar tillräckligt bra, vad faller sig mest naturligt?",
-      en: "When you notice something that is not working well enough, what feels most natural?",
+      sv: "När du ser något som inte fungerar så bra som det borde, vad gör du mest naturligt?",
+      en: "When you see something that is not working as well as it should, what do you most naturally do?",
     },
     tagged([
       {
@@ -341,8 +341,8 @@ const PATH_C: DiscoveryItem[] = [
   adaptive(
     "ADAPT_DEVELOP_01",
     {
-      sv: "Vilken del av din nuvarande roll vill du att andra ska kunna förlita sig ännu mer på?",
-      en: "Which part of your current role would you like others to rely on even more?",
+      sv: "Vilken styrka i din nuvarande roll vill du att andra ska kunna förlita sig ännu mer på?",
+      en: "Which strength in your current role would you like others to be able to rely on even more?",
     },
     tagged([
       {
@@ -440,8 +440,8 @@ const PATH_C: DiscoveryItem[] = [
   adaptive(
     "ADAPT_DEVELOP_04",
     {
-      sv: "Vad skulle vara ett meningsfullt nästa steg under de kommande 12–24 månaderna?",
-      en: "What would be a meaningful next step during the next 12–24 months?",
+      sv: "Vad skulle vara ett meningsfullt nästa steg för dig under de kommande 12–24 månaderna?",
+      en: "What would be a meaningful next step for you during the next 12–24 months?",
     },
     tagged([
       {
@@ -579,8 +579,8 @@ const PATH_D: DiscoveryItem[] = [
   adaptive(
     "ADAPT_CHANGE_04",
     {
-      sv: "Vad är du mest beredd att göra för att nå ett nytt säkerhetsområde?",
-      en: "What are you most prepared to do to enter a new Security Career Area?",
+      sv: "Vad är du mest beredd att göra för att ta dig vidare till ett nytt säkerhetsområde?",
+      en: "What are you most prepared to do to move into a new Security Career Area?",
     },
     tagged([
       {
@@ -656,8 +656,8 @@ const PATH_E: DiscoveryItem[] = [
   adaptive(
     "ADAPT_LEADER_02",
     {
-      sv: "Vilken avvägning är mest krävande i ditt ledarskap?",
-      en: "Which balance is most demanding in your leadership?",
+      sv: "Vilken avvägning är mest utmanande i ditt ledarskap?",
+      en: "Which trade-off is most challenging in your leadership?",
     },
     tagged([
       {
@@ -689,8 +689,8 @@ const PATH_E: DiscoveryItem[] = [
   adaptive(
     "ADAPT_LEADER_03",
     {
-      sv: "När en säkerhetsfråga berör flera delar av organisationen, vad blir normalt ditt viktigaste bidrag?",
-      en: "When a security issue affects several parts of the organisation, what is normally your most important contribution?",
+      sv: "När en säkerhetsfråga berör flera delar av organisationen, vilket blir oftast ditt viktigaste bidrag?",
+      en: "When a security issue affects several parts of the organisation, what is most often your most important contribution?",
     },
     tagged([
       {

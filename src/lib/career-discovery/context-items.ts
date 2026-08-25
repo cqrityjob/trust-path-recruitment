@@ -104,8 +104,8 @@ export const DISCOVERY_GOAL_ITEM: DiscoveryItem = {
   itemVersion: 1,
   evidenceClass: "contextual_self_report",
   prompt: {
-    sv: "Vad hoppas du få ut av den här upptäcktsresan?",
-    en: "What do you hope to get from this discovery?",
+    sv: "Vad hoppas du främst få ut av Career Discovery?",
+    en: "What do you most hope to get from Career Discovery?",
   },
   axes: [],
   estimatedSeconds: 15,

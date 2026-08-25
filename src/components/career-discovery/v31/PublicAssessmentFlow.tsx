@@ -600,6 +600,7 @@ export function PublicAssessmentFlow() {
                     onSelect={(v) =>
                       advance(recordAnswer(buffer, { itemId, format: "scale", value: v }))
                     }
+                    instruction={t("cd.public.scaleInstruction")}
                     lowLabel={t("cd.public.scaleLow")}
                     highLabel={t("cd.public.scaleHigh")}
                   />

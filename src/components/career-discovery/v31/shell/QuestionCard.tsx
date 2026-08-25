@@ -123,22 +123,36 @@ export function SelectableAnswer({
   );
 }
 
-/** The 1–10 Likert scale. Horizontal on desktop, 5×2 on small screens. */
+/** The 1–10 Likert scale. Horizontal on desktop, 5×2 on small screens.
+ *
+ *  `instruction` states what the ten numbers MEAN. A bare row of digits under
+ *  a statement is only self-explanatory to someone who has met this kind of
+ *  instrument before, which is precisely the reader v3.2 is written for
+ *  (students, career changers, people new to security). The two endpoint
+ *  labels alone do not carry it: they say what 1 and 10 are, not what the
+ *  question is asking you to rate.
+ *
+ *  It is placed BEFORE the numbers and rendered as real text — never as a
+ *  placeholder or a title attribute — so a screen reader reaches it in
+ *  reading order, on the same terms as a sighted reader. */
 export function LikertScale({
   name,
   value,
   onSelect,
+  instruction,
   lowLabel,
   highLabel,
 }: {
   name: string;
   value: number | undefined;
   onSelect: (v: number) => void;
+  instruction: string;
   lowLabel: string;
   highLabel: string;
 }) {
   return (
     <div>
+      <p className="mb-4 text-sm text-muted-foreground">{instruction}</p>
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => {
           const checked = value === v;
