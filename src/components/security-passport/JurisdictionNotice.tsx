@@ -33,22 +33,13 @@
 
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { formatWorkLocation, workCountrySupportKey } from "@/lib/security-passport/format";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
-/** What the product can record, per work country.
- *
- *  Sweden is the only ACTIVE market pack, so it is the only country that gets
- *  the "can be registered" sentence. Everything else says plainly that it
- *  cannot yet — naming the country, because "not supported" without saying
- *  which market is the kind of vagueness a holder reads as a fault. */
-const SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
-  SE: "workCountry.support.SE",
-  GB: "workCountry.support.GB",
-  AE: "workCountry.support.AE",
-  "AE-DU": "workCountry.support.AE-DU",
-};
+/* The per-country sentence moved to `workCountrySupportKey` in
+   lib/security-passport/format.ts when the credential form started needing the
+   same one. Two components saying different things about the same closed
+   market is precisely what the pilot tester met, so there is now one map. */
 
 export function JurisdictionNotice({
   workCountry,
@@ -68,7 +59,7 @@ export function JurisdictionNotice({
   // Sverige" over a holder who had never mentioned Sweden.
   if (!workCountry) return null;
 
-  const supportKey = SUPPORT_KEY[subJurisdiction ?? workCountry] ?? SUPPORT_KEY[workCountry];
+  const supportKey = workCountrySupportKey(workCountry, subJurisdiction);
 
   return (
     <section className={cn("rounded-lg border border-border bg-secondary/40 p-4", className)}>
@@ -89,7 +80,7 @@ export function JurisdictionNotice({
               {pt("workCountry.regulated")}
             </p>
             <p className="mt-0.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-              {supportKey ? pt(supportKey) : pt("jurisdiction.marketAvailability")}
+              {pt(supportKey)}
             </p>
           </div>
 

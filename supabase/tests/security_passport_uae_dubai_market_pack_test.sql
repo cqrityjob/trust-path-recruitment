@@ -61,7 +61,7 @@ BEGIN
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      sub_jurisdiction_code, claimed_issuer_name, valid_until,
      credential_reference, authorisation_scope)
-  VALUES (_h, 'licence', 'SIRA Security Cadre Card', 'AE_DU_SIRA_CARD_GUARD', 'AE',
+  VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE',
           'AE-DU', 'Security Industry Regulatory Agency', current_date + 700,
           'SIRA-2026-004417', 'Fictional Security Services LLC');
   RAISE NOTICE 'ok  2.1 POSITIVE CONTROL a Dubai cadre card records normally';
@@ -69,10 +69,20 @@ BEGIN
   -- With the pack live, a UAE claim with no emirate is STILL refused. This is
   -- the assertion that matters most in the whole suite: activating Dubai must
   -- not activate the country.
+  --
+  -- The probe names a CREDENTIAL_CODE, and from 20260910090000 that is
+  -- load-bearing. The market gate governs which REGULATED credentials may be
+  -- registered; it used to run on every claim carrying a jurisdiction, which
+  -- is how a British driving licence became unrecordable because the UK
+  -- SECURITY pack is unreviewed. What must never soften is this: a SIRA cadre
+  -- card cannot be recorded as UAE-wide, and it still cannot.
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, jurisdiction_code)
-    VALUES (_h, 'licence', 'A UAE-wide licence', 'AE');
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       claimed_issuer_name, valid_until, authorisation_scope)
+    VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard',
+            'AE_DU_SIRA_CARD_GUARD', 'AE', 'SIRA', current_date + 700,
+            'Fictional Security Services LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 2.2 a UAE-wide claim was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
@@ -87,8 +97,11 @@ BEGIN
                WHERE jurisdiction_code = 'AE' AND code <> 'AE-DU' LOOP
     BEGIN
       INSERT INTO public.sp_claims
-        (holder_user_id, claim_type, title, jurisdiction_code, sub_jurisdiction_code)
-      VALUES (_h, 'licence', 'Card from another emirate', 'AE', _txt);
+        (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+         sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
+      VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard',
+              'AE_DU_SIRA_CARD_GUARD', 'AE', _txt,
+              'SIRA', current_date + 700, 'Fictional Security Services LLC');
       RAISE EXCEPTION 'ASSERTION FAILED: 2.3 % was accepted', _txt;
     EXCEPTION WHEN check_violation THEN
       NULL;
@@ -101,7 +114,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
-    VALUES (_h, 'licence', 'SIRA card in Abu Dhabi', 'AE_DU_SIRA_CARD_GUARD', 'AE',
+    VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE',
             'AE-AZ', 'SIRA', current_date + 700, 'Fictional LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 2.4 a Dubai card was filed against Abu Dhabi';
   EXCEPTION WHEN check_violation THEN
@@ -150,7 +163,7 @@ BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'Unlinked cadre card', 'AE_DU_SIRA_CARD_SUPERVISOR', 'AE',
+    VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Supervisor', 'AE_DU_SIRA_CARD_SUPERVISOR', 'AE',
             'AE-DU', 'SIRA', current_date + 700, 'SIRA-2026-004418');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.1 a cadre card with no employing company was accepted';
   EXCEPTION WHEN check_violation THEN

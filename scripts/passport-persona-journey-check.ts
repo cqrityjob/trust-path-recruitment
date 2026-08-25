@@ -667,17 +667,88 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-// The load-bearing one. Offering GB and AE as work countries must not have
-// leaked into the credential path: that select is still built from the markets
-// the server hands it, which are the ACTIVE packs.
+// The load-bearing one, and it got stronger.
+//
+// It used to assert that the credential COUNTRY SELECT was built from the
+// markets the server hands the form rather than from a literal list — the
+// defect being a hardcoded `["SE", "NO", "DK", "FI", "DE"]` of which four
+// values did not exist in sp_jurisdictions.
+//
+// There is no country select any more, and its absence is the stronger
+// property. `sp_claims_credential_rules` pins a claim's jurisdiction to its
+// credential type's, so the control had exactly one correct answer and every
+// other answer produced SP_CREDENTIAL_JURISDICTION_MISMATCH. The form now
+// STATES the credential's own jurisdiction from the definition. A Swedish VU1
+// says Sweden for a holder who has moved to Dubai, and nobody — holder or
+// component — can say otherwise.
+//
+// The original assertion is kept in substance: no literal country list may
+// return to this file, under any name.
 const credentialForm = readFileSync(
   join(ROOT, "src/components/security-passport/CredentialForm.tsx"),
   "utf8",
 );
 assert(
-  !/options=\{?\[/.test(credentialForm) && credentialForm.includes("markets.map("),
-  "the credential country select is still driven by ACTIVE market packs, not a literal list",
+  !/options=\{?\[/.test(credentialForm),
+  "the credential form declares no literal list of countries",
 );
+assert(
+  !/\bmarkets\b/.test(credentialForm),
+  "the credential form no longer offers a country to choose from at all",
+);
+assert(
+  credentialForm.includes("type.jurisdictionCode") &&
+    credentialForm.includes("formatWorkLocation("),
+  "the credential's country is STATED from its own definition, not selected",
+);
+// And the selector itself follows the holder's market rather than showing
+// every active credential type. The defect: `listCredentialTypes` returns the
+// eight Swedish credentials and nothing else, so a holder who had told the
+// product they work in Dubai was offered VU1 and Skyddsvaktsförordnande as
+// though they were Dubai credentials.
+const credentialRoute = readFileSync(
+  join(ROOT, "src/routes/_authenticated.passport.credentials.new.tsx"),
+  "utf8",
+);
+assert(
+  credentialRoute.includes("getRegulatedCredentialAvailability") &&
+    // The comment above the import legitimately NAMES the function it replaced
+    // in order to explain why, so this looks for a call rather than the word.
+    !/useServerFn\(listCredentialTypes\)/.test(credentialRoute),
+  "the add-credential route asks what THIS holder's market allows, not what is active anywhere",
+);
+assert(
+  credentialForm.includes("closedMarket") &&
+    credentialForm.includes('pt("cred.market.unavailableTitle")'),
+  "a closed market renders a stated reason rather than an empty credential list",
+);
+// Three different facts, three different sentences. An empty list could only
+// ever have said the first, and it did not say even that.
+for (const lang of ["sv", "en"] as const) {
+  for (const key of [
+    "cred.market.unavailableTitle",
+    "cred.market.noWorkCountry",
+    "cred.market.stillPossible",
+    "cred.market.keepsExisting",
+  ] as const) {
+    assert(Boolean(passportCopy[lang][key]), `${lang}: the closed-market copy has ${key}`);
+  }
+  // The line that must never appear. "Not supported yet" is true; "not
+  // eligible", "not qualified" and "invalid" are legal claims this product has
+  // no basis for and section 11 of the brief forbids outright.
+  const closed = [
+    passportCopy[lang]["cred.market.unavailableTitle"],
+    passportCopy[lang]["cred.market.noWorkCountry"],
+    passportCopy[lang]["cred.market.stillPossible"],
+    passportCopy[lang]["cred.market.keepsExisting"],
+  ].join(" ");
+  assert(
+    !/(inte behörig|ej behörig|inte kvalificerad|ogiltig|not eligible|not qualified|invalid|not allowed to work)/i.test(
+      closed,
+    ),
+    `${lang}: a closed market is described as unavailable, never as the holder being ineligible`,
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    THE WRITE PATH ACTUALLY REACHES THE SERVER

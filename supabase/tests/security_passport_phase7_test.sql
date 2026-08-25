@@ -124,7 +124,7 @@ BEGIN
   -- Never disclosed: not verified, whatever their codes say.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, issued_on)
-  VALUES (_h, 'training', 'P7 Självdeklarerad VU2', 'VU2', 'Väktarskolan Fiktiv AB', DATE '2025-06-01');
+  VALUES (_h, 'training', 'Väktarutbildning 2 (VU2)', 'VU2', 'Väktarskolan Fiktiv AB', DATE '2025-06-01');
 
   -- An appointment must carry an end date (Phase 6 trigger), so this fixture
   -- is complete in every respect EXCEPT being verified. That is the point:
@@ -136,7 +136,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
      issued_on, valid_until, assertion_level, authorisation_scope)
-  VALUES (_h, 'licence', 'P7 Dokumenterad SV', 'SV', 'Fiktiva Myndigheten',
+  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Fiktiva Myndigheten',
           DATE '2025-07-01', DATE '2028-06-30', 'document_provided',
           'Skyddsobjekt: Fiktiv anläggning');
 
@@ -185,7 +185,7 @@ BEGIN
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
      issued_on, valid_until, assertion_level, verified_by_user_id, verified_at,
      authorisation_scope)
-  VALUES (_o, 'licence', 'P7 ANNAN INNEHAVARE Skyddsvakt', 'SV', 'Fiktiva Myndigheten',
+  VALUES (_o, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Fiktiva Myndigheten',
           DATE '2025-02-02', DATE '2028-02-01', 'verified', _v, now(),
           'Skyddsobjekt: Fiktiv anläggning');
 END $$;
@@ -361,7 +361,9 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   SELECT public.sp_correct_claim(
-    _old, 'Väktarutbildning 1 (VU1) — rättad', 'Väktarskolan Fiktiv AB', 'SE',
+    -- The title is the definition's, unchanged by the correction; what this
+    -- correction changes is the provider and the dates.
+    _old, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', 'SE',
     DATE '2024-03-02', DATE '2024-03-02', NULL, 'p7 rättelse', 'VU1',
     'P7-REF-VU1-SECRET', 'P7 privat anteckning VU1') INTO _new;
   RESET ROLE;

@@ -67,7 +67,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
      credential_reference, holder_note, issued_on)
-  VALUES (_h, 'training', 'VU1', 'VU1', 'Nordvakt (fiktiv)',
+  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'Nordvakt (fiktiv)',
           'CERT-1001', 'Tog kursen på plats i Malmö.', DATE '2023-05-01')
   RETURNING id INTO _old;
 
@@ -117,7 +117,7 @@ DECLARE
 BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, credential_reference, holder_note)
-  VALUES (_h, 'training', 'VU1 igen', 'VU1', 'CERT-2002', 'gammal anteckning')
+  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'CERT-2002', 'gammal anteckning')
   RETURNING id INTO _old;
 
   SET LOCAL ROLE authenticated;
@@ -251,13 +251,20 @@ BEGIN
   -- Evidence points at a claim id, and the new version has a new id.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, assertion_level)
-  VALUES (_h, 'training', 'VU1 med underlag', 'VU1', 'document_provided')
+  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'document_provided')
   RETURNING id INTO _old;
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  -- The correction changes the TRAINING PROVIDER, which is material.
+  --
+  -- It used to change the title instead, and from 20260910090000 it cannot:
+  -- a governed credential is named by its definition, so the one field this
+  -- fixture was editing is now the one field a correction may not touch. The
+  -- assertion is unchanged — a material correction does not carry
+  -- DOCUMENT_PROVIDED onto a row no evidence points at — only its subject is.
   SELECT public.sp_correct_claim(
-    _old, 'VU1 med annat underlag', NULL, NULL, NULL, NULL, NULL,
+    _old, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
     'Bytte bevis', 'VU1', NULL, NULL) INTO _new;
   RESET ROLE;
 
@@ -275,13 +282,16 @@ DECLARE
   _old uuid; _new uuid; _lvl text; _args text;
 BEGIN
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h, 'training', 'VU2 självuppgiven', 'VU2')
+  VALUES (_h, 'training', 'Väktarutbildning 2 (VU2)', 'VU2')
   RETURNING id INTO _old;
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  -- Corrects the training provider. The title is the definition's and stays
+  -- so; from 20260910090000 a governed credential cannot be renamed by anyone.
   SELECT public.sp_correct_claim(
-    _old, 'VU2 rättad', NULL, NULL, NULL, NULL, NULL, 'r', 'VU2', NULL, NULL) INTO _new;
+    _old, 'Väktarutbildning 2 (VU2)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
+    'r', 'VU2', NULL, NULL) INTO _new;
   RESET ROLE;
 
   SELECT assertion_level INTO _lvl FROM public.sp_claims WHERE id = _new;
@@ -315,7 +325,7 @@ DECLARE
   _claim uuid; _superseded uuid;
 BEGIN
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h, 'training', 'VU1 för vakter', 'VU1')
+  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1')
   RETURNING id INTO _claim;
 
   -- Somebody else's Passport stays somebody else's.
@@ -331,7 +341,8 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   SELECT public.sp_correct_claim(
-    _claim, 'VU1 rättad', NULL, NULL, NULL, NULL, NULL, 'r', 'VU1', NULL, NULL)
+    _claim, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
+    'r', 'VU1', NULL, NULL)
     INTO _superseded;
   PERFORM pg_temp.must_fail(
     format('SELECT public.sp_correct_claim(%L, ''again'', NULL, NULL, NULL, NULL, NULL, ''r'', ''VU1'', NULL, NULL)', _claim),

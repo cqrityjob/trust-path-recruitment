@@ -23,6 +23,25 @@
 // thing holders most often get wrong: uploading documentation later makes
 // an entry DOCUMENTED, not approved — only a review can do that.
 //
+// ── THE TITLE IS NOT A FIELD ───────────────────────────────────────────
+//
+// It used to be. A tester chose Skyddsvaktsförordnande, typed "Bajskorv" into
+// Benämning and saved it — because the controlled-label rule reached only
+// `narrowResultOnly` credentials. The name of a regulated authorisation is the
+// one thing a governed vocabulary exists to control, so it is now rendered as
+// the derived value it is: shown, never editable, taken from the definition.
+// `titleIsControlled` decides, from data, so a future "other training" type
+// can still be named by its holder without this component learning about it.
+//
+// ── THE MARKET DECIDES WHAT IS OFFERED, NOT THIS FILE ──────────────────
+//
+// `types` arrives already filtered to the holder's own market. When their
+// market is not open the form renders `unavailable` instead of a credential
+// list: a Dubai-based holder must not be shown VU1 and Skyddsvaktsförordnande
+// as though they were things one registers in Dubai. The country a credential
+// belongs to is likewise STATED from the definition rather than chosen — it is
+// a property of the credential, not of the person holding it.
+//
 // ── PURE COMPONENT ─────────────────────────────────────────────────────
 //
 // No server import, no Supabase, no navigation. The route wires the
@@ -35,6 +54,7 @@ import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
   clearIncompatible,
+  controlledTitle,
   emptyCredentialDraft,
   fieldsFor,
   issuedOnLabelKey,
@@ -44,35 +64,41 @@ import {
   type CredentialFieldError,
   type CredentialType,
 } from "@/lib/security-passport/credentials";
+import { formatWorkLocation, workCountrySupportKey } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CredentialSymbol } from "./CredentialSymbol";
 
-/** The jurisdictions the select offers. ISO 3166-1 alpha-2; Sweden first
- *  because the launch taxonomy is Swedish, never because others are less. */
-/** One market the form may offer.
+/** Why the holder's own market is closed, when it is.
  *
  *  Structural rather than imported from the server module, so this component
  *  stays free of any database dependency — the same reason `CredentialType` is
- *  declared this way. The dev harness supplies its own list. */
-export interface FormMarket {
-  readonly marketPackCode: string;
-  readonly jurisdictionCode: string;
+ *  declared this way. The dev harness supplies its own value.
+ *
+ *  `null` means open: `types` is the market's credentials and the form behaves
+ *  as it always has. Anything else means the form has nothing to offer, and
+ *  says which market and why rather than rendering an empty list. */
+export interface ClosedMarket {
+  /** "no_work_country" — nobody has said where the holder works.
+   *  "pending_review" — a pack exists for this market and is unreviewed.
+   *  "unsupported"    — no pack covers this country, or covers it only at a
+   *                     sub-jurisdiction the holder has not named. */
+  readonly reason: "no_work_country" | "pending_review" | "unsupported";
+  readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
-  readonly nameSv: string;
-  readonly nameEn: string;
 }
 
 export interface CredentialFormProps {
   /** The taxonomy, from sp_credential_types (or fixtures in the harness). */
   readonly types: readonly CredentialType[];
-  /** The markets a holder may record in, from the ACTIVE market packs.
+  /** Null when the holder's market is open. Set when it is not, in which case
+   *  `types` is expected to be empty and the form renders the reason.
    *
-   *  This used to be a literal `["SE", "NO", "DK", "FI", "DE"]` in this file.
-   *  Only the first existed in sp_jurisdictions, so four of the five options
-   *  produced a foreign-key error — a controlled vocabulary whose control was
-   *  a list nobody had reconciled with the database. Reading it from the packs
-   *  means the form can only offer what the database will accept. */
-  readonly markets: readonly FormMarket[];
+   *  ── WHY THE FORM DOES NOT WORK THIS OUT ITSELF ─────────────────────────
+   *
+   *  "No credentials" and "Dubai's rules have not been reviewed yet" are
+   *  different facts, and only the second is true. A component that inferred
+   *  the state from an empty array could only ever say the first. */
+  readonly closedMarket?: ClosedMarket | null;
   /** Resumed draft, or null for a fresh form. */
   readonly initial?: (CredentialDraft & { readonly id: string }) | null;
   /** Preselected credential code (e.g. arriving from an overview action). */
@@ -128,7 +154,7 @@ function FieldError({ id, message }: { id: string; message: string | null }) {
 
 export function CredentialForm({
   types,
-  markets,
+  closedMarket = null,
   initial = null,
   preselectCode = null,
   busy,
@@ -200,81 +226,139 @@ export function CredentialForm({
         {pt("cred.add.body")}
       </p>
 
-      {/* ── Step 1: which credential ────────────────────────────────── */}
-      <fieldset>
-        <legend className="text-sm font-medium text-foreground">{pt("cred.select.label")}</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {types.map((t) => {
-            const chosen = draft.credentialCode === t.code;
-            return (
-              <label
-                key={t.code}
-                className={cn(
-                  // focus-within: the radio itself is visually hidden, so
-                  // the card must carry the keyboard focus indicator.
-                  "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring",
-                  chosen ? "border-accent bg-accent/5" : "border-border hover:bg-accent/5",
+      {/* ── When the holder's own market is not open ────────────────── */}
+      {closedMarket ? (
+        <section
+          aria-label={pt("cred.market.unavailableTitle")}
+          className="rounded-lg border border-border bg-secondary/40 p-4"
+        >
+          <h3 className="text-sm font-semibold text-foreground">
+            {pt("cred.market.unavailableTitle")}
+          </h3>
+
+          {/* The factual sentence, per market, from the same governed copy the
+              work-country panel uses — so the two surfaces cannot say
+              different things about the same closed market. It is about
+              REGISTRATION and never about the right to work: "cannot yet be
+              registered" is true, "not eligible" would not be. */}
+          <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-foreground">
+            {closedMarket.reason === "no_work_country"
+              ? pt("cred.market.noWorkCountry")
+              : pt(
+                  workCountrySupportKey(
+                    closedMarket.jurisdictionCode,
+                    closedMarket.subJurisdictionCode,
+                  ),
                 )}
-              >
-                <input
-                  type="radio"
-                  name="sp-cred-code"
-                  value={t.code}
-                  checked={chosen}
-                  onChange={() =>
-                    setDraft((d) =>
-                      // Values the new credential does not ask for are dropped,
-                      // not merely hidden. A retained scope or end date would
-                      // be submitted from a field the holder can no longer see.
-                      clearIncompatible(
-                        {
-                          ...d,
-                          credentialCode: t.code,
-                          // The certificate name is almost always the taxonomy
-                          // name, so it is prefilled — but stays editable, and a
-                          // name the holder typed themselves is never replaced.
-                          title:
-                            d.title.trim() === "" ||
-                            types.some((x) => d.title === x.nameSv || d.title === x.nameEn)
-                              ? typeName(t)
-                              : d.title,
-                        },
-                        t,
-                      ),
-                    )
-                  }
-                  className="sr-only"
-                />
-                <CredentialSymbol
-                  code={t.code}
-                  state="self_declared"
-                  symbolLabel={t.symbolLabel}
-                  name={typeName(t)}
-                  size={40}
-                  decorative
-                  className="shrink-0"
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium leading-snug text-foreground">
-                    {typeName(t)}
+          </p>
+
+          {/* Two things a holder needs to hear immediately, because the
+              tester's version of this moment was an unexplained absence: what
+              they CAN still record, and that nothing they already have is
+              affected. */}
+          <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("cred.market.stillPossible")}
+          </p>
+          <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("cred.market.keepsExisting")}
+          </p>
+          <p className="mt-2 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+            {pt("workCountry.notAuthorisation")}
+          </p>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-4 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("claim.back")}
+          </button>
+        </section>
+      ) : null}
+
+      {/* ── Step 1: which credential ────────────────────────────────── */}
+      {closedMarket ? null : (
+        <fieldset>
+          <legend className="text-sm font-medium text-foreground">{pt("cred.select.label")}</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {types.map((t) => {
+              const chosen = draft.credentialCode === t.code;
+              return (
+                <label
+                  key={t.code}
+                  className={cn(
+                    // focus-within: the radio itself is visually hidden, so
+                    // the card must carry the keyboard focus indicator.
+                    "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring",
+                    chosen ? "border-accent bg-accent/5" : "border-border hover:bg-accent/5",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="sp-cred-code"
+                    value={t.code}
+                    checked={chosen}
+                    onChange={() =>
+                      setDraft((d) =>
+                        // Values the new credential does not ask for are dropped,
+                        // not merely hidden. A retained scope or end date would
+                        // be submitted from a field the holder can no longer see.
+                        clearIncompatible(
+                          {
+                            ...d,
+                            credentialCode: t.code,
+                            // The definition's own name. It used to be a prefill
+                            // that "stays editable" — which is how a skyddsvakt
+                            // appointment came to be called "Bajskorv".
+                            // `clearIncompatible` sets it again from the same
+                            // source for every controlled credential, and the
+                            // server sets it a third time before the write; this
+                            // is the one that makes the field show the right
+                            // thing immediately.
+                            title: typeName(t),
+                            // The credential's country comes from the credential.
+                            // Nobody chooses it, here or anywhere: a Swedish VU1
+                            // is Swedish for a holder who has moved to Dubai, and
+                            // the database refuses any other filing.
+                            jurisdictionCode: t.jurisdictionCode ?? d.jurisdictionCode,
+                          },
+                          t,
+                        ),
+                      )
+                    }
+                    className="sr-only"
+                  />
+                  <CredentialSymbol
+                    code={t.code}
+                    state="self_declared"
+                    symbolLabel={t.symbolLabel}
+                    name={typeName(t)}
+                    size={40}
+                    decorative
+                    className="shrink-0"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium leading-snug text-foreground">
+                      {typeName(t)}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {pt(
+                        t.category === "appointment"
+                          ? "cred.category.appointment"
+                          : "cred.category.qualification",
+                      )}
+                    </span>
                   </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {pt(
-                      t.category === "appointment"
-                        ? "cred.category.appointment"
-                        : "cred.category.qualification",
-                    )}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        <FieldError
-          id={`${fieldId("credentialCode")}-error`}
-          message={errorFor("credentialCode")}
-        />
-      </fieldset>
+                </label>
+              );
+            })}
+          </div>
+          <FieldError
+            id={`${fieldId("credentialCode")}-error`}
+            message={errorFor("credentialCode")}
+          />
+        </fieldset>
+      )}
 
       {/* ── The rest appears once the choice decides what to ask ────── */}
       {type && visible ? (
@@ -296,17 +380,34 @@ export function CredentialForm({
 
             <div>
               <FieldLabel htmlFor={fieldId("title")}>{pt("cred.field.title")}</FieldLabel>
-              <input
-                id={fieldId("title")}
-                type="text"
-                maxLength={200}
-                value={draft.title}
-                placeholder={typeName(type)}
-                aria-invalid={errorFor("title") ? true : undefined}
-                aria-describedby={describedBy("title", `${fieldId("title")}-help`)}
-                onChange={(e) => set("title", e.target.value)}
-                className={inputClass}
-              />
+              {visible.title ? (
+                <input
+                  id={fieldId("title")}
+                  type="text"
+                  maxLength={200}
+                  value={draft.title}
+                  placeholder={typeName(type)}
+                  aria-invalid={errorFor("title") ? true : undefined}
+                  aria-describedby={describedBy("title", `${fieldId("title")}-help`)}
+                  onChange={(e) => set("title", e.target.value)}
+                  className={inputClass}
+                />
+              ) : (
+                /* Not a disabled input: a disabled field still reads as "a
+                   thing you could fill in, but not now", and this is not that.
+                   The credential's name is a FACT about the credential, so it
+                   is rendered as one. Nothing is submitted from here — the
+                   value travels in `draft.title`, which `clearIncompatible`
+                   set from the definition the moment the credential was
+                   chosen, and which the server sets again from the definition
+                   before the write. */
+                <p
+                  id={fieldId("title")}
+                  className="mt-1 flex h-11 items-center rounded-md border border-border bg-secondary/40 px-3 text-sm font-medium text-foreground"
+                >
+                  {controlledTitle(type, lang)}
+                </p>
+              )}
               <p id={`${fieldId("title")}-help`} className="mt-1 text-xs text-muted-foreground">
                 {pt("cred.field.titleHelp")}
               </p>
@@ -344,33 +445,40 @@ export function CredentialForm({
               </div>
             ) : null}
 
+            {/* ── Where the credential belongs ────────────────────────
+                Stated, not chosen.
+
+                This was a <select> over the active market packs. It could only
+                ever have one correct answer — `sp_claims_credential_rules`
+                pins a claim's jurisdiction to its credential type's, so
+                picking anything else produced
+                SP_CREDENTIAL_JURISDICTION_MISMATCH — and once the selector
+                itself became market-aware every credential in the list already
+                belonged to exactly one market. A control whose only possible
+                use is to cause an error is worse than no control.
+
+                Saying it out loud still matters, and matters more after this
+                release than before: a holder who has moved to Dubai needs to
+                see that the Swedish credential they are recording is a SWEDISH
+                credential, and stays one. */}
             <div>
-              <FieldLabel htmlFor={fieldId("jurisdictionCode")}>
-                {pt("cred.field.jurisdiction")}
-              </FieldLabel>
-              <select
-                id={fieldId("jurisdictionCode")}
-                value={draft.jurisdictionCode}
-                aria-invalid={errorFor("jurisdictionCode") ? true : undefined}
-                aria-describedby={describedBy("jurisdictionCode")}
-                onChange={(e) => set("jurisdictionCode", e.target.value)}
-                className={cn(inputClass, "sm:w-64")}
-              >
-                {markets.map((m) => (
-                  <option key={m.marketPackCode} value={m.jurisdictionCode}>
-                    {lang === "sv" ? m.nameSv : m.nameEn}
-                  </option>
-                ))}
-              </select>
+              <p className="block text-sm font-medium text-foreground">
+                {pt("cred.field.credentialCountry")}
+              </p>
+              <p className="mt-1 flex h-11 items-center rounded-md border border-border bg-secondary/40 px-3 text-sm font-medium text-foreground">
+                {formatWorkLocation(
+                  type.jurisdictionCode ?? draft.jurisdictionCode,
+                  type.subJurisdictionCode,
+                  lang,
+                )}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {pt("cred.field.credentialCountryHelp")}
+              </p>
               <FieldError
                 id={`${fieldId("jurisdictionCode")}-error`}
                 message={errorFor("jurisdictionCode")}
               />
-              {/* `markets` is the ACTIVE market packs and nothing else, so an
-                  unreviewed market is not merely discouraged here — it is not
-                  in the list, and the claim trigger would refuse it anyway.
-                  Saying which markets exist but are closed is what stops the
-                  short list reading as an oversight. */}
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 {pt("jurisdiction.marketAvailability")}
               </p>
@@ -599,41 +707,46 @@ export function CredentialForm({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-        <button
-          type="submit"
-          disabled={busy || !type}
-          className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          {busy ? pt("cred.action.saving") : pt("cred.action.activate")}
-        </button>
-        <button
-          type="button"
-          disabled={busy || !type}
-          onClick={() => trySubmit("draft")}
-          className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          {pt("cred.action.saveDraft")}
-        </button>
-        {onDiscard ? (
+      {/* No actions when there is nothing to act on. A disabled "Add to my
+          Passport" under a paragraph explaining that this market is not open
+          invites the holder to keep trying it. */}
+      {closedMarket ? null : (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <button
+            type="submit"
+            disabled={busy || !type}
+            className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {busy ? pt("cred.action.saving") : pt("cred.action.activate")}
+          </button>
+          <button
+            type="button"
+            disabled={busy || !type}
+            onClick={() => trySubmit("draft")}
+            className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("cred.action.saveDraft")}
+          </button>
+          {onDiscard ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onDiscard}
+              className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("cred.action.discard")}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={busy}
-            onClick={onDiscard}
-            className="inline-flex h-11 items-center rounded-md border border-destructive/40 px-4 text-sm font-medium text-destructive transition-colors hover:bg-destructive/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            onClick={onCancel}
+            className="inline-flex h-11 items-center px-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {pt("cred.action.discard")}
+            {pt("common.cancel")}
           </button>
-        ) : null}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onCancel}
-          className="inline-flex h-11 items-center px-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          {pt("common.cancel")}
-        </button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }

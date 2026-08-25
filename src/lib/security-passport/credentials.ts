@@ -77,6 +77,51 @@ export interface CredentialType {
    *  material — a register check, a fitness certificate — must never enter the
    *  Passport at all. */
   readonly narrowResultOnly: boolean;
+  /** Whether the HOLDER supplies this credential's name.
+   *
+   *  ── WHY THIS IS DATA AND NOT A RULE IN THIS FILE ───────────────────────
+   *
+   *  A tester selected Skyddsvaktsförordnande and typed "Bajskorv" into
+   *  Benämning, and it saved. The name of a regulated authorisation is the one
+   *  thing a governed vocabulary exists to control, and it was the one field
+   *  the holder could write freely — the controlled-label rule reached only
+   *  `narrowResultOnly` credentials, which the skyddsvakt appointment is not.
+   *
+   *  `false` for every credential shipped today, from the column's DEFAULT, so
+   *  a credential added later is controlled unless somebody deliberately says
+   *  otherwise. Reserved for a future "other training / other certificate"
+   *  type whose entire point is that the holder names it. */
+  readonly titleIsHolderWritten: boolean;
+  /** Where the credential itself belongs — NOT where its holder works.
+   *
+   *  A Swedish VU1 is a Swedish credential for a guard who has moved to Dubai,
+   *  and this is the field that keeps saying so. The database already pins it
+   *  (`SP_CREDENTIAL_JURISDICTION_MISMATCH`); carrying it into the domain type
+   *  is what lets the form STATE the jurisdiction instead of asking the holder
+   *  to choose one. */
+  readonly jurisdictionCode: string | null;
+  /** The emirate or region, where the authority is not national. `AE-DU` for a
+   *  Dubai credential; NULL everywhere the regulator is the country. */
+  readonly subJurisdictionCode: string | null;
+}
+
+/** The name a governed credential must carry, in the reader's language.
+ *
+ *  Both language forms are the credential's real name and the database accepts
+ *  either, so the holder reads Swedish in Swedish and English in English
+ *  without the stored value becoming free text. */
+export function controlledTitle(type: CredentialType, lang: "sv" | "en"): string {
+  return lang === "sv" ? type.nameSv : type.nameEn;
+}
+
+/** Whether the definition owns this credential's title rather than the holder.
+ *
+ *  A narrow-result credential is controlled regardless of the column, for the
+ *  same reason it accepts no holder note: what it records is a checked result,
+ *  and every free-text field on it is somewhere the underlying material could
+ *  arrive. */
+export function titleIsControlled(type: CredentialType): boolean {
+  return type.narrowResultOnly || !type.titleIsHolderWritten;
 }
 
 /** What the holder types. Every field is optional at this stage — a draft is
@@ -143,7 +188,10 @@ export function fieldsFor(type: CredentialType): FieldVisibility {
     validUntil: isAppointment || type.requiresValidUntil,
     reference: true,
     scope: type.requiresScope,
-    title: !type.narrowResultOnly,
+    // Whether the title is an INPUT. A controlled title is still shown — as
+    // the derived value it is — because hiding the credential's own name would
+    // leave the holder unable to see what they had chosen.
+    title: !titleIsControlled(type),
     note: !type.narrowResultOnly,
   };
 }
@@ -180,9 +228,11 @@ export function clearIncompatible(draft: CredentialDraft, type: CredentialType):
     credentialReference: fields.reference ? draft.credentialReference : "",
     authorisationScope: fields.scope ? draft.authorisationScope : "",
     holderNote: fields.note ? draft.holderNote : "",
-    // A narrow-result credential's title is not the holder's to choose, so
-    // switching to one SETS the controlled label rather than blanking it or
-    // leaving the previous credential's name behind.
+    // A governed credential's title is not the holder's to choose, so switching
+    // to one SETS the controlled label rather than blanking it or leaving the
+    // previous credential's name behind. This once applied only to
+    // narrow-result credentials; it now applies wherever the definition owns
+    // the name, because `fieldsFor` reads `titleIsControlled`.
     //
     // The first version left it alone, reasoning that the write path supplies
     // the label anyway. It does — but `validateCredential` runs first and
@@ -284,17 +334,23 @@ export function validateCredential(
   // register commentary has already done the harm. Validating them only at
   // submit would mean the form accepts a note the server then refuses, which
   // is how a holder learns to write one.
-  if (type?.narrowResultOnly) {
-    if (!isBlank(draft.holderNote)) {
-      errors.push({ field: "holderNote", messageKey: "cred.error.noNoteAllowed" });
-    }
-    if (
-      !isBlank(draft.title) &&
-      draft.title.trim() !== type.nameSv &&
-      draft.title.trim() !== type.nameEn
-    ) {
-      errors.push({ field: "title", messageKey: "cred.error.controlledLabelOnly" });
-    }
+  if (type?.narrowResultOnly && !isBlank(draft.holderNote)) {
+    errors.push({ field: "holderNote", messageKey: "cred.error.noNoteAllowed" });
+  }
+
+  // The controlled title, checked in BOTH modes and for every governed
+  // credential rather than only the narrow-result ones — the gap that let
+  // "Bajskorv" onto a skyddsvakt appointment. The database refuses the same
+  // write for every caller; this runs first so the holder gets a field-level
+  // message in their own language instead of a 23514.
+  if (
+    type &&
+    titleIsControlled(type) &&
+    !isBlank(draft.title) &&
+    draft.title.trim() !== type.nameSv &&
+    draft.title.trim() !== type.nameEn
+  ) {
+    errors.push({ field: "title", messageKey: "cred.error.controlledLabelOnly" });
   }
 
   if (mode === "draft") return errors;
@@ -304,7 +360,11 @@ export function validateCredential(
     return errors;
   }
 
-  if (isBlank(draft.title) && !type.narrowResultOnly) {
+  // Asked only of a title the holder actually supplies. A controlled title is
+  // never blank by the time it is written — `clearIncompatible` sets it and the
+  // write path sets it again — so demanding one here would demand it of a field
+  // the form does not offer.
+  if (isBlank(draft.title) && !titleIsControlled(type)) {
     errors.push({ field: "title", messageKey: "cred.error.titleRequired" });
   }
   if (isBlank(draft.jurisdictionCode)) {

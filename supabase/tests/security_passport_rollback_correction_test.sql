@@ -58,8 +58,8 @@ IF _phase = 'before' THEN
 
   INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, credential_code,
                                 jurisdiction_code, lifecycle_state)
-  VALUES (_a, _h, 'training', 'VU1 corrected while Phase A is applied', 'VU1', 'SE', 'active'),
-         (_b, _h, 'training', 'VU1 that must outlive the rollback',     'VU1', 'SE', 'active');
+  VALUES (_a, _h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'SE', 'active'),
+         (_b, _h, 'training', 'Väktarutbildning 1 (VU1)',     'VU1', 'SE', 'active');
   RAISE NOTICE '    ok  two active claims exist';
 
   RAISE NOTICE 'GROUP 2 -- the Phase A correction path works';
@@ -67,7 +67,7 @@ IF _phase = 'before' THEN
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
   SELECT public.sp_correct_claim(
-    _a, 'VU1 corrected while Phase A is applied (rev)', 'Utbildare', 'SE',
+    _a, 'Väktarutbildning 1 (VU1)', 'Utbildare', 'SE',
     NULL, NULL, NULL, 'forward-path probe', 'VU1', NULL, NULL, NULL, NULL) INTO _new;
   RESET ROLE;
 

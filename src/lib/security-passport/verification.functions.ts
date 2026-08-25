@@ -536,3 +536,104 @@ export const listEmployerAttestations = createServerFn({ method: "POST" })
       holderMessage: (r.holder_message as string | null) ?? null,
     }));
   });
+
+/* ------------------------------------------------------------------ */
+/* Disputes                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The defect these two close.
+ *
+ * A holder pressed "Anmäl att uppgiften är fel", the entry became Bestridd,
+ * and that was the end of it. `sp_raise_dispute` writes the lifecycle state
+ * and an audit event; `sp_verifier_queue` reads `sp_verification_requests`.
+ * The two never met, so a disputed entry appeared in no queue, and the tester
+ * who went looking for it in admin was right that it was not there.
+ *
+ * `sp_dispute_queue` is the missing read and `sp_resolve_dispute` the missing
+ * decision. Both carry the verifier capability check in the database, in the
+ * function body, before anything else — the same shape as the verification
+ * queue, for the same reason: a page is not an authorisation boundary.
+ */
+export interface DisputeQueueItem {
+  readonly subjectType: "claim" | "experience";
+  readonly subjectId: string;
+  readonly holderName: string;
+  readonly title: string | null;
+  readonly credentialCode: string | null;
+  readonly skillCode: string | null;
+  readonly claimType: string | null;
+  readonly issuer: string | null;
+  readonly jurisdiction: string | null;
+  readonly subJurisdiction: string | null;
+  readonly assertion: string | null;
+  readonly lifecycle: string | null;
+  /** When the holder reported it, read back from the audit event. Null only
+   *  for a row disputed before the event existed. */
+  readonly disputedAt: string | null;
+  /** What the holder said was wrong. Null when none was captured. */
+  readonly reason: string | null;
+  readonly evidenceCount: number;
+  /** The caller is the holder. `sp_resolve_dispute` refuses on this basis, so
+   *  the page disables the controls rather than offering an action that
+   *  cannot succeed. */
+  readonly isSelf: boolean;
+}
+
+export const listDisputeQueue = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<readonly DisputeQueueItem[]> => {
+    const { data: rows, error } = await context.supabase.rpc("sp_dispute_queue");
+    if (error) throw new Error(error.message);
+
+    return ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      subjectType: r.subject_type as "claim" | "experience",
+      subjectId: String(r.subject_id),
+      holderName: String(r.holder_name ?? ""),
+      title: (r.title as string | null) ?? null,
+      credentialCode: (r.credential_code as string | null) ?? null,
+      skillCode: (r.skill_code as string | null) ?? null,
+      claimType: (r.claim_type as string | null) ?? null,
+      issuer: (r.issuer as string | null) ?? null,
+      jurisdiction: (r.jurisdiction as string | null) ?? null,
+      subJurisdiction: (r.sub_jurisdiction as string | null) ?? null,
+      assertion: (r.assertion as string | null) ?? null,
+      lifecycle: (r.lifecycle as string | null) ?? null,
+      disputedAt: (r.disputed_at as string | null) ?? null,
+      reason: (r.reason as string | null) ?? null,
+      evidenceCount: Number(r.evidence_count ?? 0),
+      isSelf: r.is_self === true,
+    }));
+  });
+
+/**
+ * Closes one dispute.
+ *
+ * `restored` returns the entry to active; `withdrawn` takes it out of the
+ * active Passport. Neither writes `assertion_level` — a dispute is not a route
+ * to verification, and resolving one cannot verify anything. The database
+ * refuses a third outcome, refuses a caller without the verifier capability,
+ * and refuses a verifier resolving a dispute on their own entry.
+ */
+export const resolveDispute = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        claimId: z.string().uuid().nullable(),
+        periodId: z.string().uuid().nullable(),
+        outcome: z.enum(["restored", "withdrawn"]),
+        note: z.string().max(300),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<{ ok: true }> => {
+    const { error } = await context.supabase.rpc("sp_resolve_dispute", {
+      _claim_id: orNull(data.claimId),
+      _period_id: orNull(data.periodId),
+      _outcome: data.outcome,
+      _note: orNull(data.note.trim() === "" ? null : data.note.trim()),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

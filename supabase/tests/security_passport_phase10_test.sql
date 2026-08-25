@@ -114,7 +114,12 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, assertion_level,
      lifecycle_state, claimed_issuer_name, valid_from, valid_until)
-  VALUES (_holder, 'licence', _code, _code, 'document_provided', 'active',
+  VALUES (_holder, 'licence',
+          -- The definition's own name, not the code. A governed credential is
+          -- named by its taxonomy row, so a fixture that titles one "OV" is a
+          -- row that could not exist.
+          (SELECT name_sv FROM public.sp_credential_types WHERE code = _code),
+          _code, 'document_provided', 'active',
           'Fiktiv myndighet', DATE '2026-01-01', DATE '2026-12-31')
   RETURNING id INTO _claim;
 

@@ -41,7 +41,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (id, holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      claimed_issuer_name, valid_until, lifecycle_state)
-  VALUES (_legacy, _h, 'licence', 'Gammalt skyddsvaktsförordnande', 'SV', 'SE',
+  VALUES (_legacy, _h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
           'Länsstyrelsen', current_date + 300, 'superseded');
   UPDATE public.sp_credential_types SET requires_scope = true WHERE code = 'SV';
 

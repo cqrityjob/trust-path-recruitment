@@ -24,16 +24,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import type { CredentialDraft, CredentialType } from "@/lib/security-passport/credentials";
-import type { SelectableMarket } from "@/lib/security-passport/credentials.functions";
+import type { CredentialDraft } from "@/lib/security-passport/credentials";
 import {
   discardCredentialDraft,
-  listCredentialTypes,
-  listSelectableMarkets,
+  getRegulatedCredentialAvailability,
   listMyCredentialDrafts,
   saveCredential,
   type DraftCredential,
+  type RegulatedCredentialAvailability,
 } from "@/lib/security-passport/credentials.functions";
+import type { ClosedMarket } from "@/components/security-passport/CredentialForm";
 import { CredentialForm } from "@/components/security-passport/CredentialForm";
 import { CredentialSymbol } from "@/components/security-passport/CredentialSymbol";
 
@@ -56,14 +56,16 @@ function NewCredentialRoute() {
   const navigate = useNavigate();
   const search = Route.useSearch();
 
-  const loadTypes = useServerFn(listCredentialTypes);
-  const loadMarkets = useServerFn(listSelectableMarkets);
+  // NOT `listCredentialTypes`, which returns every active type — which is the
+  // eight Swedish ones, and was being offered to a holder who had told the
+  // product they work in Dubai. This asks the market question instead: given
+  // where this holder works, what may they register, and if nothing, why.
+  const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
   const loadDrafts = useServerFn(listMyCredentialDrafts);
   const doSave = useServerFn(saveCredential);
   const doDiscard = useServerFn(discardCredentialDraft);
 
-  const [types, setTypes] = useState<readonly CredentialType[] | null>(null);
-  const [markets, setMarkets] = useState<readonly SelectableMarket[]>([]);
+  const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
   const [drafts, setDrafts] = useState<readonly DraftCredential[]>([]);
   const [claimId, setClaimId] = useState<string | null>(search.draft ?? null);
   const [busy, setBusy] = useState(false);
@@ -73,21 +75,19 @@ function NewCredentialRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const [t, d, m] = await Promise.all([
-        loadTypes({ data: undefined }),
+      const [a, d] = await Promise.all([
+        loadAvailability({ data: undefined }),
         loadDrafts({ data: undefined }),
-        loadMarkets({ data: undefined }),
       ]);
-      setTypes(t);
+      setAvailability(a);
       setDrafts(d);
-      setMarkets(m);
     } catch (err) {
       console.error("[passport] credential form load failed", err);
       setError(pt("common.error"));
     } finally {
       setLoaded(true);
     }
-  }, [loadTypes, loadDrafts, loadMarkets, pt]);
+  }, [loadAvailability, loadDrafts, pt]);
 
   useEffect(() => {
     void refresh();
@@ -153,9 +153,21 @@ function NewCredentialRoute() {
     }
   }
 
-  if (!loaded || !types) {
+  if (!loaded || !availability) {
     return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
   }
+
+  // "Open" is the only state with credentials to offer. The other three are
+  // different facts about the same absence and the form says which — an empty
+  // list would have said none of them.
+  const closedMarket: ClosedMarket | null =
+    availability.state === "open"
+      ? null
+      : {
+          reason: availability.state,
+          jurisdictionCode: availability.jurisdictionCode,
+          subJurisdictionCode: availability.subJurisdictionCode,
+        };
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -246,8 +258,8 @@ function NewCredentialRoute() {
           // Remount when switching between fresh and resumed, so the form
           // state always matches what the heading above it claims.
           key={resumed?.id ?? "new"}
-          types={types}
-          markets={markets}
+          types={availability.types}
+          closedMarket={closedMarket}
           initial={resumed ? { ...toFormDraft(resumed), id: resumed.id } : null}
           preselectCode={search.code ?? null}
           busy={busy}

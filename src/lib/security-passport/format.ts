@@ -10,7 +10,7 @@
 // ambiguous. So both languages get the same unambiguous form.
 
 import { toDuration } from "./experience";
-import { passportT, type PassportLang } from "./i18n";
+import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import type { IsoDate } from "./types";
 
 /** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
@@ -147,4 +147,40 @@ export function formatWorkLocation(
   // Printing "AE-SH, Förenade Arabemiraten" is a bug report; printing the
   // country alone would hide it. The code shows, deliberately.
   return sub === country ? country : `${sub}, ${country}`;
+}
+
+/** What the product can record for a given work country, as a copy key.
+ *
+ *  ── WHY IT LIVES HERE AND NOT IN A COMPONENT ───────────────────────────
+ *
+ *  Two surfaces say this now: the work-country panel on the Passport, and the
+ *  credential form when the holder's own market is closed. They must say the
+ *  same sentence about the same market — a form that goes quiet while a panel
+ *  two screens away explains why is exactly the absence the pilot tester ran
+ *  into. One map, imported twice.
+ *
+ *  Sweden is the only ACTIVE market pack, so it is the only country whose
+ *  sentence says "can be registered". `sp_market_packs.is_active` remains the
+ *  authority and the claim trigger remains the enforcement; this only has to
+ *  TELL the holder. `passport-persona-journey-check` asserts the two agree.
+ *
+ *  The sub-jurisdiction is tried first: a Dubai holder is told about Dubai,
+ *  not about the UAE, because SIRA does not license the UAE and neither does
+ *  this product's copy. */
+const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
+  SE: "workCountry.support.SE",
+  GB: "workCountry.support.GB",
+  AE: "workCountry.support.AE",
+  "AE-DU": "workCountry.support.AE-DU",
+};
+
+export function workCountrySupportKey(
+  jurisdictionCode: string | null,
+  subJurisdictionCode: string | null,
+): PassportCopyKey {
+  const bySub = subJurisdictionCode ? WORK_COUNTRY_SUPPORT_KEY[subJurisdictionCode] : undefined;
+  const byCountry = jurisdictionCode ? WORK_COUNTRY_SUPPORT_KEY[jurisdictionCode] : undefined;
+  // A country nobody has written a sentence for falls back to the general
+  // statement of which markets are open, which is true of every country.
+  return bySub ?? byCountry ?? "jurisdiction.marketAvailability";
 }
