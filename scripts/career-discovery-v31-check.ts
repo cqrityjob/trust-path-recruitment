@@ -596,13 +596,31 @@ eq(
 // any of them alters a hash, and the only correct response is to bump the
 // version strings below and re-freeze deliberately.
 const FROZEN: Record<string, string> = {
-  // Re-frozen for CONTENT_VERSION/SCORING_VERSION/PATTERN_DEFINITION_VERSION
-  // v3.1-draft-3 (Final Autonomous Matching Engine Completion Mandate: CID17
-  // + CQ21/CQ22, CP06's central set swapped CID09 -> CID17).
-  CP01: "a4bd2d5eca8df52f",
-  CP05: "a03c8fa82f6ee383",
-  CP10: "38257685f6e4d28d",
-  balanced: "1df068a88a4af70a",
+  // Re-frozen for CONTENT_VERSION v3.1-draft-4 (Question Refinement v3.2).
+  //
+  // READ THIS BEFORE ASSUMING SCORING MOVED. These hashes cover the whole
+  // CareerIntelligence object, and that object carries its version tuple --
+  // so a pure content-version bump moves every hash here while changing no
+  // score at all. That is exactly what happened: the v3.2 refinement
+  // rephrased twelve stems, the C2 prompt and six adaptive prompts, and
+  // bumped CONTENT_VERSION alone.
+  //
+  // The re-freeze was not taken on trust. With the new wording in place and
+  // CONTENT_VERSION temporarily held at 'v3.1-draft-3', this entire script
+  // passed on the PREVIOUS hashes -- which isolates the delta to the version
+  // string and to nothing else. scripts/career-discovery-v32-equivalence-check.ts
+  // makes the same proof permanent and field-by-field (dimensions, Career
+  // Areas, profession fit/centralZ/priority/order, stage) against a baseline
+  // frozen on pre-refinement main.
+  //
+  // Previous, for v3.1-draft-3 (Final Autonomous Matching Engine Completion
+  // Mandate: CID17 + CQ21/CQ22, CP06's central set swapped CID09 -> CID17):
+  //   CP01 a4bd2d5eca8df52f · CP05 a03c8fa82f6ee383
+  //   CP10 38257685f6e4d28d · balanced 1df068a88a4af70a
+  CP01: "bb2f32de2fc387ff",
+  CP05: "c1dba7bea78d40aa",
+  CP10: "876216ef55816099",
+  balanced: "c61524c2bdd054d0",
 };
 
 const fixtureHashes: Record<string, string> = {
@@ -627,7 +645,7 @@ if (process.env.FREEZE_FIXTURES === "1") {
 }
 
 // The version strings the fixtures are pinned to.
-eq(CONTENT_VERSION, "v3.1-draft-3", "9.4 content version is pinned");
+eq(CONTENT_VERSION, "v3.1-draft-4", "9.4 content version is pinned");
 eq(SCORING_VERSION, "v3.1-draft-3", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-2", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-3", "9.7 pattern definition version is pinned");
@@ -718,7 +736,9 @@ const valuesBlock = optionMatrixMigration.slice(
   optionMatrixMigration.indexOf(
     "(scoring_version, question_id, option_id, dimension_id, role, role_weight, value, rationale)\nVALUES",
   ),
-  optionMatrixMigration.indexOf("ON CONFLICT (scoring_version, question_id, option_id, dimension_id)"),
+  optionMatrixMigration.indexOf(
+    "ON CONFLICT (scoring_version, question_id, option_id, dimension_id)",
+  ),
 );
 
 // Each tuple: ('ver','Q','OPT','CID','role',w,v,\n   'rationale')
@@ -823,15 +843,38 @@ const contentV2MigrationPath = path.join(
 );
 const contentV2Migration = readFileSync(contentV2MigrationPath, "utf8");
 
-for (const v of [
-  { value: CONTENT_VERSION, label: "content version" },
-  { value: SCORING_VERSION, label: "scoring version" },
-]) {
-  ok(
-    contentV2Migration.includes(`'${v.value}'`),
-    `11.8b the content-v2 migration carries the same ${v.label}`,
-  );
-}
+// SCORING_VERSION is still the one content-v2 set -- and that is the point:
+// the v3.2 refinement moved content only, so this assertion pinning scoring
+// to the OLDER migration is what proves scoring did not travel with it.
+ok(
+  contentV2Migration.includes(`'${SCORING_VERSION}'`),
+  "11.8b the content-v2 migration carries the same scoring version",
+);
+
+// CONTENT_VERSION has since moved on to draft-4 in its own migration
+// (Question Refinement v3.2), which updates content_version and NOTHING
+// else. The code constant and the database stamp must agree, because
+// cd_guard_snapshot_derive_versions() copies the database's value onto every
+// new snapshot while the payload carries the constant -- if these two drift,
+// each new report row disagrees with itself about which wording produced it.
+const contentV3MigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20260910091000_cd_v31_content_v3_question_refinement.sql",
+);
+const contentV3Migration = readFileSync(contentV3MigrationPath, "utf8");
+
+ok(
+  contentV3Migration.includes(`'${CONTENT_VERSION}'`),
+  "11.8c the content-v3 migration carries the same content version",
+);
+ok(
+  !/scoring_version\s*=/.test(contentV3Migration),
+  "11.8d the content-v3 migration never assigns scoring_version",
+);
+ok(
+  !/pattern_definition_version\s*=/.test(contentV3Migration),
+  "11.8e the content-v3 migration never assigns pattern_definition_version",
+);
 
 // CQ21 + CQ22 are registered against the existing definition_version_id in
 // the content-v2 migration, not the original instrument migration.
@@ -850,9 +893,8 @@ for (const [, id, kind] of newItemIds) {
 }
 
 // The recalibrated profession catalogue: 14 professions x 17 dimensions.
-const recalCount = [
-  ...contentV2Migration.matchAll(/\('SP\d+', 'layer4-recalibrated-2026-08-16'/g),
-].length;
+const recalCount = [...contentV2Migration.matchAll(/\('SP\d+', 'layer4-recalibrated-2026-08-16'/g)]
+  .length;
 eq(recalCount, 238, "11.10 the migration seeds 238 recalibrated profession-profile rows");
 
 // v3.1 must be registered as internal_test: not reachable by real candidates.
@@ -974,7 +1016,9 @@ ok(
 );
 
 // =========================================================================
-group("12b · Career Area \"why\" evidence leads with the area's own defining traits (real-world defect fix)");
+group(
+  '12b · Career Area "why" evidence leads with the area\'s own defining traits (real-world defect fix)',
+);
 // =========================================================================
 
 // Real defect, found live: SCA01 (Guarding & Operational Protection)
@@ -1039,7 +1083,7 @@ ok(
 );
 
 // =========================================================================
-group("12c · \"Bred profil\" (CP00) narrative respects career context (real-world defect fix)");
+group('12c · "Bred profil" (CP00) narrative respects career context (real-world defect fix)');
 // =========================================================================
 
 // Real defect, found live: CP00 told every candidate, verbatim, to "retake
@@ -1360,7 +1404,9 @@ ok(
 );
 
 // =========================================================================
-group("14b · Anonymous current-profession snapshot — Owner Security Manager scenario (real-world defect fix)");
+group(
+  "14b · Anonymous current-profession snapshot — Owner Security Manager scenario (real-world defect fix)",
+);
 // =========================================================================
 
 // Real defect, found live: the anonymous, client-computed report (no

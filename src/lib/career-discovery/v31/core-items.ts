@@ -1,9 +1,27 @@
 // The 22 core Career DNA items.
 //
-// CQ01–CQ20 stems are owner-locked and reproduced VERBATIM from
-// CQrityjob_Career_Intelligence_Matrix_LOCKED_v0_2.xlsx, sheet 10. Twelve are
-// 1–10 scales; eight are single-choice, whose options live in
-// option-matrix.ts because they carry their own dimension loadings.
+// STEM WORDING IS OWNER-APPROVED AT v3.2, NOT WORKBOOK-VERBATIM. Until
+// Question Refinement v3.2, CQ01–CQ20's stems were reproduced verbatim from
+// CQrityjob_Career_Intelligence_Matrix_LOCKED_v0_2.xlsx, sheet 10. The owner
+// then re-approved twelve of them (CQ01, CQ03, CQ05, CQ06, CQ09, CQ13, CQ14,
+// CQ15, CQ17, CQ20, CQ21, CQ22) in plainer language, because the workbook
+// phrasing assumed the reader already worked in security — it asked about
+// "kontroll", "incident", "hela verksamheten" and "transaktioner", which a
+// student or career changer cannot answer from experience. The workbook is
+// therefore NO LONGER the authority on stem text; the approved v3.2 wording
+// transcribed in scripts/career-discovery-v32-content-check.ts is, and that
+// guard fails on any paraphrase.
+//
+// What the workbook still governs is unchanged: the constructs. Every
+// declared primary and secondary dimension below, and every item id, format
+// and order, is exactly what it was — the refinement rephrased the question
+// and never the thing being measured. That is proven per-field, against a
+// baseline frozen on pre-refinement main, by
+// scripts/career-discovery-v32-equivalence-check.ts.
+//
+// Fourteen items are 1–10 scales; eight are single-choice, whose options live
+// in option-matrix.ts because they carry their own dimension loadings. Option
+// text was NOT touched by v3.2 — only stems.
 //
 // CQ21 and CQ22 are new (Final Autonomous Matching Engine Completion
 // Mandate): CID17 (Regulatory & Compliance Orientation) postdates the locked
@@ -21,11 +39,19 @@
 // restating each other, so together they are real evidence, not statistical
 // padding: 0.70/(0.70+0.70) = 50%, comfortably under the cap.
 //
-// Declared primary and secondary dimensions are also owner-locked (CQ01–20)
-// or newly declared following the same primary=0.70/secondary=0.30 role-
-// weight convention (CQ21, CQ22). Owner decision A-3 permits an OPTION to
-// carry evidence for further dimensions, but never changes what is declared
-// here.
+// That distinction SURVIVES the v3.2 rephrasing, which is worth stating
+// because the two stems now share the phrase "lägga märke till" and look
+// more alike than they used to. They are still not the same question: CQ21
+// is "jag tycker om att" — what the candidate is drawn to — and CQ22 is "jag
+// brukar" — what they actually do. Preference and habit are exactly the two
+// expressions this pair was built to separate, and someone can genuinely
+// hold one without the other.
+//
+// Declared primary and secondary dimensions are owner-locked (CQ01–20) or
+// declared following the same primary=0.70/secondary=0.30 role-weight
+// convention (CQ21, CQ22). These are the part v3.2 explicitly did not touch —
+// see the header. Owner decision A-3 permits an OPTION to carry evidence for
+// further dimensions, but never changes what is declared here.
 //
 // ── WHY SCALE MAPPINGS LIVE IN CODE AND OPTIONS LIVE IN THE DATABASE ────
 //
@@ -68,8 +94,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 1,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag trivs bäst när jag får vara nära den praktiska verksamheten och agera direkt när något händer.",
-      en: "I prefer being close to operations and acting directly when something happens.",
+      sv: "Jag trivs bäst när jag får vara nära det som händer och agera praktiskt när det behövs.",
+      en: "I am at my best when I am close to what is happening and can act practically when needed.",
     },
   },
   {
@@ -92,8 +118,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 3,
     purpose: "Judgement",
     stem: {
-      sv: "Du upptäcker att en viktig kontroll har hoppats över för att spara tid. Vad gör du först?",
-      en: "You discover that an important control was skipped to save time. What do you do first?",
+      sv: "Du märker att ett viktigt steg har hoppats över för att spara tid. Vad skulle du göra först?",
+      en: "You notice that an important step has been skipped to save time. What would you do first?",
     },
   },
   {
@@ -116,8 +142,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 5,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag får energi av att förklara, lyssna och skapa trygghet för andra.",
-      en: "I gain energy from explaining, listening and creating reassurance for others.",
+      sv: "Jag får energi av att hjälpa andra att förstå och känna sig trygga.",
+      en: "I gain energy from helping others understand things and feel reassured.",
     },
   },
   {
@@ -128,8 +154,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 6,
     purpose: "Pressure and investigation",
     stem: {
-      sv: "Två personer ger motstridiga uppgifter under en pressad situation. Vad gör du?",
-      en: "Two people provide conflicting information during a pressured situation. What do you do?",
+      sv: "Två personer ger olika uppgifter om vad som har hänt och du behöver komma vidare. Vad gör du?",
+      en: "Two people give different accounts of what happened and you need to move forward. What do you do?",
     },
   },
   {
@@ -164,8 +190,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 9,
     purpose: "Work orientation",
     stem: {
-      sv: "När ett återkommande problem uppstår, vad känns mest naturligt?",
-      en: "When a recurring problem occurs, what feels most natural?",
+      sv: "När ett återkommande problem uppstår, vad känns mest naturligt för dig att göra?",
+      en: "When a recurring problem occurs, what feels most natural for you to do?",
     },
   },
   {
@@ -212,8 +238,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 13,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag motiveras av att utveckla andra och skapa riktning när flera personer behöver samarbeta.",
-      en: "I am motivated by developing others and creating direction when several people must cooperate.",
+      sv: "Jag tycker om att hjälpa andra att utvecklas och skapa riktning när en grupp behöver komma framåt.",
+      en: "I enjoy helping others develop and creating direction when a group needs to move forward.",
     },
   },
   {
@@ -224,8 +250,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 14,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag tänker gärna flera steg framåt och ser hur beslut påverkar hela verksamheten.",
-      en: "I like thinking several steps ahead and seeing how decisions affect the whole organisation.",
+      sv: "Jag tänker gärna flera steg framåt och funderar på vilka följder ett beslut kan få.",
+      en: "I like to think several steps ahead and consider the possible consequences of a decision.",
     },
   },
   {
@@ -236,8 +262,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 15,
     purpose: "Environment preference",
     stem: {
-      sv: "Vilken arbetsmiljö känns mest naturlig för dig?",
-      en: "Which work environment feels most natural to you?",
+      sv: "Vilken arbetsmiljö tror du att du skulle trivas bäst i?",
+      en: "Which work environment do you think you would enjoy most?",
     },
   },
   {
@@ -260,8 +286,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 17,
     purpose: "Investigation",
     stem: {
-      sv: "En incident är löst men orsaken är fortfarande oklar. Vad prioriterar du?",
-      en: "An incident is resolved but the cause remains unclear. What do you prioritise?",
+      sv: "Ett problem är löst för stunden, men det är fortfarande oklart varför det uppstod. Vad skulle du prioritera?",
+      en: "A problem has been resolved for now, but it is still unclear why it occurred. What would you prioritise?",
     },
   },
   {
@@ -296,8 +322,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 20,
     purpose: "Motivation",
     stem: {
-      sv: "Vilket resultat känns mest meningsfullt efter en arbetsdag?",
-      en: "Which outcome feels most meaningful after a working day?",
+      sv: "Vilket resultat skulle ge dig störst känsla av att du gjort något meningsfullt?",
+      en: "Which outcome would give you the strongest sense that you had done something meaningful?",
     },
   },
   {
@@ -308,8 +334,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 21,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag tycker om att sätta mig in i regelverk och rutiner, och känner mig motiverad av att upptäcka avvikelser från dem.",
-      en: "I enjoy getting to grips with rules and procedures, and feel motivated by spotting deviations from them.",
+      sv: "Jag tycker om att förstå vilka regler som gäller och lägga märke till när något inte följer dem.",
+      en: "I enjoy understanding which rules apply and noticing when something does not follow them.",
     },
   },
   {
@@ -320,8 +346,8 @@ export const CORE_ITEMS: readonly CoreItem[] = [
     order: 22,
     purpose: "Core DNA",
     stem: {
-      sv: "Jag är noggrann med att kontrollera att underlag och transaktioner stämmer mot gällande krav, och reagerar snabbt om något inte stämmer.",
-      en: "I am careful to check that records and transactions match applicable requirements, and I react quickly when something doesn't add up.",
+      sv: "Jag brukar lägga märke till när detaljer inte stämmer med regler eller krav som ska följas.",
+      en: "I tend to notice when details do not match rules or requirements that need to be followed.",
     },
   },
 ];

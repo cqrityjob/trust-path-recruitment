@@ -30,13 +30,31 @@ export const DEFINITION_ID = "security-career-discovery-v3" as const;
 export const DEFINITION_VERSION = "2026-scd-v3.1.0" as const;
 
 /** Item wording and options. Bumped when any candidate-facing string
- *  changes. Bumped to draft-2 (Final Autonomous Matching Engine Completion
- *  Mandate): CQ21 + CQ22 added (CID17 Regulatory & Compliance Orientation
- *  needed a real evidence source, and a second question was required to
- *  clear the 0.60 dominance cap -- see core-items.ts). Same
- *  definition_version_id as before -- this is a same-generation content
- *  addition, not a new product-level instrument (see DEFINITION_VERSION). */
-export const CONTENT_VERSION = "v3.1-draft-3" as const;
+ *  changes. Bumped to draft-4 (Question Refinement v3.2): twelve Career DNA
+ *  stems, the C2 context prompt and six adaptive prompts were rephrased for
+ *  readers new to security, and the 1-10 scale gained explicit semantic
+ *  endpoints. NOTHING else moved -- SCORING_VERSION, OPTION_MATRIX_VERSION
+ *  and PATTERN_DEFINITION_VERSION are all deliberately unchanged below, and
+ *  scripts/career-discovery-v32-equivalence-check.ts proves per-field that
+ *  the same responses still produce the same dimensions, Career Areas,
+ *  profession fit scores and ordering.
+ *
+ *  ── WHY THIS IS THE *ONLY* VERSION THAT MOVES ──────────────────────────
+ *
+ *  This file's whole design is that the granular versions travel
+ *  independently. A rephrasing is a content event and nothing else; bumping
+ *  SCORING_VERSION alongside it would be actively misleading, because it
+ *  would tell a future reader that the way answers become scores changed on
+ *  this date, and they would go looking for a recalibration that never
+ *  happened.
+ *
+ *  Previous draft-3 (Final Autonomous Matching Engine Completion Mandate):
+ *  CQ21 + CQ22 added (CID17 Regulatory & Compliance Orientation needed a
+ *  real evidence source, and a second question was required to clear the
+ *  0.60 dominance cap -- see core-items.ts). Same definition_version_id as
+ *  before -- this is a same-generation content change, not a new
+ *  product-level instrument (see DEFINITION_VERSION). */
+export const CONTENT_VERSION = "v3.1-draft-4" as const;
 
 /** How answers become dimension scores: role weights, option loadings,
  *  aggregation and confidence. Bumped when any of those change. Bumped to

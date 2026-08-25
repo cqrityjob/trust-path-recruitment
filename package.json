@@ -31,6 +31,8 @@
     "build:dev": "vite build --mode development", 
     "security-competency-separation:check": "bun run scripts/security-competency-separation-check.ts", 
     "career-discovery-v31:check": "bun run scripts/career-discovery-v31-check.ts", 
+    "career-discovery-v32-content:check": "bun run scripts/career-discovery-v32-content-check.ts",
+    "career-discovery-v32-equivalence:check": "bun run scripts/career-discovery-v32-equivalence-check.ts",
     "assessment-assignment:check": "bun run scripts/assessment-assignment-check.ts", 
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 

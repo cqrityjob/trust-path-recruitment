@@ -535,11 +535,22 @@ for (const v of [...CONTEXT_STATUS_VALUES, ...DISCOVERY_GOAL_VALUES]) {
 // The two context questions and the section/transition copy are owner-locked.
 // If someone paraphrases them, this fails.
 
+// C2's wording was re-locked by the owner under Question Refinement v3.2
+// ("Vad hoppas du främst få ut av Career Discovery?"). The item id, its five
+// option values and their meanings are untouched -- only the prompt -- and
+// the change is recorded against v3.1's CONTENT_VERSION (v3.1-draft-4), the
+// only version of this instrument that is administrable. v3.0's own
+// CONTENT_VERSION deliberately does NOT move with it: v3.0 is
+// LIFECYCLE_STATUS 'design' with every review gate outstanding, so
+// isAdministrableToCandidates() is false and no v3.0 report can exist to be
+// misinterpreted -- and bumping it would mean editing the already-applied
+// phase-1 migration this same file asserts against, which is a far worse
+// trade than an unbumped version on a version nobody can sit.
 const LOCKED: Array<[string, string]> = [
   ["C1 prompt sv", "Vilket påstående beskriver dig bäst just nu?"],
   ["C1 prompt en", "Which statement best describes where you are right now?"],
-  ["C2 prompt sv", "Vad hoppas du få ut av den här upptäcktsresan?"],
-  ["C2 prompt en", "What do you hope to get from this discovery?"],
+  ["C2 prompt sv", "Vad hoppas du främst få ut av Career Discovery?"],
+  ["C2 prompt en", "What do you most hope to get from Career Discovery?"],
 ];
 const contextPrompts = [
   CONTEXT_ITEMS[0].prompt.sv,
