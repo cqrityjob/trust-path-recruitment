@@ -59,14 +59,30 @@ export interface CareerContext {
    *  currentProfessionStatus === "selected"; null otherwise. */
   readonly currentProfessionTitleSv: string | null;
   readonly currentProfessionTitleEn: string | null;
+  /** What the candidate typed when they said their profession is not in the
+   *  catalogue. Set ONLY when currentProfessionStatus === "not_listed".
+   *
+   *  Free text, and it stays free text: never joined to cig_professions,
+   *  never promoted into the canonical vocabulary, never scored, and never
+   *  an input to profession matching or to the recommendation — exactly the
+   *  contract cd_sessions.current_profession_other carries at the database
+   *  level (20260913091000). Before it existed the control recorded the
+   *  FACT that the catalogue was missing their job and threw away what the
+   *  job was. Bounded to 120 characters, matching the column's CHECK. */
+  readonly currentProfessionOther: string | null;
   readonly experienceBand: ExperienceBand | null;
 }
+
+/** The bound the database enforces, stated once so the form, the validator
+ *  and the column cannot drift apart. */
+export const CURRENT_PROFESSION_OTHER_MAX = 120;
 
 export const EMPTY_CAREER_CONTEXT: CareerContext = {
   currentProfessionStatus: null,
   currentProfessionSlug: null,
   currentProfessionTitleSv: null,
   currentProfessionTitleEn: null,
+  currentProfessionOther: null,
   experienceBand: null,
 };
 
@@ -134,6 +150,10 @@ export function parseCareerContext(value: unknown): CareerContext {
     currentProfessionTitleEn:
       hasSlug && typeof parsed.currentProfessionTitleEn === "string"
         ? parsed.currentProfessionTitleEn
+        : null,
+    currentProfessionOther:
+      status === "not_listed" && typeof parsed.currentProfessionOther === "string"
+        ? parsed.currentProfessionOther.trim().slice(0, CURRENT_PROFESSION_OTHER_MAX) || null
         : null,
     experienceBand: isExperienceBand(parsed.experienceBand) ? parsed.experienceBand : null,
   };

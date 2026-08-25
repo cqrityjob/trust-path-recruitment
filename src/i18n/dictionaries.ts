@@ -867,6 +867,12 @@ export const dictionaries = {
     "cd.careerContext.roleLabel": "Vilken roll har du idag?",
     "cd.careerContext.roleSearchPlaceholder": "Sök yrke...",
     "cd.careerContext.roleNotListed": "Mitt yrke finns inte listat",
+    // Telling the product its catalogue is missing your job and having
+    // nowhere to say what the job is is a control that loses the answer.
+    "cd.careerContext.roleOtherLabel": "Vad heter din roll? (valfritt)",
+    "cd.careerContext.roleOtherPlaceholder": "T.ex. Säkerhetsskyddschef",
+    "cd.careerContext.roleOtherNote":
+      "Sparas som din egen beskrivning. Den läggs inte till i yrkeslistan och påverkar inte ditt resultat.",
     "cd.careerContext.roleSkip": "Jag vill inte ange det",
     "cd.careerContext.experienceLabel": "Hur länge har du arbetat i den rollen?",
     "cd.careerContext.continue": "Fortsätt till din rapport",
@@ -4569,6 +4575,10 @@ export const dictionaries = {
     "cd.careerContext.roleLabel": "What's your role today?",
     "cd.careerContext.roleSearchPlaceholder": "Search for a profession...",
     "cd.careerContext.roleNotListed": "My role isn't listed",
+    "cd.careerContext.roleOtherLabel": "What is your role called? (optional)",
+    "cd.careerContext.roleOtherPlaceholder": "e.g. Head of Protective Security",
+    "cd.careerContext.roleOtherNote":
+      "Saved as your own description. It is not added to the profession list and does not affect your result.",
     "cd.careerContext.roleSkip": "I'd rather not say",
     "cd.careerContext.experienceLabel": "How long have you been in that role?",
     "cd.careerContext.continue": "Continue to your report",

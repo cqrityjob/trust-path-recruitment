@@ -400,10 +400,58 @@ eq(
   "3.8 every adaptive item is accounted for as changed or unchanged",
 );
 
+// ── C1: SITUATION ONLY (content v4, draft-5) ───────────────────────────
+//
+// v3.2 left C1 alone, and 3.9 pinned that. It is now REPHRASED, deliberately
+// and for one reason: C1 asks about the candidate's situation and C2 asks
+// what they want out of Career Discovery, and one C1 option had welded a
+// goal onto a situation using C2's own words ("...and want to understand my
+// strengths better" vs C2's "Understand my strengths"). The assertions below
+// pin the new wording AND, more importantly, pin the separation itself --
+// which is the property that must not regress, not any particular sentence.
 eq(
   CONTEXT_ITEMS[0].prompt.sv,
-  "Vilket påstående beskriver dig bäst just nu?",
-  "3.9 C1 is unchanged",
+  "Vilken situation beskriver dig bäst just nu?",
+  "3.9 C1 asks about the candidate's situation",
+);
+eq(
+  CONTEXT_ITEMS[0].prompt.en,
+  "Which situation best describes you right now?",
+  "3.9b C1 asks about the candidate's situation (EN)",
+);
+eq(
+  CONTEXT_ITEMS[0].options.find((o) => o.value === "security_leader")?.label.sv,
+  "Jag leder andra inom säkerhet",
+  "3.9c the leadership option describes a situation, not a goal",
+);
+
+// The structural assertion. No C1 option may restate a C2 option: that is
+// the defect, stated as a rule rather than as a list of sentences somebody
+// could satisfy by editing one word.
+for (const c1 of CONTEXT_ITEMS[0].options) {
+  for (const c2 of CONTEXT_ITEMS[1].options) {
+    for (const locale of ["sv", "en"] as const) {
+      const a = c1.label[locale].toLowerCase();
+      const b = c2.label[locale].toLowerCase();
+      ok(
+        !a.includes(b) && !b.includes(a),
+        `3.9d C1 "${c1.value}" does not restate C2 "${c2.value}" (${locale})`,
+      );
+    }
+  }
+}
+
+// Values, order and the adaptive path mapping are what may NOT move: they
+// are persisted on every session and they decide the adaptive path.
+eq(
+  CONTEXT_ITEMS[0].options.map((o) => o.value).join(","),
+  "exploring_security,working_in_security,developing_current_role,changing_career_area,security_leader",
+  "3.9e C1 option values and order are unchanged by the rewording",
+);
+eq(
+  CONTEXT_ITEMS[1].options.map((o) => o.value).join(","),
+  "find_direction,confirm_direction,discover_opportunities,understand_strengths,curious",
+  "3.9f C2 option values and order are unchanged",
 );
 
 // =========================================================================
@@ -578,7 +626,7 @@ for (const item of [...CONTEXT_ITEMS, ...ALL_ADAPTIVE_ITEMS]) {
 group("6 · Versioning");
 // =========================================================================
 
-eq(CONTENT_VERSION, "v3.1-draft-4", "6.1 content version records the v3.2 refinement");
+eq(CONTENT_VERSION, "v3.1-draft-5", "6.1 content version records the context/intent separation");
 eq(SCORING_VERSION, "v3.1-draft-3", "6.2 scoring version did NOT move with it");
 ok(CONTENT_VERSION !== SCORING_VERSION, "6.3 content and scoring versions travel independently");
 
