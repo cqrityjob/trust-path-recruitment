@@ -168,7 +168,20 @@ export function PrivacyControls({ className }: { className?: string }) {
         </div>
       </section>
 
-      <p className="text-xs text-muted-foreground">{pt("privacy.prototypeNote")}</p>
+      {/* Export and deletion are rights the product already promises at sign-up.
+          They had no control here and a note saying "the buttons are inactive in
+          the prototype" — naming buttons this section does not contain. Building
+          a self-service export is a feature; telling a holder where to exercise a
+          right they already have is finishing the sentence. */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <p className="text-sm leading-relaxed text-foreground">{pt("privacy.requestNote")}</p>
+        <a
+          href="/contact"
+          className="mt-3 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("privacy.requestAction")}
+        </a>
+      </div>
     </div>
   );
 }

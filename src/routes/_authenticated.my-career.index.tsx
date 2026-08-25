@@ -830,15 +830,17 @@ function MyCareerPage() {
               )}
             </DashboardCard>
 
+            {/* "My career profile" is deliberately NOT here.
+                It pointed at #career-profile — a section on THIS page, a
+                screen's scroll away. A quick action that scrolls you down the
+                page you are already on is not a destination, and dressing it up
+                as one made the list look longer than it was useful. The profile
+                section carries its own Save control where the editing happens.
+                What remains are real destinations, plus the assessment, which
+                appears as an action or as an explanation depending on the
+                candidate's actual access. */}
             <DashboardCard title={L(c("Snabbåtgärder", "Quick actions"), lang)}>
               <ul className="space-y-2 text-sm">
-                <li>
-                  <QuickLink
-                    to="/my-career"
-                    hash="career-profile"
-                    label={L(c("Min karriärprofil", "My career profile"), lang)}
-                  />
-                </li>
                 <li>
                   <QuickLink
                     to="/career-center"
@@ -1569,7 +1571,6 @@ function EmptyState({
 
 function QuickLink({
   to,
-  hash,
   label,
   unavailable,
 }: {
@@ -1579,7 +1580,6 @@ function QuickLink({
     | "/career-center"
     | "/jobs"
     | "/security-career-assessment";
-  hash?: string;
   label: string;
   /** When set, the action is NOT rendered as a link. A quick action whose
    *  destination refuses the candidate is a dead end, and silently dropping it
@@ -1600,7 +1600,6 @@ function QuickLink({
   return (
     <Link
       to={to}
-      hash={hash}
       className="flex items-center justify-between rounded-md px-2 py-1.5 text-foreground hover:bg-accent"
     >
       <span>{label}</span>

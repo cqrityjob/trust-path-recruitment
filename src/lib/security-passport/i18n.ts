@@ -111,7 +111,11 @@ const sv = {
   "home.passport.tagline": "Din yrkesidentitet och dina bevis inom säkerhet.",
   "home.passport.body":
     "Vad du har gjort, lärt dig och fått verifierat. Du bestämmer själv vad som delas.",
-  "home.passport.start": "Starta Security Passport",
+  // "Öppna", not "Starta". The card is deliberately stateless — it fetches
+  // nothing, so it cannot know whether a Passport exists — and "Starta" told
+  // every returning holder to start something they had already built. "Öppna"
+  // is true in both states, and costs no request to be true.
+  "home.passport.start": "Öppna Security Passport",
   "home.passport.continue": "Fortsätt",
   "home.passport.addExperience": "Lägg till erfarenhet",
   "home.passport.addTraining": "Lägg till utbildning eller certifiering",
@@ -453,6 +457,12 @@ const sv = {
   // Shown to a holder whose work location nobody has confirmed. Covers the new
   // Passport and the legacy row still carrying the old DEFAULT 'SE' — the same
   // sentence for both, because the product genuinely does not know either way.
+  // The permanent work-country control on "My information". Named "arbetsland"
+  // rather than "jurisdiktion": the holder is being asked where they work, not
+  // to classify themselves legally.
+  "workCountry.title": "Arbetsland",
+  "workCountry.current": "Nuvarande",
+  "workCountry.save": "Spara arbetsland",
   "jurisdiction.confirmPrompt":
     "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
   "jurisdiction.confirmAction": "Ange var jag arbetar",
@@ -476,7 +486,14 @@ const sv = {
   "privacy.deleteTitle": "Radera ditt Passport",
   "privacy.deleteBody":
     "Aktiva delningar återkallas först. Bekräftelser som en arbetsgivare har lämnat behålls i avidentifierad form.",
-  "privacy.prototypeNote": "Knapparna är inaktiva i prototypen.",
+  // Was "Knapparna är inaktiva i prototypen." — which named buttons that do
+  // not exist in this section, and called a product we are putting in front of
+  // pilot customers a prototype. Export and deletion are real rights the login
+  // page already promises; this says how to use them instead of implying a
+  // control that was never built.
+  "privacy.requestNote":
+    "Vill du exportera eller radera dina uppgifter? Kontakta oss, så hanterar vi det.",
+  "privacy.requestAction": "Kontakta CQrityjob",
 
   // ── Common ───────────────────────────────────────────────────────────
   "common.yes": "Ja",
@@ -1289,7 +1306,7 @@ const en: Record<PassportCopyKey, string> = {
   "home.passport.title": "Security Passport",
   "home.passport.tagline": "Your professional security identity and evidence.",
   "home.passport.body": "What you have done, learned and had verified. You decide what is shared.",
-  "home.passport.start": "Start Security Passport",
+  "home.passport.start": "Open Security Passport",
   "home.passport.continue": "Continue",
   "home.passport.addExperience": "Add experience",
   "home.passport.addTraining": "Add training or certification",
@@ -1599,6 +1616,9 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
     "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+  "workCountry.title": "Work country",
+  "workCountry.current": "Current",
+  "workCountry.save": "Save work country",
   "jurisdiction.confirmPrompt":
     "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
   "jurisdiction.confirmAction": "Tell us where I work",
@@ -1621,7 +1641,9 @@ const en: Record<PassportCopyKey, string> = {
   "privacy.deleteTitle": "Delete your Passport",
   "privacy.deleteBody":
     "Active disclosures are revoked first. Confirmations given by an employer are retained in unlinked form.",
-  "privacy.prototypeNote": "The buttons are inactive in the prototype.",
+  "privacy.requestNote":
+    "Want to export or delete your information? Contact us and we will handle it.",
+  "privacy.requestAction": "Contact CQrityjob",
 
   "common.yes": "Yes",
   "common.no": "No",

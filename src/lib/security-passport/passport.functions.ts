@@ -565,6 +565,49 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     return { completedAt: now, createdPeriod };
   });
 
+/**
+ * Set the holder's work country, from anywhere in the Passport.
+ *
+ * ── WHY THIS IS NOT `saveOnboardingProgress` ───────────────────────────
+ *
+ * The obvious shortcut is to reuse the onboarding autosave, which already
+ * writes these columns. It also writes `onboarding_step`, `onboarding_answers`
+ * and `onboarding_state = 'in_progress'` — so calling it from a settings
+ * screen would knock a holder who FINISHED onboarding back into the middle of
+ * it, months later, because they corrected their country. A permanent control
+ * needs a function that changes only what it claims to change.
+ *
+ * The country and the emirate are split in one place (`splitWorkCountry`) and
+ * the confirmation timestamp is stamped here, because arriving at this form and
+ * choosing is exactly the act `work_location_confirmed_at` records. That is
+ * what lets a legacy 'SE' row — stored by the old `DEFAULT`, chosen by nobody —
+ * become a stated fact without ever being guessed at.
+ */
+export const setWorkCountry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => z.object({ workCountry: z.string().max(6) }).parse(data))
+  .handler(async ({ context, data }): Promise<{ savedAt: string }> => {
+    const { supabase, userId } = context;
+    const work = splitWorkCountry(data.workCountry);
+    if (!work.jurisdictionCode) throw new Error("SP_WORK_COUNTRY_REQUIRED");
+
+    const now = new Date().toISOString();
+    type ProfileUpdate = Database["public"]["Tables"]["sp_passport_profiles"]["Update"];
+    const patch: ProfileUpdate = {
+      jurisdiction_code: work.jurisdictionCode,
+      sub_jurisdiction_code: work.subJurisdictionCode,
+      work_location_confirmed_at: now,
+    };
+
+    const { error } = await supabase
+      .from("sp_passport_profiles")
+      .update(patch)
+      .eq("holder_user_id", userId);
+    if (error) throw new Error(error.message);
+
+    return { savedAt: now };
+  });
+
 const experienceInput = z.object({
   employerName: z.string().min(1).max(160),
   roleTitle: z.string().min(1).max(160),
