@@ -1015,6 +1015,12 @@ export const dictionaries = {
     "employer.jobs.error.notAuthorised":
       "Du har inte behörighet att göra det här i den här organisationen.",
     "employer.jobs.list.updated": "Uppdaterad",
+    "employer.jobs.list.applications": "Ansökningar",
+    "employer.jobs.list.applicationCount.one": "ansökan",
+    "employer.jobs.list.applicationCount.other": "ansökningar",
+    "employer.jobs.list.newCount.one": "{n} ny",
+    "employer.jobs.list.newCount.other": "{n} nya",
+    "employer.jobs.list.moreActions": "Fler åtgärder",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Går ut",
     "employer.jobs.new.heading": "Ny jobbannons",
@@ -1352,6 +1358,9 @@ export const dictionaries = {
     "employer.workforce.empty.heading": "Inga medarbetare ännu",
     "employer.workforce.empty.body":
       "Lägg till era medarbetare för att börja bygga en verifierad kompetensbild.",
+    "employer.workforce.field.role": "Roll:",
+    "employer.workforce.field.site": "Plats:",
+    "employer.workforce.field.started": "Började",
     "employer.workforce.status.active": "Aktiv",
     "employer.workforce.status.inactive": "Inaktiv",
     "employer.workforce.form.firstName": "Förnamn",
@@ -1441,6 +1450,20 @@ export const dictionaries = {
 
     // Filtered application list — every count on Översikt lands on exactly
     // the rows it counted.
+    "employer.applications.evidence.cv": "CV",
+    "employer.applications.coverNoteLabel": "Kandidatens meddelande:",
+    "employer.applications.searchLabel": "Sök kandidat eller annons",
+    "employer.applications.searchPlaceholder": "Sök på namn eller annons",
+    "employer.applications.sortLabel": "Sortera",
+    "employer.applications.sort.newest": "Senaste först",
+    "employer.applications.sort.oldest": "Äldsta först",
+    "employer.applications.sort.waiting": "Väntat längst",
+    "employer.applications.action.changeStage": "Ändra steg",
+    "employer.applications.action.changeStageFor": "Ändra steg för",
+    "employer.applications.confirm.hired.body":
+      "Kandidaten markeras som anställd och läggs till bland era medarbetare med kopplingen till den här ansökan bevarad. Steget kan inte ändras efteråt.",
+    "employer.applications.confirm.rejected.body":
+      "Kandidaten markeras som inte aktuell för den här tjänsten. Ansökan och dess historik finns kvar. Steget kan inte ändras efteråt.",
     "employer.applications.filter.all": "Alla",
     "employer.applications.filter.forJob": "Visar kandidater för",
     "employer.applications.filter.clearJob": "Visa alla annonser",
@@ -1457,8 +1480,8 @@ export const dictionaries = {
     "employer.actions.waitingLabel": "Väntar på kandidaten",
     "employer.actions.newApplications.one": "ny ansökan",
     "employer.actions.newApplications.other": "nya ansökningar",
-    "employer.actions.responsesToReview.one": "svar behöver granskas",
-    "employer.actions.responsesToReview.other": "svar behöver granskas",
+    "employer.actions.responsesToReview.one": "bedömningssvar väntar på granskning",
+    "employer.actions.responsesToReview.other": "bedömningssvar väntar på granskning",
     "employer.actions.resultsReady.one": "resultat klart att delas",
     "employer.actions.resultsReady.other": "resultat klara att delas",
     "employer.actions.awaitingNextStep.one": "kandidat väntar på nästa steg",
@@ -2583,12 +2606,15 @@ export const dictionaries = {
     "academy.nav.reviews": "Granska svar",
     "academy.nav.programmes": "Utvecklingsprogram",
     "academy.cancel": "Avbryt",
-    "academy.overview.competenceTitle": "Kompetensunderlag",
+    "academy.overview.competenceTitle": "Bedömningar och underlag",
     "academy.overview.competenceLede":
       "Underlag som byggs upp över tid och beskriver vad som faktiskt har visats i arbetsnära situationer. Resultatet uttrycks som mognadsnivåer, aldrig som poäng eller procent.",
     "academy.overview.active": "Pågående",
     "academy.overview.released": "Slutförda bedömningar",
     "academy.overview.awaitingReview": "Svar att granska",
+    "academy.overview.awaitingReviewUnified": "Väntar på granskning",
+    "academy.overview.awaitingReviewDetail.one": "bedömningssvar att gå igenom",
+    "academy.overview.awaitingReviewDetail.other": "bedömningssvar att gå igenom",
     "academy.overview.openLibrary": "Öppna bedömningsbiblioteket",
     "academy.overview.openParticipants": "Visa tilldelade tester",
     "academy.overview.recruitmentTitle": "Bedömning i rekrytering",
@@ -2616,7 +2642,7 @@ export const dictionaries = {
       "Exempelmaterial som vi använder för att visa och kvalitetssäkra produkten. Aldrig riktigt kundinnehåll.",
     "academy.library.sections.development": "Under utveckling",
     "academy.library.sections.developmentLede":
-      "Innehåll som ännu inte är färdigvaliderat. Det kan användas som förhandsversion om er organisation har fått tillgång.",
+      "Innehåll som ännu inte är färdigvaliderat. Det kan användas som pilotversion om er organisation har fått tillgång.",
     "academy.library.filter.all": "Alla",
     "academy.library.kind.assessment": "Bedömning",
     "academy.library.kind.training": "Utbildning",
@@ -2667,7 +2693,7 @@ export const dictionaries = {
     "training.overview.openParticipants": "Visa tilldelade utbildningar",
     "training.overview.boundaryTitle": "Utbildning styrker inte kompetens",
     "training.overview.boundaryBody":
-      "Ett genomfört utvecklingsprogram visar att en person har gjort arbetet. Det fastställer inte yrkeskompetens och höjer aldrig en mognadsnivå — det gör bara en ny bedömning.",
+      "Genomförd utbildning registreras som utvecklingsaktivitet. Kompetensnivå fastställs separat genom relevant bedömning.",
     "training.programmes.title": "Utvecklingsprogram",
     "training.programmes.lede":
       "Program som kan tilldelas, och program som fortfarande är under utveckling. Vad ett program inte fastställer står lika tydligt som vad det ger.",
@@ -2733,10 +2759,10 @@ export const dictionaries = {
     "academy.library.countMany": "{{count}} program",
     "academy.status.available": "Tillgängligt",
     "academy.status.development": "Under utveckling",
-    "academy.status.closedTest": "Förhandsversion",
-    "academy.library.closedTest.title": "Förhandsversion",
+    "academy.status.closedTest": "Pilotversion",
+    "academy.library.closedTest.title": "Pilotversion",
     "academy.library.closedTest.body":
-      "Den här bedömningen är tillgänglig för er organisation som förhandsversion. Innehållet är ännu inte färdigvaliderat, så resultatet är underlag för samtal och utveckling — det ska inte ensamt ligga till grund för ett anställningsbeslut. Varje resultat märks som förhandsversion.",
+      "Den här bedömningen är tillgänglig för er organisation som pilotversion. Innehållet är ännu inte färdigvaliderat, så resultatet är underlag för samtal och utveckling — det ska inte ensamt ligga till grund för ett anställningsbeslut. Varje resultat märks som pilotversion.",
     "academy.status.fixture": "Internt exempel",
     "academy.assign.email": "Personens e-postadress",
     "academy.assign.deadline": "Sista dag (valfritt)",
@@ -2908,7 +2934,7 @@ export const dictionaries = {
     "academy.reviews.participantRefNote":
       "Personen visas med en pseudonym referens. Granskningen görs på svaret, inte på personen — arbetsgivaren vet vem det gäller.",
     "academy.reviews.closedTestBasis":
-      "Förhandsversion. Innehållet är ännu inte färdigvaliderat, så den här granskningen är underlag för utveckling och samtal — den ska inte användas som grund för ett rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
+      "Pilotversion. Innehållet är ännu inte färdigvaliderat, så den här granskningen är underlag för utveckling och samtal — den ska inte användas som grund för ett rekryteringsbeslut. Din bedömning registreras med den begränsningen.",
     "academy.reviews.chose": "Personen valde",
     "academy.reviews.choseBest": "Personen valde som bästa handling",
     "academy.reviews.choseWorst": "Personen valde som sämsta handling",
@@ -3011,7 +3037,7 @@ export const dictionaries = {
     "academy.report.completed": "Genomförd",
     "academy.report.started": "Påbörjad",
     "academy.report.closedTestBanner":
-      "Förhandsversion – endast för utvärdering. Rapporten är underlag inför samtal och ska inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
+      "Pilotversion – endast för utvärdering. Rapporten är underlag inför samtal och ska inte ensam ligga till grund för anställnings- eller placeringsbeslut.",
     "academy.report.lineageToggle": "Visa spårbarhet och versioner",
     "academy.report.instrument": "Instrument",
     "academy.report.governance": "Användningsläge",
@@ -3019,7 +3045,7 @@ export const dictionaries = {
     "academy.report.contentStatus": "Innehållsstatus",
     "academy.report.attemptStatus": "Försöksstatus",
     "academy.lineage.mode.development": "Utveckling",
-    "academy.lineage.mode.closedTest": "Förhandsversion",
+    "academy.lineage.mode.closedTest": "Pilotversion",
     "academy.lineage.mode.recruitment": "Rekrytering",
     "academy.lineage.validation.design": "Under framtagning",
     "academy.lineage.validation.pilot": "Pilot",
@@ -3402,8 +3428,8 @@ export const dictionaries = {
     "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
     "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
     "journey.openBrief": "Öppna kandidatunderlag",
-    "journey.closedTest": "Förhandsversion",
-    "journey.closedTestNotForSelection": "Förhandsversion – endast för utvärdering",
+    "journey.closedTest": "Pilotversion",
+    "journey.closedTestNotForSelection": "Pilotversion – endast för utvärdering",
     "journey.stage.invited": "Tilldelad",
     "journey.stage.started": "Pågår",
     "journey.stage.under_review": "Test genomfört",
@@ -3448,7 +3474,7 @@ export const dictionaries = {
     // Candidate-side job context.
     "academy.work.forJob": "Gäller ansökan:",
     "academy.work.recruitmentContext": "Rekrytering",
-    "academy.report.purposeClosedTestRecruitment": "Rekryteringsbedömning (förhandsversion)",
+    "academy.report.purposeClosedTestRecruitment": "Rekryteringsbedömning (pilotversion)",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -4466,6 +4492,12 @@ export const dictionaries = {
     "employer.jobs.error.notAuthorised":
       "You do not have permission to do that in this organisation.",
     "employer.jobs.list.updated": "Updated",
+    "employer.jobs.list.applications": "Applications",
+    "employer.jobs.list.applicationCount.one": "application",
+    "employer.jobs.list.applicationCount.other": "applications",
+    "employer.jobs.list.newCount.one": "{n} new",
+    "employer.jobs.list.newCount.other": "{n} new",
+    "employer.jobs.list.moreActions": "More actions",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Expires",
     "employer.jobs.new.heading": "New job",
@@ -4798,6 +4830,9 @@ export const dictionaries = {
     "employer.workforce.empty.heading": "No employees yet",
     "employer.workforce.empty.body":
       "Add your employees to begin building a verified competence picture.",
+    "employer.workforce.field.role": "Role:",
+    "employer.workforce.field.site": "Site:",
+    "employer.workforce.field.started": "Started",
     "employer.workforce.status.active": "Active",
     "employer.workforce.status.inactive": "Inactive",
     "employer.workforce.form.firstName": "First name",
@@ -4888,6 +4923,20 @@ export const dictionaries = {
 
     // Filtered application list -- every count on the overview lands on
     // exactly the rows it counted.
+    "employer.applications.evidence.cv": "CV",
+    "employer.applications.coverNoteLabel": "Candidate's message:",
+    "employer.applications.searchLabel": "Search candidate or job ad",
+    "employer.applications.searchPlaceholder": "Search by name or job ad",
+    "employer.applications.sortLabel": "Sort",
+    "employer.applications.sort.newest": "Newest first",
+    "employer.applications.sort.oldest": "Oldest first",
+    "employer.applications.sort.waiting": "Waiting longest",
+    "employer.applications.action.changeStage": "Change stage",
+    "employer.applications.action.changeStageFor": "Change stage for",
+    "employer.applications.confirm.hired.body":
+      "The candidate is marked as hired and added to your employees, with the link to this application preserved. The stage cannot be changed afterwards.",
+    "employer.applications.confirm.rejected.body":
+      "The candidate is marked as not being taken forward for this role. The application and its history are kept. The stage cannot be changed afterwards.",
     "employer.applications.filter.all": "All",
     "employer.applications.filter.forJob": "Showing candidates for",
     "employer.applications.filter.clearJob": "Show all job ads",
@@ -4904,8 +4953,8 @@ export const dictionaries = {
     "employer.actions.waitingLabel": "Waiting on the candidate",
     "employer.actions.newApplications.one": "new application",
     "employer.actions.newApplications.other": "new applications",
-    "employer.actions.responsesToReview.one": "response needs review",
-    "employer.actions.responsesToReview.other": "responses need review",
+    "employer.actions.responsesToReview.one": "assessment response is waiting for review",
+    "employer.actions.responsesToReview.other": "assessment responses are waiting for review",
     "employer.actions.resultsReady.one": "result is ready to share",
     "employer.actions.resultsReady.other": "results are ready to share",
     "employer.actions.awaitingNextStep.one": "candidate is waiting for the next step",
@@ -6020,12 +6069,15 @@ export const dictionaries = {
     "academy.nav.reviews": "Review responses",
     "academy.nav.programmes": "Development programmes",
     "academy.cancel": "Cancel",
-    "academy.overview.competenceTitle": "Competence evidence",
+    "academy.overview.competenceTitle": "Assessments and evidence",
     "academy.overview.competenceLede":
       "Evidence built up over time describing what has actually been demonstrated in work-like situations. Results are expressed as maturity levels, never as scores or percentages.",
     "academy.overview.active": "In progress",
     "academy.overview.released": "Completed assessments",
     "academy.overview.awaitingReview": "Responses to review",
+    "academy.overview.awaitingReviewUnified": "Waiting for review",
+    "academy.overview.awaitingReviewDetail.one": "assessment response to work through",
+    "academy.overview.awaitingReviewDetail.other": "assessment responses to work through",
     "academy.overview.openLibrary": "Open the assessment library",
     "academy.overview.openParticipants": "View assigned tests",
     "academy.overview.recruitmentTitle": "Assessment in recruitment",
@@ -6054,7 +6106,7 @@ export const dictionaries = {
       "Sample material we use to demonstrate and quality-check the product. Never real customer content.",
     "academy.library.sections.development": "Under development",
     "academy.library.sections.developmentLede":
-      "Content that is not yet fully validated. It can be used as a preview if your organisation has been given access.",
+      "Content that is not yet fully validated. It can be used as a pilot version if your organisation has been given access.",
     "academy.library.filter.all": "All",
     "academy.library.kind.assessment": "Assessment",
     "academy.library.kind.training": "Training",
@@ -6104,7 +6156,7 @@ export const dictionaries = {
     "training.overview.openParticipants": "View assigned training",
     "training.overview.boundaryTitle": "Training does not verify competence",
     "training.overview.boundaryBody":
-      "A completed development programme shows that somebody did the work. It does not establish professional competence and never raises a maturity level — only a new assessment does that.",
+      "Completed training is recorded as a development activity. Competence level is established separately through an appropriate assessment.",
     "training.programmes.title": "Development programmes",
     "training.programmes.lede":
       "Programmes that can be assigned, and programmes still in development. What a programme does not establish is stated as plainly as what it provides.",
@@ -6170,10 +6222,10 @@ export const dictionaries = {
     "academy.library.countMany": "{{count}} programmes",
     "academy.status.available": "Available",
     "academy.status.development": "In development",
-    "academy.status.closedTest": "Preview",
-    "academy.library.closedTest.title": "Preview",
+    "academy.status.closedTest": "Pilot version",
+    "academy.library.closedTest.title": "Pilot version",
     "academy.library.closedTest.body":
-      "This assessment is available to your organisation as a preview. The content is not yet fully validated, so the result is input for a conversation and for development — it should not on its own decide an appointment. Every result is marked as a preview.",
+      "This assessment is available to your organisation as a pilot version. The content is not yet fully validated, so the result is input for a conversation and for development — it should not on its own decide an appointment. Every result is marked as a pilot version.",
     "academy.status.fixture": "Internal sample",
     "academy.assign.email": "The person's email address",
     "academy.assign.deadline": "Deadline (optional)",
@@ -6345,7 +6397,7 @@ export const dictionaries = {
     "academy.reviews.participantRefNote":
       "The person is shown by a pseudonymous reference. You are reviewing the answer, not the person — the employer knows who it concerns.",
     "academy.reviews.closedTestBasis":
-      "Preview. The content is not yet fully validated, so this review is input for development and for a conversation — it should not be used as the basis for a recruitment decision. Your review is recorded with that limitation.",
+      "Pilot version. The content is not yet fully validated, so this review is input for development and for a conversation — it should not be used as the basis for a recruitment decision. Your review is recorded with that limitation.",
     "academy.reviews.chose": "The person chose",
     "academy.reviews.choseBest": "The person chose as the best action",
     "academy.reviews.choseWorst": "The person chose as the worst action",
@@ -6449,7 +6501,7 @@ export const dictionaries = {
     "academy.report.completed": "Completed",
     "academy.report.started": "Started",
     "academy.report.closedTestBanner":
-      "Preview – for evaluation only. This report is input for a conversation and should not on its own decide an appointment or a placement.",
+      "Pilot version – for evaluation only. This report is input for a conversation and should not on its own decide an appointment or a placement.",
     "academy.report.lineageToggle": "Show lineage and versions",
     "academy.report.instrument": "Instrument",
     "academy.report.governance": "Use context",
@@ -6457,7 +6509,7 @@ export const dictionaries = {
     "academy.report.contentStatus": "Content status",
     "academy.report.attemptStatus": "Attempt status",
     "academy.lineage.mode.development": "Development",
-    "academy.lineage.mode.closedTest": "Preview",
+    "academy.lineage.mode.closedTest": "Pilot version",
     "academy.lineage.mode.recruitment": "Recruitment",
     "academy.lineage.validation.design": "In design",
     "academy.lineage.validation.pilot": "Pilot",
@@ -6830,8 +6882,8 @@ export const dictionaries = {
     "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
     "journey.assignNoBasis": "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
-    "journey.closedTest": "Preview",
-    "journey.closedTestNotForSelection": "Preview – for evaluation only",
+    "journey.closedTest": "Pilot version",
+    "journey.closedTestNotForSelection": "Pilot version – for evaluation only",
     "journey.stage.invited": "Assigned",
     "journey.stage.started": "In progress",
     "journey.stage.under_review": "Test completed",
@@ -6873,7 +6925,7 @@ export const dictionaries = {
 
     "academy.work.forJob": "Relates to your application for:",
     "academy.work.recruitmentContext": "Recruitment",
-    "academy.report.purposeClosedTestRecruitment": "Recruitment assessment (preview)",
+    "academy.report.purposeClosedTestRecruitment": "Recruitment assessment (pilot version)",
   },
 } as const;
 

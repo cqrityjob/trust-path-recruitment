@@ -12,7 +12,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { GraduationCap, ShieldAlert } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, TrainingPage } from "@/components/academy/AcademyWorkspace";
@@ -96,16 +96,17 @@ function Overview({ employerId, employerSlug }: { employerId: string; employerSl
         </Link>
       </div>
 
-      {/* The one thing an employer must not misunderstand about this area. */}
-      <div className="mt-8 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <ShieldAlert className="h-4 w-4 text-accent" aria-hidden="true" />
-          {t("training.overview.boundaryTitle")}
-        </p>
-        <p className="mt-1.5 max-w-[72ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("training.overview.boundaryBody")}
-        </p>
-      </div>
+      {/* ── THE BOUNDARY, KEPT BUT NOT SHOUTED ────────────────────────────
+          This was a bordered card with an alert icon and a bold heading
+          reading "Utbildning styrker inte kompetens" -- the loudest element on
+          a page whose actual job is planning and following development. The
+          statement is load-bearing and stays exactly as binding; what changes
+          is that it now reads as the footnote it is rather than as a warning
+          about the page the employer is standing on. Nothing in the evidence
+          model moves: training still never raises a maturity level. */}
+      <p className="mt-8 max-w-[72ch] border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
+        {t("training.overview.boundaryBody")}
+      </p>
     </>
   );
 }

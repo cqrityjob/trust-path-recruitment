@@ -30,6 +30,15 @@ import { translateJobServerError } from "@/components/employer/EmployerJobForm";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
 import { formatDate } from "@/lib/job-intelligence/date-format";
+import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/")({
   ssr: false,
@@ -99,9 +108,10 @@ function JobsList({
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
 }) {
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const listFn = useServerFn(listEmployerJobs);
+  const listApplicationsFn = useServerFn(listApplicationsForEmployer);
   const closeFn = useServerFn(closeEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
   const deleteFn = useServerFn(deleteEmployerJob);
@@ -111,6 +121,33 @@ function JobsList({
     queryKey: ["employer", employerId, "jobs"],
     queryFn: () => listFn({ data: { employerId } }),
   });
+
+  // ── WHERE THE APPLICATION COUNTS COME FROM ────────────────────────────
+  //
+  // "8 ansökningar · 2 nya" is the single most useful thing this table can
+  // say, and it needs no new endpoint: listApplicationsForEmployer is already
+  // RLS-scoped to this organisation, already carries jobId and status on every
+  // row, and is already in the cache under this exact key -- the dashboard and
+  // the applications list both hold it. So the counts are a projection of rows
+  // the reader is independently authorised to see, tallied in the browser.
+  //
+  // Nothing is invented and nothing is estimated: a job with no applications
+  // renders an em dash, and while the query is still in flight the column is
+  // simply blank rather than showing a zero it would later contradict.
+  const applicationsQuery = useQuery({
+    queryKey: ["employer", employerId, "applications"],
+    queryFn: () => listApplicationsFn({ data: { employerId } }),
+  });
+
+  const countsByJob = new Map<string, { total: number; fresh: number }>();
+  for (const a of applicationsQuery.data ?? []) {
+    const c = countsByJob.get(a.jobId) ?? { total: 0, fresh: 0 };
+    c.total += 1;
+    // "New" means nobody has moved it yet -- the same 'submitted' the
+    // dashboard's "nya ansökningar" action counts and links to.
+    if (a.status === "submitted") c.fresh += 1;
+    countsByJob.set(a.jobId, c);
+  }
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -312,6 +349,7 @@ function JobsList({
                 <tr>
                   <th className="px-4 py-3">{t("employer.jobs.list.title")}</th>
                   <th className="px-4 py-3">{t("employer.jobs.list.status")}</th>
+                  <th className="px-4 py-3">{t("employer.jobs.list.applications")}</th>
                   <th className="px-4 py-3">{t("employer.jobs.list.expires")}</th>
                   <th className="px-4 py-3">{t("employer.jobs.list.updated")}</th>
                   <th className="px-4 py-3 text-right">&nbsp;</th>
@@ -375,6 +413,41 @@ function JobsList({
                           {jobStatusLabel(r.status, lang) || r.status}
                         </span>
                       </td>
+                      {/* Applications, and how many nobody has looked at yet.
+                          The whole cell is the way into exactly those rows, so
+                          the number lands on what it counted. */}
+                      <td className="px-4 py-3 text-xs">
+                        {applicationsQuery.isLoading ? (
+                          <span className="text-muted-foreground">&nbsp;</span>
+                        ) : (
+                          (() => {
+                            const c = countsByJob.get(r.id);
+                            if (!c || c.total === 0)
+                              return <span className="text-muted-foreground">—</span>;
+                            return (
+                              <Link
+                                to="/employer/$employerSlug/applications"
+                                params={{ employerSlug }}
+                                search={{ job: r.id }}
+                                className="inline-flex flex-wrap items-baseline gap-x-1.5 text-muted-foreground hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                <span className="font-medium tabular-nums text-foreground">
+                                  {c.total}
+                                </span>
+                                {tp("employer.jobs.list.applicationCount", c.total)}
+                                {c.fresh > 0 && (
+                                  <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+                                    {tp("employer.jobs.list.newCount", c.fresh).replace(
+                                      "{n}",
+                                      String(c.fresh),
+                                    )}
+                                  </span>
+                                )}
+                              </Link>
+                            );
+                          })()
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         {r.expires_at ? formatDate(r.expires_at, lang) : "—"}
                       </td>
@@ -382,76 +455,92 @@ function JobsList({
                         {formatDate(r.updated_at, lang)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          {/* Open works for every status; Redigera only for
-                              the two the database will actually accept an
-                              edit on. */}
+                        {/* ── ONE PRIMARY, THE REST IN A MENU ────────────
+                            Open, Edit, Duplicate, Delete, Close and Restore
+                            used to sit in one wrapping row of identically
+                            sized buttons, so "Ta bort" had the same visual
+                            weight as the action a recruiter wants 95% of the
+                            time -- and on a narrow screen they wrapped into an
+                            unpredictable order. Öppna is now the only button;
+                            everything that edits, copies or ENDS the
+                            advertisement is one deliberate click further away.
+                            Every destructive path keeps its existing
+                            ConfirmAction dialog. */}
+                        <div className="flex items-center justify-end gap-2">
                           <Link
                             to="/employer/$employerSlug/jobs/$jobId"
                             params={{ employerSlug, jobId: r.id }}
-                            className="rounded-md border border-accent/50 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             {t("employer.jobs.list.open")}
                           </Link>
-                          {editable && (
-                            <Link
-                              to="/employer/$employerSlug/jobs/$jobId/edit"
-                              params={{ employerSlug, jobId: r.id }}
-                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                            >
-                              {t("employer.jobs.list.edit")}
-                            </Link>
-                          )}
-                          <button
-                            type="button"
-                            disabled={dupMutation.isPending}
-                            onClick={() => {
-                              setActionError(null);
-                              setPending({ kind: "duplicate", id: r.id });
-                            }}
-                            className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                          >
-                            {t("employer.jobs.list.duplicate")}
-                          </button>
-                          {deletable && (
-                            <button
-                              type="button"
-                              disabled={deleteMutation.isPending}
-                              onClick={() => {
-                                setActionError(null);
-                                setPending({ kind: "delete", id: r.id });
-                              }}
-                              className="rounded-md border border-destructive/60 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
-                            >
-                              {t("employer.jobs.list.delete")}
-                            </button>
-                          )}
-                          {restorable && (
-                            <button
-                              type="button"
-                              disabled={restoreMutation.isPending}
-                              onClick={() => {
-                                setActionError(null);
-                                restoreMutation.mutate(r.id);
-                              }}
-                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                            >
-                              {t("employer.jobs.list.restore")}
-                            </button>
-                          )}
-                          {closeable && (
-                            <button
-                              type="button"
-                              disabled={closeMutation.isPending}
-                              onClick={() => {
-                                setActionError(null);
-                                setPending({ kind: "close", id: r.id });
-                              }}
-                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                            >
-                              {t("employer.jobs.list.close")}
-                            </button>
-                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label={t("employer.jobs.list.moreActions")}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              {editable && (
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    to="/employer/$employerSlug/jobs/$jobId/edit"
+                                    params={{ employerSlug, jobId: r.id }}
+                                  >
+                                    {t("employer.jobs.list.edit")}
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                disabled={dupMutation.isPending}
+                                onSelect={() => {
+                                  setActionError(null);
+                                  setPending({ kind: "duplicate", id: r.id });
+                                }}
+                              >
+                                {t("employer.jobs.list.duplicate")}
+                              </DropdownMenuItem>
+                              {restorable && (
+                                <DropdownMenuItem
+                                  disabled={restoreMutation.isPending}
+                                  onSelect={() => {
+                                    setActionError(null);
+                                    restoreMutation.mutate(r.id);
+                                  }}
+                                >
+                                  {t("employer.jobs.list.restore")}
+                                </DropdownMenuItem>
+                              )}
+                              {(closeable || deletable) && <DropdownMenuSeparator />}
+                              {closeable && (
+                                <DropdownMenuItem
+                                  disabled={closeMutation.isPending}
+                                  onSelect={() => {
+                                    setActionError(null);
+                                    setPending({ kind: "close", id: r.id });
+                                  }}
+                                >
+                                  {t("employer.jobs.list.close")}
+                                </DropdownMenuItem>
+                              )}
+                              {deletable && (
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  disabled={deleteMutation.isPending}
+                                  onSelect={() => {
+                                    setActionError(null);
+                                    setPending({ kind: "delete", id: r.id });
+                                  }}
+                                >
+                                  {t("employer.jobs.list.delete")}
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>

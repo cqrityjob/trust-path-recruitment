@@ -34,11 +34,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
-import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
+import { ApplicationAssessmentChip } from "@/components/academy/ApplicationAssessmentPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   EmployerAppShell,
   type EmployerRole,
@@ -62,6 +63,16 @@ import {
   type EmployerSettableStatus,
 } from "@/lib/job-intelligence/application-status";
 import { listEmployerJobs } from "@/lib/job-intelligence/employer-jobs.functions";
+import { ConfirmAction } from "@/components/employer/ConfirmAction";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, FileText, Search } from "lucide-react";
 
 // ── WHY THIS LIST TAKES A FILTER FROM THE URL ──────────────────────────
 //
@@ -77,10 +88,24 @@ import { listEmployerJobs } from "@/lib/job-intelligence/employer-jobs.functions
 // shows the unfiltered list rather than a validation error.
 const STATUS_FILTERS = ["submitted", "reviewing", "interview", "hired", "rejected"] as const;
 
+// Three orderings, because a recruiter asks three different questions of the
+// same inbox: what just arrived, what has been here longest, and -- the one
+// that actually prevents a candidate being forgotten -- who has been waiting
+// on US the longest. "waiting" is deliberately NOT just oldest-first: it ranks
+// only the applications still in play, so a rejection from March does not sit
+// at the top of the list of people owed an answer.
+const SORTS = ["newest", "oldest", "waiting"] as const;
+type SortKey = (typeof SORTS)[number];
+
 const searchSchema = z.object({
   job: z.string().uuid().optional().catch(undefined),
   status: z.enum(STATUS_FILTERS).optional().catch(undefined),
+  q: z.string().trim().max(100).optional().catch(undefined),
+  sort: z.enum(SORTS).optional().catch(undefined),
 });
+
+/** Still waiting on the employer. Terminal outcomes are settled business. */
+const OPEN_STATUSES = new Set(["submitted", "reviewing", "interview"]);
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/applications/")({
   ssr: false,
@@ -158,8 +183,25 @@ function ApplicationsList({
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const listJobsFn = useServerFn(listEmployerJobs);
   const [actionError, setActionError] = useState<string | null>(null);
-  const { job: jobFilter, status: statusFilter } = Route.useSearch();
+  const {
+    job: jobFilter,
+    status: statusFilter,
+    q: searchTerm,
+    sort: sortKey,
+  } = Route.useSearch();
   const navigate = Route.useNavigate();
+
+  // A terminal transition is confirmed; a progression is not. `hired` and
+  // `rejected` are both ends of the line -- set_application_status() offers no
+  // transition out of either -- and `hired` additionally creates an employment
+  // record through scp_employment_from_application(). Neither should be one
+  // stray click away, and neither is worth a dialog when the employer is
+  // simply moving somebody from "ny" to "granskas".
+  const [pendingStatus, setPendingStatus] = useState<{
+    applicationId: string;
+    candidate: string;
+    newStatus: EmployerSettableStatus;
+  } | null>(null);
 
   const query = useQuery({
     queryKey: ["employer", employerId, "applications"],
@@ -185,6 +227,10 @@ function ApplicationsList({
     onError: () => setActionError(t("employer.applications.error.statusUpdate")),
   });
 
+  function setSearch(next: Partial<{ q: string | undefined; sort: SortKey | undefined }>) {
+    void navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+  }
+
   async function onDownloadCv(applicationId: string) {
     setActionError(null);
     try {
@@ -200,12 +246,38 @@ function ApplicationsList({
   // it is already RLS-scoped to this organisation server-side. The filter is a
   // view over authorised data, never a substitute for the authorisation.
   const allRows: EmployerApplicationRow[] = query.data ?? [];
-  const rows = allRows.filter(
-    (r) =>
-      (jobFilter === undefined || r.jobId === jobFilter) &&
-      (statusFilter === undefined || r.status === statusFilter),
-  );
-  const filtered = jobFilter !== undefined || statusFilter !== undefined;
+  // Search is a plain substring over the two things a recruiter actually
+  // remembers -- the person and the vacancy. Deliberately not an ATS query
+  // language: the brief asks for a way to find one candidate in a list of
+  // twenty, and that is a text box.
+  const needle = (searchTerm ?? "").toLocaleLowerCase();
+  const rows = allRows
+    .filter((r) => {
+      const jobMatches = jobFilter === undefined || r.jobId === jobFilter;
+      const statusMatches = statusFilter === undefined || r.status === statusFilter;
+      const textMatches =
+        needle === "" ||
+        [r.applicantDisplayName, r.jobTitleSv, r.jobTitleEn]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(needle);
+      return jobMatches && statusMatches && textMatches;
+    })
+    .sort((a, b) => {
+      if (sortKey === "oldest") return a.createdAt.localeCompare(b.createdAt);
+      if (sortKey === "waiting") {
+        // Open applications first, oldest of those at the top. A settled
+        // application is not "waiting" however long ago it was settled.
+        const aOpen = OPEN_STATUSES.has(a.status);
+        const bOpen = OPEN_STATUSES.has(b.status);
+        if (aOpen !== bOpen) return aOpen ? -1 : 1;
+        return a.createdAt.localeCompare(b.createdAt);
+      }
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  const filtered =
+    jobFilter !== undefined || statusFilter !== undefined || (searchTerm ?? "") !== "";
   const filteredJobTitle = jobFilter
     ? (() => {
         const j = (jobsQuery.data ?? []).find((row) => row.id === jobFilter);
@@ -277,6 +349,68 @@ function ApplicationsList({
         </div>
       )}
 
+      {/* Search and sort sit with the status chips: one control strip, not a
+          toolbar above a second toolbar. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <label className="relative flex-1 basis-[15rem]">
+          <span className="sr-only">{t("employer.applications.searchLabel")}</span>
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={searchTerm ?? ""}
+            onChange={(e) => setSearch({ q: e.target.value === "" ? undefined : e.target.value })}
+            placeholder={t("employer.applications.searchPlaceholder")}
+            className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          {t("employer.applications.sortLabel")}
+          <select
+            value={sortKey ?? "newest"}
+            onChange={(e) =>
+              setSearch({ sort: e.target.value === "newest" ? undefined : (e.target.value as SortKey) })
+            }
+            className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {SORTS.map((sk) => (
+              <option key={sk} value={sk}>
+                {t(`employer.applications.sort.${sk}` as TranslationKey)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {/* Terminal outcomes are confirmed by name, and the dialog says what the
+          outcome DOES -- an employer who marks somebody hired is also creating
+          an employment record, and that should not be a surprise. */}
+      {pendingStatus && (
+        <ConfirmAction
+          open
+          onOpenChange={(o) => {
+            if (!o) setPendingStatus(null);
+          }}
+          tone={pendingStatus.newStatus === "rejected" ? "destructive" : "default"}
+          busy={setStatus.isPending}
+          title={`${t(APPLICATION_ACTION_LABEL_KEY[pendingStatus.newStatus])} \u2014 ${pendingStatus.candidate}`}
+          consequence={t(
+            pendingStatus.newStatus === "hired"
+              ? "employer.applications.confirm.hired.body"
+              : "employer.applications.confirm.rejected.body",
+          )}
+          confirmLabel={t(APPLICATION_ACTION_LABEL_KEY[pendingStatus.newStatus])}
+          cancelLabel={t("employer.workforce.form.cancel")}
+          onConfirm={() => {
+            const p = pendingStatus;
+            setPendingStatus(null);
+            setStatus.mutate({ applicationId: p.applicationId, newStatus: p.newStatus });
+          }}
+        />
+      )}
+
       {actionError && (
         <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {actionError}
@@ -323,79 +457,139 @@ function ApplicationsList({
             }
           />
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-background">
             {rows.map((r) => {
               const jobTitle =
                 (lang === "sv" ? r.jobTitleSv : r.jobTitleEn) ||
                 r.jobTitleSv ||
                 r.jobTitleEn ||
-                "—";
+                "\u2014";
+              const nextStatuses = EMPLOYER_NEXT_STATUSES[r.status] ?? [];
+              const candidateName =
+                r.applicantDisplayName ?? t("employer.applications.anonymousCandidate");
               return (
-                <li key={r.id} className="rounded-lg border border-border bg-background p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    {/* The candidate is the subject of the row, and the way
-                        into their own page. The job and the date stay as the
-                        context underneath: a recruiter is triaging people, and
-                        clicking a person should open that person. */}
-                    <div className="min-w-0">
-                      <Link
-                        to="/employer/$employerSlug/applications/$applicationId"
-                        params={{ employerSlug, applicationId: r.id }}
-                        className="text-sm font-semibold text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        {r.applicantDisplayName ?? t("employer.applications.anonymousCandidate")}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {jobTitle}
-                        {" · "}
-                        {formatDate(r.createdAt, lang)}
-                      </p>
-                    </div>
-                    <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                      {t(APPLICATION_STATUS_LABEL_KEY[r.status])}
-                    </span>
-                  </div>
-                  {r.coverNote && <p className="mt-3 text-sm text-foreground">{r.coverNote}</p>}
-                  <div className="mt-3 flex flex-wrap gap-2">
+                <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                  {/* IDENTITY — the person, the vacancy, the date. One block,
+                      so the eye runs down a single column of names rather than
+                      hunting for each one inside a card. */}
+                  <div className="min-w-0 flex-1 basis-[16rem]">
                     <Link
                       to="/employer/$employerSlug/applications/$applicationId"
                       params={{ employerSlug, applicationId: r.id }}
-                      className="inline-flex min-h-[32px] items-center rounded-md border border-accent/50 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="text-sm font-semibold text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      {t("employer.candidate.openAction")}
+                      {candidateName}
                     </Link>
-                    {(EMPLOYER_NEXT_STATUSES[r.status] ?? []).map((next) => (
-                      <button
-                        key={next}
-                        type="button"
-                        disabled={setStatus.isPending}
-                        onClick={() => setStatus.mutate({ applicationId: r.id, newStatus: next })}
-                        className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
-                      >
-                        {t(APPLICATION_ACTION_LABEL_KEY[next])}
-                      </button>
-                    ))}
+                    <p className="truncate text-xs text-muted-foreground">
+                      {jobTitle}
+                      {" \u00b7 "}
+                      {formatDate(r.createdAt, lang)}
+                    </p>
+                  </div>
+
+                  {/* EVIDENCE — what exists, at a glance, and never merged into
+                      a single "qualified" verdict. The CV chip says a document
+                      is attached; the assessment chip says where the governed
+                      run has got to. There is deliberately NO Passport signal
+                      here: a disclosure is holder-authorised and
+                      application-scoped, and a per-row "shared / not shared"
+                      badge would leak whether a Passport exists to a reader who
+                      was never given one. See rule 3b/3d in
+                      scripts/passport-separation-check.ts -- the applications
+                      list is named there as staying closed. */}
+                  <div className="flex flex-none flex-wrap items-center gap-1.5">
                     {r.hasCv && (
                       <button
                         type="button"
                         onClick={() => onDownloadCv(r.id)}
-                        className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        {t("employer.applications.action.downloadCv")}
+                        <FileText className="h-3 w-3" aria-hidden="true" />
+                        {t("employer.applications.evidence.cv")}
                       </button>
+                    )}
+                    <ApplicationAssessmentChip applicationId={r.id} />
+                  </div>
+
+                  <span className="inline-flex flex-none rounded-full border border-border px-2 py-0.5 text-xs font-medium">
+                    {t(APPLICATION_STATUS_LABEL_KEY[r.status])}
+                  </span>
+
+                  {/* ACTION — one primary, everything else behind a menu.
+                      "Anställd" and "Inte aktuell" used to sit in this row as
+                      plain buttons the same size as "Öppna", which is a
+                      terminal, auditable outcome one stray click away. */}
+                  <div className="flex flex-none items-center gap-2">
+                    <Link
+                      to="/employer/$employerSlug/applications/$applicationId"
+                      params={{ employerSlug, applicationId: r.id }}
+                      className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {t("employer.candidate.openAction")}
+                    </Link>
+                    {nextStatuses.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={setStatus.isPending}
+                            className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2.5 text-xs font-medium text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                          >
+                            {t("employer.applications.action.changeStage")}
+                            <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                            {t("employer.applications.action.changeStageFor")} {candidateName}
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {nextStatuses.map((next) => {
+                            const terminal = next === "hired" || next === "rejected";
+                            return (
+                              <DropdownMenuItem
+                                key={next}
+                                className={
+                                  next === "rejected"
+                                    ? "text-destructive focus:text-destructive"
+                                    : undefined
+                                }
+                                onSelect={() => {
+                                  setActionError(null);
+                                  if (terminal) {
+                                    setPendingStatus({
+                                      applicationId: r.id,
+                                      candidate: candidateName,
+                                      newStatus: next,
+                                    });
+                                  } else {
+                                    setStatus.mutate({ applicationId: r.id, newStatus: next });
+                                  }
+                                }}
+                              >
+                                {t(APPLICATION_ACTION_LABEL_KEY[next])}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
 
-                  {/* The recruitment assessment step, in the application it
-                      belongs to. It resolves the candidate from the
-                      application, so nobody retypes an address — and it is
-                      also the way back to the released brief. */}
-                  <ApplicationAssessmentPanel
-                    employerId={employerId}
-                    employerSlug={employerSlug}
-                    applicationId={r.id}
-                    canAssign={role === "owner" || role === "admin"}
-                  />
+                  {/* THE CANDIDATE'S OWN WORDS — labelled as theirs, clamped to
+                      two lines, and last. It used to render in full at body
+                      size directly under the name, which made a long message
+                      the most prominent thing about that candidate and pushed
+                      the next person off the screen. It is never a quality
+                      signal; the full text is on the candidate's page. */}
+                  {r.coverNote && (
+                    <p className="w-full text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground/70">
+                        {t("employer.applications.coverNoteLabel")}
+                      </span>{" "}
+                      <span className="line-clamp-2">{r.coverNote}</span>
+                    </p>
+                  )}
                 </li>
               );
             })}

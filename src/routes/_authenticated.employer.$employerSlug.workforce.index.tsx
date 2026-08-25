@@ -326,35 +326,56 @@ function WorkforceDirectory({
                   key={row.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 shadow-sm"
                 >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* The roster and the person page are the same objects
-                          seen at two depths, so the name is the way in. */}
-                      <Link
-                        to="/employer/$employerSlug/workforce/$personId"
-                        params={{ employerSlug, personId: row.id }}
-                        className="text-sm font-semibold text-foreground underline-offset-2 hover:underline"
-                      >
-                        {row.firstName} {row.lastName}
-                      </Link>
-                      <span
-                        className={
-                          "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest " +
-                          (row.employmentStatus === "active"
-                            ? "border border-border text-muted-foreground"
-                            : "border border-dashed border-border text-muted-foreground/70")
-                        }
-                      >
-                        {t(
-                          row.employmentStatus === "active"
-                            ? "employer.workforce.status.active"
-                            : "employer.workforce.status.inactive",
-                        )}
-                      </span>
+                  {/* ── FIELDS, NOT A SENTENCE ─────────────────────────
+                      Role, site and start date used to be joined with " · "
+                      into one muted line, so an employer scanning for "who
+                      works at Landvetter" was reading prose. They are separate
+                      labelled fields now: same data, same query, readable down
+                      a column. */}
+                  <div className="grid min-w-0 flex-1 gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* The roster and the person page are the same objects
+                            seen at two depths, so the name is the way in. */}
+                        <Link
+                          to="/employer/$employerSlug/workforce/$personId"
+                          params={{ employerSlug, personId: row.id }}
+                          className="truncate text-sm font-semibold text-foreground underline-offset-2 hover:underline"
+                        >
+                          {row.firstName} {row.lastName}
+                        </Link>
+                        <span
+                          className={
+                            "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest " +
+                            (row.employmentStatus === "active"
+                              ? "border border-border text-muted-foreground"
+                              : "border border-dashed border-border text-muted-foreground/70")
+                          }
+                        >
+                          {t(
+                            row.employmentStatus === "active"
+                              ? "employer.workforce.status.active"
+                              : "employer.workforce.status.inactive",
+                          )}
+                        </span>
+                      </div>
+                      {row.startDate && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {t("employer.workforce.field.started")} {formatDate(row.startDate, lang)}
+                        </p>
+                      )}
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {[row.roleTitle, row.siteName].filter(Boolean).join(" · ") || "—"}
-                      {row.startDate ? ` · ${formatDate(row.startDate, lang)}` : ""}
+                    <p className="min-w-0 truncate text-xs text-muted-foreground">
+                      <span className="text-muted-foreground/70">
+                        {t("employer.workforce.field.role")}
+                      </span>{" "}
+                      <span className="text-foreground">{row.roleTitle || "\u2014"}</span>
+                    </p>
+                    <p className="min-w-0 truncate text-xs text-muted-foreground">
+                      <span className="text-muted-foreground/70">
+                        {t("employer.workforce.field.site")}
+                      </span>{" "}
+                      <span className="text-foreground">{row.siteName || "\u2014"}</span>
                     </p>
                   </div>
                   <div className="flex flex-none gap-2">

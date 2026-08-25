@@ -38,7 +38,7 @@ export function AcademyOverview({
   employerId: string;
   employerSlug: string;
 }) {
-  const { t } = useT();
+  const { t, tp } = useT();
   const participantsFn = useServerFn(getEmployerAssessmentPipeline);
   const pressureFn = useServerFn(getAcademyReviewPressure);
 
@@ -55,14 +55,32 @@ export function AcademyOverview({
   const active = rows.filter(
     (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
   ).length;
-  // Two different measures, deliberately named apart: how many ATTEMPTS are
-  // waiting on a human, and how many individual RESPONSES that amounts to.
-  // Both come from the same employer scope, so they can no longer contradict
-  // each other the way the old counter did.
-  const attemptsAwaitingReview = rows.filter((r) => r.lifecycleState === "under_review").length;
   const readyToRelease = rows.filter((r) => r.lifecycleState === "ready_to_release").length;
   const released = rows.filter((r) => r.lifecycleState === "result_available").length;
+
+  // ── ONE QUESTION, ONE TILE ──────────────────────────────────────────
+  //
+  // This section showed FIVE numbers, two of which were about review:
+  // "Genomförda tester att granska" (attempts stuck) and "Svar att granska"
+  // (individual responses open). They are genuinely different measures, and
+  // the pair was named apart precisely so they would stop contradicting each
+  // other -- but an employer does not have two review decisions to make. They
+  // have one: somebody has to sit down and review. Attempt-versus-response is
+  // how the ENGINE counts the work, not a distinction the reader acts on, and
+  // two tiles asking the same question is what made this grid unreadable.
+  //
+  // So: one tile. The attempt count leads, because attempts are what an
+  // employer recognises ("three tests are waiting"), and the response count
+  // rides underneath as the size of the job. The destination is the review
+  // workspace -- the place where a person actually clears it.
+  //
+  // Governance is untouched: no review control is weakened, removed or
+  // widened, and scp_employer_review_pressure still decides both numbers.
+  // attemptsBlocked comes from the SAME RPC call as awaitingReview instead of
+  // being re-derived from the participant list, so the two halves of one tile
+  // cannot disagree.
   const awaitingReview = pressure.data?.awaitingReview ?? 0;
+  const attemptsAwaitingReview = pressure.data?.attemptsBlocked ?? 0;
 
   return (
     <section className="mb-10">
@@ -77,7 +95,10 @@ export function AcademyOverview({
         {t("academy.overview.competenceLede")}
       </p>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+      {/* Four tiles, in lifecycle order, answering exactly the four questions
+          the employer has: what is running, what needs a person, what is
+          waiting on me, what is done. */}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatLink
           icon={Users}
           label="academy.overview.active"
@@ -85,6 +106,22 @@ export function AcademyOverview({
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
           search={{ state: "active" as const }}
+        />
+        {/* The one tile where the work is a person's time. Its sub-line says
+            how many responses that is, so the number is a workload rather
+            than a mystery. */}
+        <StatLink
+          icon={Hourglass}
+          label="academy.overview.awaitingReviewUnified"
+          value={attemptsAwaitingReview}
+          detail={
+            awaitingReview > 0
+              ? `${awaitingReview} ${tp("academy.overview.awaitingReviewDetail", awaitingReview)}`
+              : undefined
+          }
+          employerSlug={employerSlug}
+          to="/employer/$employerSlug/assessments/reviews"
+          search={{ scope: "all" as const }}
         />
         {/* "Ready to release" is the one state where the EMPLOYER is the party
             being waited on, so it is surfaced next to the others rather than
@@ -104,27 +141,6 @@ export function AcademyOverview({
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
           search={{ state: "result_available" as const }}
-        />
-        {/* ATTEMPTS whose result cannot progress. The destination is the
-            participant list, because that is where the attempt lives and where
-            releasing it will happen once review completes. */}
-        <StatLink
-          icon={Hourglass}
-          label="academy.overview.attemptsAwaitingReview"
-          value={attemptsAwaitingReview}
-          employerSlug={employerSlug}
-          to="/employer/$employerSlug/assessments/participants"
-          search={{ state: "under_review" as const }}
-        />
-        {/* RESPONSES waiting for a person. The destination is the review
-            workspace, because that is where somebody acts on them. */}
-        <StatLink
-          icon={Lock}
-          label="academy.overview.awaitingReview"
-          value={awaitingReview}
-          employerSlug={employerSlug}
-          to="/employer/$employerSlug/assessments/reviews"
-          search={{ scope: "all" as const }}
         />
       </div>
 
@@ -171,6 +187,7 @@ function StatLink<S extends Record<string, string>>({
   icon: Icon,
   label,
   value,
+  detail,
   employerSlug,
   to,
   search,
@@ -178,6 +195,9 @@ function StatLink<S extends Record<string, string>>({
   icon: typeof Users;
   label: TranslationKey;
   value: number;
+  /** Optional second line: the same work, measured the way the engine counts
+   *  it. Supporting information, never a competing headline. */
+  detail?: string;
   employerSlug: string;
   to: string;
   search: S;
@@ -190,7 +210,7 @@ function StatLink<S extends Record<string, string>>({
       search={search}
       className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
     >
-      <StatBody icon={Icon} label={t(label)} value={value} />
+      <StatBody icon={Icon} label={t(label)} value={value} detail={detail} />
     </Link>
   );
 }
@@ -199,10 +219,12 @@ function StatBody({
   icon: Icon,
   label,
   value,
+  detail,
 }: {
   icon: typeof Users;
   label: string;
   value: number;
+  detail?: string;
 }) {
   return (
     <>
@@ -211,6 +233,7 @@ function StatBody({
         {label}
       </p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      {detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
     </>
   );
 }
