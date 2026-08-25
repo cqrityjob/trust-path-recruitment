@@ -318,3 +318,69 @@ function ReviewAction({
     <span className="text-[13px] text-muted-foreground">{t("academy.reviews.whyNotConflict")}</span>
   );
 }
+
+// ── THE SAME STATE, AT LIST DENSITY ─────────────────────────────────────
+//
+// The applications list used to render the whole panel above under every row:
+// an assign control, a progress fraction, a review action and a report link,
+// per candidate, on a page whose job is to let a recruiter scan twenty people.
+// The panel is right where a decision is being made about ONE person, and
+// wrong as twenty stacked copies.
+//
+// This is the same query, the same derivation and the same vocabulary, drawn
+// as one chip. It deliberately lives in THIS file rather than in a new
+// component of its own: this module is named in RECRUITMENT_SURFACES in
+// scripts/passport-separation-check.ts, so the assessment signal the list
+// shows stays inside the boundary the guard already proves. A new file would
+// be a new surface the guard does not read.
+//
+// It renders NOTHING when there is no assessment: absence of a chip means "not
+// assigned", which the list's own column heading already says, and an
+// "inte tilldelad" badge on nineteen rows is noise rather than information.
+export function ApplicationAssessmentChip({ applicationId }: { applicationId: string }) {
+  const { t } = useT();
+  const listFn = useServerFn(listApplicationAssessments);
+
+  // Same cache key as the panel, so opening the candidate costs no second
+  // fetch and the two surfaces can never disagree about the stage.
+  const assessments = useQuery({
+    queryKey: ["employer", "application", applicationId, "assessments"],
+    queryFn: () => listFn({ data: { applicationId } }),
+  });
+
+  const rows = assessments.data ?? [];
+  if (rows.length === 0) return null;
+
+  // The furthest-along attempt speaks for the row. A candidate with two
+  // assessments is rare and the list is not where that is resolved -- the
+  // candidate page shows every one of them.
+  const lead = rows.reduce(
+    (best, a) => (STAGE_RANK[stageOf(a)] > STAGE_RANK[stageOf(best)] ? a : best),
+    rows[0],
+  );
+  const needsReview = lead.reviewsOutstanding > 0;
+
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium " +
+        (needsReview
+          ? "border-accent/50 bg-accent/10 text-accent"
+          : "border-border bg-card text-muted-foreground")
+      }
+    >
+      <ClipboardCheck className="h-3 w-3" aria-hidden="true" />
+      {t(stageOf(lead))}
+    </span>
+  );
+}
+
+/** Which stage is "furthest", for picking the row's lead attempt. Same order
+ *  as stageOf reads them, written once so the two cannot drift. */
+const STAGE_RANK: Record<TranslationKey, number> = {
+  "journey.stage.invited": 0,
+  "journey.stage.started": 1,
+  "journey.stage.under_review": 2,
+  "journey.stage.ready_to_release": 3,
+  "journey.stage.report_available": 4,
+} as Record<TranslationKey, number>;
