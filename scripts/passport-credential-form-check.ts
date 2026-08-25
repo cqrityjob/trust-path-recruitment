@@ -32,6 +32,7 @@ import {
   type CredentialType,
 } from "../src/lib/security-passport/credentials";
 import { FIXTURE_CREDENTIAL_TYPES } from "../src/lib/security-passport/fixtures/credential-types";
+import { passportCopy } from "../src/lib/security-passport/i18n";
 
 let failures = 0;
 let checks = 0;
@@ -411,6 +412,62 @@ for (const type of FIXTURE_CREDENTIAL_TYPES) {
     `${type.code}: an empty draft saves without complaint` +
       (problems.length ? ` — got ${problems.join(", ")}` : ""),
   );
+}
+
+console.log("\nGROUP 5 -- validity ordering is caught HERE, not by the constraint");
+
+// The database rule is strict:
+//
+//     sp_claim_validity_ordered
+//       CHECK (valid_until IS NULL OR valid_from IS NULL
+//              OR valid_until > valid_from)
+//
+// The form's check used `<`, so two EQUAL dates passed validation, reached the
+// insert, and surfaced as the constraint violation's generic "Something went
+// wrong. Please try again." — naming no field and giving no reason. These
+// assertions pin the form to the same strictness as the constraint, in both
+// modes, so the database goes back to being the last line of defence rather
+// than the first thing to notice.
+{
+  const dateType =
+    FIXTURE_CREDENTIAL_TYPES.find((t) => t.requiresValidUntil) ?? FIXTURE_CREDENTIAL_TYPES[0];
+  const withDates = (validFrom: string, validUntil: string): CredentialDraft => ({
+    ...emptyCredentialDraft(),
+    credentialCode: dateType.code,
+    validFrom,
+    validUntil,
+  });
+
+  for (const mode of ["draft", "active"] as const) {
+    ok(
+      keysFor(dateType, withDates("2026-01-01", "2026-01-01"), mode).includes(
+        "cred.error.endBeforeStart",
+      ),
+      `${mode}: equal validFrom/validUntil is refused by the form, as the constraint would`,
+    );
+    ok(
+      keysFor(dateType, withDates("2026-06-01", "2026-01-01"), mode).includes(
+        "cred.error.endBeforeStart",
+      ),
+      `${mode}: an end date before the start date is refused`,
+    );
+    ok(
+      !keysFor(dateType, withDates("2026-01-01", "2026-01-02"), mode).includes(
+        "cred.error.endBeforeStart",
+      ),
+      `${mode}: one day of validity is still accepted`,
+    );
+  }
+
+  // The message has to be true of the rule it now enforces: "cannot be before"
+  // invites exactly the equal-date entry the constraint rejects.
+  for (const lang of ["sv", "en"] as const) {
+    const copy = passportCopy[lang]["cred.error.endBeforeStart"];
+    ok(
+      /(efter|after)/i.test(copy),
+      `${lang}: the message says the end date must be AFTER the start date`,
+    );
+  }
 }
 
 console.log("");

@@ -34,7 +34,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { BadgeCheck, ExternalLink, ShieldAlert, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { getPublicDisclosure } from "@/lib/security-passport/public-disclosure.functions";
+import { getPublicDisclosureFromCookie } from "@/lib/security-passport/public-disclosure.functions";
 import { LIVE_PACKAGES, type RecipientPayload } from "@/lib/security-passport/packages";
 import {
   formatDuration,
@@ -117,8 +117,21 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function RecipientRoute() {
   const { pt, lang } = usePassportCopy();
-  const { token } = useParams({ from: "/p/$token" });
-  const read = useServerFn(getPublicDisclosure);
+  // The param here is a NAVIGATION ID, never a token.
+  //
+  // src/server.ts answers `/p/<token>` with a 302 to `/p/<navigationId>` and
+  // puts the token in an HttpOnly cookie named after that id, before any
+  // document exists — because the host injects an analytics script that reports
+  // window.location.href on every full page load, and the token is a bearer
+  // capability. By the time this component runs, the address bar holds a
+  // one-way hash that authorises nothing.
+  //
+  // It IS read, and must be: it names which share this tab is on. Two open
+  // shares hold two differently-named cookies, and without the id the server
+  // could not tell them apart — which is exactly the substitution bug the
+  // single-cookie version had. See share-transport.ts.
+  const { token: navigationId } = useParams({ from: "/p/$token" });
+  const read = useServerFn(getPublicDisclosureFromCookie);
 
   const [payload, setPayload] = useState<RecipientPayload | null>(null);
   const [checkedAt, setCheckedAt] = useState<string>("");
@@ -133,7 +146,7 @@ function RecipientRoute() {
 
   useEffect(() => {
     let alive = true;
-    void read({ data: { token } })
+    void read({ data: { navigationId } })
       .then((result) => {
         if (!alive) return;
         setPayload(result);
@@ -147,7 +160,7 @@ function RecipientRoute() {
     return () => {
       alive = false;
     };
-  }, [read, token]);
+  }, [read, navigationId]);
 
   if (!payload) {
     return (
@@ -180,7 +193,18 @@ function RecipientRoute() {
   // `presentation` is non-null whenever the payload is active; the guard
   // keeps TypeScript honest without a cast.
   if (!presentation) return null;
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  // The canonical site address, NOT this page's own URL.
+  //
+  // It used to be `window.location.href`, which was the share link itself —
+  // and that link is a bearer capability, printed onto a card a recipient can
+  // screenshot and forward. Since the token moved out of the URL it would now
+  // read `/p/view`, which is worse than useless: it grants nothing AND leads a
+  // reader who tries it to "this link is not available".
+  //
+  // So it names where the record lives. A recipient returns through the link
+  // they were sent — the page is re-read on every open, which is the property
+  // the footer is claiming — and nothing printed here is a credential.
+  const shareUrl = publicShareOrigin();
 
   // A single-credential share is a different object from a Passport, so it
   // gets its own presentation rather than the Passport page with one row.

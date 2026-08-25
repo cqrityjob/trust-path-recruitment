@@ -192,7 +192,9 @@ export interface DisclosurePayload {
   /** Derived from the holder's verified claims, never stored. Self-declared
    *  titles cannot reach here: the payload is built for somebody else. */
   readonly identity: ProfessionalIdentity;
-  readonly jurisdictionCode: string;
+  /** NULL when the holder has not stated a work country. Rendered as "not
+   *  stated" by formatJurisdiction — never silently as a country. */
+  readonly jurisdictionCode: string | null;
   readonly purposeKey: PassportCopyKey;
   readonly packageNameKey: PassportCopyKey;
   readonly recipientHint: string | null;

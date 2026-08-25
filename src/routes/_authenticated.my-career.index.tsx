@@ -40,6 +40,10 @@ import {
   DiscoveryReportUnreadable,
   DiscoveryV31Pending,
 } from "@/components/career-discovery/DiscoveryReportStates";
+import {
+  getV31Availability,
+  getV31TesterStatus,
+} from "@/lib/career-discovery/v31-public.functions";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
@@ -145,6 +149,41 @@ function MyCareerPage() {
       alive = false;
     };
   }, []);
+
+  // ── Can THIS candidate actually open the assessment? ──────────────────
+  //
+  // My Career used to link to /security-career-assessment unconditionally, so
+  // a candidate outside the internal test group was told "Complete the
+  // assessment to unlock recommendations", given a "Start assessment" button,
+  // and then shown "The assessment isn't open yet" on arrival. The dead end was
+  // not the gate — the gate is deliberate (see v31-public.functions.ts: the
+  // content is `active`, but only platform admins and `cd_internal_testers`
+  // may run it while the recommendation layer is mid-build). The dead end was
+  // this page promising something the product refuses.
+  //
+  // So ask the SAME two questions the assessment route asks, in the same
+  // order, and let the answer decide what this page offers. Deliberately not a
+  // hardcoded "closed" notice: when the owner grants tester access the CTAs
+  // come back on their own, with no second edit here to forget.
+  const checkAvailability = useServerFn(getV31Availability);
+  const checkTesterStatus = useServerFn(getV31TesterStatus);
+  const assessmentOpenQ = useQuery({
+    queryKey: ["my-career", "assessment-open"],
+    queryFn: async () => {
+      const availability = await checkAvailability({});
+      if (!availability.available) return false;
+      // This route is inside _authenticated, so there is always a session and
+      // the tester check can never be the anonymous case the flow defers.
+      const status = await checkTesterStatus({});
+      return status.allowed;
+    },
+    staleTime: 60_000,
+  });
+  // Undefined while loading. Treated as "not open" ONLY for enabling a CTA —
+  // never for showing the closed notice — so a slow query cannot flash a
+  // "closed" message at a candidate who may in fact be allowed in.
+  const assessmentOpen = assessmentOpenQ.data;
+  const assessmentClosed = assessmentOpenQ.data === false;
 
   const fetchRuns = useServerFn(listAssessmentRuns);
   // ONE selection point, resolved on the server before the summary renders.
@@ -297,7 +336,15 @@ function MyCareerPage() {
             {displayName ? `, ${displayName}` : ""}.
           </h1>
           <p className="mt-3 text-muted-foreground">
-            {hasProfile
+            {/* `activeIsDiscovery ||`, not `hasProfile` alone.
+                `hasProfile` is the LEGACY v2.1 career profile, which a
+                candidate whose only assessment is v3 never has. So a tester who
+                had just finished all 28 questions was told "Complete the
+                assessment to unlock recommendations" directly above a card
+                reading "Your new report is ready" — the same legacy-era signal
+                deciding a v3-era question that hid the #career-profile
+                anchor. */}
+            {activeIsDiscovery || hasProfile
               ? L(
                   c(
                     "Här är din personliga karriärsöversikt — din profil, rekommenderade yrken och relevanta jobb.",
@@ -305,13 +352,21 @@ function MyCareerPage() {
                   ),
                   lang,
                 )
-              : L(
-                  c(
-                    "Din personliga karriärstartsida. Slutför säkerhetstestet för att låsa upp rekommendationer.",
-                    "Your personal career home. Complete the assessment to unlock recommendations.",
-                  ),
-                  lang,
-                )}
+              : assessmentClosed
+                ? L(
+                    c(
+                      "Din personliga karriärstartsida. Utforska yrken och bygg ditt Security Passport.",
+                      "Your personal career home. Explore professions and build your Security Passport.",
+                    ),
+                    lang,
+                  )
+                : L(
+                    c(
+                      "Din personliga karriärstartsida. Slutför säkerhetstestet för att låsa upp rekommendationer.",
+                      "Your personal career home. Complete the assessment to unlock recommendations.",
+                    ),
+                    lang,
+                  )}
           </p>
         </header>
 
@@ -355,24 +410,44 @@ function MyCareerPage() {
               <Sparkles className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold text-foreground">
-                  {L(c("Börja med säkerhetstestet", "Start with the assessment"), lang)}
+                  {assessmentClosed
+                    ? L(c("Testet är inte öppet ännu", "The assessment isn't open yet"), lang)
+                    : L(c("Börja med säkerhetstestet", "Start with the assessment"), lang)}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {L(
-                    c(
-                      "Testet tar cirka fem minuter. Efteråt visar vi din karriärprofil, rekommenderade yrken, utvecklingsvägar och relevanta jobb.",
-                      "It takes about five minutes. Afterwards we present your career profile, recommended professions, development paths and relevant jobs.",
-                    ),
-                    lang,
-                  )}
+                  {assessmentClosed
+                    ? L(
+                        c(
+                          "Den uppdaterade versionen av Security Career Discovery genomgår granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar. Under tiden kan du utforska yrken och bygga ditt Security Passport.",
+                          "The updated version of Security Career Discovery is going through review before it opens to everyone. We'll open it as soon as that review is complete. In the meantime you can explore professions and build your Security Passport.",
+                        ),
+                        lang,
+                      )
+                    : L(
+                        c(
+                          "Testet tar cirka fem minuter. Efteråt visar vi din karriärprofil, rekommenderade yrken, utvecklingsvägar och relevanta jobb.",
+                          "It takes about five minutes. Afterwards we present your career profile, recommended professions, development paths and relevant jobs.",
+                        ),
+                        lang,
+                      )}
                 </p>
-                <Link
-                  to="/security-career-assessment"
-                  className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  {L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                {assessmentClosed ? (
+                  <Link
+                    to="/career-center"
+                    className="mt-4 inline-flex items-center rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+                  >
+                    {L(c("Utforska yrken", "Explore professions"), lang)}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/security-career-assessment"
+                    className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    {L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -558,8 +633,15 @@ function MyCareerPage() {
               </DashboardCard>
             )}
 
-            {/* Security Career Profile — editable, contextual only (Phase 1) */}
+            {/* Security Career Profile — editable, contextual only (Phase 1).
+                Carries the #career-profile anchor because this is the profile
+                section every candidate actually gets. The anchor used to live
+                on the legacy CareerProfileBlock below; when 4eea18a put that
+                block behind `activeIsLegacy`, the Quick Action kept pointing at
+                an id that no longer rendered for anyone on a v3 report — a
+                visible action that changed the URL and moved nothing. */}
             <DashboardCard
+              id="career-profile"
               icon={<UserIcon className="h-5 w-5" />}
               title={L(c("Din säkerhetskarriärprofil", "Your Security Career Profile"), lang)}
             >
@@ -740,6 +822,7 @@ function MyCareerPage() {
                 <NextStep
                   lang={lang}
                   noAssessment={noAssessment}
+                  assessmentClosed={assessmentClosed}
                   topAreaLabel={topAreaLabel}
                   topProfTitle={topProfTitle}
                   topSlug={topProfession?.slug}
@@ -747,15 +830,17 @@ function MyCareerPage() {
               )}
             </DashboardCard>
 
+            {/* "My career profile" is deliberately NOT here.
+                It pointed at #career-profile — a section on THIS page, a
+                screen's scroll away. A quick action that scrolls you down the
+                page you are already on is not a destination, and dressing it up
+                as one made the list look longer than it was useful. The profile
+                section carries its own Save control where the editing happens.
+                What remains are real destinations, plus the assessment, which
+                appears as an action or as an explanation depending on the
+                candidate's actual access. */}
             <DashboardCard title={L(c("Snabbåtgärder", "Quick actions"), lang)}>
               <ul className="space-y-2 text-sm">
-                <li>
-                  <QuickLink
-                    to="/my-career"
-                    hash="career-profile"
-                    label={L(c("Min karriärprofil", "My career profile"), lang)}
-                  />
-                </li>
                 <li>
                   <QuickLink
                     to="/career-center"
@@ -775,6 +860,20 @@ function MyCareerPage() {
                   <QuickLink
                     to="/security-career-assessment"
                     label={L(c("Gör om testet", "Retake assessment"), lang)}
+                    unavailable={
+                      assessmentClosed
+                        ? {
+                            badge: L(c("Stängd", "Closed"), lang),
+                            reason: L(
+                              c(
+                                "Testet granskas innan det öppnas för alla.",
+                                "The assessment is under review before it opens to everyone.",
+                              ),
+                              lang,
+                            ),
+                          }
+                        : undefined
+                    }
                   />
                 </li>
               </ul>
@@ -1110,7 +1209,11 @@ function CareerProfileBlock({
     : [];
 
   return (
-    <div id="career-profile" className="space-y-5">
+    // No #career-profile anchor here: this block renders only for a legacy
+    // v2.1 report, and the Security Career Profile card above — which every
+    // candidate gets — owns that anchor. Two elements sharing the id would
+    // make the Quick Action's destination depend on which report is active.
+    <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <ProfileTile
           icon={<UserIcon className="h-4 w-4" />}
@@ -1230,16 +1333,52 @@ function ProfileTile({
 function NextStep({
   lang,
   noAssessment,
+  assessmentClosed,
   topAreaLabel,
   topProfTitle,
   topSlug,
 }: {
   lang: "sv" | "en";
   noAssessment: boolean;
+  assessmentClosed: boolean;
   topAreaLabel: string | undefined;
   topProfTitle: string | undefined;
   topSlug: string | undefined;
 }) {
+  // The recommended next step must be a step the candidate can actually take.
+  // With the assessment gated, "Start assessment" is not a next step — it is a
+  // closed door — so the genuinely available action is offered instead.
+  if (noAssessment && assessmentClosed) {
+    return (
+      <StepBody
+        why={L(
+          c(
+            "Security Career Discovery granskas innan den öppnas för alla.",
+            "Security Career Discovery is under review before it opens to everyone.",
+          ),
+          lang,
+        )}
+        gain={L(
+          c(
+            "Du kan utforska yrken och bygga ditt Security Passport under tiden.",
+            "You can explore professions and build your Security Passport in the meantime.",
+          ),
+          lang,
+        )}
+        ctaLabel={L(c("Utforska yrken", "Explore professions"), lang)}
+        cta={
+          <Link
+            to="/career-center"
+            className="mt-3 inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+          >
+            {L(c("Utforska yrken", "Explore professions"), lang)}
+            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        }
+      />
+    );
+  }
+
   if (noAssessment) {
     return (
       <StepBody
@@ -1357,18 +1496,25 @@ function StepBody({
 // -----------------------------------------------------------------
 
 function DashboardCard({
+  id,
   icon,
   title,
   action,
   children,
 }: {
+  /** Anchor target for in-page navigation. `scroll-mt` clears the sticky
+   *  header, which a bare anchor would otherwise scroll the heading behind. */
+  id?: string;
   icon?: React.ReactNode;
   title: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-background p-5 md:p-6">
+    <section
+      id={id}
+      className="scroll-mt-24 rounded-xl border border-border bg-background p-5 md:p-6"
+    >
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           {icon && <span className="text-primary">{icon}</span>}
@@ -1425,8 +1571,8 @@ function EmptyState({
 
 function QuickLink({
   to,
-  hash,
   label,
+  unavailable,
 }: {
   to:
     | "/my-career"
@@ -1434,13 +1580,26 @@ function QuickLink({
     | "/career-center"
     | "/jobs"
     | "/security-career-assessment";
-  hash?: string;
   label: string;
+  /** When set, the action is NOT rendered as a link. A quick action whose
+   *  destination refuses the candidate is a dead end, and silently dropping it
+   *  is no better — the row stays, says it is unavailable, and says why. */
+  unavailable?: { readonly badge: string; readonly reason: string };
 }) {
+  if (unavailable) {
+    return (
+      <div className="rounded-md px-2 py-1.5">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>{label}</span>
+          <span className="text-xs font-medium uppercase tracking-wide">{unavailable.badge}</span>
+        </div>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{unavailable.reason}</p>
+      </div>
+    );
+  }
   return (
     <Link
       to={to}
-      hash={hash}
       className="flex items-center justify-between rounded-md px-2 py-1.5 text-foreground hover:bg-accent"
     >
       <span>{label}</span>

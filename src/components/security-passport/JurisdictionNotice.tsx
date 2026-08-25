@@ -12,24 +12,30 @@
 
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatJurisdiction } from "@/lib/security-passport/format";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-
-function jurisdictionName(code: string, sweden: string): string {
-  return code === "SE" ? sweden : code;
-}
 
 export function JurisdictionNotice({
   credentialJurisdiction,
   viewingJurisdiction,
   className,
 }: {
-  credentialJurisdiction: string;
-  viewingJurisdiction: string;
+  /** NULL when the holder has not stated a work country. */
+  credentialJurisdiction: string | null;
+  viewingJurisdiction: string | null;
   className?: string;
 }) {
-  const { pt } = usePassportCopy();
-  const sweden = pt("jurisdiction.SE");
-  const differs = credentialJurisdiction !== viewingJurisdiction;
+  const { pt, lang } = usePassportCopy();
+
+  // Nothing truthful can be said about where an authorisation applies when
+  // nobody has said which country it is from. The notice used to be reached
+  // with a jurisdiction defaulted to "SE", so it confidently announced "Gäller
+  // i Sverige" over a holder who had never mentioned Sweden. Rendering nothing
+  // is the honest state: the country step asks for it, and the notice returns
+  // as soon as it is answered.
+  if (!credentialJurisdiction) return null;
+
+  const differs = viewingJurisdiction !== null && credentialJurisdiction !== viewingJurisdiction;
 
   return (
     <section
@@ -76,9 +82,9 @@ export function JurisdictionNotice({
               differs ? "text-amber-900/80 dark:text-amber-200/80" : "text-muted-foreground",
             )}
           >
-            {pt("claims.jurisdiction")}: {jurisdictionName(credentialJurisdiction, sweden)}
+            {pt("claims.jurisdiction")}: {formatJurisdiction(credentialJurisdiction, lang)}
             {differs
-              ? ` · ${pt("jurisdiction.viewingFrom")}: ${jurisdictionName(viewingJurisdiction, sweden)}`
+              ? ` · ${pt("jurisdiction.viewingFrom")}: ${formatJurisdiction(viewingJurisdiction, lang)}`
               : ""}
           </p>
         </div>

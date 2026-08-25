@@ -29,7 +29,7 @@ import { AssertionLegend } from "./AssertionChip";
 import { ClaimList } from "./ClaimRow";
 import { CredentialSymbol } from "./CredentialSymbol";
 import { ExperienceTimeline } from "./ExperienceTimeline";
-import { formatJurisdiction } from "@/lib/security-passport/format";
+import { formatWorkLocation } from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
@@ -59,6 +59,8 @@ export function PassportOverview({
   holder,
   evaluationOn,
   viewingJurisdiction,
+  needsWorkLocation,
+  onConfirmWorkLocation,
   onContinue,
   onOpenCard,
   onShare,
@@ -75,7 +77,13 @@ export function PassportOverview({
 }: {
   holder: PassportHolder;
   evaluationOn: string;
-  viewingJurisdiction: string;
+  /** The country the READER is in. NULL when unknown — no cross-border
+   *  comparison is made rather than one against an assumed country. */
+  viewingJurisdiction: string | null;
+  /** True while nobody has confirmed where this holder works — a new Passport,
+   *  or a legacy row carrying the old `DEFAULT 'SE'` that was never chosen. */
+  needsWorkLocation?: boolean;
+  onConfirmWorkLocation?: () => void;
   onContinue: () => void;
   onOpenCard: () => void;
   onShare: () => void;
@@ -121,9 +129,42 @@ export function PassportOverview({
         >
           {pt("overview.title")}
         </h2>
+        {/* Joined, never interpolated with literal separators. `displayName`
+            is `?? ""` upstream, so a holder who has not reached the identity
+            step rendered a line that opened with a dangling "· ", which reads
+            as a missing value rather than an absent one. The same applies to a
+            jurisdiction nobody has stated yet — see formatJurisdiction, which
+            returns "not stated" for null rather than guessing a country. */}
         <p className="mt-2 text-sm text-foreground">
-          {holder.displayName} · {profession} · {formatJurisdiction(holder.jurisdictionCode, lang)}
+          {[
+            holder.displayName,
+            profession,
+            formatWorkLocation(holder.jurisdictionCode, holder.subJurisdictionCode, lang),
+          ]
+            .map((part) => part?.trim())
+            .filter((part): part is string => Boolean(part))
+            .join(" · ")}
         </p>
+
+        {/* The product does not know where this person works, and says so
+            rather than showing a country nobody stated. A legacy holder whose
+            row still reads 'SE' from the old DEFAULT lands here too: the
+            stored value is kept for them to correct, and withheld from every
+            reader until they do. */}
+        {needsWorkLocation && onConfirmWorkLocation ? (
+          <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-3">
+            <p className="text-sm leading-relaxed text-foreground">
+              {pt("jurisdiction.confirmPrompt")}
+            </p>
+            <button
+              type="button"
+              onClick={onConfirmWorkLocation}
+              className="mt-2 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("jurisdiction.confirmAction")}
+            </button>
+          </div>
+        ) : null}
 
         {/* What an authority currently PERMITS, separate from what the
             holder may be called and separate from what they have completed.

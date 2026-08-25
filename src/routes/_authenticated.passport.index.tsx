@@ -28,6 +28,7 @@ import {
   type PassportSnapshot,
 } from "@/lib/security-passport/passport.functions";
 import { PassportOverview } from "@/components/security-passport/PassportOverview";
+import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboarding";
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
@@ -189,6 +190,12 @@ function PassportOverviewRoute() {
         holder={snapshot.holder}
         evaluationOn={today()}
         viewingJurisdiction={snapshot.holder.jurisdictionCode}
+        // Asked once, of anyone whose work location nobody has confirmed —
+        // both the brand-new Passport and the legacy row still carrying the
+        // old `DEFAULT 'SE'`. Deliberately the same prompt, because it is the
+        // same question: the product does not know where this person works.
+        needsWorkLocation={needsWorkLocationConfirmation(snapshot.profile)}
+        onConfirmWorkLocation={() => void navigate({ to: "/passport/onboarding" })}
         onContinue={() => void navigate({ to: "/passport/onboarding" })}
         onOpenCard={() => void navigate({ to: "/passport/card" })}
         onShare={() => void navigate({ to: "/passport/share" })}

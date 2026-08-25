@@ -65,7 +65,9 @@ export interface SocialCardModel {
    *  `ProfessionalIdentity`: an exported image must carry no dates, and the
    *  forbidden-key guard caught `expiresOn` here on the first attempt. */
   readonly titles: readonly PublicTitle[];
-  readonly jurisdictionCode: string;
+  /** NULL when the holder has not stated a work country. Rendered as "not
+   *  stated" by formatJurisdiction — never silently as a country. */
+  readonly jurisdictionCode: string | null;
   /** Verified years only, or null. The single permitted prominent number. */
   readonly milestoneYears: number | null;
   /** NAMES ONLY — no issuer, no dates, no numbers. */

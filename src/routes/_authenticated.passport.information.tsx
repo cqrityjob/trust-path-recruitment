@@ -31,6 +31,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
+import { getMyPassport, setWorkCountry } from "@/lib/security-passport/passport.functions";
 import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
@@ -120,6 +122,34 @@ function PassportInformationRoute() {
   const navigate = useNavigate();
 
   const load = useServerFn(listMyEntries);
+  // The profile, for the work-country control. Read here rather than threaded
+  // through from the overview so this tab stands on its own: a holder who lands
+  // straight on /passport/information still sees, and can correct, the country
+  // their whole Passport is spoken in.
+  const loadProfile = useServerFn(getMyPassport);
+  const saveWorkCountry = useServerFn(setWorkCountry);
+  const [workCountry, setWorkCountryState] = useState<{
+    jurisdictionCode: string | null;
+    subJurisdictionCode: string | null;
+    confirmed: boolean;
+  } | null>(null);
+  const refreshWorkCountry = useCallback(async () => {
+    try {
+      const snap = await loadProfile({ data: undefined });
+      setWorkCountryState({
+        jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
+        subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
+        confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
+      });
+    } catch (err) {
+      // A failure here must not take the rest of the page down with it: the
+      // entries below are independent and still editable.
+      console.error("[passport] work country load failed", err);
+    }
+  }, [loadProfile]);
+  useEffect(() => {
+    void refreshWorkCountry();
+  }, [refreshWorkCountry]);
   const saveExp = useServerFn(saveExperienceEntry);
   const saveClaim = useServerFn(saveClaimEntry);
   const doRemove = useServerFn(removeEntry);
@@ -340,6 +370,22 @@ function PassportInformationRoute() {
         <p role="status" className="text-sm text-muted-foreground">
           {notice}
         </p>
+      ) : null}
+
+      {/* ── Where the holder works ────────────────────────────────────── */}
+      {/* First, because every credential below is read in the context of a
+          country, and until this commit there was nowhere in the product to
+          see or change it. */}
+      {workCountry ? (
+        <WorkCountryCard
+          jurisdictionCode={workCountry.jurisdictionCode}
+          subJurisdictionCode={workCountry.subJurisdictionCode}
+          confirmed={workCountry.confirmed}
+          onSave={async (value) => {
+            await saveWorkCountry({ data: { workCountry: value } });
+            await refreshWorkCountry();
+          }}
+        />
       ) : null}
 
       {/* ── Supported credentials ─────────────────────────────────────── */}

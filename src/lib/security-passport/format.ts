@@ -117,3 +117,34 @@ export function formatPeriodRange(
   const end = endedOn ?? passportT("common.present", lang);
   return `${startedOn} – ${end}`;
 }
+
+/**
+ * Where a holder WORKS, as one reader-facing phrase.
+ *
+ * A country alone is not always the truth. SIRA licenses Dubai and not the
+ * United Arab Emirates, so a Dubai holder rendered as "United Arab Emirates"
+ * has been widened into a claim the market pack exists to refuse — and one
+ * rendered as "Sweden", which is what the old `DEFAULT 'SE'` produced, is
+ * simply false.
+ *
+ * So the emirate leads and the country follows: "Dubai, Förenade
+ * Arabemiraten". Both are named, because a reader outside the Gulf may not
+ * place Dubai and a reader inside it must not be told the licence is national.
+ *
+ * Falls back to the country when there is no sub-jurisdiction, and to
+ * "not stated" when there is no country — never to a guess.
+ */
+export function formatWorkLocation(
+  jurisdictionCode: string | null,
+  subJurisdictionCode: string | null,
+  lang: PassportLang,
+): string {
+  if (!jurisdictionCode) return passportT("common.notStated", lang);
+  const country = formatJurisdiction(jurisdictionCode, lang);
+  if (!subJurisdictionCode) return country;
+  const sub = formatJurisdiction(subJurisdictionCode, lang);
+  // An unmapped sub-jurisdiction returns its own code from formatJurisdiction.
+  // Printing "AE-SH, Förenade Arabemiraten" is a bug report; printing the
+  // country alone would hide it. The code shows, deliberately.
+  return sub === country ? country : `${sub}, ${country}`;
+}

@@ -559,7 +559,9 @@ for (const pkg of DISCLOSURE_PACKAGES) {
       //     languages: exactly what the card is allowed to show.
       const approved = new Set<string>([
         ...headlineTitles(persona.identity).flatMap((t) => [labelFor(t, "sv"), labelFor(t, "en")]),
-        persona.jurisdictionCode,
+        // A persona with no stated country contributes nothing to approve —
+        // "not stated" is not a label the card may print as a country.
+        ...(persona.jurisdictionCode === null ? [] : [persona.jurisdictionCode]),
       ]);
       const sensitiveValues = new Set<string>();
       for (const p of persona.periods) {

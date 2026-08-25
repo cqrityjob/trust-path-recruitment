@@ -7,6 +7,8 @@
     "build": "vite build", 
     "passport-error-scope:check": "bun run scripts/passport-error-scope-check.ts", 
     "passport-share-default:check": "bun run scripts/passport-share-default-check.ts", 
+    "my-career-gate:check": "bun run scripts/my-career-assessment-gate-check.ts", 
+    "passport-share-transport:check": "bun run scripts/passport-share-transport-check.ts", 
     "passport-skill-contract:check": "bun run scripts/passport-skill-contract-check.ts", 
     "v31-evidence-payload:check": "bun run scripts/v31-evidence-payload-check.ts", 
     "passport-separation:check": "bun run scripts/passport-separation-check.ts", 

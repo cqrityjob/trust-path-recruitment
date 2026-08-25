@@ -39,7 +39,12 @@ import {
 } from "../src/lib/security-passport/identity/presentation";
 import { formatJurisdiction } from "../src/lib/security-passport/format";
 import { passportCopy } from "../src/lib/security-passport/i18n";
-import { ONBOARDING_STEPS } from "../src/lib/security-passport/onboarding";
+import {
+  ONBOARDING_STEPS,
+  confirmedWorkLocation,
+  needsWorkLocationConfirmation,
+  splitWorkCountry,
+} from "../src/lib/security-passport/onboarding";
 import type { Claim, LifecycleState, AssertionLevel } from "../src/lib/security-passport/types";
 
 const TODAY = "2026-08-24";
@@ -451,9 +456,12 @@ const SURFACES = [
 ];
 for (const rel of SURFACES) {
   const src = readFileSync(join(ROOT, rel), "utf8");
+  // `formatWorkLocation` counts: it is the shared formatter for a HOLDER's
+  // work location and delegates to `formatJurisdiction` for both halves. What
+  // must never come back is a surface formatting a jurisdiction by itself.
   assert(
-    src.includes("formatJurisdiction("),
-    `${rel} renders the jurisdiction through the shared formatter`,
+    src.includes("formatJurisdiction(") || src.includes("formatWorkLocation("),
+    `${rel} renders the jurisdiction through a shared formatter`,
   );
   assert(
     !/jurisdictionCode\s*===\s*"SE"\s*\?/.test(src),
@@ -462,6 +470,25 @@ for (const rel of SURFACES) {
   assert(
     !/·\s*\$\{[a-zA-Z.]*jurisdictionCode\}/.test(src),
     `${rel} never interpolates a RAW jurisdiction code into reader-facing text`,
+  );
+}
+
+// An identity line is assembled from parts that can legitimately be absent —
+// `displayName` is `?? ""` upstream, and a jurisdiction nobody has stated
+// renders as "not stated". Interpolating those between literal "·" produced a
+// line opening with a dangling separator, which reads as a value that failed
+// to load rather than one nobody has given yet. Joining a filtered list cannot
+// produce a leading, trailing or doubled separator for ANY combination.
+{
+  const rel = "src/components/security-passport/PassportOverview.tsx";
+  const src = readFileSync(join(ROOT, rel), "utf8");
+  assert(
+    !/\{holder\.displayName\}\s*·/.test(src),
+    `${rel} does not interpolate the display name against a literal separator`,
+  );
+  assert(
+    /\.join\(" · "\)/.test(src),
+    `${rel} builds the identity line by joining the parts that exist`,
   );
 }
 
@@ -483,16 +510,149 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-const jurisdictionStep = ONBOARDING_STEPS.find((s) => s.id === "jurisdiction");
-assert(
-  jurisdictionStep?.bodyKey === "jurisdiction.marketAvailability",
-  "the onboarding country step explains why the list is short",
-);
 assert(
   readFileSync(join(ROOT, "src/components/security-passport/CredentialForm.tsx"), "utf8").includes(
     'pt("jurisdiction.marketAvailability")',
   ),
-  "and so does the credential form's country field",
+  "the credential form's country field says a closed market is closed",
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   WHERE A PERSON WORKS IS NOT WHICH CREDENTIALS ARE SUPPORTED
+   ══════════════════════════════════════════════════════════════════════
+
+   The defect this defends: the onboarding country step offered Sweden and
+   nothing else, because it was built from the ACTIVE market packs. A holder
+   working in Dubai could not say so, `sp_passport_profiles.jurisdiction_code`
+   kept its `DEFAULT 'SE'`, and their Passport Card then told every reader they
+   were in Sweden — the product asserting a false country about a real person.
+
+   The two questions are independent and must stay that way:
+
+     * the WORK COUNTRY list is the countries `sp_jurisdictions` holds, which
+       is what the profile column's foreign key accepts;
+     * CREDENTIAL availability remains the ACTIVE market packs alone.
+
+   Widening the first must never widen the second.                        */
+console.log("\nWORK COUNTRY -- stated truthfully, and grants no market");
+
+const jurisdictionStep = ONBOARDING_STEPS.find((s) => s.id === "jurisdiction");
+assert(
+  jurisdictionStep?.bodyKey === "jurisdiction.workCountryAvailability",
+  "the onboarding country step separates work country from credential support",
+);
+
+const workCountries = (jurisdictionStep?.fields[0]?.options ?? []).map((o) => o.value);
+// Every market the product names must be answerable, or a holder in it has no
+// way to be described except by somebody else's country.
+for (const code of ["SE", "GB", "AE"]) {
+  assert(workCountries.includes(code), `a holder working in ${code} can say so`);
+}
+// Dubai is its own answer. SIRA licenses the emirate and not the country, so a
+// product that can only record "United Arab Emirates" has already made the
+// UAE-wide claim the market pack exists to refuse.
+assert(
+  workCountries.includes("AE-DU"),
+  "a holder working in Dubai can say Dubai, not merely 'the UAE'",
+);
+
+// The answer is one string; the profile stores two columns, and
+// `sp_profile_sub_matches_country` requires them to agree. Every option must
+// therefore split into a country the FK accepts, with its emirate attached to
+// the right one.
+for (const answer of workCountries) {
+  const split = splitWorkCountry(answer);
+  assert(
+    split.jurisdictionCode !== null && ["SE", "GB", "AE"].includes(split.jurisdictionCode),
+    `${answer} splits into a country sp_jurisdictions holds (${split.jurisdictionCode})`,
+  );
+  assert(
+    split.subJurisdictionCode === null ||
+      split.subJurisdictionCode.slice(0, 2) === split.jurisdictionCode,
+    `${answer} keeps its sub-jurisdiction under its own country`,
+  );
+}
+// An unanswered step must stay unanswered. The whole defect was a country
+// appearing where nobody had stated one.
+assert(
+  splitWorkCountry("").jurisdictionCode === null &&
+    splitWorkCountry(null).jurisdictionCode === null &&
+    splitWorkCountry(undefined).jurisdictionCode === null,
+  "no answer yields no country, rather than a default",
+);
+
+/* ══════════════════════════════════════════════════════════════════════
+   A STORED COUNTRY IS NOT A CONFIRMED ONE
+   ══════════════════════════════════════════════════════════════════════
+
+   `jurisdiction_code` carries two facts that look identical: a country the
+   holder chose, and the `DEFAULT 'SE'` written before they were ever asked.
+   Presenting the second as the first is the same false assertion the default
+   was making, so every reader goes through `confirmedWorkLocation`.        */
+console.log("\nWORK LOCATION PROVENANCE -- unconfirmed is not shown");
+
+{
+  const legacy = {
+    jurisdictionCode: "SE",
+    subJurisdictionCode: null,
+    workLocationConfirmedAt: null,
+  };
+  assert(
+    confirmedWorkLocation(legacy).jurisdictionCode === null,
+    "a legacy SE row nobody confirmed reads as NOT STATED, never as Sweden",
+  );
+  assert(needsWorkLocationConfirmation(legacy), "and the holder is asked where they work");
+
+  const confirmed = { ...legacy, workLocationConfirmedAt: "2026-08-24T00:00:00Z" };
+  assert(
+    confirmedWorkLocation(confirmed).jurisdictionCode === "SE",
+    "a holder who states Sweden gets Sweden",
+  );
+  assert(!needsWorkLocationConfirmation(confirmed), "and is not asked again");
+
+  const dubai = {
+    jurisdictionCode: "AE",
+    subJurisdictionCode: "AE-DU",
+    workLocationConfirmedAt: "2026-08-24T00:00:00Z",
+  };
+  const shown = confirmedWorkLocation(dubai);
+  assert(
+    shown.jurisdictionCode === "AE" && shown.subJurisdictionCode === "AE-DU",
+    "a confirmed Dubai holder keeps the emirate through the gate",
+  );
+  // A confirmation cannot conjure a country, and an unconfirmed emirate must
+  // not survive on its own either.
+  assert(
+    confirmedWorkLocation({ ...dubai, workLocationConfirmedAt: null }).subJurisdictionCode === null,
+    "an unconfirmed emirate is withheld with its country",
+  );
+  assert(confirmedWorkLocation(null).jurisdictionCode === null, "no profile yields no country");
+  assert(needsWorkLocationConfirmation(null), "and a holder with no profile is asked");
+}
+
+for (const lang of ["sv", "en"] as const) {
+  const copy = passportCopy[lang]["jurisdiction.workCountryAvailability"];
+  assert(Boolean(copy && copy.length > 40), `${lang}: the work-country note exists`);
+  assert(
+    /(Sverige|Sweden)/.test(copy),
+    `${lang}: it names the one market whose credentials ARE supported`,
+  );
+  assert(
+    !/\b20\d\d\b/.test(copy),
+    `${lang}: and promises no date, because no launch date is known`,
+  );
+}
+
+// The load-bearing one. Offering GB and AE as work countries must not have
+// leaked into the credential path: that select is still built from the markets
+// the server hands it, which are the ACTIVE packs.
+const credentialForm = readFileSync(
+  join(ROOT, "src/components/security-passport/CredentialForm.tsx"),
+  "utf8",
+);
+assert(
+  !/options=\{?\[/.test(credentialForm) && credentialForm.includes("markets.map("),
+  "the credential country select is still driven by ACTIVE market packs, not a literal list",
 );
 
 /* ══════════════════════════════════════════════════════════════════════

@@ -111,7 +111,11 @@ const sv = {
   "home.passport.tagline": "Din yrkesidentitet och dina bevis inom säkerhet.",
   "home.passport.body":
     "Vad du har gjort, lärt dig och fått verifierat. Du bestämmer själv vad som delas.",
-  "home.passport.start": "Starta Security Passport",
+  // "Öppna", not "Starta". The card is deliberately stateless — it fetches
+  // nothing, so it cannot know whether a Passport exists — and "Starta" told
+  // every returning holder to start something they had already built. "Öppna"
+  // is true in both states, and costs no request to be true.
+  "home.passport.start": "Öppna Security Passport",
   "home.passport.continue": "Fortsätt",
   "home.passport.addExperience": "Lägg till erfarenhet",
   "home.passport.addTraining": "Lägg till utbildning eller certifiering",
@@ -445,6 +449,25 @@ const sv = {
   // because none is known.
   "jurisdiction.marketAvailability":
     "Sverige är tillgängligt i dag. Andra marknader, däribland Storbritannien och Dubai, är under förberedelse och kan ännu inte väljas. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
+  // Shown where the person states WHERE THEY WORK, which is a different
+  // question from which regulated credentials the product supports. Says both
+  // in one breath so a UK or UAE holder can answer truthfully and still knows,
+  // before they go looking, that no credential for that country can be added
+  // yet. Dateless for the same reason as the key above.
+  // Shown to a holder whose work location nobody has confirmed. Covers the new
+  // Passport and the legacy row still carrying the old DEFAULT 'SE' — the same
+  // sentence for both, because the product genuinely does not know either way.
+  // The permanent work-country control on "My information". Named "arbetsland"
+  // rather than "jurisdiktion": the holder is being asked where they work, not
+  // to classify themselves legally.
+  "workCountry.title": "Arbetsland",
+  "workCountry.current": "Nuvarande",
+  "workCountry.save": "Spara arbetsland",
+  "jurisdiction.confirmPrompt":
+    "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
+  "jurisdiction.confirmAction": "Ange var jag arbetar",
+  "jurisdiction.workCountryAvailability":
+    "Ange det land där du arbetar. Reglerade behörigheter kan i dag endast registreras för Sverige — Storbritannien och Dubai är under förberedelse. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
   "jurisdiction.title": "Land och behörighet",
   "jurisdiction.crossBorderTitle": "Gäller i Sverige",
   "jurisdiction.crossBorderBody":
@@ -463,7 +486,14 @@ const sv = {
   "privacy.deleteTitle": "Radera ditt Passport",
   "privacy.deleteBody":
     "Aktiva delningar återkallas först. Bekräftelser som en arbetsgivare har lämnat behålls i avidentifierad form.",
-  "privacy.prototypeNote": "Knapparna är inaktiva i prototypen.",
+  // Was "Knapparna är inaktiva i prototypen." — which named buttons that do
+  // not exist in this section, and called a product we are putting in front of
+  // pilot customers a prototype. Export and deletion are real rights the login
+  // page already promises; this says how to use them instead of implying a
+  // control that was never built.
+  "privacy.requestNote":
+    "Vill du exportera eller radera dina uppgifter? Kontakta oss, så hanterar vi det.",
+  "privacy.requestAction": "Kontakta CQrityjob",
 
   // ── Common ───────────────────────────────────────────────────────────
   "common.yes": "Ja",
@@ -911,7 +941,7 @@ const sv = {
   "cred.error.controlledLabelOnly":
     "Den här uppgiften har en fast benämning och kan inte skrivas om.",
   "cred.error.dateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
-  "cred.error.endBeforeStart": "Slutdatumet kan inte vara före startdatumet.",
+  "cred.error.endBeforeStart": "Slutdatumet måste vara efter startdatumet.",
   "cred.error.referenceTooLong": "Referensen är för lång (max 120 tecken).",
   "cred.error.noteTooLong": "Anteckningen är för lång (max 2000 tecken).",
   "cred.error.incompleteForActive":
@@ -1276,7 +1306,7 @@ const en: Record<PassportCopyKey, string> = {
   "home.passport.title": "Security Passport",
   "home.passport.tagline": "Your professional security identity and evidence.",
   "home.passport.body": "What you have done, learned and had verified. You decide what is shared.",
-  "home.passport.start": "Start Security Passport",
+  "home.passport.start": "Open Security Passport",
   "home.passport.continue": "Continue",
   "home.passport.addExperience": "Add experience",
   "home.passport.addTraining": "Add training or certification",
@@ -1586,6 +1616,14 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
     "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+  "workCountry.title": "Work country",
+  "workCountry.current": "Current",
+  "workCountry.save": "Save work country",
+  "jurisdiction.confirmPrompt":
+    "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
+  "jurisdiction.confirmAction": "Tell us where I work",
+  "jurisdiction.workCountryAvailability":
+    "Tell us the country where you work. Regulated authorisations can currently only be recorded for Sweden — the United Kingdom and Dubai are being prepared. You can state your country now even if its authorisations are not supported yet.",
   "jurisdiction.title": "Country and eligibility",
   "jurisdiction.crossBorderTitle": "Applies in Sweden",
   "jurisdiction.crossBorderBody":
@@ -1603,7 +1641,9 @@ const en: Record<PassportCopyKey, string> = {
   "privacy.deleteTitle": "Delete your Passport",
   "privacy.deleteBody":
     "Active disclosures are revoked first. Confirmations given by an employer are retained in unlinked form.",
-  "privacy.prototypeNote": "The buttons are inactive in the prototype.",
+  "privacy.requestNote":
+    "Want to export or delete your information? Contact us and we will handle it.",
+  "privacy.requestAction": "Contact CQrityjob",
 
   "common.yes": "Yes",
   "common.no": "No",
@@ -2033,7 +2073,7 @@ const en: Record<PassportCopyKey, string> = {
     "This entry cannot carry a note. Only the fact of the check is recorded.",
   "cred.error.controlledLabelOnly": "This entry has a fixed label and cannot be reworded.",
   "cred.error.dateFormat": "Use the format YYYY-MM-DD.",
-  "cred.error.endBeforeStart": "The end date cannot be before the start date.",
+  "cred.error.endBeforeStart": "The end date must be after the start date.",
   "cred.error.referenceTooLong": "That reference is too long (120 characters maximum).",
   "cred.error.noteTooLong": "That note is too long (2000 characters maximum).",
   "cred.error.incompleteForActive": "Fill in the required fields before adding this entry.",

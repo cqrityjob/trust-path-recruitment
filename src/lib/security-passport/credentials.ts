@@ -255,14 +255,26 @@ export function validateCredential(
     errors.push({ field: "holderNote", messageKey: "cred.error.noteTooLong" });
   }
 
-  // An end date before the start date is wrong in either mode: it is not an
-  // incomplete draft, it is a contradiction.
+  // An end date that does not come after the start date is wrong in either
+  // mode: it is not an incomplete draft, it is a contradiction.
+  //
+  // The comparison is `<=`, not `<`, to mirror the database exactly:
+  //
+  //     sp_claim_validity_ordered
+  //       CHECK (valid_until IS NULL OR valid_from IS NULL
+  //              OR valid_until > valid_from)
+  //
+  // is STRICT. While this read `<`, two equal dates passed the form, reached
+  // the insert, and came back as the constraint violation's generic
+  // "Something went wrong. Please try again." — the holder was told nothing
+  // about which field was wrong or why. The database stays as the last line of
+  // defence; it is no longer the FIRST thing to notice.
   if (
     draft.validUntil &&
     ISO_DATE.test(draft.validUntil) &&
     draft.validFrom &&
     ISO_DATE.test(draft.validFrom) &&
-    draft.validUntil < draft.validFrom
+    draft.validUntil <= draft.validFrom
   ) {
     errors.push({ field: "validUntil", messageKey: "cred.error.endBeforeStart" });
   }

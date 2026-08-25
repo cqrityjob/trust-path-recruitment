@@ -97,12 +97,30 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: "jurisdiction",
     titleKey: "onboarding.jurisdiction.title",
     whyKey: "onboarding.jurisdiction.why",
-    // The select below offers exactly the ACTIVE market packs, which today
-    // means Sweden alone. Without this the step is a one-option dropdown with
-    // no explanation, and a UK or Dubai worker is left to guess whether the
-    // product forgot their country or refuses it. It refuses it, on purpose,
-    // and says so.
-    bodyKey: "jurisdiction.marketAvailability",
+    // ── WHERE YOU WORK IS NOT WHICH CREDENTIALS WE SUPPORT ──────────────
+    //
+    // This select used to offer Sweden and nothing else, because it was built
+    // from the ACTIVE market packs. That silently conflated two independent
+    // facts, and the conflation was not harmless: a holder working in Dubai
+    // had no way to say so, `sp_passport_profiles.jurisdiction_code` kept its
+    // `DEFAULT 'SE'`, and their Passport Card then told every reader they were
+    // in Sweden. The product asserted a false country about a real person.
+    //
+    // The two questions are now answered separately:
+    //
+    //   * THIS step asks where the person works: the countries in
+    //     `sp_jurisdictions`, plus Dubai, which is a sub-jurisdiction and gets
+    //     its own answer so an emirate is never flattened into its country.
+    //
+    //   * CREDENTIAL availability stays exactly where it was: the credential
+    //     form still builds its own jurisdiction select from the ACTIVE market
+    //     packs alone, so choosing GB or AE here grants nothing. A closed
+    //     market is still closed, and no unsupported regulated claim can be
+    //     recorded.
+    //
+    // The body copy states that split rather than implying the country list
+    // is a list of open markets.
+    bodyKey: "jurisdiction.workCountryAvailability",
     required: true,
     createsClaim: false,
     fields: [
@@ -111,7 +129,20 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         labelKey: "onboarding.jurisdiction.field",
         type: "select",
         required: true,
-        options: [{ value: "SE", label: "Sverige / Sweden" }],
+        // The countries in `sp_jurisdictions`, plus Dubai as its own answer.
+        //
+        // Dubai is listed separately rather than folded into "United Arab
+        // Emirates" because SIRA licenses the emirate and not the country, and
+        // a product that records a Dubai worker as "UAE" has already made the
+        // UAE-wide claim its market pack exists to refuse. The value carries
+        // the sub-jurisdiction code; `splitWorkCountry` below turns it into the
+        // country and emirate the profile stores in separate columns.
+        options: [
+          { value: "SE", label: "Sverige / Sweden" },
+          { value: "GB", label: "Storbritannien / United Kingdom" },
+          { value: "AE-DU", label: "Dubai, Förenade Arabemiraten / Dubai, United Arab Emirates" },
+          { value: "AE", label: "Förenade Arabemiraten (övriga) / United Arab Emirates (other)" },
+        ],
       },
     ],
   },
@@ -151,3 +182,65 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
 ] as const;
 
 export const ONBOARDING_STEP_COUNT = ONBOARDING_STEPS.length;
+
+/**
+ * One onboarding answer → the two columns the profile stores.
+ *
+ * The country step offers Dubai as its own option because SIRA licenses the
+ * emirate and not the country, so "AE-DU" has to be a thing a holder can
+ * actually say. The profile keeps country and sub-jurisdiction apart —
+ * `sp_profile_sub_matches_country` enforces that they agree — so the answer is
+ * split here, in one place, rather than at each call site.
+ *
+ * An empty answer stays empty: a holder who has not chosen has no country, and
+ * inventing one is the whole defect this replaced.
+ */
+export function splitWorkCountry(answer: string | null | undefined): {
+  readonly jurisdictionCode: string | null;
+  readonly subJurisdictionCode: string | null;
+} {
+  const value = (answer ?? "").trim();
+  if (!value) return { jurisdictionCode: null, subJurisdictionCode: null };
+  // "AE-DU" -> country AE, emirate AE-DU. A bare country has no emirate.
+  const dash = value.indexOf("-");
+  if (dash === -1) return { jurisdictionCode: value, subJurisdictionCode: null };
+  return { jurisdictionCode: value.slice(0, dash), subJurisdictionCode: value };
+}
+
+/** A holder's work location, as it may be SHOWN to anyone.
+ *
+ * Reading `jurisdiction_code` directly is the bug this exists to prevent. The
+ * column carries two different facts that look identical: a country the holder
+ * chose, and the `DEFAULT 'SE'` that was written before they were ever asked.
+ * `work_location_confirmed_at` is what separates them, and every surface has to
+ * respect it or the old false assertion simply reappears one layer up.
+ *
+ * Unconfirmed reads as "not stated" — the same as a brand-new Passport — while
+ * the stored value stays on the profile for the holder to confirm or correct.
+ */
+export function confirmedWorkLocation(
+  profile: {
+    readonly jurisdictionCode: string | null;
+    readonly subJurisdictionCode: string | null;
+    readonly workLocationConfirmedAt: string | null;
+  } | null,
+): { readonly jurisdictionCode: string | null; readonly subJurisdictionCode: string | null } {
+  if (!profile?.workLocationConfirmedAt || !profile.jurisdictionCode) {
+    return { jurisdictionCode: null, subJurisdictionCode: null };
+  }
+  return {
+    jurisdictionCode: profile.jurisdictionCode,
+    subJurisdictionCode: profile.subJurisdictionCode,
+  };
+}
+
+/** True when the holder should be asked where they work.
+ *
+ *  Covers both the new Passport with no country and the legacy row whose 'SE'
+ *  nobody chose — deliberately the same prompt, because they are the same
+ *  question. */
+export function needsWorkLocationConfirmation(
+  profile: { readonly workLocationConfirmedAt: string | null } | null,
+): boolean {
+  return !profile?.workLocationConfirmedAt;
+}
