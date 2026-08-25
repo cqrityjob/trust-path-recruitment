@@ -3548,6 +3548,9 @@ export type Database = {
           job_id: string
           new_status: string
           note: string | null
+          notified_at: string | null
+          notify_attempts: number
+          notify_error: string | null
           previous_status: string
         }
         Insert: {
@@ -3560,6 +3563,9 @@ export type Database = {
           job_id: string
           new_status: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status: string
         }
         Update: {
@@ -3572,6 +3578,9 @@ export type Database = {
           job_id?: string
           new_status?: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status?: string
         }
         Relationships: [
@@ -3756,6 +3765,8 @@ export type Database = {
           experience_level: string | null
           expires_at: string | null
           family_id: string | null
+          family_other: boolean
+          family_other_text: string | null
           formal_requirement_ids: string[]
           id: string
           inference_method: string | null
@@ -3767,6 +3778,8 @@ export type Database = {
           model_version: string | null
           night_work: boolean | null
           preferred_skill_ids: string[]
+          profession_other: boolean
+          profession_other_text: string | null
           profession_slug: string | null
           published_at: string | null
           region: string | null
@@ -3821,6 +3834,8 @@ export type Database = {
           experience_level?: string | null
           expires_at?: string | null
           family_id?: string | null
+          family_other?: boolean
+          family_other_text?: string | null
           formal_requirement_ids?: string[]
           id?: string
           inference_method?: string | null
@@ -3832,6 +3847,8 @@ export type Database = {
           model_version?: string | null
           night_work?: boolean | null
           preferred_skill_ids?: string[]
+          profession_other?: boolean
+          profession_other_text?: string | null
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
@@ -3886,6 +3903,8 @@ export type Database = {
           experience_level?: string | null
           expires_at?: string | null
           family_id?: string | null
+          family_other?: boolean
+          family_other_text?: string | null
           formal_requirement_ids?: string[]
           id?: string
           inference_method?: string | null
@@ -3897,6 +3916,8 @@ export type Database = {
           model_version?: string | null
           night_work?: boolean | null
           preferred_skill_ids?: string[]
+          profession_other?: boolean
+          profession_other_text?: string | null
           profession_slug?: string | null
           published_at?: string | null
           region?: string | null
@@ -9967,6 +9988,21 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      jase_notification_payload: {
+        Args: { _event_id: string }
+        Returns: {
+          employer_name: string
+          event_id: string
+          job_title: string
+          language: string
+          new_status: string
+          recipient_email: string
+        }[]
+      }
+      jase_record_notification: {
+        Args: { _error?: string; _event_id: string; _ok: boolean }
+        Returns: undefined
+      }
       job_is_active: {
         Args: {
           p_deadline_at: string
@@ -9975,6 +10011,10 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      jobs_delete_draft: {
+        Args: { _employer_id: string; _job_id: string }
+        Returns: string
       }
       moderate_employer: {
         Args: { _action: string; _employer_id: string; _note?: string }

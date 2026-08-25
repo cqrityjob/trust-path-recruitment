@@ -44,8 +44,16 @@ export type EmployerJobFormValues = {
   application_email: string;
   deadline_at: string;
   expires_at: string;
+  /** A canonical id, "" for not specified, or OTHER_OPTION for "Annat".
+   *
+   *  The sentinel lives only in the form. toServerPayload() turns it into the
+   *  boolean-plus-text pair the database actually stores, because writing
+   *  "other" into family_id would fail assert_cig_family_id() -- and if it did
+   *  not, it would pollute a vocabulary the public job filters match on. */
   family_id: string;
+  family_other_text: string;
   profession_slug: string;
+  profession_other_text: string;
 };
 
 // A brand-new advert starts with NO application method chosen.
@@ -82,7 +90,9 @@ export const emptyValues: EmployerJobFormValues = {
   deadline_at: "",
   expires_at: "",
   family_id: "",
+  family_other_text: "",
   profession_slug: "",
+  profession_other_text: "",
 };
 
 // -----------------------------------------------------------------------------
@@ -206,8 +216,12 @@ export function fromJobRow(job: JobRowLike): EmployerJobFormValues {
     // family_id is read back verbatim -- the canonical id is never
     // re-derived or re-mapped from a label, so it round-trips exactly as
     // stored regardless of the viewer's current language.
-    family_id: str(job.family_id),
-    profession_slug: str(job.profession_slug),
+    // "Annat" comes back from its own column, never from family_id -- which
+    // is NULL on such a row precisely so no filter claims it.
+    family_id: job.family_other ? OTHER_OPTION : str(job.family_id),
+    family_other_text: str(job.family_other_text),
+    profession_slug: job.profession_other ? OTHER_OPTION : str(job.profession_slug),
+    profession_other_text: str(job.profession_other_text),
   };
 }
 
@@ -231,8 +245,15 @@ export function toServerPayload(v: EmployerJobFormValues) {
     application_email: v.application_email.trim() || null,
     deadline_at: fromDateInput(v.deadline_at),
     expires_at: fromDateInput(v.expires_at),
-    family_id: v.family_id.trim() || null,
-    profession_slug: v.profession_slug.trim() || null,
+    // Three states, three shapes. The canonical columns stay canonical or
+    // NULL; the employer's own words never touch them.
+    family_id: v.family_id === OTHER_OPTION ? null : v.family_id.trim() || null,
+    family_other: v.family_id === OTHER_OPTION,
+    family_other_text: v.family_id === OTHER_OPTION ? v.family_other_text.trim() || null : null,
+    profession_slug: v.profession_slug === OTHER_OPTION ? null : v.profession_slug.trim() || null,
+    profession_other: v.profession_slug === OTHER_OPTION,
+    profession_other_text:
+      v.profession_slug === OTHER_OPTION ? v.profession_other_text.trim() || null : null,
   };
 }
 
@@ -506,6 +527,14 @@ export const PUBLICATION_MODEL: PublicationModel = "direct";
 // -----------------------------------------------------------------------------
 
 export const SERVER_ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
+  // The lifecycle refusals. jobs_delete_draft() names the rule that stopped
+  // it, and each one has a different thing for the employer to do next --
+  // which is the whole reason the function raises four codes instead of one.
+  JOB_HAS_APPLICATIONS: "employer.jobs.error.hasApplications",
+  JOB_HAS_ASSIGNMENTS: "employer.jobs.error.hasAssignments",
+  JOB_HAS_INVITATIONS: "employer.jobs.error.hasAssignments",
+  JOB_NOT_DELETABLE: "employer.jobs.error.notDeletable",
+  JOB_NOT_AUTHORISED: "employer.jobs.error.notAuthorised",
   ACCESS_NOT_AVAILABLE: "employer.jobs.form.error.accessNotAvailable",
   LOAD_JOBS_FAILED: "employer.jobs.form.error.loadJobsFailed",
   LOAD_JOB_FAILED: "employer.jobs.form.error.loadJobFailed",
@@ -529,6 +558,13 @@ export const SERVER_ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   CLOSE_JOB_FAILED: "employer.jobs.form.error.closeJobFailed",
   DUPLICATE_JOB_FAILED: "employer.jobs.form.error.duplicateJobFailed",
 };
+
+/** The value the two taxonomy selects use for "Annat".
+ *
+ *  Deliberately not a plausible id: it must never survive into family_id or
+ *  profession_slug by accident, and if it ever did, assert_cig_family_id()
+ *  and the cig_professions lookup both reject it loudly rather than storing it. */
+export const OTHER_OPTION = "__other__";
 
 export function translateJobServerError(
   code: string | null | undefined,

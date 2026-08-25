@@ -227,7 +227,14 @@ const draftPayloadSchema = z.object({
   requirements_sv: z.string().max(20000).optional().nullable(),
   requirements_en: z.string().max(20000).optional().nullable(),
   family_id: z.string().max(64).optional().nullable(),
+  // "Annat" is a separate answer from "Ej angivet", so it is a separate field.
+  // The canonical columns never carry it: assert_cig_family_id() would reject
+  // it, and the public job filters match family_id exactly.
+  family_other: z.boolean().optional().default(false),
+  family_other_text: z.string().trim().max(120).optional().nullable(),
   profession_slug: z.string().max(120).optional().nullable(),
+  profession_other: z.boolean().optional().default(false),
+  profession_other_text: z.string().trim().max(120).optional().nullable(),
   location_text: z.string().max(200).optional().nullable(),
   country: z.string().max(2).optional().nullable(),
   region: z.string().max(120).optional().nullable(),
@@ -270,7 +277,11 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       requirements_sv: data.requirements_sv ?? null,
       requirements_en: data.requirements_en ?? null,
       family_id: data.family_id || null,
+      family_other: data.family_other ?? false,
+      family_other_text: data.family_other ? data.family_other_text || null : null,
       profession_slug: data.profession_slug || null,
+      profession_other: data.profession_other ?? false,
+      profession_other_text: data.profession_other ? data.profession_other_text || null : null,
       location_text: data.location_text ?? null,
       country: data.country ?? null,
       region: data.region ?? null,
@@ -530,7 +541,39 @@ export const publishEmployerJob = createServerFn({ method: "POST" })
     };
   });
 
-// -------------------- CLOSE (published -> archived) --------------------
+// ------------- CLOSE (published or previously published -> archived) -------
+//
+// "Avsluta annons" has to be available on everything that was ever live, not
+// only on what is live right now. restoreEmployerJob moves a closed
+// advertisement back to 'draft' while published_at stays set, so a job with a
+// full recruitment history behind it can be sitting at status 'draft' -- and
+// with the old published-only rule that job could be neither deleted (the
+// database refuses, because it was published) nor closed (this function
+// refused, because it is not published today). A dead end on the one
+// advertisement that has applications hanging off it.
+//
+// The set below is exactly what jobs_validate_before_write() already allows an
+// employer to move to 'archived': draft, rejected and published.
+// pending_review is deliberately absent from both -- it belongs to a moderator
+// until they are done with it, and letting it vanish underneath them would be
+// a moderation defect rather than a convenience.
+
+/** Exactly what jobs_validate_before_write() lets an employer move to
+ *  'archived'. Exported so the list and the job page offer the button on the
+ *  same rows this function will accept -- an action that is offered and then
+ *  always refused is worse than one that is not offered. */
+export const CLOSEABLE_STATUSES: readonly string[] = ["published", "draft", "rejected"];
+
+/** jobs_delete_draft() refusals that all mean the same thing to the employer:
+ *  something depends on this advertisement, so close it instead of deleting
+ *  it. The surface cannot see assignments or invitations, so it learns which
+ *  drafts these are only by being told. */
+export const DELETE_REFUSED_CODES: readonly string[] = [
+  "JOB_HAS_APPLICATIONS",
+  "JOB_HAS_ASSIGNMENTS",
+  "JOB_HAS_INVITATIONS",
+  "JOB_NOT_DELETABLE",
+];
 
 const closeSchema = z.object({
   employerId: z.string().uuid(),
@@ -552,7 +595,7 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
       .maybeSingle();
     if (bErr) throw new Error("LOAD_JOB_FAILED");
     if (!before) throw new Error("JOB_NOT_FOUND");
-    if (before.status !== "published") {
+    if (!CLOSEABLE_STATUSES.includes(before.status as string)) {
       throw new Error("JOB_NOT_CLOSEABLE");
     }
 
@@ -576,28 +619,44 @@ export const closeEmployerJob = createServerFn({ method: "POST" })
     return { id: data.jobId, status: "archived" as const };
   });
 
-// ------------------- ARCHIVE / RESTORE (draft clutter) ----------------------
+// ------------------- DELETE / RESTORE (draft clutter) -----------------------
 //
-// closeEmployerJob above handles published -> archived, which is a different
-// act with a different meaning: closing a live advertisement. These two are
-// about the drafts nobody ever finished. They were unremovable, so they simply
-// accumulated -- and Duplicate made that worse every time it was used.
+// closeEmployerJob above ends a recruitment: the advertisement stops taking
+// applications and everything that happened to it stays where it is. These two
+// are about the drafts nobody ever finished. They were unremovable, so they
+// simply accumulated -- and Duplicate made that worse every time it was used.
 //
-// Archiving, never deleting. Applications, moderation decisions and audit rows
-// all hang off a job, and a delete would take them with it.
+// Deleting is therefore narrow to the point of being boring: a draft that was
+// never published and has nothing attached. Applications, assessment
+// assignments, invitations and audit rows all hang off a job, and the first
+// three cascade -- so the database, not this file, decides whether a delete is
+// safe. Everything else is closed.
 
 const archiveSchema = z.object({
   employerId: z.string().uuid(),
   jobId: z.string().uuid(),
 });
 
-export const archiveEmployerJob = createServerFn({ method: "POST" })
+// archiveEmployerJob is gone. It set status='archived' -- exactly what
+// closeEmployerJob sets -- so the interface offered "Stäng" and "Arkivera" as
+// two buttons with two confirmations and one outcome, and a customer pressed
+// one and went looking for where the advertisement had gone. The real
+// distinction it was standing in for is now honest: a never-published draft is
+// deleted (deleteEmployerJob, guarded in the database), and anything that was
+// ever live is closed (closeEmployerJob), which keeps its applications.
+//
+// Nothing called it once the buttons were removed, and leaving an unused
+// second path to the same state is how the two drift back apart.
+
+export const deleteEmployerJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => archiveSchema.parse(d))
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     await assertActiveMembership(ctx, data.employerId);
 
+    // Read first, so the audit entry has something to describe: after the
+    // delete there is no row left to snapshot.
     const { data: before, error: bErr } = await ctx.supabase
       .from("jobs")
       .select("*")
@@ -607,30 +666,26 @@ export const archiveEmployerJob = createServerFn({ method: "POST" })
     if (bErr) throw new Error("LOAD_JOB_FAILED");
     if (!before) throw new Error("JOB_NOT_FOUND");
 
-    // pending_review is deliberately absent: it belongs to a moderator until
-    // they are done with it. The database enforces this too — this check only
-    // exists so the message is specific instead of a policy silently matching
-    // zero rows.
-    if (!["draft", "rejected", "published"].includes(before.status as string)) {
-      throw new Error("JOB_NOT_ARCHIVABLE");
+    const { error } = await ctx.supabase.rpc("jobs_delete_draft", {
+      _employer_id: data.employerId,
+      _job_id: data.jobId,
+    });
+    if (error) {
+      // The function's own vocabulary, kept intact so the surface can say
+      // which rule refused rather than "could not delete".
+      const code = /JOB_[A-Z_]+/.exec(error.message ?? "")?.[0];
+      throw new Error(code ?? "DELETE_JOB_FAILED");
     }
-
-    const { error: uErr } = await ctx.supabase
-      .from("jobs")
-      .update({ status: "archived", updated_at: new Date().toISOString() })
-      .eq("id", data.jobId)
-      .eq("employer_id", data.employerId);
-    if (uErr) throw sanitizeJobWriteError(uErr, "archiveEmployerJob update", "ARCHIVE_JOB_FAILED");
 
     await writeAudit({
       jobId: data.jobId,
       slugSnapshot: before.slug,
       actorId: ctx.userId,
-      action: "archived",
+      action: "deleted",
       before,
-      after: { ...before, status: "archived" },
+      after: null,
     });
-    return { id: data.jobId, status: "archived" as const };
+    return { id: data.jobId, deleted: true as const };
   });
 
 export const restoreEmployerJob = createServerFn({ method: "POST" })
@@ -720,7 +775,11 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       requirements_sv: src.requirements_sv,
       requirements_en: src.requirements_en,
       family_id: src.family_id,
+      family_other: src.family_other,
+      family_other_text: src.family_other_text,
       profession_slug: src.profession_slug,
+      profession_other: src.profession_other,
+      profession_other_text: src.profession_other_text,
       location_text: src.location_text,
       country: src.country,
       region: src.region,

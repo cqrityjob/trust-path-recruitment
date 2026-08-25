@@ -8,6 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useT } from "@/i18n/context";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
+import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -62,6 +63,7 @@ function EmployerJobEditPage() {
   });
 
   const [formError, setFormError] = useState<string | null>(null);
+  const [pending, setPending] = usePendingConfirm<"close" | "duplicate">();
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
   const saveMutation = useMutation({
@@ -203,10 +205,8 @@ function EmployerJobEditPage() {
                   type="button"
                   disabled={dupMutation.isPending}
                   onClick={() => {
-                    if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
-                      setFormError(null);
-                      dupMutation.mutate();
-                    }
+                    setFormError(null);
+                    setPending({ kind: "duplicate", id: jobId });
                   }}
                   className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
                 >
@@ -217,10 +217,8 @@ function EmployerJobEditPage() {
                     type="button"
                     disabled={closeMutation.isPending}
                     onClick={() => {
-                      if (window.confirm(t("employer.jobs.list.confirmClose"))) {
-                        setFormError(null);
-                        closeMutation.mutate();
-                      }
+                      setFormError(null);
+                      setPending({ kind: "close", id: jobId });
                     }}
                     className="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
                   >
@@ -228,6 +226,37 @@ function EmployerJobEditPage() {
                   </button>
                 )}
               </div>
+              {pending && (
+                <ConfirmAction
+                  open
+                  onOpenChange={(o) => {
+                    if (!o) setPending(null);
+                  }}
+                  busy={closeMutation.isPending || dupMutation.isPending}
+                  title={t(
+                    pending.kind === "close"
+                      ? "employer.jobs.confirm.close.title"
+                      : "employer.jobs.confirm.duplicate.title",
+                  )}
+                  consequence={t(
+                    pending.kind === "close"
+                      ? "employer.jobs.confirm.close.body"
+                      : "employer.jobs.confirm.duplicate.body",
+                  )}
+                  confirmLabel={t(
+                    pending.kind === "close"
+                      ? "employer.jobs.list.close"
+                      : "employer.jobs.list.duplicate",
+                  )}
+                  cancelLabel={t("employer.workforce.form.cancel")}
+                  onConfirm={() => {
+                    const { kind } = pending;
+                    setPending(null);
+                    if (kind === "close") closeMutation.mutate();
+                    else dupMutation.mutate();
+                  }}
+                />
+              )}
             </div>
           )}
 

@@ -988,23 +988,34 @@ export const dictionaries = {
     "employer.jobs.list.view": "Öppna",
     "employer.jobs.list.searchLabel": "Sök på titel eller id",
     "employer.jobs.list.filterActive": "Aktiva",
-    "employer.jobs.list.filterArchived": "Arkiverade",
-    "employer.jobs.list.archive": "Arkivera",
+    "employer.jobs.list.filterArchived": "Avslutade annonser",
     "employer.jobs.list.restore": "Återställ",
-    "employer.jobs.list.confirmArchive":
-      "Arkivera annonsen? Den försvinner från listan men raderas inte, och kan återställas som utkast.",
     "employer.jobs.list.untitled": "(utan titel)",
-    "employer.jobs.list.emptyArchived": "Inga arkiverade annonser.",
+    "employer.jobs.list.emptyArchived": "Inga avslutade annonser.",
     "employer.jobs.list.emptySearch": "Ingen annons matchar sökningen.",
     "employer.jobs.list.duplicate": "Duplicera",
-    "employer.jobs.list.close": "Stäng",
+    "employer.jobs.list.close": "Avsluta annons",
+    "employer.jobs.list.delete": "Ta bort annons",
+    "employer.jobs.confirm.delete.title": "Ta bort annonsen?",
+    "employer.jobs.confirm.delete.body":
+      "Annonsen tas bort permanent. Den har aldrig varit publicerad, så inga ansökningar eller historik påverkas.",
+    "employer.jobs.confirm.close.title": "Avsluta annonsen?",
+    "employer.jobs.confirm.close.body":
+      "Annonsen stängs för nya ansökningar och flyttas till Avslutade annonser. Befintliga ansökningar och historik sparas.",
+    "employer.jobs.confirm.duplicate.title": "Duplicera annonsen?",
+    "employer.jobs.confirm.duplicate.body":
+      "En kopia skapas som nytt utkast. Originalet påverkas inte.",
+    "employer.jobs.error.hasApplications":
+      "Annonsen har ansökningar och kan inte tas bort. Avsluta den i stället — då sparas ansökningarna.",
+    "employer.jobs.error.notDeletable":
+      "Bara ett utkast som aldrig publicerats kan tas bort. Avsluta annonsen i stället.",
+    "employer.jobs.error.hasAssignments":
+      "Tester har tilldelats från den här annonsen och kan inte tas bort. Avsluta annonsen i stället.",
+    "employer.jobs.error.notAuthorised":
+      "Du har inte behörighet att göra det här i den här organisationen.",
     "employer.jobs.list.updated": "Uppdaterad",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Går ut",
-    "employer.jobs.list.confirmClose":
-      "Är du säker på att du vill stänga den här jobbannonsen? En publicerad annons kan inte återöppnas — du får duplicera den istället.",
-    "employer.jobs.list.confirmDuplicate":
-      "Vill du skapa ett nytt utkast baserat på den här jobbannonsen?",
     "employer.jobs.new.heading": "Ny jobbannons",
     "employer.jobs.new.lede":
       "Fyra korta steg: jobbet, beskrivningen, ansökan och en granskning innan annonsen skickas för publicering.",
@@ -1102,6 +1113,11 @@ export const dictionaries = {
     "employer.jobs.form.orgPendingNotice":
       "Er organisation väntar fortfarande på godkännande hos CQrityjob. Ni kan skriva och spara annonser nu, men de kan publiceras först när organisationen är godkänd.",
     "employer.jobs.form.option.none": "Ej angivet",
+    "employer.jobs.form.option.other": "Annat",
+    "employer.jobs.form.field.familyOther": "Ange yrkesområde",
+    "employer.jobs.form.placeholder.familyOther": "T.ex. Säkerhetsteknik för sjukvård",
+    "employer.jobs.form.field.professionOther": "Ange yrkesroll",
+    "employer.jobs.form.placeholder.professionOther": "T.ex. Larmtekniker med jour",
     "employer.jobs.form.lang.addEnglish": "+ Lägg till engelsk version (valfritt)",
     "employer.jobs.form.lang.addSwedish": "+ Lägg till svensk version (valfritt)",
     "employer.jobs.form.field.title": "Jobbtitel",
@@ -1638,6 +1654,8 @@ export const dictionaries = {
     "employer.candidate.decision.lede":
       "Ni avgör hur ansökan går vidare. Plattformen rangordnar inte kandidater och rekommenderar inte anställning.",
     "employer.candidate.decision.closed": "Ansökan är avslutad och har inga fler steg.",
+    "employer.candidate.decision.nowEmployee": "Personen finns nu bland era medarbetare.",
+    "employer.candidate.decision.openEmployee": "Öppna medarbetaren",
     "employer.candidate.history.heading": "Tidigare ansökningar",
     "employer.candidate.history.lede":
       "Andra ansökningar som samma person har skickat till er organisation.",
@@ -2911,6 +2929,21 @@ export const dictionaries = {
     "academy.reviews.alreadyCompleted":
       "Granskningen är redan slutförd, sannolikt av en kollega. Uppdatera kön.",
     "academy.reviews.rubricLegend": "Bedömningsmatris",
+    "academy.reviews.whatToAssess":
+      "Läs kandidatens svar och välj den beskrivning som stämmer bäst för varje del. Du bedömer svaret, inte personen.",
+    "academy.reviews.showMethod": "Visa hur bedömningen räknas",
+    "academy.reviews.hideMethod": "Dölj hur bedömningen räknas",
+    "academy.reviews.level.0": "Inget underlag",
+    "academy.reviews.level.1": "Enstaka inslag",
+    "academy.reviews.level.2": "Delvis uppfyllt",
+    "academy.reviews.level.3": "Uppfyllt",
+    "academy.reviews.level.4": "Uppfyllt genomgående",
+    "academy.reviews.proposalTag": "AI-förslag",
+    "academy.reviews.proposalUncertain": "osäkert",
+    "academy.reviews.proposalLede":
+      "Ett förslag, inte en bedömning. Ingenting sparas förrän du bekräftar eller ändrar det, och det är din bedömning som registreras.",
+    "academy.reviews.proposalDisabled":
+      "AI-stöd är inte aktiverat. Du gör bedömningen själv — arbetsytan är densamma.",
     "academy.reviews.rubricHint":
       "Sätt en nivå per dimension. Poängen räknas fram ur dina nivåer — du anger aldrig ett slutbetyg själv.",
     "academy.reviews.rubricLevel": "Nivå",
@@ -4405,22 +4438,34 @@ export const dictionaries = {
     "employer.jobs.list.view": "Open",
     "employer.jobs.list.searchLabel": "Search by title or id",
     "employer.jobs.list.filterActive": "Active",
-    "employer.jobs.list.filterArchived": "Archived",
-    "employer.jobs.list.archive": "Archive",
+    "employer.jobs.list.filterArchived": "Closed jobs",
     "employer.jobs.list.restore": "Restore",
-    "employer.jobs.list.confirmArchive":
-      "Archive this advertisement? It leaves the list but is not deleted, and can be restored as a draft.",
     "employer.jobs.list.untitled": "(untitled)",
-    "employer.jobs.list.emptyArchived": "No archived advertisements.",
+    "employer.jobs.list.emptyArchived": "No closed job ads.",
     "employer.jobs.list.emptySearch": "No advertisement matches that search.",
     "employer.jobs.list.duplicate": "Duplicate",
-    "employer.jobs.list.close": "Close",
+    "employer.jobs.list.close": "Close job",
+    "employer.jobs.list.delete": "Delete job",
+    "employer.jobs.confirm.delete.title": "Delete this job ad?",
+    "employer.jobs.confirm.delete.body":
+      "The ad is deleted permanently. It was never published, so no applications or history are affected.",
+    "employer.jobs.confirm.close.title": "Close this job ad?",
+    "employer.jobs.confirm.close.body":
+      "The ad stops accepting new applications and moves to Closed jobs. Existing applications and history are kept.",
+    "employer.jobs.confirm.duplicate.title": "Duplicate this job ad?",
+    "employer.jobs.confirm.duplicate.body":
+      "A copy is created as a new draft. The original is unchanged.",
+    "employer.jobs.error.hasApplications":
+      "This ad has applications and cannot be deleted. Close it instead — that keeps the applications.",
+    "employer.jobs.error.notDeletable":
+      "Only a draft that was never published can be deleted. Close the ad instead.",
+    "employer.jobs.error.hasAssignments":
+      "Tests were assigned from this ad, so it cannot be deleted. Close it instead.",
+    "employer.jobs.error.notAuthorised":
+      "You do not have permission to do that in this organisation.",
     "employer.jobs.list.updated": "Updated",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Expires",
-    "employer.jobs.list.confirmClose":
-      "Close this job? A published job cannot be reopened — duplicate it into a new draft if you need to change the content.",
-    "employer.jobs.list.confirmDuplicate": "Create a new draft based on this job?",
     "employer.jobs.new.heading": "New job",
     "employer.jobs.new.lede":
       "Four short steps: the job, the description, how candidates apply, and a review before the ad is sent for publication.",
@@ -4518,6 +4563,12 @@ export const dictionaries = {
     "employer.jobs.form.orgPendingNotice":
       "Your organisation is still awaiting approval from CQrityjob. You can write and save job ads now, but they can only be published once the organisation has been approved.",
     "employer.jobs.form.option.none": "Not specified",
+    "employer.jobs.form.option.other": "Other",
+    "employer.jobs.form.field.familyOther": "Specify the career area",
+    "employer.jobs.form.placeholder.familyOther": "For example: Security technology for healthcare",
+    "employer.jobs.form.field.professionOther": "Specify the role",
+    "employer.jobs.form.placeholder.professionOther":
+      "For example: Alarm technician with on-call duty",
     "employer.jobs.form.lang.addEnglish": "+ Add English version (optional)",
     "employer.jobs.form.lang.addSwedish": "+ Add Swedish version (optional)",
     "employer.jobs.form.field.title": "Job title",
@@ -5051,6 +5102,8 @@ export const dictionaries = {
     "employer.candidate.decision.lede":
       "You decide how the application proceeds. The platform does not rank candidates and does not recommend hiring.",
     "employer.candidate.decision.closed": "This application is closed and has no further steps.",
+    "employer.candidate.decision.nowEmployee": "This person is now one of your employees.",
+    "employer.candidate.decision.openEmployee": "Open the employee",
     "employer.candidate.history.heading": "Earlier applications",
     "employer.candidate.history.lede":
       "Other applications the same person has sent to your organisation.",
@@ -6313,6 +6366,21 @@ export const dictionaries = {
     "academy.reviews.alreadyCompleted":
       "This review is already completed, most likely by a colleague. Refresh the queue.",
     "academy.reviews.rubricLegend": "Rubric",
+    "academy.reviews.whatToAssess":
+      "Read the candidate's answer and choose the description that fits best for each part. You are assessing the answer, not the person.",
+    "academy.reviews.showMethod": "Show how the assessment is calculated",
+    "academy.reviews.hideMethod": "Hide how the assessment is calculated",
+    "academy.reviews.level.0": "No evidence",
+    "academy.reviews.level.1": "Isolated elements",
+    "academy.reviews.level.2": "Partly met",
+    "academy.reviews.level.3": "Met",
+    "academy.reviews.level.4": "Met throughout",
+    "academy.reviews.proposalTag": "AI proposal",
+    "academy.reviews.proposalUncertain": "uncertain",
+    "academy.reviews.proposalLede":
+      "A proposal, not an assessment. Nothing is saved until you confirm or change it, and it is your assessment that is recorded.",
+    "academy.reviews.proposalDisabled":
+      "AI assistance is not enabled. You make the assessment yourself — the workspace is the same.",
     "academy.reviews.rubricHint":
       "Set one level per dimension. The score is derived from your levels — you never enter a final number yourself.",
     "academy.reviews.rubricLevel": "Level",

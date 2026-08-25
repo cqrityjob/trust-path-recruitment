@@ -12,15 +12,18 @@ import {
   type EmployerRole,
   type EmployerStatus,
 } from "@/components/employer/EmployerAppShell";
+import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import {
   listEmployerJobs,
   closeEmployerJob,
-  archiveEmployerJob,
+  deleteEmployerJob,
   restoreEmployerJob,
   duplicateEmployerJob,
+  CLOSEABLE_STATUSES,
+  DELETE_REFUSED_CODES,
   type EmployerJobRow,
 } from "@/lib/job-intelligence/employer-jobs.functions";
 import { translateJobServerError } from "@/components/employer/EmployerJobForm";
@@ -101,7 +104,7 @@ function JobsList({
   const listFn = useServerFn(listEmployerJobs);
   const closeFn = useServerFn(closeEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
-  const archiveFn = useServerFn(archiveEmployerJob);
+  const deleteFn = useServerFn(deleteEmployerJob);
   const restoreFn = useServerFn(restoreEmployerJob);
 
   const jobsQuery = useQuery({
@@ -111,10 +114,17 @@ function JobsList({
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  // Archived is a separate view rather than another row in the same list.
-  // Putting away a draft has to actually make it go away, or the feature has
-  // not solved the clutter it exists for.
+  // Closed is a separate view rather than another row in the same list.
+  // Ending a recruitment has to actually clear it from the working list, or
+  // the feature has not solved the clutter it exists for.
   const [showArchived, setShowArchived] = useState(false);
+  const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
+  // Advertisements the database refused to delete. The list cannot see whether
+  // a draft has assessment assignments or invitations hanging off it -- only
+  // jobs_delete_draft() can -- so when it says no, the row stops offering the
+  // delete it cannot perform and offers the close it can. Without this the
+  // employer is left pressing a button that will refuse every time.
+  const [deleteRefused, setDeleteRefused] = useState<ReadonlySet<string>>(new Set());
 
   const closeMutation = useMutation({
     mutationFn: (jobId: string) => closeFn({ data: { employerId, jobId } }),
@@ -134,13 +144,19 @@ function JobsList({
     onError: (e: any) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
-  const archiveMutation = useMutation({
-    mutationFn: (jobId: string) => archiveFn({ data: { employerId, jobId } }),
+  const deleteMutation = useMutation({
+    mutationFn: (jobId: string) => deleteFn({ data: { employerId, jobId } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
     },
-    onError: (e: any) => setActionError(e?.message ?? "ARCHIVE_JOB_FAILED"),
+    onError: (e: any, jobId: string) => {
+      const code = e?.message ?? "DELETE_JOB_FAILED";
+      setActionError(code);
+      if (DELETE_REFUSED_CODES.includes(code)) {
+        setDeleteRefused((prev) => new Set(prev).add(jobId));
+      }
+    },
   });
 
   const restoreMutation = useMutation({
@@ -233,6 +249,48 @@ function JobsList({
         </div>
       </div>
 
+      {/* One dialog for the whole list. The pending row decides what it says,
+          so a five-row table does not carry five dialogs able to open at once. */}
+      {pending && (
+        <ConfirmAction
+          open
+          onOpenChange={(o) => {
+            if (!o) setPending(null);
+          }}
+          tone={pending.kind === "delete" ? "destructive" : "default"}
+          busy={deleteMutation.isPending || closeMutation.isPending || dupMutation.isPending}
+          title={t(
+            pending.kind === "delete"
+              ? "employer.jobs.confirm.delete.title"
+              : pending.kind === "close"
+                ? "employer.jobs.confirm.close.title"
+                : "employer.jobs.confirm.duplicate.title",
+          )}
+          consequence={t(
+            pending.kind === "delete"
+              ? "employer.jobs.confirm.delete.body"
+              : pending.kind === "close"
+                ? "employer.jobs.confirm.close.body"
+                : "employer.jobs.confirm.duplicate.body",
+          )}
+          confirmLabel={t(
+            pending.kind === "delete"
+              ? "employer.jobs.list.delete"
+              : pending.kind === "close"
+                ? "employer.jobs.list.close"
+                : "employer.jobs.list.duplicate",
+          )}
+          cancelLabel={t("employer.workforce.form.cancel")}
+          onConfirm={() => {
+            const { kind, id } = pending;
+            setPending(null);
+            if (kind === "delete") deleteMutation.mutate(id);
+            else if (kind === "close") closeMutation.mutate(id);
+            else dupMutation.mutate(id);
+          }}
+        />
+      )}
+
       <div className="mt-6">
         {jobsQuery.isLoading ? (
           <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
@@ -262,10 +320,34 @@ function JobsList({
               <tbody className="divide-y divide-border">
                 {rows.map((r) => {
                   const editable = r.status === "draft" || r.status === "rejected";
-                  const closeable = r.status === "published";
-                  // published has its own "close" wording; these are the ones
-                  // that were previously stuck with no action at all.
-                  const archivable = r.status === "draft" || r.status === "rejected";
+
+                  // ── ONE OUTCOME, ONE BUTTON ───────────────────────────
+                  //
+                  // "Stäng" and "Arkivera" both set status='archived'. Two
+                  // buttons, two confirmations, one result -- which is why a
+                  // customer pressed Stäng and then went looking for where
+                  // the advertisement had gone.
+                  //
+                  // Arkivera is gone. What is left is the real distinction:
+                  //
+                  //   delete  a draft that never went live and has nothing
+                  //           attached, which can genuinely be discarded
+                  //   close   everything that was ever live, which keeps its
+                  //           applications and its history
+                  //
+                  // published_at, not status alone, decides. restoreEmployerJob
+                  // moves a closed advertisement back to 'draft', so a job
+                  // that WAS published can be sitting at status 'draft' with
+                  // a full recruitment history behind it. The database
+                  // refuses to delete that -- this is so the button is not
+                  // offered in the first place.
+                  //
+                  // pending_review is in neither set: it belongs to a
+                  // moderator until they are done with it, and the status
+                  // trigger refuses both transitions for it.
+                  const deletable =
+                    r.status === "draft" && r.published_at === null && !deleteRefused.has(r.id);
+                  const closeable = !deletable && CLOSEABLE_STATUSES.includes(r.status);
                   const restorable = r.status === "archived";
                   return (
                     <tr key={r.id} className="align-top">
@@ -324,28 +406,24 @@ function JobsList({
                             type="button"
                             disabled={dupMutation.isPending}
                             onClick={() => {
-                              if (window.confirm(t("employer.jobs.list.confirmDuplicate"))) {
-                                setActionError(null);
-                                dupMutation.mutate(r.id);
-                              }
+                              setActionError(null);
+                              setPending({ kind: "duplicate", id: r.id });
                             }}
                             className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
                           >
                             {t("employer.jobs.list.duplicate")}
                           </button>
-                          {archivable && (
+                          {deletable && (
                             <button
                               type="button"
-                              disabled={archiveMutation.isPending}
+                              disabled={deleteMutation.isPending}
                               onClick={() => {
-                                if (window.confirm(t("employer.jobs.list.confirmArchive"))) {
-                                  setActionError(null);
-                                  archiveMutation.mutate(r.id);
-                                }
+                                setActionError(null);
+                                setPending({ kind: "delete", id: r.id });
                               }}
-                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
+                              className="rounded-md border border-destructive/60 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
                             >
-                              {t("employer.jobs.list.archive")}
+                              {t("employer.jobs.list.delete")}
                             </button>
                           )}
                           {restorable && (
@@ -366,12 +444,10 @@ function JobsList({
                               type="button"
                               disabled={closeMutation.isPending}
                               onClick={() => {
-                                if (window.confirm(t("employer.jobs.list.confirmClose"))) {
-                                  setActionError(null);
-                                  closeMutation.mutate(r.id);
-                                }
+                                setActionError(null);
+                                setPending({ kind: "close", id: r.id });
                               }}
-                              className="rounded-md border border-destructive/60 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+                              className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted/40"
                             >
                               {t("employer.jobs.list.close")}
                             </button>
