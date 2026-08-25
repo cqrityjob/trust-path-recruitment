@@ -24,6 +24,7 @@
 // user-facing text — so it has to come from the copy module like everything
 // else, and be resolved at render time in the reader's language.
 
+import { isCalendarDate, isFutureDate } from "./dates";
 import type { PassportCopyKey } from "./i18n";
 
 /** The four launch credentials. A wider vocabulary is a database INSERT; this
@@ -262,7 +263,13 @@ export interface CredentialFieldError {
   readonly messageKey: PassportCopyKey;
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** A real calendar date, not merely a well-shaped string.
+ *
+ *  This used to be `/^\d{4}-\d{2}-\d{2}$/`, which accepts 2026-13-45. See
+ *  ./dates.ts for the whole account of why a shape check was not enough and
+ *  what replaced it. Kept under the same name so every existing call site
+ *  reads the same and none was missed. */
+const ISO_DATE = { test: (v: string) => isCalendarDate(v) };
 
 function isBlank(value: string): boolean {
   return value.trim().length === 0;
@@ -296,6 +303,17 @@ export function validateCredential(
     if (value !== null && value !== "" && !ISO_DATE.test(value)) {
       errors.push({ field, messageKey: "cred.error.dateFormat" });
     }
+  }
+
+  // A course completed, or an authority's decision taken, in the FUTURE is
+  // not an incomplete draft -- it is a claim about something that has not
+  // happened, so it is refused in both modes.
+  //
+  // Deliberately NOT applied to validFrom or validUntil: a validity window
+  // is supposed to run into the future, and an appointment that expires next
+  // year is the normal case, not an error.
+  if (draft.issuedOn && isFutureDate(draft.issuedOn)) {
+    errors.push({ field: "issuedOn", messageKey: "cred.error.dateFuture" });
   }
 
   if (draft.credentialReference.length > 120) {

@@ -932,6 +932,18 @@ export const dictionaries = {
     "sca.scp.loading": "Laddar…",
     "sca.scp.card.body":
       "Denna profil är kontextuell information om dig — den påverkar aldrig testresultat eller yrkesmatchning. Du kan redigera den när som helst.",
+    // ── CAREER PROFILE IS NOT THE SECURITY PASSPORT ──────────────────────
+    //
+    // Two products, one candidate, and the difference decides what an
+    // employer may rely on. Anything a person writes about themselves is
+    // career-profile information; a Passport entry becomes VERIFIED only
+    // through the Passport's own verification process, carried out by
+    // CQrityjob or by an employer with direct knowledge — never by entering
+    // it, and never by uploading a document. Said here, where the typing
+    // happens, rather than only on the Passport pages somebody may not
+    // visit.
+    "sca.scp.notPassport":
+      "Uppgifterna här sparas i din karriärprofil. De blir inte verifierade uppgifter i ditt Security Passport — det sker bara genom Passportets verifieringsprocess.",
     "sca.scp.save": "Spara",
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
@@ -4638,6 +4650,8 @@ export const dictionaries = {
     "sca.scp.loading": "Loading…",
     "sca.scp.card.body":
       "This profile is contextual information about you — it never affects your test result or profession matching. You can edit it at any time.",
+    "sca.scp.notPassport":
+      "Information here is stored in your career profile. It does not become verified information in your Security Passport unless it goes through the Passport verification process.",
     "sca.scp.save": "Save",
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",

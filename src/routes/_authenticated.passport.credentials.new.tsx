@@ -25,6 +25,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { CredentialDraft } from "@/lib/security-passport/credentials";
+import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import {
   discardCredentialDraft,
   getRegulatedCredentialAvailability,
@@ -71,6 +72,7 @@ function NewCredentialRoute() {
   const [busy, setBusy] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -101,6 +103,7 @@ function NewCredentialRoute() {
   async function submit(draft: CredentialDraft, activate: boolean) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       // SPREAD, never a hand-copied field list.
       //
@@ -126,9 +129,25 @@ function NewCredentialRoute() {
       }
       setClaimId(saved.id);
       setSavedAt(saved.updatedAt);
+      // "Saved" is not "done". A draft that says only "saved" is how somebody
+      // concludes the entry is in their Passport when it is not -- which is
+      // the "stuck as a draft" report, seen from the holder's side.
+      setNotice(pt("cred.action.draftKept"));
+      // The drafts list above is now stale: this entry either just joined it
+      // or just changed in it.
+      await refresh();
     } catch (err) {
       console.error("[passport] credential save failed", err);
-      setError(pt("common.error"));
+      // ── SAY WHICH REFUSAL IT WAS ─────────────────────────────────────
+      //
+      // Every failure here used to become "Something went wrong. Please try
+      // again." -- including the ones the holder could act on. A holder who
+      // is told nothing tries the same thing again, gets the same sentence,
+      // and concludes the Passport is broken; that is exactly what UAT saw
+      // on this screen. The client validates with the same rules as the
+      // server, so a server refusal means something the form could not see,
+      // and the holder is entitled to know which.
+      setError(pt(saveErrorKey(err)));
     } finally {
       setBusy(false);
     }
@@ -192,6 +211,12 @@ function NewCredentialRoute() {
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {notice}
         </p>
       ) : null}
 
@@ -273,6 +298,20 @@ function NewCredentialRoute() {
       </section>
     </div>
   );
+}
+
+/** Which refusal the server gave, as copy the holder can act on.
+ *
+ *  The codes are the ones saveCredential raises by name; anything else
+ *  genuinely is unexpected and keeps the generic message, with the real
+ *  reason already in the console. */
+function saveErrorKey(err: unknown): PassportCopyKey {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  if (message.includes("SP_CREDENTIAL_INCOMPLETE")) return "cred.error.serverIncomplete";
+  if (message.includes("SP_CREDENTIAL_INVALID")) return "cred.error.serverInvalid";
+  if (message.includes("SP_CREDENTIAL_CODE_UNKNOWN")) return "cred.error.serverUnknownCode";
+  if (message.includes("SP_CREDENTIAL_CODE_REQUIRED")) return "cred.error.selectCredential";
+  return "common.error";
 }
 
 /** A stored draft row, as the form's value shape. */

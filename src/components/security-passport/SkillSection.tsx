@@ -22,6 +22,7 @@
 // self-declared until somebody reviews evidence for it.
 
 import { useMemo } from "react";
+import { MAX_DATE_ATTR, MIN_DATE_ATTR } from "@/lib/security-passport/dates";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type {
@@ -315,6 +316,8 @@ export function SkillSection({
               <input
                 id={`skill-until-${claimType}`}
                 type="date"
+                min={MIN_DATE_ATTR}
+                max={MAX_DATE_ATTR}
                 value={draft.validUntil}
                 onChange={(ev) => onDraftChange({ ...draft, validUntil: ev.target.value })}
                 aria-invalid={errors.validUntil ? true : undefined}

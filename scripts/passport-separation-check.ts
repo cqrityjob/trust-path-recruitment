@@ -856,6 +856,83 @@ for (const file of passportFiles) {
 }
 
 // ---------------------------------------------------------------------------
+// CAREER PROFILE IS NOT THE SECURITY PASSPORT
+// ---------------------------------------------------------------------------
+//
+// The rest of this file guards the separation between the Passport and
+// Career Discovery. This guards a different pair, and the one that decides
+// what an employer may RELY on: self-reported career-profile information
+// versus verified Passport evidence.
+//
+// The Passport's own surfaces have always said this ("you can never verify
+// yourself"; "never through an upload"). The career-profile side said
+// nothing, so a candidate filling in their profession, experience — and,
+// when the Career Profile grows, their courses, languages and education —
+// had no way to know the two are different things. It is pinned here so a
+// future Career Profile or CV Builder cannot quietly blur it.
+
+const CAREER_PROFILE_COPY_KEY = "sca.scp.notPassport";
+const CAREER_PROFILE_SURFACES = [
+  "src/components/assessment/SecurityCareerProfileForm.tsx",
+  "src/components/assessment/SecurityCareerProfileCard.tsx",
+];
+
+{
+  const dict = readFileSync(path.join(root, "src/i18n/dictionaries.ts"), "utf8");
+  const occurrences = dict.split(`"${CAREER_PROFILE_COPY_KEY}"`).length - 1;
+  if (occurrences < 2) {
+    errors.push(
+      `${CAREER_PROFILE_COPY_KEY} must exist in BOTH locales (found ${occurrences}); ` +
+        "the Career Profile / Security Passport boundary cannot be stated in one language only.",
+    );
+  }
+  // The statement has to actually make the claim. A key that exists and says
+  // something vague is how a boundary erodes without any test noticing.
+  for (const [locale, must] of [
+    ["sv", ["karriärprofil", "Security Passport", "verifier"]],
+    ["en", ["career profile", "Security Passport", "verif"]],
+  ] as const) {
+    const idx =
+      locale === "sv"
+        ? dict.indexOf(`"${CAREER_PROFILE_COPY_KEY}"`)
+        : dict.lastIndexOf(`"${CAREER_PROFILE_COPY_KEY}"`);
+    const text = dict.slice(idx, idx + 400);
+    for (const needle of must) {
+      if (!text.includes(needle)) {
+        errors.push(
+          `${CAREER_PROFILE_COPY_KEY} (${locale}) must say it is stored in the career profile ` +
+            `and does not become verified Passport information; missing "${needle}".`,
+        );
+      }
+    }
+  }
+
+  for (const rel of CAREER_PROFILE_SURFACES) {
+    const body = readFileSync(path.join(root, rel), "utf8");
+    if (!body.includes(CAREER_PROFILE_COPY_KEY)) {
+      errors.push(
+        `${rel} collects self-reported career-profile information but never states the ` +
+          `Career Profile / Security Passport boundary (${CAREER_PROFILE_COPY_KEY}).`,
+      );
+    }
+    // A career-profile surface must not write to the Passport. Copying
+    // self-reported data into Passport evidence is the exact governance
+    // failure the boundary exists to prevent.
+    for (const forbidden of [
+      "security-passport/passport.functions",
+      "security-passport/credentials.functions",
+      "security-passport/entries.functions",
+    ]) {
+      if (body.includes(forbidden)) {
+        errors.push(
+          `${rel} imports ${forbidden}: a career-profile surface must never write Passport data.`,
+        );
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 if (errors.length > 0) {
@@ -874,5 +951,7 @@ console.log(
     `that one file; internal reviewer notes never reach a card or a holder; ` +
     `${RECRUITMENT_SURFACES.length} employer recruitment surfaces reach no ` +
     `Passport module, table, function, token or link, and name it only as ` +
-    `pinned privacy copy)`,
+    `pinned privacy copy; the Career Profile / Security Passport boundary is ` +
+    `stated in both locales on every career-profile surface, none of which ` +
+    `writes Passport data)`,
 );

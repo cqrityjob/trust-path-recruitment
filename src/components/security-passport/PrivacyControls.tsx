@@ -116,6 +116,17 @@ export function DisclosureHistory({
   );
 }
 
+/** Says how the right beside it is exercised. A card with no control needs
+ *  to say that it has no control, or it reads as one that is broken. */
+function RequestOnlyChip() {
+  const { pt } = usePassportCopy();
+  return (
+    <span className="mt-3 inline-flex items-center rounded-md border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      {pt("privacy.handledOnRequest")}
+    </span>
+  );
+}
+
 export function PrivacyControls({ className }: { className?: string }) {
   const { pt } = usePassportCopy();
 
@@ -137,6 +148,17 @@ export function PrivacyControls({ className }: { className?: string }) {
         <p className="mt-1 text-sm text-muted-foreground">{pt("privacy.defaultBody")}</p>
       </section>
 
+      {/* ── NEITHER OF THESE IS A CONTROL, AND THEY NOW SAY SO ─────────
+          Both cards describe a right the product already grants; neither has
+          ever carried a button, because export and deletion depend on a
+          retention design that needs legal validation before it is built,
+          and a convincing button wired to nothing would be worse.
+
+          What they DID do was look exactly like every actionable card in the
+          product -- icon, heading, body, same border, same padding -- and
+          black-box UAT read them as available and non-functional. The chip
+          answers that directly: the right is real, the route is a request,
+          and the request control is the one below. Nothing here is faked. */}
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-start gap-2.5">
@@ -149,6 +171,7 @@ export function PrivacyControls({ className }: { className?: string }) {
                 {pt("privacy.exportTitle")}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">{pt("privacy.exportBody")}</p>
+              <RequestOnlyChip />
             </div>
           </div>
         </div>
@@ -163,6 +186,7 @@ export function PrivacyControls({ className }: { className?: string }) {
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 {pt("privacy.deleteBody")}
               </p>
+              <RequestOnlyChip />
             </div>
           </div>
         </div>

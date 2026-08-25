@@ -38,6 +38,7 @@
 // somebody else is mid-decision on it.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isCalendarDate } from "./dates";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
@@ -191,8 +192,6 @@ export const listMyEntries = createServerFn({ method: "GET" })
 /* Employment                                                          */
 /* ------------------------------------------------------------------ */
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 const experienceInput = z
   .object({
     /** Present when editing an existing row. */
@@ -203,9 +202,9 @@ const experienceInput = z
     fteFraction: z.number().min(0.01).max(1),
     securityRelevance: z.enum(["primary", "partial", "none"]),
     securityFraction: z.number().min(0).max(1),
-    startedOn: z.string().regex(ISO_DATE),
+    startedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }),
     /** Null means ongoing. */
-    endedOn: z.string().regex(ISO_DATE).nullable(),
+    endedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
     jurisdictionCode: z.string().length(2).default("SE"),
   })
   // An end before the start is not an incomplete entry, it is a contradiction,
@@ -407,7 +406,7 @@ const skillInput = z
      *  the authority on that; this is a shape check, not the rule. */
     skillLevel: z.string().max(16).nullable(),
     jurisdictionCode: z.string().length(2).nullable(),
-    validUntil: z.string().regex(ISO_DATE).nullable(),
+    validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
     holderNote: z.string().max(2000).nullable(),
   })
   .strict();
@@ -494,8 +493,8 @@ const claimInput = z
     title: z.string().min(1).max(200),
     issuerName: z.string().max(160).nullable(),
     jurisdictionCode: z.string().length(2).nullable(),
-    issuedOn: z.string().regex(ISO_DATE).nullable(),
-    validUntil: z.string().regex(ISO_DATE).nullable(),
+    issuedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+    validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
   })
   .refine((v) => v.validUntil === null || v.issuedOn === null || v.validUntil >= v.issuedOn, {
     message: "SP_CLAIM_END_BEFORE_START",

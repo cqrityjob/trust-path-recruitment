@@ -21,6 +21,7 @@
 // say which, and the end date disappears when it is ticked.
 
 import { useState } from "react";
+import { isCalendarDate, MAX_DATE_ATTR, MIN_DATE_ATTR } from "@/lib/security-passport/dates";
 import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -34,7 +35,9 @@ import type {
 const inputClass =
   "mt-1 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
+/** A real calendar date, not merely a well-shaped string. The old regex
+ *  accepted 2026-13-45 — see @/lib/security-passport/dates for the account. */
+const ISO = { test: (v: string) => isCalendarDate(v) };
 
 function Field({
   id,
@@ -195,6 +198,8 @@ export function ExperienceForm({
           <input
             id="exp-start"
             type="date"
+            min={MIN_DATE_ATTR}
+            max={MAX_DATE_ATTR}
             value={draft.startedOn}
             aria-invalid={err("startedOn") ? true : undefined}
             onChange={(e) => set("startedOn", e.target.value)}
@@ -225,6 +230,8 @@ export function ExperienceForm({
               <input
                 id="exp-end"
                 type="date"
+                min={MIN_DATE_ATTR}
+                max={MAX_DATE_ATTR}
                 value={draft.endedOn ?? ""}
                 aria-invalid={err("endedOn") ? true : undefined}
                 onChange={(e) => set("endedOn", e.target.value || null)}
@@ -473,6 +480,8 @@ export function ClaimEntryForm({
           <input
             id="claim-issued"
             type="date"
+            min={MIN_DATE_ATTR}
+            max={MAX_DATE_ATTR}
             value={draft.issuedOn ?? ""}
             aria-invalid={err("issuedOn") ? true : undefined}
             onChange={(e) => set("issuedOn", e.target.value || null)}
@@ -505,6 +514,8 @@ export function ClaimEntryForm({
               <input
                 id="claim-until"
                 type="date"
+                min={MIN_DATE_ATTR}
+                max={MAX_DATE_ATTR}
                 value={draft.validUntil ?? ""}
                 aria-invalid={err("validUntil") ? true : undefined}
                 onChange={(e) => set("validUntil", e.target.value || null)}

@@ -24,6 +24,7 @@
 // the guarantee. Neither is load-bearing on its own.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isCalendarDate } from "./dates";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -277,18 +278,9 @@ const draftInput = z.object({
   title: z.string().max(200),
   issuerName: z.string().max(160),
   jurisdictionCode: z.string().max(2),
-  issuedOn: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  validFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
-  validUntil: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  issuedOn: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  validFrom: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
+  validUntil: z.string().refine(isCalendarDate, { message: "SP_INVALID_DATE" }).nullable(),
   credentialReference: z.string().max(120),
   holderNote: z.string().max(2000),
   // Bounded to match the column's own CHECK, so an over-long scope is refused
