@@ -335,9 +335,10 @@
         }
       ],
       "file": "20260916090000_security_hardening_expand.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "note": "EXPAND, phase 1 of 2 of the security hardening. Ships on its own, ahead of the application code, deliberately: it ADDS the two governed entry points and the rest of the hardening and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. It is therefore safe to apply hosted while the current main is live, and applying it is the PRECONDITION for merging the application branch. No code on this branch references anything it introduces, so release-parity-check reports no dependency here; once fix/security-hardening-lovable-findings merges, the dependency it then reports is the pairing working as intended. Phase 2 (20260916091000, CONTRACT) withdraws the legacy direct INSERT and arrives with that branch -- it must NOT be applied hosted until the new code is live.",
-      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');"
+      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826153409, hosted generated name eb51ffcc-be14-482c-afe7-b656051a7287. SQL equivalence PASS (whitespace-normalised content identical to the canonical file). Applied 2026-08-26 under the owner-approved EXPAND-only step 1 of the expand/contract sequence; confirmed by querying the hosted schema for the objects it introduces, the function ACLs it sets and the search_path pinning it applies. CONTRACT (20260916091000) remains NOT applied hosted."
     }
   ],
   "policyVersion": 1,
