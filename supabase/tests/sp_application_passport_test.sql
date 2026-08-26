@@ -103,6 +103,34 @@ VALUES
    NULL, NULL, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now(), NULL)
 ON CONFLICT (id) DO NOTHING;
 
+-- ── The private fields, attached to the credential that IS disclosed ──────
+--
+-- The leak assertions below are only meaningful on a claim that reaches the
+-- payload. Hanging them on a self-declared claim would prove nothing: that
+-- row is excluded wholesale, so its columns could never appear anyway.
+-- d...0001 is the verified Ordningsvaktsförordnande the employer is entitled
+-- to see, and these three columns are what they are NOT entitled to see on
+-- it -- field-level exclusion, not row-level.
+--
+-- 20260817180000 states the rule in a comment ("credential_reference and
+-- holder_note are NOT added and must never be"). A comment does not fail a
+-- build; this does.
+UPDATE public.sp_claims
+   SET holder_note          = 'SYNTHETIC-HOLDER-NOTE-MUST-NOT-LEAK',
+       credential_reference = 'SYNTHETIC-DOCNR-MUST-NOT-LEAK'
+ WHERE id = 'd0000000-0000-4000-8000-000000000001';
+
+-- A raw evidence document for that same credential.
+INSERT INTO public.sp_evidence (
+  id, holder_user_id, claim_id, storage_path, file_name, mime_type, size_bytes, sha256)
+VALUES ('c1e00000-0000-4000-8000-000000000001',
+        'a0000000-0000-4000-8000-000000000001',
+        'd0000000-0000-4000-8000-000000000001',
+        'a0000000-0000-4000-8000-000000000001/SYNTHETIC-EVIDENCE-PATH-MUST-NOT-LEAK.pdf',
+        'SYNTHETIC-EVIDENCE-FILENAME-MUST-NOT-LEAK.pdf',
+        'application/pdf', 1024, 'SYNTHETIC-SHA-MUST-NOT-LEAK')
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.sp_experience_periods (
   id, holder_user_id, employer_name, role_title, jurisdiction_code,
   employment_type, fte_fraction, security_relevance, security_fraction,
@@ -280,6 +308,46 @@ BEGIN
     RAISE EXCEPTION 'AC4 LEAK: contact detail was disclosed';
   END IF;
   _asserts := _asserts + 5;
+
+  -- ── Field-level exclusion on a credential that IS disclosed ────────────
+  --
+  -- The three the privacy contract names by name. Each is a column on
+  -- d...0001, whose title, issuer, jurisdiction and validity ARE in the
+  -- payload asserted above -- so these cannot pass by the row being absent.
+  IF _payload::text LIKE '%SYNTHETIC-HOLDER-NOTE-MUST-NOT-LEAK%' THEN
+    RAISE EXCEPTION 'AC4 LEAK: sp_claims.holder_note reached an employer';
+  END IF;
+  IF _payload::text LIKE '%SYNTHETIC-DOCNR-MUST-NOT-LEAK%' THEN
+    RAISE EXCEPTION 'AC4 LEAK: sp_claims.credential_reference (the document '
+      'number) reached an employer';
+  END IF;
+  IF _payload::text LIKE '%SYNTHETIC-EVIDENCE-PATH-MUST-NOT-LEAK%'
+     OR _payload::text LIKE '%SYNTHETIC-EVIDENCE-FILENAME-MUST-NOT-LEAK%'
+     OR _payload::text LIKE '%SYNTHETIC-SHA-MUST-NOT-LEAK%' THEN
+    RAISE EXCEPTION 'AC4 LEAK: raw evidence (sp_evidence) reached an employer';
+  END IF;
+  _asserts := _asserts + 3;
+
+  -- ── Per-APPLICATION scope, read by an employer entitled to both ────────
+  --
+  -- The sharpest version of the scoping claim. _app1 and _app2 belong to the
+  -- SAME candidate and the SAME employer, and _member is a legitimate reader
+  -- of both -- so nothing about identity, membership or tenancy separates
+  -- them. Only the holder's per-application decision does. _app2 was opted
+  -- in (asserted above); _app1 was not, and must stay silent no matter how
+  -- much the same employer is entitled to see elsewhere.
+  --
+  -- This is what stops a share from being "the candidate's Passport, now
+  -- unlocked for this employer" instead of "this application's disclosure".
+  _payload := public.sp_application_disclosure(_app1);
+  IF _payload->>'status' <> 'none' THEN
+    RAISE EXCEPTION 'AC4 LEAK: an un-opted-in application of the same '
+      'candidate disclosed to the same employer (%)', _payload;
+  END IF;
+  IF _payload::text LIKE '%Ordningsvaktsförordnande%' THEN
+    RAISE EXCEPTION 'AC4 LEAK: a sibling application inherited the disclosure';
+  END IF;
+  _asserts := _asserts + 2;
 
   -- =========================================================================
   -- 5. Authorisation. Every negative answer is the same answer.

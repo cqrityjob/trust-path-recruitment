@@ -250,10 +250,17 @@ export function ApplyInternalDialog({
       <DialogTrigger asChild>
         <Button className="w-full">{label}</Button>
       </DialogTrigger>
-      <DialogContent>
+      {/* The base DialogContent scrolls as ONE box. This form is the longest
+          surface in the product -- phone, note, CV, the Passport panel and
+          consent -- so it opts into the stronger pattern instead: the dialog
+          itself never scrolls (overflow-y-hidden overrides the base
+          overflow-y-auto), the FIELDS scroll, and the header and the submit
+          button stay put. On a 375x667 phone that is the difference between
+          a reachable submit button and a form that cannot be completed. */}
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-y-hidden">
         {success ? (
-          <>
-            <DialogHeader>
+          <div className="flex min-h-0 flex-col">
+            <DialogHeader className="shrink-0">
               <DialogTitle>{t("jobs.apply.success.title")}</DialogTitle>
               <DialogDescription>{t("jobs.apply.success.body")}</DialogDescription>
             </DialogHeader>
@@ -268,15 +275,18 @@ export function ApplyInternalDialog({
                 ? t("jobs.apply.passport.sharedConfirm")
                 : t("jobs.apply.passport.notSharedConfirm")}
             </p>
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-4 shrink-0">
               <Button type="button" onClick={() => setOpen(false)}>
                 {t("jobs.apply.success.close")}
               </Button>
             </DialogFooter>
-          </>
+          </div>
         ) : (
-          <form onSubmit={onSubmit}>
-            <DialogHeader>
+          // min-h-0 is what actually makes the scroll work: without it the
+          // flex item's automatic minimum size is its CONTENT height, so the
+          // form refuses to shrink and the overflow never engages.
+          <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+            <DialogHeader className="shrink-0">
               <DialogTitle>{t("jobs.apply.dialog.title")}</DialogTitle>
               <DialogDescription>
                 {employerName
@@ -285,7 +295,9 @@ export function ApplyInternalDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 space-y-4">
+            {/* The ONE scroll container. Nothing inside it scrolls
+                independently, so there is no nested trap. */}
+            <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
               <div>
                 <Label htmlFor="apply-phone">{t("jobs.apply.field.phone")}</Label>
                 <Input
@@ -430,7 +442,7 @@ export function ApplyInternalDialog({
               )}
             </div>
 
-            <DialogFooter className="mt-6">
+            <DialogFooter className="mt-4 shrink-0 border-t border-border pt-4">
               <Button
                 type="submit"
                 disabled={submitting || !consent || !file}

@@ -38,7 +38,21 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+        // max-h + overflow are part of the BASE contract, not something each
+        // dialog remembers to add. A centred `position: fixed` box with no
+        // height limit does not clip when its content outgrows the viewport --
+        // the -50% translate pushes its top ABOVE the viewport and its bottom
+        // below, and because it is fixed it is not reachable by page scroll
+        // either, which Radix has locked anyway. Both ends simply become
+        // unreachable. That is a blocked form, not a cosmetic overflow.
+        //
+        // dvh, not vh: on mobile Safari/Chrome `100vh` is the LARGEST viewport
+        // (chrome retracted), so a vh-capped dialog still hides its footer
+        // behind the visible address bar. dvh tracks the live viewport.
+        //
+        // A dialog that wants a stable (non-scrolling) header/footer overrides
+        // the display and overflow here -- see ApplyInternalDialog.
+        "fixed left-[50%] top-[50%] z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
         className,
       )}
       {...props}

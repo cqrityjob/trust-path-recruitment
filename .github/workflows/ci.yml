@@ -101,6 +101,15 @@ jobs:
       - name: Passport fixture and copy-parity check
         run: bun run passport-fixture:check
 
+      # The application modal. A centred fixed dialog with no height cap is
+      # clipped at BOTH ends once its content outgrows the viewport, and the
+      # body scroll lock means no gesture reaches either -- measured at
+      # 375x667 as a 911px dialog with the submit button 97px below the fold.
+      # That is a candidate who cannot finish an application, so it is a
+      # release gate, not a lint.
+      - name: Application dialog scroll check
+        run: bun run application-dialog-scroll:check
+
       # The professional identity engine. Every case is a mutation: hold one
       # credential, assert the title the product must NOT grant is absent. Two
       # are load-bearing — VU1 alone must never produce Väktare, and
