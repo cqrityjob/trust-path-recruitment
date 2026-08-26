@@ -968,6 +968,11 @@ export const dictionaries = {
     "sca.report.printHeading": "Din karriärintelligensrapport",
     "sca.report.download": "Ladda ner rapport",
     "employer.workspace.label": "Arbetsgivaryta",
+    // The signed-in account menu in the header. Sign-out used to exist only
+    // as a row at the bottom of /my-career; these are its chrome-level home.
+    "account.menu.label": "Konto och inställningar",
+    "account.signOut": "Logga ut",
+    "account.section": "Konto",
     "employer.loading": "Laddar…",
     "employer.comingSoon.heading": "Under utveckling",
     "employer.comingSoon.body": "Arbetsgivarytan är under utveckling och inte tillgänglig ännu.",
@@ -4689,6 +4694,9 @@ export const dictionaries = {
     "sca.report.printHeading": "Your Career Intelligence Report",
     "sca.report.download": "Download report",
     "employer.workspace.label": "Employer workspace",
+    "account.menu.label": "Account and settings",
+    "account.signOut": "Sign out",
+    "account.section": "Account",
     "employer.loading": "Loading…",
     "employer.comingSoon.heading": "Under development",
     "employer.comingSoon.body":

@@ -210,6 +210,76 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
+// 7. Account chrome belongs to the header, not to the dashboard
+// ---------------------------------------------------------------------------
+// /my-career used to end on a strip carrying the whole product's account
+// controls — name, email, workspace switch, sign out — because until the
+// header had an account menu there was nowhere else to sign out. It read as an
+// unfinished footer on an otherwise finished dashboard.
+const accountMenu = code(read("src/components/site/AccountMenu.tsx"));
+
+// The dashboard no longer signs anyone out or renders identity chrome.
+expect(
+  !/supabase\.auth\.signOut/.test(routeCode),
+  `${routePath}: sign-out belongs to the header account menu, not to a page.`,
+);
+expect(
+  !/account\.signOut|"Logga ut"|"Sign out"/.test(routeCode),
+  `${routePath}: no sign-out control may render on the dashboard.`,
+);
+expect(
+  !/employer\.workspace\.label/.test(routeCode),
+  `${routePath}: the workspace switch belongs to the account menu — a second ` +
+    "copy on the dashboard is the duplicate this cleanup removed.",
+);
+
+// The header genuinely provides all three, so nothing was merely deleted.
+expect(
+  /supabase\.auth\.signOut/.test(header) && accountMenu.includes("account.signOut"),
+  `${headerPath}: the header must own sign-out. Removing the dashboard row ` +
+    "without this would leave the product with no way to sign out at all.",
+);
+expect(
+  accountMenu.includes("employer.workspace.label"),
+  "AccountMenu must offer the employer workspace switch.",
+);
+
+// Gated on DATA — an active membership the database returned — never on a
+// client-side role string, which would be a second copy of the rule.
+expect(
+  /hasEmployerWorkspace && \(/.test(accountMenu),
+  "AccountMenu: the workspace switch must be conditional on holding one.",
+);
+expect(
+  header.includes("listMyEmployerWorkspaces") && /workspaces\.data\?\.length \?\? 0/.test(header),
+  `${headerPath}: employer access must be decided by listMyEmployerWorkspaces, ` +
+    "not by a role literal in the client.",
+);
+expect(
+  !/isEmployer|hasEmployerRole|role === "employer"/.test(header + accountMenu),
+  "Employer access must not be inferred from a client-side role literal.",
+);
+
+// One switch, not several. Exactly one place renders the workspace label.
+{
+  const surfaces = [
+    ["SiteHeader", header],
+    ["AccountMenu", accountMenu],
+    ["my-career route", routeCode],
+  ] as const;
+  const total = surfaces.reduce(
+    (n, [, src]) => n + (src.split("employer.workspace.label").length - 1),
+    0,
+  );
+  expect(
+    total === 2,
+    `the employer workspace switch must render on exactly the two account ` +
+      `surfaces (desktop menu + mobile sheet), found ${total} use(s) of ` +
+      "employer.workspace.label across the header, the menu and the dashboard.",
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 if (errors.length > 0) {
@@ -224,5 +294,7 @@ console.log(
     "history stay openable; the profile editor is behind a dialog with a real " +
     "summary and no invented score; product grids do not stretch; tasks render " +
     "only when one exists; assessment wording is purpose-aware; reviewer " +
-    "navigation is gated on the queue, not a role literal)",
+    "navigation is gated on the queue, not a role literal; account chrome " +
+    "lives in the header, with the workspace switch gated on holding one and " +
+    "rendered exactly once per viewport)",
 );
