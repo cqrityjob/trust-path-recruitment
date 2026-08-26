@@ -1880,6 +1880,28 @@ END \$mp\$;" >/dev/null
 echo "    ok  every active market pack has a recorded review state"
 
 # ---------------------------------------------------------------------------
+# The jurisdiction-first catalogue. Registered HERE, before the rollback chain:
+# the chain drops sp_market_packs and sp_regulated_roles, so a suite placed
+# after it would fail on "relation does not exist" rather than on anything it
+# asserts.
+# ---------------------------------------------------------------------------
+echo "==> Running Security Passport jurisdiction catalogue assertions"
+set +e
+SPJC_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/tests/security_passport_jurisdiction_catalogue_test.sql 2>&1)"
+SPJC_RC=$?
+set -e
+
+echo "$SPJC_OUT" | grep -E "GROUP |ok  |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+
+if [ "$SPJC_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the jurisdiction catalogue suite exited with code ${SPJC_RC}." >&2
+  echo "$SPJC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport jurisdiction catalogue"
+fi
+
+# ---------------------------------------------------------------------------
 # The correction path, phase 1 of 2: with Phase A applied, immediately before
 # the rollback chain. Creates the holder and the two claims the "after" phase
 # depends on, so claim B is a row that genuinely predates the rollback.
@@ -1898,6 +1920,65 @@ if [ "$SPRCB_RC" -ne 0 ]; then
   echo "FAIL: the correction path is broken BEFORE any rollback ran (code ${SPRCB_RC})." >&2
   echo "$SPRCB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
   suite_failed "Security Passport rollback correction (before)"
+fi
+
+# ---------------------------------------------------------------------------
+# The jurisdiction-first catalogue rolls back FIRST, newest to oldest: Abu
+# Dhabi (20260914092000), the Dubai cadre catalogue (20260914091000), then
+# Northern Ireland (20260914090000).
+#
+# The order is enforced, not conventional. The Swedish rollback further down
+# restores the original 16-character limit on credential codes, and
+# AE_AZ_PSBD_LICENCE_SUPERVISOR is 29 characters while UK_SIA_LICENCE_VI is 17.
+# Leaving any of the three in place aborts the Swedish file with
+# ROLLBACK BLOCKED naming the count.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the Abu Dhabi market pack rollback"
+set +e
+SPAZRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260914092000_sp_uae_abu_dhabi_market_pack_rollback.sql 2>&1)"
+SPAZRB_RC=$?
+set -e
+
+if [ "$SPAZRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Abu Dhabi market pack rollback exited with code ${SPAZRB_RC}." >&2
+  echo "$SPAZRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Abu Dhabi market pack rollback"
+else
+  echo "    ok  Abu Dhabi rolls back cleanly, Dubai and Sweden intact"
+fi
+
+echo "==> Verifying the Dubai cadre catalogue rollback"
+set +e
+SPDCRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260914091000_sp_uae_dubai_cadre_catalogue_rollback.sql 2>&1)"
+SPDCRB_RC=$?
+set -e
+
+if [ "$SPDCRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Dubai cadre catalogue rollback exited with code ${SPDCRB_RC}." >&2
+  echo "$SPDCRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Dubai cadre catalogue rollback"
+else
+  echo "    ok  the added cadre categories roll back, the original three survive"
+fi
+
+echo "==> Verifying the UK vehicle immobilisation rollback"
+set +e
+SPNIRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260914090000_sp_uk_vehicle_immobilisation_rollback.sql 2>&1)"
+SPNIRB_RC=$?
+set -e
+
+if [ "$SPNIRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the UK vehicle immobilisation rollback exited with code ${SPNIRB_RC}." >&2
+  echo "$SPNIRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "UK vehicle immobilisation rollback"
+else
+  echo "    ok  Northern Ireland rolls back cleanly, Great Britain intact"
 fi
 
 # The UK title-rule correction is versioned between migrations 3 and 4, so in
