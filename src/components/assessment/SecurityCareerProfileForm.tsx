@@ -74,9 +74,16 @@ export function SecurityCareerProfileForm({
   onChange,
   statusOptions = currentStatusOptions,
   statusBodyOverride,
+  statesBoundary = true,
 }: {
   value: SecurityCareerProfileDraft;
   onChange: (next: SecurityCareerProfileDraft) => void;
+  /** Whether this form prints the Career Profile / Security Passport boundary
+   *  itself. Default true, because a form somebody types into must state it.
+   *  SecurityCareerProfileCard passes false: it wraps this form and states the
+   *  same boundary directly above, and printing both put the identical
+   *  sentence on screen twice. */
+  statesBoundary?: boolean;
   // Overridable so the Public Career Assessment's Current Situation step can
   // offer its 5 supported options (dropping "other", which has no defined
   // question-profile mapping) without changing the /my-career profile
@@ -114,9 +121,11 @@ export function SecurityCareerProfileForm({
           evidentiary weight, and the difference decides what an employer may
           rely on. Stated at the top of the form somebody is about to type
           into, not only on the Passport pages they may never open. */}
-      <p className="rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3 text-sm leading-relaxed text-muted-foreground">
-        {t("sca.scp.notPassport")}
-      </p>
+      {statesBoundary && (
+        <p className="rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-3 text-sm leading-relaxed text-muted-foreground">
+          {t("sca.scp.notPassport")}
+        </p>
+      )}
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-widest text-accent">
           {t("sca.scp.status.title")}
