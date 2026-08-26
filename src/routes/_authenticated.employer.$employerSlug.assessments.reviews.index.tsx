@@ -118,7 +118,15 @@ function Reviews({ employerId, employerSlug }: { employerId: string; employerSlu
 
   const rows = board.data ?? [];
   const byAttempt = new Map((pipeline.data ?? []).map((p) => [p.attemptId, p]));
-  const items: WorkItem[] = rows.map((r) => ({ ...r, attempt: byAttempt.get(r.attemptId) }));
+  // Recruitment only — this queue sits under Rekrytering. A board row whose
+  // attempt the pipeline does not describe is KEPT: the two are scoped
+  // slightly differently (the pipeline reads mode='assessment'), and dropping
+  // a row because we cannot name it would strand review work with no surface
+  // anywhere. Such a row already renders as "Okänd bedömning" and still
+  // carries its authorisation basis.
+  const items: WorkItem[] = rows
+    .map((r) => ({ ...r, attempt: byAttempt.get(r.attemptId) }))
+    .filter((i) => i.attempt === undefined || i.attempt.useCase === "recruitment");
 
   const mine = items.filter((i) => canAct(i.basis));
   const responsesWaiting = items.reduce((n, i) => n + i.responsesOpen, 0);
@@ -291,7 +299,7 @@ function WorkRow({
   lang: "sv" | "en";
   canManageReviewers: boolean;
 }) {
-  const { t } = useT();
+  const { t, tp } = useT();
   const a = item.attempt;
   const assessment =
     (lang === "en" ? a?.assessmentNameEn : a?.assessmentNameSv) ?? t("academy.reviews.unknown");
@@ -300,35 +308,47 @@ function WorkRow({
     : "—";
   const actionable = canAct(item.basis);
   const basisKey = BASIS_LABEL[item.basis] ?? "academy.reviews.basisConflict";
+  // How much of this attempt somebody has already worked through. Taken from
+  // the pipeline row so the queue and Kandidater count one attempt's review
+  // work identically.
+  const total = a?.reviewsTotal ?? 0;
+  const reviewed = Math.max(total - item.responsesOpen, 0);
 
   return (
     <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{assessment}</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            {/* The employer's own employment record supplies a name for staff.
-                A recruitment candidate stays the pseudonymous reference until
-                their result is released — the reviewer is judging an answer,
-                not a person they know. */}
-            {t("academy.reviews.participant")}: {a?.participantName ?? a?.participantRef ?? "—"}
-          </p>
+          {/* The candidate leads. The queue is grouped by candidate, and a
+              reviewer picking up work asks "whose responses am I about to
+              read?" before "which test was it?".
+
+              A recruitment candidate stays the pseudonymous reference until
+              their brief is shared — the reviewer is judging an answer, not a
+              person they know. */}
+          <h2 className="font-mono text-sm font-semibold text-foreground">
+            {t("academy.participants.subject")} {a?.participantRef ?? "—"}
+          </h2>
+          <p className="mt-1 text-[13px] text-muted-foreground">{assessment}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-            {t(
-              a?.useCase === "recruitment"
-                ? "academy.participants.contextCandidate"
-                : "academy.participants.contextEmployee",
-            )}
-          </span>
-          {a && <LifecycleChip state={a.lifecycleState} />}
-        </div>
+        {a && <LifecycleChip state={a.lifecycleState} useCase="recruitment" />}
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-[10px] border border-border bg-[color:var(--surface-subtle)] p-4 sm:grid-cols-3">
-        <Fact label={t("academy.reviews.responsesOpen")} value={String(item.responsesOpen)} />
-        <Fact label={t("academy.reviews.submittedAt")} value={submitted} />
+        <Fact
+          label={t("academy.reviews.responsesOpen")}
+          value={`${item.responsesOpen} ${tp("academy.reviews.responsesLeft", item.responsesOpen)}`}
+        />
+        {/* Partial progress, where there is any. Somebody who reviewed four of
+            ten yesterday is picking up a job, not starting one, and the row
+            should say which. */}
+        <Fact
+          label={t(reviewed > 0 ? "academy.reviews.progressLabel" : "academy.reviews.submittedAt")}
+          value={
+            reviewed > 0
+              ? `${reviewed} ${t("academy.reviews.of")} ${total} ${t("academy.reviews.reviewedOf")}`
+              : submitted
+          }
+        />
         <Fact label={t("academy.reviews.myBasis")} value={t(basisKey)} />
       </dl>
 
@@ -351,7 +371,7 @@ function WorkRow({
             params={{ employerSlug, attemptId: item.attemptId }}
             className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {t("academy.reviews.review")}
+            {t(reviewed > 0 ? "academy.reviews.reviewContinue" : "academy.reviews.review")}
           </Link>
         ) : (
           // No disabled button. A control that cannot be used is a question

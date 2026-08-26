@@ -1,26 +1,81 @@
-// Participants — status, progress, release, identity and reassessment.
+// Kandidater — every recruitment candidate with an assigned test, and what to
+// do about each one.
 //
-// ── EVERY ROW IS PSEUDONYMOUS UNTIL ASKED OTHERWISE ───────────────────
+// ── ONE CARD, ONE PRIMARY ACTION ──────────────────────────────────────
 //
-// The list is built from subject ids. Nobody's name or address appears until an
-// owner or admin explicitly asks for one specific participant, one at a time,
-// and the server agrees — which it only does once a result has been released.
+// The list this replaces described states and offered controls that had
+// nothing to do with them. A card reading "Test genomfört · Svar att granska:
+// 10" carried no way to review those ten: the only route to the work was a
+// tab two clicks away, and the card that reported the problem was a dead end.
+// That is the defect this file exists to make structurally impossible.
 //
-// That is why there is a "Show who this is" control rather than an email
-// column. An email column would have to resolve every row on load, which is
-// exactly the bulk disclosure the architecture refuses.
+// So every row now resolves to exactly one primary control, chosen by the
+// lifecycle state the database derived, and the states that have work always
+// have a button:
+//
+//   Pågående              -> Visa kandidat        (the application it came from)
+//   Väntar på granskning  -> Granska svar         (the review workspace)
+//   Underlag klart        -> Dela kandidatunderlaget
+//   Slutförd              -> Öppna kandidatunderlag
+//
+// Nothing is a disabled rectangle. Where an action genuinely does not exist —
+// a member without release rights, an assignment that never came from an
+// application — the card says so in a sentence, because a greyed-out control
+// is a question ("why not?") the card should already have answered.
+//
+// ── RECRUITMENT ONLY ──────────────────────────────────────────────────
+//
+// This area sits under Rekrytering. It used to carry an Alla / Kandidater /
+// Medarbetare toggle and show both populations, which meant "Kandidater" was
+// a filter on a page that was also about employees, and the same list mixed
+// two products with two different governance stories. Existing staff are
+// assessed under Kompetensutveckling and read on their own person page; this
+// list is candidates, always, with no toggle to get that wrong with.
+//
+// ── WHO THE CARD IS ABOUT ─────────────────────────────────────────────
+//
+// One rule, and it is the employer's existing entitlement rather than a new
+// one:
+//
+//   assessment came from a job application  ->  the candidate's name
+//   assessment sent straight to an address  ->  the pseudonymous reference
+//
+// A candidate who applied is a person this employer already knows. Their name,
+// their job and their CV are on the application, on a page one click away, and
+// the recruiter reading this list has been looking at that name all morning.
+// Printing "Referens 4C42C8" next to it does not protect anybody — it just
+// makes the recruiter go and look the reference up.
+//
+// The name is READ FROM THAT APPLICATION, through listApplicationsForEmployer:
+// the same governed, membership-verified, RLS-scoped call the Ansökningar page
+// already makes, on the same react-query key, so this page adds no fetch of
+// its own and no new access path. Nothing here queries profiles, subjects or
+// identities.
+//
+// What is deliberately NOT taken from the pipeline is participantName. That
+// field resolves the employer's own EMPLOYMENT record, it is the workforce
+// product's disclosure, and a recruitment assignment never carries one.
+//
+// Where no application exists there is no identified context to inherit, so
+// the reference stays — and "Visa vem detta är" is untouched: it still asks
+// the server, which still only agrees once the brief has been shared.
+//
+// The blind-assessment surface is Granskning, not this page. A reviewer judges
+// an answer, not a person they know, and the queue and the review workspace
+// stay pseudonymous for that reason.
 
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Ban, CalendarClock, Eye, FileText, Send } from "lucide-react";
+import { Ban, CalendarClock, ClipboardCheck, Eye, FileText, Send, UserRound } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
+import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import {
   cancelAcademyAssignment,
   listAssignmentApplications,
@@ -33,18 +88,18 @@ import {
   getEmployerAssessmentPipeline,
   type PipelineRow,
 } from "@/lib/security-competency/assessment-lifecycle.functions";
-import { LifecycleChip, nextActionLabel } from "@/components/academy/LifecycleChip";
+import { LifecycleChip } from "@/components/academy/LifecycleChip";
 
 // ── ARRIVING FROM A NUMBER ────────────────────────────────────────────
 //
 // The status cards on Oversikt used to be printed metrics. They are entry
 // points now, and `state` is what makes the destination match the card that
-// was clicked: "Klara att frislappa: 3" opens this list showing those three,
-// not all thirty with the three somewhere in them.
+// was clicked: "Underlag klara: 3" opens this list showing those three, not
+// all thirty with the three somewhere in them.
 //
 // A single state, not a list, because a card names exactly one. Anything else
 // falls back to `all` rather than erroring -- a stale bookmark should show the
-// participants, not a validation failure.
+// candidates, not a validation failure.
 const STATE_FILTERS = [
   "all",
   "active",
@@ -63,8 +118,8 @@ const searchSchema = z.object({
 });
 
 /** `active` is the one filter that is not a lifecycle state: the Oversikt card
- *  called "Pagaende" counts invited AND started, because to an employer both
- *  mean the same thing -- sent out, not back yet. */
+ *  called "Pagaende kandidater" counts invited AND started, because to an
+ *  employer both mean the same thing -- sent out, not back yet. */
 const MATCHES: Record<
   Exclude<StateFilter, "all">,
   (s: PipelineRow["lifecycleState"]) => boolean
@@ -75,12 +130,37 @@ const MATCHES: Record<
   result_available: (s) => s === "result_available",
 };
 
+// The filter chips name the employer's states, not the engine's. They are
+// their own keys rather than borrowed from the Oversikt tiles: a tile is a
+// count of a population ("Pagaende kandidater") and a chip is a status
+// ("Pagaende"), and one string cannot read correctly as both.
+const URGENCY: Record<PipelineRow["lifecycleState"], number> = {
+  under_review: 0,
+  ready_to_release: 1,
+  in_progress: 2,
+  invited: 3,
+  processing: 4,
+  result_available: 5,
+  abandoned: 6,
+};
+
+function byUrgency(a: PipelineRow, b: PipelineRow): number {
+  const u = URGENCY[a.lifecycleState] - URGENCY[b.lifecycleState];
+  if (u !== 0) return u;
+  // A deadline that has passed matters more than one three weeks out; a row
+  // with no deadline at all sorts last rather than first.
+  const da = a.deadline ? Date.parse(a.deadline) : Number.POSITIVE_INFINITY;
+  const db = b.deadline ? Date.parse(b.deadline) : Number.POSITIVE_INFINITY;
+  if (da !== db) return da - db;
+  return a.attemptId.localeCompare(b.attemptId);
+}
+
 const STATE_LABEL: Record<StateFilter, TranslationKey> = {
   all: "academy.participants.filterStateAll",
-  active: "academy.overview.active",
-  under_review: "academy.overview.attemptsAwaitingReview",
-  ready_to_release: "academy.overview.readyToRelease",
-  result_available: "academy.overview.released",
+  active: "academy.participants.filterOngoing",
+  under_review: "academy.participants.filterUnderReview",
+  ready_to_release: "academy.participants.filterReady",
+  result_available: "academy.participants.filterCompleted",
 };
 
 export const Route = createFileRoute(
@@ -97,7 +177,7 @@ function ParticipantsRoute() {
   return (
     <AcademyPage employerSlug={employerSlug}>
       {(ws) => (
-        <Participants
+        <Candidates
           employerId={ws.employerId}
           employerSlug={ws.employerSlug}
           canManage={ws.role !== "member"}
@@ -107,7 +187,7 @@ function ParticipantsRoute() {
   );
 }
 
-function Participants({
+function Candidates({
   employerId,
   employerSlug,
   canManage,
@@ -116,7 +196,7 @@ function Participants({
   employerSlug: string;
   canManage: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const list = useServerFn(getEmployerAssessmentPipeline);
   const query = useQuery({
     queryKey: ["academy", "participants", employerId],
@@ -125,7 +205,7 @@ function Participants({
 
   // Which assignments came from an application. Asked once for the list rather
   // than once per row, and never blocking: a row whose mapping is missing
-  // simply links to the report without carrying the application forward.
+  // simply shows no candidate link rather than failing the page.
   const appsFn = useServerFn(listAssignmentApplications);
   const applications = useQuery({
     queryKey: ["academy", "assignment-applications", employerId],
@@ -133,13 +213,25 @@ function Participants({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Recruitment candidates and existing staff sit in one list because they run
-  // the same assessments, but they are not the same people to a manager: one is
-  // being considered, the other is employed. The filter is how you look at one
-  // group without the other, and the chip on each row is how you never confuse
-  // the two -- a candidate is a candidate on this page and nowhere near
-  // Medarbetare.
-  const [context, setContext] = useState<"all" | "recruitment" | "workforce">("all");
+  // Who those applications are from. Deliberately the SAME query key the
+  // Ansökningar page and the employer dashboard use, so this is one cache
+  // entry across three surfaces rather than a second read of the same rows --
+  // and so a name can never differ between the two pages that show it.
+  const candidatesFn = useServerFn(listApplicationsForEmployer);
+  const applicants = useQuery({
+    queryKey: ["employer", employerId, "applications"],
+    queryFn: () => candidatesFn({ data: { employerId } }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const identified = new Map(
+    (applicants.data ?? []).map((a) => [
+      a.id,
+      {
+        name: a.applicantDisplayName,
+        role: (lang === "en" ? a.jobTitleEn : a.jobTitleSv) ?? null,
+      },
+    ]),
+  );
 
   // The lifecycle filter lives in the URL rather than in state, because it is
   // how another page hands this one a subject: a card on Oversikt links here
@@ -149,8 +241,10 @@ function Participants({
   const navigate = Route.useNavigate();
 
   const visible = (rows: PipelineRow[]) => {
-    const byContext = context === "all" ? rows : rows.filter((r) => r.useCase === context);
-    return state === "all" ? byContext : byContext.filter((r) => MATCHES[state](r.lifecycleState));
+    const recruitment = rows.filter((r) => r.useCase === "recruitment");
+    const matched =
+      state === "all" ? recruitment : recruitment.filter((r) => MATCHES[state](r.lifecycleState));
+    return [...matched].sort(byUrgency);
   };
 
   return (
@@ -160,42 +254,13 @@ function Participants({
         lede={t("academy.participants.lede")}
       />
 
-      <div
-        role="tablist"
-        aria-label={t("academy.participants.contextFilter")}
-        className="mb-5 inline-flex gap-1 rounded-[10px] border border-border p-1"
-      >
-        {(["all", "recruitment", "workforce"] as const).map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="tab"
-            aria-selected={context === c}
-            onClick={() => setContext(c)}
-            className={
-              context === c
-                ? "rounded-[7px] bg-[color:var(--surface-subtle)] px-3 py-1.5 text-[13px] font-medium text-foreground"
-                : "rounded-[7px] px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
-            }
-          >
-            {t(
-              c === "all"
-                ? "academy.participants.filterAll"
-                : c === "recruitment"
-                  ? "academy.participants.filterCandidates"
-                  : "academy.participants.filterEmployees",
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* The filter is shown, not just applied. Arriving from a card and seeing
           an unexplained short list is the same confusion as a dead card, one
           step later -- so the active state names itself and offers the way out. */}
       <div
         role="tablist"
         aria-label={t("academy.participants.stateFilter")}
-        className="mb-5 ml-0 flex flex-wrap gap-1 sm:ml-3 sm:inline-flex"
+        className="mb-4 flex flex-wrap gap-1"
       >
         {STATE_FILTERS.map((sf) => (
           <button
@@ -206,8 +271,8 @@ function Participants({
             onClick={() => void navigate({ search: { state: sf }, replace: true })}
             className={
               state === sf
-                ? "rounded-[7px] border border-accent bg-[color:var(--surface-subtle)] px-3 py-1.5 text-[13px] font-medium text-foreground"
-                : "rounded-[7px] border border-transparent px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                ? "rounded-[7px] border border-accent bg-[color:var(--surface-subtle)] px-3 py-1.5 text-[13px] font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                : "rounded-[7px] border border-transparent px-3 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             }
           >
             {t(STATE_LABEL[sf])}
@@ -215,13 +280,20 @@ function Participants({
         ))}
       </div>
 
+      {/* The rule behind every reference on this page, said once. It used to be
+          said nowhere, which is why an employer reading "Referens 4C42C8" had
+          no way to know whether a name was missing or withheld. */}
+      <p className="mb-5 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+        {t("academy.participants.referenceExplain")}
+      </p>
+
       <AcademyQueryState
         query={query}
         surface="assessments/participants"
         isEmpty={(rows) => visible(rows).length === 0}
         // A filter that matches nothing is not an empty workspace. Telling
-        // someone who just clicked "Klara att frislappa" to go and assign their
-        // first assessment would be answering a question they did not ask.
+        // someone who just clicked "Underlag klara" to go and assign their
+        // first test would be answering a question they did not ask.
         emptyTitle={
           state === "all"
             ? t("academy.participants.emptyTitle")
@@ -257,12 +329,16 @@ function Participants({
         {(rows) => (
           <div className="space-y-3">
             {visible(rows).map((p) => (
-              <ParticipantCard
+              <CandidateCard
                 key={p.attemptId}
                 row={p}
                 employerId={employerId}
                 employerSlug={employerSlug}
                 applicationId={(p.assignmentId && applications.data?.[p.assignmentId]) || null}
+                candidate={
+                  (p.assignmentId && identified.get(applications.data?.[p.assignmentId] ?? "")) ||
+                  null
+                }
                 canManage={canManage}
               />
             ))}
@@ -273,11 +349,12 @@ function Participants({
   );
 }
 
-function ParticipantCard({
+function CandidateCard({
   row,
   employerId,
   employerSlug,
   applicationId,
+  candidate,
   canManage,
 }: {
   row: PipelineRow;
@@ -285,9 +362,14 @@ function ParticipantCard({
   employerSlug: string;
   /** The application this assignment came from, when it came from one. */
   applicationId: string | null;
+  /** The candidate as the employer's own application record already names
+   *  them, when the assignment came from an identified application. Null for
+   *  an assessment sent straight to an address: there is no identified context
+   *  to inherit, so the reference stands. */
+  candidate: { name: string | null; role: string | null } | null;
   canManage: boolean;
 }) {
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const resolve = useServerFn(resolveParticipantIdentity);
   const release = useServerFn(releaseAcademyReport);
@@ -306,16 +388,15 @@ function ParticipantCard({
   const [identity, setIdentity] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
-  // Releasing is irreversible and the copy under the button has always said
+  // Sharing is irreversible and the copy under the button has always said
   // so -- but the click ran straight through, so the sentence was a warning
   // nobody had the chance to act on. Cancelling leaves everything exactly as
   // it was: no state beyond this flag is touched until the confirm.
   const [confirmRelease, setConfirmRelease] = useState(false);
 
-  const programme = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
-  // Candidate rows and employee rows are the same objects and not the same
-  // work, so they are told apart in words rather than only by a chip.
-  const recruitment = row.useCase === "recruitment";
+  const assessment = (lang === "en" ? row.assessmentNameEn : row.assessmentNameSv) ?? "—";
+  const state = row.lifecycleState;
+  const reviewed = Math.max(row.reviewsTotal - row.reviewsOpen, 0);
 
   const identityM = useMutation({
     mutationFn: () => resolve({ data: { employerId, subjectId: row.subjectId } }),
@@ -343,7 +424,7 @@ function ParticipantCard({
   //
   // Offered only while the attempt is still in progress, which is the same
   // condition scp_sync_assignment_terminal_status enforces — a submitted,
-  // scored or released attempt is completed work and the database refuses to
+  // scored or shared attempt is completed work and the database refuses to
   // let it be cancelled. Showing the control there and letting the refusal
   // arrive after the click would read as a bug rather than as a rule.
   const cancelM = useMutation({
@@ -382,58 +463,61 @@ function ParticipantCard({
     },
   });
 
+  const canShare = row.canRelease && canManage;
+
   return (
     <article className="rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{programme}</h2>
-          {/* The pseudonymous reference is shown deliberately: it is what the
-              employer actually holds, and naming it makes the model visible
-              rather than pretending a person is missing. */}
-          {/* A NAME only where this employer's own employment record supplies
-              one -- its data about its own staff, and the way into that
-              person's profile. Everyone else stays the pseudonymous reference
-              the architecture deliberately shows. */}
-          {row.participantName && row.employeeId ? (
-            <Link
-              to="/employer/$employerSlug/workforce/$personId"
-              params={{ employerSlug, personId: row.employeeId }}
-              className="mt-1 inline-block text-xs text-foreground underline-offset-2 hover:underline"
-            >
-              {row.participantName}
-            </Link>
-          ) : (
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
+          {/* The candidate leads, because the card is about a person: their
+              name where this employer's own application record supplies one,
+              the governed reference where nothing identified it. */}
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <UserRound className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            {candidate?.name ? (
+              <span>{candidate.name}</span>
+            ) : (
+              <span className="font-mono">
+                {t("academy.participants.subject")} {row.participantRef}
+              </span>
+            )}
+          </h2>
+          {candidate?.role && (
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {t("academy.participants.candidateRole")} {candidate.role}
             </p>
           )}
+          <p className="mt-1 text-[13px] text-muted-foreground">{assessment}</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-              {t(
-                row.useCase === "recruitment"
-                  ? "academy.participants.contextCandidate"
-                  : "academy.participants.contextEmployee",
-              )}
-            </span>
-            <LifecycleChip state={row.lifecycleState} useCase={row.useCase} />
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            {nextActionLabel(t, row.lifecycleState, row.useCase)}
-          </span>
-        </div>
+        <LifecycleChip state={state} useCase="recruitment" />
       </div>
 
       <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-4">
         <Fact label={t("academy.participants.progress")}>
           <span className="tabular-nums">
-            {row.answered}/{row.totalItems}
-          </span>
+            {row.answered} {t("academy.participants.progressOf")} {row.totalItems}
+          </span>{" "}
+          {t("academy.participants.progressAnswered")}
         </Fact>
-        <Fact label={t("academy.participants.awaitingReview")}>
-          <span className="tabular-nums">{row.reviewsOpen}</span>
-        </Fact>
+        {/* Only where there is review work, or review work that has been
+            partly done. A row with nothing to review does not need a zero. */}
+        {row.reviewsTotal > 0 && (
+          <Fact label={t("academy.participants.reviewLabel")}>
+            {row.reviewsOpen > 0 ? (
+              <>
+                <span className="tabular-nums">{row.reviewsOpen}</span>{" "}
+                {tp("academy.participants.reviewLeft", row.reviewsOpen)}
+              </>
+            ) : (
+              <>
+                <span className="tabular-nums">
+                  {reviewed} {t("academy.participants.progressOf")} {row.reviewsTotal}
+                </span>{" "}
+                {t("academy.participants.reviewedCount")}
+              </>
+            )}
+          </Fact>
+        )}
         <Fact label={t("academy.participants.deadline")}>
           {row.deadline
             ? new Date(row.deadline).toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE")
@@ -446,31 +530,101 @@ function ParticipantCard({
         </Fact>
       </div>
 
+      {/* One sentence saying what this state means for the reader, above the
+          one control that acts on it. */}
+      <p className="mt-4 max-w-[74ch] text-[13px] leading-relaxed text-muted-foreground">
+        {supportText(t, tp, state, row, applicationId, canShare)}
+      </p>
+
       {identity && (
-        <p className="mt-4 rounded-[10px] bg-[color:var(--surface-subtle)] px-3 py-2 text-[13px] text-foreground">
+        <p className="mt-3 rounded-[10px] bg-[color:var(--surface-subtle)] px-3 py-2 text-[13px] text-foreground">
           {identity}
         </p>
       )}
       {notice && (
-        <p role="status" className="mt-4 text-[13px] leading-relaxed text-foreground">
+        <p role="status" className="mt-3 text-[13px] leading-relaxed text-foreground">
           {notice}
         </p>
       )}
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {row.releasedAt && (
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {/* ── THE PRIMARY CONTROL ───────────────────────────────────────
+         *
+         *  Exactly one per card, chosen by state. The under_review branch is
+         *  the one this rebuild exists for: a card that says ten responses
+         *  need a person must be the thing that opens those ten responses. */}
+        {state === "under_review" && (
+          <Link
+            to="/employer/$employerSlug/assessments/reviews/$attemptId"
+            params={{ employerSlug, attemptId: row.attemptId }}
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.ctaReview")}
+          </Link>
+        )}
+
+        {state === "result_available" && row.releasedAt && (
           <Link
             to="/employer/$employerSlug/assessments/results/$attemptId"
             params={{ employerSlug, attemptId: row.attemptId }}
             search={applicationId ? { application: applicationId } : {}}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <FileText className="h-4 w-4" aria-hidden="true" />
-            {t(
-              recruitment
-                ? "academy.participants.openReportRecruitment"
-                : "academy.participants.openReport",
-            )}
+            {t("academy.participants.ctaOpenBrief")}
+          </Link>
+        )}
+
+        {/* "Frisläpp" said nothing to anybody outside this codebase. What the
+            button does is share the material — and because the same click also
+            gives the candidate their own copy and unlocks the identity
+            request, and because none of it can be undone, the confirmation
+            below says so before anything happens. */}
+        {state === "ready_to_release" && canShare && !confirmRelease && (
+          <button
+            type="button"
+            onClick={() => {
+              setNotice(null);
+              setConfirmRelease(true);
+            }}
+            disabled={releaseM.isPending}
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.ctaShare")}
+          </button>
+        )}
+
+        {/* Pågående, and anywhere else the candidate's own page is the useful
+            destination. It is the application, because that is where this
+            employer already holds their name, their CV and the decision. */}
+        {applicationId && state !== "under_review" && state !== "result_available" && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId }}
+            className={
+              state === "ready_to_release" && canShare
+                ? "inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                : "inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            }
+          >
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.ctaViewCandidate")}
+          </Link>
+        )}
+
+        {/* Secondary controls. Never competing with the primary: they are the
+            things a manager occasionally needs, not the thing this card is
+            asking for. */}
+        {applicationId && (state === "under_review" || state === "result_available") && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId }}
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            {t("academy.participants.ctaViewCandidate")}
           </Link>
         )}
 
@@ -479,40 +633,11 @@ function ParticipantCard({
             type="button"
             onClick={() => identityM.mutate()}
             disabled={identityM.isPending}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Eye className="h-4 w-4" aria-hidden="true" />
             {t("academy.participants.showIdentity")}
           </button>
-        )}
-
-        {/* "Frisläpp" said nothing to anybody outside this codebase. What the
-            button does is share the material — and because the same click also
-            gives the participant their own copy and unlocks the identity
-            request, and because none of it can be undone, the sentence under it
-            says so before the click rather than after. */}
-        {row.canRelease && !confirmRelease && (
-          <div className="w-full">
-            <button
-              type="button"
-              onClick={() => {
-                setNotice(null);
-                setConfirmRelease(true);
-              }}
-              disabled={releaseM.isPending}
-              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
-              {t(
-                recruitment
-                  ? "academy.participants.releaseRecruitment"
-                  : "academy.participants.release",
-              )}
-            </button>
-            <p className="mt-2 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
-              {t("academy.participants.releaseExplain")}
-            </p>
-          </div>
         )}
 
         {canManage && row.releasedAt && (
@@ -525,14 +650,15 @@ function ParticipantCard({
                 ? undefined
                 : t("academy.participants.reassessmentPurposePending")
             }
-            className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <CalendarClock className="h-4 w-4" aria-hidden="true" />
             {t("academy.participants.reassess")}
           </button>
         )}
+
         {canManage &&
-          (row.lifecycleState === "invited" || row.lifecycleState === "in_progress") &&
+          (state === "invited" || state === "in_progress") &&
           row.assignmentId &&
           !confirmCancel && (
             <button
@@ -541,40 +667,39 @@ function ParticipantCard({
                 setNotice(null);
                 setConfirmCancel(true);
               }}
-              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-border px-4 text-[13px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Ban className="h-4 w-4" aria-hidden="true" />
               {t("academy.participants.cancel")}
             </button>
           )}
-
-        {canManage && row.releasedAt && !reassessmentAvailable && (
-          <p className="w-full text-[12px] leading-relaxed text-muted-foreground">
-            {t("academy.participants.reassessmentPurposePending")}
-          </p>
-        )}
       </div>
 
-      {/* The release confirmation. The sentence under the button already said
-          the step cannot be undone; this is the moment at which somebody can
-          act on having read it. It names the three things that happen at once,
-          says plainly that a person -- not the system -- is doing the
-          releasing, and Cancel changes nothing. */}
+      {/* What sharing actually does, before the click rather than after it.
+          The confirmation below repeats it at the moment of the decision; this
+          is the sentence that lets somebody decide not to click at all. */}
+      {state === "ready_to_release" && canShare && !confirmRelease && (
+        <p className="mt-3 max-w-[74ch] text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.releaseExplain")}
+        </p>
+      )}
+
+      {canManage && row.releasedAt && !reassessmentAvailable && (
+        <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+          {t("academy.participants.reassessmentPurposePending")}
+        </p>
+      )}
+
+      {/* The share confirmation. It names the three things that happen at once,
+          says plainly that a person -- not the system -- is doing the sharing,
+          and Cancel changes nothing. */}
       {confirmRelease && (
         <div className="mt-4 rounded-[10px] border border-accent/40 bg-[color:var(--surface-subtle)] p-4">
           <p className="text-[13px] font-semibold text-foreground">
-            {t(
-              recruitment
-                ? "academy.participants.releaseConfirmTitleRecruitment"
-                : "academy.participants.releaseConfirmTitle",
-            )}
+            {t("academy.participants.releaseConfirmTitleRecruitment")}
           </p>
           <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
-            {t(
-              recruitment
-                ? "academy.participants.releaseConfirmBodyRecruitment"
-                : "academy.participants.releaseConfirmBody",
-            )}
+            {t("academy.participants.releaseConfirmBodyRecruitment")}
           </p>
           <p className="mt-1.5 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
             {t("academy.participants.releaseConfirmResponsibility")}
@@ -584,22 +709,18 @@ function ParticipantCard({
               type="button"
               onClick={() => releaseM.mutate()}
               disabled={releaseM.isPending}
-              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center gap-1.5 rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Send className="h-4 w-4" aria-hidden="true" />
               {releaseM.isPending
                 ? t("academy.participants.releaseConfirmPending")
-                : t(
-                    recruitment
-                      ? "academy.participants.releaseConfirmActionRecruitment"
-                      : "academy.participants.releaseConfirmAction",
-                  )}
+                : t("academy.participants.releaseConfirmActionRecruitment")}
             </button>
             <button
               type="button"
               onClick={() => setConfirmRelease(false)}
               disabled={releaseM.isPending}
-              className="inline-flex h-10 items-center rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {t("academy.participants.releaseConfirmCancel")}
             </button>
@@ -625,7 +746,7 @@ function ParticipantCard({
               type="button"
               onClick={() => cancelM.mutate()}
               disabled={cancelM.isPending}
-              className="inline-flex h-10 items-center rounded-[10px] border border-destructive/50 px-3.5 text-[13px] font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center rounded-[10px] border border-destructive/50 px-4 text-[13px] font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {cancelM.isPending
                 ? t("academy.participants.cancelling")
@@ -634,7 +755,7 @@ function ParticipantCard({
             <button
               type="button"
               onClick={() => setConfirmCancel(false)}
-              className="inline-flex h-10 items-center rounded-[10px] border border-border px-3.5 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {t("academy.participants.cancelKeep")}
             </button>
@@ -643,6 +764,40 @@ function ParticipantCard({
       )}
     </article>
   );
+}
+
+/** What this state means for the reader, in one sentence.
+ *
+ *  Never invents an action the lifecycle does not support, and never leaves a
+ *  card silent: where the primary control is absent, this is the sentence that
+ *  explains why instead of a disabled button. */
+function supportText(
+  t: (k: TranslationKey) => string,
+  tp: (k: "academy.participants.reviewNeeded", n: number) => string,
+  state: PipelineRow["lifecycleState"],
+  row: PipelineRow,
+  applicationId: string | null,
+  canShare: boolean,
+): string {
+  switch (state) {
+    case "invited":
+    case "in_progress":
+      return applicationId
+        ? t("lifecycle.next.recruitment.awaitingCandidate")
+        : t("academy.participants.awaitingCandidateNoApplication");
+    case "under_review":
+      return `${row.reviewsOpen} ${tp("academy.participants.reviewNeeded", row.reviewsOpen)}`;
+    case "ready_to_release":
+      return canShare
+        ? t("academy.participants.readySupport")
+        : t("academy.participants.releaseNeedsAdmin");
+    case "result_available":
+      return t("academy.participants.completedSupport");
+    case "processing":
+      return t("lifecycle.next.processing");
+    case "abandoned":
+      return t("lifecycle.next.none");
+  }
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {

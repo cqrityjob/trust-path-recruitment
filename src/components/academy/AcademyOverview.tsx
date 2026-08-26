@@ -1,34 +1,41 @@
-// Assessment Center Overview.
+// Tester & bedömningar — the recruitment assessment overview.
 //
-// Separates competence development — the active product — from recruitment
-// assessment, which is deliberately unavailable. The recruitment card is not a
-// teaser for a coming feature: it states that recruitment use requires a
-// validation level this content has not reached, because an employer who
-// assumes otherwise would be the most costly misunderstanding this product can
-// produce.
+// ── WHAT THIS PAGE IS FOR ─────────────────────────────────────────────
 //
-// ── #63: A COUNT OF WORK IS A DOOR, NOT A NOTICE ──────────────────────
+// One question: what needs me, and where do I click. The page before it
+// opened with a section heading, a paragraph of methodology and a card
+// explaining that recruitment assessment was unavailable — on the surface
+// that IS the recruitment assessment product. A recruiter read three
+// explanations before reaching a number, and the numbers themselves were the
+// only part of it that led anywhere.
 //
-// Every number here counts something an employer has to DO something about,
-// and each one used to be inert: "Klara att frisläppa: 3" told you three
-// results were waiting for you and gave you no way to reach them. The fix is
-// not a link next to the number — it is the number, because that is where a
-// person clicks. Each card names the state it counts and opens the list
-// filtered to exactly that state, so the destination visibly matches the card.
+// So the order is inverted. Four counts, then the work, then — behind a
+// disclosure, for the reader who wants it — how the assessments work.
 //
-// The two review numbers are deliberately different destinations, because they
-// are different questions: how many RESULTS are stuck (an attempt list, with
-// the release control on it) versus how many RESPONSES need a person (the
-// review workspace). They were also both labelled "Väntar på granskning",
-// which made the pair unreadable; they now say which one they mean.
+// ── EVERY NUMBER IS A DOOR ────────────────────────────────────────────
+//
+// Each tile counts something an employer has to DO something about, and each
+// one opens the list filtered to exactly that state, so the destination
+// visibly matches the card that was clicked. A zero is still a link: an empty
+// filtered list is a perfectly good answer, and a tile that is clickable on
+// Monday and dead on Tuesday teaches people not to try.
+//
+// ── ONE SOURCE FOR EVERY COUNT ────────────────────────────────────────
+//
+// All five numbers come from the pipeline read model — the same rows
+// Kandidater renders — so a tile cannot disagree with the list under it.
+// scp_employer_review_pressure counts the same pending reviews organisation
+// wide, which is the wrong scope for a surface that is recruitment only:
+// deriving both review numbers from the recruitment rows is what keeps
+// "8 kandidater väntar på granskning" and the list of eight in agreement.
 
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ClipboardCheck, Lock, Users, Send, Hourglass } from "lucide-react";
+import { ClipboardCheck, FileCheck2, Users, Hourglass } from "lucide-react";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
-import { getAcademyReviewPressure } from "@/lib/security-competency/academy-employer.functions";
+import { AcademyHeading } from "@/components/academy/AcademyWorkspace";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 
 export function AcademyOverview({
@@ -39,16 +46,11 @@ export function AcademyOverview({
   employerSlug: string;
 }) {
   const { t, tp } = useT();
-  const participantsFn = useServerFn(getEmployerAssessmentPipeline);
-  const pressureFn = useServerFn(getAcademyReviewPressure);
+  const pipelineFn = useServerFn(getEmployerAssessmentPipeline);
 
-  const participants = useQuery({
+  const pipeline = useQuery({
     queryKey: ["academy", "participants", employerId],
-    queryFn: () => participantsFn({ data: { employerId } }),
-  });
-  const pressure = useQuery({
-    queryKey: ["academy", "review-pressure", employerId],
-    queryFn: () => pressureFn({ data: { employerId } }),
+    queryFn: () => pipelineFn({ data: { employerId } }),
   });
 
   // ── A NUMBER YOU DO NOT HAVE YET IS NOT ZERO ─────────────────────────
@@ -57,60 +59,37 @@ export function AcademyOverview({
   // or so before the query resolved every card read 0 -- and then silently
   // changed. "Väntar på granskning: 0" is not a slow answer, it is a wrong
   // one, and it is the answer an employer glancing at the page actually took
-  // away. While either query is in flight the tiles show a dash instead.
-  const loading = participants.isPending || pressure.isPending;
-  const rows = participants.data ?? [];
-  const active = rows.filter(
+  // away. While the query is in flight the tiles show a dash instead.
+  const loading = pipeline.isPending;
+
+  // Recruitment only. This area sits under Rekrytering; competence
+  // development for existing staff is its own area, with its own people, and
+  // mixing the two is what made "Kandidater" mean two different things.
+  const rows = (pipeline.data ?? []).filter((r) => r.useCase === "recruitment");
+
+  const ongoing = rows.filter(
     (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
   ).length;
-  const readyToRelease = rows.filter((r) => r.lifecycleState === "ready_to_release").length;
-  const released = rows.filter((r) => r.lifecycleState === "result_available").length;
+  const underReview = rows.filter((r) => r.lifecycleState === "under_review");
+  const awaitingCandidates = underReview.length;
+  const awaitingResponses = underReview.reduce((n, r) => n + r.reviewsOpen, 0);
+  const ready = rows.filter((r) => r.lifecycleState === "ready_to_release").length;
+  const completed = rows.filter((r) => r.lifecycleState === "result_available").length;
 
-  // ── ONE QUESTION, ONE TILE ──────────────────────────────────────────
-  //
-  // This section showed FIVE numbers, two of which were about review:
-  // "Genomförda tester att granska" (attempts stuck) and "Svar att granska"
-  // (individual responses open). They are genuinely different measures, and
-  // the pair was named apart precisely so they would stop contradicting each
-  // other -- but an employer does not have two review decisions to make. They
-  // have one: somebody has to sit down and review. Attempt-versus-response is
-  // how the ENGINE counts the work, not a distinction the reader acts on, and
-  // two tiles asking the same question is what made this grid unreadable.
-  //
-  // So: one tile. The attempt count leads, because attempts are what an
-  // employer recognises ("three tests are waiting"), and the response count
-  // rides underneath as the size of the job. The destination is the review
-  // workspace -- the place where a person actually clears it.
-  //
-  // Governance is untouched: no review control is weakened, removed or
-  // widened, and scp_employer_review_pressure still decides both numbers.
-  // attemptsBlocked comes from the SAME RPC call as awaitingReview instead of
-  // being re-derived from the participant list, so the two halves of one tile
-  // cannot disagree.
-  const awaitingReview = pressure.data?.awaitingReview ?? 0;
-  const attemptsAwaitingReview = pressure.data?.attemptsBlocked ?? 0;
+  const hasWork = !loading && (awaitingCandidates > 0 || ready > 0);
 
   return (
-    <section className="mb-10">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-accent">
-        {/* Deliberately NOT "Kompetensutveckling": that is now a separate
-            top-level area, and reusing its name as a section heading inside
-            Tester is exactly the mixing the two areas were split to end. This
-            section is about the EVIDENCE this workspace produces. */}
-        {t("academy.overview.competenceTitle")}
-      </h2>
-      <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-muted-foreground">
-        {t("academy.overview.competenceLede")}
-      </p>
+    <>
+      <AcademyHeading title={t("academy.overview.title")} lede={t("academy.overview.lede")} />
 
-      {/* Four tiles, in lifecycle order, answering exactly the four questions
-          the employer has: what is running, what needs a person, what is
-          waiting on me, what is done. */}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Four tiles, in journey order, answering exactly the four questions the
+          recruiter has: what is running, what needs a person, what is waiting
+          on me, what is done. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatLink
           icon={Users}
           label="academy.overview.active"
-          value={active}
+          value={ongoing}
           loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
@@ -122,24 +101,22 @@ export function AcademyOverview({
         <StatLink
           icon={Hourglass}
           label="academy.overview.awaitingReviewUnified"
-          value={attemptsAwaitingReview}
+          value={awaitingCandidates}
           loading={loading}
           detail={
-            awaitingReview > 0
-              ? `${awaitingReview} ${tp("academy.overview.awaitingReviewDetail", awaitingReview)}`
+            awaitingResponses > 0
+              ? `${awaitingResponses} ${tp("academy.overview.todoResponses", awaitingResponses)}`
               : undefined
           }
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/reviews"
           search={{ scope: "all" as const }}
         />
-        {/* "Ready to release" is the one state where the EMPLOYER is the party
-            being waited on, so it is surfaced next to the others rather than
-            left for them to discover by scrolling the list. */}
+        {/* The one state where the EMPLOYER is the party being waited on. */}
         <StatLink
-          icon={Send}
+          icon={FileCheck2}
           label="academy.overview.readyToRelease"
-          value={readyToRelease}
+          value={ready}
           loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
@@ -148,7 +125,7 @@ export function AcademyOverview({
         <StatLink
           icon={ClipboardCheck}
           label="academy.overview.released"
-          value={released}
+          value={completed}
           loading={loading}
           employerSlug={employerSlug}
           to="/employer/$employerSlug/assessments/participants"
@@ -156,45 +133,108 @@ export function AcademyOverview({
         />
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        <Link
-          to="/employer/$employerSlug/assessments/library"
-          params={{ employerSlug }}
-          className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("academy.overview.openLibrary")}
-        </Link>
-        <Link
-          to="/employer/$employerSlug/assessments/participants"
-          params={{ employerSlug }}
-          className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {t("academy.overview.openParticipants")}
-        </Link>
-      </div>
+      {/* ── ATT GÖRA NU ──────────────────────────────────────────────────
+       *
+       *  The tiles say what the numbers are; this says what to do about them,
+       *  in one sentence each and with the button that does it. When there is
+       *  nothing outstanding it says so plainly rather than showing an
+       *  actionless heading -- an employer should be able to leave this page
+       *  knowing they are done. */}
+      <section
+        aria-labelledby="academy-todo"
+        className="mt-8 rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
+      >
+        <h2 id="academy-todo" className="text-sm font-semibold text-foreground">
+          {t("academy.overview.todoTitle")}
+        </h2>
 
-      {/* The boundary, stated rather than implied by absence. */}
-      <div className="mt-6 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-5">
-        <h3 className="text-sm font-semibold text-foreground">
-          {t("academy.overview.recruitmentTitle")}
-        </h3>
-        <p className="mt-1.5 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
-          {t("academy.overview.recruitmentBody")}
+        {loading ? (
+          <p className="mt-2 text-[13px] text-muted-foreground">{t("employer.loading")}</p>
+        ) : hasWork ? (
+          <>
+            <ul className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-foreground">
+              {awaitingCandidates > 0 && (
+                <li>
+                  <span className="font-semibold tabular-nums">{awaitingCandidates}</span>{" "}
+                  {tp("academy.overview.todoCandidates", awaitingCandidates)}
+                </li>
+              )}
+              {awaitingResponses > 0 && (
+                <li>
+                  <span className="font-semibold tabular-nums">{awaitingResponses}</span>{" "}
+                  {tp("academy.overview.todoResponses", awaitingResponses)}
+                </li>
+              )}
+              {ready > 0 && (
+                <li>
+                  <span className="font-semibold tabular-nums">{ready}</span>{" "}
+                  {tp("academy.overview.todoReady", ready)}
+                </li>
+              )}
+            </ul>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {awaitingCandidates > 0 && (
+                <Link
+                  to="/employer/$employerSlug/assessments/reviews"
+                  params={{ employerSlug }}
+                  search={{ scope: "all" as const }}
+                  className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("academy.overview.openReviewQueue")}
+                </Link>
+              )}
+              <Link
+                to="/employer/$employerSlug/assessments/participants"
+                params={{ employerSlug }}
+                search={ready > 0 ? { state: "ready_to_release" as const } : {}}
+                className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("academy.overview.openParticipants")}
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-2 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+              {t("academy.overview.todoNothing")}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                to="/employer/$employerSlug/assessments/library"
+                params={{ employerSlug }}
+                className="inline-flex h-11 items-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("academy.overview.openLibrary")}
+              </Link>
+              <Link
+                to="/employer/$employerSlug/assessments/participants"
+                params={{ employerSlug }}
+                className="inline-flex h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("academy.overview.openParticipants")}
+              </Link>
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Methodology, for the reader who wants it, out of the way of the reader
+          who does not. It used to be the first thing on the page. */}
+      <details className="mt-6 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] px-5 py-4">
+        <summary className="cursor-pointer text-[13px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          {t("academy.overview.howItWorks")}
+        </summary>
+        <p className="mt-3 max-w-[68ch] text-[13px] leading-relaxed text-muted-foreground">
+          {t("academy.overview.howItWorksBody")}
         </p>
-      </div>
-    </section>
+      </details>
+    </>
   );
 }
 
 const STAT_SHELL = "rounded-[14px] border border-border bg-card p-5";
 
-/** A metric that is also the way to the work it counts.
- *
- *  A zero is still a link. Disabling the card at zero looked tidy and made the
- *  affordance flicker: the same tile was clickable on Monday and dead on
- *  Tuesday, which teaches people not to try. An empty filtered list is a
- *  perfectly good answer to "show me the three that are ready" when there are
- *  none, and the list says so in words. */
+/** A metric that is also the way to the work it counts. */
 function StatLink<S extends Record<string, string>>({
   icon: Icon,
   label,
@@ -224,34 +264,14 @@ function StatLink<S extends Record<string, string>>({
       search={search}
       className={`${STAT_SHELL} block transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none`}
     >
-      <StatBody icon={Icon} label={t(label)} value={value} detail={detail} loading={loading} />
-    </Link>
-  );
-}
-
-function StatBody({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  loading,
-}: {
-  icon: typeof Users;
-  label: string;
-  value: number;
-  detail?: string;
-  loading?: boolean;
-}) {
-  return (
-    <>
       <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
         <Icon className="h-4 w-4 text-accent" aria-hidden="true" />
-        {label}
+        {t(label)}
       </p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
         {loading ? <span className="text-muted-foreground/50">&mdash;</span> : value}
       </p>
       {!loading && detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
-    </>
+    </Link>
   );
 }

@@ -61,7 +61,7 @@ type Tab = {
 const ASSESSMENT_TABS: Tab[] = [
   { to: "/employer/$employerSlug/assessments", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/assessments/library", label: "academy.nav.library" },
-  { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.assignedTests" },
+  { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.candidates" },
   {
     to: "/employer/$employerSlug/assessments/reviews",
     label: "academy.nav.reviews",
