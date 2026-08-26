@@ -875,6 +875,20 @@
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260826153409';",
       "sqlEquivalence": "Verified by direct comparison of the canonical file against Lovable's generated copy: whitespace-normalised content identical (canonical sha256 1ac6639964f6495a7e841cd617d9b3857d35e0d715e2d0fc5c498df51421f947). The canonical file was submitted verbatim to supabase--migration, so the generated copy is that same SQL as recorded hosted.",
       "reason": "EXPAND, phase 1 of 2 of the security hardening, applied hosted on its own under owner approval (2026-08-26) ahead of the application code: it only adds the governed entry points, tightens function ACLs and pins search_path, and withdraws no privilege the live code exercises. The generated duplicate is removed from the active path because its version sorts BEFORE the canonical slot, so a filename-order replay would execute it out of canonical order and a second time. Must never be executed hosted again. CONTRACT (20260916091000) is NOT applied hosted and must wait for the application branch to be live."
+    },
+    {
+      "canonicalFile": "20260916091000_security_hardening_contract.sql",
+      "canonicalVersion": "20260916091000",
+      "hostedVersion": "20260826190538",
+      "hostedName": "c2de6c77-f981-49ab-be27-c061c80d1bbd",
+      "generatedFileOnMain": "supabase/migrations/20260826190538_c2de6c77-f981-49ab-be27-c061c80d1bbd.sql",
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version, so the mapping lives here.",
+      "appliedAt": "2026-08-26T19:05:38Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260826190538';",
+      "sqlEquivalence": "Verified by direct comparison of the canonical file against Lovable's generated copy: whitespace-normalised content identical, differing only by a trailing newline (canonical sha256 2f66360d9e0887e3c1bfdd13913d0da5ee2e0972c5b85798301d88596b0919cd). The canonical file was submitted verbatim to supabase--migration, so the generated copy is that same SQL as recorded hosted.",
+      "reason": "CONTRACT, phase 2 of 2 of the security hardening, applied hosted under owner approval (2026-08-26) after PR #120 put the governed RPC write path live on main. It withdraws the legacy WITH CHECK (true) INSERT policies and the transitional INSERT grant on cd_v31_funnel_events and cd_test_feedback and adds no object. The generated duplicate is removed from the active path because its version sorts BEFORE the canonical slot, so a filename-order replay would execute it out of canonical order and a second time. Must never be executed hosted again."
     }
   ],
   "canonicalProject": {
