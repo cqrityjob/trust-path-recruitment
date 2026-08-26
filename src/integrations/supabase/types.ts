@@ -1031,6 +1031,7 @@ export type Database = {
           created_at: string
           current_experience_band: string | null
           current_item: string | null
+          current_profession_other: string | null
           current_profession_slug: string | null
           current_profession_status: string | null
           current_section: string | null
@@ -1054,6 +1055,7 @@ export type Database = {
           created_at?: string
           current_experience_band?: string | null
           current_item?: string | null
+          current_profession_other?: string | null
           current_profession_slug?: string | null
           current_profession_status?: string | null
           current_section?: string | null
@@ -1077,6 +1079,7 @@ export type Database = {
           created_at?: string
           current_experience_band?: string | null
           current_item?: string | null
+          current_profession_other?: string | null
           current_profession_slug?: string | null
           current_profession_status?: string | null
           current_section?: string | null
