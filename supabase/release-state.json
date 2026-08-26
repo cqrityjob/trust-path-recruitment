@@ -243,6 +243,27 @@
       "introduces": [], 
       "hostedState": "pending", 
       "file": "20260913092000_cig_security_leadership_professions.sql"
+    }, 
+    {
+      "file": "20260914090000_sp_uk_vehicle_immobilisation.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Introduces NO schema object: it is reference data only -- one sub-jurisdiction (GB-NI), one market pack, one regulated role, one credential type and two derivation rules, all INSERTed into tables that already exist. Nothing in the application references a new column or function because of it, so the parity guard has nothing to gate. It ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has been changed, so the credential is unreachable by any holder until a reviewer signs the pack off. NOT applied hosted.", 
+      "verify": "SELECT code, is_active FROM public.sp_market_packs WHERE code = 'GB-NI';"
+    }, 
+    {
+      "file": "20260914091000_sp_uae_dubai_cadre_catalogue.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Reference data only: twelve further SIRA Security Cadre roles, their twelve cadre-card credential types, nine SIRA courses and their derivation rules. No table, column or function is created. Every row is is_active=false inside the AE-DU pack, which stays legal_review_state='pending'; the migration ABORTS if the pack or any of its credentials has been switched on. NOT applied hosted.", 
+      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'AE\\_DU\\_SIRA\\_CARD\\_%';"
+    }, 
+    {
+      "file": "20260914092000_sp_uae_abu_dhabi_market_pack.sql", 
+      "hostedState": "pending", 
+      "introduces": [], 
+      "note": "Reference data only: the Abu Dhabi (Ministry of Interior / Private Security Business Department) authority, its regulatory source registered UNREAD, the AE-AZ market pack, seven regulated roles, seven licence credential types and their derivation rules. No schema object is created. The pack ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has changed, because the category list is authored from a regulatory framework nobody in this repository has confirmed against a pinned official page -- that confirmation is the first item of its legal review. NOT applied hosted.", 
+      "verify": "SELECT code, legal_review_state, is_active FROM public.sp_market_packs WHERE code = 'AE-AZ';"
     }
   ], 
   "policyVersion": 1, 

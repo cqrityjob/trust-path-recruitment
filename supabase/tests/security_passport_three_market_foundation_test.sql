@@ -241,11 +241,15 @@ BEGIN
     RAISE NOTICE 'ok  5.1 a UAE claim without an emirate is refused, not stored as national';
   END;
 
+  -- Sharjah has no pack at all: no authority read, no catalogue authored. It
+  -- carries the "we have never reviewed this place" branch, which Abu Dhabi
+  -- used to carry until 20260914092000 authored its Ministry of Interior
+  -- catalogue.
   BEGIN
     INSERT INTO public.sp_claims
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
-    VALUES (_h1, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE', 'AE-AZ',
+    VALUES (_h1, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE', 'AE-SH',
             'SIRA', current_date + 700, 'Fictional Security Services LLC');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 an unsupported emirate was accepted';
   EXCEPTION WHEN check_violation THEN
@@ -253,7 +257,31 @@ BEGIN
     IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2 wrong error for an unsupported emirate: %', _txt;
     END IF;
-    RAISE NOTICE 'ok  5.2 Abu Dhabi is refused as "not supported yet", not as a bad country';
+    RAISE NOTICE 'ok  5.2 Sharjah is refused as "not supported yet", not as a bad country';
+  END;
+
+  -- Abu Dhabi now has an AUTHORED pack, pending legal review and inactive.
+  -- It names an Abu Dhabi CREDENTIAL because 20260910090000 scoped the market
+  -- gate to rows that carry a credential_code — a credential-less claim is a
+  -- driving licence's business, not a security market's. The
+  -- refusal therefore moves from "never heard of it" to "authored, not
+  -- approved" — a different true sentence, and the one the UI should render.
+  -- It must NOT become an acceptance, and it must NOT answer with Dubai's
+  -- catalogue.
+  BEGIN
+    INSERT INTO public.sp_claims
+      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
+       sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
+    VALUES (_h1, 'licence', 'Private Security Guard licence · Abu Dhabi',
+            'AE_AZ_PSBD_LICENCE_GUARD', 'AE', 'AE-AZ',
+            'Ministry of Interior', current_date + 365, 'Fictional Security Services LLC');
+    RAISE EXCEPTION 'ASSERTION FAILED: 5.2b an unreviewed Abu Dhabi pack accepted a claim';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
+    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: 5.2b wrong error for Abu Dhabi: %', _txt;
+    END IF;
+    RAISE NOTICE 'ok  5.2b Abu Dhabi is refused as "pending legal review", never as Dubai';
   END;
 
   -- Dubai is registered but its pack is unreviewed, so it too is refused —

@@ -476,9 +476,17 @@ const sv = {
     "CQrityjob stöder ännu inte registrering av reglerade behörigheter i Förenade Arabemiraten.",
   "workCountry.support.AE-DU":
     "CQrityjob stöder ännu inte registrering av Dubai-reglerade behörigheter.",
+  "workCountry.support.AE-AZ":
+    "CQrityjob stöder ännu inte registrering av Abu Dhabi-reglerade behörigheter.",
+  "workCountry.support.GB-NI":
+    "CQrityjob stöder ännu inte registrering av nordirländska reglerade behörigheter.",
   "workCountry.notAuthorisation":
     "Arbetsland är var du arbetar. Det är inte ett besked om att du får arbeta där — det avgörs av dina behörigheter och av myndigheterna i landet.",
   "jurisdiction.option.AE-DU": "Dubai, Förenade Arabemiraten",
+  "jurisdiction.AE-AZ": "Abu Dhabi",
+  "jurisdiction.GB-NI": "Nordirland",
+  "jurisdiction.option.GB-NI": "Nordirland, Storbritannien",
+  "jurisdiction.option.AE-AZ": "Abu Dhabi, Förenade Arabemiraten",
   "jurisdiction.option.AE": "Förenade Arabemiraten (övriga)",
   "workCountry.title": "Arbetsland",
   "workCountry.current": "Nuvarande",
@@ -1758,9 +1766,17 @@ const en: Record<PassportCopyKey, string> = {
     "CQrityjob does not yet support registration of United Arab Emirates regulated credentials.",
   "workCountry.support.AE-DU":
     "CQrityjob does not yet support registration of Dubai-regulated credentials.",
+  "workCountry.support.AE-AZ":
+    "CQrityjob does not yet support registration of Abu Dhabi-regulated credentials.",
+  "workCountry.support.GB-NI":
+    "CQrityjob does not yet support registration of Northern Ireland-regulated credentials.",
   "workCountry.notAuthorisation":
     "Work country is where you work. It is not a statement that you may work there — that follows from your authorisations and from the authorities in that country.",
   "jurisdiction.option.AE-DU": "Dubai, United Arab Emirates",
+  "jurisdiction.AE-AZ": "Abu Dhabi",
+  "jurisdiction.GB-NI": "Northern Ireland",
+  "jurisdiction.option.GB-NI": "Northern Ireland, United Kingdom",
+  "jurisdiction.option.AE-AZ": "Abu Dhabi, United Arab Emirates",
   "jurisdiction.option.AE": "United Arab Emirates (other)",
   "workCountry.title": "Work country",
   "workCountry.current": "Current",

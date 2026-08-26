@@ -67,6 +67,10 @@ export function formatJurisdiction(code: string | null, lang: PassportLang): str
       return passportT("jurisdiction.AE", lang);
     case "AE-DU":
       return passportT("jurisdiction.AE-DU", lang);
+    case "AE-AZ":
+      return passportT("jurisdiction.AE-AZ", lang);
+    case "GB-NI":
+      return passportT("jurisdiction.GB-NI", lang);
     default:
       return code;
   }
@@ -172,6 +176,12 @@ const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
   GB: "workCountry.support.GB",
   AE: "workCountry.support.AE",
   "AE-DU": "workCountry.support.AE-DU",
+  // Both are authored and pending legal review, exactly like Dubai and Great
+  // Britain, and both say so in their own name. Falling back to the country
+  // line would tell an Abu Dhabi holder about "the United Arab Emirates",
+  // which is the UAE-wide reading the market packs exist to refuse.
+  "AE-AZ": "workCountry.support.AE-AZ",
+  "GB-NI": "workCountry.support.GB-NI",
 };
 
 export function workCountrySupportKey(

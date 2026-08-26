@@ -164,7 +164,19 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
         options: [
           { value: "SE", labelKey: "jurisdiction.SE" },
           { value: "GB", labelKey: "jurisdiction.GB" },
+          // Northern Ireland is a separate licensing territory, not a
+          // formality: vehicle immobilisation is licensable there and nowhere
+          // else in the United Kingdom. A holder who works there and picks
+          // plain "GB" resolves to the Great Britain pack, which does not
+          // contain their licence — so the choice has to exist.
+          { value: "GB-NI", labelKey: "jurisdiction.option.GB-NI" },
           { value: "AE-DU", labelKey: "jurisdiction.option.AE-DU" },
+          // Abu Dhabi licenses under the Ministry of Interior framework, not
+          // under SIRA. Offering it only as "United Arab Emirates (other)"
+          // would file an Abu Dhabi worker under a country with no pack, and
+          // they would be told their market is unsupported when in fact it is
+          // authored and awaiting review.
+          { value: "AE-AZ", labelKey: "jurisdiction.option.AE-AZ" },
           { value: "AE", labelKey: "jurisdiction.option.AE" },
         ],
       },
