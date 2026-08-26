@@ -95,6 +95,21 @@ const SECTIONS: readonly { key: SectionKey; icon: typeof ShieldCheck }[] = [
 
 function sectionOf(e: ContentLibraryEntry): SectionKey {
   if (e.isTestFixture || e.lifecycleState === "internal_testing") return "internal";
+  // ── ASSIGNABLE IS THE QUESTION THIS SECTION ANSWERS ─────────────────
+  //
+  // Content lifecycle and usability are two different facts, and the flagship
+  // recruitment assessment is the live example of them disagreeing: its
+  // governed state is under_review, and an organisation holding a closed-test
+  // grant can assign it today. Filing it under "Under utveckling" told a
+  // recruiter that the only test they have cannot be used, directly above a
+  // card with a working "Tilldela kandidat" button on it -- so Testbibliotek
+  // opened on an empty "Tester för rekrytering" and a warning.
+  //
+  // Assignability is computed in the database by the same function the assign
+  // path calls, so this can never show something the engine would refuse. What
+  // the row must NOT lose is its validation status, and it does not: StateChip
+  // still renders Pilotversion on exactly these rows.
+  if (e.assignable) return e.libraryKind === "training" ? "training" : "assessment";
   if (e.lifecycleState === "draft" || e.lifecycleState === "under_review") return "development";
   return e.libraryKind === "training" ? "training" : "assessment";
 }
@@ -246,6 +261,7 @@ export function ContentLibrary({
                     employerId={employerId}
                     canAssign={canAssign}
                     lang={lang}
+                    area={area}
                   />
                 );
               })}
@@ -294,6 +310,7 @@ function Section({
   employerId,
   canAssign,
   lang,
+  area,
 }: {
   sectionKey: SectionKey;
   icon: typeof ShieldCheck;
@@ -301,6 +318,7 @@ function Section({
   employerId: string;
   canAssign: boolean;
   lang: string;
+  area: LibraryArea;
 }) {
   const { t } = useT();
   return (
@@ -328,6 +346,7 @@ function Section({
             employerId={employerId}
             canAssign={canAssign}
             lang={lang}
+            area={area}
           />
         ))}
       </ul>
@@ -342,11 +361,13 @@ function LibraryRow({
   employerId,
   canAssign,
   lang,
+  area,
 }: {
   entry: ContentLibraryEntry;
   employerId: string;
   canAssign: boolean;
   lang: string;
+  area: LibraryArea;
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
@@ -381,8 +402,8 @@ function LibraryRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <h3 className="text-[15px] font-semibold leading-snug text-foreground">{name}</h3>
-            <KindChip kind={entry.libraryKind} />
-            <RecruitmentChip entry={entry} />
+            {area === "workforce" && <KindChip kind={entry.libraryKind} />}
+            {area === "workforce" && <RecruitmentChip entry={entry} />}
             <StateChip entry={entry} />
           </div>
 
@@ -447,6 +468,7 @@ function LibraryRow({
             employerId={employerId}
             canAssign={canAssign}
             lang={lang}
+            area={area}
             assigning={assigning}
             onStartAssign={() => setAssigning(true)}
             onDoneAssign={() => setAssigning(false)}
@@ -535,6 +557,7 @@ function ProgrammeDetail({
   employerId,
   canAssign,
   lang,
+  area,
   assigning,
   onStartAssign,
   onDoneAssign,
@@ -543,6 +566,7 @@ function ProgrammeDetail({
   employerId: string;
   canAssign: boolean;
   lang: string;
+  area: LibraryArea;
   assigning: boolean;
   onStartAssign: () => void;
   onDoneAssign: () => void;
@@ -660,7 +684,13 @@ function ProgrammeDetail({
       <div className="mt-5">
         {entry.assignable && canAssign ? (
           assigning ? (
-            <AssignForm employerId={employerId} entry={entry} lang={lang} onDone={onDoneAssign} />
+            <AssignForm
+              employerId={employerId}
+              entry={entry}
+              lang={lang}
+              area={area}
+              onDone={onDoneAssign}
+            />
           ) : (
             <button
               type="button"
@@ -730,17 +760,33 @@ function Boundary({ title, body }: { title: string; body: string }) {
 function PurposeAffirmation({
   entry,
   lang,
+  area,
   confirmed,
   onConfirm,
   inputId,
 }: {
   entry: ContentLibraryEntry;
   lang: string;
+  area: LibraryArea;
   confirmed: boolean;
   onConfirm: (v: boolean) => void;
   inputId: string;
 }) {
   const { t } = useT();
+  // ── THE PURPOSE HAS TO BE THE PURPOSE ────────────────────────────────
+  //
+  // This panel said "Underlaget samlas in för kompetensutveckling och
+  // uppföljning av medarbetare" on every assignment, including the ones made
+  // from Testbibliotek to a recruitment candidate. It was the wrong purpose
+  // stated to the wrong person about the wrong process, on the exact screen
+  // where an employer affirms what they are collecting evidence for.
+  //
+  // The DECISION MODEL is unchanged and is what both variants still say: the
+  // result carries no pass or fail, no suitability judgement and no ranking,
+  // and it makes no employment decision. Recruitment states the same boundary
+  // the recruitment product states everywhere else -- decision support, and a
+  // person at the employer decides.
+  const recruitment = area === "recruitment";
   const purpose = lang === "en" ? entry.summaryEn : entry.summarySv;
   const doesNot = lang === "en" ? entry.doesNotMeasureEn : entry.doesNotMeasureSv;
 
@@ -753,10 +799,14 @@ function PurposeAffirmation({
       {purpose && <p className="mt-2 text-[13px] leading-relaxed text-foreground">{purpose}</p>}
 
       <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-        {t("academy.assign.purposeDevelopment")}
+        {t(recruitment ? "academy.assign.purposeRecruitment" : "academy.assign.purposeDevelopment")}
       </p>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-        {t("academy.assign.purposeNotSelection")}
+        {t(
+          recruitment
+            ? "academy.assign.purposeNotSelectionRecruitment"
+            : "academy.assign.purposeNotSelection",
+        )}
       </p>
 
       {doesNot.length > 0 && (
@@ -777,7 +827,13 @@ function PurposeAffirmation({
           onChange={(ev) => onConfirm(ev.target.checked)}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-border text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         />
-        <span>{t("academy.assign.purposeConfirm")}</span>
+        <span>
+          {t(
+            recruitment
+              ? "academy.assign.purposeConfirmRecruitment"
+              : "academy.assign.purposeConfirm",
+          )}
+        </span>
       </label>
     </div>
   );
@@ -787,11 +843,13 @@ function AssignForm({
   employerId,
   entry,
   lang,
+  area,
   onDone,
 }: {
   employerId: string;
   entry: ContentLibraryEntry;
   lang: string;
+  area: LibraryArea;
   onDone: () => void;
 }) {
   const { t } = useT();
@@ -948,6 +1006,7 @@ function AssignForm({
       <PurposeAffirmation
         entry={entry}
         lang={lang}
+        area={area}
         confirmed={confirmed}
         onConfirm={setConfirmed}
         inputId={`purpose-${assessmentVersionId}`}

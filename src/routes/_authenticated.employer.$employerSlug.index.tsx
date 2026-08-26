@@ -299,7 +299,12 @@ function EmployerOverview({
   // lifecycle derivation, as the workspace this card links into. Counting
   // assignment.status here would be a second status vocabulary on the
   // dashboard, and the two would drift.
-  const pipeline = pipelineQuery.data ?? [];
+  //
+  // Recruitment rows only. This card links into Tester & bedömningar, which is
+  // a recruitment surface and shows nobody else — so a total that also counted
+  // competence-development attempts would be a number you could click and then
+  // fail to find. Existing staff are counted on the Kompetensutveckling card.
+  const pipeline = (pipelineQuery.data ?? []).filter((r) => r.useCase === "recruitment");
   const testsActiveCount = pipeline.filter(
     (r) => r.lifecycleState === "invited" || r.lifecycleState === "in_progress",
   ).length;
@@ -320,7 +325,10 @@ function EmployerOverview({
   const trainingCompletedCount = training.filter((r) => r.status === "completed").length;
 
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
-  const responsesToReview = (reviewBoardQuery.data ?? []).reduce((n, r) => n + r.responsesOpen, 0);
+  const recruitmentAttemptIds = new Set(pipeline.map((r) => r.attemptId));
+  const responsesToReview = (reviewBoardQuery.data ?? [])
+    .filter((r) => recruitmentAttemptIds.has(r.attemptId))
+    .reduce((n, r) => n + r.responsesOpen, 0);
   // Somebody the employer has already picked up and not yet decided about.
   // Deliberately not "everyone who is not rejected": a candidate still at
   // `submitted` is in the first item above, and counting them twice would make

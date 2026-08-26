@@ -229,6 +229,16 @@ jobs:
       - name: Employer UAT reconciliation check
         run: bun run emma-uat:check
 
+      # Tester & bedömningar. Two rules, both of which fail silently: a card
+      # that reports work must be the control that opens it (the dead
+      # "Svar att granska: 10" card is what this rebuild came from), and this
+      # area is recruitment only (merging it with competence development is
+      # what made "Kandidater" a filter instead of a page). Also holds the
+      # vocabulary, the pseudonymity of the list, and the keyboard/touch
+      # properties of the controls.
+      - name: Recruitment assessment UX check
+        run: bun run recruitment-assessment-ux:check
+
       # The source-level half of the security invariants. It replays every
       # migration's grants, policies and function definitions in filename order
       # and reports only what SURVIVES, so it fails on a SECURITY DEFINER

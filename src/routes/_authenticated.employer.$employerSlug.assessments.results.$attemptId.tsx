@@ -36,6 +36,7 @@ import { z } from "zod";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { AcademyHeading, AcademyPage } from "@/components/academy/AcademyWorkspace";
+import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import { logAcademyError } from "@/lib/security-competency/rpc-errors";
 import type { DecisionSupport } from "@/lib/security-competency/decision-support";
 import type { ReportBrief } from "@/lib/security-competency/academy-employer.functions";
@@ -137,6 +138,29 @@ function Report({
   const resolveFn = useServerFn(resolveParticipantIdentity);
   const [identity, setIdentity] = useState<string | null>(null);
 
+  // ── WHOSE BRIEF THIS IS ───────────────────────────────────────────────
+  //
+  // Opened from an identified application, this page belongs to a person the
+  // employer already knows by name -- the same name on the application it was
+  // reached from. Naming them in the heading is not a disclosure: it is the
+  // application's own identity, read through the same governed,
+  // membership-verified call the Ansökningar page makes, on the same query
+  // key, and only when an application id actually came with the link.
+  //
+  // The snapshot's own panels are untouched. They describe a frozen report and
+  // keep the governed reference they were released with, and "Visa vem detta
+  // är" still asks the server for the participant's address exactly as before.
+  const applicantsFn = useServerFn(listApplicationsForEmployer);
+  const applicants = useQuery({
+    queryKey: ["employer", employerId, "applications"],
+    queryFn: () => applicantsFn({ data: { employerId } }),
+    staleTime: 5 * 60 * 1000,
+    enabled: Boolean(applicationId),
+  });
+  const candidateName = applicationId
+    ? ((applicants.data ?? []).find((a) => a.id === applicationId)?.applicantDisplayName ?? null)
+    : null;
+
   const report = useQuery({
     queryKey: ["academy", "report", attemptId, "employer"],
     queryFn: () => reportFn({ data: { attemptId, audience: "employer" as const } }),
@@ -216,6 +240,7 @@ function Report({
         employerSlug={employerSlug}
         employerId={employerId}
         applicationId={applicationId}
+        candidateName={candidateName}
         canDecide={canDecide}
         identity={identity}
         onResolveIdentity={() =>
@@ -449,6 +474,7 @@ function CandidateDecisionSupportReport({
   attemptId,
   employerSlug,
   applicationId,
+  candidateName,
   canDecide,
   identity,
   onResolveIdentity,
@@ -460,6 +486,9 @@ function CandidateDecisionSupportReport({
   employerSlug: string;
   employerId: string;
   applicationId: string | null;
+  /** The candidate as this employer's own application record names them, when
+   *  the brief was opened from an identified application. */
+  candidateName: string | null;
   canDecide: boolean;
   identity: string | null;
   onResolveIdentity: () => void;
@@ -486,9 +515,14 @@ function CandidateDecisionSupportReport({
           occasion cannot support. */}
       <AcademyHeading
         title={t("decision.reportTitle")}
-        lede={`${t("academy.report.completed")} ${new Date(
-          r.context?.submittedAt ?? r.releasedAt,
-        ).toLocaleDateString(sv ? "sv-SE" : "en-GB")}`}
+        lede={[
+          candidateName,
+          `${t("academy.report.completed")} ${new Date(
+            r.context?.submittedAt ?? r.releasedAt,
+          ).toLocaleDateString(sv ? "sv-SE" : "en-GB")}`,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       {/* ── THE FIRST SCREEN ──────────────────────────────────────────────
