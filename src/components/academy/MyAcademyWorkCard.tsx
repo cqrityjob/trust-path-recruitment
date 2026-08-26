@@ -63,6 +63,7 @@ export function MyAcademyWorkCard() {
       <ul className="mt-4 space-y-2.5">
         {assessments.slice(0, 3).map((a) => {
           const name = (lang === "en" ? a.programmeNameEn : a.programmeNameSv) ?? "—";
+          const purpose = (lang === "en" ? a.purposeEn : a.purposeSv) ?? null;
           return (
             <li
               key={a.attemptId}
@@ -73,6 +74,16 @@ export function MyAcademyWorkCard() {
                 {a.employerName && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {t("academy.home.requestedBy")} {a.employerName}
+                  </p>
+                )}
+                {/* The GOVERNED purpose for this specific attempt, read from
+                    the row the server already sends. The card used to state
+                    one purpose for everything in it — "för kompetensutveckling"
+                    — which mislabelled every recruitment assessment on the
+                    page. Purpose is per-attempt, so it is said per-attempt. */}
+                {purpose && (
+                  <p className="mt-1 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    {t("academy.myWork.purposeLabel")}: {purpose}
                   </p>
                 )}
               </div>
