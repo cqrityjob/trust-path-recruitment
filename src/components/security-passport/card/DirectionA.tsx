@@ -90,8 +90,17 @@ export function DirectionA({
           >
             {c.holderName}
           </h3>
+          {/* Two facts, two lines. The middot that used to join them read as
+              "this derived title applies in this country", which for a Swedish
+              appointment beside a Dubai work location is false. DirectionC was
+              corrected first; the separator survived here, on a card that is
+              exported and forwarded exactly like the others. */}
           <p className="mt-1.5 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-            {c.profession} · {c.jurisdiction}
+            {c.profession}
+          </p>
+          <p className="mt-1.5 text-xs" style={{ color: TRUST_PALETTE.inkMuted }}>
+            <span className="uppercase tracking-[0.16em]">{c.currentMarketLabel}</span>{" "}
+            <span style={{ color: TRUST_PALETTE.ink }}>{c.jurisdiction}</span>
           </p>
         </div>
 

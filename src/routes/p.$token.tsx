@@ -382,8 +382,20 @@ function RecipientRoute() {
 
                 <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
                   <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
-                  {c.subJurisdiction ? (
-                    <Row label={pt("rec.subJurisdiction")} value={c.subJurisdiction} />
+                  {/* The credential's OWN market, on every credential.
+                      Previously only a REGION was printed, and only when the
+                      credential had one — so a Swedish appointment showed no
+                      country at all and was read under the holder's work
+                      location at the top of the page. For a Swedish holder
+                      working in Dubai that is the transfer claim, made by
+                      omission. Rendered through formatWorkLocation so an
+                      emirate prints as "Dubai, Förenade Arabemiraten" and is
+                      never flattened to the UAE. */}
+                  {c.jurisdiction ? (
+                    <Row
+                      label={pt("rec.credentialMarket")}
+                      value={formatWorkLocation(c.jurisdiction, c.subJurisdiction, lang)}
+                    />
                   ) : null}
                   <Row
                     label={pt("rec.verifiedBy")}

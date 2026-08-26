@@ -72,8 +72,15 @@ export function DirectionB({
         <header className="flex items-start justify-between">
           <div>
             <MicroLabel tone={rimBright}>{c.brandLabel}</MicroLabel>
+            {/* Separated for the same reason as DirectionA and DirectionC: a
+                middot between a derived title and a work country asserts that
+                one holds in the other. */}
             <p className="mt-1 text-xs" style={{ color: TRUST_PALETTE.inkMuted }}>
-              {c.profession} · {c.jurisdiction}
+              {c.profession}
+            </p>
+            <p className="mt-0.5 text-[10px]" style={{ color: TRUST_PALETTE.inkMuted }}>
+              <span className="uppercase tracking-[0.16em]">{c.currentMarketLabel}</span>{" "}
+              <span style={{ color: TRUST_PALETTE.ink }}>{c.jurisdiction}</span>
             </p>
           </div>
           {c.milestone ? <VerifiedSeal tone={rimBright} size={38} /> : null}

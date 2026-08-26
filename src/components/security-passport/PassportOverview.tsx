@@ -71,6 +71,7 @@ export function PassportOverview({
   /** Opens the credential form. Optional so the fixture prototype, which
    *  has no router, simply hides the actions. */
   onAddCredential,
+  marketCredentials,
   /** Resumes one saved credential draft in the form. */
   onResumeDraft,
   className,
@@ -89,6 +90,23 @@ export function PassportOverview({
   onShare: () => void;
   onOpenEntry?: (kind: "claim" | "experience", id: string) => void;
   onAddCredential?: (code?: string) => void;
+  /** What this holder may actually register, from the governed market pack.
+   *
+   *  Undefined means the caller has not resolved it yet, and the section then
+   *  renders its "add something else" control WITHOUT a regulated catalogue —
+   *  never a Swedish one. This section used to render the literal
+   *  ["VU1","VU2","OV","SV"] regardless of the holder's market, which is the
+   *  same defect the entry page carried: a Dubai holder was offered Swedish
+   *  regulated credentials from the Passport's front page. */
+  marketCredentials?: {
+    readonly state: "no_work_country" | "open" | "pending_review" | "unsupported";
+    readonly options: readonly {
+      code: string;
+      nameSv: string;
+      nameEn: string;
+      symbolLabel: string | null;
+    }[];
+  };
   onResumeDraft?: (claimId: string) => void;
   className?: string;
 }) {
@@ -260,26 +278,55 @@ export function PassportOverview({
           is exactly what a first visit needs. */}
       {onAddCredential ? (
         <section className="rounded-xl border border-border bg-card p-5">
-          <SectionHeading>{pt("cred.overview.title")}</SectionHeading>
+          {/* ── THE LEAD IS PART OF THE OFFER ────────────────────────
+              `cred.overview.body` names the four Swedish credentials in prose
+              -- "Lagg till VU1, VU2, ordningsvaktsforordnande eller
+              skyddsvaktsforordnande". Governing only the BUTTONS would have
+              removed the controls and left the sentence, so a Dubai holder
+              would still have been told to add a Swedish appointment. The
+              sentence is governed with them. */}
+          <SectionHeading>
+            {marketCredentials?.state === "open"
+              ? `${pt("market.section.credentialsFor")} ${formatWorkLocation(
+                  holder.jurisdictionCode,
+                  holder.subJurisdictionCode,
+                  lang,
+                )}`
+              : pt("cred.overview.title")}
+          </SectionHeading>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {pt("cred.overview.body")}
+            {marketCredentials === undefined
+              ? pt("cred.market.stillPossible")
+              : marketCredentials.state === "open"
+                ? pt("cred.overview.body")
+                : marketCredentials.state === "pending_review"
+                  ? pt("market.pending.body")
+                  : marketCredentials.state === "unsupported"
+                    ? pt("market.unsupported.body")
+                    : pt("cred.market.noWorkCountry")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {(["VU1", "VU2", "OV", "SV"] as const).map((code) => (
+            {/* The governed catalogue, or none. A regulated credential is only
+                ever offered for a market whose pack is ACTIVE; every other
+                state offers nothing regulated rather than falling back to
+                another market's list. */}
+            {(marketCredentials?.state === "open" ? marketCredentials.options : []).map((o) => (
               <button
-                key={code}
+                key={o.code}
                 type="button"
-                onClick={() => onAddCredential(code)}
+                onClick={() => onAddCredential(o.code)}
+                data-credential-code={o.code}
                 className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <CredentialSymbol
-                  code={code}
+                  code={o.code}
                   state="self_declared"
-                  name={code}
+                  symbolLabel={o.symbolLabel ?? undefined}
+                  name={lang === "sv" ? o.nameSv : o.nameEn}
                   size={28}
                   decorative
                 />
-                {code}
+                {o.code}
               </button>
             ))}
             <button

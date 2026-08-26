@@ -91,6 +91,9 @@ export interface ClaimEntry {
   readonly title: string;
   readonly issuerName: string | null;
   readonly jurisdictionCode: string | null;
+  /** Present only for markets whose rules are authored per region. NULL means
+   *  the claim is national, not that its region is unknown. */
+  readonly subJurisdictionCode: string | null;
   readonly issuedOn: string | null;
   readonly validUntil: string | null;
   readonly assertionLevel: string;
@@ -134,7 +137,7 @@ export const listMyEntries = createServerFn({ method: "GET" })
         supabase
           .from("sp_claims")
           .select(
-            "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, issued_on, valid_until, assertion_level, lifecycle_state, version_no",
+            "id, claim_type, credential_code, skill_code, skill_level, title, claimed_issuer_name, jurisdiction_code, sub_jurisdiction_code, issued_on, valid_until, assertion_level, lifecycle_state, version_no",
           )
           .eq("holder_user_id", userId)
           .neq("lifecycle_state", "superseded")
@@ -175,6 +178,11 @@ export const listMyEntries = createServerFn({ method: "GET" })
           title: row.title as string,
           issuerName: (row.claimed_issuer_name as string | null) ?? null,
           jurisdictionCode: (row.jurisdiction_code as string | null) ?? null,
+          // Read alongside the country because a market is not always a
+          // country: SIRA licenses Dubai, not the UAE. Dropping this column
+          // would collapse AE-DU and AE-AZ into one "United Arab Emirates"
+          // group, which is the UAE-wide claim the market packs refuse.
+          subJurisdictionCode: (row.sub_jurisdiction_code as string | null) ?? null,
           issuedOn: (row.issued_on as string | null) ?? null,
           validUntil: (row.valid_until as string | null) ?? null,
           assertionLevel: row.assertion_level as string,

@@ -32,6 +32,10 @@ import { needsWorkLocationConfirmation } from "@/lib/security-passport/onboardin
 import { AttentionPanel } from "@/components/security-passport/AttentionPanel";
 import { attentionFor, type OpenReviews } from "@/lib/security-passport/attention";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
+import {
+  getRegulatedCredentialAvailability,
+  type RegulatedCredentialAvailability,
+} from "@/lib/security-passport/credentials.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/")({
   ssr: false,
@@ -50,6 +54,9 @@ function PassportOverviewRoute() {
   const load = useServerFn(getMyPassport);
   const create = useServerFn(ensureMyPassport);
   const loadRequests = useServerFn(listMyVerificationRequests);
+  // The governed market catalogue. Read here rather than in the component so
+  // the Passport component tree stays free of the server tier.
+  const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
   // Which entries have a review open. The overview cannot say "waiting on you"
@@ -57,15 +64,18 @@ function PassportOverviewRoute() {
   const [openReviews, setOpenReviews] = useState<OpenReviews>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
 
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const [snap, reqs] = await Promise.all([
+      const [snap, reqs, avail] = await Promise.all([
         load({ data: undefined }),
         loadRequests({ data: undefined }),
+        loadAvailability({ data: undefined }),
       ]);
       setSnapshot(snap);
+      setAvailability(avail);
       const open = new Map<string, "pending" | "clarification_requested">();
       for (const r of reqs.requests) {
         if (r.status !== "pending" && r.status !== "clarification_requested") continue;
@@ -79,7 +89,7 @@ function PassportOverviewRoute() {
       console.error("[passport] load failed", err);
       setError(pt("live.error"));
     }
-  }, [load, loadRequests, pt]);
+  }, [load, loadRequests, loadAvailability, pt]);
 
   useEffect(() => {
     void refresh();
@@ -199,6 +209,12 @@ function PassportOverviewRoute() {
         onContinue={() => void navigate({ to: "/passport/onboarding" })}
         onOpenCard={() => void navigate({ to: "/passport/card" })}
         onShare={() => void navigate({ to: "/passport/share" })}
+        // Undefined until the market answer arrives, which renders no
+        // regulated catalogue at all — never a Swedish one standing in for a
+        // market whose rules nobody has reviewed.
+        marketCredentials={
+          availability ? { state: availability.state, options: availability.types } : undefined
+        }
         onOpenEntry={(kind, id) =>
           void navigate({
             to: "/passport/entry/$kind/$entryId",
