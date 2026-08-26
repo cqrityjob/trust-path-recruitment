@@ -1,53 +1,70 @@
-# Read-only platform/cutover check — external Supabase (`mlvzmiutmyyqeuvjglco`)
+# Preview runtime repair after the latest main merge — diagnosis and minimum safe sequence
 
-Nothing was edited, deployed, migrated or disabled. Current Cloud backend `zrahptwsnjcdyzfywbeh` is untouched.
+Read-only inspection only. Nothing was edited, applied, written or deployed.
 
-## 1. Can this project be switched in place, keeping Cloud as rollback?
+## Error 1 — "Missing Supabase environment variable(s): SUPABASE_SERVICE_ROLE_KEY"
 
-No — not as a supported in-place switch. Two independent confirmations:
+Classification: **(a) server environment / backend binding — not a code defect, not a migration issue.**
 
-- Lovable Cloud, once enabled on a project, cannot be disconnected from that project. Disabling Cloud in Connectors only affects future projects.
-- Official documentation states there is no path to switch backends between built-in Cloud and an owned Supabase project in either direction; the documented route is a project that connects the owned Supabase project instead.
+Evidence:
+- `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_URL` are both present in the current build environment (checked by presence only, never printed).
+- The message text comes from `src/integrations/supabase/client.server.ts`, which reads the key inside `createSupabaseAdminClient()` at first use, server-side only. That file is generated and correct.
+- Every `supabaseAdmin` use in the codebase is a dynamic `await import(...)` inside a server handler, so nothing leaks into the browser bundle. Spot-checked across `src/lib/**` — no top-level import in a `*.functions.ts` or route file.
 
-Verified locally that this is not merely a UI restriction: the runtime injects `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID`, `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` as real process environment variables, all resolving to `zrahptwsnjcdyzfywbeh`. Vite's dotenv does not overwrite pre-existing process env, so committed `.env` values for those names are inert. Editing `.env` cannot repoint preview or published builds of this project.
+Meaning: the failure is a runtime process that was started before the managed backend env was (re)bound, i.e. a stale server process env — the same class of failure resolved earlier by re-binding the managed backend secrets. No secret needs to be invented, pasted or committed.
 
-## 2. Exact UI sequence for an in-place switch
+## Error 2 — "column sp_market_packs.pilot_state does not exist"
 
-Not applicable — there is no such sequence for a Cloud-enabled project. The "Already have a Supabase project? Connect it here" affordance appears for projects without a backend, which is not this project's state. Since no step exists, no step deletes, pauses or hides Cloud data. (Independently: the only Cloud-side actions that would make data inaccessible are pause or delete in Cloud advanced settings — neither is part of any cutover step recommended here, and neither should be performed.)
+Classification: **(b) unapplied canonical migration.** Code on main is ahead of the hosted database.
 
-## 3. Is a second Lovable project the safest supported route?
+Confirmed against the hosted database:
+- `public.sp_market_packs` columns: no `pilot_state`.
+- `sp_market_access`, `sp_is_pilot_member`, `sp_grant_pilot_member`, `sp_revoke_pilot_member`: none exist.
+- `public.sp_pilot_members`: does not exist.
 
-Yes. Recommended shape:
+The consumer is `src/lib/security-passport/credentials.functions.ts`, which selects `pilot_state` and calls `sp_market_access`. Both are introduced only by canonical `supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql`.
 
-1. New Lovable project, backend = the owned Supabase project (do not enable Cloud on it).
-2. Link it to the same GitHub repository and a dedicated branch (e.g. `cutover/external-backend`), so hand-written code stays single-source. Expect generated files (`src/integrations/supabase/types.ts`, `client.ts`, `.env`) to diverge per project — treat them as project-local, not as shared code.
-3. Test on that project's own preview/published URL with real journeys.
-4. Move the custom domain only after owner acceptance. Rollback = point the domain back at this project; `zrahptwsnjcdyzfywbeh` still holds all data.
+### This is not an isolated gap
 
-Since schema/data on `mlvz` is already replicated and verified, this route requires no data movement.
+The hosted database is behind main by the whole tail of the frontier. `supabase/release-state.json` already records 11 files as `pending`, and independent hosted probes agree with it:
 
-## 4. Injected values with an external Supabase project
+| Canonical file | Hosted probe |
+| --- | --- |
+| 20260909090000_jobs_delete_unpublished_draft | pending (per release-state) |
+| 20260909093000_application_status_notifications | `job_applications.notified_at` absent, `jase_record_notification` absent |
+| 20260909094000_job_audit_vocabulary_lifecycle | pending (per release-state) |
+| 20260910091000_cd_v31_content_v3_question_refinement | pending (per release-state) |
+| 20260911090000_admin_control_center_lifecycle | `admin_person_overview` absent |
+| 20260912090000_cd_ranking_guard_recommendation | pending (per release-state) |
+| 20260913090000_cd_v31_content_v4_context_intent_separation | pending (per release-state) |
+| 20260913091000_cd_career_context_other_profession | `cd_sessions.current_profession_other` absent |
+| 20260913092000_cig_security_leadership_professions | pending (per release-state) |
+| 20260914090000_sp_uk_vehicle_immobilisation | no immobilisation credential type |
+| 20260914091000_sp_uae_dubai_cadre_catalogue | pending (per release-state) |
+| 20260914092000_sp_uae_abu_dhabi_market_pack | no `AE-AZ` market pack row |
+| 20260915090000_sp_market_pilot_entitlement | `pilot_state` / pilot functions / `sp_pilot_members` absent |
 
-- Browser/build: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (documented as build-time, browser-exposed values that live in the project `.env`; the connected project's values are what the generated client reads). `VITE_SUPABASE_PROJECT_ID` / `VITE_SUPABASE_ANON_KEY` follow the same generated pattern.
-- Server-side: this codebase's server paths (`auth-middleware.ts`, `public-server.ts`, `client.server.ts`) read `process.env.SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. URL and publishable key are safe to supply.
-- Service role: documentation describes the service-role key as a **secret you provide**, stored so that **Edge Functions** can read it — it does not state that it is auto-injected into a TanStack Start server runtime for a BYO-Supabase project.
+Applying only 20260915090000 would clear the visible error and leave the rest of that list as latent SAVE/READ failures of exactly the class the parity guard was created for. Governance state today: `SE` active/grandfathered, `GB` and `AE-DU` inactive/pending — unchanged, and none of these migrations activates them (20260915090000 aborts if GB/AE-DU are no longer `pending`/inactive).
 
-**Unknown / must be confirmed with Lovable support before relying on it:** whether a BYO-Supabase connection auto-populates `SUPABASE_SERVICE_ROLE_KEY` (and `SUPABASE_DB_URL`) into the server/SSR process environment of a published TanStack Start app, or whether the owner must add it manually as a project secret. This matters because several admin paths in this codebase use `supabaseAdmin`. It cannot be verified from inside this Cloud-bound project.
+## Error 3 — none found
 
-## 5. Can the connection be completed by the agent/API?
+No third defect. `read_runtime_errors` returned no captured errors for the service-role message, so both reports come from server-side logs rather than a client crash.
 
-No. There is no agent tool in this environment for linking or connecting an external Supabase project — all available Supabase tooling operates against the already-bound Cloud backend. Per documentation the link is established by connecting the Supabase **organization** to the Lovable **workspace** and then the project, which is an interactive action a workspace owner performs in the browser (docs describe it as an org/workspace link rather than a per-project OAuth grant). One signed-in browser session by a workspace owner is required; the owner's normal browser is sufficient and no remote/cloud browser is needed.
+## Minimum safe sequence
 
-## 6. Project-specific blockers before an authenticated preview is safe
+Order matters: 1 before 2, because the pilot Passport paths need a working server env to be verifiable at all.
 
-- **Google sign-in.** `src/integrations/lovable/index.ts` routes Google through the Lovable broker and then calls `supabase.auth.setSession`. The Google provider must be enabled in the target project's Auth; whether the Lovable broker works against a BYO-Supabase project, or whether the app must switch to native `signInWithOAuth` with owner-supplied Google credentials, is **unknown** and must be confirmed. This is the highest-risk item.
-- **Auth URL allow-list.** The target project needs Site URL and Redirect URLs for the second project's preview URL, its published URL, and the final custom domain, or OAuth and email links fail.
-- **Secrets.** Only `LOVABLE_API_KEY` exists today (AI Gateway; unrelated to the database but Lovable-managed and per-project — the second project needs its own if AI features are used). Any service-role need must be re-provisioned per point 4. `CQRITYJOB_MCP_ENABLED` / `CQRITYJOB_MCP_TOKEN` are intentionally unset, which keeps `/mcp` closed — verify they stay unset in the new project.
-- **Edge Functions.** This codebase deliberately uses none (`createServerFn` and `src/routes/api/*` instead), so no function redeploy is needed — but that is also why the service-role question in point 4 is not answered by the Edge-Function-oriented documentation.
-- **Generated client files.** `client.ts`, `client.server.ts`, `auth-middleware.ts`, `auth-attacher.ts`, `types.ts`, `.env` and `supabase/config.toml` are platform-generated and must not be hand-edited; they will be regenerated for the target project. `supabase/config.toml` currently pins `project_id = "zrahptwsnjcdyzfywbeh"`, and `supabase/migrations-policy.json` records canonical→hosted mappings for the current backend — both are backend-specific and need review in the new project.
-- **Storage.** Confirm the `job-application-cvs` bucket plus its policies exist on `mlvz` (stated as replicated; worth an explicit re-check, since bucket objects and policies are not always covered by a schema replication).
-- **Release flags.** `VITE_JOBS_ENABLED`, `VITE_EMPLOYER_PORTAL_ENABLED`, `VITE_CIG_LIFECYCLE_ENFORCED` are read from `.env` (not injected) — confirmed — so they carry over with the repo, but `cig_governance_settings.lifecycle_enforced` must match on the target database.
+1. **Re-bind the managed backend env** (`supabase--rebind_secrets`), then restart the preview server process and re-check the failing page. No code change, no secret entered by hand, nothing exposed to the browser. Stop and report if the key is still missing after a restart.
+2. **Apply the pending canonical migrations in version order, one tracked Lovable migration per file, verbatim** — 20260909090000 → 20260915090000, in the table order above. No `db push`, no rewriting, no merging files, no ledger edits. After each: verify the objects that file introduces (the `verify` query in `release-state.json` where present) and confirm holder/candidate row counts are unchanged.
+3. **Re-assert governance after 20260914092000 and 20260915090000**: `GB`, `AE-DU` (and new `AE-AZ`) must remain `is_active = false`, `legal_review_state = 'pending'`, `legal_reviewed_by` NULL, with `pilot_state` left at its default `closed` and `sp_pilot_members` empty unless the owner separately grants a tester.
+4. **Reconcile the repository**: update each applied entry in `supabase/release-state.json` to `applied` with its hosted generated version/UUID as `evidenceSource` (`appliedThroughLovable` mapping), and run `scripts/release-parity-check.ts` plus `scripts/migration-safety-check.ts` until clean.
+5. **Verify** the previously failing surfaces: Passport credential/market surface (the `pilot_state` path), employer job save/publish, admin control-center pages, Career Discovery session start. Type-check and the relevant guard scripts.
+6. **No publish.** Production deployment stays out of scope until the owner approves separately.
 
-## Summary
+Rollback: each of these files has a matching `supabase/rollback/*_rollback.sql`; per-file rollback is possible in reverse order. Step 1 is non-destructive and needs no rollback.
 
-In-place switch: not supported. Safest route: second Lovable project on the owned Supabase project, same repo, separate branch and URL, domain cutover last, this project retained as rollback. Two items must be answered by Lovable support before an authenticated preview is trusted: server-side service-role availability for TanStack Start with BYO Supabase, and Google broker behaviour outside Lovable Cloud.
+## Risk notes
+
+- Two of the pending files carry content-version bumps for Career Discovery (`20260910091000`, `20260913090000`) and one changes the ranking guard (`20260912090000`). Existing stored reports must be spot-checked for unchanged output after they land; that is the only part of this sequence that touches assessment behaviour.
+- `20260911090000_admin_control_center_lifecycle` introduces deletion/anonymisation functions. Verify their access control (admin-only, denial case) before considering that step complete.
+- Applying 13 files is more than the reported symptom requires; the smaller alternative (20260915090000 only) is available but leaves known-broken surfaces. Say which you prefer.
