@@ -26,11 +26,20 @@
 // the database for something that is not there." It was right, and it did not
 // help, because it is a RELEASE gate and the deploy happens at MERGE.
 //
-// This runs in ordinary CI. It asserts the two properties that make the
+// This runs in ordinary CI. It asserts the properties that make the
 // deploy/migrate gap survivable rather than fatal:
 //
 //   1. the degraded answer is correct AND fails closed;
-//   2. an optional read cannot take a load-bearing one down with it.
+//   2. an optional read cannot take a load-bearing one down with it;
+//   3. the type-level workaround that gap once needed stays deleted.
+//
+// ── HOSTED HAS SINCE CAUGHT UP, AND THIS STILL RUNS ────────────────────
+//
+// pilot_state and sp_market_access are applied; release parity reports zero
+// unapplied migrations. That retires the TYPE workaround, not the guard.
+// Shipping a migration ahead of its application is the normal workflow here,
+// so the next feature sits in the same gap -- and 1 and 2 are what decide
+// whether that is a quiet degradation or an empty product.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -155,26 +164,34 @@ console.log("\n3 -- the market read model requests no column that may not exist"
 
   // The types read MAY filter on pilot_state, but only on the branch that is
   // unreachable unless the RPC succeeded -- which proves the column exists.
-  // The filter goes through `pilotStateFilter`, which is where the column name
-  // and the reason for it live together.
   ck(
     "the pilot type filter is reachable only after a successful RPC",
-    /access === "production"[\s\S]{0,200}pilotStateFilter/.test(src),
+    /access === "production"[\s\S]{0,200}pilot_state/.test(src),
   );
 
-  // Anything ahead of the hosted schema must say so through the one named
-  // helper. types.ts is generated FROM hosted, so a raw `.rpc("sp_market_access")`
-  // typed against it compiles today and stops compiling the moment somebody
-  // regenerates -- which is exactly how `main` broke.
+  // ── THE TYPE-LEVEL WORKAROUND MUST STAY GONE ─────────────────────
+  //
+  // While hosted was behind, these calls were routed through a cast so the
+  // build survived a types.ts regenerated from a database that had never heard
+  // of them. Hosted has caught up and the generated types describe them, so the
+  // cast is now strictly harmful: it would hide a renamed function or a changed
+  // argument from the compiler in exchange for nothing.
+  //
+  // Asserted rather than merely deleted, because dead compatibility code is
+  // exactly the kind of thing that gets copied back the next time something is
+  // "temporarily" ahead of hosted. The answer to that is runtime tolerance,
+  // which is what the rest of this file guards.
   ck(
-    "the pilot RPC goes through the ahead-of-hosted helper",
-    /aheadOfHostedSchema\(supabase\)\.rpc\(/.test(src),
+    "the pilot RPC is typed against the generated schema",
+    /supabase\.rpc\(\s*"sp_market_access"/.test(src),
   );
-  ck(
-    "and no pilot call is typed against the generated hosted schema",
-    !/supabase\.rpc\(\s*"sp_market_access"/.test(src) &&
-      !/typeQuery\.eq\(\s*"pilot_state"/.test(src),
-  );
+  for (const dead of ["aheadOfHostedSchema", "pilotStateFilter"]) {
+    ck(`the ${dead} type escape is gone from the read model`, !src.includes(dead));
+    ck(
+      `and gone from market-access.ts`,
+      !code(read("src/lib/security-passport/market-access.ts")).includes(dead),
+    );
+  }
 
   ck(
     "the RPC failure is routed through the tolerance helper",

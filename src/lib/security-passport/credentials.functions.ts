@@ -25,12 +25,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
-import {
-  aheadOfHostedSchema,
-  isMissingPilotLayer,
-  pilotStateFilter,
-  resolveMarketAccess,
-} from "./market-access";
+import { isMissingPilotLayer, resolveMarketAccess } from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -270,19 +265,20 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // the migration nobody gains pilot access, which is precisely the
     // pre-pilot behaviour, and no absence of schema can ever open a market
     // that should be shut.
-    // `aheadOfHostedSchema` because types.ts is generated FROM hosted and this
-    // function is deliberately not there yet. See its comment for why that is
-    // a statement about the deploy/migrate gap rather than a type escape.
-    const { data: rpcAccess, error: accessError } = await aheadOfHostedSchema(supabase).rpc(
-      "sp_market_access",
-      { _user_id: userId, _market_pack_code: pack.code },
-    );
+    // Typed against the generated schema, which now describes this function:
+    // the hosted database has caught up and the type-level escape hatch that
+    // stood here was removed with it. A rename or a changed argument is the
+    // compiler's problem again, which is where it belongs.
+    const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
+      _user_id: userId,
+      _market_pack_code: pack.code,
+    });
 
     if (accessError && !isMissingPilotLayer(accessError)) throw new Error(accessError.message);
 
     const access = resolveMarketAccess({
       packIsActive: pack.is_active,
-      rpcAccess: typeof rpcAccess === "string" ? rpcAccess : null,
+      rpcAccess,
       pilotLayerMissing: Boolean(accessError),
     });
 
@@ -302,7 +298,7 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     const { data, error } =
       access === "production"
         ? await typeQuery.eq("is_active", true)
-        : await pilotStateFilter(typeQuery);
+        : await typeQuery.eq("pilot_state", "internal_pilot");
     if (error) throw new Error(error.message);
 
     return {
