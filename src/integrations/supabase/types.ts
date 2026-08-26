@@ -1031,6 +1031,7 @@ export type Database = {
           created_at: string
           current_experience_band: string | null
           current_item: string | null
+          current_profession_other: string | null
           current_profession_slug: string | null
           current_profession_status: string | null
           current_section: string | null
@@ -1054,6 +1055,7 @@ export type Database = {
           created_at?: string
           current_experience_band?: string | null
           current_item?: string | null
+          current_profession_other?: string | null
           current_profession_slug?: string | null
           current_profession_status?: string | null
           current_section?: string | null
@@ -1077,6 +1079,7 @@ export type Database = {
           created_at?: string
           current_experience_band?: string | null
           current_item?: string | null
+          current_profession_other?: string | null
           current_profession_slug?: string | null
           current_profession_status?: string | null
           current_section?: string | null
@@ -3548,6 +3551,9 @@ export type Database = {
           job_id: string
           new_status: string
           note: string | null
+          notified_at: string | null
+          notify_attempts: number
+          notify_error: string | null
           previous_status: string
         }
         Insert: {
@@ -3560,6 +3566,9 @@ export type Database = {
           job_id: string
           new_status: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status: string
         }
         Update: {
@@ -3572,6 +3581,9 @@ export type Database = {
           job_id?: string
           new_status?: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status?: string
         }
         Relationships: [
@@ -8344,6 +8356,7 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only: boolean
+          pilot_state: string
           reference_label_en: string | null
           reference_label_local: string | null
           reference_pattern: string | null
@@ -8372,6 +8385,7 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only?: boolean
+          pilot_state?: string
           reference_label_en?: string | null
           reference_label_local?: string | null
           reference_pattern?: string | null
@@ -8400,6 +8414,7 @@ export type Database = {
           name_en?: string
           name_sv?: string
           narrow_result_only?: boolean
+          pilot_state?: string
           reference_label_en?: string | null
           reference_label_local?: string | null
           reference_pattern?: string | null
@@ -8725,6 +8740,7 @@ export type Database = {
           name_ar: string | null
           name_en: string
           name_sv: string
+          pilot_state: string
           sub_jurisdiction_code: string | null
           superseded_on: string | null
           updated_at: string
@@ -8741,6 +8757,7 @@ export type Database = {
           name_ar?: string | null
           name_en: string
           name_sv: string
+          pilot_state?: string
           sub_jurisdiction_code?: string | null
           superseded_on?: string | null
           updated_at?: string
@@ -8757,6 +8774,7 @@ export type Database = {
           name_ar?: string | null
           name_en?: string
           name_sv?: string
+          pilot_state?: string
           sub_jurisdiction_code?: string | null
           superseded_on?: string | null
           updated_at?: string
@@ -8892,6 +8910,44 @@ export type Database = {
             columns: ["sub_jurisdiction_code"]
             isOneToOne: false
             referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_pilot_members: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          market_pack_code: string
+          note: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          market_pack_code: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          market_pack_code?: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_pilot_members_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
             referencedColumns: ["code"]
           },
         ]
@@ -9819,6 +9875,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_anonymise_user: {
+        Args: { _confirm_email: string; _reason: string; _user_id: string }
+        Returns: Json
+      }
       admin_cancel_assessment_assignment: {
         Args: { _assignment_id: string; _reason: string }
         Returns: {
@@ -9827,6 +9887,25 @@ export type Database = {
           previous_status: string
         }[]
       }
+      admin_delete_employer_if_safe: {
+        Args: { _confirm_name: string; _employer_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_delete_job_if_safe: {
+        Args: { _job_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_delete_user_if_safe: {
+        Args: { _confirm_email: string; _reason: string; _user_id: string }
+        Returns: Json
+      }
+      admin_disposable_records: { Args: { _limit?: number }; Returns: Json }
+      admin_employer_deletion_impact: {
+        Args: { _employer_id: string }
+        Returns: Json
+      }
+      admin_identity_diagnostics: { Args: never; Returns: Json }
+      admin_person_overview: { Args: { _user_id: string }; Returns: Json }
       admin_set_platform_role: {
         Args: { _grant: boolean; _role: string; _target_user_id: string }
         Returns: {
@@ -9835,6 +9914,11 @@ export type Database = {
           target_user_id: string
         }[]
       }
+      admin_set_user_disabled: {
+        Args: { _disabled: boolean; _reason: string; _user_id: string }
+        Returns: Json
+      }
+      admin_user_deletion_impact: { Args: { _user_id: string }; Returns: Json }
       approve_access_request: {
         Args: { _decision: string; _granted_role?: string; _request_id: string }
         Returns: {
@@ -9961,6 +10045,10 @@ export type Database = {
           membership_id: string
         }[]
       }
+      employer_accepts_operations: {
+        Args: { _employer_id: string }
+        Returns: boolean
+      }
       employer_is_active_status: {
         Args: { _employer_id: string }
         Returns: boolean
@@ -9982,6 +10070,21 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      jase_notification_payload: {
+        Args: { _event_id: string }
+        Returns: {
+          employer_name: string
+          event_id: string
+          job_title: string
+          language: string
+          new_status: string
+          recipient_email: string
+        }[]
+      }
+      jase_record_notification: {
+        Args: { _error?: string; _event_id: string; _ok: boolean }
+        Returns: undefined
+      }
       job_is_active: {
         Args: {
           p_deadline_at: string
@@ -9990,6 +10093,10 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      jobs_delete_draft: {
+        Args: { _employer_id: string; _job_id: string }
+        Returns: string
       }
       moderate_employer: {
         Args: { _action: string; _employer_id: string; _note?: string }
@@ -10955,7 +11062,19 @@ export type Database = {
         Returns: Json
       }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
+      sp_grant_pilot_member: {
+        Args: { _market_pack_code: string; _note?: string; _user_id: string }
+        Returns: undefined
+      }
+      sp_is_pilot_member: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: boolean
+      }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_market_access: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: string
+      }
       sp_my_application_disclosures: {
         Args: never
         Returns: {
@@ -10986,6 +11105,10 @@ export type Database = {
         Returns: undefined
       }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
+      sp_revoke_pilot_member: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: undefined
+      }
       sp_share_passport_with_application: {
         Args: {
           _application_id: string

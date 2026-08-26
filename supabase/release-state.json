@@ -45,8 +45,9 @@
           "kind": "function"
         }
       ],
-      "hostedState": "pending",
-      "file": "20260909090000_jobs_delete_unpublished_draft.sql"
+      "hostedState": "applied",
+      "file": "20260909090000_jobs_delete_unpublished_draft.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826114820. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "note": "THE MIGRATION THIS GUARD EXISTS FOR, now closed. Deployed application code expected these columns while the hosted schema did not have them, and employers could not save or publish a job at all. It was applied hosted during UAT to end the outage; this repository was never told, which is precisely the staleness release-parity-check exists to make impossible to leave in place. The hosted generated version and UUID for that application are not known here, so no appliedThroughLovable mapping is claimed.",
@@ -107,14 +108,16 @@
           "kind": "column"
         }
       ],
-      "hostedState": "pending",
-      "file": "20260909093000_application_status_notifications.sql"
+      "hostedState": "applied",
+      "file": "20260909093000_application_status_notifications.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826114954. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "note": "Vocabulary/lifecycle data only -- introduces no object application code can reference, so it can never produce a code/schema mismatch. It still has to be applied, in order, for the audit vocabulary to be correct.",
       "introduces": [],
-      "hostedState": "pending",
-      "file": "20260909094000_job_audit_vocabulary_lifecycle.sql"
+      "hostedState": "applied",
+      "file": "20260909094000_job_audit_vocabulary_lifecycle.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826115058. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "introduces": [
@@ -149,8 +152,9 @@
     {
       "note": "cd_definition_versions.content_version -> v3.1-draft-4. No new object, but NOT inert: the database stamps every new report snapshot from this row while the payload carries version.ts's CONTENT_VERSION, so shipping the code without this makes each new report disagree with itself about which wording the candidate read.",
       "introduces": [],
-      "hostedState": "pending",
-      "file": "20260910091000_cd_v31_content_v3_question_refinement.sql"
+      "hostedState": "applied",
+      "file": "20260910091000_cd_v31_content_v3_question_refinement.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826115155. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "introduces": [
@@ -207,8 +211,9 @@
           "kind": "function"
         }
       ],
-      "hostedState": "pending",
-      "file": "20260911090000_admin_control_center_lifecycle.sql"
+      "hostedState": "applied",
+      "file": "20260911090000_admin_control_center_lifecycle.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826120547. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "note": "Extends the per-match profession eligibility guard to professions.ranked. Replaces an existing function rather than adding one, so a code/schema mismatch here is not a missing-object error -- it is the new candidate-facing recommendation reaching a snapshot UNVALIDATED. Apply before, or with, the code that writes `ranked`.",
@@ -218,14 +223,16 @@
           "kind": "function"
         }
       ],
-      "hostedState": "pending",
-      "file": "20260912090000_cd_ranking_guard_recommendation.sql"
+      "hostedState": "applied",
+      "file": "20260912090000_cd_ranking_guard_recommendation.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123731. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "note": "cd_definition_versions.content_version -> v3.1-draft-5. Same reasoning as the draft-4 migration above.",
       "introduces": [],
-      "hostedState": "pending",
-      "file": "20260913090000_cd_v31_content_v4_context_intent_separation.sql"
+      "hostedState": "applied",
+      "file": "20260913090000_cd_v31_content_v4_context_intent_separation.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123839. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "introduces": [
@@ -235,39 +242,44 @@
           "kind": "column"
         }
       ],
-      "hostedState": "pending",
-      "file": "20260913091000_cd_career_context_other_profession.sql"
+      "hostedState": "applied",
+      "file": "20260913091000_cd_career_context_other_profession.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123914. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "note": "Two cig_professions rows. Data only: the picker reads whatever rows exist, so the code does not name them and cannot break without them -- the profession list is simply shorter.",
       "introduces": [],
-      "hostedState": "pending",
-      "file": "20260913092000_cig_security_leadership_professions.sql"
+      "hostedState": "applied",
+      "file": "20260913092000_cig_security_leadership_professions.sql",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124021. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "file": "20260914090000_sp_uk_vehicle_immobilisation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [],
       "note": "Introduces NO schema object: it is reference data only -- one sub-jurisdiction (GB-NI), one market pack, one regulated role, one credential type and two derivation rules, all INSERTed into tables that already exist. Nothing in the application references a new column or function because of it, so the parity guard has nothing to gate. It ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has been changed, so the credential is unreachable by any holder until a reviewer signs the pack off. NOT applied hosted.",
-      "verify": "SELECT code, is_active FROM public.sp_market_packs WHERE code = 'GB-NI';"
+      "verify": "SELECT code, is_active FROM public.sp_market_packs WHERE code = 'GB-NI';",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124114. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "file": "20260914091000_sp_uae_dubai_cadre_catalogue.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [],
       "note": "Reference data only: twelve further SIRA Security Cadre roles, their twelve cadre-card credential types, nine SIRA courses and their derivation rules. No table, column or function is created. Every row is is_active=false inside the AE-DU pack, which stays legal_review_state='pending'; the migration ABORTS if the pack or any of its credentials has been switched on. NOT applied hosted.",
-      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'AE\\_DU\\_SIRA\\_CARD\\_%';"
+      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'AE\\_DU\\_SIRA\\_CARD\\_%';",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124318. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "file": "20260914092000_sp_uae_abu_dhabi_market_pack.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [],
       "note": "Reference data only: the Abu Dhabi (Ministry of Interior / Private Security Business Department) authority, its regulatory source registered UNREAD, the AE-AZ market pack, seven regulated roles, seven licence credential types and their derivation rules. No schema object is created. The pack ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has changed, because the category list is authored from a regulatory framework nobody in this repository has confirmed against a pinned official page -- that confirmation is the first item of its legal review. NOT applied hosted.",
-      "verify": "SELECT code, legal_review_state, is_active FROM public.sp_market_packs WHERE code = 'AE-AZ';"
+      "verify": "SELECT code, legal_review_state, is_active FROM public.sp_market_packs WHERE code = 'AE-AZ';",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124459. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
       "file": "20260915090000_sp_market_pilot_entitlement.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "sp_pilot_members",
@@ -300,7 +312,8 @@
           "kind": "column"
         }
       ],
-      "note": "The internal-pilot market entitlement. Adds sp_market_packs.pilot_state and sp_credential_types.pilot_state as an axis ORTHOGONAL to is_active, a per-user-per-market membership table with admin-only grant and revoke, and the sp_market_access() decision the claim trigger and the candidate read model both consult. It does NOT touch legal_review_state, legal_reviewed_by or is_active for any pack: GB, GB-NI and AE-DU stay pending and publicly inactive, and the migration ABORTS if any of them has gained a legal review, become active, or if a market outside the approved GB / GB-NI / AE-DU scope was opened. Abu Dhabi stays closed. Requires 20260914090000 for the GB-NI pack (its UPDATE is a no-op until then) and 20260914091000 for the full fifteen-category SIRA cadre catalogue."
+      "note": "The internal-pilot market entitlement. Adds sp_market_packs.pilot_state and sp_credential_types.pilot_state as an axis ORTHOGONAL to is_active, a per-user-per-market membership table with admin-only grant and revoke, and the sp_market_access() decision the claim trigger and the candidate read model both consult. It does NOT touch legal_review_state, legal_reviewed_by or is_active for any pack: GB, GB-NI and AE-DU stay pending and publicly inactive, and the migration ABORTS if any of them has gained a legal review, become active, or if a market outside the approved GB / GB-NI / AE-DU scope was opened. Abu Dhabi stays closed. Requires 20260914090000 for the GB-NI pack (its UPDATE is a no-op until then) and 20260914091000 for the full fifteen-category SIRA cadre catalogue.",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124732. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     }
   ],
   "policyVersion": 1,
