@@ -47,6 +47,9 @@ export interface CardContent {
   readonly holderName: string;
   readonly profession: string;
   readonly jurisdiction: string;
+  /** Label for `jurisdiction`. The work location is a separate fact from the
+   *  derived professional title and must never be concatenated with it. */
+  readonly workLabel: string;
   readonly milestone: CardMilestone | null;
   readonly credentials: readonly CredentialPlateProps[];
   readonly attributions: string | null;
@@ -145,6 +148,7 @@ export function useCardContent(
     holderName: card.holderDisplayName,
     profession: professionLine(card.identity, lang, pt("identity.none")),
     jurisdiction: formatWorkLocation(card.jurisdictionCode, card.subJurisdictionCode, lang),
+    workLabel: pt("card.workLabel"),
     milestone,
     credentials,
     attributions:

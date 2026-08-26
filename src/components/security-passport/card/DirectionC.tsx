@@ -87,10 +87,32 @@ export function DirectionC({
           >
             {c.holderName}
           </h3>
+          {/* Two facts, two lines — NOT one line joined by a middot.
+
+              This printed "Ordningsvakt · Skyddsvakt · Dubai, Förenade
+              Arabemiraten" for a holder with Swedish credentials working in the
+              UAE. Read left to right, that says a Swedish regulated
+              appointment applies in Dubai. It does not: an
+              ordningsvaktsförordnande is granted by Polismyndigheten under
+              Swedish law and means nothing to SIRA, whose Security Cadre
+              licences are the only thing Dubai reads.
+
+              The derived title and the stated work location are independent
+              facts, and the card is the artefact people screenshot and forward
+              — so the separator was doing the asserting, silently, on the one
+              surface that leaves the product. The work location now carries
+              its own label. */}
           <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
             {c.profession}
-            <span aria-hidden="true"> · </span>
-            <span style={{ color: TRUST_PALETTE.ink }}>{c.jurisdiction}</span>
+          </p>
+          <p
+            className="mt-3 text-[10px] uppercase tracking-[0.18em]"
+            style={{ color: TRUST_PALETTE.inkMuted }}
+          >
+            {c.workLabel}
+          </p>
+          <p className="text-sm" style={{ color: TRUST_PALETTE.ink }}>
+            {c.jurisdiction}
           </p>
         </div>
 

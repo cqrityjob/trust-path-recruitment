@@ -121,6 +121,29 @@ const sv = {
   "home.passport.addTraining": "Lägg till utbildning eller certifiering",
   "home.passport.manageShares": "Hantera delningar",
 
+  // ── Dashboard summary card (candidate home) ──────────────────────────
+  // The Passport is the candidate's primary professional asset, so its card
+  // on /my-career reports real state rather than linking blindly. Counts are
+  // derived from the holder's own claims; there is deliberately no score,
+  // rank or completeness percentage, because none of those has a governed
+  // meaning in this product and inventing one would be a claim about a person.
+  "home.passport.workLabel": "Land / jurisdiktion",
+  "home.passport.verified": "Verifierade",
+  "home.passport.pending": "Väntar",
+  "home.passport.open": "Öppna Passport",
+  "home.passport.addCredential": "Lägg till behörighet",
+  "home.passport.share": "Dela Passport",
+  "home.passport.relevantHere": "Uppgifter för vald jurisdiktion",
+  "home.passport.otherCredentials": "Övriga uppgifter",
+  "home.passport.credentialsFrom": "uppgifter från",
+  "home.passport.credentialFrom": "uppgift från",
+  "home.passport.noneHere": "Inga uppgifter för det här landet ännu",
+  "home.passport.noneHereBody":
+    "Lägg till dina behörigheter och utbildningar för det land du arbetar i.",
+  "home.passport.loading": "Laddar ditt Security Passport …",
+  "home.passport.unavailable":
+    "Kunde inte läsa ditt Security Passport just nu. Öppna Passport för att försöka igen.",
+
   // ── Welcome and purpose ──────────────────────────────────────────────
   "welcome.eyebrow": "Security Passport",
   "welcome.title": "Din yrkesidentitet inom säkerhet",
@@ -350,6 +373,12 @@ const sv = {
   // ── Passport Card ────────────────────────────────────────────────────
   "card.title": "Passport Card",
   "card.subtitle": "Yrkesidentitet och underlag",
+  // The work location is a SEPARATE fact from the professional title, and the
+  // card prints it under its own label for that reason. It used to be joined
+  // to the derived title by a middot -- "Ordningsvakt · Skyddsvakt · Dubai" --
+  // which reads as a Swedish regulated title asserted in the UAE. It is not
+  // one, cannot be one, and the card is the artefact people forward onward.
+  "card.workLabel": "Arbetsland / jurisdiktion",
   "card.locked":
     "Innehållet skapas från dina registrerade uppgifter och deras aktuella tillstånd. Du väljer om och hur det delas — inte vad som står.",
   "card.emptyState": "Inget att visa ännu",
@@ -1453,6 +1482,23 @@ const en: Record<PassportCopyKey, string> = {
   "home.passport.addTraining": "Add training or certification",
   "home.passport.manageShares": "Manage disclosures",
 
+  "home.passport.workLabel": "Country / jurisdiction",
+  "home.passport.verified": "Verified",
+  "home.passport.pending": "Pending",
+  "home.passport.open": "Open Passport",
+  "home.passport.addCredential": "Add credential",
+  "home.passport.share": "Share Passport",
+  "home.passport.relevantHere": "Records for the selected jurisdiction",
+  "home.passport.otherCredentials": "Other records",
+  "home.passport.credentialsFrom": "records from",
+  "home.passport.credentialFrom": "record from",
+  "home.passport.noneHere": "No records for this country yet",
+  "home.passport.noneHereBody":
+    "Add the credentials and training you hold for the country you work in.",
+  "home.passport.loading": "Loading your Security Passport …",
+  "home.passport.unavailable":
+    "Could not read your Security Passport right now. Open Passport to try again.",
+
   "welcome.eyebrow": "Security Passport",
   "welcome.title": "Your professional identity in security",
   "welcome.lead":
@@ -1674,6 +1720,7 @@ const en: Record<PassportCopyKey, string> = {
 
   "card.title": "Passport Card",
   "card.subtitle": "Professional identity and evidence",
+  "card.workLabel": "Work country / jurisdiction",
   "card.locked":
     "The content is generated from your recorded entries and their current state. You choose whether and how it is shared — not what it says.",
   "card.emptyState": "Nothing to show yet",
