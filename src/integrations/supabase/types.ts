@@ -9929,6 +9929,10 @@ export type Database = {
         }[]
       }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      cd_assert_session_writable: {
+        Args: { _caller: string; _session_id: string }
+        Returns: undefined
+      }
       cd_begin_internal_test_session: {
         Args: {
           _context_status?: string
@@ -9981,6 +9985,10 @@ export type Database = {
           weight: number
         }[]
       }
+      cd_record_funnel_event: {
+        Args: { _detail?: Json; _event_name: string; _session_id?: string }
+        Returns: undefined
+      }
       cd_session_core_completion: {
         Args: { _session_id: string }
         Returns: {
@@ -9989,6 +9997,20 @@ export type Database = {
           missing: string[]
           unexpected: string[]
         }[]
+      }
+      cd_submit_test_feedback: {
+        Args: {
+          _explored_profession_id?: string
+          _free_text?: string
+          _locale: string
+          _missing_career_note?: string
+          _pathway_realistic?: boolean
+          _relevant?: number
+          _requirements_useful?: boolean
+          _session_id?: string
+          _understood_why?: boolean
+        }
+        Returns: undefined
       }
       cd_v31_complete_session: {
         Args: {
@@ -10002,6 +10024,7 @@ export type Database = {
           was_created: boolean
         }[]
       }
+      cd_v31_funnel_event_names: { Args: never; Returns: string[] }
       cd_v31_validate_session_evidence: {
         Args: { _session_id: string }
         Returns: {
