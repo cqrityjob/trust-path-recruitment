@@ -110,6 +110,13 @@ jobs:
       - name: Application dialog scroll check
         run: bun run application-dialog-scroll:check
 
+      # The candidate dashboard. Two of its properties are one CSS class or one
+      # component swap from silently regressing: a completed Career Discovery
+      # report staying reachable, and the product grids not stretching to the
+      # tallest card (which is what filled the old dashboard with empty panels).
+      - name: My Career dashboard check
+        run: bun run my-career-dashboard:check
+
       # The professional identity engine. Every case is a mutation: hold one
       # credential, assert the title the product must NOT grant is absent. Two
       # are load-bearing — VU1 alone must never produce Väktare, and
