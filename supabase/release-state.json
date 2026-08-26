@@ -316,28 +316,29 @@
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124732. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
-      "note": "EXPAND, phase 1 of 2. Backward compatible by construction: it ADDS the two governed entry points and the rest of the hardening, and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. Safe to apply hosted while the current main is live, and it should be applied BEFORE this branch merges. release-parity-check reports the code dependency below; that is the pairing working as intended, not a defect.",
       "introduces": [
         {
-          "object": "cd_record_funnel_event",
-          "kind": "function"
+          "kind": "function",
+          "object": "cd_record_funnel_event"
         },
         {
-          "object": "cd_submit_test_feedback",
-          "kind": "function"
+          "kind": "function",
+          "object": "cd_submit_test_feedback"
         },
         {
-          "object": "cd_assert_session_writable",
-          "kind": "function"
+          "kind": "function",
+          "object": "cd_assert_session_writable"
         },
         {
-          "object": "cd_v31_funnel_event_names",
-          "kind": "function"
+          "kind": "function",
+          "object": "cd_v31_funnel_event_names"
         }
       ],
-      "hostedState": "pending",
       "file": "20260916090000_security_hardening_expand.sql",
-      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');"
+      "hostedState": "applied",
+      "note": "EXPAND, phase 1 of 2 of the security hardening. Ships on its own, ahead of the application code, deliberately: it ADDS the two governed entry points and the rest of the hardening and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. It is therefore safe to apply hosted while the current main is live, and applying it is the PRECONDITION for merging the application branch. No code on this branch references anything it introduces, so release-parity-check reports no dependency here; once fix/security-hardening-lovable-findings merges, the dependency it then reports is the pairing working as intended. Phase 2 (20260916091000, CONTRACT) withdraws the legacy direct INSERT and arrives with that branch -- it must NOT be applied hosted until the new code is live.",
+      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');",
+      "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826153409, hosted generated name eb51ffcc-be14-482c-afe7-b656051a7287. SQL equivalence PASS (whitespace-normalised content identical to the canonical file). Applied 2026-08-26 under the owner-approved EXPAND-only step 1 of the expand/contract sequence; confirmed by querying the hosted schema for the objects it introduces, the function ACLs it sets and the search_path pinning it applies. CONTRACT (20260916091000) remains NOT applied hosted."
     },
     {
       "note": "CONTRACT, phase 2 of 2. Introduces no object, which is why `introduces` is empty: it only DROPs the two WITH CHECK (true) INSERT policies and REVOKEs the transitional INSERT grant that EXPAND left in place. No code can depend on it, so it can never be a release blocker -- but it has a precondition no repository file can check, and this is where that precondition is recorded: DO NOT APPLY IT until the commit carrying the RPC form of src/lib/career-discovery/v31-feedback.functions.ts is live on main. Applied early, the previously deployed code loses its write and anonymous funnel events and test-group feedback stop being recorded until the code catches up; both writes are fire-and-forget, so the failure is silent. The migration refuses to run at all if EXPAND is missing.",
