@@ -99,14 +99,22 @@ assert(
   /assessmentClosed\s*\?/.test(src),
   "the CTAs branch on the gate rather than rendering unconditionally",
 );
-// The recommended next step must offer something reachable when it is closed.
+// The no-report state must branch on the gate rather than always offering the
+// test. The owner-approved dashboard removed the "Recommended next step" card
+// and the "Retake assessment" quick action, so the two assertions that named
+// those components no longer describe any surface. What they PROTECTED is
+// unchanged and is asserted here against the surfaces that replaced them: the
+// Career Discovery card's no-report state, and its optional retake link.
 assert(
-  /noAssessment && assessmentClosed/.test(src),
-  "the recommended next step has a closed branch of its own",
+  /\{assessmentClosed \? \(/.test(src),
+  "the no-report state branches on the gate rather than always offering the test",
 );
+// Stronger than the old `unavailable={...}` badge: the retake link is not
+// rendered at all unless the candidate has a report AND the gate would admit
+// them, so there is no dead link to dress up as unavailable.
 assert(
-  src.includes("unavailable={") || src.includes("unavailable ="),
-  "the quick action can render as unavailable rather than as a dead link",
+  /!noAssessment && !assessmentClosed && assessmentOpen/.test(src),
+  "the optional retake link renders only when the gate would admit the candidate",
 );
 
 console.log("\nGROUP 3b -- a completed v3 assessment is not judged by legacy signals");
@@ -117,9 +125,15 @@ console.log("\nGROUP 3b -- a completed v3 assessment is not judged by legacy sig
 // unlock recommendations" — directly above a card reading "Your new report is
 // ready". Same shape as the regression that hid the #career-profile anchor: a
 // legacy-era signal answering a v3-era question.
+// The subtitle no longer branches on assessment state at all: the approved
+// dashboard opens with one unconditional sentence about the candidate's
+// career, not a status report about a test. A hero that cannot mention the
+// assessment cannot misreport it, which settles this failure mode outright
+// rather than by choosing the right signal. The assertion below still forbids
+// the legacy profile deciding it anywhere on the page.
 assert(
-  /activeIsDiscovery \|\| hasProfile/.test(src),
-  "the overview subtitle counts a v3 report, not only a legacy profile",
+  !/Complete the assessment to unlock|Slutför säkerhetstestet/.test(src),
+  "the hero does not report assessment status at all",
 );
 assert(
   !/\{hasProfile\s*\n?\s*\?/.test(src),

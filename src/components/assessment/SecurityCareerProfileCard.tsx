@@ -66,10 +66,16 @@ export function SecurityCareerProfileCard() {
       {/* The Career Profile / Security Passport boundary, stated where the
           candidate is actually entering things about themselves. Self-reported
           profile information is not Passport evidence and never becomes it by
-          being typed here — see sca.scp.notPassport. */}
+          being typed here — see sca.scp.notPassport.
+
+          The form below states the same boundary for the surfaces that render
+          it WITHOUT this card (the public assessment's profile step). Both
+          files must carry it — passport-separation-check enforces that per
+          file — so the card suppresses the form's copy rather than letting a
+          candidate read the identical sentence twice in one column. */}
       <p className="mt-2 text-sm text-muted-foreground">{t("sca.scp.notPassport")}</p>
       <div className="mt-5">
-        <SecurityCareerProfileForm value={draft} onChange={setDraft} />
+        <SecurityCareerProfileForm value={draft} onChange={setDraft} statesBoundary={false} />
       </div>
       <div className="mt-6 flex items-center gap-3">
         <button

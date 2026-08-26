@@ -1250,9 +1250,13 @@ expect(
   dashboard.includes("activeIsDiscovery") && dashboard.includes("activeIsLegacy"),
   "my-career: the dashboard must branch on the active report type",
 );
+// The owner-approved dashboard removed the legacy career-profile block and
+// the "Recommended professions" list; the legacy renderer that survives is the
+// assessment summary. The INVARIANT is unchanged and is what is asserted:
+// legacy content appears only when legacy is genuinely the active report.
 expect(
-  /activeIsLegacy && hasProfile && profile &&/.test(dashboard),
-  "my-career: the legacy career-profile card must render only when legacy is active",
+  /activeIsLegacy && latestRun &&/.test(dashboard),
+  "my-career: the legacy assessment summary must render only when legacy is active",
 );
 expect(
   dashboard.includes("activeQ.isLoading") && dashboard.includes("animate-pulse"),
@@ -1264,9 +1268,13 @@ expect(
 );
 
 // Career journey must not let legacy state overwrite a newer v3 completion.
+// The five-step Career Journey stepper this guarded is gone. The failure mode
+// it protected against — legacy state overwriting a newer v3 completion — now
+// lives in `noAssessment`, which decides whether the candidate is offered the
+// test at all. It must lead with the v3 signal, not a legacy run.
 expect(
-  dashboard.includes("hasCompletedAssessment || activeIsDiscovery"),
-  "my-career: a v3 completion must mark the assessment step complete",
+  /const noAssessment =\s*!activeIsDiscovery/.test(dashboard),
+  "my-career: a v3 completion must not be treated as 'no assessment'",
 );
 expect(
   /const noAssessment =\s*\n\s*!activeIsDiscovery/.test(dashboard),

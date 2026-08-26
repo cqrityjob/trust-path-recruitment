@@ -8,30 +8,25 @@ import {
   Compass,
   Briefcase,
   RefreshCcw,
+  Eye,
   LogOut,
   User as UserIcon,
-  Sparkles,
   MapPin,
   Building2,
-  CheckCircle2,
-  Circle,
-  Target,
   TrendingUp,
   Award,
   Flame,
-  Eye,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { MyAcademyWorkCard } from "@/components/academy/MyAcademyWorkCard";
 import { MyReviewQueueCard } from "@/components/academy/MyReviewQueueCard";
-import { MyPassportEntryCard } from "@/components/security-passport/MyPassportEntryCard";
+import { PassportSummaryCard } from "@/components/security-passport/PassportSummaryCard";
+import { getMyPassport } from "@/lib/security-passport/passport.functions";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
-import {
-  DiscoveryCareerSummary,
-  DiscoveryNextStep,
-} from "@/components/career-discovery/DiscoveryCareerSummary";
+import { DiscoveryCareerSummary } from "@/components/career-discovery/DiscoveryCareerSummary";
 import {
   getActiveCareerReport,
   isRenderableDiscovery,
@@ -243,11 +238,9 @@ function MyCareerPage() {
   });
   const hasEmployerWorkspace = (employerWorkspacesQ.data?.length ?? 0) > 0;
 
-  // Pilot Readiness Track 1: the "Apply" and "Develop" journey steps were
-  // hardcoded to false, so a candidate who had genuinely applied to a job or
-  // been assigned development work still saw an unfinished journey. Both now
-  // read real signals. Neither may break the dashboard if its backend is
-  // unavailable -- both are non-critical, hence retry: false and no error UI.
+  // Feeds the "Active applications" figure on the Jobs card. Non-critical:
+  // an applications backend that is briefly unavailable must degrade one
+  // number, never the dashboard, hence retry: false and no error UI.
   const fetchMyApplications = useServerFn(listMyApplications);
   const myApplicationsQ = useQuery({
     queryKey: ["my-career", "applications"],
@@ -255,7 +248,6 @@ function MyCareerPage() {
     staleTime: 30_000,
     retry: false,
   });
-  const hasApplied = (myApplicationsQ.data?.length ?? 0) > 0;
 
   // Same query key as MyAcademyWorkCard, so this shares one request.
   const fetchAcademyWork = useServerFn(listMyAcademyWork);
@@ -264,7 +256,20 @@ function MyCareerPage() {
     queryFn: () => fetchAcademyWork(),
     retry: false,
   });
-  const hasDevelopment = (academyWorkQ.data?.length ?? 0) > 0;
+
+  // The Passport snapshot for the primary card. Fetched HERE rather than
+  // inside PassportSummaryCard because Passport components may not reach the
+  // server tier (passport-separation-check.ts, rule 2) — the card is
+  // presentational and takes what this route gives it.
+  const fetchPassport = useServerFn(getMyPassport);
+  const passportQ = useQuery({
+    queryKey: ["passport", "mine"],
+    queryFn: () => fetchPassport(),
+    staleTime: 60_000,
+    // A Passport backend that is briefly unavailable degrades one card, never
+    // the whole career dashboard.
+    retry: false,
+  });
 
   const profileState = useCareerProfileForJobs();
   const profile = profileState.status === "ready" ? profileState.data.profile : undefined;
@@ -279,26 +284,7 @@ function MyCareerPage() {
     staleTime: 60_000,
   });
 
-  const jobsForTopFamilyQ = useQuery({
-    queryKey: ["my-career", "family-job-counts", topProfessions.map((p) => p.slug)],
-    queryFn: async () => {
-      // Small parallel probe to know which recommended professions have
-      // at least one open role. Cheap: each call is limited to 1 row.
-      const results = await Promise.all(
-        topProfessions.map(async (p) => ({
-          slug: p.slug,
-          hasJobs: (await listPublicJobs({ professionSlug: p.slug, limit: 1 })).length > 0,
-        })),
-      );
-      return Object.fromEntries(results.map((r) => [r.slug, r.hasJobs] as const));
-    },
-    enabled: topProfessions.length > 0,
-    staleTime: 60_000,
-  });
-
   const latestRun = runsQ.data?.[0];
-  const hasCompletedAssessment = !!latestRun && latestRun.status === "completed";
-  const hasProfile = profileState.status === "ready" && !!profile;
   // A newer v3 completion must never be overwritten by legacy state: a
   // candidate whose only assessment is v3 has no legacy run and no legacy
   // profile, and must still count as having completed an assessment.
@@ -320,165 +306,195 @@ function MyCareerPage() {
       : topProfession.prof!.titleEn
     : undefined;
 
+  // The approved dashboard greets by first name. `displayName` may be a full
+  // name or an email local-part; either way the first token is the right
+  // greeting and never renders an empty ", ".
+  const firstName = displayName.trim().split(/\s+/)[0] ?? "";
+
+  // "Active" is the set an applicant is still waiting on. rejected / hired /
+  // withdrawn are concluded, and counting them as active would tell somebody
+  // they have five live applications when every one of them is closed.
+  const activeApplications = (myApplicationsQ.data ?? []).filter(
+    (a) => a.status === "submitted" || a.status === "reviewing" || a.status === "interview",
+  ).length;
+
+  // Employer-assigned work, and the ONLY thing that makes the tasks area
+  // exist. Same filter MyAcademyWorkCard applies internally, computed here
+  // because the layout has to know whether the row has one card or two before
+  // that card decides to render nothing.
+  const assessmentTasks = (academyWorkQ.data ?? []).filter((r) => r.mode === "assessment");
+  const linkableTasks = linkableQ.data ?? [];
+  const hasEmployerTask = assessmentTasks.length > 0 || linkableTasks.length > 0;
+
   return (
     <SiteLayout>
       <Section>
         {/* ---------------- Hero ---------------- */}
         <header className="max-w-3xl">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {L(c("Min karriär", "My career"), lang)}
-          </p>
           <h1
-            className="mt-2 text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+            className="text-3xl font-semibold tracking-tight text-balance text-foreground md:text-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {greeting}
-            {displayName ? `, ${displayName}` : ""}.
+            {firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span>
           </h1>
+          {/* One sentence, unconditional.
+              The lede used to branch three ways on assessment state, so the
+              first thing a candidate read was a status report about a test.
+              This page is no longer a test centre, and its opening line no
+              longer changes depending on whether somebody has taken one. */}
           <p className="mt-3 text-muted-foreground">
-            {/* `activeIsDiscovery ||`, not `hasProfile` alone.
-                `hasProfile` is the LEGACY v2.1 career profile, which a
-                candidate whose only assessment is v3 never has. So a tester who
-                had just finished all 28 questions was told "Complete the
-                assessment to unlock recommendations" directly above a card
-                reading "Your new report is ready" — the same legacy-era signal
-                deciding a v3-era question that hid the #career-profile
-                anchor. */}
-            {activeIsDiscovery || hasProfile
-              ? L(
-                  c(
-                    "Här är din personliga karriärsöversikt — din profil, rekommenderade yrken och relevanta jobb.",
-                    "Here is your personal career overview — your profile, recommended professions and relevant jobs.",
-                  ),
-                  lang,
-                )
-              : assessmentClosed
-                ? L(
-                    c(
-                      "Din personliga karriärstartsida. Utforska yrken och bygg ditt Security Passport.",
-                      "Your personal career home. Explore professions and build your Security Passport.",
-                    ),
-                    lang,
-                  )
-                : L(
-                    c(
-                      "Din personliga karriärstartsida. Slutför säkerhetstestet för att låsa upp rekommendationer.",
-                      "Your personal career home. Complete the assessment to unlock recommendations.",
-                    ),
-                    lang,
-                  )}
+            {L(
+              c(
+                "Din säkerhetskarriär på ett ställe. Hantera ditt Security Passport, hitta jobb och utveckla din professionella profil.",
+                "Your security career in one place. Manage your Security Passport, find jobs and develop your professional profile.",
+              ),
+              lang,
+            )}
           </p>
         </header>
 
-        {/* Assessment Center work, if any. Renders nothing when the person has
-            no assignment, so a career dashboard never shows a dead entry. */}
-        <MyAcademyWorkCard />
+        {/* ---------------- Row 1: Passport · Jobs · Profile ----------------
 
-        {/* Renders only for an account an employer has authorised to review
-            responses (#51) -- the scoped queue is the gate, not a client-side
-            role check. */}
-        <MyReviewQueueCard />
-
-        {/* Security Passport — a separate Trust product under the same
-            account, per the approved shared-home architecture. Career
-            Discovery and Career Card are untouched and continue to render
-            below; this is an adjacent entry, not a step in their flow. */}
-        <div className="mt-6">
-          <MyPassportEntryCard />
-        </div>
-
-        {/* ---------------- Career Journey ---------------- */}
-        <div className="mt-8">
-          <CareerJourney
-            lang={lang}
-            steps={{
-              // v3 completion counts as both a completed assessment and a
-              // created career profile — the snapshot IS the profile.
-              assessment: hasCompletedAssessment || activeIsDiscovery,
-              profile: hasProfile || activeIsDiscovery,
-              explore: (hasProfile && topProfessions.length > 0) || activeIsDiscovery,
-              apply: hasApplied,
-              develop: hasDevelopment,
-            }}
+            Source of truth for order, on every viewport. The grid places them
+            left to right on desktop; with no explicit ordering the same DOM
+            sequence stacks Passport → Jobs → Profile on mobile, which is the
+            approved mobile order, so no `order-*` classes are needed. */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          <PassportSummaryCard
+            snapshot={passportQ.data}
+            isLoading={passportQ.isLoading}
+            isError={passportQ.isError}
           />
+
+          {/* ── Jobs and applications ── */}
+          <DashboardCard
+            icon={<Briefcase className="h-5 w-5" />}
+            title={L(c("Jobb & ansökningar", "Jobs & applications"), lang)}
+          >
+            <dl className="space-y-2 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted-foreground">
+                  {L(c("Aktiva ansökningar", "Active applications"), lang)}
+                </dt>
+                {/* Deliberately blank rather than 0 while the query is in
+                    flight or has failed: "0 active applications" is a claim
+                    about this person's job search, and it must not be made on
+                    the strength of a request that has not answered. */}
+                <dd className="font-semibold tabular-nums text-foreground">
+                  {myApplicationsQ.isSuccess ? activeApplications : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            {jobsQ.data && jobsQ.data.length > 0 && (
+              <ul className="mt-4 divide-y divide-border border-t border-border pt-1">
+                {jobsQ.data.map((j) => {
+                  const title =
+                    (lang === "sv" ? j.title_sv : j.title_en) || j.title_en || j.title_sv || "";
+                  const location =
+                    [j.location_text, j.city, j.country].filter(Boolean).join(", ") || "";
+                  return (
+                    <li key={j.id} className="py-2.5">
+                      <Link to="/jobs/$slug" params={{ slug: j.slug }} className="group block">
+                        <p className="text-sm font-medium text-balance text-foreground group-hover:underline">
+                          {title}
+                        </p>
+                        {location && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" aria-hidden="true" />
+                            {location}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {jobsQ.isSuccess && jobsQ.data.length === 0 && (
+              <p className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">
+                {L(
+                  c(
+                    "Just nu finns inga öppna roller som matchar din profil.",
+                    "There are no open roles matching your profile right now.",
+                  ),
+                  lang,
+                )}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link
+                to="/jobs"
+                className="inline-flex h-10 items-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {L(c("Hitta jobb", "Find jobs"), lang)}
+              </Link>
+              <Link
+                to="/my-career/applications"
+                className="inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-accent"
+              >
+                {L(c("Mina ansökningar", "My applications"), lang)}
+              </Link>
+            </div>
+          </DashboardCard>
+
+          {/* ── Career profile ──
+
+              Self-reported, and the card says so in as many words. The
+              boundary is not decoration: this data is typed in by the holder
+              and nothing here is checked by anyone, so presenting it beside a
+              Passport full of verified credentials without naming the
+              difference would let the Passport's credibility rub off on it. */}
+          <DashboardCard
+            id="career-profile"
+            icon={<UserIcon className="h-5 w-5" />}
+            title={L(c("Din karriärprofil", "Your career profile"), lang)}
+          >
+            {/* Framing, not a fourth restatement of the boundary. The card
+                below already says — once — that nothing typed here becomes
+                Passport evidence; what this line adds is the word the approved
+                dashboard leads with: self-reported. */}
+            <p className="mb-4 text-xs font-medium text-foreground">
+              {L(
+                c(
+                  "Självrapporterad information. Den blir inte automatiskt verifierad i ditt Security Passport.",
+                  "Self-reported information. It is not automatically verified in your Security Passport.",
+                ),
+                lang,
+              )}
+            </p>
+            <SecurityCareerProfileCard />
+          </DashboardCard>
         </div>
 
-        {/* Onboarding — no assessment yet */}
-        {noAssessment && (
-          <div className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6 md:p-8">
-            <div className="flex items-start gap-4">
-              <Sparkles className="mt-0.5 h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-              <div className="min-w-0">
-                <h2 className="text-xl font-semibold text-foreground">
-                  {assessmentClosed
-                    ? L(c("Testet är inte öppet ännu", "The assessment isn't open yet"), lang)
-                    : L(c("Börja med säkerhetstestet", "Start with the assessment"), lang)}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {assessmentClosed
-                    ? L(
-                        c(
-                          "Den uppdaterade versionen av Security Career Discovery genomgår granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar. Under tiden kan du utforska yrken och bygga ditt Security Passport.",
-                          "The updated version of Security Career Discovery is going through review before it opens to everyone. We'll open it as soon as that review is complete. In the meantime you can explore professions and build your Security Passport.",
-                        ),
-                        lang,
-                      )
-                    : L(
-                        c(
-                          "Testet tar cirka fem minuter. Efteråt visar vi din karriärprofil, rekommenderade yrken, utvecklingsvägar och relevanta jobb.",
-                          "It takes about five minutes. Afterwards we present your career profile, recommended professions, development paths and relevant jobs.",
-                        ),
-                        lang,
-                      )}
-                </p>
-                {assessmentClosed ? (
-                  <Link
-                    to="/career-center"
-                    className="mt-4 inline-flex items-center rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-                  >
-                    {L(c("Utforska yrken", "Explore professions"), lang)}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                ) : (
-                  <Link
-                    to="/security-career-assessment"
-                    className="mt-4 inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                  >
-                    {L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ---------------- Row 2: Career Discovery · Employer tasks ----------
 
-        {/* ---------------- Main grid ---------------- */}
-        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-6">
-            {/* Assessment summary */}
-            {/* Assessment summary — driven by the ACTIVE report.
-                Selection is resolved server-side first, so the legacy
-                summary can never flash before a newer v3 result. */}
+            Career Discovery keeps its full read path — every report contract,
+            the unreadable state and the history list. What changed is where it
+            sits: it is a supporting product on this page now, not the spine of
+            it. `lg:grid-cols-2` collapses to one column when there is no task,
+            so Career Discovery is never left beside a hole. */}
+        <div
+          className={cn("mt-6 grid gap-6", hasEmployerTask ? "lg:grid-cols-2" : "lg:grid-cols-1")}
+        >
+          <DashboardCard
+            icon={<Compass className="h-5 w-5" />}
+            title={L(c("Career Discovery", "Career Discovery"), lang)}
+          >
             {activeQ.isLoading && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-              >
-                <div className="space-y-3" role="status" aria-live="polite">
-                  <p className="text-sm text-muted-foreground">
-                    {t("careerDiscovery.dashboard.loading")}
-                  </p>
-                  <div className="h-24 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
-                </div>
-              </DashboardCard>
+              <div className="space-y-3" role="status" aria-live="polite">
+                <p className="text-sm text-muted-foreground">
+                  {t("careerDiscovery.dashboard.loading")}
+                </p>
+                <div className="h-24 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+              </div>
             )}
 
             {activeQ.isError && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-              >
+              <>
                 {/* Sanitised, and deliberately NOT a silent fall back to an
                     older legacy report presented as current. */}
                 <p role="alert" className="text-sm text-destructive">
@@ -491,521 +507,206 @@ function MyCareerPage() {
                 >
                   {t("careerDiscovery.dashboard.retry")}
                 </button>
-              </DashboardCard>
-            )}
-
-            {activeQ.data?.kind === "discovery_v3_0" && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-              >
-                <DiscoveryCareerSummary active={activeQ.data} />
-              </DashboardCard>
-            )}
-
-            {activeQ.data?.kind === "discovery_v3_1" && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-              >
-                <DiscoveryV31Pending active={activeQ.data} />
-              </DashboardCard>
-            )}
-
-            {activeIsUnreadable && activeQ.data?.kind === "discovery_unreadable" && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-              >
-                <DiscoveryReportUnreadable active={activeQ.data} />
-              </DashboardCard>
-            )}
-
-            {activeIsLegacy && (
-              <>
-                <DashboardCard
-                  icon={<ClipboardCheck className="h-5 w-5" />}
-                  title={L(c("Bedömningssammanfattning", "Assessment summary"), lang)}
-                >
-                  {runsQ.isLoading && (
-                    <p className="text-sm text-muted-foreground">
-                      {L(c("Laddar…", "Loading…"), lang)}
-                    </p>
-                  )}
-                  {runsQ.isError && (
-                    <p className="text-sm text-destructive">
-                      {L(
-                        c(
-                          "Kunde inte hämta din bedömning just nu. Försök igen om en stund.",
-                          "Couldn't load your assessment right now. Please try again shortly.",
-                        ),
-                        lang,
-                      )}
-                    </p>
-                  )}
-                  {runsQ.data && runsQ.data.length === 0 && (
-                    <EmptyState
-                      what={L(
-                        c(
-                          "Här visas din bedömningssammanfattning så snart testet är klart.",
-                          "Your assessment summary appears here as soon as the test is complete.",
-                        ),
-                        lang,
-                      )}
-                      why={L(
-                        c(
-                          "Bedömningen är grunden för alla rekommendationer på plattformen.",
-                          "The assessment is the foundation of every recommendation on the platform.",
-                        ),
-                        lang,
-                      )}
-                      ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
-                      ctaTo="/security-career-assessment"
-                    />
-                  )}
-                  {latestRun && (
-                    <AssessmentSummary
-                      lang={lang}
-                      completedAt={latestRun.completed_at ?? latestRun.started_at}
-                      profile={profile}
-                      topProfession={topProfTitle}
-                      topArea={topAreaLabel}
-                      runId={latestRun.id}
-                    />
-                  )}
-                </DashboardCard>
-
-                {/* Employer-assigned assessments completed before sign-in,
-                matched by verified email, offered for explicit linking. */}
-                {linkableQ.data && linkableQ.data.length > 0 && (
-                  <DashboardCard
-                    icon={<ClipboardCheck className="h-5 w-5" />}
-                    title={L(
-                      c("Bedömning att koppla till din profil", "Assessment ready to link"),
-                      lang,
-                    )}
-                  >
-                    <p className="mb-3 text-sm text-muted-foreground">
-                      {L(
-                        c(
-                          "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
-                          "You've completed an employer-assigned assessment with this email address. Link the result to your profile to see it under My Reports.",
-                        ),
-                        lang,
-                      )}
-                    </p>
-                    <ul className="divide-y divide-border">
-                      {linkableQ.data.map((a) => (
-                        <li key={a.id} className="flex items-center justify-between gap-3 py-3">
-                          <span className="text-sm text-foreground">
-                            {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={claimMutation.isPending}
-                            onClick={() => claimMutation.mutate(a.id)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
-                          >
-                            {L(c("Koppla till min profil", "Link to my profile"), lang)}
-                            <ArrowRight className="h-3 w-3" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </DashboardCard>
-                )}
               </>
             )}
 
-            {/* Previous reports — reuses runsQ.data, already fetched above;
-                no new query. Excludes the latest run, already linked from
-                the Assessment summary card. */}
-            {runsQ.data && runsQ.data.length > 1 && (
-              <DashboardCard
-                icon={<ClipboardCheck className="h-5 w-5" />}
-                title={L(c("Tidigare rapporter", "Previous reports"), lang)}
-              >
-                {/* Unified history: Security Career Discovery v3 and legacy
-                    v2.1 in one chronological list, each labelled with the
-                    instrument that produced it. Legacy rows keep their
-                    existing /my-career/reports/$runId destination. */}
-                <ReportHistoryList legacyRuns={runsQ.data.slice(1) as never} />
-              </DashboardCard>
+            {/* Each report contract reaches its own renderer, unchanged. */}
+            {activeQ.data?.kind === "discovery_v3_0" && (
+              <DiscoveryCareerSummary active={activeQ.data} />
+            )}
+            {activeQ.data?.kind === "discovery_v3_1" && (
+              <DiscoveryV31Pending active={activeQ.data} />
+            )}
+            {activeIsUnreadable && activeQ.data?.kind === "discovery_unreadable" && (
+              <DiscoveryReportUnreadable active={activeQ.data} />
             )}
 
-            {/* Security Career Profile — editable, contextual only (Phase 1).
-                Carries the #career-profile anchor because this is the profile
-                section every candidate actually gets. The anchor used to live
-                on the legacy CareerProfileBlock below; when 4eea18a put that
-                block behind `activeIsLegacy`, the Quick Action kept pointing at
-                an id that no longer rendered for anyone on a v3 report — a
-                visible action that changed the URL and moved nothing. */}
-            <DashboardCard
-              id="career-profile"
-              icon={<UserIcon className="h-5 w-5" />}
-              title={L(c("Din säkerhetskarriärprofil", "Your Security Career Profile"), lang)}
-            >
-              <SecurityCareerProfileCard />
-            </DashboardCard>
-
-            {/* Career profile */}
-            {/* Legacy career profile — Karriärprofil, Toppyrke, Primär
-                drivkraft, Konfidensnivå. Rendered ONLY when the legacy
-                report is the active one. */}
-            {activeIsLegacy && hasProfile && profile && (
-              <DashboardCard
-                icon={<UserIcon className="h-5 w-5" />}
-                title={L(c("Din karriärprofil", "Your career profile"), lang)}
-              >
-                <CareerProfileBlock
-                  lang={lang}
-                  profile={profile}
-                  topFamilyId={topFamilyId}
-                  topSlug={topProfession?.slug}
-                />
-              </DashboardCard>
+            {activeIsLegacy && latestRun && (
+              <AssessmentSummary
+                lang={lang}
+                completedAt={latestRun.completed_at ?? latestRun.started_at}
+                profile={profile}
+                topProfession={topProfTitle}
+                topArea={topAreaLabel}
+                runId={latestRun.id}
+              />
             )}
 
-            {/* Recommended professions */}
-            {activeIsLegacy && hasProfile && topProfessions.length > 0 && (
-              <DashboardCard
-                icon={<Compass className="h-5 w-5" />}
-                title={L(c("Rekommenderade yrken", "Recommended professions"), lang)}
-              >
-                <ul className="grid gap-3 sm:grid-cols-1">
-                  {topProfessions.map((r) => {
-                    const areaLabel = getCareerAreaLabel(r.familyKey)?.name[lang] ?? r.familyKey;
-                    const summary =
-                      (lang === "sv" ? r.prof!.description.sv : r.prof!.description.en) || "";
-                    const hasJobs = jobsForTopFamilyQ.data?.[r.slug];
-                    return (
-                      <li
-                        key={r.slug}
-                        className="rounded-lg border border-border bg-background p-4"
-                      >
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                          <h3 className="text-base font-semibold text-foreground">
-                            {lang === "sv" ? r.prof!.titleSv : r.prof!.titleEn}
-                          </h3>
-                          <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                            {areaLabel}
-                          </span>
-                        </div>
-                        {summary && (
-                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                            {summary}
-                          </p>
-                        )}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Link
-                            to="/career-center/$profession"
-                            params={{ profession: r.slug }}
-                            className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-                          >
-                            {L(c("Utforska yrke", "Explore profession"), lang)}
-                            <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                          </Link>
-                          {hasJobs && (
-                            <Link
-                              to="/jobs/profession/$professionSlug"
-                              params={{ professionSlug: r.slug }}
-                              className="inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-                            >
-                              {L(c("Visa jobb", "View jobs"), lang)}
-                            </Link>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </DashboardCard>
-            )}
-
-            {/* Relevant jobs */}
-            <DashboardCard
-              icon={<Briefcase className="h-5 w-5" />}
-              title={L(c("Relevanta jobb för dig", "Relevant jobs for you"), lang)}
-              action={
-                <Link to="/jobs" className="text-xs text-primary hover:underline">
-                  {L(c("Alla jobb", "All jobs"), lang)} →
-                </Link>
-              }
-            >
-              {jobsQ.isLoading && (
-                <p className="text-sm text-muted-foreground">{L(c("Laddar…", "Loading…"), lang)}</p>
-              )}
-              {jobsQ.data && jobsQ.data.length === 0 && (
-                <EmptyState
-                  what={L(
-                    c(
-                      "Just nu finns inga öppna roller som matchar din profil.",
-                      "We don't currently have open roles matching your profile.",
-                    ),
-                    lang,
-                  )}
-                  why={L(
-                    c(
-                      "Utforska alla säkerhetsjobb eller upptäck närliggande yrken medan nya möjligheter läggs till.",
-                      "Explore all security jobs or discover related professions while new opportunities are added.",
-                    ),
-                    lang,
-                  )}
-                  ctaLabel={L(c("Bläddra alla jobb", "Browse all jobs"), lang)}
-                  ctaTo="/jobs"
-                  secondaryLabel={L(c("Utforska yrken", "Explore professions"), lang)}
-                  secondaryTo="/career-center"
-                />
-              )}
-              {jobsQ.data && jobsQ.data.length > 0 && (
-                <ul className="divide-y divide-border">
-                  {jobsQ.data.map((j) => {
-                    const title =
-                      (lang === "sv" ? j.title_sv : j.title_en) || j.title_en || j.title_sv || "";
-                    const location =
-                      [j.location_text, j.city, j.country].filter(Boolean).join(", ") || "";
-                    return (
-                      <li key={j.id} className="py-3 first:pt-0 last:pb-0">
-                        <Link to="/jobs/$slug" params={{ slug: j.slug }} className="group block">
-                          <p className="text-sm font-medium text-foreground group-hover:underline">
-                            {title}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            {location && (
-                              <span className="inline-flex items-center gap-1">
-                                <MapPin className="h-3 w-3" aria-hidden="true" />
-                                {location}
-                              </span>
-                            )}
-                            {j.employment_type && (
-                              <span className="inline-flex items-center gap-1">
-                                <Building2 className="h-3 w-3" aria-hidden="true" />
-                                {employmentTypeLabel(j.employment_type, lang)}
-                              </span>
-                            )}
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </DashboardCard>
-          </div>
-
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            <DashboardCard
-              icon={<Target className="h-5 w-5" />}
-              title={L(c("Nästa steg", "Recommended next step"), lang)}
-            >
-              {/* Derived from the ACTIVE report. A legacy profession such as
-                  Skyddsvakt must never be suggested merely because an older
-                  report exists. */}
-              {activeQ.data?.kind === "discovery_v3_0" ? (
-                <DiscoveryNextStep active={activeQ.data} />
-              ) : activeQ.data?.kind === "discovery_v3_1" ||
-                activeQ.data?.kind === "discovery_unreadable" ? (
-                // A v3.1 or unreadable report must not fall through to the
-                // legacy next step: it would suggest a v2.1 profession such as
-                // Skyddsvakt on the strength of a report that never said so.
+            {/* No report yet — the introduction and the start CTA, which is
+                the ONLY state where starting the test is the headline action. */}
+            {noAssessment && (
+              <div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  {t("careerDiscovery.dashboard.nextStepFallback")}
+                  {assessmentClosed
+                    ? L(
+                        c(
+                          "Career Discovery visar dina styrkor, ditt arbetssätt och de säkerhetsroller som passar dig bäst. Den uppdaterade versionen granskas innan den öppnas för alla.",
+                          "Career Discovery shows your strengths, how you work and the security roles that suit you best. The updated version is under review before it opens to everyone.",
+                        ),
+                        lang,
+                      )
+                    : L(
+                        c(
+                          "Career Discovery visar dina styrkor, ditt arbetssätt och de säkerhetsroller som passar dig bäst. Testet tar cirka fem minuter.",
+                          "Career Discovery shows your strengths, how you work and the security roles that suit you best. It takes about five minutes.",
+                        ),
+                        lang,
+                      )}
                 </p>
-              ) : activeQ.isLoading ? (
-                <div
-                  className="h-16 animate-pulse rounded-md bg-muted motion-reduce:animate-none"
-                  role="status"
-                  aria-label={t("careerDiscovery.dashboard.loading")}
-                />
-              ) : (
-                <NextStep
-                  lang={lang}
-                  noAssessment={noAssessment}
-                  assessmentClosed={assessmentClosed}
-                  topAreaLabel={topAreaLabel}
-                  topProfTitle={topProfTitle}
-                  topSlug={topProfession?.slug}
-                />
-              )}
-            </DashboardCard>
-
-            {/* "My career profile" is deliberately NOT here.
-                It pointed at #career-profile — a section on THIS page, a
-                screen's scroll away. A quick action that scrolls you down the
-                page you are already on is not a destination, and dressing it up
-                as one made the list look longer than it was useful. The profile
-                section carries its own Save control where the editing happens.
-                What remains are real destinations, plus the assessment, which
-                appears as an action or as an explanation depending on the
-                candidate's actual access. */}
-            <DashboardCard title={L(c("Snabbåtgärder", "Quick actions"), lang)}>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <QuickLink
-                    to="/career-center"
-                    label={L(c("Utforska yrken", "Explore professions"), lang)}
-                  />
-                </li>
-                <li>
-                  <QuickLink to="/jobs" label={L(c("Bläddra jobb", "Browse jobs"), lang)} />
-                </li>
-                <li>
-                  <QuickLink
-                    to="/my-career/applications"
-                    label={L(c("Mina ansökningar", "My applications"), lang)}
-                  />
-                </li>
-                <li>
-                  <QuickLink
-                    to="/security-career-assessment"
-                    label={L(c("Gör om testet", "Retake assessment"), lang)}
-                    unavailable={
-                      assessmentClosed
-                        ? {
-                            badge: L(c("Stängd", "Closed"), lang),
-                            reason: L(
-                              c(
-                                "Testet granskas innan det öppnas för alla.",
-                                "The assessment is under review before it opens to everyone.",
-                              ),
-                              lang,
-                            ),
-                          }
-                        : undefined
-                    }
-                  />
-                </li>
-              </ul>
-            </DashboardCard>
-
-            <DashboardCard
-              icon={<UserIcon className="h-5 w-5" />}
-              title={L(c("Konto", "Account"), lang)}
-            >
-              <div className="space-y-2 text-sm">
-                {displayName && <p className="font-medium text-foreground">{displayName}</p>}
-                {email && <p className="text-xs text-muted-foreground">{email}</p>}
-                <p className="text-xs text-muted-foreground">
-                  {L(
-                    c(
-                      "Byt språk längst ner på sidan. Fler kontoinställningar kommer snart.",
-                      "Change language at the bottom of the page. More account settings coming soon.",
-                    ),
-                    lang,
-                  )}
-                </p>
-                {employerPortalEnabled() && hasEmployerWorkspace && (
+                {/* The start CTA exists only when the gate would actually let
+                    this candidate in. When it would not, the card offers the
+                    thing they CAN do instead — a refusal with nowhere to go is
+                    the dead end this gate was built to remove, and dropping
+                    the CTA without replacing it would reintroduce it quietly. */}
+                {assessmentClosed ? (
                   <Link
-                    to="/employer"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                    to="/career-center"
+                    className="mt-4 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground hover:bg-accent"
                   >
-                    <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t("employer.workspace.label")}
+                    {L(c("Utforska yrken", "Explore professions"), lang)}
+                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/security-career-assessment"
+                    className="mt-4 inline-flex h-10 items-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                  >
+                    {L(c("Starta testet", "Start the assessment"), lang)}
+                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                   </Link>
                 )}
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-                >
-                  <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-                  {L(c("Logga ut", "Sign out"), lang)}
-                </button>
               </div>
-            </DashboardCard>
-          </aside>
+            )}
+
+            {/* Previous reports stay reachable. Unchanged component, unchanged
+                destinations — this is the read path the brief forbids
+                regressing, and it is rendered from the SAME runsQ data as
+                before, not a new query. */}
+            {runsQ.data && runsQ.data.length > 1 && (
+              <details className="mt-4 border-t border-border pt-3">
+                <summary className="cursor-pointer text-sm font-medium text-foreground">
+                  {L(c("Alla mina rapporter", "All my reports"), lang)}
+                </summary>
+                <div className="mt-3">
+                  <ReportHistoryList legacyRuns={runsQ.data.slice(1) as never} />
+                </div>
+              </details>
+            )}
+
+            {/* Retake — small, secondary, and only for somebody who already
+                has a report. It used to be a top-level Quick Action, which
+                offered "redo the test" to people whose test was the thing they
+                had just finished. */}
+            {!noAssessment && !assessmentClosed && assessmentOpen && (
+              <p className="mt-4 text-xs">
+                <Link
+                  to="/security-career-assessment"
+                  className="text-muted-foreground underline-offset-4 hover:underline"
+                >
+                  {L(c("Gör om testet (valfritt)", "Retake the assessment (optional)"), lang)}
+                </Link>
+              </p>
+            )}
+          </DashboardCard>
+
+          {/* ── Employer tasks — rendered ONLY when one exists ──
+
+              MyAcademyWorkCard returns null on an empty queue, and the
+              linkable list is only non-empty when there is genuinely
+              something to link, so this whole area disappears for the
+              overwhelming majority of candidates rather than standing
+              permanently empty. */}
+          {hasEmployerTask && (
+            <div className="space-y-6">
+              <MyAcademyWorkCard />
+
+              {/* Employer-assigned assessments completed before sign-in,
+                  matched by verified email, offered for explicit linking.
+
+                  This used to render only inside the legacy-report branch, so
+                  a candidate on a v3 report was never offered the link at all
+                  and their completed assessment stayed invisible. It is an
+                  employer task and belongs with the employer tasks. */}
+              {linkableTasks.length > 0 && (
+                <DashboardCard
+                  icon={<ClipboardCheck className="h-5 w-5" />}
+                  title={L(
+                    c("Bedömning att koppla till din profil", "Assessment ready to link"),
+                    lang,
+                  )}
+                >
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    {L(
+                      c(
+                        "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
+                        "You've completed an employer-assigned assessment with this email address. Link the result to your profile to see it under My Reports.",
+                      ),
+                      lang,
+                    )}
+                  </p>
+                  <ul className="divide-y divide-border">
+                    {linkableTasks.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between gap-3 py-3">
+                        <span className="text-sm text-foreground">
+                          {lang === "sv" ? a.assessmentNameSv : a.assessmentNameEn}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={claimMutation.isPending}
+                          onClick={() => claimMutation.mutate(a.id)}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
+                        >
+                          {L(c("Koppla till min profil", "Link to my profile"), lang)}
+                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </DashboardCard>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Reviewer queue — self-hiding, and only for an account an employer
+            has authorised to review responses (#51). */}
+        <MyReviewQueueCard />
+
+        {/* ---------------- Account strip ----------------
+
+            Not a dashboard card. Sign-out lives nowhere else in the
+            authenticated chrome, so removing the old Account panel outright
+            would have stranded every candidate on the page; it is kept as one
+            quiet row rather than a column of its own. */}
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
+          <div className="min-w-0 text-xs text-muted-foreground">
+            {displayName && <span className="font-medium text-foreground">{displayName}</span>}
+            {email && <span className="ml-2">{email}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {employerPortalEnabled() && hasEmployerWorkspace && (
+              <Link
+                to="/employer"
+                className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("employer.workspace.label")}
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+            >
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+              {L(c("Logga ut", "Sign out"), lang)}
+            </button>
+          </div>
         </div>
       </Section>
     </SiteLayout>
   );
 }
-
-// -----------------------------------------------------------------
-// Career Journey — horizontal stepper
-// -----------------------------------------------------------------
-
-function CareerJourney({
-  lang,
-  steps,
-}: {
-  lang: "sv" | "en";
-  steps: {
-    assessment: boolean;
-    profile: boolean;
-    explore: boolean;
-    apply: boolean;
-    develop: boolean;
-  };
-}) {
-  const stages: Array<{ key: keyof typeof steps; label: string }> = [
-    {
-      key: "assessment",
-      label: L(c("Genomför bedömning", "Complete assessment"), lang),
-    },
-    {
-      key: "profile",
-      label: L(c("Skapa karriärprofil", "Create career profile"), lang),
-    },
-    {
-      key: "explore",
-      label: L(c("Utforska yrken", "Explore professions"), lang),
-    },
-    { key: "apply", label: L(c("Sök en roll", "Apply for a role"), lang) },
-    {
-      key: "develop",
-      label: L(c("Fortsätt utvecklas", "Continue developing"), lang),
-    },
-  ];
-
-  return (
-    <nav
-      aria-label={L(c("Karriärresa", "Career journey"), lang)}
-      className="rounded-xl border border-border bg-background p-4 md:p-5"
-    >
-      <div className="mb-3 flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-foreground">
-          {L(c("Din karriärresa", "Your career journey"), lang)}
-        </h2>
-      </div>
-      <ol className="grid gap-3 sm:grid-cols-5">
-        {stages.map((s, i) => {
-          const done = steps[s.key];
-          return (
-            <li
-              key={s.key}
-              className={
-                "flex items-start gap-2 rounded-lg border p-3 text-xs " +
-                (done
-                  ? "border-primary/40 bg-primary/5 text-foreground"
-                  : "border-border bg-muted/40 text-muted-foreground")
-              }
-            >
-              <span className="mt-0.5 shrink-0">
-                {done ? (
-                  <CheckCircle2
-                    className="h-4 w-4 text-primary"
-                    aria-label={L(c("Klart", "Done"), lang)}
-                  />
-                ) : (
-                  <Circle className="h-4 w-4" aria-label={L(c("Kvar", "Upcoming"), lang)} />
-                )}
-              </span>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {L(c("Steg", "Step"), lang)} {i + 1}
-                </p>
-                <p className="mt-0.5 font-medium leading-snug">{s.label}</p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
 // -----------------------------------------------------------------
 // Assessment summary — rich card
 // -----------------------------------------------------------------
@@ -1176,321 +877,6 @@ function ConfidenceBadge({
     </span>
   );
 }
-
-// -----------------------------------------------------------------
-// Career Profile — visual block
-// -----------------------------------------------------------------
-
-function CareerProfileBlock({
-  lang,
-  profile,
-  topFamilyId,
-  topSlug,
-}: {
-  lang: "sv" | "en";
-  profile: CareerProfileForJobsV1;
-  topFamilyId: string | undefined;
-  topSlug: string | undefined;
-}) {
-  const workingStyle = profile.archetype
-    ? lang === "sv"
-      ? profile.archetype.labelSv
-      : profile.archetype.labelEn
-    : undefined;
-  const motivations = profile.motivations.map((m) => (lang === "sv" ? m.labelSv : m.labelEn));
-  const domain = topFamilyId ? getCareerAreaLabel(topFamilyId)?.name[lang] : undefined;
-
-  const slugScore = topSlug ? profile.slugScores[topSlug] : undefined;
-  const strongDims = slugScore
-    ? slugScore.strongDims.slice(0, 4).map((d) => dimensionLabel(d, lang))
-    : [];
-  const developDims = slugScore
-    ? slugScore.developDims.slice(0, 4).map((d) => dimensionLabel(d, lang))
-    : [];
-
-  return (
-    // No #career-profile anchor here: this block renders only for a legacy
-    // v2.1 report, and the Security Career Profile card above — which every
-    // candidate gets — owns that anchor. Two elements sharing the id would
-    // make the Quick Action's destination depend on which report is active.
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <ProfileTile
-          icon={<UserIcon className="h-4 w-4" />}
-          label={L(c("Arbetsstil", "Working style"), lang)}
-          value={workingStyle}
-          fallback={L(c("Analyseras…", "Being analysed…"), lang)}
-        />
-        <ProfileTile
-          icon={<Compass className="h-4 w-4" />}
-          label={L(c("Föredraget område", "Preferred security domain"), lang)}
-          value={domain}
-          fallback={L(c("Ej fastställt", "Not determined"), lang)}
-        />
-      </div>
-
-      <div>
-        <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          {L(c("Främsta drivkrafter", "Main motivations"), lang)}
-        </p>
-        {motivations.length > 0 ? (
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {motivations.map((m, i) => (
-              <li
-                key={i}
-                className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-              >
-                {m}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-1 text-sm text-muted-foreground">
-            {L(
-              c("Inga tydliga drivkrafter i det här testet.", "No clear motivations in this test."),
-              lang,
-            )}
-          </p>
-        )}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            {L(c("Starkaste kompetenser", "Strongest competencies"), lang)}
-          </p>
-          {strongDims.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-sm">
-              {strongDims.map((d, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                  <span className="text-foreground">{d}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {L(c("Analyseras…", "Being analysed…"), lang)}
-            </p>
-          )}
-        </div>
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-            {L(c("Utvecklingsområden", "Development areas"), lang)}
-          </p>
-          {developDims.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-sm">
-              {developDims.map((d, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-                  <span className="text-foreground">{d}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {L(
-                c(
-                  "Inga tydliga utvecklingsområden framkom.",
-                  "No clear development areas identified.",
-                ),
-                lang,
-              )}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProfileTile({
-  icon,
-  label,
-  value,
-  fallback,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | undefined;
-  fallback: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-muted/30 p-3">
-      <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-        <span className="text-primary/70">{icon}</span>
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-medium text-foreground">{value ?? fallback}</p>
-    </div>
-  );
-}
-
-// -----------------------------------------------------------------
-// Next step + helpers
-// -----------------------------------------------------------------
-
-function NextStep({
-  lang,
-  noAssessment,
-  assessmentClosed,
-  topAreaLabel,
-  topProfTitle,
-  topSlug,
-}: {
-  lang: "sv" | "en";
-  noAssessment: boolean;
-  assessmentClosed: boolean;
-  topAreaLabel: string | undefined;
-  topProfTitle: string | undefined;
-  topSlug: string | undefined;
-}) {
-  // The recommended next step must be a step the candidate can actually take.
-  // With the assessment gated, "Start assessment" is not a next step — it is a
-  // closed door — so the genuinely available action is offered instead.
-  if (noAssessment && assessmentClosed) {
-    return (
-      <StepBody
-        why={L(
-          c(
-            "Security Career Discovery granskas innan den öppnas för alla.",
-            "Security Career Discovery is under review before it opens to everyone.",
-          ),
-          lang,
-        )}
-        gain={L(
-          c(
-            "Du kan utforska yrken och bygga ditt Security Passport under tiden.",
-            "You can explore professions and build your Security Passport in the meantime.",
-          ),
-          lang,
-        )}
-        ctaLabel={L(c("Utforska yrken", "Explore professions"), lang)}
-        cta={
-          <Link
-            to="/career-center"
-            className="mt-3 inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-          >
-            {L(c("Utforska yrken", "Explore professions"), lang)}
-            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        }
-      />
-    );
-  }
-
-  if (noAssessment) {
-    return (
-      <StepBody
-        why={L(
-          c(
-            "Testet är grunden för alla rekommendationer på plattformen.",
-            "The assessment is the foundation of every recommendation on the platform.",
-          ),
-          lang,
-        )}
-        gain={L(
-          c(
-            "Efteråt får du en personlig karriärprofil, rekommenderade yrken och relevanta jobb.",
-            "Afterwards you get a personal career profile, recommended professions and relevant jobs.",
-          ),
-          lang,
-        )}
-        ctaLabel={L(c("Gör säkerhetstestet", "Take the assessment"), lang)}
-        cta={
-          <Link
-            to="/security-career-assessment"
-            className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            {L(c("Starta testet", "Start assessment"), lang)}
-            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        }
-      />
-    );
-  }
-
-  if (topSlug && topProfTitle && topAreaLabel) {
-    return (
-      <StepBody
-        why={L(
-          c(
-            `Din profil pekar mot stark potential inom ${topAreaLabel}.`,
-            `Your profile indicates strong potential within ${topAreaLabel}.`,
-          ),
-          lang,
-        )}
-        gain={L(
-          c(
-            `Utforska ${topProfTitle} för att förstå kompetenskrav, certifieringar och tillgängliga möjligheter.`,
-            `Explore ${topProfTitle} to understand required skills, certifications and available opportunities.`,
-          ),
-          lang,
-        )}
-        ctaLabel={topProfTitle}
-        cta={
-          <Link
-            to="/career-center/$profession"
-            params={{ profession: topSlug }}
-            className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            {L(c("Utforska yrket", "Explore profession"), lang)}
-            <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        }
-      />
-    );
-  }
-
-  return (
-    <StepBody
-      why={L(
-        c(
-          "Att välja ett målprofession fokuserar din utveckling och gör rekommendationerna skarpare.",
-          "Choosing a target profession focuses your development and sharpens every recommendation.",
-        ),
-        lang,
-      )}
-      gain={L(
-        c(
-          "Du får skräddarsydd vägledning och tydligare nästa steg.",
-          "You'll get tailored guidance and clearer next steps.",
-        ),
-        lang,
-      )}
-      ctaLabel={L(c("Öppna Karriärcentret", "Open Career Center"), lang)}
-      cta={
-        <Link
-          to="/career-center"
-          className="mt-3 inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          {L(c("Öppna Karriärcentret", "Open Career Center"), lang)}
-          <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      }
-    />
-  );
-}
-
-function StepBody({
-  why,
-  gain,
-  cta,
-}: {
-  why: string;
-  gain: string;
-  ctaLabel: string;
-  cta: React.ReactNode;
-}) {
-  return (
-    <div>
-      <p className="text-sm leading-relaxed text-foreground">{why}</p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{gain}</p>
-      {cta}
-    </div>
-  );
-}
-
 // -----------------------------------------------------------------
 // Small components
 // -----------------------------------------------------------------
@@ -1526,84 +912,5 @@ function DashboardCard({
       </header>
       <div className="mt-4">{children}</div>
     </section>
-  );
-}
-
-function EmptyState({
-  what,
-  why,
-  ctaLabel,
-  ctaTo,
-  secondaryLabel,
-  secondaryTo,
-}: {
-  what: string;
-  why: string;
-  ctaLabel: string;
-  ctaTo: "/security-career-assessment" | "/jobs" | "/career-center";
-  secondaryLabel?: string;
-  secondaryTo?: "/security-career-assessment" | "/jobs" | "/career-center";
-}) {
-  return (
-    <div>
-      <p className="text-sm text-foreground">{what}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{why}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Link
-          to={ctaTo}
-          className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          {ctaLabel}
-          <ArrowRight className="ml-1 h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-        {secondaryLabel && secondaryTo && (
-          <Link
-            to={secondaryTo}
-            className="inline-flex items-center rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-          >
-            {secondaryLabel}
-          </Link>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function QuickLink({
-  to,
-  label,
-  unavailable,
-}: {
-  to:
-    | "/my-career"
-    | "/my-career/applications"
-    | "/career-center"
-    | "/jobs"
-    | "/security-career-assessment";
-  label: string;
-  /** When set, the action is NOT rendered as a link. A quick action whose
-   *  destination refuses the candidate is a dead end, and silently dropping it
-   *  is no better — the row stays, says it is unavailable, and says why. */
-  unavailable?: { readonly badge: string; readonly reason: string };
-}) {
-  if (unavailable) {
-    return (
-      <div className="rounded-md px-2 py-1.5">
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span>{label}</span>
-          <span className="text-xs font-medium uppercase tracking-wide">{unavailable.badge}</span>
-        </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{unavailable.reason}</p>
-      </div>
-    );
-  }
-  return (
-    <Link
-      to={to}
-      className="flex items-center justify-between rounded-md px-2 py-1.5 text-foreground hover:bg-accent"
-    >
-      <span>{label}</span>
-      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-    </Link>
   );
 }
