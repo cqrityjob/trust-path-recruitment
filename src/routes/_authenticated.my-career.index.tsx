@@ -9,10 +9,8 @@ import {
   Briefcase,
   RefreshCcw,
   Eye,
-  LogOut,
   User as UserIcon,
   MapPin,
-  Building2,
   TrendingUp,
   Award,
   Flame,
@@ -46,10 +44,8 @@ import {
   getMyLinkableAssignments,
   claimAssessmentAssignment,
 } from "@/lib/job-intelligence/assessment-assignments.functions";
-import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { listMyApplications } from "@/lib/job-intelligence/applications.functions";
 import { listMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
-import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { getProfession } from "@/lib/career-center/professions";
@@ -125,7 +121,6 @@ function confidenceBand(level: ConfidenceLevel, lang: "sv" | "en") {
 function MyCareerPage() {
   const { lang, t } = useT();
   const [displayName, setDisplayName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
     let alive = true;
@@ -138,7 +133,6 @@ function MyCareerPage() {
         (data.user.email ?? "").split("@")[0] ||
         "";
       setDisplayName(nm);
-      setEmail(data.user.email ?? "");
     });
     return () => {
       alive = false;
@@ -226,18 +220,6 @@ function MyCareerPage() {
     },
   });
 
-  // Phase G2 — entry point is gated on BOTH the feature flag and having
-  // at least one active membership. `enabled: employerPortalEnabled()`
-  // means no request is made at all while the flag is false — "no
-  // entry point at all" applies to data-fetching, not just rendering.
-  const fetchEmployerWorkspaces = useServerFn(listMyEmployerWorkspaces);
-  const employerWorkspacesQ = useQuery({
-    queryKey: ["employer", "my-workspaces"],
-    queryFn: () => fetchEmployerWorkspaces(),
-    enabled: employerPortalEnabled(),
-  });
-  const hasEmployerWorkspace = (employerWorkspacesQ.data?.length ?? 0) > 0;
-
   // Feeds the "Active applications" figure on the Jobs card. Non-critical:
   // an applications backend that is briefly unavailable must degrade one
   // number, never the dashboard, hence retry: false and no error UI.
@@ -293,10 +275,6 @@ function MyCareerPage() {
     activeQ.status !== "pending" &&
     runsQ.status === "success" &&
     (runsQ.data.length === 0 || profileState.status === "no_profile");
-
-  async function onSignOut() {
-    await supabase.auth.signOut();
-  }
 
   const greeting = L(c("Välkommen tillbaka", "Welcome back"), lang);
   const topAreaLabel = topFamilyId ? getCareerAreaLabel(topFamilyId)?.name[lang] : undefined;
@@ -707,37 +685,17 @@ function MyCareerPage() {
             has authorised to review responses (#51). */}
         <MyReviewQueueCard />
 
-        {/* ---------------- Account strip ----------------
+        {/* The account row that used to sit here — name, email,
+            "Arbetsgivaryta", "Logga ut" — has moved to the header's account
+            menu (src/components/site/AccountMenu.tsx).
 
-            Not a dashboard card. Sign-out lives nowhere else in the
-            authenticated chrome, so removing the old Account panel outright
-            would have stranded every candidate on the page; it is kept as one
-            quiet row rather than a column of its own. */}
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-          <div className="min-w-0 text-xs text-muted-foreground">
-            {displayName && <span className="font-medium text-foreground">{displayName}</span>}
-            {email && <span className="ml-2">{email}</span>}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {employerPortalEnabled() && hasEmployerWorkspace && (
-              <Link
-                to="/employer"
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
-              >
-                <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("employer.workspace.label")}
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
-            >
-              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-              {L(c("Logga ut", "Sign out"), lang)}
-            </button>
-          </div>
-        </div>
+            It was here because until that menu existed there was nowhere else
+            to sign out, so this page carried the whole product's account
+            chrome as a strip below its last card. That is what made a finished
+            dashboard end on something that read as an unfinished footer.
+            Nothing was dropped: identity, the membership-gated workspace
+            switch and sign-out are all in the menu, on every page instead of
+            this one. */}
       </Section>
     </SiteLayout>
   );

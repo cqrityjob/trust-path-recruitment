@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X, ShieldCheck, Building2, LogOut } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
@@ -10,16 +10,45 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
 import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
+import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 
 export function SiteHeader() {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  // Read off the SAME session this component already subscribes to — no extra
+  // request. The account menu has to be able to say who it would sign out.
+  const [account, setAccount] = useState<{ name: string; email: string }>({
+    name: "",
+    email: "",
+  });
 
   useEffect(() => {
     let alive = true;
+    const read = (session: { user?: unknown } | null) => {
+      const user = (session?.user ?? null) as {
+        email?: string | null;
+        user_metadata?: Record<string, unknown>;
+      } | null;
+      if (!user) {
+        setAccount({ name: "", email: "" });
+        return;
+      }
+      const meta = user.user_metadata ?? {};
+      const email = user.email ?? "";
+      const name =
+        (typeof meta.display_name === "string" && meta.display_name) ||
+        (typeof meta.name === "string" && meta.name) ||
+        email.split("@")[0] ||
+        "";
+      setAccount({ name, email });
+    };
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive) setSignedIn(Boolean(data.session));
+      if (!alive) return;
+      setSignedIn(Boolean(data.session));
+      read(data.session);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (
@@ -29,6 +58,7 @@ export function SiteHeader() {
         event === "INITIAL_SESSION"
       ) {
         setSignedIn(Boolean(session));
+        read(session);
       }
     });
     return () => {
@@ -82,6 +112,38 @@ export function SiteHeader() {
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
+
+  // Does this person actually hold a workspace? Same server function the
+  // dashboard used, same query key, so on /my-career the two share one
+  // request rather than each making their own. `enabled` keeps a signed-out
+  // visitor — and a build with the portal flag off — from asking at all.
+  const fetchWorkspaces = useServerFn(listMyEmployerWorkspaces);
+  const workspaces = useQuery({
+    queryKey: ["employer", "my-workspaces"],
+    queryFn: () => fetchWorkspaces(),
+    enabled: signedIn === true && employerPortalEnabled(),
+    staleTime: 5 * 60 * 1000,
+    // The two count queries above use retry: false, because a missing badge
+    // costs a number. This one gates NAVIGATION: if it fails, a member loses
+    // the only route into their workspace from the chrome and gets it back
+    // only by chance on a later page. One retry, so a transient blip does not
+    // strand them.
+    retry: 1,
+  });
+  // Strictly "the database returned a workspace". Pending and failed both read
+  // as no access, so the switch is hidden rather than offering a door that may
+  // not open -- it appears when the answer arrives.
+  const hasEmployerWorkspace = (workspaces.data?.length ?? 0) > 0;
+
+  const identity: AccountIdentity = {
+    name: account.name,
+    email: account.email,
+    hasEmployerWorkspace,
+  };
+
+  async function onSignOut() {
+    await supabase.auth.signOut();
+  }
 
   const academyTotal = academy.data?.total ?? 0;
   const academyActionable = academy.data?.actionable ?? 0;
@@ -190,6 +252,10 @@ export function SiteHeader() {
                 >
                   {t("nav.my_career")}
                 </Link>
+                {/* Account concerns — identity, workspace switch, sign out —
+                    in the chrome, on every page. Before this they existed
+                    only as a row at the bottom of the /my-career dashboard. */}
+                <AccountMenu identity={identity} onSignOut={onSignOut} />
               </>
             ) : (
               // Two entries, two audiences, two destinations. "Logga in" is
@@ -296,6 +362,50 @@ export function SiteHeader() {
               {t("nav.employerPortal")}
             </Link>
           </div>
+
+          {/* ── Account, at this width ──────────────────────────────────
+              A dropdown is the wrong affordance inside an already-open
+              mobile sheet, so the same three concerns are listed inline:
+              who you are, the workspace switch when you hold one, and sign
+              out. Same gate and same actions as the desktop menu — the
+              switch is not duplicated, it is the one control rendered for
+              the one viewport in play. */}
+          {signedIn && (
+            <div className="mt-4 border-t border-border pt-4">
+              <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("account.section")}
+              </p>
+              <p className="mt-1 truncate px-2 text-sm font-medium text-foreground">
+                {identity.name || identity.email}
+              </p>
+              {identity.name && identity.email && (
+                <p className="truncate px-2 text-xs text-muted-foreground">{identity.email}</p>
+              )}
+
+              {identity.hasEmployerWorkspace && (
+                <Link
+                  to="/employer"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  {t("employer.workspace.label")}
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  void onSignOut();
+                }}
+                className="mt-1 flex min-h-[44px] w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                {t("account.signOut")}
+              </button>
+            </div>
+          )}
         </Container>
       </div>
     </header>
