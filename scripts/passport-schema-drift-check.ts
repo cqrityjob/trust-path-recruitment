@@ -155,9 +155,25 @@ console.log("\n3 -- the market read model requests no column that may not exist"
 
   // The types read MAY filter on pilot_state, but only on the branch that is
   // unreachable unless the RPC succeeded -- which proves the column exists.
+  // The filter goes through `pilotStateFilter`, which is where the column name
+  // and the reason for it live together.
   ck(
     "the pilot type filter is reachable only after a successful RPC",
-    /access === "production"[\s\S]{0,200}pilot_state/.test(src),
+    /access === "production"[\s\S]{0,200}pilotStateFilter/.test(src),
+  );
+
+  // Anything ahead of the hosted schema must say so through the one named
+  // helper. types.ts is generated FROM hosted, so a raw `.rpc("sp_market_access")`
+  // typed against it compiles today and stops compiling the moment somebody
+  // regenerates -- which is exactly how `main` broke.
+  ck(
+    "the pilot RPC goes through the ahead-of-hosted helper",
+    /aheadOfHostedSchema\(supabase\)\.rpc\(/.test(src),
+  );
+  ck(
+    "and no pilot call is typed against the generated hosted schema",
+    !/supabase\.rpc\(\s*"sp_market_access"/.test(src) &&
+      !/typeQuery\.eq\(\s*"pilot_state"/.test(src),
   );
 
   ck(

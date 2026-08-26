@@ -25,7 +25,12 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
-import { isMissingPilotLayer, resolveMarketAccess } from "./market-access";
+import {
+  aheadOfHostedSchema,
+  isMissingPilotLayer,
+  pilotStateFilter,
+  resolveMarketAccess,
+} from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -265,16 +270,19 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // the migration nobody gains pilot access, which is precisely the
     // pre-pilot behaviour, and no absence of schema can ever open a market
     // that should be shut.
-    const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
-      _user_id: userId,
-      _market_pack_code: pack.code,
-    });
+    // `aheadOfHostedSchema` because types.ts is generated FROM hosted and this
+    // function is deliberately not there yet. See its comment for why that is
+    // a statement about the deploy/migrate gap rather than a type escape.
+    const { data: rpcAccess, error: accessError } = await aheadOfHostedSchema(supabase).rpc(
+      "sp_market_access",
+      { _user_id: userId, _market_pack_code: pack.code },
+    );
 
     if (accessError && !isMissingPilotLayer(accessError)) throw new Error(accessError.message);
 
     const access = resolveMarketAccess({
       packIsActive: pack.is_active,
-      rpcAccess,
+      rpcAccess: typeof rpcAccess === "string" ? rpcAccess : null,
       pilotLayerMissing: Boolean(accessError),
     });
 
@@ -294,7 +302,7 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     const { data, error } =
       access === "production"
         ? await typeQuery.eq("is_active", true)
-        : await typeQuery.eq("pilot_state", "internal_pilot");
+        : await pilotStateFilter(typeQuery);
     if (error) throw new Error(error.message);
 
     return {

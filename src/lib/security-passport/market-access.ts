@@ -81,3 +81,53 @@ export function resolveMarketAccess(input: MarketAccessInputs): MarketAccess {
     ? input.rpcAccess
     : "closed";
 }
+
+/* ------------------------------------------------------------------ */
+/* Reaching a schema the generated types do not describe               */
+/* ------------------------------------------------------------------ */
+
+/** ── WHY THIS ESCAPE HATCH EXISTS ──────────────────────────────────
+ *
+ *  `src/integrations/supabase/types.ts` is generated from the HOSTED
+ *  database. The pilot layer is, by design, ahead of it: the migration ships
+ *  unapplied and is applied deliberately, later.
+ *
+ *  So the generated types do not describe `sp_market_access` or `pilot_state`
+ *  and — correctly — they never will until the migration is applied. When
+ *  Lovable regenerated types.ts from hosted it deleted all sixty lines
+ *  describing them, and `main` stopped compiling: the same deploy/migrate gap
+ *  that emptied the Passport at runtime broke the build a day later.
+ *
+ *  Typing these two calls against the generated schema is therefore wrong in
+ *  principle, not merely inconvenient. Anything that runs ahead of hosted has
+ *  to say so, once, in a named place, instead of being asserted inline at
+ *  every call site where the next reader would read it as an oversight.
+ *
+ *  ── WHAT THIS DOES NOT BUY ────────────────────────────────────────
+ *
+ *  Safety at runtime. The call can still fail, and it is EXPECTED to fail
+ *  until the migration lands — which is exactly what `isMissingPilotLayer`
+ *  and `resolveMarketAccess` above are for. This only stops the compiler
+ *  demanding that hosted already knows about it.
+ *
+ *  Keep the surface minimal: two members, both narrowly typed, nothing that
+ *  would let an unrelated query slip through untyped. */
+export interface AheadOfHostedSchema {
+  rpc(
+    fn: "sp_market_access",
+    args: { _user_id: string; _market_pack_code: string },
+  ): PromiseLike<{ data: unknown; error: { code?: string; message: string } | null }>;
+}
+
+export function aheadOfHostedSchema(client: unknown): AheadOfHostedSchema {
+  return client as AheadOfHostedSchema;
+}
+
+/** The one filter that names a column hosted may not have yet. Same reasoning
+ *  as above, and it is only ever reached on the branch where the RPC already
+ *  succeeded — which proves the column exists. */
+export function pilotStateFilter<T extends { eq(column: string, value: string): unknown }>(
+  query: T,
+): T {
+  return query.eq("pilot_state", "internal_pilot") as T;
+}
