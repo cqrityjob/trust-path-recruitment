@@ -314,6 +314,30 @@
       ],
       "note": "The internal-pilot market entitlement. Adds sp_market_packs.pilot_state and sp_credential_types.pilot_state as an axis ORTHOGONAL to is_active, a per-user-per-market membership table with admin-only grant and revoke, and the sp_market_access() decision the claim trigger and the candidate read model both consult. It does NOT touch legal_review_state, legal_reviewed_by or is_active for any pack: GB, GB-NI and AE-DU stay pending and publicly inactive, and the migration ABORTS if any of them has gained a legal review, become active, or if a market outside the approved GB / GB-NI / AE-DU scope was opened. Abu Dhabi stays closed. Requires 20260914090000 for the GB-NI pack (its UPDATE is a no-op until then) and 20260914091000 for the full fifteen-category SIRA cadre catalogue.",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124732. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
+    },
+    {
+      "note": "Security hardening for the five Lovable/Supabase advisor findings. NOT applied hosted, and the code that calls its two new entry points ships on the same branch -- that pairing is what release-parity-check reports below, and it is the correct shape of the change, not a defect. It DOES mean the two must land together: merging the code without applying the migration leaves cd_record_funnel_event and cd_submit_test_feedback missing, and anonymous funnel events and test-group feedback would stop being recorded (silently -- both writes are fire-and-forget by design). Nothing else degrades: no candidate-facing flow depends on either.",
+      "introduces": [
+        {
+          "object": "cd_record_funnel_event",
+          "kind": "function"
+        },
+        {
+          "object": "cd_submit_test_feedback",
+          "kind": "function"
+        },
+        {
+          "object": "cd_assert_session_writable",
+          "kind": "function"
+        },
+        {
+          "object": "cd_v31_funnel_event_names",
+          "kind": "function"
+        }
+      ],
+      "hostedState": "pending",
+      "file": "20260916090000_security_hardening_lovable_findings.sql",
+      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');"
     }
   ],
   "policyVersion": 1,

@@ -229,6 +229,16 @@ jobs:
       - name: Employer UAT reconciliation check
         run: bun run emma-uat:check
 
+      # The source-level half of the security invariants. It replays every
+      # migration's grants, policies and function definitions in filename order
+      # and reports only what SURVIVES, so it fails on a SECURITY DEFINER
+      # function left unpinned or reachable by anon, or on a WITH CHECK (true)
+      # policy over a table that carries a user_id. The other half runs in the
+      # database job, against a replay that reproduces Supabase's own default
+      # privileges -- see supabase/tests/security_hardening_test.sql.
+      - name: SQL security guard
+        run: bun run sql-security:check
+
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.

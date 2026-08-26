@@ -280,27 +280,31 @@ SELECT pg_temp.ok(
       AND grantee='anon' AND privilege_type IN ('UPDATE','DELETE','TRUNCATE')) = 0,
   'P4.6a anon holds no UPDATE or DELETE grant on any cd_ table');
 
--- INSERT is confined to the two append-only anonymous telemetry/feedback
--- tables introduced by 20260815090000. That grant is deliberate and reviewed:
--- the schema suite's V9.6b–f prove the boundary around it is tight (anon
--- cannot read either table back, RLS is on, the policy is INSERT-only, and
--- privileged reading is a separate grant). This assertion is the public-flow
--- half of the same contract, so a write grant appearing on any table holding
--- actual assessment data — sessions, evidence, snapshots — still fails here.
+-- No cd_ table admits a direct anonymous INSERT any more — not one.
+--
+-- Until 20260916090000 this assertion carried a two-table allowlist for the
+-- telemetry tables introduced by 20260815090000, on the reasoning that their
+-- boundary was tight. It was not: the policy was `WITH CHECK (true)` over
+-- tables carrying a user_id and a session_id, so any holder of the publishable
+-- key could write a row attributed to another candidate. The direct grant is
+-- withdrawn; the allowlist is empty.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND grantee='anon' AND privilege_type = 'INSERT'
-      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
-  'P4.6b anon INSERT is confined to the reviewed telemetry allowlist');
+      AND grantee='anon' AND privilege_type = 'INSERT') = 0,
+  'P4.6b no cd_ table admits a direct anonymous INSERT');
 
--- The allowlist is a fixed pair, not an open category. Widening it is a
--- governance decision and must break this test rather than pass silently.
+-- The anonymous path itself is NOT gone, and this is where that is asserted
+-- from the public-flow side: it moved into two SECURITY DEFINER entry points
+-- that derive user_id from auth.uid() instead of accepting it. A change that
+-- removed anonymous telemetry outright would fail here, which is the point —
+-- "more secure" must not be allowed to mean "the feature was deleted".
 SELECT pg_temp.ok(
-  (SELECT count(DISTINCT table_name) FROM information_schema.role_table_grants
-    WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND grantee='anon' AND privilege_type = 'INSERT') = 2,
-  'P4.6c exactly two cd_ tables admit an anonymous write');
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback')
+      AND has_function_privilege('anon', p.oid, 'EXECUTE')) = 2,
+  'P4.6c exactly two audited entry points admit an anonymous write');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP P5 — honest governance record'; END $$;
 

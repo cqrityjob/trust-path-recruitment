@@ -1783,6 +1783,58 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Security hardening — the five Lovable/Supabase advisor findings.
+#
+# NOTE ON PLACEMENT: this suite runs BEFORE the rollback chain, deliberately.
+# It asks whole-schema questions ("no repository-owned function in public has a
+# mutable search_path", "no trigger function is executable by anon"), and the
+# rollback chain drops most of the schema those questions are about. Run after
+# it, the suite would keep passing while proving progressively less — the worst
+# possible failure mode for a security guard.
+#
+# It also runs against the FULLY migrated database on purpose: the grant
+# assertions are only answerable because 20260817190000, 20260817210000 and
+# 20260916090000 reproduce Supabase's ALTER DEFAULT PRIVILEGES locally.
+# ---------------------------------------------------------------------------
+echo "==> Running security hardening assertions"
+set +e
+SECH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_hardening_test.sql 2>&1)"
+SECH_RC=$?
+set -e
+
+echo "$SECH_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SECH_PASSED="$(echo "$SECH_OUT" | grep -c "ok  " || true)"
+
+if [ "$SECH_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the security hardening suite exited with code ${SECH_RC}." >&2
+  echo "$SECH_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "security hardening"
+else
+  echo "    ok  ${SECH_PASSED} security hardening assertions passed"
+
+  # GROUP S6 is the reason this suite is a guard rather than a snapshot: it
+  # reintroduces each violation and proves the property-based query catches it.
+  # A run that stopped before S6 proves only that today is clean.
+  for REQUIRED in \
+    "S6.2 a new definer function is anon-executable BY DEFAULT" \
+    "S6.3 S3.1's query DOES break when an unreviewed definer function appears" \
+    "S6.5 S1.2's query DOES see a reintroduced WITH CHECK (true) INSERT policy" \
+    "S6.6 S2.1's query DOES see a restored direct anon INSERT grant"; do
+    if ! echo "$SECH_OUT" | grep -qF "$REQUIRED"; then
+      echo "FAIL: the mandatory self-test assertion did not run: ${REQUIRED}" >&2
+      suite_failed "security hardening (missing: ${REQUIRED})"
+    fi
+  done
+
+  if [ "$SECH_PASSED" -lt 55 ]; then
+    echo "FAIL: expected at least 55 security hardening assertions, only ${SECH_PASSED} ran." >&2
+    echo "      A security suite that silently stops asserting is worse than one that fails." >&2
+    suite_failed "security hardening (assertion shortfall: floor 55)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Runs BEFORE the rollback chain, and creates the data the chain would destroy.
 # db-test.sh executes every rollback, which proves they RUN — it cannot prove
 # they REFUSE, because by then every suite has cleaned up and there is nothing
@@ -1958,6 +2010,46 @@ fi
 # Leaving any of the three in place aborts the Swedish file with
 # ROLLBACK BLOCKED naming the count.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# The security hardening rolls back FIRST: 20260916090000 is the newest
+# migration in the history, and the chain runs in reverse migration order so
+# each rollback sees the schema its forward migration left behind.
+#
+# It is also the one rollback in this chain that deliberately reinstates a
+# VULNERABILITY -- WITH CHECK (true) on the two telemetry tables, EXECUTE on
+# save_career_report back to PUBLIC. That is what a rollback IS, and the file
+# says so at the top. What it must not do is lose the 13 archived rows in the
+# legacy backup table, which is the whole reason that table was kept rather
+# than deleted; the file asserts the count itself and this step surfaces it.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the security hardening rollback"
+set +e
+SECHRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260916090000_security_hardening_lovable_findings_rollback.sql 2>&1)"
+SECHRB_RC=$?
+set -e
+
+if [ "$SECHRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the security hardening rollback exited with code ${SECHRB_RC}." >&2
+  echo "$SECHRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "security hardening rollback"
+else
+  echo "    ok  the security hardening reverses cleanly, legacy backup rows intact"
+fi
+
+# Independently of the file's own assertion: the reversal must be REAL. If the
+# two entry points survived, the rollback silently did nothing and the "ok"
+# above would be reporting a no-op as a success.
+SECHRB_FUNCS="$(psql -tAq -d "$TEST_DB" -c "
+  SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback')")"
+if [ "$SECHRB_FUNCS" != "0" ]; then
+  echo "FAIL: the security hardening rollback left ${SECHRB_FUNCS} entry point(s) behind." >&2
+  suite_failed "security hardening rollback (entry points survived)"
+fi
+
 # ---------------------------------------------------------------------------
 # The pilot entitlement rolls back BEFORE any of the market packs.
 # sp_pilot_members.market_pack_code references sp_market_packs(code), and the

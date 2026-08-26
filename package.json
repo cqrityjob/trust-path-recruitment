@@ -73,7 +73,8 @@
     "passport-recipient-card:check": "bun run scripts/passport-recipient-card-check.tsx",
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
-    "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx"
+    "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx",
+    "sql-security:check": "bun run scripts/sql-security-guard-check.ts"
   }, 
   "dependencies": {
     "embla-carousel-react": "^8.6.0", 
