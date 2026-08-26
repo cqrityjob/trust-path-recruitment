@@ -316,7 +316,7 @@
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124732. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
     },
     {
-      "note": "Security hardening for the five Lovable/Supabase advisor findings. NOT applied hosted, and the code that calls its two new entry points ships on the same branch -- that pairing is what release-parity-check reports below, and it is the correct shape of the change, not a defect. It DOES mean the two must land together: merging the code without applying the migration leaves cd_record_funnel_event and cd_submit_test_feedback missing, and anonymous funnel events and test-group feedback would stop being recorded (silently -- both writes are fire-and-forget by design). Nothing else degrades: no candidate-facing flow depends on either.",
+      "note": "EXPAND, phase 1 of 2. Backward compatible by construction: it ADDS the two governed entry points and the rest of the hardening, and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. Safe to apply hosted while the current main is live, and it should be applied BEFORE this branch merges. release-parity-check reports the code dependency below; that is the pairing working as intended, not a defect.",
       "introduces": [
         {
           "object": "cd_record_funnel_event",
@@ -336,8 +336,15 @@
         }
       ],
       "hostedState": "pending",
-      "file": "20260916090000_security_hardening_lovable_findings.sql",
+      "file": "20260916090000_security_hardening_expand.sql",
       "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');"
+    },
+    {
+      "note": "CONTRACT, phase 2 of 2. Introduces no object, which is why `introduces` is empty: it only DROPs the two WITH CHECK (true) INSERT policies and REVOKEs the transitional INSERT grant that EXPAND left in place. No code can depend on it, so it can never be a release blocker -- but it has a precondition no repository file can check, and this is where that precondition is recorded: DO NOT APPLY IT until the commit carrying the RPC form of src/lib/career-discovery/v31-feedback.functions.ts is live on main. Applied early, the previously deployed code loses its write and anonymous funnel events and test-group feedback stop being recorded until the code catches up; both writes are fire-and-forget, so the failure is silent. The migration refuses to run at all if EXPAND is missing.",
+      "introduces": [],
+      "hostedState": "pending",
+      "file": "20260916091000_security_hardening_contract.sql",
+      "verify": "SELECT count(*) AS legacy_insert_policies FROM pg_policies WHERE schemaname='public' AND tablename IN ('cd_v31_funnel_events','cd_test_feedback') AND cmd='INSERT';"
     }
   ],
   "policyVersion": 1,

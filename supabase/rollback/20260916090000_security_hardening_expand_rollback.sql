@@ -1,21 +1,32 @@
 -- =============================================================================
--- ROLLBACK — security hardening, the five Lovable/Supabase advisor findings
+-- ROLLBACK — security hardening, PHASE 1 of 2: EXPAND
 --
--- Reverses 20260916090000_security_hardening_lovable_findings.sql.
+-- Reverses 20260916090000_security_hardening_expand.sql.
+--
+-- ── RUN THE CONTRACT ROLLBACK FIRST ────────────────────────────────────
+--
+--   supabase/rollback/20260916091000_security_hardening_contract_rollback.sql
+--
+-- Reverse migration order, and not merely as a convention: this file DROPs the
+-- two governed entry points, and once they are gone the only remaining write
+-- path into either telemetry table is the legacy INSERT that CONTRACT removed.
+-- Running this one alone would leave both tables with no anonymous write path
+-- at all — the outage the phase split exists to prevent, produced by the
+-- rollback instead of by the deploy. This file refuses to run in that state.
 --
 -- ── READ THIS BEFORE RUNNING IT ────────────────────────────────────────
 --
 -- A rollback puts back what was there. What was there is the vulnerable
 -- state, and this file reinstates all of it deliberately:
 --
---   * `WITH CHECK (true)` INSERT policies on cd_v31_funnel_events and
---     cd_test_feedback, so any caller can again attribute a funnel event or a
---     feedback row to ANY user id and ANY session id;
 --   * EXECUTE on save_career_report(...) back to PUBLIC, so an unauthenticated
 --     caller holding the publishable key can again forge a completed career
 --     assessment run against any user in the system;
 --   * the full table grant set on the legacy backup, TRUNCATE included, which
 --     row-level security does not cover.
+--
+-- The `WITH CHECK (true)` INSERT policies are restored by the CONTRACT
+-- rollback rather than by this file, because CONTRACT is what removed them.
 --
 -- Run it only to unblock a genuine regression, and only as a step on the way
 -- back to a fixed forward migration.
@@ -43,7 +54,36 @@
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- 1 · The telemetry entry points and the direct INSERT they replaced
+-- 0 · Refuse to strand the telemetry tables
+--
+-- The CONTRACT rollback restores the legacy INSERT policy. If it has not run,
+-- dropping the entry points below removes the last remaining write path.
+-- ---------------------------------------------------------------------------
+DO $ordering$
+DECLARE _legacy integer;
+BEGIN
+  SELECT count(*) INTO _legacy
+    FROM pg_policies
+   WHERE schemaname = 'public'
+     AND tablename IN ('cd_v31_funnel_events', 'cd_test_feedback')
+     AND cmd = 'INSERT';
+
+  IF _legacy <> 2 THEN
+    RAISE EXCEPTION
+      'SECURITY_HARDENING_EXPAND_ROLLBACK_BLOCKED: % of 2 legacy INSERT policies are in '
+      'place. Run 20260916091000_security_hardening_contract_rollback.sql first, or this '
+      'rollback leaves both telemetry tables with no anonymous write path at all.',
+      _legacy;
+  END IF;
+END
+$ordering$;
+
+-- ---------------------------------------------------------------------------
+-- 1 · The telemetry entry points and the constraints EXPAND added
+--
+-- The legacy INSERT policy and grant are NOT restored here: EXPAND never
+-- removed them, so there is nothing for this file to put back. The CONTRACT
+-- rollback owns them, and section 0 has already confirmed it ran.
 -- ---------------------------------------------------------------------------
 
 DROP FUNCTION IF EXISTS public.cd_record_funnel_event(text, jsonb, uuid);
@@ -57,16 +97,15 @@ ALTER TABLE public.cd_v31_funnel_events
 ALTER TABLE public.cd_test_feedback
   DROP CONSTRAINT IF EXISTS cd_test_feedback_explored_profession_id_bounded;
 
-DROP POLICY IF EXISTS cd_v31_funnel_events_insert ON public.cd_v31_funnel_events;
-CREATE POLICY cd_v31_funnel_events_insert ON public.cd_v31_funnel_events
-  FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS cd_test_feedback_insert ON public.cd_test_feedback;
-CREATE POLICY cd_test_feedback_insert ON public.cd_test_feedback
-  FOR INSERT TO anon, authenticated WITH CHECK (true);
-
 -- Exactly the grants 20260815090000 left behind: INSERT for both roles,
 -- SELECT for authenticated, no UPDATE and no DELETE.
+--
+-- The inherited anon SELECT and anon TRUNCATE that EXPAND revoked are
+-- deliberately NOT restored. They were never written by this repository -- they
+-- arrived from Supabase's default privileges -- and re-granting an anonymous
+-- role the ability to TRUNCATE a table, which row-level security does not
+-- cover, in the name of fidelity to a state nobody chose, would be the one
+-- irreversible mistake in an otherwise reversible file.
 REVOKE UPDATE, DELETE ON public.cd_v31_funnel_events FROM anon, authenticated;
 GRANT INSERT ON public.cd_v31_funnel_events TO anon, authenticated;
 GRANT SELECT ON public.cd_v31_funnel_events TO authenticated;
@@ -261,13 +300,16 @@ BEGIN
     RAISE EXCEPTION 'ROLLBACK INCOMPLETE: % hardening function(s) survive', _left;
   END IF;
 
+  -- Restored by the CONTRACT rollback, not by this file. Asserted anyway: it is
+  -- the state the deployed code needs, and section 0's check happened before
+  -- any of the drops above rather than after them.
   SELECT count(*) INTO _policies
     FROM pg_policies
    WHERE schemaname = 'public'
      AND tablename IN ('cd_v31_funnel_events', 'cd_test_feedback')
      AND cmd = 'INSERT';
   IF _policies <> 2 THEN
-    RAISE EXCEPTION 'ROLLBACK INCOMPLETE: % of 2 INSERT policies restored', _policies;
+    RAISE EXCEPTION 'ROLLBACK INCOMPLETE: % of 2 legacy INSERT policies present', _policies;
   END IF;
 
   IF NOT has_function_privilege('anon',
@@ -282,7 +324,7 @@ BEGIN
     RAISE EXCEPTION 'ROLLBACK DESTROYED DATA: legacy backup holds % rows, expected at least 13', _backup;
   END IF;
 
-  RAISE NOTICE 'security hardening rollback: reversed, % legacy backup rows intact', _backup;
+  RAISE NOTICE 'security hardening (expand) rollback: reversed, % legacy backup rows intact', _backup;
 END
 $verify$;
 

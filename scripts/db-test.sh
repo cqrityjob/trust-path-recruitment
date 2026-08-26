@@ -1835,6 +1835,109 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# The expand/contract release sequence.
+#
+# 20260916090000 (EXPAND) and 20260916091000 (CONTRACT) exist as two migrations
+# so that neither ordering of "apply the migration" and "deploy the code" can
+# break production. A canonical replay applies both, so the state IN BETWEEN --
+# the one the hosted database actually sits in while the code catches up -- does
+# not exist at the end of it and would otherwise never be tested.
+#
+# This reaches it deliberately: roll CONTRACT back, assert the transitional
+# contract, then re-apply CONTRACT. Three things get proved at once --
+#
+#   * the post-EXPAND state is safe for BOTH the old and the new code
+#   * the contract rollback actually works, on a database that has the state
+#     it is meant to reverse rather than one every suite has already cleaned up
+#   * CONTRACT is safe to re-apply, which is what happens if a sequencing
+#     mistake is corrected by rolling back and rolling forward again
+#
+# It runs BEFORE the rollback chain, which drops most of the schema it reads.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the expand/contract release sequence"
+
+set +e
+XC_BACK="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260916091000_security_hardening_contract_rollback.sql 2>&1)"
+XC_BACK_RC=$?
+set -e
+
+if [ "$XC_BACK_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the contract rollback exited with code ${XC_BACK_RC}." >&2
+  echo "$XC_BACK" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "contract rollback (reaching the post-expand state)"
+else
+  echo "    ok  contract rolled back — the database is now in the post-EXPAND state"
+
+  set +e
+  XC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_hardening_expand_test.sql 2>&1)"
+  XC_RC=$?
+  set -e
+
+  echo "$XC_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  XC_PASSED="$(echo "$XC_OUT" | grep -c "ok  " || true)"
+
+  if [ "$XC_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the expand-phase suite exited with code ${XC_RC}." >&2
+    echo "$XC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    suite_failed "expand phase contract"
+  else
+    echo "    ok  ${XC_PASSED} expand-phase assertions passed"
+
+    # E1 is "the deployed code still works" and E2 is "the new code already
+    # works". A run that skipped either proves only half of what makes the
+    # split safe, and half is indistinguishable from a race.
+    for REQUIRED in \
+      "E1.1 main's direct funnel INSERT still succeeds after EXPAND" \
+      "E1.2 main's direct feedback INSERT still succeeds after EXPAND" \
+      "E2.1 the governed funnel entry point already works for anon after EXPAND" \
+      "E2.2 the governed feedback entry point already works for anon after EXPAND"; do
+      if ! echo "$XC_OUT" | grep -qF "$REQUIRED"; then
+        echo "FAIL: the mandatory expand-phase assertion did not run: ${REQUIRED}" >&2
+        suite_failed "expand phase contract (missing: ${REQUIRED})"
+      fi
+    done
+
+    if [ "$XC_PASSED" -lt 20 ]; then
+      echo "FAIL: expected at least 20 expand-phase assertions, only ${XC_PASSED} ran." >&2
+      suite_failed "expand phase contract (assertion shortfall: floor 20)"
+    fi
+  fi
+
+  # Roll forward again, so the rollback chain below starts from the real end
+  # state rather than from halfway through the release.
+  set +e
+  XC_FWD="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+    -f supabase/migrations/20260916091000_security_hardening_contract.sql 2>&1)"
+  XC_FWD_RC=$?
+  set -e
+
+  if [ "$XC_FWD_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: re-applying CONTRACT exited with code ${XC_FWD_RC}." >&2
+    echo "$XC_FWD" | grep -iE "ERROR:|FEL:" | head -10 >&2
+    suite_failed "contract re-application"
+  else
+    echo "    ok  contract re-applied — a corrected sequencing mistake rolls forward cleanly"
+  fi
+
+  # And the end state is genuinely back. Asserted here rather than trusting the
+  # migration's own post-conditions, because a re-application that silently did
+  # nothing would have raised nothing either.
+  XC_LEFT="$(psql -tAq -d "$TEST_DB" -c "
+    SELECT count(*) FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
+       AND cmd = 'INSERT'")"
+  if [ "$XC_LEFT" != "0" ]; then
+    echo "FAIL: ${XC_LEFT} legacy INSERT policy/policies survive after re-applying CONTRACT." >&2
+    suite_failed "contract re-application (legacy path still open)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Runs BEFORE the rollback chain, and creates the data the chain would destroy.
 # db-test.sh executes every rollback, which proves they RUN — it cannot prove
 # they REFUSE, because by then every suite has cleaned up and there is nothing
@@ -2011,9 +2114,13 @@ fi
 # ROLLBACK BLOCKED naming the count.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# The security hardening rolls back FIRST: 20260916090000 is the newest
-# migration in the history, and the chain runs in reverse migration order so
-# each rollback sees the schema its forward migration left behind.
+# The security hardening rolls back FIRST, and in two steps: 20260916091000
+# (CONTRACT) then 20260916090000 (EXPAND). The chain runs in reverse migration
+# order so each rollback sees the schema its forward migration left behind, and
+# here that ordering is enforced by the files themselves rather than assumed --
+# the expand rollback DROPs the governed entry points, so running it while
+# CONTRACT is still applied would leave both telemetry tables with no anonymous
+# write path at all. It refuses.
 #
 # It is also the one rollback in this chain that deliberately reinstates a
 # VULNERABILITY -- WITH CHECK (true) on the two telemetry tables, EXECUTE on
@@ -2022,20 +2129,22 @@ fi
 # legacy backup table, which is the whole reason that table was kept rather
 # than deleted; the file asserts the count itself and this step surfaces it.
 # ---------------------------------------------------------------------------
-echo "==> Verifying the security hardening rollback"
+echo "==> Verifying the security hardening rollbacks (contract, then expand)"
 set +e
 SECHRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20260916090000_security_hardening_lovable_findings_rollback.sql 2>&1)"
+  -f supabase/rollback/20260916091000_security_hardening_contract_rollback.sql 2>&1
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260916090000_security_hardening_expand_rollback.sql 2>&1)"
 SECHRB_RC=$?
 set -e
 
 if [ "$SECHRB_RC" -ne 0 ]; then
   echo ""
-  echo "FAIL: the security hardening rollback exited with code ${SECHRB_RC}." >&2
+  echo "FAIL: a security hardening rollback exited with code ${SECHRB_RC}." >&2
   echo "$SECHRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
   suite_failed "security hardening rollback"
 else
-  echo "    ok  the security hardening reverses cleanly, legacy backup rows intact"
+  echo "    ok  both phases reverse cleanly, legacy backup rows intact"
 fi
 
 # Independently of the file's own assertion: the reversal must be REAL. If the

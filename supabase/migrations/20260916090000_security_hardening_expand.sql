@@ -1,9 +1,32 @@
 -- =============================================================================
 -- Security hardening — the five Lovable/Supabase advisor findings
+-- PHASE 1 of 2: EXPAND. Backward compatible. Safe to apply hosted on its own.
 --
--- One migration, five findings, no product feature removed. Anonymous funnel
--- analytics and anonymous test-group feedback BOTH remain supported; what goes
--- away is the ability to forge who they belong to.
+-- Five findings, no product feature removed. Anonymous funnel analytics and
+-- anonymous test-group feedback BOTH remain supported; what goes away is the
+-- ability to forge who they belong to.
+--
+-- ── WHY THIS IS SPLIT IN TWO ─────────────────────────────────────────────
+--
+-- Application code syncs to Lovable the moment it reaches main; migrations run
+-- only when somebody asks for them. So the two halves of a change are never
+-- simultaneous, and a migration that both ADDS the new write path and REMOVES
+-- the old one loses whichever way round it is sequenced:
+--
+--   migration first  ->  the deployed code's direct INSERT is already gone,
+--                        and feedback and funnel writes stop
+--   code first       ->  the new code calls entry points the database does not
+--                        have yet, and feedback and funnel writes stop
+--
+-- Expand/contract removes the race instead of choosing a side. THIS migration
+-- adds everything and takes away nothing the deployed code uses, so it is safe
+-- to apply while the current main is live. 20260916091000 withdraws the legacy
+-- path, and is safe to apply once the new code is live. In between, BOTH paths
+-- work, and neither ordering breaks anything.
+--
+-- Nothing about the security design changes across the split: the same policies
+-- are dropped, the same grants revoked and the same entry points introduced.
+-- Only WHEN the legacy write is withdrawn moves.
 --
 -- ── THE FIVE FINDINGS, MAPPED TO REAL OBJECTS ────────────────────────────
 --
@@ -16,6 +39,7 @@
 --
 --  2. "cd_test_feedback allows unrestricted INSERT from anon/authenticated"
 --  3. "cd_v31_funnel_events allows unrestricted INSERT from anon/authenticated"
+--     [these two are completed by CONTRACT — see the EXPAND ONLY note below]
 --       -> both carried `FOR INSERT TO anon, authenticated WITH CHECK (true)`
 --          over tables with a user_id column referencing auth.users and a
 --          session_id referencing cd_sessions. Verified against a replay that
@@ -49,6 +73,10 @@
 -- It does not delete the legacy backup table, does not change Career Discovery
 -- scoring or the question methodology, does not touch Passport governance, and
 -- does not change market activation.
+--
+-- And, in this phase specifically: it does not withdraw a single privilege the
+-- currently deployed code exercises. The one thing main does with these two
+-- tables is INSERT, and INSERT is exactly what survives here.
 -- =============================================================================
 
 -- =============================================================================
@@ -564,29 +592,43 @@ COMMENT ON FUNCTION public.cd_submit_test_feedback(
   'unless the session is unclaimed or the caller''s own.';
 
 -- ---------------------------------------------------------------------------
--- Withdraw the direct write path the entry points replace.
+-- EXPAND ONLY: narrow the grants that no deployed code has ever used, and
+-- KEEP the direct INSERT path that the currently deployed code still needs.
 --
--- The tables keep RLS enabled and keep their admin-only SELECT policies. What
--- goes is the `WITH CHECK (true)` INSERT policy and every table privilege anon
--- and authenticated held — SELECT and TRUNCATE included, both of which arrived
--- through the hosted default privileges and neither of which was ever
--- intended. `authenticated` keeps SELECT because the admin read policy is what
--- narrows it to platform admins; without the grant that policy is dead.
+-- This is the whole point of the phase split. The direct INSERT is what main
+-- writes with today, so withdrawing it here would break feedback and funnel
+-- writes the moment this migration is applied and before the new code is live.
+-- It is withdrawn in 20260916091000 (CONTRACT) instead, once the deployed code
+-- is calling the entry points above.
 --
--- The entry points above run as their owner, so they insert without needing a
--- policy. That is a deliberate, narrow bypass through one audited function per
--- table, not a widened policy: there is no statement in either function that
--- can update or delete an existing row.
+-- Everything else on these two tables IS closed here, because no code has ever
+-- used it: anon arrived holding SELECT, UPDATE, DELETE, TRUNCATE, REFERENCES
+-- and TRIGGER through Supabase's default privileges, and TRUNCATE in
+-- particular is not bounded by row-level security. Revoking those is
+-- backward-compatible by inspection — the only privilege either the old or the
+-- new write path exercises is INSERT.
+--
+-- `authenticated` keeps SELECT because the admin read policy is what narrows
+-- it to platform admins; without the grant that policy is dead.
 -- ---------------------------------------------------------------------------
 
-DROP POLICY IF EXISTS cd_v31_funnel_events_insert ON public.cd_v31_funnel_events;
-DROP POLICY IF EXISTS cd_test_feedback_insert     ON public.cd_test_feedback;
-
+-- REVOKE ALL then re-GRANT exactly what is still in use, rather than revoking a
+-- named list: the inherited grant set is whatever Supabase's defaults happened
+-- to include, and a named list silently misses anything added to it later.
 REVOKE ALL ON public.cd_v31_funnel_events FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.cd_test_feedback     FROM PUBLIC, anon, authenticated;
 
+-- The transitional grant. Removed by CONTRACT.
+GRANT INSERT ON public.cd_v31_funnel_events TO anon, authenticated;
+GRANT INSERT ON public.cd_test_feedback     TO anon, authenticated;
+
 GRANT SELECT ON public.cd_v31_funnel_events TO authenticated;
 GRANT SELECT ON public.cd_test_feedback     TO authenticated;
+
+-- The `WITH CHECK (true)` INSERT policies from 20260815090000 are deliberately
+-- LEFT IN PLACE by this migration. They are the finding, and they are dropped
+-- by CONTRACT — a grant without a policy would refuse the deployed code's
+-- writes just as surely as no grant at all.
 
 -- Structural bounds that bind even the service-role path, added NOT VALID so
 -- no existing row is rewritten or rejected: a NOT VALID CHECK is still enforced
@@ -617,20 +659,22 @@ BEGIN
 END
 $bounds$;
 
+-- Transitional, and honest about it: while both paths are open the comment must
+-- not claim the entry point is the only one. 20260916091000 replaces both of
+-- these with the final wording once that is actually true.
 COMMENT ON TABLE public.cd_v31_funnel_events IS
   'Privacy-safe funnel events for the v3.1 anonymous-first flow (Execution '
-  'Mandate §34). Anonymous tracking is supported and intended; the ONLY write '
-  'path for anon and authenticated is cd_record_funnel_event(), which derives '
-  'user_id from auth.uid() and bounds the detail payload. Direct INSERT was '
-  'withdrawn: WITH CHECK (true) let any caller attribute an event to any user.';
+  'Mandate §34). MIGRATING (expand phase): the governed write path is '
+  'cd_record_funnel_event(), which derives user_id from auth.uid(); the legacy '
+  'direct INSERT is still open for the currently deployed code and is '
+  'withdrawn by 20260916091000.';
 
 COMMENT ON TABLE public.cd_test_feedback IS
   'Lightweight, opt-in test-group feedback (Execution Mandate §31). Never the '
-  'candidate''s raw assessment answers. Anonymous submission is supported and '
-  'intended; the ONLY write path for anon and authenticated is '
-  'cd_submit_test_feedback(), which derives user_id from auth.uid(). Direct '
-  'INSERT was withdrawn: WITH CHECK (true) let any caller attribute feedback '
-  'to any user.';
+  'candidate''s raw assessment answers. MIGRATING (expand phase): the governed '
+  'write path is cd_submit_test_feedback(), which derives user_id from '
+  'auth.uid(); the legacy direct INSERT is still open for the currently '
+  'deployed code and is withdrawn by 20260916091000.';
 
 -- =============================================================================
 -- FINDING 1 — the legacy backup table
@@ -708,10 +752,11 @@ $mirror$;
 
 DO $post$
 DECLARE
-  _no_path      integer;
-  _anon_secdef  text;
-  _anon_tbl     integer;
-  _bad_policy   integer;
+  _no_path       integer;
+  _anon_secdef   text;
+  _anon_legacy   integer;
+  _anon_tel      text;
+  _entry_points  integer;
 BEGIN
   -- 1. No repository-owned function in public is left without a search_path.
   SELECT count(*) INTO _no_path
@@ -742,28 +787,46 @@ BEGIN
     RAISE EXCEPTION 'SECURITY_HARDENING_INCOMPLETE: unexpected anon-executable SECURITY DEFINER set: [%]', COALESCE(_anon_secdef, '<none>');
   END IF;
 
-  -- 3. anon holds no table privilege at all on the telemetry tables or on the
-  --    legacy backup.
-  SELECT count(*) INTO _anon_tbl
+  -- 3. anon holds no table privilege at all on the legacy backup.
+  SELECT count(*) INTO _anon_legacy
     FROM information_schema.role_table_grants
    WHERE table_schema = 'public'
      AND grantee = 'anon'
-     AND table_name IN ('cd_v31_funnel_events', 'cd_test_feedback',
-                        'cig_profession_families_legacy_backup');
-  IF _anon_tbl <> 0 THEN
-    RAISE EXCEPTION 'SECURITY_HARDENING_INCOMPLETE: anon still holds % table grant(s) on the hardened tables', _anon_tbl;
+     AND table_name = 'cig_profession_families_legacy_backup';
+  IF _anon_legacy <> 0 THEN
+    RAISE EXCEPTION 'SECURITY_HARDENING_INCOMPLETE: anon still holds % grant(s) on the legacy backup', _anon_legacy;
   END IF;
 
-  -- 4. No WITH CHECK (true) INSERT policy survives on either telemetry table.
-  SELECT count(*) INTO _bad_policy
-    FROM pg_policies
-   WHERE schemaname = 'public'
-     AND tablename IN ('cd_v31_funnel_events', 'cd_test_feedback')
-     AND cmd = 'INSERT';
-  IF _bad_policy <> 0 THEN
-    RAISE EXCEPTION 'SECURITY_HARDENING_INCOMPLETE: % INSERT policy/policies still on the telemetry tables', _bad_policy;
+  -- 4. On the telemetry tables anon is left holding INSERT and NOTHING ELSE.
+  --    Asserted as an exact set, in both directions: too much means the
+  --    inherited SELECT/TRUNCATE survived, too little means this migration
+  --    withdrew the write the deployed code still depends on and CONTRACT's
+  --    job has been done a phase early.
+  SELECT COALESCE(string_agg(DISTINCT privilege_type, ',' ORDER BY privilege_type), '')
+    INTO _anon_tel
+    FROM information_schema.role_table_grants
+   WHERE table_schema = 'public'
+     AND grantee = 'anon'
+     AND table_name IN ('cd_v31_funnel_events', 'cd_test_feedback');
+  IF _anon_tel <> 'INSERT' THEN
+    RAISE EXCEPTION
+      'SECURITY_HARDENING_EXPAND_WRONG_SHAPE: anon holds [%] on the telemetry tables, expected exactly INSERT', _anon_tel;
   END IF;
 
-  RAISE NOTICE 'security hardening: all four post-conditions hold';
+  -- 5. Both governed entry points exist and are reachable by an anonymous
+  --    visitor. Anonymous telemetry has to work through the NEW path from the
+  --    moment this migration lands, because the new code may deploy at any
+  --    time after it.
+  SELECT count(*) INTO _entry_points
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public'
+     AND p.proname IN ('cd_record_funnel_event', 'cd_submit_test_feedback')
+     AND p.prosecdef
+     AND has_function_privilege('anon', p.oid, 'EXECUTE');
+  IF _entry_points <> 2 THEN
+    RAISE EXCEPTION 'SECURITY_HARDENING_INCOMPLETE: % of 2 governed entry points are anon-executable', _entry_points;
+  END IF;
+
+  RAISE NOTICE 'security hardening (expand): all five post-conditions hold';
 END
 $post$;
