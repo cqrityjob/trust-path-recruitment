@@ -696,46 +696,55 @@ SELECT pg_temp.ok(
       AND privilege_type IN ('UPDATE','DELETE','TRUNCATE')) = 0,
   'V9.6a anon holds no UPDATE, DELETE or TRUNCATE on any cd_ table');
 
--- 9.6b — INSERT is confined to the two named tables. A third table gaining
--- anon INSERT fails here, which is the whole point of naming them.
+-- 9.6b — anon holds NO direct INSERT on any cd_ table, telemetry included.
+--
+-- This assertion used to carry a two-table allowlist. The allowlist was the
+-- finding: `FOR INSERT TO anon WITH CHECK (true)` over tables with a user_id
+-- column let any holder of the publishable key attribute a funnel event or a
+-- feedback row to somebody else's account and somebody else's session.
+-- 20260916090000 withdrew the direct grant entirely, so the allowlist is now
+-- empty and the assertion is a flat prohibition.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND table_name LIKE 'cd\_%'
-      AND grantee = 'anon' AND privilege_type = 'INSERT'
-      AND table_name NOT IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
-  'V9.6b no cd_ table outside the telemetry allowlist grants anon INSERT');
+      AND grantee = 'anon' AND privilege_type = 'INSERT') = 0,
+  'V9.6b no cd_ table grants anon a direct INSERT');
 
--- 9.6c — anon cannot READ either of them. Write-only is the property that makes
--- anonymous telemetry acceptable: a visitor may contribute, never browse.
+-- 9.6c — anon cannot READ either telemetry table. Note this is now asserted of
+-- a database that can answer it: before 20260916090000 mirrored Supabase's
+-- ALTER DEFAULT PRIVILEGES locally, hosted granted anon SELECT on both tables
+-- and this assertion passed anyway, because a clean replay never had the grant.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_table_grants
     WHERE table_schema='public' AND grantee = 'anon'
-      AND privilege_type = 'SELECT'
       AND table_name IN ('cd_v31_funnel_events','cd_test_feedback')) = 0,
-  'V9.6c anon cannot read the anonymous telemetry tables it writes to');
+  'V9.6c anon holds no privilege at all on the telemetry tables');
 
--- 9.6d — RLS is on for both, so the grant is bounded by policy rather than
--- being a bare table privilege.
+-- 9.6d — RLS is on for both. It is no longer the only thing standing between a
+-- caller and a row, but a table that lost RLS would still be a regression.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_class c
      JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
       AND c.relname IN ('cd_v31_funnel_events','cd_test_feedback')
       AND c.relrowsecurity) = 2,
-  'V9.6d RLS is enabled on both allowlisted telemetry tables');
+  'V9.6d RLS is enabled on both telemetry tables');
 
--- 9.6e — and the bounding policy is an INSERT policy that actually admits
--- anon, so the grant is not dead and not doing something else.
+-- 9.6e — anonymous telemetry is STILL SUPPORTED, through exactly one audited
+-- entry point per table. This is the half of the contract that stops the fix
+-- from quietly becoming a feature removal: if these two functions disappear,
+-- anonymous funnel tracking and anonymous feedback are gone, and that must
+-- fail a test rather than pass as "more secure".
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename IN ('cd_v31_funnel_events','cd_test_feedback')
-      AND cmd = 'INSERT'
-      AND 'anon' = ANY (roles)) = 2,
-  'V9.6e each allowlisted table has an INSERT policy admitting anon');
+  (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback')
+      AND p.prosecdef
+      AND has_function_privilege('anon', p.oid, 'EXECUTE')) = 2,
+  'V9.6e anonymous telemetry survives as two anon-executable entry points');
 
 -- 9.6f — reading stays separately controlled, for authenticated principals
--- only, so the admin path is not an artefact of the anonymous grant.
+-- only, so the admin path is not an artefact of the anonymous write path.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_policies
     WHERE schemaname = 'public'

@@ -1,9 +1,24 @@
 // Test-group feedback, funnel analytics, and career-goal persistence
-// (Execution Mandate §17, §31, §34). See the migration
-// 20260815090000_cd_v31_feedback_analytics_goals.sql for the RLS shape this
-// relies on: anyone may insert an event or a feedback row (both are the
-// point of an anonymous-first funnel), only an authenticated candidate may
-// read or write their OWN career goal.
+// (Execution Mandate §17, §31, §34).
+//
+// ANONYMOUS TELEMETRY IS STILL ANONYMOUS. What changed in
+// 20260916090000_security_hardening_lovable_findings.sql is HOW it is written:
+// the two tables no longer accept a direct INSERT from anon or authenticated,
+// because the policy that allowed it was `WITH CHECK (true)` over a table with
+// a user_id column. Anyone holding the publishable key could therefore attach
+// a funnel event or a feedback row to somebody else's account and somebody
+// else's session, and a platform admin would read it as though the victim had
+// written it.
+//
+// Both writes now go through a narrow SECURITY DEFINER entry point that takes
+// no user_id parameter at all — it derives one from auth.uid() — and refuses a
+// session_id that belongs to a different candidate. A visitor who has not
+// signed in still records events and still submits feedback; the row simply
+// carries the identity the database observed rather than the one the caller
+// claimed.
+//
+// Only an authenticated candidate may read or write their OWN career goal;
+// that path is unchanged.
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -46,6 +61,12 @@ export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];
  * Records one funnel event. Fire-and-forget by design: a tracking failure
  * must never block or degrade the candidate's actual experience, so this
  * never throws to the caller — it logs and returns.
+ *
+ * This handler talks to the database with the PUBLISHABLE key and carries no
+ * candidate JWT, so auth.uid() inside cd_record_funnel_event() is NULL and the
+ * stored event is anonymous — exactly as it was before, when this code simply
+ * omitted user_id. The difference is that it is now anonymous because the
+ * database observed no identity, not because the caller chose not to send one.
  */
 export const trackV31FunnelEvent = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
@@ -53,16 +74,20 @@ export const trackV31FunnelEvent = createServerFn({ method: "POST" })
       .object({
         eventName: z.enum(FUNNEL_EVENT_NAMES),
         detail: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+        // Optional, and validated server-side against session ownership: the
+        // entry point refuses a session that belongs to another candidate.
+        sessionId: z.string().uuid().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }): Promise<{ readonly recorded: boolean }> => {
-    const { error } = await publicClient.from("cd_v31_funnel_events").insert({
-      event_name: data.eventName,
-      detail: data.detail ?? {},
+    const { error } = await publicClient.rpc("cd_record_funnel_event", {
+      _event_name: data.eventName,
+      _detail: data.detail ?? {},
+      _session_id: data.sessionId ?? null,
     });
     if (error) {
-      console.error("[v31] funnel event insert failed", data.eventName, error.message);
+      console.error("[v31] funnel event record failed", data.eventName, error.message);
       return { recorded: false };
     }
     return { recorded: true };
@@ -80,22 +105,25 @@ export const submitV31Feedback = createServerFn({ method: "POST" })
         exploredProfessionId: z.string().max(20).optional(),
         freeText: z.string().max(1000).optional(),
         locale: z.enum(["sv", "en"]),
+        // Same ownership rule as the funnel entry point above.
+        sessionId: z.string().uuid().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }): Promise<{ readonly submitted: boolean }> => {
-    const { error } = await publicClient.from("cd_test_feedback").insert({
-      relevant: data.relevant ?? null,
-      understood_why: data.understoodWhy ?? null,
-      pathway_realistic: data.pathwayRealistic ?? null,
-      requirements_useful: data.requirementsUseful ?? null,
-      missing_career_note: data.missingCareerNote ?? null,
-      explored_profession_id: data.exploredProfessionId ?? null,
-      free_text: data.freeText ?? null,
-      locale: data.locale,
+    const { error } = await publicClient.rpc("cd_submit_test_feedback", {
+      _locale: data.locale,
+      _relevant: data.relevant ?? null,
+      _understood_why: data.understoodWhy ?? null,
+      _pathway_realistic: data.pathwayRealistic ?? null,
+      _requirements_useful: data.requirementsUseful ?? null,
+      _missing_career_note: data.missingCareerNote ?? null,
+      _explored_profession_id: data.exploredProfessionId ?? null,
+      _free_text: data.freeText ?? null,
+      _session_id: data.sessionId ?? null,
     });
     if (error) {
-      console.error("[v31] feedback insert failed", error.message);
+      console.error("[v31] feedback submit failed", error.message);
       return { submitted: false };
     }
     return { submitted: true };
