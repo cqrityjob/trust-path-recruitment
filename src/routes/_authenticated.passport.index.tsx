@@ -68,14 +68,32 @@ function PassportOverviewRoute() {
 
   const refresh = useCallback(async () => {
     setError(null);
+
+    // ── THE CATALOGUE IS NOT LOAD-BEARING FOR THIS PAGE ───────────────
+    //
+    // It used to be the third leg of one Promise.all, so when the market
+    // lookup failed the snapshot was never set either and the entire Passport
+    // rendered a bare "loading" line -- for a holder whose Passport was
+    // perfectly intact. One optional read took the whole record with it.
+    //
+    // It is fetched on its own now. Failing to learn which credentials may be
+    // ADDED costs the holder the add controls, and nothing else: everything
+    // they already have still renders.
+    void (async () => {
+      try {
+        setAvailability(await loadAvailability({ data: undefined }));
+      } catch (err) {
+        console.error("[passport] market availability load failed", err);
+        setAvailability(null);
+      }
+    })();
+
     try {
-      const [snap, reqs, avail] = await Promise.all([
+      const [snap, reqs] = await Promise.all([
         load({ data: undefined }),
         loadRequests({ data: undefined }),
-        loadAvailability({ data: undefined }),
       ]);
       setSnapshot(snap);
-      setAvailability(avail);
       const open = new Map<string, "pending" | "clarification_requested">();
       for (const r of reqs.requests) {
         if (r.status !== "pending" && r.status !== "clarification_requested") continue;
