@@ -295,7 +295,7 @@
       "canonicalVersion": "20260828093000",
       "canonicalFile": "20260828093000_scp_sg_access_control_assessment.sql",
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty.",
-      "reason": "Real assessment content: Tillträde, behörighet & access control, 12 governed items.",
+      "reason": "Real assessment content: Tilltr\u00e4de, beh\u00f6righet & access control, 12 governed items.",
       "generatedFileOnMain": "supabase/migrations/20260820074627_731709ea-bafb-4938-8aeb-adb88a2933d0.sql (REMOVED from the active path -- it sorts before the canonical file, and the policy forbids keeping both so a clean replay cannot run the same SQL twice)",
       "doNotReExecute": true,
       "hostedName": "731709ea-bafb-4938-8aeb-adb88a2933d0",
@@ -307,7 +307,7 @@
       "canonicalVersion": "20260828094000",
       "canonicalFile": "20260828094000_scp_sg_incident_response_assessment.sql",
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty.",
-      "reason": "Real assessment content: Incidenthantering & första åtgärder, 12 governed items.",
+      "reason": "Real assessment content: Incidenthantering & f\u00f6rsta \u00e5tg\u00e4rder, 12 governed items.",
       "generatedFileOnMain": "supabase/migrations/20260820080103_af267c66-8b5b-4282-a335-9a92e00afb24.sql (REMOVED from the active path -- it sorts before the canonical file, and the policy forbids keeping both so a clean replay cannot run the same SQL twice)",
       "doNotReExecute": true,
       "hostedName": "af267c66-8b5b-4282-a335-9a92e00afb24",
@@ -645,10 +645,10 @@
       "appliedAt": "2026-08-24T12:06:03Z",
       "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
       "generatedFileOnMain": "supabase/migrations/20260824120603_d7637351-7bdd-45f7-bb15-9ddebb6430c4.sql",
-      "sqlEquivalence": "Verified from main e6ab9dd on six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (6983 vs 6984 bytes) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 85. (3) Whitespace-normalised: identical, sha256 prefix 54dc749322164d4f. (4) Statement order: identical, 24 statements both sides. (5) Statement targets and WHERE codes identical across all 25. (6) All 24 label strings byte-identical -- the decisive check for this migration, because the exact wording of every label IS the reviewed product decision. Hosted postconditions confirm it: SE_VAKTARE_COMPETENCE now reads 'Väktarutbildning (VU1 + VU2)' / 'Security Guard Training (VU1 + VU2)', 0 titles end in a country name, all three Dubai active titles keep '· Dubai', 0 active titles derive from a training credential, 0 blank SV/EN labels, and titles_total stayed 41 (labels only, no rows inserted or deleted).",
+      "sqlEquivalence": "Verified from main e6ab9dd on six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (6983 vs 6984 bytes) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 85. (3) Whitespace-normalised: identical, sha256 prefix 54dc749322164d4f. (4) Statement order: identical, 24 statements both sides. (5) Statement targets and WHERE codes identical across all 25. (6) All 24 label strings byte-identical -- the decisive check for this migration, because the exact wording of every label IS the reviewed product decision. Hosted postconditions confirm it: SE_VAKTARE_COMPETENCE now reads 'V\u00e4ktarutbildning (VU1 + VU2)' / 'Security Guard Training (VU1 + VU2)', 0 titles end in a country name, all three Dubai active titles keep '\u00b7 Dubai', 0 active titles derive from a training credential, 0 blank SV/EN labels, and titles_total stayed 41 (labels only, no rows inserted or deleted).",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '· Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'Väktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
+      "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '\u00b7 Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'V\u00e4ktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824120603';"
     },
     {
@@ -861,6 +861,20 @@
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260826124732';",
       "sqlEquivalence": "Verified this turn by direct comparison of the canonical file against Lovable's generated copy: whitespace-normalised content identical, and byte-identical apart from a trailing newline where present. The canonical file was submitted verbatim to supabase--migration, so the generated copy is that same SQL as recorded hosted.",
       "reason": "Applied hosted during the owner-approved reconciliation of the pending canonical frontier (2026-08-26), one tracked Lovable migration per canonical file, in version order. The generated duplicate is removed from the active path because its version sorts BEFORE the canonical slot and before migrations already in the ledger, so a filename-order replay would execute it out of canonical order and a second time. Must never be executed hosted again."
+    },
+    {
+      "canonicalFile": "20260916090000_security_hardening_expand.sql",
+      "canonicalVersion": "20260916090000",
+      "hostedVersion": "20260826153409",
+      "hostedName": "eb51ffcc-be14-482c-afe7-b656051a7287",
+      "generatedFileOnMain": "supabase/migrations/20260826153409_eb51ffcc-be14-482c-afe7-b656051a7287.sql",
+      "doNotReExecute": true,
+      "equivalenceVerified": true,
+      "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version, so the mapping lives here.",
+      "appliedAt": "2026-08-26T15:34:09Z",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260826153409';",
+      "sqlEquivalence": "Verified by direct comparison of the canonical file against Lovable's generated copy: whitespace-normalised content identical (canonical sha256 1ac6639964f6495a7e841cd617d9b3857d35e0d715e2d0fc5c498df51421f947). The canonical file was submitted verbatim to supabase--migration, so the generated copy is that same SQL as recorded hosted.",
+      "reason": "EXPAND, phase 1 of 2 of the security hardening, applied hosted on its own under owner approval (2026-08-26) ahead of the application code: it only adds the governed entry points, tightens function ACLs and pins search_path, and withdraws no privilege the live code exercises. The generated duplicate is removed from the active path because its version sorts BEFORE the canonical slot, so a filename-order replay would execute it out of canonical order and a second time. Must never be executed hosted again. CONTRACT (20260916091000) is NOT applied hosted and must wait for the application branch to be live."
     }
   ],
   "canonicalProject": {
