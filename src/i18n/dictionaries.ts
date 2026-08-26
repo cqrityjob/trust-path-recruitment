@@ -948,6 +948,16 @@ export const dictionaries = {
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
     "sca.scp.errorNote": "Kunde inte spara just nu. Försök igen.",
+    // The dashboard card is a summary; the editor opens from it.
+    "sca.scp.summary.status": "Nuläge",
+    "sca.scp.summary.profession": "Nuvarande yrke",
+    "sca.scp.summary.experience": "Erfarenhet",
+    "sca.scp.summary.empty":
+      "Du har inte fyllt i din karriärprofil ännu. Den hjälper oss visa jobb och yrken som passar dig bättre.",
+    "sca.scp.summary.edit": "Redigera karriärprofil",
+    "sca.scp.summary.fillIn": "Fyll i din karriärprofil",
+    "sca.scp.summary.dialogTitle": "Din karriärprofil",
+    "sca.scp.summary.cancel": "Avbryt",
     "sca.report.loading": "Laddar din rapport…",
     "sca.report.notFound": "Rapporten kunde inte hittas.",
     "sca.report.backToMyCareer": "Tillbaka till Min karriär",
@@ -2644,10 +2654,14 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
     "academy.error.retry": "Försök igen",
-    "academy.myWork.title": "Kompetensbedömning",
+    // Purpose-NEUTRAL. The old copy hardcoded "för kompetensutveckling", which
+    // was simply untrue for a recruitment assessment — and the card can hold
+    // both kinds at once. Each row names its own governed purpose instead.
+    "academy.myWork.title": "Dina bedömningar",
     "academy.myWork.lede":
-      "En arbetsgivare har bett dig genomföra en bedömning för kompetensutveckling. Det är inget prov och ger inget godkänt eller underkänt.",
-    "academy.myWork.openCenter": "Öppna min kompetensutveckling",
+      "En organisation har bett dig genomföra följande. Det är inget prov och ger inget godkänt eller underkänt.",
+    "academy.myWork.purposeLabel": "Syfte",
+    "academy.myWork.openCenter": "Öppna alla bedömningar",
     "academy.myWork.outstanding": "att göra",
     "academy.myWork.released": "frisläppta rapporter",
     "academy.myReviews.title": "Granskningar väntar på dig",
@@ -4656,6 +4670,15 @@ export const dictionaries = {
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",
     "sca.scp.errorNote": "Couldn't save right now. Please try again.",
+    "sca.scp.summary.status": "Current situation",
+    "sca.scp.summary.profession": "Current profession",
+    "sca.scp.summary.experience": "Experience",
+    "sca.scp.summary.empty":
+      "You haven't filled in your career profile yet. It helps us show jobs and professions that suit you better.",
+    "sca.scp.summary.edit": "Edit career profile",
+    "sca.scp.summary.fillIn": "Fill in your career profile",
+    "sca.scp.summary.dialogTitle": "Your career profile",
+    "sca.scp.summary.cancel": "Cancel",
     "sca.report.loading": "Loading your report…",
     "sca.report.notFound": "That report could not be found.",
     "sca.report.backToMyCareer": "Back to My Career",
@@ -6327,10 +6350,11 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
     "academy.error.retry": "Try again",
-    "academy.myWork.title": "Competence assessment",
+    "academy.myWork.title": "Your assessments",
     "academy.myWork.lede":
-      "An employer has asked you to complete an assessment for competence development. It is not an exam and gives no pass or fail.",
-    "academy.myWork.openCenter": "Open my competence development",
+      "An organisation has asked you to complete the following. It is not an exam and gives no pass or fail.",
+    "academy.myWork.purposeLabel": "Purpose",
+    "academy.myWork.openCenter": "Open all assessments",
     "academy.myWork.outstanding": "to do",
     "academy.myWork.released": "released reports",
     "academy.myReviews.title": "Reviews are waiting for you",

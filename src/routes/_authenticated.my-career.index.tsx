@@ -328,7 +328,12 @@ function MyCareerPage() {
 
   return (
     <SiteLayout>
-      <Section>
+      {/* `Section` defaults to py-20/md:py-28 — the marketing pages' rhythm,
+          where a section is a chapter and the air is the point. A dashboard is
+          not read that way: 112px of empty space above the greeting pushed the
+          first real card most of the way down the opening screen. Tightened
+          here rather than in Section, which the public pages still want. */}
+      <Section className="py-10 md:py-12">
         {/* ---------------- Hero ---------------- */}
         <header className="max-w-3xl">
           <h1
@@ -343,12 +348,13 @@ function MyCareerPage() {
               first thing a candidate read was a status report about a test.
               This page is no longer a test centre, and its opening line no
               longer changes depending on whether somebody has taken one. */}
-          <p className="mt-3 text-muted-foreground">
+          {/* One short line. The longer version listed the Passport, jobs and
+              the profile — the three cards immediately below it, each with its
+              own heading — so it spent two lines of the opening screen
+              describing what the reader could already see. */}
+          <p className="mt-2 text-muted-foreground">
             {L(
-              c(
-                "Din säkerhetskarriär på ett ställe. Hantera ditt Security Passport, hitta jobb och utveckla din professionella profil.",
-                "Your security career in one place. Manage your Security Passport, find jobs and develop your professional profile.",
-              ),
+              c("Din säkerhetskarriär på ett ställe.", "Your security career in one place."),
               lang,
             )}
           </p>
@@ -360,8 +366,23 @@ function MyCareerPage() {
             left to right on desktop; with no explicit ordering the same DOM
             sequence stacks Passport → Jobs → Profile on mobile, which is the
             approved mobile order, so no `order-*` classes are needed. */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        {/* `items-start` is the whole fix for the dashboard's large empty
+            panels. Grid items stretch to the tallest sibling by default, so
+            while the Career Profile card rendered its full editor inline it
+            dragged the Passport and Jobs cards down to match — roughly 900px
+            of card for ~300px of content. The editor now lives in a dialog
+            AND the row no longer stretches, so each card is as tall as what
+            it actually contains.
+
+            Widths are deliberately unequal: the Passport is the candidate's
+            primary professional asset and gets the most room, then Jobs, then
+            the self-reported profile summary. Source of truth for order on
+            every viewport — the same DOM sequence stacks Passport → Jobs →
+            Profile on mobile, which is the approved mobile order, so no
+            `order-*` classes are needed. */}
+        <div className="mt-7 grid items-start gap-6 lg:grid-cols-12">
           <PassportSummaryCard
+            className="lg:col-span-5"
             snapshot={passportQ.data}
             isLoading={passportQ.isLoading}
             isError={passportQ.isError}
@@ -369,6 +390,7 @@ function MyCareerPage() {
 
           {/* ── Jobs and applications ── */}
           <DashboardCard
+            className="lg:col-span-4"
             icon={<Briefcase className="h-5 w-5" />}
             title={L(c("Jobb & ansökningar", "Jobs & applications"), lang)}
           >
@@ -395,8 +417,15 @@ function MyCareerPage() {
                   const location =
                     [j.location_text, j.city, j.country].filter(Boolean).join(", ") || "";
                   return (
-                    <li key={j.id} className="py-2.5">
-                      <Link to="/jobs/$slug" params={{ slug: j.slug }} className="group block">
+                    <li key={j.id}>
+                      {/* min-h-11 (44px) rather than text-height. These rows
+                          are a primary destination on a phone and were 20px
+                          of tappable text. */}
+                      <Link
+                        to="/jobs/$slug"
+                        params={{ slug: j.slug }}
+                        className="group flex min-h-11 flex-col justify-center py-2"
+                      >
                         <p className="text-sm font-medium text-balance text-foreground group-hover:underline">
                           {title}
                         </p>
@@ -450,22 +479,16 @@ function MyCareerPage() {
               difference would let the Passport's credibility rub off on it. */}
           <DashboardCard
             id="career-profile"
+            className="lg:col-span-3"
             icon={<UserIcon className="h-5 w-5" />}
             title={L(c("Din karriärprofil", "Your career profile"), lang)}
           >
-            {/* Framing, not a fourth restatement of the boundary. The card
-                below already says — once — that nothing typed here becomes
-                Passport evidence; what this line adds is the word the approved
-                dashboard leads with: self-reported. */}
-            <p className="mb-4 text-xs font-medium text-foreground">
-              {L(
-                c(
-                  "Självrapporterad information. Den blir inte automatiskt verifierad i ditt Security Passport.",
-                  "Self-reported information. It is not automatically verified in your Security Passport.",
-                ),
-                lang,
-              )}
-            </p>
+            {/* The boundary is stated ONCE, by the card itself. It used to be
+                stated here as well, in slightly different words, so the
+                narrowest column on the dashboard opened with two paragraphs
+                saying the same thing before any of the candidate's own
+                information appeared. The sentence that survives is the one
+                pinned by passport-separation-check. */}
             <SecurityCareerProfileCard />
           </DashboardCard>
         </div>
@@ -478,7 +501,10 @@ function MyCareerPage() {
             it. `lg:grid-cols-2` collapses to one column when there is no task,
             so Career Discovery is never left beside a hole. */}
         <div
-          className={cn("mt-6 grid gap-6", hasEmployerTask ? "lg:grid-cols-2" : "lg:grid-cols-1")}
+          className={cn(
+            "mt-6 grid items-start gap-6",
+            hasEmployerTask ? "lg:grid-cols-2" : "lg:grid-cols-1",
+          )}
         >
           <DashboardCard
             icon={<Compass className="h-5 w-5" />}
@@ -598,10 +624,14 @@ function MyCareerPage() {
                 offered "redo the test" to people whose test was the thing they
                 had just finished. */}
             {!noAssessment && !assessmentClosed && assessmentOpen && (
-              <p className="mt-4 text-xs">
+              <p className="mt-3 text-xs">
+                {/* Deliberately quiet — a retake is not the headline action for
+                    somebody who has just finished. Quiet is a matter of weight
+                    and colour, though, not of hit area, so it still gets a
+                    44px target. */}
                 <Link
                   to="/security-career-assessment"
-                  className="text-muted-foreground underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:underline"
                 >
                   {L(c("Gör om testet (valfritt)", "Retake the assessment (optional)"), lang)}
                 </Link>
@@ -627,15 +657,20 @@ function MyCareerPage() {
                   a candidate on a v3 report was never offered the link at all
                   and their completed assessment stayed invisible. It is an
                   employer task and belongs with the employer tasks. */}
+              {/* Demoted from a full dashboard card to a quiet strip inside
+                  the tasks column. It is a one-off housekeeping action for a
+                  small minority of accounts — an assessment taken before
+                  signing in, matched by verified email — and it was carrying
+                  the same visual weight as the Passport. The action itself is
+                  unchanged, and it still only appears when there is genuinely
+                  something to link. */}
               {linkableTasks.length > 0 && (
-                <DashboardCard
-                  icon={<ClipboardCheck className="h-5 w-5" />}
-                  title={L(
-                    c("Bedömning att koppla till din profil", "Assessment ready to link"),
-                    lang,
-                  )}
-                >
-                  <p className="mb-3 text-sm text-muted-foreground">
+                <section className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    <ClipboardCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    {L(c("Koppla ett tidigare resultat", "Link an earlier result"), lang)}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
                     {L(
                       c(
                         "Du har genomfört en arbetsgivartilldelad bedömning med den här e-postadressen. Koppla resultatet till din profil för att se det under Mina rapporter.",
@@ -644,7 +679,7 @@ function MyCareerPage() {
                       lang,
                     )}
                   </p>
-                  <ul className="divide-y divide-border">
+                  <ul className="mt-2 divide-y divide-border">
                     {linkableTasks.map((a) => (
                       <li key={a.id} className="flex items-center justify-between gap-3 py-3">
                         <span className="text-sm text-foreground">
@@ -662,7 +697,7 @@ function MyCareerPage() {
                       </li>
                     ))}
                   </ul>
-                </DashboardCard>
+                </section>
               )}
             </div>
           )}
@@ -687,7 +722,7 @@ function MyCareerPage() {
             {employerPortalEnabled() && hasEmployerWorkspace && (
               <Link
                 to="/employer"
-                className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
               >
                 <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("employer.workspace.label")}
@@ -696,7 +731,7 @@ function MyCareerPage() {
             <button
               type="button"
               onClick={onSignOut}
-              className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               {L(c("Logga ut", "Sign out"), lang)}
@@ -807,7 +842,7 @@ function AssessmentSummary({
         </Link>
         <Link
           to="/security-career-assessment"
-          className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
         >
           <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
           {L(c("Gör om bedömningen", "Retake assessment"), lang)}
@@ -883,6 +918,7 @@ function ConfidenceBadge({
 
 function DashboardCard({
   id,
+  className,
   icon,
   title,
   action,
@@ -891,6 +927,8 @@ function DashboardCard({
   /** Anchor target for in-page navigation. `scroll-mt` clears the sticky
    *  header, which a bare anchor would otherwise scroll the heading behind. */
   id?: string;
+  /** Grid placement only. The card owns its own surface; callers position it. */
+  className?: string;
   icon?: React.ReactNode;
   title: string;
   action?: React.ReactNode;
@@ -899,7 +937,10 @@ function DashboardCard({
   return (
     <section
       id={id}
-      className="scroll-mt-24 rounded-xl border border-border bg-background p-5 md:p-6"
+      className={cn(
+        "scroll-mt-24 rounded-xl border border-border bg-background p-5 md:p-6",
+        className,
+      )}
     >
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
