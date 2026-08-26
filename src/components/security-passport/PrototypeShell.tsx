@@ -38,6 +38,8 @@ import { LinkedInShareSection } from "./live/LinkedInShareSection";
 import { SharePanel } from "./live/SharePanel";
 import { RecipientCardFixture } from "./RecipientCardFixture";
 import { EntryFixture } from "./EntryFixture";
+import { MarketProfileFixture } from "./MarketProfileFixture";
+import { FIXTURE_CREDENTIAL_TYPES } from "@/lib/security-passport/fixtures/credential-types";
 import { buildSocialCard } from "@/lib/security-passport/social";
 import { CredentialSymbolMatrix } from "./CredentialSymbolMatrix";
 import { DisclosureHistory, PrivacyControls, type ShareHistoryEntry } from "./PrivacyControls";
@@ -51,6 +53,7 @@ import { WelcomePurpose } from "./WelcomePurpose";
 
 type ScreenId =
   | "home"
+  | "marketProfiles"
   | "welcome"
   | "onboarding"
   | "overview"
@@ -71,6 +74,7 @@ type ScreenId =
 
 const SCREENS: readonly { id: ScreenId; labelKey: PassportCopyKey }[] = [
   { id: "home", labelKey: "screen.home" },
+  { id: "marketProfiles", labelKey: "screen.marketProfiles" },
   { id: "welcome", labelKey: "screen.welcome" },
   { id: "onboarding", labelKey: "screen.onboarding" },
   { id: "overview", labelKey: "screen.overview" },
@@ -304,6 +308,20 @@ export function PrototypeShell() {
             onShare={() => setScreen("share")}
             onAddCredential={() => setScreen("credentialForm")}
             onResumeDraft={() => setScreen("credentialForm")}
+            // The fixture personas all work in Sweden, whose pack is the one
+            // that is ACTIVE — so "open" plus the Swedish catalogue is what the
+            // governed call would return for them, not a shortcut around it.
+            marketCredentials={{
+              state: "open",
+              options: FIXTURE_CREDENTIAL_TYPES.filter((t) =>
+                ["VU1", "VU2", "OV", "SV"].includes(t.code),
+              ).map((t) => ({
+                code: t.code,
+                nameSv: t.nameSv,
+                nameEn: t.nameEn,
+                symbolLabel: t.symbolLabel,
+              })),
+            }}
           />
         ) : null}
 
@@ -324,6 +342,8 @@ export function PrototypeShell() {
         {screen === "recipientCard" ? <RecipientCardFixture /> : null}
 
         {screen === "entries" ? <EntryFixture /> : null}
+
+        {screen === "marketProfiles" ? <MarketProfileFixture /> : null}
 
         {screen === "linkedin" ? (
           <div className="mx-auto w-full max-w-2xl">

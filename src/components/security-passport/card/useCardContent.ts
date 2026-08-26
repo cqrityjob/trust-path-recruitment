@@ -21,7 +21,12 @@ import {
 } from "@/lib/security-passport/design/trust-system";
 import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
-import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
+import type {
+  CardCredential,
+  PassportCardModel,
+  ShareOverlayState,
+} from "@/lib/security-passport/card";
+import { marketDisplayName } from "@/lib/security-passport/market-profiles";
 import type { CredentialPlateProps } from "./CardPrimitives";
 
 export interface CardDirectionProps {
@@ -42,6 +47,30 @@ export interface CardMilestone {
   readonly style: MilestoneStyle;
 }
 
+/** One market, as the evidence band prints it.
+ *
+ *  ── WHY THE CARD GROUPS AT ALL ────────────────────────────────────────
+ *
+ *  The evidence band was a flat list of plates with the work location printed
+ *  separately above it. For a holder with Swedish credentials working in Dubai
+ *  that card showed four Swedish plates under the heading "Dubai, Förenade
+ *  Arabemiraten" — and the card is the artefact that leaves the product and
+ *  gets forwarded. Nothing on it said the plates were Swedish, so the layout
+ *  itself made the transfer claim.
+ *
+ *  Each group now names its own market and counts only what is verified AND
+ *  current in it. The current work market is stated separately, and when the
+ *  holder has no verified credential there the card says so rather than
+ *  letting the markets above stand in for it. */
+export interface CardMarketGroup {
+  readonly marketCode: string;
+  readonly displayName: string;
+  readonly verifiedCount: number;
+  readonly verifiedLabel: string;
+  readonly plates: readonly CredentialPlateProps[];
+  readonly isCurrentWorkMarket: boolean;
+}
+
 export interface CardContent {
   readonly brandLabel: string;
   readonly holderName: string;
@@ -52,6 +81,14 @@ export interface CardContent {
   readonly workLabel: string;
   readonly milestone: CardMilestone | null;
   readonly credentials: readonly CredentialPlateProps[];
+  /** The same evidence, grouped by the market each credential belongs to. */
+  readonly markets: readonly CardMarketGroup[];
+  readonly marketsLabel: string;
+  readonly currentMarketLabel: string;
+  /** Printed under the current work market when the holder has verified
+   *  nothing there yet. The absence is stated so the markets listed above it
+   *  cannot be read as covering it. */
+  readonly noVerifiedInCurrentMarket: string | null;
   readonly attributions: string | null;
   readonly verifyLabel: string;
   readonly verifyAtSource: string;
@@ -101,7 +138,7 @@ export function useCardContent(
       }
     : null;
 
-  const credentials: CredentialPlateProps[] = card.credentials.map((c) => {
+  const toPlate = (c: CardCredential): CredentialPlateProps => {
     const ev = evidenceStyle(c.assertionLevel);
     const overlay = lifecycleOverlay(c.lifecycleState);
     const isCurrent = c.lifecycleState === "active";
@@ -130,7 +167,35 @@ export function useCardContent(
       symbolCode: c.credentialCode,
       symbolState: credentialPresentation(c.assertionLevel, c.lifecycleState),
     };
+  };
+
+  const credentials: CredentialPlateProps[] = card.credentials.map(toPlate);
+
+  // ── PER-MARKET EVIDENCE ────────────────────────────────────────────
+  //
+  // Verified-and-current first, because the count beside the market name
+  // refers to exactly those. Lapsed and self-declared credentials still print
+  // — they are true — but below, and they are not counted.
+  const markets: CardMarketGroup[] = card.marketProfiles.map((p) => {
+    const count = p.verifiedCredentials.length;
+    return {
+      marketCode: p.marketCode,
+      displayName: marketDisplayName(p, lang),
+      verifiedCount: count,
+      verifiedLabel: count === 1 ? pt("market.verified.one") : pt("market.verified.many"),
+      plates: [...p.verifiedCredentials, ...p.pendingCredentials, ...p.otherClaims].map(toPlate),
+      isCurrentWorkMarket: p.isCurrentWorkMarket,
+    };
   });
+
+  // "No verified credentials in this market yet" is printed only when the
+  // holder HAS named a work market. With no market named there is nothing for
+  // the sentence to be about, and printing it would invent a gap.
+  const currentGroup = markets.find((m) => m.isCurrentWorkMarket) ?? null;
+  const noVerifiedInCurrentMarket =
+    card.jurisdictionCode && (currentGroup === null || currentGroup.verifiedCount === 0)
+      ? pt("market.currentMarket.none")
+      : null;
 
   const stateWords: string[] = [];
   if (card.containsExpired) stateWords.push(pt("card.containsExpired"));
@@ -151,6 +216,10 @@ export function useCardContent(
     workLabel: pt("card.workLabel"),
     milestone,
     credentials,
+    markets,
+    marketsLabel: pt("card.verifiedMarkets"),
+    currentMarketLabel: pt("card.currentWorkMarket"),
+    noVerifiedInCurrentMarket,
     attributions:
       socialSafe || card.attributions.length === 0 ? null : card.attributions.join(", "),
     verifyLabel: pt("card.verifyNow"),

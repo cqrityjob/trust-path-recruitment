@@ -1732,6 +1732,31 @@ else
   fi
 fi
 
+echo "==> Running Security Passport internal-pilot entitlement assertions"
+set +e
+SPPILOT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_market_pilot_test.sql 2>&1)"
+SPPILOT_RC=$?
+set -e
+
+echo "$SPPILOT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+SPPILOT_PASSED="$(echo "$SPPILOT_OUT" | grep -c "ok  " || true)"
+
+if [ "$SPPILOT_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the internal-pilot entitlement suite exited with code ${SPPILOT_RC}." >&2
+  echo "$SPPILOT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Security Passport internal-pilot entitlement"
+else
+  echo "    ok  ${SPPILOT_PASSED} internal-pilot entitlement assertions passed"
+  # The cross-jurisdiction group is the reason this suite exists. A short run
+  # that stopped before GROUP 6 would report success having proved nothing
+  # about whether pilot access is a bypass.
+  if [ "$SPPILOT_PASSED" -lt 30 ]; then
+    echo "FAIL: expected at least 30 pilot entitlement assertions, only ${SPPILOT_PASSED} ran." >&2
+    suite_failed "Security Passport internal-pilot entitlement (assertion shortfall: floor 30)"
+  fi
+fi
+
 echo "==> Running Security Passport Dubai (SIRA) market pack assertions"
 set +e
 SPAE_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_uae_dubai_market_pack_test.sql 2>&1)"
@@ -1933,6 +1958,28 @@ fi
 # Leaving any of the three in place aborts the Swedish file with
 # ROLLBACK BLOCKED naming the count.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# The pilot entitlement rolls back BEFORE any of the market packs.
+# sp_pilot_members.market_pack_code references sp_market_packs(code), and the
+# three-market rollback further down does DROP TABLE sp_market_packs, which
+# Postgres refuses while a dependent table exists.
+# ---------------------------------------------------------------------------
+echo "==> Verifying the internal-pilot entitlement rollback"
+set +e
+SPPRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20260915090000_sp_market_pilot_entitlement_rollback.sql 2>&1)"
+SPPRB_RC=$?
+set -e
+
+if [ "$SPPRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the internal-pilot entitlement rollback exited with code ${SPPRB_RC}." >&2
+  echo "$SPPRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "internal-pilot entitlement rollback"
+else
+  echo "    ok  the pilot entitlement rolls back cleanly, Sweden still the only open market"
+fi
+
 echo "==> Verifying the Abu Dhabi market pack rollback"
 set +e
 SPAZRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
@@ -2383,6 +2430,7 @@ echo "              ${SPSE_PASSED} Swedish truth model assertions,"
 echo "              ${SPUK_PASSED} UK market pack assertions,"
 echo "              ${SPUKT_PASSED} UK title rule assertions,"
 echo "              ${SPAE_PASSED} Dubai market pack assertions,"
+echo "              ${SPPILOT_PASSED} internal-pilot entitlement assertions,"
 echo "              ${SPLSC_PASSED} legacy scope correction assertions,"
 echo "              ${SPSDB_PASSED} scope disclosure boundary assertions,"
 echo "              ${SPRDS_PASSED} rollback data-safety assertions"

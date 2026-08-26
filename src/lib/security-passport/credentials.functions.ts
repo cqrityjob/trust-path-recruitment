@@ -165,6 +165,13 @@ export type RegulatedMarketState =
   | "no_work_country"
   /** The pack is active and reviewed; its credentials are below. */
   | "open"
+  /** The pack is NOT reviewed and NOT public, and this holder is a named
+   *  internal pilot member of it. Its credentials are below and they are
+   *  registrable — but the market is under regulatory review and the surface
+   *  MUST say so. `open` and `open_pilot` are deliberately different states
+   *  rather than one boolean, because a caller that cannot tell them apart
+   *  will eventually present an unreviewed market as a live one. */
+  | "open_pilot"
   /** A pack exists for this market and its regulatory content has not been
    *  reviewed. Not "you are not eligible" — the rules are not ready. */
   | "pending_review"
@@ -178,7 +185,7 @@ export interface RegulatedCredentialAvailability {
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
   readonly marketPackCode: string | null;
-  /** Non-empty only when `state` is "open". */
+  /** Non-empty only when `state` is "open" or "open_pilot". */
   readonly types: readonly CredentialType[];
 }
 
@@ -216,7 +223,7 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // either alone.
     let packQuery = supabase
       .from("sp_market_packs")
-      .select("code, is_active")
+      .select("code, is_active, pilot_state")
       .eq("jurisdiction_code", jurisdictionCode)
       .is("superseded_on", null);
     packQuery = subJurisdictionCode
@@ -232,20 +239,40 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // holder has named the country but not an emirate.
     if (!pack) return { state: "unsupported", ...none };
 
-    if (!pack.is_active) {
+    // ── WHO MAY REACH THIS MARKET, DECIDED IN THE DATABASE ───────────
+    //
+    // NOT recomputed here from `is_active` and `pilot_state`. The claim
+    // trigger asks `sp_is_pilot_member` before it accepts a write, and a form
+    // that decided availability its own way would eventually offer something
+    // the database then refuses — which is the exact defect class this whole
+    // area exists to remove. One decision, one function, both callers.
+    const { data: access, error: accessError } = await supabase.rpc("sp_market_access", {
+      _user_id: userId,
+      _market_pack_code: pack.code,
+    });
+    if (accessError) throw new Error(accessError.message);
+
+    if (access !== "production" && access !== "pilot") {
       return { state: "pending_review", ...none, marketPackCode: pack.code };
     }
 
-    const { data, error } = await supabase
+    // A pilot market publishes nothing: its credentials are reachable through
+    // `pilot_state`, and `is_active` stays false so they do not become public
+    // the day the pack is approved without somebody deciding that separately.
+    const typeQuery = supabase
       .from("sp_credential_types")
       .select(TAXONOMY_COLUMNS)
-      .eq("is_active", true)
       .eq("market_pack_code", pack.code)
       .order("sort_order", { ascending: true });
+
+    const { data, error } =
+      access === "production"
+        ? await typeQuery.eq("is_active", true)
+        : await typeQuery.eq("pilot_state", "internal_pilot");
     if (error) throw new Error(error.message);
 
     return {
-      state: "open",
+      state: access === "production" ? "open" : "open_pilot",
       jurisdictionCode,
       subJurisdictionCode,
       marketPackCode: pack.code,

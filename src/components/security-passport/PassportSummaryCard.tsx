@@ -39,6 +39,8 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { formatWorkLocation, formatJurisdiction } from "@/lib/security-passport/format";
 import { splitByWorkLocation, countriesOf } from "@/lib/security-passport/jurisdiction-relevance";
+import { deriveMarketProfiles, marketBadges } from "@/lib/security-passport/market-profiles";
+import { MarketBadgeRow } from "@/components/security-passport/MarketBadgeRow";
 
 /** Presentational. The snapshot is fetched by the route that renders this and
  *  handed down, because a Passport COMPONENT may not reach the server tier —
@@ -78,6 +80,11 @@ export function PassportSummaryCard({
   const canShare = claims.some((c) => c.assertionLevel === "verified");
 
   const otherCountries = countriesOf(split.elsewhere);
+
+  // One badge per market the holder holds evidence in, current market first.
+  // Derived from the same module the Passport Card uses, so the compact card
+  // and the full card can never disagree about how many markets there are.
+  const badges = marketBadges(deriveMarketProfiles(claims, work).profiles);
 
   return (
     <section
@@ -158,6 +165,12 @@ export function PassportSummaryCard({
               </p>
             </div>
           )}
+
+          {/* The markets themselves, before the prose below reports what is
+              outside the current one. A badge row is the compact card's only
+              statement about jurisdiction, so it names markets and counts —
+              never credential codes beside a country. */}
+          <MarketBadgeRow badges={badges} className="mt-4" onNavy />
 
           {/* Credentials from another jurisdiction. Reported as a count with
               their country named, never merged into the figures above — that

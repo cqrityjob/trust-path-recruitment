@@ -24,6 +24,7 @@ import { withoutSelfDeclared } from "./identity/visibility";
 import type { ProfessionalIdentity } from "./identity/types";
 import { recognitionFor, type RecognitionState } from "./recognition";
 import { validityOf } from "./validity";
+import { deriveMarketProfiles, type MarketProfile } from "./market-profiles";
 import type {
   AssertionLevel,
   Claim,
@@ -57,6 +58,13 @@ export interface CardCredential {
   readonly titleSv: string;
   readonly titleEn: string;
   readonly credentialCode: string | null;
+  /** The credential's OWN market, carried onto the card so the evidence band
+   *  can group by it. Without these two fields the card had one flat list and
+   *  one work-location line, and a reader could only guess which credential
+   *  belonged to which — which on the artefact people screenshot and forward is
+   *  where a Swedish appointment starts looking like a Dubai licence. */
+  readonly jurisdictionCode: string | null;
+  readonly subJurisdictionCode: string | null;
   readonly issuerName: string;
   readonly verifierName: string | null;
   readonly assertionLevel: AssertionLevel;
@@ -99,6 +107,14 @@ export interface PassportCardModel {
    *  otherwise pushes people to overclaim. */
   readonly reportedExperienceDays: number;
   readonly credentials: readonly CardCredential[];
+  /** Every market the holder has a credential in, derived and complete.
+   *
+   *  Deliberately computed over ALL the holder's claims rather than over the
+   *  three plates above: `credentials` is a curated top-three for the evidence
+   *  band, and summarising markets from a truncated list would silently drop a
+   *  whole market from a card that claims to list them. A holder with four
+   *  Swedish and two Dubai credentials has two markets, and says two. */
+  readonly marketProfiles: readonly MarketProfile<CardCredential>[];
   readonly containsExpired: boolean;
   readonly containsDisputed: boolean;
   /** Distinct attributions behind the shown credentials. */
@@ -145,6 +161,8 @@ function toCardCredential(claim: Claim, evaluationOn: IsoDate): CardCredential {
     titleSv: claim.titleSv,
     titleEn: claim.titleEn,
     credentialCode: claim.credentialCode,
+    jurisdictionCode: claim.jurisdictionCode,
+    subJurisdictionCode: claim.subJurisdictionCode,
     issuerName: claim.issuerName,
     verifierName: claim.verifierName,
     assertionLevel: claim.assertionLevel,
@@ -170,6 +188,14 @@ export function buildPassportCard(
     .sort((a, b) => evidenceRank(b) - evidenceRank(a) || recency(b) - recency(a))
     .slice(0, CARD_CREDENTIAL_LIMIT);
 
+  // Grouped from the FULL dated set, and against the holder's stated work
+  // location so the card can name the current market separately from the
+  // markets it has evidence in.
+  const { profiles: marketProfiles } = deriveMarketProfiles(dated, {
+    jurisdictionCode: holder.jurisdictionCode ?? null,
+    subJurisdictionCode: holder.subJurisdictionCode ?? null,
+  });
+
   const attributions = Array.from(
     new Set(
       credentials
@@ -192,6 +218,7 @@ export function buildPassportCard(
     reportedExperienceDays: totals.reported.elapsedDays,
 
     credentials,
+    marketProfiles,
     // Derived, so a licence that lapsed yesterday is reported today. The
     // whole card carries the warning, not only the plate.
     containsExpired:

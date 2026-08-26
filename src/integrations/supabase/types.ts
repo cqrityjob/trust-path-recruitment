@@ -8344,6 +8344,7 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only: boolean
+          pilot_state: string
           reference_label_en: string | null
           reference_label_local: string | null
           reference_pattern: string | null
@@ -8372,6 +8373,7 @@ export type Database = {
           name_en: string
           name_sv: string
           narrow_result_only?: boolean
+          pilot_state?: string
           reference_label_en?: string | null
           reference_label_local?: string | null
           reference_pattern?: string | null
@@ -8400,6 +8402,7 @@ export type Database = {
           name_en?: string
           name_sv?: string
           narrow_result_only?: boolean
+          pilot_state?: string
           reference_label_en?: string | null
           reference_label_local?: string | null
           reference_pattern?: string | null
@@ -8725,6 +8728,7 @@ export type Database = {
           name_ar: string | null
           name_en: string
           name_sv: string
+          pilot_state: string
           sub_jurisdiction_code: string | null
           superseded_on: string | null
           updated_at: string
@@ -8741,6 +8745,7 @@ export type Database = {
           name_ar?: string | null
           name_en: string
           name_sv: string
+          pilot_state?: string
           sub_jurisdiction_code?: string | null
           superseded_on?: string | null
           updated_at?: string
@@ -8757,6 +8762,7 @@ export type Database = {
           name_ar?: string | null
           name_en?: string
           name_sv?: string
+          pilot_state?: string
           sub_jurisdiction_code?: string | null
           superseded_on?: string | null
           updated_at?: string
@@ -8892,6 +8898,44 @@ export type Database = {
             columns: ["sub_jurisdiction_code"]
             isOneToOne: false
             referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_pilot_members: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          market_pack_code: string
+          note: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          market_pack_code: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          market_pack_code?: string
+          note?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_pilot_members_market_pack_code_fkey"
+            columns: ["market_pack_code"]
+            isOneToOne: false
+            referencedRelation: "sp_market_packs"
             referencedColumns: ["code"]
           },
         ]
@@ -10955,7 +10999,19 @@ export type Database = {
         Returns: Json
       }
       sp_get_disclosure: { Args: { _token: string }; Returns: Json }
+      sp_grant_pilot_member: {
+        Args: { _market_pack_code: string; _note?: string; _user_id: string }
+        Returns: undefined
+      }
+      sp_is_pilot_member: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: boolean
+      }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_market_access: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: string
+      }
       sp_my_application_disclosures: {
         Args: never
         Returns: {
@@ -10986,6 +11042,10 @@ export type Database = {
         Returns: undefined
       }
       sp_revoke_disclosure: { Args: { _id: string }; Returns: undefined }
+      sp_revoke_pilot_member: {
+        Args: { _market_pack_code: string; _user_id: string }
+        Returns: undefined
+      }
       sp_share_passport_with_application: {
         Args: {
           _application_id: string

@@ -109,11 +109,20 @@ export function DirectionC({
             className="mt-3 text-[10px] uppercase tracking-[0.18em]"
             style={{ color: TRUST_PALETTE.inkMuted }}
           >
-            {c.workLabel}
+            {c.currentMarketLabel}
           </p>
           <p className="text-sm" style={{ color: TRUST_PALETTE.ink }}>
             {c.jurisdiction}
           </p>
+          {/* The absence, stated. A holder who has just moved to Dubai still
+              has four Swedish plates below; without this line the card lists
+              markets and names Dubai, and the reader supplies the connection
+              the product refuses to make. */}
+          {c.noVerifiedInCurrentMarket ? (
+            <p className="mt-1 text-[11px]" style={{ color: TRUST_PALETTE.inkMuted }}>
+              {c.noVerifiedInCurrentMarket}
+            </p>
+          ) : null}
         </div>
 
         {/* ── The signature rule, with the milestone straddling it ──── */}
@@ -157,12 +166,38 @@ export function DirectionC({
           </div>
         </div>
 
-        {/* ── Evidence band ─────────────────────────────────────────── */}
-        {c.credentials.length > 0 ? (
-          <section className="mt-4 space-y-2">
-            {c.credentials.map((p) => (
-              <CredentialPlate key={p.title} {...p} />
-            ))}
+        {/* ── Evidence band, one block per market ───────────────────── */}
+        {/* Was a flat list of plates. Grouping is not decoration here: it is
+            the only thing on the card that says which country each credential
+            belongs to, and the card is what leaves the product. */}
+        {c.markets.length > 0 ? (
+          <section className="mt-4" data-testid="card-verified-markets">
+            <MicroLabel tone={rimBright}>{c.marketsLabel}</MicroLabel>
+            <div className="mt-2 space-y-3">
+              {c.markets.map((m) => (
+                <div key={m.marketCode} data-market={m.marketCode}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span
+                      className="truncate text-[11px] font-semibold uppercase tracking-[0.14em]"
+                      style={{ color: TRUST_PALETTE.ink }}
+                    >
+                      {m.displayName}
+                    </span>
+                    <span
+                      className="shrink-0 text-[10px] uppercase tracking-[0.14em]"
+                      style={{ color: TRUST_PALETTE.inkMuted }}
+                    >
+                      {m.verifiedCount} {m.verifiedLabel}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 space-y-2">
+                    {m.plates.map((p) => (
+                      <CredentialPlate key={p.title} {...p} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         ) : null}
 

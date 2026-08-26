@@ -39,6 +39,7 @@ import {
 import { EligibilityLine } from "./EligibilityLine";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { PassportCardModel, ShareOverlayState } from "@/lib/security-passport/card";
+import { marketDisplayName } from "@/lib/security-passport/market-profiles";
 import { AssertionChip } from "./AssertionChip";
 import { LifecycleChip } from "./LifecycleChip";
 import { RecognitionBadge } from "./RecognitionBadges";
@@ -86,6 +87,12 @@ export function PassportCard({
   // Emirate included: the card is the artefact people screenshot and forward,
   // so it must not be the one surface that still flattens Dubai into the UAE.
   const jurisdiction = formatWorkLocation(card.jurisdictionCode, card.subJurisdictionCode, lang);
+  // Stated only when a work market has actually been named: with none there is
+  // nothing for the sentence to be about, and printing it would invent a gap.
+  const hereProfile = card.marketProfiles.find((m) => m.isCurrentWorkMarket) ?? null;
+  const noVerifiedHere =
+    card.jurisdictionCode !== null &&
+    (hereProfile === null || hereProfile.verifiedCredentials.length === 0);
 
   return (
     <article
@@ -120,9 +127,22 @@ export function PassportCard({
             >
               {card.holderDisplayName}
             </h3>
-            <p className="mt-1 text-sm text-foreground">
-              {profession} · {jurisdiction}
+            {/* Two facts, two lines. The middot printed "Ordningsvakt ·
+                Skyddsvakt · Dubai, Förenade Arabemiraten" for a Swedish holder
+                working in the UAE, and read left to right that says a Swedish
+                appointment holds in Dubai. It does not. The work market now
+                carries its own label, and the markets each credential belongs
+                to are stated below. */}
+            <p className="mt-1 text-sm text-foreground">{profession}</p>
+            <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {pt("card.currentWorkMarket")}
             </p>
+            <p className="text-sm text-foreground">{jurisdiction}</p>
+            {noVerifiedHere ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pt("market.currentMarket.none")}
+              </p>
+            ) : null}
             {/* buildPassportCard already applies withoutSelfDeclared, so in a
                 correct program this never renders. It is here because the card
                 is the artefact people screenshot and send onward: if a
@@ -151,35 +171,60 @@ export function PassportCard({
             </div>
           ) : null}
 
-          {card.credentials.length > 0 ? (
+          {/* ── The register, one block per market ──────────────────
+              Was a single flat list. A reader saw Skyddsvaktsförordnande and
+              SIRA Security Guard in one column under one work location and had
+              nothing to tell them which country either belonged to. Each block
+              now names its market and counts only what is verified AND current
+              in it. */}
+          {card.marketProfiles.length > 0 ? (
             <section className="mt-5 border-t border-border pt-4">
-              <MicroLabel>{pt("overview.sectionClaims")}</MicroLabel>
-              <ul className="mt-2 space-y-2.5">
-                {card.credentials.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1"
-                  >
-                    <div className="min-w-0 flex-1">
-                      {/* Wraps rather than truncates: a credential whose
-                          name a reader cannot finish is not a credential.
-                          The metadata line below may still truncate — a
-                          clipped issuer is recoverable, a clipped title
-                          is not. */}
-                      <p className="text-sm font-medium text-balance text-foreground">
-                        {lang === "sv" ? c.titleSv : c.titleEn}
-                      </p>
-                      <p className="truncate text-xs tabular-nums text-muted-foreground">
-                        {c.issuerName} · {formatExpiry(c.validUntil, lang)}
-                      </p>
+              <MicroLabel>{pt("card.verifiedMarkets")}</MicroLabel>
+              <div className="mt-2 space-y-4">
+                {card.marketProfiles.map((m) => (
+                  <div key={m.marketCode} data-market={m.marketCode}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+                        {marketDisplayName(m, lang)}
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                        {m.verifiedCredentials.length}{" "}
+                        {m.verifiedCredentials.length === 1
+                          ? pt("market.verified.one")
+                          : pt("market.verified.many")}
+                      </span>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <AssertionChip level={c.assertionLevel} size="sm" />
-                      <LifecycleChip state={c.lifecycleState} />
-                    </div>
-                  </li>
+                    <ul className="mt-1.5 space-y-2.5">
+                      {[...m.verifiedCredentials, ...m.pendingCredentials, ...m.otherClaims].map(
+                        (c) => (
+                          <li
+                            key={c.id}
+                            className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1"
+                          >
+                            <div className="min-w-0 flex-1">
+                              {/* Wraps rather than truncates: a credential whose
+                                name a reader cannot finish is not a credential.
+                                The metadata line below may still truncate — a
+                                clipped issuer is recoverable, a clipped title
+                                is not. */}
+                              <p className="text-sm font-medium text-balance text-foreground">
+                                {lang === "sv" ? c.titleSv : c.titleEn}
+                              </p>
+                              <p className="truncate text-xs tabular-nums text-muted-foreground">
+                                {c.issuerName} · {formatExpiry(c.validUntil, lang)}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <AssertionChip level={c.assertionLevel} size="sm" />
+                              <LifecycleChip state={c.lifecycleState} />
+                            </div>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           ) : null}
 

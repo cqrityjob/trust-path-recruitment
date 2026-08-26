@@ -32,7 +32,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { WorkCountryCard } from "@/components/security-passport/WorkCountryCard";
+import { MarketCredentialSection } from "@/components/security-passport/MarketCredentialSection";
+import {
+  OtherMarketsPanel,
+  type OtherMarketClaim,
+} from "@/components/security-passport/OtherMarketsPanel";
+import {
+  deriveMarketProfiles,
+  currentMarket,
+  otherMarkets,
+} from "@/lib/security-passport/market-profiles";
 import { getMyPassport, setWorkCountry } from "@/lib/security-passport/passport.functions";
+import {
+  getRegulatedCredentialAvailability,
+  type RegulatedCredentialAvailability,
+} from "@/lib/security-passport/credentials.functions";
 import { Briefcase, GraduationCap, Languages, Plus, ShieldCheck, Wrench } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
@@ -128,25 +142,42 @@ function PassportInformationRoute() {
   // their whole Passport is spoken in.
   const loadProfile = useServerFn(getMyPassport);
   const saveWorkCountry = useServerFn(setWorkCountry);
+  // The governed answer to "what may this holder register here". NOT a literal
+  // credential list: see MarketCredentialSection for why the literal was a
+  // regulatory claim rather than a convenience.
+  const loadAvailability = useServerFn(getRegulatedCredentialAvailability);
   const [workCountry, setWorkCountryState] = useState<{
     jurisdictionCode: string | null;
     subJurisdictionCode: string | null;
     confirmed: boolean;
   } | null>(null);
+  const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
+
+  // ── ONE REFRESH FOR BOTH ──────────────────────────────────────────
+  //
+  // The work country and the market catalogue are the SAME fact read twice,
+  // and loading them separately is how a page ends up showing Sweden's
+  // credentials under a Dubai heading for one render. They are fetched
+  // together and set together, so the catalogue on screen always belongs to
+  // the country printed above it.
   const refreshWorkCountry = useCallback(async () => {
     try {
-      const snap = await loadProfile({ data: undefined });
+      const [snap, avail] = await Promise.all([
+        loadProfile({ data: undefined }),
+        loadAvailability({ data: undefined }),
+      ]);
       setWorkCountryState({
         jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
         subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
         confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
       });
+      setAvailability(avail);
     } catch (err) {
       // A failure here must not take the rest of the page down with it: the
       // entries below are independent and still editable.
       console.error("[passport] work country load failed", err);
     }
-  }, [loadProfile]);
+  }, [loadProfile, loadAvailability]);
   useEffect(() => {
     void refreshWorkCountry();
   }, [refreshWorkCountry]);
@@ -225,6 +256,57 @@ function PassportInformationRoute() {
   // The four taxonomy credentials are shown here for completeness but are
   // never edited here — they belong to the credential form.
   const taxonomyClaims = useMemo(() => claims.filter((c) => c.credentialCode !== null), [claims]);
+
+  // ── THE MULTI-MARKET READ MODEL ───────────────────────────────────
+  //
+  // Derived, never stored. Every field comes from columns sp_claims already
+  // carries, so there is no table that could disagree with the claims it
+  // summarises — and no migration was needed to group a list.
+  //
+  // Scoped to TAXONOMY claims: a market profile is about regulated
+  // authorisations, which is what belongs to a jurisdiction. A language or a
+  // free-text course is portable, keeps its own section below, and is not
+  // filed under a country it would then appear to depend on.
+  const marketProfiles = useMemo(
+    () =>
+      deriveMarketProfiles<OtherMarketClaim>(
+        taxonomyClaims.map((c) => ({
+          id: c.id,
+          title: c.title,
+          jurisdictionCode: c.jurisdictionCode,
+          subJurisdictionCode: c.subJurisdictionCode,
+          assertionLevel: c.assertionLevel,
+          lifecycleState: c.lifecycleState,
+        })),
+        {
+          jurisdictionCode: workCountry?.jurisdictionCode ?? null,
+          subJurisdictionCode: workCountry?.subJurisdictionCode ?? null,
+        },
+      ).profiles,
+    [taxonomyClaims, workCountry],
+  );
+  const hereProfile = useMemo(() => currentMarket(marketProfiles), [marketProfiles]);
+  const elsewhereProfiles = useMemo(() => otherMarkets(marketProfiles), [marketProfiles]);
+  // The ids the selected market owns, so the list rendered inside the market
+  // section is exactly this market's — and a Swedish credential can never be
+  // drawn under a Dubai heading, whatever the claim order happens to be.
+  const hereClaimIds = useMemo(
+    () =>
+      new Set(
+        hereProfile
+          ? [
+              ...hereProfile.verifiedCredentials,
+              ...hereProfile.pendingCredentials,
+              ...hereProfile.otherClaims,
+            ].map((c) => c.id)
+          : [],
+      ),
+    [hereProfile],
+  );
+  const hereClaims = useMemo(
+    () => taxonomyClaims.filter((c) => hereClaimIds.has(c.id)),
+    [taxonomyClaims, hereClaimIds],
+  );
   const freeClaims = useMemo(() => claims.filter((c) => c.credentialCode === null), [claims]);
 
   async function commitExperience(draft: ExperienceDraft) {
@@ -388,15 +470,24 @@ function PassportInformationRoute() {
         />
       ) : null}
 
-      {/* ── Supported credentials ─────────────────────────────────────── */}
-      <SectionShell
-        icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
-        title={pt("cred.overview.title")}
-        lead={pt("cred.overview.body")}
+      {/* ── The selected market, and only the selected market ────────── */}
+      {/* Was a literal ["VU1","VU2","OV","SV"] rendered unconditionally, which
+          offered Swedish regulated credentials to a holder who had told the
+          product they work in Dubai. It is now the governed answer, and the
+          three closed states each say which absence they are. */}
+      <MarketCredentialSection
+        state={availability?.state ?? "no_work_country"}
+        jurisdictionCode={availability?.jurisdictionCode ?? null}
+        subJurisdictionCode={availability?.subJurisdictionCode ?? null}
+        options={availability?.state === "open" ? availability.types : []}
+        onSelect={(code) => void navigate({ to: "/passport/credentials/new", search: { code } })}
+        onSetWorkCountry={() => {
+          document.getElementById("sp-work-country")?.focus();
+        }}
       >
-        {taxonomyClaims.length > 0 ? (
-          <ul className="mb-4 space-y-2">
-            {taxonomyClaims.map((c) => (
+        {hereClaims.length > 0 ? (
+          <ul className="space-y-2">
+            {hereClaims.map((c) => (
               <li
                 key={c.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
@@ -433,27 +524,13 @@ function PassportInformationRoute() {
             ))}
           </ul>
         ) : null}
+      </MarketCredentialSection>
 
-        <div className="flex flex-wrap gap-2">
-          {(["VU1", "VU2", "OV", "SV"] as const).map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => void navigate({ to: "/passport/credentials/new", search: { code } })}
-              className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <CredentialSymbol
-                code={code}
-                state="self_declared"
-                name={code}
-                size={28}
-                decorative
-              />
-              {code}
-            </button>
-          ))}
-        </div>
-      </SectionShell>
+      {/* ── What the holder has earned somewhere else ─────────────────── */}
+      {/* Read-only, and rendered even when empty while the holder works
+          anywhere: "you have nothing in another market yet" is the answer to
+          the question a country change provokes, and silence is not. */}
+      <OtherMarketsPanel profiles={elsewhereProfiles} />
 
       {/* ── Employment ────────────────────────────────────────────────── */}
       <SectionShell

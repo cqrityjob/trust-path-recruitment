@@ -38,6 +38,7 @@ const sv = {
 
   // ── Screen names (harness navigation) ────────────────────────────────
   "screen.home": "Kandidathem (mockup)",
+  "screen.marketProfiles": "Marknadsprofiler",
   "screen.welcome": "Välkommen och syfte",
   "screen.onboarding": "Kom igång",
   "screen.overview": "Mitt Security Passport",
@@ -939,6 +940,11 @@ const sv = {
   "rec.scopeWithheld":
     "Godkännandet gäller ett angivet skyddsobjekt, en arbetsgivare eller en uppdragsgivare. Omfattningen visas inte i den här vyn.",
   "rec.subJurisdiction": "Region",
+  // The market the CREDENTIAL was issued under — never the holder's work
+  // country, which is stated once at the top of the page. Without this row an
+  // employer read a flat list of authorisations under one work location and
+  // had nothing to tell them a Swedish appointment was Swedish.
+  "rec.credentialMarket": "Gäller i",
   "rec.experience": "Verifierad anställning",
   "rec.tenure": "Verifierad tid i yrket",
   "rec.verifiedBy": "Verifierad av",
@@ -1090,6 +1096,47 @@ const sv = {
   "cred.market.noWorkCountry":
     "Ange först var du arbetar. Vilka reglerade behörigheter som kan registreras beror på arbetslandet.",
   "cred.market.setWorkCountry": "Ange arbetsland",
+
+  // ── Market profiles ─────────────────────────────────────────────────
+  //
+  // The market NAME is never baked into these sentences. It is rendered beside
+  // them by formatWorkLocation, so one set of strings serves every market and
+  // a market added to sp_market_packs needs no copy release. The headings are
+  // therefore prefixes and suffixes, which read correctly in both languages
+  // because both put the country in the same place.
+  "market.step.workMarket": "Arbetsmarknad",
+  "market.workMarket.question": "Var arbetar du eller vill du använda ditt Security Passport?",
+  "market.registerNote": "Reglerade behörigheter kan endast registreras för det valda landet.",
+  "market.section.credentialsFor": "Behörigheter och utbildningar för",
+  // ── The internal pilot status line ──────────────────────────────────
+  //
+  // Restrained on purpose. This is a market STATUS, not a warning: it sits
+  // once, beside the market name, in the same register as the rest of the
+  // page. A red alert on every screen would train the tester to dismiss it,
+  // and the thing it has to convey is a fact, not a danger.
+  //
+  // What it must never do is let an unreviewed market read as a live one.
+  "market.pilot.status": "Intern pilotmarknad — regulatoriskt innehåll granskas fortfarande",
+  "market.pilot.body":
+    "Du deltar i en intern pilot för den här marknaden. Uppgifter du registrerar sparas i ditt Security Passport med sin egen jurisdiktion. Marknaden är ännu inte öppen för alla och innehållet är inte juridiskt godkänt.",
+  "market.section.lead": "Välj en behörighet eller utbildning för att lägga till och fortsätta.",
+  "market.pending.headingSuffix": "är ännu inte öppnad",
+  "market.pending.body":
+    "Registrering av lokala behörigheter för den här marknaden är ännu inte öppnad. Du kan ange den som arbetsmarknad redan nu. Dina verifierade uppgifter från andra länder finns kvar i ditt Security Passport.",
+  "market.unsupported.heading": "Marknaden stöds inte ännu",
+  "market.unsupported.body": "Den här marknaden stöds ännu inte för reglerade behörigheter.",
+  "market.noWorkCountry.heading": "Ange arbetsmarknad först",
+  "market.other.title": "Verifierat i andra marknader",
+  "market.other.lead":
+    "Uppgifter du har verifierat i andra marknader. De hör till sitt eget land och redigeras där, inte härifrån.",
+  "market.other.none": "Du har inga verifierade uppgifter i andra marknader ännu.",
+  "market.verified.one": "verifierad",
+  "market.verified.many": "verifierade",
+  "market.details.show": "Visa detaljer",
+  "market.details.hide": "Dölj detaljer",
+  "market.currentMarket.none": "Inga verifierade uppgifter i denna marknad ännu.",
+  "card.verifiedMarkets": "Verifierade marknader",
+  "card.currentWorkMarket": "Aktuell arbetsmarknad",
   "cred.field.credentialCountry": "Behörighetens land",
   "cred.field.credentialCountryHelp":
     "Behörigheten hör till det här landet, oavsett var du arbetar i dag. Den ändras inte om du byter arbetsland.",
@@ -1405,6 +1452,7 @@ const en: Record<PassportCopyKey, string> = {
   "proto.back": "Back",
 
   "screen.home": "Candidate home (mock)",
+  "screen.marketProfiles": "Market profiles",
   "screen.welcome": "Welcome and purpose",
   "screen.onboarding": "Get started",
   "screen.overview": "My Security Passport",
@@ -2212,6 +2260,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.scopeWithheld":
     "The approval applies to a stated protected object, employer or principal. The scope is not shown in this view.",
   "rec.subJurisdiction": "Region",
+  "rec.credentialMarket": "Valid in",
   "rec.experience": "Verified employment",
   "rec.tenure": "Verified time in the profession",
   "rec.verifiedBy": "Verified by",
@@ -2332,6 +2381,34 @@ const en: Record<PassportCopyKey, string> = {
   "cred.market.noWorkCountry":
     "Tell us where you work first. Which regulated credentials can be registered depends on the work country.",
   "cred.market.setWorkCountry": "Set work country",
+
+  // ── Market profiles ─────────────────────────────────────────────────
+  "market.step.workMarket": "Work market",
+  "market.workMarket.question":
+    "Where do you work, or where do you want to use your Security Passport?",
+  "market.registerNote": "Regulated credentials can only be registered for the selected country.",
+  "market.section.credentialsFor": "Credentials and training for",
+  "market.pilot.status": "Internal pilot market — regulatory content is under review",
+  "market.pilot.body":
+    "You are taking part in an internal pilot for this market. What you register is saved in your Security Passport with its own jurisdiction. The market is not yet open to everyone and its content has not been legally approved.",
+  "market.section.lead": "Choose a credential or training to add and continue.",
+  "market.pending.headingSuffix": "is not open yet",
+  "market.pending.body":
+    "Registration of local credentials for this market is not open yet. You can already set it as your work market. Your verified records from other countries remain in your Security Passport.",
+  "market.unsupported.heading": "This market is not supported yet",
+  "market.unsupported.body": "This market is not yet supported for regulated credentials.",
+  "market.noWorkCountry.heading": "Set your work market first",
+  "market.other.title": "Verified in other markets",
+  "market.other.lead":
+    "Records you have verified in other markets. They belong to their own country and are edited there, not from here.",
+  "market.other.none": "You have no verified records in other markets yet.",
+  "market.verified.one": "verified",
+  "market.verified.many": "verified",
+  "market.details.show": "View details",
+  "market.details.hide": "Hide details",
+  "market.currentMarket.none": "No verified records in this market yet.",
+  "card.verifiedMarkets": "Verified markets",
+  "card.currentWorkMarket": "Current work market",
   "cred.field.credentialCountry": "Credential's country",
   "cred.field.credentialCountryHelp":
     "The credential belongs to this country whatever country you work in today. Changing your work country does not change it.",
