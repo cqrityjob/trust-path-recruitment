@@ -3548,6 +3548,9 @@ export type Database = {
           job_id: string
           new_status: string
           note: string | null
+          notified_at: string | null
+          notify_attempts: number
+          notify_error: string | null
           previous_status: string
         }
         Insert: {
@@ -3560,6 +3563,9 @@ export type Database = {
           job_id: string
           new_status: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status: string
         }
         Update: {
@@ -3572,6 +3578,9 @@ export type Database = {
           job_id?: string
           new_status?: string
           note?: string | null
+          notified_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           previous_status?: string
         }
         Relationships: [
@@ -9819,6 +9828,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_anonymise_user: {
+        Args: { _confirm_email: string; _reason: string; _user_id: string }
+        Returns: Json
+      }
       admin_cancel_assessment_assignment: {
         Args: { _assignment_id: string; _reason: string }
         Returns: {
@@ -9827,6 +9840,25 @@ export type Database = {
           previous_status: string
         }[]
       }
+      admin_delete_employer_if_safe: {
+        Args: { _confirm_name: string; _employer_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_delete_job_if_safe: {
+        Args: { _job_id: string; _reason: string }
+        Returns: Json
+      }
+      admin_delete_user_if_safe: {
+        Args: { _confirm_email: string; _reason: string; _user_id: string }
+        Returns: Json
+      }
+      admin_disposable_records: { Args: { _limit?: number }; Returns: Json }
+      admin_employer_deletion_impact: {
+        Args: { _employer_id: string }
+        Returns: Json
+      }
+      admin_identity_diagnostics: { Args: never; Returns: Json }
+      admin_person_overview: { Args: { _user_id: string }; Returns: Json }
       admin_set_platform_role: {
         Args: { _grant: boolean; _role: string; _target_user_id: string }
         Returns: {
@@ -9835,6 +9867,11 @@ export type Database = {
           target_user_id: string
         }[]
       }
+      admin_set_user_disabled: {
+        Args: { _disabled: boolean; _reason: string; _user_id: string }
+        Returns: Json
+      }
+      admin_user_deletion_impact: { Args: { _user_id: string }; Returns: Json }
       approve_access_request: {
         Args: { _decision: string; _granted_role?: string; _request_id: string }
         Returns: {
@@ -9961,6 +9998,10 @@ export type Database = {
           membership_id: string
         }[]
       }
+      employer_accepts_operations: {
+        Args: { _employer_id: string }
+        Returns: boolean
+      }
       employer_is_active_status: {
         Args: { _employer_id: string }
         Returns: boolean
@@ -9982,6 +10023,21 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      jase_notification_payload: {
+        Args: { _event_id: string }
+        Returns: {
+          employer_name: string
+          event_id: string
+          job_title: string
+          language: string
+          new_status: string
+          recipient_email: string
+        }[]
+      }
+      jase_record_notification: {
+        Args: { _error?: string; _event_id: string; _ok: boolean }
+        Returns: undefined
+      }
       job_is_active: {
         Args: {
           p_deadline_at: string
@@ -9990,6 +10046,10 @@ export type Database = {
           p_status: string
         }
         Returns: boolean
+      }
+      jobs_delete_draft: {
+        Args: { _employer_id: string; _job_id: string }
+        Returns: string
       }
       moderate_employer: {
         Args: { _action: string; _employer_id: string; _note?: string }
