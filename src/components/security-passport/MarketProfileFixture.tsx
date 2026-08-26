@@ -185,6 +185,28 @@ function Panel({
 export function MarketProfileFixture() {
   const { lang } = usePassportCopy();
 
+  // The seven SIA licences, exactly as the GB pack authors them. Fictional
+  // only in that no database is consulted: these are the real catalogue codes,
+  // which is what makes the pilot screen worth reviewing.
+  const GB_PILOT_OPTIONS = useMemo(
+    () =>
+      [
+        ["UK_SIA_LICENCE_SG", "SIA Licence — Security Guarding", "SG"],
+        ["UK_SIA_LICENCE_DS", "SIA Licence — Door Supervision", "DS"],
+        ["UK_SIA_LICENCE_CCTV", "SIA Licence — Public Space Surveillance (CCTV)", "CCTV"],
+        ["UK_SIA_LICENCE_CP", "SIA Licence — Close Protection", "CP"],
+        ["UK_SIA_LICENCE_CVIT", "SIA Licence — Cash and Valuables in Transit", "CVIT"],
+        ["UK_SIA_LICENCE_KH", "SIA Licence — Key Holding", "KH"],
+        ["UK_SIA_LICENCE_NFL", "SIA Licence — Non-Front-Line", "NFL"],
+      ].map(([code, name, label]) => ({
+        code,
+        nameSv: name,
+        nameEn: name,
+        symbolLabel: label,
+      })),
+    [],
+  );
+
   const swedishOptions = useMemo(
     () =>
       FIXTURE_CREDENTIAL_TYPES.filter((t) => ["VU1", "VU2", "OV", "SV"].includes(t.code)).map(
@@ -261,6 +283,26 @@ export function MarketProfileFixture() {
           jurisdictionCode="AE"
           subJurisdictionCode="AE-DU"
           options={[]}
+          onSelect={() => undefined}
+        />
+      </Panel>
+
+      <Panel
+        id="screen-b-pilot"
+        title={note(
+          "B-PILOT — Storbritannien som pilotmarknad",
+          "B-PILOT — Great Britain as a pilot market",
+        )}
+        note={note(
+          "Samma marknad som är stängd för alla andra. En namngiven pilotdeltagare ser SIA-katalogen och en marknadsstatus som säger att innehållet fortfarande granskas.",
+          "The same market that is closed to everyone else. A named pilot participant sees the SIA catalogue and a market status saying the content is still under review.",
+        )}
+      >
+        <MarketCredentialSection
+          state="open_pilot"
+          jurisdictionCode="GB"
+          subJurisdictionCode={null}
+          options={GB_PILOT_OPTIONS}
           onSelect={() => undefined}
         />
       </Panel>

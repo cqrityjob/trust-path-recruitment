@@ -99,7 +99,7 @@ export function PassportOverview({
    *  same defect the entry page carried: a Dubai holder was offered Swedish
    *  regulated credentials from the Passport's front page. */
   marketCredentials?: {
-    readonly state: "no_work_country" | "open" | "pending_review" | "unsupported";
+    readonly state: "no_work_country" | "open" | "open_pilot" | "pending_review" | "unsupported";
     readonly options: readonly {
       code: string;
       nameSv: string;
@@ -286,7 +286,7 @@ export function PassportOverview({
               would still have been told to add a Swedish appointment. The
               sentence is governed with them. */}
           <SectionHeading>
-            {marketCredentials?.state === "open"
+            {marketCredentials?.state === "open" || marketCredentials?.state === "open_pilot"
               ? `${pt("market.section.credentialsFor")} ${formatWorkLocation(
                   holder.jurisdictionCode,
                   holder.subJurisdictionCode,
@@ -299,18 +299,23 @@ export function PassportOverview({
               ? pt("cred.market.stillPossible")
               : marketCredentials.state === "open"
                 ? pt("cred.overview.body")
-                : marketCredentials.state === "pending_review"
-                  ? pt("market.pending.body")
-                  : marketCredentials.state === "unsupported"
-                    ? pt("market.unsupported.body")
-                    : pt("cred.market.noWorkCountry")}
+                : marketCredentials.state === "open_pilot"
+                  ? pt("market.pilot.status")
+                  : marketCredentials.state === "pending_review"
+                    ? pt("market.pending.body")
+                    : marketCredentials.state === "unsupported"
+                      ? pt("market.unsupported.body")
+                      : pt("cred.market.noWorkCountry")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {/* The governed catalogue, or none. A regulated credential is only
                 ever offered for a market whose pack is ACTIVE; every other
                 state offers nothing regulated rather than falling back to
                 another market's list. */}
-            {(marketCredentials?.state === "open" ? marketCredentials.options : []).map((o) => (
+            {(marketCredentials?.state === "open" || marketCredentials?.state === "open_pilot"
+              ? marketCredentials.options
+              : []
+            ).map((o) => (
               <button
                 key={o.code}
                 type="button"

@@ -176,11 +176,11 @@ function NewCredentialRoute() {
     return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
   }
 
-  // "Open" is the only state with credentials to offer. The other three are
-  // different facts about the same absence and the form says which — an empty
-  // list would have said none of them.
+  // "Open" and "open as a pilot" are the two states with credentials to offer.
+  // The other three are different facts about the same absence and the form
+  // says which — an empty list would have said none of them.
   const closedMarket: ClosedMarket | null =
-    availability.state === "open"
+    availability.state === "open" || availability.state === "open_pilot"
       ? null
       : {
           reason: availability.state,

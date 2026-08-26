@@ -1108,6 +1108,17 @@ const sv = {
   "market.workMarket.question": "Var arbetar du eller vill du använda ditt Security Passport?",
   "market.registerNote": "Reglerade behörigheter kan endast registreras för det valda landet.",
   "market.section.credentialsFor": "Behörigheter och utbildningar för",
+  // ── The internal pilot status line ──────────────────────────────────
+  //
+  // Restrained on purpose. This is a market STATUS, not a warning: it sits
+  // once, beside the market name, in the same register as the rest of the
+  // page. A red alert on every screen would train the tester to dismiss it,
+  // and the thing it has to convey is a fact, not a danger.
+  //
+  // What it must never do is let an unreviewed market read as a live one.
+  "market.pilot.status": "Intern pilotmarknad — regulatoriskt innehåll granskas fortfarande",
+  "market.pilot.body":
+    "Du deltar i en intern pilot för den här marknaden. Uppgifter du registrerar sparas i ditt Security Passport med sin egen jurisdiktion. Marknaden är ännu inte öppen för alla och innehållet är inte juridiskt godkänt.",
   "market.section.lead": "Välj en behörighet eller utbildning för att lägga till och fortsätta.",
   "market.pending.headingSuffix": "är ännu inte öppnad",
   "market.pending.body":
@@ -2377,6 +2388,9 @@ const en: Record<PassportCopyKey, string> = {
     "Where do you work, or where do you want to use your Security Passport?",
   "market.registerNote": "Regulated credentials can only be registered for the selected country.",
   "market.section.credentialsFor": "Credentials and training for",
+  "market.pilot.status": "Internal pilot market — regulatory content is under review",
+  "market.pilot.body":
+    "You are taking part in an internal pilot for this market. What you register is saved in your Security Passport with its own jurisdiction. The market is not yet open to everyone and its content has not been legally approved.",
   "market.section.lead": "Choose a credential or training to add and continue.",
   "market.pending.headingSuffix": "is not open yet",
   "market.pending.body":

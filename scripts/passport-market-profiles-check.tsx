@@ -226,6 +226,55 @@ console.log("1-2 -- the selected market decides what is offered");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   2b. AN INTERNAL-PILOT MARKET OFFERS ITS CATALOGUE, AND SAYS WHAT IT IS
+   ══════════════════════════════════════════════════════════════════════ */
+// The pilot is the one state where an UNREVIEWED market is registrable. That
+// makes it the one state where the surface can mislead: a catalogue with no
+// status line reads exactly like a live market. Both halves are asserted --
+// the catalogue must be there, and so must the sentence.
+console.log("\n2b -- an internal-pilot market is usable AND labelled");
+{
+  const pilot = section({
+    state: "open_pilot",
+    jurisdictionCode: "GB",
+    subJurisdictionCode: null,
+    options: SWEDISH_OPTIONS.map((o) => ({ ...o, code: "UK_" + o.code })),
+  });
+
+  ck("pilot: the governed catalogue IS offered", /data-credential-code/.test(pilot));
+  ck("pilot: the heading names the market", /Storbritannien/.test(pilot));
+  ck("pilot: the market status line is rendered", /market-pilot-status/.test(pilot));
+  ck(
+    "pilot: it says the market is an internal pilot under review",
+    pilot.includes(passportT("market.pilot.status", "sv")),
+  );
+  // The whole point of a separate state rather than a boolean.
+  const open = section({ state: "open", jurisdictionCode: "SE", subJurisdictionCode: null });
+  ck("a production market shows NO pilot status line", !/market-pilot-status/.test(open));
+
+  for (const lang of ["sv", "en"] as const) {
+    // "Under review" is the load-bearing claim. A status line that only said
+    // "pilot" would leave a tester thinking the content was approved.
+    ck(
+      `${lang}: the status line says the regulatory content is under review`,
+      /(granskas|under review)/i.test(passportT("market.pilot.status", lang)),
+    );
+    ck(
+      `${lang}: the body denies legal approval outright`,
+      /(inte juridiskt godkänt|not been legally approved)/i.test(
+        passportT("market.pilot.body", lang),
+      ),
+    );
+    ck(
+      `${lang}: and says the market is not open to everyone`,
+      /(inte .*öppen för alla|not yet open to everyone)/i.test(
+        passportT("market.pilot.body", lang),
+      ),
+    );
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    3 & 4. NO FALLBACK CATALOGUE, EVER
    ══════════════════════════════════════════════════════════════════════ */
 console.log("\n3-4 -- a closed market renders no catalogue at all");
@@ -598,6 +647,8 @@ console.log("\n10 -- SV/EN semantic parity on the new copy");
     "market.currentMarket.none",
     "card.verifiedMarkets",
     "card.currentWorkMarket",
+    "market.pilot.status",
+    "market.pilot.body",
     "rec.credentialMarket",
   ];
   for (const k of KEYS) {
@@ -623,6 +674,8 @@ console.log("\n10 -- SV/EN semantic parity on the new copy");
     "market.unsupported.body",
     "market.section.credentialsFor",
     "market.pending.headingSuffix",
+    "market.pilot.status",
+    "market.pilot.body",
   ];
   for (const k of GENERIC) {
     for (const lang of ["sv", "en"] as const) {

@@ -38,7 +38,15 @@ import { CredentialSymbol } from "@/components/security-passport/CredentialSymbo
  *  so this stays a pure component the fixture harness can render offline —
  *  `passport-separation-check` keeps the component tree free of the server
  *  tier, and the route is the one place that knows how the answer is fetched. */
-export type MarketSectionState = "no_work_country" | "open" | "pending_review" | "unsupported";
+export type MarketSectionState =
+  | "no_work_country"
+  | "open"
+  /** Open to this holder as a named internal pilot member. Renders the
+   *  catalogue AND a market-status line, because a market whose regulatory
+   *  content is still under review must not look like a live one. */
+  | "open_pilot"
+  | "pending_review"
+  | "unsupported";
 
 /** One registrable credential, as the market pack describes it. */
 export interface MarketCredentialOption {
@@ -76,18 +84,21 @@ export function MarketCredentialSection({
 }: MarketCredentialSectionProps) {
   const { pt, lang } = usePassportCopy();
   const marketName = formatWorkLocation(jurisdictionCode, subJurisdictionCode, lang);
+  // Both states offer a catalogue. They differ only in what the surface must
+  // SAY about the market, never in what it may refuse — the database decides
+  // that, and it decided before this component was rendered.
+  const isOpen = state === "open" || state === "open_pilot";
 
   // The heading names the market in every state. That is what lets one set of
   // copy strings serve every market: the sentences below never contain a
   // country, so adding a market pack needs no new copy.
-  const heading =
-    state === "open"
-      ? `${pt("market.section.credentialsFor")} ${marketName}`
-      : state === "pending_review"
-        ? `${marketName} ${pt("market.pending.headingSuffix")}`
-        : state === "unsupported"
-          ? pt("market.unsupported.heading")
-          : pt("market.noWorkCountry.heading");
+  const heading = isOpen
+    ? `${pt("market.section.credentialsFor")} ${marketName}`
+    : state === "pending_review"
+      ? `${marketName} ${pt("market.pending.headingSuffix")}`
+      : state === "unsupported"
+        ? pt("market.unsupported.heading")
+        : pt("market.noWorkCountry.heading");
 
   return (
     <section
@@ -101,15 +112,33 @@ export function MarketCredentialSection({
         {heading}
       </h2>
 
-      {state === "open" ? (
+      {isOpen ? (
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           {pt("market.section.lead")}
         </p>
       ) : null}
 
+      {/* ── The market status line ────────────────────────────────────
+          One line, in the page's own register, immediately under the heading
+          that names the market. Not a red alert repeated on every screen:
+          that trains a tester to dismiss it. It states a fact about the
+          market, which is exactly what stops an unreviewed market from
+          reading as a live one. */}
+      {state === "open_pilot" ? (
+        <div
+          data-testid="market-pilot-status"
+          className="mt-3 rounded-lg border border-border bg-secondary/40 p-3"
+        >
+          <p className="text-sm font-medium text-foreground">{pt("market.pilot.status")}</p>
+          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("market.pilot.body")}
+          </p>
+        </div>
+      ) : null}
+
       {children ? <div className="mt-4">{children}</div> : null}
 
-      {state === "open" ? (
+      {isOpen ? (
         <div className="mt-4 flex flex-wrap gap-2" data-testid="market-credential-options">
           {options.map((o) => {
             const name = lang === "sv" ? o.nameSv : o.nameEn;
