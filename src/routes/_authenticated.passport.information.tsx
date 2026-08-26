@@ -161,21 +161,33 @@ function PassportInformationRoute() {
   // together and set together, so the catalogue on screen always belongs to
   // the country printed above it.
   const refreshWorkCountry = useCallback(async () => {
+    // ── TWO READS, TWO FAILURES ───────────────────────────────────────
+    //
+    // These were one Promise.all, and a market lookup that failed also took
+    // the work-country panel with it -- so the holder lost the control that
+    // states where they work AND the credentials for it, from one error in
+    // the second. The panel is the more important of the two: without it a
+    // holder cannot even correct the country that decides the catalogue.
+    //
+    // Settled independently. Each is allowed to fail on its own terms.
     try {
-      const [snap, avail] = await Promise.all([
-        loadProfile({ data: undefined }),
-        loadAvailability({ data: undefined }),
-      ]);
+      const snap = await loadProfile({ data: undefined });
       setWorkCountryState({
         jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
         subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
         confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
       });
-      setAvailability(avail);
     } catch (err) {
       // A failure here must not take the rest of the page down with it: the
       // entries below are independent and still editable.
       console.error("[passport] work country load failed", err);
+    }
+
+    try {
+      setAvailability(await loadAvailability({ data: undefined }));
+    } catch (err) {
+      console.error("[passport] market availability load failed", err);
+      setAvailability(null);
     }
   }, [loadProfile, loadAvailability]);
   useEffect(() => {

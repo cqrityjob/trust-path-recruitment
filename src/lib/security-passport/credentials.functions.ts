@@ -25,6 +25,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isCalendarDate } from "./dates";
+import { isMissingPilotLayer, resolveMarketAccess } from "./market-access";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { orNull } from "./rpc";
@@ -221,9 +222,13 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // Written twice is a risk, so it is written the same way twice — a form
     // that offered a credential the trigger then refused would be worse than
     // either alone.
+    // `pilot_state` is deliberately NOT selected. The pilot decision belongs to
+    // sp_market_access() and nothing here needs the raw column — and asking
+    // PostgREST for a column that does not exist fails the whole request,
+    // which is exactly how this surface went dark in production.
     let packQuery = supabase
       .from("sp_market_packs")
-      .select("code, is_active, pilot_state")
+      .select("code, is_active")
       .eq("jurisdiction_code", jurisdictionCode)
       .is("superseded_on", null);
     packQuery = subJurisdictionCode
@@ -246,11 +251,32 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // that decided availability its own way would eventually offer something
     // the database then refuses — which is the exact defect class this whole
     // area exists to remove. One decision, one function, both callers.
-    const { data: access, error: accessError } = await supabase.rpc("sp_market_access", {
+    //
+    // ── AND IT TOLERATES A DATABASE THAT HAS NOT GOT IT YET ──────────
+    //
+    // The application deploys the moment `main` moves; a migration is applied
+    // when somebody asks for it. Between those two events this function was
+    // calling `sp_market_access` against a database that had never heard of
+    // it, and PostgREST answered every single call with an error. The whole
+    // Passport went dark — not the pilot part of it, all of it.
+    //
+    // So a missing pilot layer is treated as what it factually is: a database
+    // where no market is in internal pilot. That answer FAILS CLOSED. Without
+    // the migration nobody gains pilot access, which is precisely the
+    // pre-pilot behaviour, and no absence of schema can ever open a market
+    // that should be shut.
+    const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
       _user_id: userId,
       _market_pack_code: pack.code,
     });
-    if (accessError) throw new Error(accessError.message);
+
+    if (accessError && !isMissingPilotLayer(accessError)) throw new Error(accessError.message);
+
+    const access = resolveMarketAccess({
+      packIsActive: pack.is_active,
+      rpcAccess,
+      pilotLayerMissing: Boolean(accessError),
+    });
 
     if (access !== "production" && access !== "pilot") {
       return { state: "pending_review", ...none, marketPackCode: pack.code };
