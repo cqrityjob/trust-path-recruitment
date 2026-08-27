@@ -239,6 +239,11 @@ LANGUAGE sql AS $$
     'scp_interview_findings','scp_interview_assessments','scp_interview_reports',
     'scp_interview_case_events'])
   UNION ALL
+  SELECT unnest(ARRAY[                             -- candidate-facing (1)
+    -- A candidate's statement that a FACT in their material is wrong. Read by a
+    -- human, never applied automatically, and unable to reach an assessment.
+    'scp_interview_candidate_corrections'])
+  UNION ALL
   SELECT unnest(ARRAY[                             -- Phase 2 method library (2)
     'scp_interview_methods','scp_interview_method_practices'])
   UNION ALL

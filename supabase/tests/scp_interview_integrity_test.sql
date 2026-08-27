@@ -763,5 +763,130 @@ BEGIN
   PERFORM set_config('scp_iv.in_interview_write', 'off', true);
 END $$;
 
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I9 — what a candidate may see about themselves'; END $$;
+-- ===========================================================================
+--
+-- scp_interview_cases stays employer-only. The candidate's view is an explicit
+-- projection, so what they can learn is a short list somebody wrote down rather
+-- than whatever the table happens to contain.
+
+INSERT INTO auth.users (id, email) VALUES
+  ('44440000-0000-0000-0000-0000000000d1', 'cand-a@test.local'),
+  ('44440000-0000-0000-0000-0000000000d2', 'cand-b@test.local')
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+DECLARE _case uuid; _n integer; _status text; _detail jsonb;
+BEGIN
+  SELECT id INTO _case FROM public.scp_interview_cases
+   WHERE employer_id = '55550000-0000-0000-0000-00000000000a' ORDER BY created_at LIMIT 1;
+
+  UPDATE public.scp_interview_cases
+     SET candidate_user_id = '44440000-0000-0000-0000-0000000000d1',
+         candidate_external_ref = NULL
+   WHERE id = _case;
+
+  -- ---- a case still in draft is not visible at all ------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+  SELECT count(*) INTO _n FROM public.scp_iv_candidate_interview_status();
+  PERFORM pg_temp.ok(_n = 0,
+    'I9.1 a case whose plan is not approved is invisible — considering an interview is not offering one');
+  RESET ROLE;
+
+  -- ---- once the plan is approved, exactly one coarse status ---------------
+  --      Walked through the real transitions rather than jumped: the case
+  --      transition guard refuses draft -> prep_approved, correctly, and a test
+  --      that worked around it would be testing a state the product cannot
+  --      reach.
+  PERFORM set_config('scp_iv.governed_transition', 'on', true);
+  UPDATE public.scp_interview_cases SET status = 'sources_ready' WHERE id = _case;
+  UPDATE public.scp_interview_cases SET status = 'prep_generated' WHERE id = _case;
+  UPDATE public.scp_interview_cases SET status = 'prep_approved' WHERE id = _case;
+  PERFORM set_config('scp_iv.governed_transition', 'off', true);
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+  SELECT candidate_status INTO _status FROM public.scp_iv_candidate_interview_status();
+  PERFORM pg_temp.ok(_status = 'interview_offered',
+    format('I9.2 an approved plan reads as "interview_offered" (%s)', _status));
+  RESET ROLE;
+
+  -- ---- the employer's deliberation collapses into ONE state ---------------
+  --      A candidate who could watch evidence_review become assessed would be
+  --      watching the employer think.
+  PERFORM set_config('scp_iv.governed_transition', 'on', true);
+  UPDATE public.scp_interview_cases SET status = 'interview_in_progress' WHERE id = _case;
+  FOR _status IN SELECT unnest(ARRAY['interview_complete','evidence_review','assessed','reported'])
+  LOOP
+    UPDATE public.scp_interview_cases SET status = _status WHERE id = _case;
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+    PERFORM pg_temp.ok(
+      (SELECT candidate_status FROM public.scp_iv_candidate_interview_status())
+        = 'employer_process_continuing',
+      format('I9.3 "%s" is reported to the candidate as employer_process_continuing', _status));
+    RESET ROLE;
+  END LOOP;
+  PERFORM set_config('scp_iv.governed_transition', 'off', true);
+
+  -- ---- another candidate sees nothing -------------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d2', true);
+  SELECT count(*) INTO _n FROM public.scp_iv_candidate_interview_status();
+  PERFORM pg_temp.ok(_n = 0, 'I9.4 a different candidate sees none of it');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_candidate_interview_detail(%L)', _case),
+    'SCP_IV_CANDIDATE_NOT_PERMITTED',
+    'I9.5 and cannot open the detail either');
+  RESET ROLE;
+
+  -- ---- the detail carries no employer-internal material -------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+  _detail := public.scp_iv_candidate_interview_detail(_case);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(
+    NOT (_detail::text ~* '(prompt|anchor|ankare|dimension|evidence|evidens|assessment|bedömning|level|nivå)'),
+    'I9.6 the candidate detail contains no question, anchor, dimension, evidence or assessment');
+
+  PERFORM pg_temp.ok(
+    _detail ? 'sources' AND _detail ? 'candidate_status' AND _detail ? 'retain_until',
+    'I9.7 it does contain what the candidate is entitled to: material, status, retention');
+
+  -- ---- the case table itself stays shut -----------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+  SELECT count(*) INTO _n FROM public.scp_interview_cases;
+  PERFORM pg_temp.ok(_n = 0,
+    'I9.8 the candidate still cannot read scp_interview_cases directly — the projection is the only door');
+  RESET ROLE;
+
+  -- ---- a correction is possible, and is not an edit -----------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000d1', true);
+  INSERT INTO public.scp_interview_candidate_corrections
+    (case_id, candidate_user_id, what_is_wrong, what_is_correct)
+  VALUES (_case, '44440000-0000-0000-0000-0000000000d1', 'Fel slutdatum.', 'Ska vara 2025.');
+  PERFORM pg_temp.ok(true, 'I9.9 the candidate can report a factual error');
+
+  PERFORM pg_temp.must_fail(
+    format($q$INSERT INTO public.scp_interview_candidate_corrections
+      (case_id, candidate_user_id, what_is_wrong, what_is_correct)
+      VALUES (%L, %L, 'x', 'y')$q$, _case, '44440000-0000-0000-0000-0000000000d2'),
+    'row-level security',
+    'I9.10 and cannot file one in somebody else''s name');
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'scp_interview_candidate_corrections'
+                   AND column_name IN ('level', 'assessment_id', 'evidence_id')),
+    'I9.11 a correction cannot reach an assessment — it is a statement, not an edit');
+END $$;
+
 DO $$ BEGIN RAISE NOTICE 'INTEGRITY SUITE COMPLETE'; END $$;
 ROLLBACK;

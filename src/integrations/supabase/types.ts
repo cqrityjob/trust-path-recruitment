@@ -6228,6 +6228,7 @@ export type Database = {
           policy_version: string
           prompt_version: string
           provider: string
+          provider_mode: string
           raw_request: Json | null
           raw_response: Json | null
           requires_human_review: boolean
@@ -6257,6 +6258,7 @@ export type Database = {
           policy_version?: string
           prompt_version: string
           provider: string
+          provider_mode?: string
           raw_request?: Json | null
           raw_response?: Json | null
           requires_human_review?: boolean
@@ -6286,6 +6288,7 @@ export type Database = {
           policy_version?: string
           prompt_version?: string
           provider?: string
+          provider_mode?: string
           raw_request?: Json | null
           raw_response?: Json | null
           requires_human_review?: boolean
@@ -6455,6 +6458,57 @@ export type Database = {
           },
         ]
       }
+      scp_interview_candidate_corrections: {
+        Row: {
+          candidate_user_id: string
+          case_id: string
+          created_at: string
+          employer_response: string | null
+          id: string
+          responded_at: string | null
+          responded_by: string | null
+          what_is_correct: string
+          what_is_wrong: string
+        }
+        Insert: {
+          candidate_user_id: string
+          case_id: string
+          created_at?: string
+          employer_response?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          what_is_correct: string
+          what_is_wrong: string
+        }
+        Update: {
+          candidate_user_id?: string
+          case_id?: string
+          created_at?: string
+          employer_response?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          what_is_correct?: string
+          what_is_wrong?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_candidate_corrections_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_candidate_corrections_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
       scp_interview_candidate_facts: {
         Row: {
           ai_run_id: string | null
@@ -6607,6 +6661,7 @@ export type Database = {
           case_id: string
           content_text: string | null
           created_at: string
+          disclosure_id: string | null
           erased_at: string | null
           id: string
           label: string
@@ -6623,6 +6678,7 @@ export type Database = {
           case_id: string
           content_text?: string | null
           created_at?: string
+          disclosure_id?: string | null
           erased_at?: string | null
           id?: string
           label: string
@@ -6639,6 +6695,7 @@ export type Database = {
           case_id?: string
           content_text?: string | null
           created_at?: string
+          disclosure_id?: string | null
           erased_at?: string | null
           id?: string
           label?: string
@@ -6667,6 +6724,13 @@ export type Database = {
             referencedColumns: ["case_id"]
           },
           {
+            foreignKeyName: "scp_interview_case_sources_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scp_interview_case_sources_linked_application_id_fkey"
             columns: ["linked_application_id"]
             isOneToOne: false
@@ -6682,6 +6746,9 @@ export type Database = {
           cancelled_reason: string | null
           candidate_display_name: string
           candidate_external_ref: string | null
+          candidate_informed_confirmed_at: string | null
+          candidate_informed_confirmed_by: string | null
+          candidate_informed_statement: string | null
           candidate_user_id: string | null
           created_at: string
           created_by: string | null
@@ -6692,6 +6759,8 @@ export type Database = {
           pack_version_id: string
           purpose_code: string
           retain_until: string | null
+          retention_set_at: string | null
+          retention_set_by: string | null
           retention_state: string
           role_version_id: string
           status: string
@@ -6699,6 +6768,7 @@ export type Database = {
           transcript_lawful_basis_confirmed_at: string | null
           transcript_lawful_basis_confirmed_by: string | null
           transcript_lawful_basis_statement: string | null
+          transcript_purpose_code: string | null
           updated_at: string
         }
         Insert: {
@@ -6707,6 +6777,9 @@ export type Database = {
           cancelled_reason?: string | null
           candidate_display_name: string
           candidate_external_ref?: string | null
+          candidate_informed_confirmed_at?: string | null
+          candidate_informed_confirmed_by?: string | null
+          candidate_informed_statement?: string | null
           candidate_user_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -6717,6 +6790,8 @@ export type Database = {
           pack_version_id: string
           purpose_code?: string
           retain_until?: string | null
+          retention_set_at?: string | null
+          retention_set_by?: string | null
           retention_state?: string
           role_version_id: string
           status?: string
@@ -6724,6 +6799,7 @@ export type Database = {
           transcript_lawful_basis_confirmed_at?: string | null
           transcript_lawful_basis_confirmed_by?: string | null
           transcript_lawful_basis_statement?: string | null
+          transcript_purpose_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -6732,6 +6808,9 @@ export type Database = {
           cancelled_reason?: string | null
           candidate_display_name?: string
           candidate_external_ref?: string | null
+          candidate_informed_confirmed_at?: string | null
+          candidate_informed_confirmed_by?: string | null
+          candidate_informed_statement?: string | null
           candidate_user_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -6742,6 +6821,8 @@ export type Database = {
           pack_version_id?: string
           purpose_code?: string
           retain_until?: string | null
+          retention_set_at?: string | null
+          retention_set_by?: string | null
           retention_state?: string
           role_version_id?: string
           status?: string
@@ -6749,6 +6830,7 @@ export type Database = {
           transcript_lawful_basis_confirmed_at?: string | null
           transcript_lawful_basis_confirmed_by?: string | null
           transcript_lawful_basis_statement?: string | null
+          transcript_purpose_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -13782,6 +13864,7 @@ export type Database = {
           _input_tokens?: number
           _latency_ms?: number
           _output_tokens?: number
+          _provider_mode?: string
           _raw_response?: Json
           _run_id: string
           _status: string
@@ -13821,6 +13904,21 @@ export type Database = {
       }
       scp_iv_can_read_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_can_write_case: { Args: { _case_id: string }; Returns: boolean }
+      scp_iv_candidate_interview_detail: {
+        Args: { _case_id: string }
+        Returns: Json
+      }
+      scp_iv_candidate_interview_status: {
+        Args: never
+        Returns: {
+          application_id: string
+          candidate_status: string
+          case_id: string
+          employer_name: string
+          role_title: string
+          updated_at: string
+        }[]
+      }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
       scp_iv_confirm_evidence_proposal: {
         Args: {
@@ -13833,7 +13931,13 @@ export type Database = {
         Returns: string
       }
       scp_iv_confirm_transcript_basis: {
-        Args: { _case_id: string; _statement: string }
+        Args: {
+          _candidate_informed_statement?: string
+          _case_id: string
+          _purpose_code?: string
+          _retain_until?: string
+          _statement: string
+        }
         Returns: undefined
       }
       scp_iv_create_case: {
@@ -13852,6 +13956,10 @@ export type Database = {
       scp_iv_employer_may_read_pack: {
         Args: { _pack_version_id: string }
         Returns: boolean
+      }
+      scp_iv_erase_source: {
+        Args: { _reason: string; _source_id: string }
+        Returns: undefined
       }
       scp_iv_finalise_report: {
         Args: { _case_id: string; _draft_run_id?: string }

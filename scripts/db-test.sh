@@ -319,8 +319,11 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   evidence, findings, assessments, reports, case events, plus the AI config
 #   and pilot-grant tables). The runtime holds candidate interview material and
 #   is tenant-scoped; the knowledge layer is platform content.
-if [ "$SCP_TABLES" -ne 115 ]; then
-  echo "FAIL: expected 115 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime), found $SCP_TABLES" >&2
+# + scp_interview_candidate_corrections: a candidate's statement that a FACT in
+#   their own material is wrong. Read by a human, never applied automatically,
+#   and structurally unable to reach an assessment or a report.
+if [ "$SCP_TABLES" -ne 116 ]; then
+  echo "FAIL: expected 116 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1257,9 +1260,9 @@ fi
 
 echo "    ok  ${IVI_PASSED} Interview Intelligence integrity assertions passed"
 
-if [ "$IVI_PASSED" -lt 68 ]; then
-  echo "FAIL: expected at least 68 integrity assertions, only ${IVI_PASSED} ran." >&2
-  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 68)"
+if [ "$IVI_PASSED" -lt 82 ]; then
+  echo "FAIL: expected at least 82 integrity assertions, only ${IVI_PASSED} ran." >&2
+  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 82)"
 fi
 
 # ---------------------------------------------------------------------------

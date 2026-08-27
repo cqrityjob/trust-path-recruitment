@@ -143,8 +143,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 115,
-    'pre-rollback: 115 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime)');
+        AND table_name LIKE 'scp\_%') = 116,
+    'pre-rollback: 116 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections)');
 END $$;
 
 -- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
@@ -181,6 +181,7 @@ DROP TABLE IF EXISTS public.scp_interview_ai_runs                CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_source_passages        CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_case_sources           CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_cases                  CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_candidate_corrections  CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_pack_pilot_grants      CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_ai_config              CASCADE;
 DROP TABLE IF EXISTS public.scp_intel_edges                      CASCADE;
@@ -208,6 +209,7 @@ DROP FUNCTION IF EXISTS public.scp_iv_record_candidate_facts(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_record_role_requirements(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer);
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb, text);
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_start(uuid, text, text, text, jsonb, text);
 DROP FUNCTION IF EXISTS public.scp_iv_mark_sources_ready(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text);
@@ -216,6 +218,17 @@ DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text, text,
 -- hardening migration; a rollback that leaves them behind leaves a way to
 -- write to tables that are no longer there.
 DROP FUNCTION IF EXISTS public.scp_iv_erase_source(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_candidate_interview_status();
+DROP FUNCTION IF EXISTS public.scp_iv_candidate_interview_detail(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_is_case_candidate(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_guard_no_career_discovery();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_passport_disclosure();
+-- This one guard lives on ANOTHER domain's table (sp_claims), because that is
+-- where an interview would have to write in order to breach the boundary. The
+-- trigger therefore comes off before the function it calls -- and unwinding
+-- Interview Intelligence must not leave a dangling trigger on Passport.
+DROP TRIGGER IF EXISTS sp_claims_no_interview_write ON public.sp_claims;
+DROP FUNCTION IF EXISTS public.scp_iv_guard_no_passport_write();
 DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_active(uuid, uuid, uuid);
 DROP FUNCTION IF EXISTS public.scp_interview_guard_pilot_grant();
 DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_audit();

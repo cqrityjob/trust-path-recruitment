@@ -1804,3 +1804,191 @@ BEGIN
     (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'pending_source_verification');
 END
 $assert11$;
+
+
+-- ###########################################################################
+-- SECTION 12 -- What the candidate may see
+-- ###########################################################################
+--
+-- scp_interview_cases is readable by employer members only, and stays that way.
+-- The candidate's view is an explicit PROJECTION rather than a loosened policy,
+-- so what a candidate can learn is a short list somebody wrote down on purpose
+-- instead of whatever the table happens to contain.
+--
+-- The coarse status is the whole point. An employer's internal deliberation --
+-- evidence under review, assessed, report written -- is collapsed into one
+-- candidate-facing state, because a candidate who could watch their case move
+-- from "evidence_review" to "assessed" would be watching the employer think.
+-- That is not theirs to see, it would invite reading meaning into timing, and
+-- it is exactly the kind of leak a status field acquires by accident.
+--
+-- Nothing before an approved plan is visible either: a case in draft means the
+-- employer is considering an interview, and has not offered one.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.scp_iv_candidate_interview_status()
+RETURNS TABLE (
+  application_id uuid,
+  case_id uuid,
+  employer_name text,
+  role_title text,
+  candidate_status text,
+  updated_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT
+    c.application_id,
+    c.id,
+    e.name,
+    coalesce(j.title_sv, j.title_en, c.title),
+    CASE
+      WHEN c.status = 'prep_approved'         THEN 'interview_offered'
+      WHEN c.status = 'interview_in_progress' THEN 'interview_in_progress'
+      -- Everything after the interview collapses to one state. The employer's
+      -- deliberation is not a candidate-facing progress bar.
+      WHEN c.status IN ('interview_complete', 'evidence_review', 'assessed', 'reported')
+                                              THEN 'employer_process_continuing'
+      ELSE NULL
+    END,
+    c.updated_at
+  FROM public.scp_interview_cases c
+  JOIN public.employers e ON e.id = c.employer_id
+  LEFT JOIN public.jobs j ON j.id = c.job_id
+ WHERE auth.uid() IS NOT NULL
+   AND c.candidate_user_id = auth.uid()
+   AND c.status IN ('prep_approved', 'interview_in_progress', 'interview_complete',
+                    'evidence_review', 'assessed', 'reported');
+$$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_candidate_interview_status() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_candidate_interview_status() TO authenticated;
+
+COMMENT ON FUNCTION public.scp_iv_candidate_interview_status() IS
+  'The candidate''s own view of their interviews: employer, role, one coarse '
+  'status, nothing else. Everything after the interview is a single state, '
+  'because a candidate watching a case move from evidence_review to assessed '
+  'would be watching the employer deliberate. Cases before an approved plan are '
+  'not returned at all -- considering an interview is not offering one.';
+
+
+-- The candidate-facing interview information surface. Says what is being
+-- processed and why, and nothing about how it is going.
+CREATE OR REPLACE FUNCTION public.scp_iv_candidate_interview_detail(_case_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _c public.scp_interview_cases%ROWTYPE; _emp text; _role text; _sources jsonb;
+BEGIN
+  SELECT * INTO _c FROM public.scp_interview_cases
+   WHERE id = _case_id AND candidate_user_id = auth.uid();
+  IF NOT FOUND OR auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_CANDIDATE_NOT_PERMITTED' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF _c.status NOT IN ('prep_approved', 'interview_in_progress', 'interview_complete',
+                       'evidence_review', 'assessed', 'reported') THEN
+    RAISE EXCEPTION 'SCP_IV_CANDIDATE_NOT_PERMITTED' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT e.name INTO _emp FROM public.employers e WHERE e.id = _c.employer_id;
+  SELECT coalesce(j.title_sv, j.title_en) INTO _role FROM public.jobs j WHERE j.id = _c.job_id;
+
+  -- WHICH KINDS of material are being processed, and where each came from.
+  -- Not the material itself: a candidate is entitled to know their CV and their
+  -- application answers are being read, and is not entitled to read the
+  -- employer's own requirements document through this route.
+  SELECT jsonb_agg(jsonb_build_object(
+           'kind', s.source_kind,
+           'label', s.label,
+           'origin', s.origin,
+           'purpose', s.purpose_code,
+           'erased', s.retention_state = 'erased',
+           'from_your_passport_disclosure', s.disclosure_id IS NOT NULL)
+         ORDER BY s.created_at)
+    INTO _sources
+    FROM public.scp_interview_case_sources s
+   WHERE s.case_id = _case_id
+     AND s.source_kind IN ('candidate_cv', 'application_answers', 'passport_disclosure',
+                           'transcript');
+
+  RETURN jsonb_build_object(
+    'case_id', _c.id,
+    'employer_name', _emp,
+    'role_title', coalesce(_role, _c.title),
+    'candidate_status',
+      CASE
+        WHEN _c.status = 'prep_approved' THEN 'interview_offered'
+        WHEN _c.status = 'interview_in_progress' THEN 'interview_in_progress'
+        ELSE 'employer_process_continuing'
+      END,
+    'sources', coalesce(_sources, '[]'::jsonb),
+    'transcript_in_use', EXISTS (
+      SELECT 1 FROM public.scp_interview_case_sources s
+       WHERE s.case_id = _case_id AND s.source_kind = 'transcript'
+         AND s.retention_state = 'active'),
+    'retain_until', _c.retain_until);
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_candidate_interview_detail(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_candidate_interview_detail(uuid) TO authenticated;
+
+
+-- A candidate correcting a FACT is not a candidate editing an assessment.
+--
+-- The correction lands as its own source, attributed to the candidate, which a
+-- human reads. It cannot touch evidence, an assessment or a finalised report:
+-- those are the employer's professional judgement, and a product that let the
+-- subject of a judgement rewrite it would not be recording a judgement at all.
+CREATE TABLE IF NOT EXISTS public.scp_interview_candidate_corrections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL REFERENCES public.scp_interview_cases(id) ON DELETE CASCADE,
+  candidate_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  what_is_wrong text NOT NULL CHECK (btrim(what_is_wrong) <> ''),
+  what_is_correct text NOT NULL CHECK (btrim(what_is_correct) <> ''),
+  employer_response text,
+  responded_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  responded_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.scp_interview_candidate_corrections IS
+  'A candidate''s statement that a FACT in their material is wrong. Read by a '
+  'human; never applied automatically. It cannot alter evidence, an assessment '
+  'or a report -- a correction to what the employer concluded is a different '
+  'conversation from a correction to what the record says.';
+
+ALTER TABLE public.scp_interview_candidate_corrections ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.scp_interview_candidate_corrections FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.scp_interview_candidate_corrections TO authenticated;
+GRANT ALL ON TABLE public.scp_interview_candidate_corrections TO service_role;
+
+DROP POLICY IF EXISTS scp_iv_corrections_candidate ON public.scp_interview_candidate_corrections;
+CREATE POLICY scp_iv_corrections_candidate ON public.scp_interview_candidate_corrections
+  FOR SELECT TO authenticated USING (candidate_user_id = auth.uid());
+
+-- "Is this the candidate's own case" has to be answered by a definer function.
+-- The first version asked it with an inline EXISTS over scp_interview_cases,
+-- which is readable by employer members only -- so the subquery ran under the
+-- candidate's own RLS, found nothing, and every correction was rejected. The
+-- policy was testing whether the candidate could read the case, not whether the
+-- case was theirs.
+CREATE OR REPLACE FUNCTION public.scp_iv_is_case_candidate(_case_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT auth.uid() IS NOT NULL
+     AND EXISTS (SELECT 1 FROM public.scp_interview_cases c
+                  WHERE c.id = _case_id AND c.candidate_user_id = auth.uid());
+$$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_is_case_candidate(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_is_case_candidate(uuid) TO authenticated, service_role;
+
+DROP POLICY IF EXISTS scp_iv_corrections_candidate_insert ON public.scp_interview_candidate_corrections;
+CREATE POLICY scp_iv_corrections_candidate_insert ON public.scp_interview_candidate_corrections
+  FOR INSERT TO authenticated WITH CHECK (
+    candidate_user_id = auth.uid()
+    AND public.scp_iv_is_case_candidate(case_id));
+
+DROP POLICY IF EXISTS scp_iv_corrections_employer ON public.scp_interview_candidate_corrections;
+CREATE POLICY scp_iv_corrections_employer ON public.scp_interview_candidate_corrections
+  FOR SELECT TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.scp_interview_cases c
+             WHERE c.id = case_id
+               AND public.has_employer_role(auth.uid(), c.employer_id, NULL)));
