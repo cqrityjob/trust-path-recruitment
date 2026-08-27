@@ -24,6 +24,7 @@ import {
   LevelZeroNote,
   Panel,
   State,
+  interviewErrorMessage,
   ProviderModeChip,
   ProviderModeNote,
   WithheldPanel,
@@ -143,7 +144,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : (q.error as Error).message}
+        message={nf ? undefined : interviewErrorMessage(q.error)}
       />,
     );
   }
@@ -429,7 +430,7 @@ function Page() {
         {review.isError && (
           <div className="mt-3">
             <Panel tone="governance" role="alert" title="Granskningen kunde inte sparas">
-              <p>{(review.error as Error).message}</p>
+              <p>{interviewErrorMessage(review.error)}</p>
             </Panel>
           </div>
         )}
@@ -579,7 +580,7 @@ function Page() {
         {assess.isError && (
           <div className="mt-3">
             <Panel tone="governance" role="alert" title="Bedömningen kunde inte sparas">
-              <p className="whitespace-pre-line">{(assess.error as Error).message}</p>
+              <p className="whitespace-pre-line">{interviewErrorMessage(assess.error)}</p>
             </Panel>
           </div>
         )}
@@ -595,6 +596,19 @@ function Page() {
           </button>
         )}
       </section>
+
+      {/* Panel Review sits between the individual assessments and the report:
+          it is where several reviewers reconcile what they each concluded. Not
+          every interview needs one, so the link is always available rather than
+          gated -- the panel screen itself explains when a panel is appropriate
+          and refuses to open one for a single reviewer. */}
+      <Link
+        to="/employer/$employerSlug/interview-intelligence/$caseId/panel"
+        params={{ employerSlug, caseId }}
+        className={`${BUTTON} mt-8 mr-2`}
+      >
+        Panelgranskning
+      </Link>
 
       {["assessed", "reported"].includes(d.status) && (
         <Link

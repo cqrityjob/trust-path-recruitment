@@ -244,6 +244,11 @@ LANGUAGE sql AS $$
     -- human, never applied automatically, and unable to reach an assessment.
     'scp_interview_candidate_corrections'])
   UNION ALL
+  SELECT unnest(ARRAY[                             -- Panel Review (2)
+    -- Individual assessment sealed until every reviewer has submitted, then a
+    -- reveal and a human-written conclusion. No average, no vote.
+    'scp_interview_panels','scp_interview_panel_members'])
+  UNION ALL
   SELECT unnest(ARRAY[                             -- Phase 2 method library (2)
     'scp_interview_methods','scp_interview_method_practices'])
   UNION ALL

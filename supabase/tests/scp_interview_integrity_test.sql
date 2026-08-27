@@ -888,5 +888,178 @@ BEGIN
     'I9.11 a correction cannot reach an assessment — it is a statement, not an edit');
 END $$;
 
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I10 — Panel Review: individual first, then reveal'; END $$;
+-- ===========================================================================
+--
+-- The order is the control. Once a reviewer has heard a colleague's level they
+-- cannot un-hear it, which is why the individual stage is sealed in the
+-- DATABASE rather than in the interface: a protection a second browser tab
+-- defeats is not a protection.
+
+INSERT INTO auth.users (id, email) VALUES
+  ('44440000-0000-0000-0000-0000000000e1', 'panel-a@test.local'),
+  ('44440000-0000-0000-0000-0000000000e2', 'panel-b@test.local'),
+  ('44440000-0000-0000-0000-0000000000e3', 'outsider-panel@test.local')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.employer_memberships (user_id, employer_id, role, status) VALUES
+  ('44440000-0000-0000-0000-0000000000e1','55550000-0000-0000-0000-00000000000a','member','active'),
+  ('44440000-0000-0000-0000-0000000000e2','55550000-0000-0000-0000-00000000000a','member','active')
+ON CONFLICT (user_id, employer_id) DO UPDATE SET status = 'active';
+
+DO $$
+DECLARE
+  _case uuid; _packv uuid; _n integer; _state text;
+  _a uuid := '44440000-0000-0000-0000-0000000000e1';
+  _b uuid := '44440000-0000-0000-0000-0000000000e2';
+  _out uuid := '44440000-0000-0000-0000-0000000000e3';
+  _owner uuid := '44440000-0000-0000-0000-0000000000a1';
+  _q record;
+BEGIN
+  SELECT id, pack_version_id INTO _case, _packv FROM public.scp_interview_cases
+   WHERE employer_id = '55550000-0000-0000-0000-00000000000a' ORDER BY created_at LIMIT 1;
+
+  -- ---- a panel needs more than one person --------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_panel_open(%L, ARRAY[%L]::uuid[])', _case, _a),
+    'SCP_IV_PANEL_TOO_SMALL',
+    'I10.1 a panel of one is refused — that is just an assessment');
+
+  -- ---- and only people who work here -------------------------------------
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_panel_open(%L, ARRAY[%L,%L]::uuid[])', _case, _a, _out),
+    'SCP_IV_PANEL_MEMBER_NOT_EMPLOYER',
+    'I10.2 a reviewer from outside the employer cannot be added');
+
+  PERFORM public.scp_iv_panel_open(_case, ARRAY[_a, _b]::uuid[]);
+  PERFORM pg_temp.ok(true, 'I10.3 a two-person panel opens');
+  RESET ROLE;
+
+  -- ---- each reviewer assesses every question, alone -----------------------
+  FOR _q IN SELECT id FROM public.scp_interview_core_questions WHERE pack_version_id = _packv
+  LOOP
+    INSERT INTO public.scp_interview_assessments
+      (case_id, question_id, anchor_id, level, rationale, assessor_id, assessed_at)
+    SELECT _case, _q.id, an.id, 2, 'A:s egen bedomning.', _a, now()
+      FROM public.scp_interview_rating_anchors an
+     WHERE an.question_id = _q.id AND an.level = 2 LIMIT 1;
+    INSERT INTO public.scp_interview_assessments
+      (case_id, question_id, anchor_id, level, rationale, assessor_id, assessed_at)
+    SELECT _case, _q.id, an.id, 3, 'B:s egen bedomning.', _b, now()
+      FROM public.scp_interview_rating_anchors an
+     WHERE an.question_id = _q.id AND an.level = 3 LIMIT 1;
+  END LOOP;
+
+  -- ---- before the reveal, each sees ONLY their own ------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _a::text, true);
+  SELECT count(*) INTO _n FROM public.scp_iv_panel_visible_assessments(_case)
+   WHERE NOT is_mine;
+  PERFORM pg_temp.ok(_n = 0,
+    'I10.4 BEFORE the reveal a reviewer sees none of the others'' assessments');
+  SELECT count(*) INTO _n FROM public.scp_iv_panel_visible_assessments(_case) WHERE is_mine;
+  PERFORM pg_temp.ok(_n > 0, 'I10.5 but does see their own');
+  RESET ROLE;
+
+  -- ---- and the reveal cannot be forced early ------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_panel_reveal(%L)', _case),
+    'SCP_IV_PANEL_REVEAL_TOO_EARLY',
+    'I10.6 the reveal is refused while a reviewer has not submitted');
+  RESET ROLE;
+
+  -- ---- someone not on the panel cannot submit -----------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_panel_submit(%L)', _case),
+    'SCP_IV_PANEL_NOT_A_MEMBER',
+    'I10.7 a non-member cannot submit into the panel');
+  RESET ROLE;
+
+  -- ---- both submit, then the reveal works ---------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _a::text, true);
+  PERFORM public.scp_iv_panel_submit(_case);
+  RESET ROLE;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _b::text, true);
+  PERFORM public.scp_iv_panel_submit(_case);
+  RESET ROLE;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM public.scp_iv_panel_reveal(_case);
+  RESET ROLE;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _a::text, true);
+  SELECT count(*) INTO _n FROM public.scp_iv_panel_visible_assessments(_case)
+   WHERE NOT is_mine;
+  PERFORM pg_temp.ok(_n > 0, 'I10.8 AFTER the reveal the others become visible');
+  RESET ROLE;
+
+  -- ---- disagreement is visible, and is not resolved by arithmetic ---------
+  SELECT count(DISTINCT level) INTO _n
+    FROM public.scp_interview_assessments
+   WHERE case_id = _case AND superseded_by IS NULL;
+  PERFORM pg_temp.ok(_n = 2,
+    format('I10.9 the two reviewers disagree, and both levels remain (%s distinct)', _n));
+
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name = 'scp_interview_panels'
+                   AND (column_name ~* 'level|score|average|mean|vote|majority')),
+    'I10.10 the panel has NO numeric conclusion column — no average, no vote');
+
+  -- ---- an individual assessment cannot be quietly rewritten ---------------
+  -- The rationale rather than the level, because changing the level first trips
+  -- the pre-existing anchor guard (SCP_IV_ANCHOR_LEVEL_MISMATCH) and would test
+  -- that instead of this.
+  PERFORM pg_temp.must_fail(
+    format($q$UPDATE public.scp_interview_assessments SET rationale = 'Omskriven i efterhand.'
+              WHERE case_id = %L AND assessor_id = %L AND superseded_by IS NULL$q$, _case, _a),
+    'SCP_IV_ASSESSMENT_EDITED_IN_PLACE',
+    'I10.11 an original individual assessment cannot be edited in place');
+
+  PERFORM pg_temp.must_fail(
+    format($q$UPDATE public.scp_interview_assessments SET assessor_id = %L
+              WHERE case_id = %L AND assessor_id = %L AND superseded_by IS NULL$q$,
+           _b, _case, _a),
+    'SCP_IV_ASSESSMENT_REATTRIBUTED',
+    'I10.12 nor reattributed to somebody else');
+
+  -- ---- the conclusion is written by a person ------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_panel_conclude(%L, %L)', _case, '   '),
+    'SCP_IV_PANEL_CONCLUSION_REQUIRED',
+    'I10.13 an empty panel conclusion is refused');
+
+  PERFORM public.scp_iv_panel_conclude(_case,
+    'Panelen enades om att evidensen for Q1 racker for niva 2. A och B skilde sig at pa Q4; diskussionen landade i att underlaget ar for tunt.');
+  RESET ROLE;
+
+  SELECT state INTO _state FROM public.scp_interview_panels WHERE case_id = _case;
+  PERFORM pg_temp.ok(_state = 'concluded', 'I10.14 the panel concludes with a written argument');
+
+  PERFORM pg_temp.ok(
+    (SELECT concluded_by FROM public.scp_interview_panels WHERE case_id = _case) IS NOT NULL,
+    'I10.15 and the conclusion names the human who wrote it');
+
+  -- ---- the ledger records the whole shape ---------------------------------
+  SELECT count(*) INTO _n FROM public.scp_interview_case_events
+   WHERE case_id = _case
+     AND event IN ('panel_opened','panel_individual_submitted','panel_revealed','panel_concluded');
+  PERFORM pg_temp.ok(_n >= 5,
+    format('I10.16 opening, both submissions, reveal and conclusion are all in the ledger (%s)', _n));
+END $$;
+
 DO $$ BEGIN RAISE NOTICE 'INTEGRITY SUITE COMPLETE'; END $$;
 ROLLBACK;

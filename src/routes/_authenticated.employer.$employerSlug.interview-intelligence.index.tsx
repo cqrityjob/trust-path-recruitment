@@ -15,6 +15,7 @@ import {
   CaseStatusChip,
   Panel,
   State,
+  interviewErrorMessage,
   ValidationChip,
   BUTTON,
 } from "@/components/employer/interview/InterviewUi";
@@ -91,7 +92,7 @@ function Page() {
 
         <div className="mt-4">
           {q.isLoading && <State kind="loading" />}
-          {q.isError && <State kind="error" message={(q.error as Error).message} />}
+          {q.isError && <State kind="error" message={interviewErrorMessage(q.error)} />}
           {q.isSuccess && cases.length === 0 && (
             <State kind="empty">
               Inga intervjuer ännu. Skapa en för att förbereda, genomföra och dokumentera en

@@ -7946,6 +7946,95 @@ export type Database = {
           },
         ]
       }
+      scp_interview_panel_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          id: string
+          panel_id: string
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          panel_id: string
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          id?: string
+          panel_id?: string
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_panel_members_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_interview_panels: {
+        Row: {
+          case_id: string
+          concluded_at: string | null
+          concluded_by: string | null
+          conclusion: string | null
+          id: string
+          opened_at: string
+          opened_by: string | null
+          revealed_at: string | null
+          revealed_by: string | null
+          state: string
+        }
+        Insert: {
+          case_id: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          conclusion?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          state?: string
+        }
+        Update: {
+          case_id?: string
+          concluded_at?: string | null
+          concluded_by?: string | null
+          conclusion?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          revealed_at?: string | null
+          revealed_by?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_panels_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_panels_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
       scp_interview_prep_items: {
         Row: {
           claim_class: string
@@ -13965,6 +14054,7 @@ export type Database = {
         Args: { _case_id: string; _draft_run_id?: string }
         Returns: string
       }
+      scp_iv_is_case_candidate: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_mark_assessed: { Args: { _case_id: string }; Returns: undefined }
       scp_iv_mark_sources_ready: {
         Args: { _case_id: string }
@@ -13973,6 +14063,29 @@ export type Database = {
       scp_iv_pack_competency_pack: {
         Args: { _pack_competency_id: string }
         Returns: string
+      }
+      scp_iv_panel_conclude: {
+        Args: { _case_id: string; _conclusion: string }
+        Returns: undefined
+      }
+      scp_iv_panel_open: {
+        Args: { _case_id: string; _member_ids: string[] }
+        Returns: string
+      }
+      scp_iv_panel_reveal: { Args: { _case_id: string }; Returns: undefined }
+      scp_iv_panel_submit: { Args: { _case_id: string }; Returns: undefined }
+      scp_iv_panel_visible_assessments: {
+        Args: { _case_id: string }
+        Returns: {
+          assessed_at: string
+          assessment_id: string
+          assessor_id: string
+          is_mine: boolean
+          level: number
+          question_id: string
+          rationale: string
+          uncertainty_note: string
+        }[]
       }
       scp_iv_plan_case: { Args: { _plan_id: string }; Returns: string }
       scp_iv_question_pack: { Args: { _question_id: string }; Returns: string }

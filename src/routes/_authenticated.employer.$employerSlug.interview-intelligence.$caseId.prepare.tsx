@@ -19,6 +19,7 @@ import {
   Chip,
   Panel,
   State,
+  interviewErrorMessage,
   ProviderModeChip,
   ProviderModeNote,
   SOURCE_KIND_LABEL,
@@ -153,7 +154,7 @@ function Page() {
     return shell(
       <State
         kind={notFound ? "denied" : "error"}
-        message={notFound ? undefined : (q.error as Error).message}
+        message={notFound ? undefined : interviewErrorMessage(q.error)}
       />,
     );
   }
@@ -295,7 +296,7 @@ function Page() {
             </div>
             {addSource.isError && (
               <Panel tone="governance" role="alert" title="Underlaget kunde inte sparas">
-                <p>{(addSource.error as Error).message}</p>
+                <p>{interviewErrorMessage(addSource.error)}</p>
               </Panel>
             )}
             <button type="submit" className={BUTTON} disabled={addSource.isPending}>
@@ -435,7 +436,7 @@ function Page() {
                 />
                 {approve.isError && (
                   <Panel tone="governance" role="alert" title="Kunde inte godkännas">
-                    <p>{(approve.error as Error).message}</p>
+                    <p>{interviewErrorMessage(approve.error)}</p>
                   </Panel>
                 )}
                 <button
@@ -467,7 +468,7 @@ function Page() {
           {startSession.isError && (
             <div className="mt-3 max-w-3xl">
               <Panel tone="governance" role="alert" title="Intervjun kunde inte startas">
-                <p>{(startSession.error as Error).message}</p>
+                <p>{interviewErrorMessage(startSession.error)}</p>
               </Panel>
             </div>
           )}

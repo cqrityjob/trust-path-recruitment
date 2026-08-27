@@ -1563,6 +1563,152 @@ export const finaliseReport = createServerFn({ method: "POST" })
     return { reportId: id as unknown as string };
   });
 
+/* ------------------------------------------------------------------ */
+/* Panel Review                                                        */
+/* ------------------------------------------------------------------ */
+
+export interface PanelAssessmentRow {
+  readonly assessmentId: string;
+  readonly questionId: string;
+  readonly assessorId: string;
+  readonly isMine: boolean;
+  readonly level: number;
+  readonly rationale: string;
+  readonly uncertaintyNote: string | null;
+}
+
+export interface PanelMemberRow {
+  readonly userId: string;
+  readonly submittedAt: string | null;
+}
+
+export interface PanelState {
+  readonly exists: boolean;
+  readonly state: "individual" | "revealed" | "concluded" | null;
+  readonly members: readonly PanelMemberRow[];
+  readonly assessments: readonly PanelAssessmentRow[];
+  readonly conclusion: string | null;
+  readonly iAmMember: boolean;
+  readonly iHaveSubmitted: boolean;
+}
+
+export const getPanel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<PanelState> => {
+    const db = context.supabase;
+
+    const panelRes = await db
+      .from("scp_interview_panels")
+      .select("id, state, conclusion")
+      .eq("case_id", data.caseId)
+      .maybeSingle();
+    if (panelRes.error) throw new Error(panelRes.error.message);
+
+    // The assessments come through the definer projection, never from the table
+    // directly: it is what withholds a colleague's judgement before the reveal,
+    // and reading around it would put the anchoring protection in the UI where
+    // a second browser tab defeats it.
+    const seenRes = await db.rpc("scp_iv_panel_visible_assessments", {
+      _case_id: data.caseId,
+    });
+    if (seenRes.error) throw new Error(seenRes.error.message);
+
+    const assessments = ((seenRes.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      assessmentId: r.assessment_id as string,
+      questionId: r.question_id as string,
+      assessorId: r.assessor_id as string,
+      isMine: Boolean(r.is_mine),
+      level: r.level as number,
+      rationale: r.rationale as string,
+      uncertaintyNote: (r.uncertainty_note as string | null) ?? null,
+    }));
+
+    if (!panelRes.data) {
+      return {
+        exists: false,
+        state: null,
+        members: [],
+        assessments,
+        conclusion: null,
+        iAmMember: false,
+        iHaveSubmitted: false,
+      };
+    }
+
+    const membersRes = await db
+      .from("scp_interview_panel_members")
+      .select("user_id, submitted_at")
+      .eq("panel_id", panelRes.data.id as string);
+    if (membersRes.error) throw new Error(membersRes.error.message);
+
+    const members = ((membersRes.data ?? []) as Array<Record<string, unknown>>).map((m) => ({
+      userId: m.user_id as string,
+      submittedAt: (m.submitted_at as string | null) ?? null,
+    }));
+    const mine = members.find((m) => m.userId === context.userId);
+
+    return {
+      exists: true,
+      state: panelRes.data.state as PanelState["state"],
+      members,
+      assessments,
+      conclusion: (panelRes.data.conclusion as string | null) ?? null,
+      iAmMember: Boolean(mine),
+      iHaveSubmitted: Boolean(mine?.submittedAt),
+    };
+  });
+
+export const openPanel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z.object({ caseId: z.string().uuid(), memberIds: z.array(z.string().uuid()).min(2) }).parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ readonly panelId: string }> => {
+    const { data: id, error } = await context.supabase.rpc("scp_iv_panel_open", {
+      _case_id: data.caseId,
+      _member_ids: data.memberIds,
+    });
+    if (error) throw new Error(error.message);
+    return { panelId: id as unknown as string };
+  });
+
+export const submitToPanel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
+    const { error } = await context.supabase.rpc("scp_iv_panel_submit", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const revealPanel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
+    const { error } = await context.supabase.rpc("scp_iv_panel_reveal", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const concludePanel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z.object({ caseId: z.string().uuid(), conclusion: z.string().min(1).max(8000) }).parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
+    const { error } = await context.supabase.rpc("scp_iv_panel_conclude", {
+      _case_id: data.caseId,
+      _conclusion: data.conclusion,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /** Process quality — about the interview, never about the candidate. */
 export const getProcessQuality = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

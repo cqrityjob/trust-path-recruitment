@@ -29,6 +29,7 @@ import {
   Panel,
   PEACE_LABEL,
   State,
+  interviewErrorMessage,
   PRACTICE_KIND_LABEL,
   uiLabel,
   BUTTON,
@@ -182,7 +183,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : (q.error as Error).message}
+        message={nf ? undefined : interviewErrorMessage(q.error)}
       />,
     );
   }

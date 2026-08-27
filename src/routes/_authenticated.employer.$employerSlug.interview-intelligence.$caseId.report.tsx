@@ -19,6 +19,7 @@ import {
   LevelZeroNote,
   Panel,
   State,
+  interviewErrorMessage,
   BUTTON,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
@@ -85,7 +86,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : (q.error as Error).message}
+        message={nf ? undefined : interviewErrorMessage(q.error)}
       />,
     );
   }
@@ -147,7 +148,7 @@ function Page() {
               {finalise.isError && (
                 <div className="mt-3">
                   <Panel tone="governance" role="alert" title="Rapporten kunde inte slutföras">
-                    <p className="whitespace-pre-line">{(finalise.error as Error).message}</p>
+                    <p className="whitespace-pre-line">{interviewErrorMessage(finalise.error)}</p>
                   </Panel>
                 </div>
               )}

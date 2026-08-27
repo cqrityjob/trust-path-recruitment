@@ -17,6 +17,7 @@ import {
   ErrorSummary,
   Panel,
   State,
+  interviewErrorMessage,
   ValidationChip,
   FIELD,
   PRIMARY_BUTTON,
@@ -151,7 +152,7 @@ function Page() {
       )}
       {packs.isError && (
         <div className="mt-6 max-w-3xl">
-          <State kind="error" message={(packs.error as Error).message} />
+          <State kind="error" message={interviewErrorMessage(packs.error)} />
         </div>
       )}
 
@@ -172,7 +173,7 @@ function Page() {
 
           {create.isError && (
             <Panel tone="governance" role="alert" title="Intervjun kunde inte skapas">
-              <p className="whitespace-pre-line">{(create.error as Error).message}</p>
+              <p className="whitespace-pre-line">{interviewErrorMessage(create.error)}</p>
             </Panel>
           )}
 

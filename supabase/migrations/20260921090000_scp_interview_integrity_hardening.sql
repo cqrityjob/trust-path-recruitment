@@ -1082,18 +1082,10 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_report_blockers(uuid) TO authenticated, 
 -- Both are state transitions and now say so. An auditor reading this trail is
 -- reconstructing what a person did before a hiring decision; it has to be
 -- literally true.
-ALTER TABLE public.scp_interview_case_events
-  DROP CONSTRAINT IF EXISTS scp_interview_case_events_event_check;
-ALTER TABLE public.scp_interview_case_events
-  ADD CONSTRAINT scp_interview_case_events_event_check CHECK (event IN (
-    'case_created','source_added','sources_marked_ready','source_erased',
-    'transcript_authorised','ai_run_started','ai_run_succeeded','ai_run_failed',
-    'source_passage_withheld','prep_generated','prep_edited','prep_approved',
-    'interview_started','interview_paused','interview_resumed','interview_completed',
-    'probe_used','evidence_review_opened','evidence_proposed','evidence_confirmed',
-    'evidence_edited','evidence_rejected','evidence_authored','finding_recorded',
-    'finding_resolved','assessment_recorded','assessment_superseded','report_drafted',
-    'report_finalised','case_cancelled','retention_applied'));
+-- The permitted event names are declared ONCE, at the end of this migration,
+-- after every section that introduces a new one. Declaring them here as well is
+-- how this file twice failed against its own output: an earlier copy rebuilt
+-- the constraint without a name a later section had already written rows using.
 
 CREATE OR REPLACE FUNCTION public.scp_iv_mark_sources_ready(_case_id uuid)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -1992,3 +1984,340 @@ CREATE POLICY scp_iv_corrections_employer ON public.scp_interview_candidate_corr
     EXISTS (SELECT 1 FROM public.scp_interview_cases c
              WHERE c.id = case_id
                AND public.has_employer_role(auth.uid(), c.employer_id, NULL)));
+
+
+-- ###########################################################################
+-- SECTION 13 -- Panel Review
+-- ###########################################################################
+--
+-- The assessment model already allowed several people to assess the same
+-- question independently: the live index is on (case_id, question_id,
+-- assessor_id). What was missing was the thing that makes a panel a panel
+-- rather than a meeting -- a sealed individual stage, a deliberate reveal, and
+-- a conclusion somebody wrote.
+--
+-- The order is the whole point, and it is the one thing the interview screen's
+-- own checklist already cites a research claim for: individual judgement before
+-- panel discussion, because once a reviewer has heard a colleague's level they
+-- cannot un-hear it. Enforcing that in the UI alone would mean the protection
+-- lasts exactly as long as nobody opens a second browser tab.
+--
+-- What this deliberately does NOT do:
+--
+--   No average.        There is no numeric conclusion column at all. A mean of
+--                      three people's judgements is not a judgement.
+--   No majority vote.  Two-against-one is not a finding, and automating it
+--                      would make disagreement disappear rather than surface.
+--   No AI.             Nothing in this section calls a model, and the panel
+--                      conclusion cannot be generated.
+--
+-- Disagreement is SHOWN. That is not the same as scoring it: the panel screen
+-- reports that three people said 2, 3 and 3 about Q4, because that is the
+-- fact a chair needs in order to run the discussion.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.scp_interview_panels (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  case_id uuid NOT NULL UNIQUE REFERENCES public.scp_interview_cases(id) ON DELETE CASCADE,
+  state text NOT NULL DEFAULT 'individual'
+    CHECK (state IN ('individual', 'revealed', 'concluded')),
+  opened_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  opened_at timestamptz NOT NULL DEFAULT now(),
+  revealed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  revealed_at timestamptz,
+  -- Free text, and NOT NULL-able to a number on purpose. A panel conclusion is
+  -- an argument, not a value.
+  conclusion text,
+  concluded_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  concluded_at timestamptz,
+  CHECK ((state = 'individual') = (revealed_at IS NULL)),
+  CHECK ((state = 'concluded') = (concluded_at IS NOT NULL)),
+  CHECK (state <> 'concluded' OR btrim(coalesce(conclusion, '')) <> '')
+);
+
+COMMENT ON TABLE public.scp_interview_panels IS
+  'A panel over one interview case. Three states and one direction: individual '
+  '(each reviewer assesses alone and can see only their own), revealed (every '
+  'reviewer has submitted and all assessments become mutually visible), '
+  'concluded (a named human has written what the panel concluded). There is no '
+  'numeric conclusion column, no average and no vote.';
+
+CREATE TABLE IF NOT EXISTS public.scp_interview_panel_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  panel_id uuid NOT NULL REFERENCES public.scp_interview_panels(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  added_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  added_at timestamptz NOT NULL DEFAULT now(),
+  submitted_at timestamptz,
+  UNIQUE (panel_id, user_id)
+);
+
+COMMENT ON TABLE public.scp_interview_panel_members IS
+  'Who is on the panel and whether they have finished their individual '
+  'assessment. submitted_at is what gates the reveal: nobody sees anybody '
+  'else''s judgement until every named reviewer has committed their own.';
+
+ALTER TABLE public.scp_interview_panels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scp_interview_panel_members ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.scp_interview_panels FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.scp_interview_panel_members FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.scp_interview_panels TO authenticated;
+GRANT SELECT ON TABLE public.scp_interview_panel_members TO authenticated;
+GRANT ALL ON TABLE public.scp_interview_panels TO service_role;
+GRANT ALL ON TABLE public.scp_interview_panel_members TO service_role;
+
+DROP POLICY IF EXISTS scp_iv_panels_read ON public.scp_interview_panels;
+CREATE POLICY scp_iv_panels_read ON public.scp_interview_panels
+  FOR SELECT TO authenticated USING (public.scp_iv_can_read_case(case_id));
+
+DROP POLICY IF EXISTS scp_iv_panel_members_read ON public.scp_interview_panel_members;
+CREATE POLICY scp_iv_panel_members_read ON public.scp_interview_panel_members
+  FOR SELECT TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.scp_interview_panels p
+             WHERE p.id = panel_id AND public.scp_iv_can_read_case(p.case_id)));
+
+
+-- ---------------------------------------------------------------------------
+-- 13.1  The anchoring guard.
+--
+-- An assessment is readable by its own author always, and by everybody else
+-- only after the reveal. This is enforced on the READ, in the database, because
+-- the protection has to survive somebody opening a second browser tab.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.scp_iv_panel_visible_assessments(_case_id uuid)
+RETURNS TABLE (
+  assessment_id uuid,
+  question_id uuid,
+  assessor_id uuid,
+  is_mine boolean,
+  level integer,
+  rationale text,
+  uncertainty_note text,
+  assessed_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT a.id, a.question_id, a.assessor_id, a.assessor_id = auth.uid(),
+         a.level, a.rationale, a.uncertainty_note, a.assessed_at
+    FROM public.scp_interview_assessments a
+   WHERE a.case_id = _case_id
+     AND a.superseded_by IS NULL
+     AND public.scp_iv_can_read_case(_case_id)
+     AND (
+       a.assessor_id = auth.uid()
+       OR EXISTS (SELECT 1 FROM public.scp_interview_panels p
+                   WHERE p.case_id = _case_id AND p.state IN ('revealed', 'concluded'))
+     );
+$$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_panel_visible_assessments(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_panel_visible_assessments(uuid) TO authenticated, service_role;
+
+COMMENT ON FUNCTION public.scp_iv_panel_visible_assessments(uuid) IS
+  'Your own assessments always; everybody else''s only after the panel has been '
+  'revealed. Enforced on the read rather than in the UI, because a protection '
+  'against anchoring that a second browser tab defeats is not a protection.';
+
+
+-- ---------------------------------------------------------------------------
+-- 13.2  Opening, joining, submitting, revealing, concluding.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.scp_iv_panel_open(_case_id uuid, _member_ids uuid[])
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _panel uuid; _employer uuid; _m uuid;
+BEGIN
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF coalesce(array_length(_member_ids, 1), 0) < 2 THEN
+    RAISE EXCEPTION
+      'SCP_IV_PANEL_TOO_SMALL: a panel needs at least two reviewers. One person assessing alone is an assessment, and the product already supports that.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  _employer := public.scp_iv_case_employer(_case_id);
+
+  INSERT INTO public.scp_interview_panels (case_id, opened_by)
+  VALUES (_case_id, auth.uid())
+  ON CONFLICT (case_id) DO NOTHING
+  RETURNING id INTO _panel;
+  IF _panel IS NULL THEN
+    SELECT id INTO _panel FROM public.scp_interview_panels WHERE case_id = _case_id;
+  END IF;
+
+  FOREACH _m IN ARRAY _member_ids LOOP
+    -- Every reviewer must be a member of THIS employer. A panel is not a way
+    -- to show a candidate's interview to somebody outside the organisation.
+    IF NOT public.has_employer_role(_m, _employer, NULL) THEN
+      RAISE EXCEPTION
+        'SCP_IV_PANEL_MEMBER_NOT_EMPLOYER: every panel reviewer must belong to this employer.'
+        USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    INSERT INTO public.scp_interview_panel_members (panel_id, user_id, added_by)
+    VALUES (_panel, _m, auth.uid())
+    ON CONFLICT (panel_id, user_id) DO NOTHING;
+  END LOOP;
+
+  PERFORM public.scp_iv_record_event(_case_id, 'panel_opened', 'human', NULL, NULL, NULL, NULL,
+    jsonb_build_object('members', coalesce(array_length(_member_ids, 1), 0)));
+  RETURN _panel;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_panel_open(uuid, uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_panel_open(uuid, uuid[]) TO authenticated, service_role;
+
+
+CREATE OR REPLACE FUNCTION public.scp_iv_panel_submit(_case_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _panel uuid; _questions integer; _mine integer;
+BEGIN
+  SELECT id INTO _panel FROM public.scp_interview_panels WHERE case_id = _case_id;
+  IF _panel IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_PANEL_NOT_OPEN' USING ERRCODE = 'check_violation';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.scp_interview_panel_members
+                  WHERE panel_id = _panel AND user_id = auth.uid()) THEN
+    RAISE EXCEPTION 'SCP_IV_PANEL_NOT_A_MEMBER: you are not on this panel.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- Submitting means "my individual view is complete", so it requires an
+  -- assessment for every core question. A partial submission would let a
+  -- reviewer see everybody else's answers while still owing some of their own.
+  SELECT count(*) INTO _questions
+    FROM public.scp_interview_core_questions q
+    JOIN public.scp_interview_cases c ON c.id = _case_id
+   WHERE q.pack_version_id = c.pack_version_id;
+  SELECT count(*) INTO _mine
+    FROM public.scp_interview_assessments a
+   WHERE a.case_id = _case_id AND a.assessor_id = auth.uid() AND a.superseded_by IS NULL;
+
+  IF _mine < _questions THEN
+    RAISE EXCEPTION
+      'SCP_IV_PANEL_INCOMPLETE: you have assessed % of % questions. Submit once your own view is complete -- seeing the others while still owing answers is the anchoring this order exists to prevent.',
+      _mine, _questions USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE public.scp_interview_panel_members
+     SET submitted_at = now()
+   WHERE panel_id = _panel AND user_id = auth.uid() AND submitted_at IS NULL;
+
+  PERFORM public.scp_iv_record_event(_case_id, 'panel_individual_submitted', 'human',
+    NULL, NULL, NULL, NULL, '{}'::jsonb);
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_panel_submit(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_panel_submit(uuid) TO authenticated, service_role;
+
+
+CREATE OR REPLACE FUNCTION public.scp_iv_panel_reveal(_case_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _panel uuid; _outstanding integer;
+BEGIN
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  SELECT id INTO _panel FROM public.scp_interview_panels
+   WHERE case_id = _case_id AND state = 'individual';
+  IF _panel IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_PANEL_NOT_INDIVIDUAL: there is no panel awaiting reveal.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  SELECT count(*) INTO _outstanding
+    FROM public.scp_interview_panel_members
+   WHERE panel_id = _panel AND submitted_at IS NULL;
+  IF _outstanding > 0 THEN
+    RAISE EXCEPTION
+      'SCP_IV_PANEL_REVEAL_TOO_EARLY: % reviewer(s) have not submitted. Revealing now would let them assess having already read the others.',
+      _outstanding USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE public.scp_interview_panels
+     SET state = 'revealed', revealed_at = now(), revealed_by = auth.uid()
+   WHERE id = _panel;
+
+  PERFORM public.scp_iv_record_event(_case_id, 'panel_revealed', 'human', NULL, NULL, NULL, NULL,
+    '{}'::jsonb);
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_panel_reveal(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_panel_reveal(uuid) TO authenticated, service_role;
+
+
+CREATE OR REPLACE FUNCTION public.scp_iv_panel_conclude(_case_id uuid, _conclusion text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _panel uuid;
+BEGIN
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  SELECT id INTO _panel FROM public.scp_interview_panels
+   WHERE case_id = _case_id AND state = 'revealed';
+  IF _panel IS NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_PANEL_NOT_REVEALED: a panel is concluded after the individual assessments have been revealed, not before.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+  IF _conclusion IS NULL OR btrim(_conclusion) = '' THEN
+    RAISE EXCEPTION
+      'SCP_IV_PANEL_CONCLUSION_REQUIRED: write what the panel concluded. There is no computed conclusion -- no average, no vote -- because neither is a judgement.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE public.scp_interview_panels
+     SET state = 'concluded', conclusion = btrim(_conclusion),
+         concluded_by = auth.uid(), concluded_at = now()
+   WHERE id = _panel;
+
+  PERFORM public.scp_iv_record_event(_case_id, 'panel_concluded', 'human', NULL, NULL, NULL,
+    btrim(_conclusion), '{}'::jsonb);
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_panel_conclude(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_panel_conclude(uuid, text) TO authenticated, service_role;
+
+
+-- Individual assessments are never rewritten by the panel. Correcting your own
+-- view after discussion is legitimate and goes through the existing supersede
+-- path, which keeps the original; a panel that could edit its members' recorded
+-- judgements would leave no evidence there had been a disagreement.
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_panel_preserves_individual()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF OLD.assessor_id IS DISTINCT FROM NEW.assessor_id THEN
+    RAISE EXCEPTION
+      'SCP_IV_ASSESSMENT_REATTRIBUTED: an assessment keeps the person who made it.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF OLD.superseded_by IS NULL AND NEW.superseded_by IS NULL
+     AND (OLD.level IS DISTINCT FROM NEW.level
+          OR OLD.rationale IS DISTINCT FROM NEW.rationale) THEN
+    RAISE EXCEPTION
+      'SCP_IV_ASSESSMENT_EDITED_IN_PLACE: change your view by superseding, so the original stays. A panel that could edit its members'' recorded judgements would leave no evidence there had been a disagreement.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_guard_panel_preserves_individual() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS scp_interview_assessments_preserve_individual
+  ON public.scp_interview_assessments;
+CREATE TRIGGER scp_interview_assessments_preserve_individual
+  BEFORE UPDATE ON public.scp_interview_assessments
+  FOR EACH ROW EXECUTE FUNCTION public.scp_iv_guard_panel_preserves_individual();
+
+-- Panel events join the ledger.
+ALTER TABLE public.scp_interview_case_events
+  DROP CONSTRAINT IF EXISTS scp_interview_case_events_event_check;
+ALTER TABLE public.scp_interview_case_events
+  ADD CONSTRAINT scp_interview_case_events_event_check CHECK (event IN (
+    'case_created','source_added','sources_marked_ready','source_erased',
+    'transcript_authorised','ai_run_started','ai_run_succeeded','ai_run_failed',
+    'source_passage_withheld','prep_generated','prep_edited','prep_approved',
+    'interview_started','interview_paused','interview_resumed','interview_completed',
+    'probe_used','evidence_review_opened','evidence_proposed','evidence_confirmed',
+    'evidence_edited','evidence_rejected','evidence_authored','finding_recorded',
+    'finding_resolved','assessment_recorded','assessment_superseded',
+    'panel_opened','panel_individual_submitted','panel_revealed','panel_concluded',
+    'report_drafted','report_finalised','case_cancelled','retention_applied'));

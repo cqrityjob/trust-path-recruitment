@@ -143,8 +143,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 116,
-    'pre-rollback: 116 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections)');
+        AND table_name LIKE 'scp\_%') = 118,
+    'pre-rollback: 118 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review)');
 END $$;
 
 -- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
@@ -181,6 +181,8 @@ DROP TABLE IF EXISTS public.scp_interview_ai_runs                CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_source_passages        CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_case_sources           CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_cases                  CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_panel_members          CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_panels                 CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_candidate_corrections  CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_pack_pilot_grants      CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_ai_config              CASCADE;
@@ -221,6 +223,12 @@ DROP FUNCTION IF EXISTS public.scp_iv_erase_source(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_candidate_interview_status();
 DROP FUNCTION IF EXISTS public.scp_iv_candidate_interview_detail(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_is_case_candidate(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_panel_open(uuid, uuid[]);
+DROP FUNCTION IF EXISTS public.scp_iv_panel_submit(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_panel_reveal(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_panel_conclude(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_panel_visible_assessments(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_guard_panel_preserves_individual();
 DROP FUNCTION IF EXISTS public.scp_iv_guard_no_career_discovery();
 DROP FUNCTION IF EXISTS public.scp_iv_guard_passport_disclosure();
 -- This one guard lives on ANOTHER domain's table (sp_claims), because that is

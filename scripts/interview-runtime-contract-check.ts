@@ -408,6 +408,56 @@ for (const screen of EMPLOYER_SCREENS) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 4b-ii. One home per permitted-value list                              */
+/* ------------------------------------------------------------------ */
+
+// A migration that declares the same CHECK constraint twice fails against its
+// OWN OUTPUT the moment the two copies drift: the earlier copy rebuilds the
+// constraint without a value the later section has already written rows using.
+// This happened three times in one file -- the case-event list, the edge
+// assurance list, and the event list again when Panel Review added four names
+// -- which is three times too many to keep catching by hand.
+{
+  const migration = read(HARDENING_MIGRATION);
+  const constraintNames = [...migration.matchAll(/ADD\s+CONSTRAINT\s+([a-z0-9_]+)\s+CHECK/gi)].map(
+    (m) => m[1],
+  );
+
+  const seen = new Map<string, number>();
+  for (const name of constraintNames) seen.set(name, (seen.get(name) ?? 0) + 1);
+
+  for (const [name, count] of seen) {
+    ok(
+      count === 1,
+      `${name} is declared ${count} times in one migration; a permitted-value list gets one home, or the copies drift and the migration fails against its own output`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 4b-iii. Database error codes must not reach the customer              */
+/* ------------------------------------------------------------------ */
+
+// The guards in this domain raise deliberately specific English messages
+// prefixed with an SCP_ code. Useful in a log; wrong on a Swedish screen. This
+// already shipped twice -- the report screen surfaced a raw
+// SCP_IV_ILLEGAL_TRANSITION, and Panel Review surfaced a raw
+// SCP_IV_PANEL_INCOMPLETE -- so it is a guard rather than a habit.
+for (const screen of EMPLOYER_SCREENS) {
+  const code = codeOnly(screen.text);
+  // RENDER sites only. `(q.error as Error).message.includes("NOT_FOUND")` is
+  // inspecting an error to decide which state to show, which is fine; what must
+  // not happen is that string reaching the screen.
+  const rendered =
+    /\{\(\w+\.error as Error\)\.message\}/.test(code) ||
+    /message=\{[^}]*\(\w+\.error as Error\)\.message[^}]*\}/.test(code);
+  ok(
+    !rendered,
+    `${screen.path} renders a raw error message; use interviewErrorMessage() so an SCP_ code never reaches a recruiter`,
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* 4c. "Verified" must not be used to mean two different things          */
 /* ------------------------------------------------------------------ */
 

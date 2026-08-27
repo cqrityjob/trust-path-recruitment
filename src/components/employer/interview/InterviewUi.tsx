@@ -276,6 +276,49 @@ export function LevelZeroNote() {
 }
 
 /**
+ * Turn a database error into something a recruiter can act on.
+ *
+ * The guards in this domain raise deliberately specific messages, and they are
+ * written for whoever is reading the SQL: "SCP_IV_PANEL_INCOMPLETE: you have
+ * assessed 0 of 8 questions...". Useful in a log, wrong on a Swedish screen —
+ * the same defect the report blockers had, where a transition guard's raw
+ * output reached the user.
+ *
+ * The mapping is by CODE, not by matching prose, so a reworded guard keeps its
+ * translation. Anything unrecognised falls through to the raw message rather
+ * than to a generic apology: an unhelpful specific error beats a helpful-
+ * sounding vague one, and it makes the gap visible enough to fix.
+ */
+const ERROR_SV: Record<string, string> = {
+  SCP_IV_PANEL_INCOMPLETE:
+    "Du har inte bedömt alla kärnfrågor ännu. Lämna in när din egen bedömning är komplett — att se de andras medan du fortfarande har frågor kvar är precis det som ordningen ska förhindra.",
+  SCP_IV_PANEL_REVEAL_TOO_EARLY:
+    "Alla bedömare har inte lämnat in ännu. Att öppna nu skulle låta någon bedöma efter att ha läst de andra.",
+  SCP_IV_PANEL_NOT_A_MEMBER: "Du ingår inte i den här panelen.",
+  SCP_IV_PANEL_TOO_SMALL:
+    "En panel behöver minst två bedömare. En ensam bedömare gör en vanlig bedömning.",
+  SCP_IV_PANEL_MEMBER_NOT_EMPLOYER: "Alla bedömare måste tillhöra er organisation.",
+  SCP_IV_PANEL_CONCLUSION_REQUIRED:
+    "Skriv vad panelen kom fram till. Det finns ingen beräknad slutsats — varken medelvärde eller omröstning.",
+  SCP_IV_PANEL_NOT_REVEALED: "Panelen avslutas efter att bedömningarna har öppnats, inte före.",
+  SCP_IV_NOT_CASE_MEMBER: "Du saknar behörighet till den här intervjun.",
+  SCP_IV_ILLEGAL_TRANSITION: "Det steget går inte att ta härifrån. Gå igenom stegen i ordning.",
+  SCP_IV_ASSESSMENT_EDITED_IN_PLACE:
+    "En registrerad bedömning ändras genom att ersättas, så att originalet finns kvar.",
+  SCP_IV_PACK_NOT_USABLE:
+    "Rollpaketet är inte publicerat och ni har inget giltigt pilotmedgivande för det.",
+};
+
+export function interviewErrorMessage(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? "");
+  const code = /\b(SCP_[A-Z0-9_]+)\b/.exec(raw)?.[1];
+  if (code && ERROR_SV[code]) return ERROR_SV[code];
+  // Strip the code prefix even when there is no translation: the sentence after
+  // it is usually readable, and the identifier never is.
+  return raw.replace(/^SCP_[A-Z0-9_]+:\s*/, "");
+}
+
+/**
  * How confident the knowledge graph is, and — more importantly — WHAT KIND of
  * confidence it is.
  *
