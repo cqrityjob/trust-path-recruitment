@@ -128,7 +128,127 @@ END $$;
 -- migration's own header.
 -- ---------------------------------------------------------------------------
 -- ---------------------------------------------------------------------------
--- Interview Intelligence Phase 1 (20260918090000) comes off FIRST: it is the
+-- Interview Intelligence Phase 2 (20260919090000 + 20260920090000) comes off
+-- before Phase 1: the runtime pins Phase 1 pack versions and the knowledge
+-- layer references them, so unwinding in the other order would trip an
+-- ON DELETE RESTRICT.
+--
+-- The drop set matches supabase/rollback/20260920090000_scp_interview_runtime_rollback.sql.
+-- Keeping them identical is the point: an incomplete documented rollback fails
+-- HERE rather than in production.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- Interview Intelligence Phase 2 unwinds first';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 115,
+    'pre-rollback: 115 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime)');
+END $$;
+
+-- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
+-- depend on Phase 2 helper functions, so they come off first -- and they are
+-- named individually so this cannot take a Phase 1 policy with it.
+DROP POLICY IF EXISTS scp_interview_pack_versions_employer_read         ON public.scp_interview_pack_versions;
+DROP POLICY IF EXISTS scp_interview_packs_employer_read                 ON public.scp_interview_packs;
+DROP POLICY IF EXISTS scp_interview_core_questions_employer_read        ON public.scp_interview_core_questions;
+DROP POLICY IF EXISTS scp_interview_pack_competencies_employer_read     ON public.scp_interview_pack_competencies;
+DROP POLICY IF EXISTS scp_interview_approved_probes_employer_read       ON public.scp_interview_approved_probes;
+DROP POLICY IF EXISTS scp_interview_verification_rules_employer_read    ON public.scp_interview_verification_rules;
+DROP POLICY IF EXISTS scp_interview_prohibited_areas_employer_read      ON public.scp_interview_prohibited_areas;
+DROP POLICY IF EXISTS scp_interview_evidence_dimensions_employer_read   ON public.scp_interview_evidence_dimensions;
+DROP POLICY IF EXISTS scp_interview_rating_anchors_employer_read        ON public.scp_interview_rating_anchors;
+DROP POLICY IF EXISTS scp_interview_question_competencies_employer_read ON public.scp_interview_question_competencies;
+
+DROP VIEW  IF EXISTS public.scp_interview_process_quality        CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_case_events            CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_reports                CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_assessments            CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_findings               CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_evidence               CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_evidence_proposals     CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_probe_usages           CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_session_notes          CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_session_questions      CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_sessions               CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_prep_items             CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_prep_plans             CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_candidate_facts        CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_role_requirements      CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_ai_run_retrievals      CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_ai_runs                CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_source_passages        CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_case_sources           CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_cases                  CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_pack_pilot_grants      CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_ai_config              CASCADE;
+DROP TABLE IF EXISTS public.scp_intel_edges                      CASCADE;
+DROP TABLE IF EXISTS public.scp_ai_tasks                         CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_method_practices       CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_methods                CASCADE;
+DROP TABLE IF EXISTS public.scp_research_implications            CASCADE;
+DROP TABLE IF EXISTS public.scp_research_claims                  CASCADE;
+DROP TABLE IF EXISTS public.scp_research_sources                 CASCADE;
+
+DROP FUNCTION IF EXISTS public.scp_iv_finalise_report(uuid, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_mark_assessed(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_report_blockers(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_record_assessment(uuid, uuid, integer, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_iv_begin_evidence_review(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_record_findings(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_author_evidence(uuid, uuid, text, uuid, uuid, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_confirm_evidence_proposal(uuid, text, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_iv_record_evidence_proposals(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_set_session_state(uuid, text, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_iv_start_session(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_approve_prep_plan(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_record_prep_plan(uuid, jsonb, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_record_candidate_facts(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_record_role_requirements(uuid, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer);
+DROP FUNCTION IF EXISTS public.scp_iv_ai_run_start(uuid, text, text, text, jsonb, text);
+DROP FUNCTION IF EXISTS public.scp_iv_mark_sources_ready(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_add_source(uuid, text, text, text, text, text, text, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_create_case(uuid, text, uuid, text, uuid, text, uuid, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_set_case_status(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_record_event(uuid, text, text, uuid, text, text, text, jsonb);
+DROP FUNCTION IF EXISTS public.scp_iv_pack_competency_pack(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_question_pack(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_employer_may_read_pack(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_plan_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_source_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_session_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_can_write_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_can_read_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_case_employer(uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_guard_ai_run_settled();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_events_append_only();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_report_immutable();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_assessment_locked();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_assessment_anchor();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_question_in_pinned_pack();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_probe_in_pinned_pack();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_passage_immutable();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_transcript_gate();
+DROP FUNCTION IF EXISTS public.scp_iv_guard_case_transition();
+DROP FUNCTION IF EXISTS public.scp_intel_guard_edge_scope();
+
+DO $$
+BEGIN
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+      WHERE ns.nspname = 'public' AND p.proname LIKE 'scp\_iv\_%' ESCAPE '\') = 0,
+    'Phase 2 rollback: every scp_iv_ function is gone');
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM public.scp_interview_core_questions) > 0,
+    'Phase 2 rollback: the Phase 1 governed questions survived');
+END $$;
+
+
+-- ---------------------------------------------------------------------------
+-- Interview Intelligence Phase 1 (20260918090000) comes off next: it is the
 -- newest layer and it sits on top of the Competency Graph, pinning
 -- scp_role_versions and scp_competency_versions, both of which the Phase 0
 -- unwind below drops.
@@ -150,7 +270,7 @@ BEGIN
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
         AND table_name LIKE 'scp\_%') = 87,
-    'pre-rollback: 87 scp_ base tables exist (74 + 13 role interview pack)');
+    'pre-rollback: 87 scp_ base tables remain after the Phase 2 unwind (74 + 13 role interview pack)');
 END $$;
 
 DROP TABLE IF EXISTS public.scp_interview_pack_events            CASCADE;

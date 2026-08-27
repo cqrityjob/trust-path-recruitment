@@ -221,12 +221,52 @@ SELECT pg_temp.ok(
 
 DO $$ BEGIN RAISE NOTICE 'GROUP I2 — the prohibition surface'; END $$;
 
+-- Phase 2 added a runtime layer and a governed-knowledge layer that share the
+-- prefix. The guard's value is unchanged and its wording is now precise: every
+-- scp_interview_ table must be CLASSIFIED into a known layer, so a new one
+-- still cannot escape scrutiny simply by existing.
+CREATE OR REPLACE FUNCTION pg_temp.known_tables() RETURNS TABLE (t text)
+LANGUAGE sql AS $$
+  SELECT t FROM pg_temp.domain_tables()           -- Phase 1 governed content (13)
+  UNION ALL
+  SELECT unnest(ARRAY[                             -- Phase 2 runtime (21)
+    'scp_interview_ai_config','scp_interview_pack_pilot_grants','scp_interview_cases',
+    'scp_interview_case_sources','scp_interview_source_passages','scp_interview_ai_runs',
+    'scp_interview_ai_run_retrievals','scp_interview_role_requirements',
+    'scp_interview_candidate_facts','scp_interview_prep_plans','scp_interview_prep_items',
+    'scp_interview_sessions','scp_interview_session_questions','scp_interview_session_notes',
+    'scp_interview_probe_usages','scp_interview_evidence_proposals','scp_interview_evidence',
+    'scp_interview_findings','scp_interview_assessments','scp_interview_reports',
+    'scp_interview_case_events'])
+  UNION ALL
+  SELECT unnest(ARRAY[                             -- Phase 2 method library (2)
+    'scp_interview_methods','scp_interview_method_practices'])
+  UNION ALL
+  SELECT unnest(ARRAY[                             -- pre-existing assessment domain (2)
+    'scp_interview_guide_prompts','scp_interview_notes']);
+$$;
+
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name LIKE 'scp_interview\_%' ESCAPE '\'
-      AND table_name NOT IN ('scp_interview_guide_prompts', 'scp_interview_notes'))
-  = (SELECT count(*) FROM pg_temp.domain_tables()),
-  'I2.0 the domain is exactly the thirteen tables this suite checks — a new one cannot escape');
+  NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+       AND table_name LIKE 'scp_interview\_%' ESCAPE '\'
+       AND table_name NOT IN (SELECT t FROM pg_temp.known_tables())),
+  'I2.0 every scp_interview_ TABLE is classified into a known layer — a new one cannot escape');
+
+-- Views are checked separately, because a view over this domain is exactly
+-- where a candidate score would be smuggled in without a new column appearing.
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_type = 'VIEW'
+       AND table_name LIKE 'scp_interview\_%' ESCAPE '\'
+       AND table_name NOT IN ('scp_interview_process_quality')),
+  'I2.0c every scp_interview_ VIEW is a known one — a view is where a hidden score would hide');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_temp.domain_tables()) = 13,
+  'I2.0b the Phase 1 governed-content domain is still exactly thirteen tables');
 
 -- The forbidden vocabulary must not exist as a column ANYWHERE in the domain.
 SELECT pg_temp.ok(

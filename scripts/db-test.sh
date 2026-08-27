@@ -310,8 +310,17 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   no candidate, no attempt and no result, and it leaves the two similarly
 #   named assessment tables (scp_interview_guide_prompts, scp_interview_notes)
 #   exactly as they were.
-if [ "$SCP_TABLES" -ne 87 ]; then
-  echo "FAIL: expected 87 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack), found $SCP_TABLES" >&2
+# + the Interview Intelligence Phase 2 layers (20260919090000 / 20260920090000):
+#   7 governed-knowledge tables (scp_research_sources / _claims / _implications,
+#   scp_interview_methods / _method_practices, scp_ai_tasks, scp_intel_edges)
+#   and 21 runtime tables (cases, sources, passages, AI runs and retrievals,
+#   extracted requirements and facts, prep plans and items, sessions, session
+#   questions, session notes, probe usages, evidence proposals, confirmed
+#   evidence, findings, assessments, reports, case events, plus the AI config
+#   and pilot-grant tables). The runtime holds candidate interview material and
+#   is tenant-scoped; the knowledge layer is platform content.
+if [ "$SCP_TABLES" -ne 115 ]; then
+  echo "FAIL: expected 115 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1186,9 +1195,40 @@ fi
 
 echo "    ok  ${IIP_PASSED} Role Interview Pack assertions passed"
 
-if [ "$IIP_PASSED" -lt 65 ]; then
-  echo "FAIL: expected at least 65 Role Interview Pack assertions, only ${IIP_PASSED} ran." >&2
-  suite_failed "Role Interview Pack (assertion shortfall: floor 65)"
+if [ "$IIP_PASSED" -lt 70 ]; then
+  echo "FAIL: expected at least 70 Role Interview Pack assertions, only ${IIP_PASSED} ran." >&2
+  suite_failed "Role Interview Pack (assertion shortfall: floor 70)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5n-b. Interview Intelligence Phase 2 -- the employer runtime, end to end
+#
+# Drives the WHOLE product journey against the governed pack: case, sources,
+# AI run, preparation, human approval, interview, AI-proposed evidence, human
+# confirmation, assessment and an immutable report -- then proves the
+# boundaries around it. Runs BEFORE the rollback step, like the Phase 1 suite.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Intelligence runtime assertions"
+set +e
+IVR_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_runtime_test.sql 2>&1)"
+IVR_RC=$?
+set -e
+
+echo "$IVR_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IVR_PASSED="$(echo "$IVR_OUT" | grep -c "ok  " || true)"
+
+if [ "$IVR_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Intelligence runtime suite exited with code ${IVR_RC}." >&2
+  echo "$IVR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Intelligence runtime"
+fi
+
+echo "    ok  ${IVR_PASSED} Interview Intelligence runtime assertions passed"
+
+if [ "$IVR_PASSED" -lt 70 ]; then
+  echo "FAIL: expected at least 70 runtime assertions, only ${IVR_PASSED} ran." >&2
+  suite_failed "Interview Intelligence runtime (assertion shortfall: floor 70)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2658,6 +2698,7 @@ echo "              ${LIB_PASSED} content library + maturity-isolation assertion
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${IIP_PASSED} Role Interview Pack governance assertions,"
+echo "              ${IVR_PASSED} Interview Intelligence runtime assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"
