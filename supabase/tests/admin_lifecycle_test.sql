@@ -689,6 +689,187 @@ SELECT pg_temp.ok(
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GROUP 8c — Account return behaviour
+--
+-- The two account endings are deliberately not variations of each other, and
+-- this group holds them apart:
+--
+--   Disable  is reversible. The SAME auth account comes back -- same id, same
+--            address, same profile, same history. The address stays taken for
+--            as long as the account exists, because the account still exists.
+--
+--   Delete   is not. The auth account stops existing, and with it every row
+--            that hung off it. The address becomes free, and the person can
+--            register again from scratch. That is a NEW account with a new
+--            id, not the old one returning: nothing is relinked, and the
+--            administrative record of the deletion stays behind under the old
+--            id, which is the whole point of keeping it.
+--
+-- The registration assertions run against the same two uniqueness rules
+-- Supabase Auth enforces -- the partial unique index on auth.users.email and
+-- the (provider_id, provider) unique constraint on auth.identities -- which
+-- the harness bootstrap reproduces from a live instance. C5 below deliberately
+-- re-runs a registration that MUST be refused, so that a passing C3/C4 cannot
+-- be the harness simply having no rule to break.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-0000000000ad';
+
+-- Two accounts that reach the two different endings. Both are shaped like a
+-- real email/password sign-up: an auth.users row, the auth.identities row
+-- GoTrue writes beside it, the profile the on_auth_user_created trigger
+-- creates, and one consent record.
+INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000d0','retur-avstangd@acc.invalid',
+   '{"display_name":"Avstängd Person"}'::jsonb),
+  ('ad100000-0000-0000-0000-0000000000d1','retur-raderad@acc.invalid',
+   '{"display_name":"Raderad Person"}'::jsonb);
+
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000d0','email','retur-avstangd@acc.invalid',
+   '{"email":"retur-avstangd@acc.invalid"}'::jsonb),
+  ('ad100000-0000-0000-0000-0000000000d1','email','retur-raderad@acc.invalid',
+   '{"email":"retur-raderad@acc.invalid"}'::jsonb);
+
+INSERT INTO public.consent_records (user_id, purpose, policy_version) VALUES
+  ('ad100000-0000-0000-0000-0000000000d0','platform_terms','2026-01'),
+  ('ad100000-0000-0000-0000-0000000000d1','platform_terms','2026-01');
+
+-- ── A. A disabled account can be reopened ──────────────────────────────────
+
+SELECT public.admin_set_user_disabled(
+  'ad100000-0000-0000-0000-0000000000d0', true, 'Avstängd under utredning.');
+
+SELECT pg_temp.ok(
+  (SELECT banned_until FROM auth.users
+    WHERE id = 'ad100000-0000-0000-0000-0000000000d0') > now() + interval '50 years'
+  AND (SELECT count(*) FROM auth.users
+        WHERE id = 'ad100000-0000-0000-0000-0000000000d0') = 1
+  AND (SELECT count(*) FROM auth.identities
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d0') = 1
+  AND (SELECT count(*) FROM public.profiles
+        WHERE id = 'ad100000-0000-0000-0000-0000000000d0') = 1
+  AND (SELECT count(*) FROM public.consent_records
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d0') = 1,
+  'A1 disabling only bans the account -- the account, its identity, its profile and its consent record are all still there');
+
+SELECT pg_temp.must_fail(
+  $$INSERT INTO auth.users (id, email)
+    VALUES ('ad100000-0000-0000-0000-0000000000df','retur-avstangd@acc.invalid')$$,
+  'users_email_partial_key',
+  'A2 a disabled account still holds its address -- the same email cannot be registered while it exists');
+
+SELECT public.admin_set_user_disabled(
+  'ad100000-0000-0000-0000-0000000000d0', false, 'Utredningen avslutad.');
+
+SELECT pg_temp.ok(
+  (SELECT banned_until FROM auth.users
+    WHERE id = 'ad100000-0000-0000-0000-0000000000d0') IS NULL
+  AND (SELECT email FROM auth.users
+        WHERE id = 'ad100000-0000-0000-0000-0000000000d0') = 'retur-avstangd@acc.invalid'
+  AND (SELECT display_name FROM public.profiles
+        WHERE id = 'ad100000-0000-0000-0000-0000000000d0') = 'Avstängd Person'
+  AND (SELECT count(*) FROM auth.identities
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d0') = 1
+  AND (SELECT count(*) FROM public.consent_records
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d0') = 1,
+  'A3 reopening restores the SAME auth account -- same id, same address, same profile, same history');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.audit_logs
+    WHERE subject_id = 'ad100000-0000-0000-0000-0000000000d0'
+      AND action = 'user_disabled') = 1
+  AND (SELECT count(*) FROM public.audit_logs
+        WHERE subject_id = 'ad100000-0000-0000-0000-0000000000d0'
+          AND action = 'user_enabled') = 1,
+  'A4 both halves of the reversible ending are on the record, separately');
+
+-- ── B. A permanently deleted account cannot be reopened ────────────────────
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-00000000005a';
+
+SELECT pg_temp.ok(
+  (public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000d1')
+     ->> 'deletable')::boolean,
+  'B1 an account with only a profile, an identity and a consent record is reported deletable');
+
+SELECT public.admin_delete_user_if_safe(
+  'ad100000-0000-0000-0000-0000000000d1','Permanent radering.','retur-raderad@acc.invalid');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000d1') = 0
+  AND (SELECT count(*) FROM auth.identities WHERE user_id = 'ad100000-0000-0000-0000-0000000000d1') = 0
+  AND (SELECT count(*) FROM public.profiles WHERE id = 'ad100000-0000-0000-0000-0000000000d1') = 0
+  AND (SELECT count(*) FROM public.user_roles WHERE user_id = 'ad100000-0000-0000-0000-0000000000d1') = 0
+  AND (SELECT count(*) FROM public.consent_records WHERE user_id = 'ad100000-0000-0000-0000-0000000000d1') = 0,
+  'B2 permanent deletion leaves no auth account, no identity, no profile, no role and no consent record behind');
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_set_user_disabled(
+      'ad100000-0000-0000-0000-0000000000d1', false, 'Öppna igen.')$$,
+  'USER_NOT_FOUND',
+  'B3 a permanently deleted account cannot be reopened -- there is nothing left to reopen');
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_person_overview('ad100000-0000-0000-0000-0000000000d1')$$,
+  'USER_NOT_FOUND',
+  'B4 and the administrator cannot even open it as a person any more');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.audit_logs
+    WHERE subject_id = 'ad100000-0000-0000-0000-0000000000d1'
+      AND action = 'user_deleted'
+      AND metadata ->> 'email' = 'retur-raderad@acc.invalid') = 1,
+  'B5 the deletion itself stays on the record, under the OLD id and with the address it carried');
+
+-- ── C. The deleted address can register again, as a NEW account ────────────
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE email = 'retur-raderad@acc.invalid') = 0
+  AND (SELECT count(*) FROM auth.identities
+        WHERE provider = 'email' AND provider_id = 'retur-raderad@acc.invalid') = 0,
+  'C1 the address is free -- nothing in auth.users and no identity still claims it');
+
+-- A brand-new sign-up, written the way GoTrue writes one. If any stale row
+-- had survived the deletion, one of these two inserts is what would refuse.
+INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000d2','retur-raderad@acc.invalid',
+   '{"display_name":"Nyregistrerad Person"}'::jsonb);
+
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000d2','email','retur-raderad@acc.invalid',
+   '{"email":"retur-raderad@acc.invalid"}'::jsonb);
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE email = 'retur-raderad@acc.invalid') = 1
+  AND (SELECT id FROM auth.users WHERE email = 'retur-raderad@acc.invalid')
+        <> 'ad100000-0000-0000-0000-0000000000d1'::uuid,
+  'C2 the same address registers again and gets a NEW account, not the old one back');
+
+SELECT pg_temp.ok(
+  (SELECT display_name FROM public.profiles
+    WHERE id = 'ad100000-0000-0000-0000-0000000000d2') = 'Nyregistrerad Person'
+  AND (SELECT count(*) FROM public.user_roles
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d2') = 0
+  AND (SELECT count(*) FROM public.consent_records
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000d2') = 0,
+  'C3 the new account starts clean -- a fresh profile from the sign-up trigger, no inherited role, no inherited consent');
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-0000000000ad';
+
+SELECT pg_temp.ok(
+  (public.admin_person_overview('ad100000-0000-0000-0000-0000000000d2') -> 'account' ->> 'disabled')::boolean
+    IS NOT TRUE,
+  'C4 the new account is usable from the first moment -- it did not inherit the old one''s disabled state');
+
+SELECT pg_temp.must_fail(
+  $$INSERT INTO auth.users (id, email)
+    VALUES ('ad100000-0000-0000-0000-0000000000d3','retur-raderad@acc.invalid')$$,
+  'users_email_partial_key',
+  'C5 and the address is taken again by the new account -- so C1-C4 tested a rule that really is enforced here');
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GROUP 9 — Authorisation boundary
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -764,6 +945,6 @@ SELECT pg_temp.ok(
       AND p.proconfig::text LIKE '%search_path%') = 11,
   'S11 every new function is SECURITY DEFINER with a fixed search_path');
 
-DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 89 assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 103 assertions passed'; END $$;
 
 ROLLBACK;
