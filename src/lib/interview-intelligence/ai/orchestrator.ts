@@ -19,6 +19,7 @@ import { MockAiProvider } from "./providers/mock";
 import { TASK_REGISTRY, abstentionSchema, type TaskKey } from "./registry";
 import { validatePolicy, type PolicyContext, type PolicyViolation } from "./policy";
 import { screenPassages, type QuarantinedPassage } from "./injection";
+import { AnthropicProvider } from "./providers/anthropic";
 
 /* ------------------------------------------------------------------ */
 /* Provider selection                                                  */
@@ -33,12 +34,46 @@ import { screenPassages, type QuarantinedPassage } from "./injection";
  * model in a recruitment product is an owner decision rather than a deployment
  * accident.
  */
+/**
+ * Choose the engine.
+ *
+ * The deterministic engine is the default and stays the default. A real model
+ * is reachable only when the provider is named explicitly AND a credential
+ * exists in the SERVER environment AND a platform admin has enabled
+ * ai_config.ai_enabled -- the third switch is checked by the server functions
+ * before they call in here, because it lives in the database, which is the only
+ * place a runtime toggle is auditable.
+ *
+ * Two behaviours worth stating, because they look like bugs and are not:
+ *
+ *   An UNRECOGNISED provider name falls back to the deterministic engine with a
+ *   warning rather than failing. A typo in a deploy variable must not take
+ *   interviews offline; the governed questions, probes and anchors work without
+ *   any AI at all, which is the whole point of the pack being governed content.
+ *
+ *   A RECOGNISED provider with no credential THROWS. That is not a typo, it is
+ *   an operator who believes production AI is running. Quietly serving mock
+ *   output to someone who thinks they are evaluating a real model would corrupt
+ *   every conclusion drawn from it.
+ */
 export function selectProvider(env: NodeJS.ProcessEnv = process.env): AiProvider {
   const configured = (env.INTERVIEW_AI_PROVIDER ?? "mock").toLowerCase();
   if (configured === "mock") return new MockAiProvider();
 
-  // A non-mock provider is only reachable once an adapter is registered here
-  // AND a credential exists. Until then the safe path is taken, loudly.
+  if (configured === "anthropic") {
+    const apiKey = env.ANTHROPIC_API_KEY ?? "";
+    if (!apiKey) {
+      throw new AiProviderError(
+        'INTERVIEW_AI_PROVIDER is "anthropic" but ANTHROPIC_API_KEY is not set in the server environment. Refusing to fall back to the deterministic engine: an operator who has asked for production AI must not be silently served mock output.',
+        "configuration",
+      );
+    }
+    return new AnthropicProvider({
+      apiKey,
+      model: env.INTERVIEW_AI_MODEL ?? "claude-sonnet-5",
+    });
+  }
+
   console.warn(
     `[interview-ai] provider "${configured}" is not registered in this build; falling back to the deterministic engine.`,
   );

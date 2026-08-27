@@ -61,7 +61,18 @@ export interface AiProvider {
 export class AiProviderError extends Error {
   constructor(
     message: string,
-    readonly kind: "timeout" | "unavailable" | "refused" | "transport",
+    readonly kind:
+      | "timeout"
+      | "unavailable"
+      | "refused"
+      | "transport"
+      // Misconfiguration -- no credential, wrong credential, or an attempt to
+      // construct the adapter somewhere it must never exist. Distinct from
+      // "transport" because retrying it is pointless and the fix is a person's.
+      | "configuration"
+      // The provider answered, but not with something usable. Reported, never
+      // retried: retrying a returned-but-unusable answer is resampling.
+      | "protocol",
   ) {
     super(message);
     this.name = "AiProviderError";

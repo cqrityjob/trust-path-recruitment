@@ -295,6 +295,24 @@ jobs:
       - name: Interview Intelligence runtime contract check
         run: bun run interview-runtime-contract:check
 
+      # The real model adapter, proved against a fake transport with no
+      # credential and no network. Transport failures retry a bounded number of
+      # times; a returned-but-unusable answer is NEVER retried, because
+      # resampling until the model says something acceptable manufactures the
+      # appearance of quality; the same logical request always carries the same
+      # idempotency key; and the credential cannot reach a browser.
+      - name: Interview Intelligence AI provider adapter
+        run: bun run interview-ai-provider:check
+
+      # The answer key must not be writable by the thing it grades. This proves
+      # the gold dataset imports nothing, computes no expectation, and states
+      # its authorship honestly -- currently 0 of 22 cases reviewed by anyone
+      # independent, which means it can prove a regression and cannot prove
+      # correctness. The check prints that limitation on every run so no report
+      # can quote the pass rate without it.
+      - name: Interview Intelligence gold dataset independence
+        run: bun run interview-gold-independence:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
