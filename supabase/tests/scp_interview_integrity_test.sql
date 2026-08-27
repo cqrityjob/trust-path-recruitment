@@ -117,9 +117,12 @@ DO $$ BEGIN RAISE NOTICE 'GROUP I2 — the graph states its own assurance'; END 
 DO $$
 DECLARE _edge uuid; _n integer; _total integer;
 BEGIN
-  SELECT count(*) INTO _total FROM public.scp_intel_edges;
+  -- PLATFORM knowledge only. Running a real interview adds case-scoped edges
+  -- carrying an employer_id, so counting the whole table would make this
+  -- assertion drift with test data rather than with the knowledge base.
+  SELECT count(*) INTO _total FROM public.scp_intel_edges WHERE employer_id IS NULL;
   PERFORM pg_temp.ok(_total = 271,
-    format('I2.0 the graph holds its 271 declared edges (found %s)', _total));
+    format('I2.0 the knowledge graph holds its 271 declared edges (found %s)', _total));
 
   -- Every prohibition binds every AI task. An unwired prohibition is not a
   -- neutral gap: read from the engine's side it is permission.
@@ -318,6 +321,55 @@ BEGIN
     VALUES (%L, %L, 'Evig pilot.', current_date, current_date)$q$, _emp, _packv),
     'scp_interview_pilot_window_check',
     'I3.13 a zero-length or backwards pilot window is refused');
+END $$;
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I4 — the product does not offer what it will refuse'; END $$;
+-- ===========================================================================
+--
+-- Found by walking the journey in a browser rather than by reading the schema:
+-- the report screen showed a green "nothing blocks the report" panel and a
+-- Finalise button while the case was still in evidence_review, and the click
+-- came back as a raw SCP_IV_ILLEGAL_TRANSITION in a Swedish interface. The
+-- blocker list checked the content preconditions and left the state
+-- precondition to the transition guard, so neither knew the whole answer.
+
+DO $$
+DECLARE
+  _packv uuid; _case uuid; _emp uuid := '55550000-0000-0000-0000-00000000000a';
+  _inside uuid := '44440000-0000-0000-0000-0000000000a2';
+  _codes text[];
+BEGIN
+  SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
+    JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se';
+
+  -- Re-open the grant I3 revoked. One grant per employer per pack version, so
+  -- this is an update rather than a second row -- which is itself the model
+  -- working: an employer cannot accumulate overlapping entitlements.
+  UPDATE public.scp_interview_pack_pilot_grants
+     SET revoked_at = NULL, revoked_by = NULL, revocation_reason = NULL,
+         usage_mode = 'synthetic_test', starts_on = current_date - 1,
+         expires_on = current_date + 7, cohort_user_ids = '{}'
+   WHERE employer_id = _emp AND pack_version_id = _packv;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _inside::text, true);
+  _case := public.scp_iv_create_case(_emp, 'Rapportsparr', _packv, 'K.', NULL, 'EXT-BLOCK');
+
+  SELECT array_agg(code) INTO _codes FROM public.scp_iv_report_blockers(_case);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok('ASSESSMENT_NOT_COMPLETE' = ANY (_codes),
+    'I4.1 a case that has not been assessed is BLOCKED from reporting, in the blocker list');
+
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.scp_iv_report_blockers(_case)
+      WHERE code = 'ASSESSMENT_NOT_COMPLETE'
+        AND message NOT LIKE 'SCP_%' AND message LIKE '%Klar med bedömningen%') = 1,
+    'I4.2 and told in the user''s language, naming the step to take — not as an internal error code');
+
+  PERFORM pg_temp.ok('QUESTION_NOT_ASSESSED' = ANY (_codes),
+    'I4.3 the content preconditions are still checked alongside it');
 END $$;
 
 DO $$ BEGIN RAISE NOTICE 'INTEGRITY SUITE COMPLETE'; END $$;

@@ -794,8 +794,8 @@ BEGIN
     RAISE EXCEPTION 'SCP_IIH_ASSERT: the Vaktare pack is no longer a draft pilot hypothesis.';
   END IF;
 
-  RAISE NOTICE 'SCP_IIH_ASSERT: integrity hardening verified. % edges carry assurance; % sources read of %.',
-    (SELECT count(*) FROM public.scp_intel_edges),
+  RAISE NOTICE 'SCP_IIH_ASSERT: integrity hardening verified. % knowledge edges carry assurance; % sources read of %.',
+    (SELECT count(*) FROM public.scp_intel_edges WHERE employer_id IS NULL),
     (SELECT count(*) FROM public.scp_research_sources WHERE access_status = 'verified_read'),
     (SELECT count(*) FROM public.scp_research_sources);
 END
@@ -894,8 +894,8 @@ BEGIN
     RAISE EXCEPTION 'SCP_IIH_ASSERT: an AI task claims a policy version the code does not implement.';
   END IF;
 
-  RAISE NOTICE 'SCP_IIH_ASSERT: prohibition graph complete -- % areas x % tasks = % restricts edges; % edges total.',
-    _areas, _tasks, _n, (SELECT count(*) FROM public.scp_intel_edges);
+  RAISE NOTICE 'SCP_IIH_ASSERT: prohibition graph complete -- % areas x % tasks = % restricts edges; % knowledge edges total.',
+    _areas, _tasks, _n, (SELECT count(*) FROM public.scp_intel_edges WHERE employer_id IS NULL);
 END
 $assert5$;
 
@@ -1010,3 +1010,167 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_ai_run_settle(uuid, text, text, text, js
 -- place means no caller can quietly settle a run without saying what it
 -- withheld.
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer);
+
+
+-- ###########################################################################
+-- SECTION 7 -- What walking the journey in a browser turned up
+-- ###########################################################################
+--
+-- Three defects, all of the same family: the ledger and the report screen each
+-- described the process slightly differently from how it actually ran. For a
+-- product whose entire claim is traceability, a ledger that misnames what
+-- happened is not cosmetic.
+-- ---------------------------------------------------------------------------
+
+-- 7.1  The report screen offered an action the database would refuse.
+--
+-- scp_iv_report_blockers() answered "nothing blocks the report" while the case
+-- was still in evidence_review, so the screen showed a green panel and a
+-- "Finalise" button, and the click came back as
+--   SCP_IV_ILLEGAL_TRANSITION: "evidence_review" -> "reported"
+-- -- an untranslated internal error in a Swedish interface, for a step the
+-- product had just told the user was ready.
+--
+-- The screen was not wrong to trust the blocker list. The blocker list was
+-- incomplete: it checked the CONTENT preconditions and left the STATE
+-- precondition to the transition guard, so neither knew the whole answer. It
+-- now owns both, and every caller inherits the fix.
+CREATE OR REPLACE FUNCTION public.scp_iv_report_blockers(_case_id uuid)
+RETURNS TABLE (code text, message text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _c public.scp_interview_cases%ROWTYPE;
+BEGIN
+  SELECT * INTO _c FROM public.scp_interview_cases WHERE id = _case_id;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 'CASE_NOT_FOUND', 'Intervjun finns inte.';
+    RETURN;
+  END IF;
+
+  IF NOT public.scp_iv_can_read_case(_case_id) THEN
+    RETURN QUERY SELECT 'NOT_PERMITTED', 'Du saknar behörighet till den här intervjun.';
+    RETURN;
+  END IF;
+
+  -- The state precondition, stated in the user's language rather than left to
+  -- surface as a transition error after the button is pressed.
+  IF _c.status NOT IN ('assessed', 'reported') THEN
+    RETURN QUERY SELECT 'ASSESSMENT_NOT_COMPLETE',
+      'Bedömningen är inte markerad som klar. Gå till Evidens och välj "Klar med bedömningen" när varje fråga har en bedömning.';
+  END IF;
+
+  RETURN QUERY
+    SELECT 'QUESTION_NOT_ASSESSED',
+           format('%s har ingen registrerad mänsklig bedömning.', q.code)
+      FROM public.scp_interview_core_questions q
+     WHERE q.pack_version_id = _c.pack_version_id
+       AND NOT EXISTS (SELECT 1 FROM public.scp_interview_assessments a
+                        WHERE a.case_id = _case_id AND a.question_id = q.id
+                          AND a.superseded_by IS NULL);
+
+  RETURN QUERY
+    SELECT 'PROPOSALS_AWAITING_REVIEW',
+           format('%s AI-förslag har inte granskats av en människa.', count(*)::text)
+      FROM public.scp_interview_evidence_proposals p
+     WHERE p.case_id = _case_id AND p.review_state = 'pending'
+    HAVING count(*) > 0;
+
+  RETURN;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_report_blockers(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_report_blockers(uuid) TO authenticated, service_role;
+
+
+-- 7.2  Two ledger entries named something other than what happened.
+--
+--   * Marking the sources complete (draft -> sources_ready) was recorded as
+--     "source_added", so the trail showed three sources added when two were.
+--   * Opening evidence review (interview_complete -> evidence_review) was
+--     recorded as "evidence_proposed" by a human -- so a run that abstained and
+--     proposed nothing still left an entry saying evidence had been proposed,
+--     attributed to a person who had proposed none of it.
+--
+-- Both are state transitions and now say so. An auditor reading this trail is
+-- reconstructing what a person did before a hiring decision; it has to be
+-- literally true.
+ALTER TABLE public.scp_interview_case_events
+  DROP CONSTRAINT IF EXISTS scp_interview_case_events_event_check;
+ALTER TABLE public.scp_interview_case_events
+  ADD CONSTRAINT scp_interview_case_events_event_check CHECK (event IN (
+    'case_created','source_added','sources_marked_ready','source_erased',
+    'transcript_authorised','ai_run_started','ai_run_succeeded','ai_run_failed',
+    'source_passage_withheld','prep_generated','prep_edited','prep_approved',
+    'interview_started','interview_paused','interview_resumed','interview_completed',
+    'probe_used','evidence_review_opened','evidence_proposed','evidence_confirmed',
+    'evidence_edited','evidence_rejected','evidence_authored','finding_recorded',
+    'finding_resolved','assessment_recorded','assessment_superseded','report_drafted',
+    'report_finalised','case_cancelled','retention_applied'));
+
+CREATE OR REPLACE FUNCTION public.scp_iv_mark_sources_ready(_case_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _n integer;
+BEGIN
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  SELECT count(*) INTO _n FROM public.scp_interview_case_sources
+   WHERE case_id = _case_id AND retention_state = 'active';
+  IF _n = 0 THEN
+    RAISE EXCEPTION
+      'SCP_IV_NO_SOURCES: a preparation brief grounded in nothing is not a brief. Add at least one source.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+  PERFORM public.scp_iv_set_case_status(_case_id, 'sources_ready');
+  PERFORM public.scp_iv_record_event(_case_id, 'sources_marked_ready', 'human', NULL,
+    'draft', 'sources_ready', NULL, jsonb_build_object('source_count', _n));
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_mark_sources_ready(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_mark_sources_ready(uuid) TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.scp_iv_begin_evidence_review(_case_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  PERFORM public.scp_iv_set_case_status(_case_id, 'evidence_review');
+  PERFORM public.scp_iv_record_event(_case_id, 'evidence_review_opened', 'human', NULL,
+    'interview_complete', 'evidence_review');
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_begin_evidence_review(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_begin_evidence_review(uuid) TO authenticated, service_role;
+
+-- Existing rows are NOT corrected, deliberately.
+--
+-- The first version of this migration tried to UPDATE the mislabelled rows and
+-- was refused by scp_iv_guard_event_append_only() -- which is the guard doing
+-- exactly its job. On reflection the guard is also right on the merits: a
+-- ledger that can be tidied up later is not a ledger, and "we only rewrote it
+-- to make it more accurate" is the justification every such rewrite gives.
+--
+-- So the old entries keep their old names, the new names apply from here, and
+-- anyone reading a trail that spans this migration can see both. That is the
+-- honest shape of a correction to an append-only record.
+
+DO $assert7$
+DECLARE _blockers integer;
+BEGIN
+  -- The naming fix is proved forward, on the functions, not by rewriting rows.
+  IF position('sources_marked_ready' in
+        pg_get_functiondef('public.scp_iv_mark_sources_ready(uuid)'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'SCP_IIH_ASSERT: marking sources ready still records "source_added".';
+  END IF;
+  IF position('evidence_review_opened' in
+        pg_get_functiondef('public.scp_iv_begin_evidence_review(uuid)'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'SCP_IIH_ASSERT: opening evidence review still records "evidence_proposed".';
+  END IF;
+  IF position('ASSESSMENT_NOT_COMPLETE' in
+        pg_get_functiondef('public.scp_iv_report_blockers(uuid)'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'SCP_IIH_ASSERT: the blocker list still ignores the state precondition.';
+  END IF;
+
+  RAISE NOTICE 'SCP_IIH_ASSERT: ledger entries name what happened; report blockers own the state precondition.';
+END
+$assert7$;

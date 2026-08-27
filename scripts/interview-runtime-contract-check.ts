@@ -143,6 +143,18 @@ const FORBIDDEN_IDENTIFIERS: readonly string[] = [
  * existence is asserted separately. Excluding it without checking it would
  * quietly remove the protection instead of the false positive.
  */
+/**
+ * TypeScript with comments removed.
+ *
+ * A guard that greps prose flags the sentence explaining the rule it enforces,
+ * which trains people to delete the explanation rather than fix the code. Where
+ * the property under test is about what the code DOES, the comments come out
+ * first.
+ */
+function codeOnly(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/[^\n]*/gm, " ");
+}
+
 function withoutSelfAssertions(text: string): string {
   const start = text.indexOf("-- SECTION 25 -- Fail-fast assertions");
   return start === -1 ? text : text.slice(0, start);
@@ -251,7 +263,7 @@ for (const key of TASK_KEYS) {
 }
 
 // And the database must not have activated a task the code does not define.
-const seededKeys = [...registryMigration.matchAll(/\n  \('([a-z_]+)','\d+\.\d+\.\d+'/g)].map(
+const seededKeys = [...registryMigration.matchAll(/\n {2}\('([a-z_]+)','\d+\.\d+\.\d+'/g)].map(
   (m) => m[1],
 );
 for (const key of seededKeys) {
@@ -281,10 +293,46 @@ const CREDENTIAL_PATTERNS: readonly [string, RegExp][] = [
   ["provider endpoint", /https:\/\/api\.(openai|anthropic|mistral|cohere)\.com/],
 ];
 
+/**
+ * A provider endpoint is allowed in exactly one file: the registered adapter.
+ *
+ * An adapter that cannot name the API it calls is not an adapter, so the rule
+ * is narrowed rather than dropped -- and narrowed by PATH, not by weakening the
+ * pattern, so an endpoint appearing anywhere else still fails. A credential, by
+ * contrast, is allowed nowhere, including here.
+ */
+const ENDPOINT_ALLOWED_IN = "ai/providers/anthropic.ts";
+
 for (const src of sources) {
   if (src.text === "") continue;
   for (const [label, pattern] of CREDENTIAL_PATTERNS) {
+    if (label === "provider endpoint" && src.path.endsWith(ENDPOINT_ALLOWED_IN)) continue;
     ok(!pattern.test(src.text), `${label} appears in ${src.path}`);
+  }
+}
+
+// And the allowance is exactly one file wide: every other source is still
+// checked, and the adapter itself still may not carry a credential.
+{
+  const adapter = sources.find((s) => s.path.endsWith(ENDPOINT_ALLOWED_IN));
+  ok(adapter !== undefined, "the registered model adapter is missing from the scanned sources");
+  if (adapter) {
+    for (const [label, pattern] of CREDENTIAL_PATTERNS) {
+      if (label === "provider endpoint") continue;
+      ok(!pattern.test(adapter.text), `${label} appears in the model adapter`);
+    }
+    ok(
+      /typeof window !== "undefined"/.test(adapter.text),
+      "the model adapter no longer refuses to be constructed in a browser",
+    );
+    ok(
+      !/import\.meta\.env|VITE_/.test(codeOnly(adapter.text)),
+      "the model adapter reads a client-visible variable; a provider credential would be bundled",
+    );
+    ok(
+      /retriesSemanticRejection: false/.test(adapter.text),
+      "the model adapter no longer declares that semantic rejections are never retried",
+    );
   }
 }
 

@@ -188,13 +188,22 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
   // Withhold anything the task is not allowed to see. Filtering here rather
   // than trusting the prompt means a CV simply never reaches a task that has no
   // business reading one.
+  // Two different filters, and keeping them apart matters. The source-kind
+  // filter says what this task is ALLOWED to read; the screen says what was
+  // SAFE to send. Only the second is a reason to abstain.
+  const eligible = input.passages.filter((p) => task.allowedSourceKinds.includes(p.sourceKind));
   const permitted = screened.clean.filter((p) => task.allowedSourceKinds.includes(p.sourceKind));
 
-  // If screening removed everything the task had to work with, the honest
-  // result is abstention. Answering from an empty corpus would produce
-  // confident text about a candidate from nothing at all, which is the worst
-  // output this product could emit.
-  if (permitted.length === 0 && quarantinedPassages.length > 0) {
+  // Abstain only when this task had material and screening took all of it.
+  //
+  // A task that legitimately reads no passages at all -- evidence extraction
+  // works from interview notes in the governed context, not from source
+  // documents -- has an empty eligible set by design, and must not be stopped
+  // by a withholding that happened somewhere it was never going to look. The
+  // first version of this check conflated the two and aborted evidence
+  // extraction while blaming the injection for it, which is both a broken step
+  // and a false explanation.
+  if (eligible.length > 0 && permitted.length === 0) {
     return {
       status: "abstained",
       output: null,

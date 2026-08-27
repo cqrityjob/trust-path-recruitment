@@ -56,6 +56,20 @@ LANGUAGE sql AS $$
     'scp_interview_case_events']);
 $$;
 
+-- THIS suite's case, not whichever row happens to sort first.
+--
+-- These assertions used "FROM scp_interview_cases LIMIT 1", which is correct
+-- only while the suite's own rows are the only ones present. The moment a real
+-- case existed in the same database -- a developer walking the journey in a
+-- browser -- the unscoped pick returned someone else's case and the assertions
+-- failed as SCP_IV_NOT_CASE_MEMBER, which looks like a product bug and is not.
+CREATE OR REPLACE FUNCTION pg_temp.suite_case() RETURNS uuid
+LANGUAGE sql STABLE AS $$
+  SELECT id FROM public.scp_interview_cases
+   WHERE employer_id = '33330000-0000-0000-0000-00000000000a'
+   ORDER BY created_at LIMIT 1;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Fixture: two employers, so cross-tenant denial is testable, plus a candidate.
 -- ---------------------------------------------------------------------------
@@ -380,7 +394,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP R3 — tenant isolation'; END $$;
 DO $$
 DECLARE _n integer; _case uuid;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
 
   -- Another employer's owner sees nothing.
   SET LOCAL ROLE authenticated;
@@ -412,7 +426,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', '22220000-0000-0000-0000-0000000000b1', true);
   PERFORM pg_temp.must_fail(
-    format('SELECT public.scp_iv_create_case(%L, ''hostile'', (SELECT pack_version_id FROM public.scp_interview_cases LIMIT 1), ''X'')',
+    format('SELECT public.scp_iv_create_case(%L, ''hostile'', (SELECT pack_version_id FROM public.scp_interview_cases WHERE id = pg_temp.suite_case()), ''X'')',
            '33330000-0000-0000-0000-00000000000a'),
     'SCP_IV_NOT_EMPLOYER_MEMBER',
     'R3.5 a non-member cannot create a case for another employer');
@@ -473,7 +487,7 @@ SELECT pg_temp.must_fail(
   'SCP_INTERVIEW_PUBLISHED_IMMUTABLE',
   'R4.1 the runtime cannot rewrite a governed question')
 WHERE (SELECT content_status FROM public.scp_interview_pack_versions
-        WHERE id = (SELECT pack_version_id FROM public.scp_interview_cases LIMIT 1)) NOT IN
+        WHERE id = (SELECT pack_version_id FROM public.scp_interview_cases WHERE id = pg_temp.suite_case())) NOT IN
       ('draft','expert_review','legal_review','cognitive_review');
 
 -- The pack used here is a draft, so Phase 1 permits content edits. What must
@@ -593,7 +607,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP R6 — AI governance'; END $$;
 DO $$
 DECLARE _case uuid;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', '22220000-0000-0000-0000-0000000000a1', true);
   PERFORM pg_temp.must_fail(
@@ -607,7 +621,7 @@ END $$;
 DO $$
 DECLARE _case uuid; _n integer;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
   UPDATE public.scp_ai_tasks SET activation_status = 'rolled_back'
    WHERE task_key = 'gap_and_contradiction_detection';
 
@@ -648,7 +662,7 @@ SELECT pg_temp.must_fail(
   'INSERT INTO public.scp_interview_ai_runs
      (case_id, task, task_version, prompt_version, provider, model, status)
    SELECT id, ''evidence_extraction'', ''1.0.0'', ''1.0.0'', ''mock'', ''m'', ''abstained''
-     FROM public.scp_interview_cases LIMIT 1',
+     FROM public.scp_interview_cases WHERE id = pg_temp.suite_case()',
   'scp_interview_ai_runs_abstention',
   'R6.5 an abstention without a stated reason is refused');
 
@@ -658,7 +672,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP R7 — the transcript gate'; END $$;
 DO $$
 DECLARE _case uuid;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.scp_interview_case_sources
               (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note)
@@ -682,7 +696,7 @@ END $$;
 DO $$
 DECLARE _case uuid;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', '22220000-0000-0000-0000-0000000000a2', true);
   PERFORM pg_temp.must_fail(
@@ -704,7 +718,7 @@ SELECT pg_temp.must_fail(
 DO $$
 DECLARE _case uuid; _run uuid;
 BEGIN
-  SELECT id INTO _case FROM public.scp_interview_cases LIMIT 1;
+  _case := pg_temp.suite_case();
   SELECT id INTO _run FROM public.scp_interview_ai_runs LIMIT 1;
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.scp_interview_candidate_facts

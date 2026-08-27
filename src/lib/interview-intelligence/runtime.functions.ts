@@ -17,7 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { runAiTask } from "./ai/orchestrator";
 import type { UntrustedBlock } from "./ai/provider";
 import type { TaskKey } from "./ai/registry";
-import { QUARANTINE_REASON_SV } from "./ai/injection";
+import { QUARANTINE_REASON_SV, screenPassages } from "./ai/injection";
 
 /* ------------------------------------------------------------------ */
 /* Vocabulary                                                          */
@@ -1139,11 +1139,28 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         .eq("session_id", sessionId);
 
       const noteRows = (notesRes.data ?? []) as Array<Record<string, unknown>>;
-      const notes = noteRows.map((n) => ({
+      const allNotes = noteRows.map((n) => ({
         ref: n.id as string,
         questionCode: ctx.questions.find((q) => q.id === n.question_id)?.code ?? null,
         body: n.body as string,
       }));
+
+      // Interview notes are UNTRUSTED content, even though a recruiter typed
+      // them. They quote what a candidate said, and a recruiter working at
+      // speed pastes -- from an application, an email, a document the candidate
+      // supplied. Sending them through the governed context because they arrive
+      // by a trusted route would put attacker-controllable text into the one
+      // channel this product treats as authoritative, which is precisely the
+      // confusion the six-layer model exists to prevent.
+      //
+      // So they are screened on the same rules as any source passage, and a
+      // note that carries an instruction to the system is withheld and
+      // reported rather than quietly analysed.
+      const screenedNotes = screenPassages(
+        allNotes.map((n) => ({ passageId: n.ref, sourceKind: "interviewer_notes", text: n.body })),
+      );
+      const withheldNoteIds = new Set(screenedNotes.quarantined.map((q) => q.passageId));
+      const notes = allNotes.filter((n) => !withheldNoteIds.has(n.ref));
 
       const runRes = await db.rpc("scp_iv_ai_run_start", {
         _case_id: data.caseId,
@@ -1177,13 +1194,16 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _output_tokens: result.usage.outputTokens,
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
-        _withheld_passages: result.quarantinedPassages as never,
+        _withheld_passages: [...result.quarantinedPassages, ...screenedNotes.quarantined] as never,
       });
 
       // Carried to the caller on every path, including failure: a recruiter
       // told only "the engine could not run" is missing the more important
       // half of what happened.
-      const withheld: readonly WithheldPassage[] = result.quarantinedPassages.map((q) => ({
+      const withheld: readonly WithheldPassage[] = [
+        ...result.quarantinedPassages,
+        ...screenedNotes.quarantined,
+      ].map((q) => ({
         passageId: q.passageId,
         reason: QUARANTINE_REASON_SV[q.reason],
         excerpt: q.excerpt,
