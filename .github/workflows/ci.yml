@@ -246,6 +246,17 @@ jobs:
       # policy over a table that carries a user_id. The other half runs in the
       # database job, against a replay that reproduces Supabase's own default
       # privileges -- see supabase/tests/security_hardening_test.sql.
+      # Lovable applies a migration under its own generated filename and syncs
+      # it back, so the repository periodically gains a second file containing
+      # the same DDL. On 889eaad there were EIGHTEEN such pairs and none was
+      # recorded anywhere. Each was harmless -- but harmless by luck, because
+      # those particular migrations happen to be idempotent, not by design.
+      # This hashes every migration's SQL (comments and whitespace stripped) and
+      # fails on an UNRECORDED identical pair, so the next one is a diff a human
+      # approves rather than something that quietly enters the ledger.
+      - name: Migration content-duplicate check
+        run: bun run migrations-duplicate:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 

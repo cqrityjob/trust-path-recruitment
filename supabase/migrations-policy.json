@@ -295,7 +295,7 @@
       "canonicalVersion": "20260828093000",
       "canonicalFile": "20260828093000_scp_sg_access_control_assessment.sql",
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty.",
-      "reason": "Real assessment content: Tilltr\u00e4de, beh\u00f6righet & access control, 12 governed items.",
+      "reason": "Real assessment content: Tillträde, behörighet & access control, 12 governed items.",
       "generatedFileOnMain": "supabase/migrations/20260820074627_731709ea-bafb-4938-8aeb-adb88a2933d0.sql (REMOVED from the active path -- it sorts before the canonical file, and the policy forbids keeping both so a clean replay cannot run the same SQL twice)",
       "doNotReExecute": true,
       "hostedName": "731709ea-bafb-4938-8aeb-adb88a2933d0",
@@ -307,7 +307,7 @@
       "canonicalVersion": "20260828094000",
       "canonicalFile": "20260828094000_scp_sg_incident_response_assessment.sql",
       "sqlEquivalence": "Verified: comment-stripped, whitespace-normalised diff against the canonical file is empty.",
-      "reason": "Real assessment content: Incidenthantering & f\u00f6rsta \u00e5tg\u00e4rder, 12 governed items.",
+      "reason": "Real assessment content: Incidenthantering & första åtgärder, 12 governed items.",
       "generatedFileOnMain": "supabase/migrations/20260820080103_af267c66-8b5b-4282-a335-9a92e00afb24.sql (REMOVED from the active path -- it sorts before the canonical file, and the policy forbids keeping both so a clean replay cannot run the same SQL twice)",
       "doNotReExecute": true,
       "hostedName": "af267c66-8b5b-4282-a335-9a92e00afb24",
@@ -645,10 +645,10 @@
       "appliedAt": "2026-08-24T12:06:03Z",
       "mechanism": "Lovable supabase--migration (tracked). Lovable stamps its own version and a UUID name; it cannot record the canonical version.",
       "generatedFileOnMain": "supabase/migrations/20260824120603_d7637351-7bdd-45f7-bb15-9ddebb6430c4.sql",
-      "sqlEquivalence": "Verified from main e6ab9dd on six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (6983 vs 6984 bytes) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 85. (3) Whitespace-normalised: identical, sha256 prefix 54dc749322164d4f. (4) Statement order: identical, 24 statements both sides. (5) Statement targets and WHERE codes identical across all 25. (6) All 24 label strings byte-identical -- the decisive check for this migration, because the exact wording of every label IS the reviewed product decision. Hosted postconditions confirm it: SE_VAKTARE_COMPETENCE now reads 'V\u00e4ktarutbildning (VU1 + VU2)' / 'Security Guard Training (VU1 + VU2)', 0 titles end in a country name, all three Dubai active titles keep '\u00b7 Dubai', 0 active titles derive from a training credential, 0 blank SV/EN labels, and titles_total stayed 41 (labels only, no rows inserted or deleted).",
+      "sqlEquivalence": "Verified from main e6ab9dd on six comparisons. (1) Strict byte: generated is a strict byte prefix of canonical; canonical == generated + '\\n' (6983 vs 6984 bytes) -- the one differing byte is the trailing newline after COMMIT;, not executable content. (2) Comment-stripped: identical after rstrip, 0 differing lines across 85. (3) Whitespace-normalised: identical, sha256 prefix 54dc749322164d4f. (4) Statement order: identical, 24 statements both sides. (5) Statement targets and WHERE codes identical across all 25. (6) All 24 label strings byte-identical -- the decisive check for this migration, because the exact wording of every label IS the reviewed product decision. Hosted postconditions confirm it: SE_VAKTARE_COMPETENCE now reads 'Väktarutbildning (VU1 + VU2)' / 'Security Guard Training (VU1 + VU2)', 0 titles end in a country name, all three Dubai active titles keep '· Dubai', 0 active titles derive from a training credential, 0 blank SV/EN labels, and titles_total stayed 41 (labels only, no rows inserted or deleted).",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '\u00b7 Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'V\u00e4ktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
+      "reason": "Phase A migration 6 of 7, applied hosted on owner approval; ledger 159 -> 160. It fixes two wording defects: the country was printed twice (the label ended in '· Sweden' and every surface appends the jurisdiction again), and the VU1+VU2 competence rule was labelled 'Väktare', which called a holder by a professional title on the strength of completed training alone. The tier deliberately stays professional_competence -- moving it to education_completed would change what headlineTitles ranks, which is a semantic change rather than a tidy-up. The generated copy is exactly equivalent, so it is deleted from the active path rather than parked. Removed because 20260824120603 sorts BEFORE the canonical slot 20260908091000 and before migrations already in the ledger, so a filename-order replay would run it out of canonical order -- the defect that broke CI in PR #55 and PR #61. Migration 6 must never be executed hosted again.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260824120603';"
     },
     {
@@ -897,5 +897,116 @@
     "ledgerRowsAtSnapshot": 108,
     "ledgerSnapshotNote": "100 after C1; 108 after the eight PR #51 migrations were applied through Lovable.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
-  }
+  },
+  "contentDuplicates": [
+    {
+      "canonical": "20260718083056_security_career_profiles.sql",
+      "duplicate": "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260720064743_h3_2_employer_settings.sql",
+      "duplicate": "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260724090000_employer_assessment_assignments.sql",
+      "duplicate": "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260801090000_career_discovery_v31_personal_layer.sql",
+      "duplicate": "20260731105531_45a611f0-6060-4479-8c7c-36ddc5d85eb5.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260801100000_scp_restore_scoring_lineage_readability.sql",
+      "duplicate": "20260731105625_c4c23c34-4fcb-4691-b9dd-de2d12a912b9.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260803120000_scp_phase1d_security_guard_draft_content.sql",
+      "duplicate": "20260804063601_b8f08ec6-eeb3-4acd-baa7-762de05a3b44.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260804110000_scp_phase1f_bestworst_cr_rubrics.sql",
+      "duplicate": "20260805053026_54aff8d4-a8fe-4904-8f49-30025561d9b8.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260805100000_scp_phase1g_learning_and_anchors.sql",
+      "duplicate": "20260805053416_64cee415-920d-4d95-9b9a-65488066cfbd.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260807090000_scp_phase2_read_models_and_identity_rpc.sql",
+      "duplicate": "20260805053628_505b877a-5596-493d-a7b2-5c2e8e35192c.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260808100000_scp_phase2c_test_fixture_programme.sql",
+      "duplicate": "20260805054010_06bf64f1-6c91-4331-a7cd-2f91a28fd8f4.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260809090000_scp_phase2e_employer_learning_progress.sql",
+      "duplicate": "20260805054236_a764df1f-735a-42a9-a86d-36199159b65e.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260809100000_scp_phase2f_learning_fixture.sql",
+      "duplicate": "20260805054409_7595e4fa-c1e1-44d6-b389-a117aa34789f.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260811090000_scp_phase2i_seed_processing_purpose_version.sql",
+      "duplicate": "20260805054837_e7c94245-d141-468e-9c5d-9d479d6a322a.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260811100000_scp_phase2j_assign_token_without_pgcrypto.sql",
+      "duplicate": "20260805054915_f8dcce61-6485-4205-babe-0a6c7dfca734.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260812100000_scp_phase2l_submit_requires_every_item.sql",
+      "duplicate": "20260805055049_68826607-5d85-490f-890b-367e2dbbd135.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260813090000_scp_phase2m_fixture_internal_only.sql",
+      "duplicate": "20260814054617_aa33afbd-687d-4c68-96d3-1c7b65056086.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts later, so the canonical file runs first and the generated copy re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260909092000_jobs_other_profession_selection.sql",
+      "duplicate": "20260825164105_9ae58010-10dc-4d5f-901f-cc7fa3eecdf4.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    },
+    {
+      "canonical": "20260917090000_superadmin_permanent_account_deletion.sql",
+      "duplicate": "20260827112444_58fc45db-729a-4d5b-a545-7c0e40d74175.sql",
+      "reason": "Lovable Cloud sync re-issue: the hosted environment applied this change under its own generated filename and synced the file back, so the repository now carries the same DDL twice. Verified content-identical after stripping comments and whitespace. The duplicate sorts EARLIER, so on replay the generated copy runs first and the canonical file re-applies the same DDL. Recorded rather than deleted because the generated file is the evidence of what the hosted database actually applied.",
+      "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
+    }
+  ],
+  "$contentDuplicatesComment": "Pairs of migrations that contain the SAME SQL under two filenames, almost always because Lovable applied a canonical change under its own generated name and synced it back. Enforced by scripts/migration-duplicate-check.ts, which hashes every migration's SQL with comments and whitespace stripped and fails on any UNRECORDED identical pair -- so a NEW duplicate is a diff a human approves rather than something that quietly enters the ledger. Recording a pair is NOT a statement that double application is safe: it is a statement that somebody looked. Each of these was checked to be idempotent or otherwise harmless on replay."
 }
