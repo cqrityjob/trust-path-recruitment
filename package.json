@@ -78,6 +78,7 @@
   "interview-pack-contract:check": "bun run scripts/interview-pack-contract-check.ts",
   "interview-pack-render:check": "bun run scripts/interview-pack-render-check.tsx",
   "interview-ai-eval:check": "bun run scripts/interview-ai-evaluation.ts",
+  "interview-runtime-contract:check": "bun run scripts/interview-runtime-contract-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts"
   }, 
   "dependencies": {

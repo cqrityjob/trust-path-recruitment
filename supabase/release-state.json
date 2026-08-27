@@ -506,6 +506,238 @@
       ],
       "note": "Interview Intelligence Phase 1: the governed Role Interview Pack domain. NOT applied hosted, and it must not be applied without separate owner approval. Purely additive -- thirteen new scp_interview_* tables plus their guards and RPCs; it modifies no existing object and touches neither scp_interview_guide_prompts nor scp_interview_notes, which share the prefix and belong to the assessment domain. It seeds the Vaktare v1 pilot as content_status='draft' with validation_label='pilot_hypothesis' and every competency mapping 'provisional', and the migration ABORTS if that seed could be published without human review. The application code that reads these objects sits behind the platform admin route /admin/interview-role-packs and behind scp_content_roles, so nothing a candidate or an employer can reach depends on this migration. Authored at slot 20260917090000 and moved to 20260918090000 when PR #122 took that slot; only the filename changed.",
       "verify": "SELECT p.slug, v.content_status, v.validation_label, v.content_hash FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'vaktare-se';"
+    },
+    {
+      "file": "20260919090000_scp_interview_intelligence_registries.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_research_sources",
+          "kind": "table"
+        },
+        {
+          "object": "scp_research_claims",
+          "kind": "table"
+        },
+        {
+          "object": "scp_research_implications",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_methods",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_method_practices",
+          "kind": "table"
+        },
+        {
+          "object": "scp_ai_tasks",
+          "kind": "table"
+        },
+        {
+          "object": "scp_intel_edges",
+          "kind": "table"
+        },
+        {
+          "object": "scp_intel_guard_edge_scope",
+          "kind": "function"
+        }
+      ],
+      "note": "Interview Intelligence Phase 2, part 1: the governed knowledge layer -- Research Evidence Registry, Interview Method Library, AI Task Registry and the Security Recruitment Intelligence Graph. NOT applied hosted; must not be applied without separate owner approval. Purely additive: seven new tables plus one guard, referencing the Phase 1 pack domain and the competency graph read-only. Everything is seeded unreviewed/draft, so nothing claims a review that has not happened, and the edge table deliberately has no weight column and no candidate node kind.",
+      "verify": "SELECT (SELECT count(*) FROM public.scp_research_claims) AS claims, (SELECT count(*) FROM public.scp_ai_tasks WHERE activation_status='active') AS active_tasks, (SELECT count(*) FROM public.scp_intel_edges) AS edges;"
+    },
+    {
+      "file": "20260920090000_scp_interview_runtime.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_interview_cases",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_case_sources",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_source_passages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_runs",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_run_retrievals",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_role_requirements",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_candidate_facts",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_prep_plans",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_prep_items",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_sessions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_session_questions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_session_notes",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_probe_usages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_evidence_proposals",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_evidence",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_findings",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_assessments",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_reports",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_case_events",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_config",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_pilot_grants",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_process_quality",
+          "kind": "view"
+        },
+        {
+          "object": "scp_iv_create_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_add_source",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_mark_sources_ready",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_confirm_transcript_basis",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_ai_run_start",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_ai_run_settle",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_role_requirements",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_candidate_facts",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_prep_plan",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_approve_prep_plan",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_start_session",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_set_session_state",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_evidence_proposals",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_confirm_evidence_proposal",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_author_evidence",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_findings",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_begin_evidence_review",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_assessment",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_report_blockers",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_mark_assessed",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_finalise_report",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_employer_may_read_pack",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_can_read_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_can_write_case",
+          "kind": "function"
+        }
+      ],
+      "note": "Interview Intelligence Phase 2, part 2: the employer runtime -- 21 tables, one process-quality view, the guards and the governed RPCs. NOT applied hosted; must not be applied without separate owner approval. It DEPENDS on 20260919090000 (AI task registry) and 20260918090000 (the pack domain) and aborts if either is missing. It also adds permissive SELECT policies to Phase 1 pack tables so an entitled employer can READ the questions they must ask -- read only, no authoring widened. AI ships disabled (ai_enabled=false) and transcripts ship disabled and double-gated.",
+      "verify": "SELECT (SELECT count(*) FROM public.scp_interview_cases) AS cases, (SELECT ai_enabled FROM public.scp_interview_ai_config) AS ai_enabled, (SELECT transcript_enabled FROM public.scp_interview_ai_config) AS transcript_enabled;"
     }
   ],
   "policyVersion": 1,

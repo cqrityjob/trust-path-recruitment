@@ -280,6 +280,21 @@ jobs:
       - name: Interview Intelligence AI evaluation
         run: bun run interview-ai-eval:check
 
+      # The Phase 2 source contract. The database suites prove these of the
+      # SCHEMA and the AI evaluation proves them of the ENGINE'S OUTPUT; this
+      # proves them of the REPOSITORY -- the half neither can reach. It asserts
+      # no prohibited identifier exists anywhere in the runtime, the AI engine
+      # or the employer UI; that AI proposals and confirmed evidence remain
+      # separate tables with no client write path between them; that the
+      # TypeScript AI Task Registry and the database registry agree on every
+      # task key and version; that no provider credential is committed and the
+      # shipped default is the deterministic engine; and that the policy
+      # validator still fires on violations AND stays quiet on the product's own
+      # legitimate wording -- a validator that flags correct output gets
+      # switched off, so both directions are tested.
+      - name: Interview Intelligence runtime contract check
+        run: bun run interview-runtime-contract:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
