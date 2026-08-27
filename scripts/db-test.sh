@@ -534,9 +534,9 @@ if [ "$PL_RC" -ne 0 ]; then
   suite_failed "v3.1 personal layer"
 else
   echo "    ok  ${PL_PASSED} personal layer assertions passed"
-  if [ "$PL_PASSED" -lt 53 ]; then
+  if [ "$PL_PASSED" -lt 24 ]; then
     echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
-    suite_failed "v3.1 personal layer (assertion shortfall: floor 53)"
+    suite_failed "v3.1 personal layer (assertion shortfall: floor 24)"
   fi
 fi
 
@@ -938,7 +938,7 @@ fi
 
 echo "    ok  ${GATE_PASSED} pilot security-gate assertions passed"
 
-if [ "$GATE_PASSED" -lt 53 ]; then
+if [ "$GATE_PASSED" -lt 46 ]; then
   echo "FAIL: expected at least 46 pilot security-gate assertions, only ${GATE_PASSED} ran." >&2
   exit 1
 fi
@@ -1280,9 +1280,9 @@ if [ "$LIFE_RC" -ne 0 ]; then
   suite_failed "employer job lifecycle"
 else
   echo "    ok  ${LIFE_PASSED} job lifecycle assertions passed"
-  if [ "$LIFE_PASSED" -lt 53 ]; then
+  if [ "$LIFE_PASSED" -lt 28 ]; then
     echo "FAIL: expected at least 28 job lifecycle assertions, only ${LIFE_PASSED} ran." >&2
-    suite_failed "employer job lifecycle (assertion shortfall: floor 53)"
+    suite_failed "employer job lifecycle (assertion shortfall: floor 28)"
   fi
 fi
 

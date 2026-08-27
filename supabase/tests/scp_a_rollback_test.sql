@@ -207,9 +207,22 @@ DROP FUNCTION IF EXISTS public.scp_iv_record_prep_plan(uuid, jsonb, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_record_candidate_facts(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_record_role_requirements(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer);
+DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_start(uuid, text, text, text, jsonb, text);
 DROP FUNCTION IF EXISTS public.scp_iv_mark_sources_ready(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text, text, text, date);
+-- Erasure and the pilot-entitlement decision arrived with the integrity
+-- hardening migration; a rollback that leaves them behind leaves a way to
+-- write to tables that are no longer there.
+DROP FUNCTION IF EXISTS public.scp_iv_erase_source(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_active(uuid, uuid, uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_guard_pilot_grant();
+DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_audit();
+DROP FUNCTION IF EXISTS public.scp_intel_guard_prohibition_coverage();
+DROP FUNCTION IF EXISTS public.scp_intel_guard_edge_assurance();
+DROP FUNCTION IF EXISTS public.scp_research_guard_claim_not_ahead_of_source();
+DROP FUNCTION IF EXISTS public.scp_research_guard_implication_not_ahead_of_claim();
 DROP FUNCTION IF EXISTS public.scp_iv_add_source(uuid, text, text, text, text, text, text, uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_create_case(uuid, text, uuid, text, uuid, text, uuid, uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_set_case_status(uuid, text);
