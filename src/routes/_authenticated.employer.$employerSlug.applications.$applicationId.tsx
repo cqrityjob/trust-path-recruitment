@@ -536,6 +536,47 @@ function Candidate360({
         <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
           {t("employer.candidate.decision.lede")}
         </p>
+        {/* The interview report, referenced rather than restated.
+         *
+         *  §12's requirement, and the reason it is a reference: the decision is
+         *  taken here, and the evidence behind it is a finalised, immutable
+         *  document with its own content hash. Copying its contents into this
+         *  page would create a second version that could drift; naming the hash
+         *  means the person deciding, and anybody reviewing the decision later,
+         *  can tell exactly which document informed it.
+         *
+         *  Every section above keeps its own source identity -- application,
+         *  assessment observations, Passport-verified facts, human-confirmed
+         *  interview evidence -- and nothing is blended into a total. There is
+         *  no overall score anywhere on this page, and this block adds none. */}
+        {interviewCases
+          .filter((ic) => ic.reportFinalised)
+          .map((ic) => (
+            <div
+              key={ic.id}
+              className="mt-4 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm"
+            >
+              <p className="font-medium text-foreground">
+                {t("employer.candidate.decision.interviewReport")}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {t("employer.candidate.decision.interviewReportNote")}
+              </p>
+              {ic.reportContentHash && (
+                <p className="mt-2 font-mono text-xs text-muted-foreground">
+                  {ic.reportContentHash.slice(0, 16)}
+                </p>
+              )}
+              <Link
+                to="/employer/$employerSlug/interview-intelligence/$caseId/report"
+                params={{ employerSlug, caseId: ic.id }}
+                className="mt-2 inline-flex min-h-11 items-center text-xs font-medium text-accent hover:underline"
+              >
+                {t("employer.candidate.structuredInterview.openReport")}
+              </Link>
+            </div>
+          ))}
+
         {nextStatuses.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
             {t("employer.candidate.decision.closed")}

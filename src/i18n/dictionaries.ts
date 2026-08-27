@@ -1766,6 +1766,9 @@ export const dictionaries = {
     "employer.candidate.structuredInterview.open": "Öppna intervjun",
     "employer.candidate.structuredInterview.openReport": "Öppna rapporten",
     "employer.candidate.structuredInterview.loading": "Läser in intervjuer…",
+    "employer.candidate.decision.interviewReport": "Underlag: strukturerad intervju",
+    "employer.candidate.decision.interviewReportNote":
+      "Rapporten är slutlig och oföränderlig och bygger enbart på evidens som en människa har bekräftat. Den är beslutsstöd — beslutet fattar och dokumenterar ni.",
     "employer.candidate.structuredInterview.pending.one": "AI-förslag väntar på granskning",
     "employer.candidate.structuredInterview.pending.other": "AI-förslag väntar på granskning",
     "employer.candidate.interview.open": "Öppna kandidatunderlag",
@@ -5785,6 +5788,9 @@ export const dictionaries = {
     "employer.candidate.structuredInterview.open": "Open interview",
     "employer.candidate.structuredInterview.openReport": "Open report",
     "employer.candidate.structuredInterview.loading": "Loading interviews…",
+    "employer.candidate.decision.interviewReport": "Evidence: structured interview",
+    "employer.candidate.decision.interviewReportNote":
+      "The report is final and immutable and rests only on evidence a human confirmed. It is decision support — the decision is yours to make and to record.",
     "employer.candidate.structuredInterview.pending.one": "AI proposal awaiting review",
     "employer.candidate.structuredInterview.pending.other": "AI proposals awaiting review",
     "employer.candidate.interview.open": "Open candidate brief",

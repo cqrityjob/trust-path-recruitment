@@ -251,6 +251,12 @@ export interface ApplicationInterviewCase {
   readonly validationLabel: string | null;
   readonly proposalsAwaitingReview: number;
   readonly reportFinalised: boolean;
+  /**
+   * The finalised report's own content hash — the governed reference the
+   * decision rests on. Present only once a report is final, because until then
+   * there is nothing immutable to refer to.
+   */
+  readonly reportContentHash: string | null;
 }
 
 const applicationInput = z.object({
@@ -280,6 +286,7 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
       const ids = (rows ?? []).map((r) => r.id as string);
       const pending = new Map<string, number>();
       const finalised = new Set<string>();
+      const hashes = new Map<string, string | null>();
       if (ids.length > 0) {
         const { data: props } = await db
           .from("scp_interview_evidence_proposals")
@@ -292,10 +299,13 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
         }
         const { data: reports } = await db
           .from("scp_interview_reports")
-          .select("case_id, status")
+          .select("case_id, status, content_hash")
           .in("case_id", ids)
           .eq("status", "final");
-        for (const r of reports ?? []) finalised.add(r.case_id as string);
+        for (const r of reports ?? []) {
+          finalised.add(r.case_id as string);
+          hashes.set(r.case_id as string, (r.content_hash as string | null) ?? null);
+        }
       }
 
       const cases = (rows ?? []).map((r) => {
@@ -316,6 +326,7 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
           validationLabel: version?.validation_label ?? null,
           proposalsAwaitingReview: pending.get(r.id as string) ?? 0,
           reportFinalised: finalised.has(r.id as string),
+          reportContentHash: hashes.get(r.id as string) ?? null,
         };
       });
 
