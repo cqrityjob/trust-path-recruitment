@@ -905,6 +905,14 @@ INSERT INTO auth.identities (user_id, provider, provider_id, identity_data) VALU
   ('ad100000-0000-0000-0000-0000000000b1','email','historik@acc.invalid',
    '{"email":"historik@acc.invalid"}'::jsonb);
 
+-- A live session and its refresh token, so "existing sessions are revoked" is
+-- asserted against rows that actually exist rather than against an empty set.
+INSERT INTO auth.sessions (id, user_id) VALUES
+  ('ad100000-eeee-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1');
+INSERT INTO auth.refresh_tokens (token, user_id, session_id) VALUES
+  ('historik-refresh-token','ad100000-0000-0000-0000-0000000000b1',
+   'ad100000-eeee-0000-0000-0000000000b1');
+
 INSERT INTO public.consent_records (user_id, purpose, policy_version) VALUES
   ('ad100000-0000-0000-0000-0000000000b1','platform_terms','2026-01');
 
@@ -1117,10 +1125,26 @@ SELECT pg_temp.ok(
 SELECT public.admin_delete_user_if_safe(
   'ad100000-0000-0000-0000-0000000000b1','Ägarens begäran om radering.','historik@acc.invalid');
 
+-- The account carries retained history, so the deletion takes the ERASURE
+-- form: the auth row survives as an anonymous tombstone precisely so that
+-- every foreign key pointing at it stays valid. What is destroyed is the
+-- IDENTITY -- which is what "the account is gone" has to mean here.
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 0
-  AND (SELECT count(*) FROM auth.identities WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0,
-  'H6 the auth account and its sign-in identity are gone');
+  (SELECT count(*) FROM auth.identities WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM auth.sessions WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT email FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000b1')
+        = 'raderad+ad100000-0000-0000-0000-0000000000b1@removed.invalid'
+  AND (SELECT raw_user_meta_data FROM auth.users
+        WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = '{}'::jsonb
+  AND (SELECT banned_until FROM auth.users
+        WHERE id = 'ad100000-0000-0000-0000-0000000000b1') > now() + interval '50 years',
+  'H6 the identity is destroyed: no sign-in identity, no live session, no address, no sign-up name, banned a century out');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.deleted_accounts
+    WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1'
+      AND had_history) = 1,
+  'H6b and the account is registered as permanently deleted, which is what makes it irreversible');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.profiles WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 0
@@ -1162,15 +1186,20 @@ SELECT pg_temp.ok(
     WHERE subject_id = 'ad100000-4444-0000-0000-0000000000b1') = 0,
   'H11 and the subject is no longer attached to any person -- the spine is detached, not deleted');
 
+-- The disclosure keeps pointing at the account row, which is exactly why that
+-- row survives: the employer's record keeps its foreign key. What it loses is
+-- the claim it pointed at, because the holder's own Passport is erased -- and
+-- losing that pointer must not take the record with it.
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.sp_disclosures WHERE id = 'ad100000-8888-0000-0000-0000000000b1') = 1
   AND (SELECT holder_user_id FROM public.sp_disclosures
-        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NULL
-  AND (SELECT holder_detached_at FROM public.sp_disclosures
-        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NOT NULL
+        WHERE id = 'ad100000-8888-0000-0000-0000000000b1')
+        = 'ad100000-0000-0000-0000-0000000000b1'::uuid
   AND (SELECT focus_claim_id FROM public.sp_disclosures
+        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NULL
+  AND (SELECT recipient_hint FROM public.sp_disclosures
         WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NULL,
-  'H12 the disclosure the employer received survives the holder AND the deleted claim it pointed at');
+  'H12 the disclosure the employer received survives the erased holder AND the deleted claim it pointed at');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_interview_notes
@@ -1192,23 +1221,28 @@ SELECT pg_temp.ok(
 
 -- ── 6. Nothing personal is left where it should have been anonymised ───────
 
+-- The application keeps its applicant reference -- a foreign key to a row that
+-- still exists and now names nobody. What it does not keep is anything the
+-- candidate wrote or uploaded.
 SELECT pg_temp.ok(
   (SELECT applicant_user_id FROM public.job_applications
-    WHERE id = 'ad100000-3333-0000-0000-0000000000b1') IS NULL
-  AND (SELECT applicant_detached_at FROM public.job_applications
-        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') IS NOT NULL
+    WHERE id = 'ad100000-3333-0000-0000-0000000000b1')
+    = 'ad100000-0000-0000-0000-0000000000b1'::uuid
   AND (SELECT coalesce(phone,'') || coalesce(cover_note,'') || coalesce(cv_storage_path,'')
               || coalesce(cv_original_filename,'')
          FROM public.job_applications
         WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = '',
-  'H15 the retained application keeps no phone number, no covering note and no CV');
+  'H15 the retained application keeps its applicant foreign key, and no phone number, covering note or CV');
 
+-- Same shape as the application: the reference survives, the identity does
+-- not. recipient_email was the last thing on this row that named a person.
 SELECT pg_temp.ok(
   (SELECT recipient_email FROM public.assessment_assignments
     WHERE id = 'ad100000-5555-0000-0000-0000000000b1')
       = 'raderad+ad100000-0000-0000-0000-0000000000b1@removed.invalid'
   AND (SELECT recipient_user_id FROM public.assessment_assignments
-        WHERE id = 'ad100000-5555-0000-0000-0000000000b1') IS NULL,
+        WHERE id = 'ad100000-5555-0000-0000-0000000000b1')
+      = 'ad100000-0000-0000-0000-0000000000b1'::uuid,
   'H16 the retained assessment assignment carries a pseudonym, not the person''s address');
 
 SELECT pg_temp.ok(
@@ -1225,15 +1259,18 @@ SELECT pg_temp.ok(
   'H17 the deleted address appears nowhere on any retained row');
 
 -- The invitation the person SENT is somebody else's record of somebody else.
--- Releasing the sender must not touch the person it was sent to.
+-- Erasing the sender must leave the person it was sent to completely alone,
+-- and must leave the sender's foreign key intact -- it now points at a row
+-- that exists and names nobody, which is the whole reason that row survives.
 SELECT pg_temp.ok(
   (SELECT invited_by FROM public.scp_assessment_invitations
-    WHERE id = 'ad100000-9999-0000-0000-0000000000b1') IS NULL
+    WHERE id = 'ad100000-9999-0000-0000-0000000000b1')
+    = 'ad100000-0000-0000-0000-0000000000b1'::uuid
   AND (SELECT email FROM public.scp_assessment_invitations
         WHERE id = 'ad100000-9999-0000-0000-0000000000b1') = 'nagon-annan@acc.invalid'
   AND (SELECT invited_name FROM public.scp_assessment_invitations
         WHERE id = 'ad100000-9999-0000-0000-0000000000b1') = 'Någon Annan',
-  'H18 an invitation they sent keeps the recipient it named, and loses only the sender');
+  'H18 an invitation they sent keeps the recipient it named, and keeps the sender''s foreign key valid');
 
 -- ── 7. No orphans ──────────────────────────────────────────────────────────
 --
@@ -1262,7 +1299,7 @@ BEGIN
         _rec.tbl, _rec.col, _n;
     END IF;
   END LOOP;
-  RAISE NOTICE '    ok  %', 'H19 no foreign key anywhere in the schema still points at the deleted account';
+  RAISE NOTICE '    ok  %', 'H19 no foreign key anywhere in the schema points at a row that does not exist';
 END $$;
 
 -- ── 8. It cannot be reopened, and the address is free ──────────────────────
@@ -1270,8 +1307,21 @@ END $$;
 SELECT pg_temp.must_fail(
   $$SELECT public.admin_set_user_disabled(
       'ad100000-0000-0000-0000-0000000000b1', false, 'Öppna igen.')$$,
-  'USER_NOT_FOUND',
-  'H20 an account deleted with all its history cannot be reopened either');
+  'ACCOUNT_ERASED',
+  'H20 an erased account cannot be reopened -- the button next to the one that erased it refuses');
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_set_user_disabled(
+      'ad100000-0000-0000-0000-0000000000b1', true, 'Stäng av.')$$,
+  'ACCOUNT_ERASED',
+  'H20b and it cannot be disabled either -- an erasure is not a disable in either direction');
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_delete_user_if_safe(
+      'ad100000-0000-0000-0000-0000000000b1','igen',
+      'raderad+ad100000-0000-0000-0000-0000000000b1@removed.invalid')$$,
+  'ACCOUNT_ALREADY_ERASED',
+  'H20c and it cannot be erased a second time');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM auth.users WHERE email = 'historik@acc.invalid') = 0
@@ -1302,6 +1352,84 @@ SELECT pg_temp.ok(
   AND (SELECT count(*) FROM public.consent_records WHERE user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0,
   'H23 the new account inherits nothing: no role, no membership, no application, no subject, no Passport, no consent');
 
+-- ── 8b. Storage erasure is queued, honestly ───────────────────────────────
+--
+-- The evidence FILE lives in a bucket behind an HTTP API and cannot be deleted
+-- inside this transaction. What CAN be guaranteed transactionally is that the
+-- order to delete it exists the moment the row naming it is gone, and these
+-- assertions are about exactly that -- not about a Storage call this suite has
+-- no business pretending to make.
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.storage_erasure_queue
+    WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
+      AND bucket_id = 'passport-evidence'
+      AND object_path = 'ad100000-0000-0000-0000-0000000000b1/bevis.pdf'
+      AND completed_at IS NULL) = 1,
+  'H26 the evidence object is queued for erasure, by bucket and exact path');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_evidence
+    WHERE storage_path = 'ad100000-0000-0000-0000-0000000000b1/bevis.pdf') = 0,
+  'H27 and the row that named it is gone -- the queue is the only thing that still knows the path');
+
+SELECT pg_temp.ok(
+  (public.admin_storage_erasure_backlog() ->> 'pending')::int >= 1
+  AND (public.admin_storage_erasure_backlog() ->> 'failed')::int = 0,
+  'H28 the backlog reports the object as owed and not yet failed');
+
+-- A sweep that fails must leave the work owed and say why. Simulated here the
+-- way the sweep records one: attempts incremented, last_error kept,
+-- completed_at still null.
+UPDATE public.storage_erasure_queue
+   SET attempts = attempts + 1, last_attempt_at = now(), last_error = 'simulated storage outage'
+ WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1';
+
+SELECT pg_temp.ok(
+  (public.admin_storage_erasure_backlog() ->> 'failed')::int >= 1
+  AND public.admin_storage_erasure_backlog() -> 'recent_errors' -> 0 ->> 'error'
+        = 'simulated storage outage'
+  AND (SELECT count(*) FROM public.storage_erasure_queue
+        WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
+          AND completed_at IS NULL) = 1,
+  'H29 a failed erasure is visible, still owed, and carries its error -- it is not dropped');
+
+UPDATE public.storage_erasure_queue
+   SET completed_at = now(), last_error = NULL
+ WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1';
+
+SELECT pg_temp.ok(
+  (public.admin_storage_erasure_backlog() ->> 'pending')::int = 0
+  AND (public.admin_storage_erasure_backlog() ->> 'completed')::int >= 1,
+  'H30 and a retry that succeeds clears it from the backlog');
+
+
+-- ── 8c. The other form: an account with nothing attached is still hard deleted
+--
+-- Both forms must keep working. The erasure form exists only because retained
+-- history needs its foreign keys; an account that has none is removed outright,
+-- exactly as before, and leaves no tombstone behind to administer.
+
+INSERT INTO auth.users (id, email) VALUES
+  ('ad100000-0000-0000-0000-0000000000b3','engenhistorik@acc.invalid');
+
+SELECT pg_temp.ok(
+  (public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b3') ->> 'form')
+    = 'hard_delete'
+  AND (public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1') ->> 'form')
+    = 'erasure',
+  'H31 the report chooses the form: hard delete without history, erasure with it');
+
+SELECT public.admin_delete_user_if_safe(
+  'ad100000-0000-0000-0000-0000000000b3','Inget bevaras.','engenhistorik@acc.invalid');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000b3') = 0
+  AND (SELECT count(*) FROM public.deleted_accounts
+        WHERE user_id = 'ad100000-0000-0000-0000-0000000000b3') = 0,
+  'H32 an account with no history is removed outright, tombstone and all');
+
+
 -- ── 9. The exception the guards recognise is not a general licence ─────────
 
 SELECT pg_temp.must_fail(
@@ -1316,6 +1444,24 @@ SELECT pg_temp.must_fail(
      WHERE attempt_id = 'ad100000-6666-0000-0000-0000000000b1'$$,
   'SCP_INTERVIEW_NOTE_APPEND_ONLY',
   'H25 and an interview note is still append-only, deletion or no deletion');
+
+-- The two Passport guards were widened to let an erasure through. Outside one
+-- they must refuse exactly as before, for a live holder. A row is inserted
+-- first, because a DELETE that matches nothing never reaches the trigger and
+-- would let these two assertions pass without testing anything.
+INSERT INTO public.sp_passport_events (holder_user_id, event_type, detail)
+VALUES ('ad100000-0000-0000-0000-000000000012','claim_created','{}'::jsonb);
+SELECT pg_temp.must_fail(
+  $$DELETE FROM public.sp_passport_events
+     WHERE holder_user_id = 'ad100000-0000-0000-0000-000000000012'$$,
+  'SP_EVENTS_APPEND_ONLY',
+  'H33 outside an erasure, passport history still cannot be deleted for a live holder');
+
+SELECT pg_temp.must_fail(
+  $$UPDATE public.sp_passport_events SET event_type = 'claim_withdrawn'
+     WHERE holder_user_id = 'ad100000-0000-0000-0000-000000000012'$$,
+  'SP_EVENTS_APPEND_ONLY',
+  'H34 and it still cannot be updated, by anyone, ever');
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -1394,6 +1540,6 @@ SELECT pg_temp.ok(
       AND p.proconfig::text LIKE '%search_path%') = 11,
   'S11 every new function is SECURITY DEFINER with a fixed search_path');
 
-DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 128 assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 140 assertions passed'; END $$;
 
 ROLLBACK;

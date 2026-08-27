@@ -2991,6 +2991,72 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_accounts: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          had_history: boolean
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          had_history?: boolean
+          reason: string
+          user_id: string
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          had_history?: boolean
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      storage_erasure_queue: {
+        Row: {
+          attempts: number
+          bucket_id: string
+          completed_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          object_path: string
+          reason: string
+          requested_at: string
+          requested_by: string | null
+          subject_user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          bucket_id: string
+          completed_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          object_path: string
+          reason: string
+          requested_at?: string
+          requested_by?: string | null
+          subject_user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          bucket_id?: string
+          completed_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          object_path?: string
+          reason?: string
+          requested_at?: string
+          requested_by?: string | null
+          subject_user_id?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           cig_profession_slug: string | null

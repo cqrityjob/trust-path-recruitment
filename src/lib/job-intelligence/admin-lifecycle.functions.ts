@@ -287,6 +287,14 @@ export type AdminUserDeletionImpact = {
   /** Rows that are not touched at all, by spine name or `table.column`. */
   preserved: Record<string, number>;
   hasHistory: boolean;
+  /**
+   * Which form a permanent deletion takes. "hard_delete" removes the auth row
+   * outright; "erasure" keeps it as an anonymous tombstone so that retained
+   * records keep their foreign keys. Both release the address.
+   */
+  form: "hard_delete" | "erasure";
+  /** True when this account has ALREADY been permanently deleted. */
+  alreadyErased: boolean;
 };
 
 export const adminGetUserDeletionImpact = createServerFn({ method: "POST" })
@@ -314,6 +322,8 @@ export const adminGetUserDeletionImpact = createServerFn({ method: "POST" })
       detached: (r.detached ?? {}) as Record<string, number>,
       preserved: (r.preserved ?? {}) as Record<string, number>,
       hasHistory: Boolean(r.has_history ?? (r.blockers ?? []).length > 0),
+      form: (r.form as "hard_delete" | "erasure") ?? "erasure",
+      alreadyErased: Boolean(r.already_erased),
     };
   });
 
@@ -376,21 +386,64 @@ const deleteUserSchema = z.object({
 export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => deleteUserSchema.parse(d))
-  .handler(async ({ data, context }): Promise<{ userId: string }> => {
-    const ctx = context as Ctx;
-    await assertSuperadmin(ctx);
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{
+      userId: string;
+      form: string;
+      storageObjectsQueued: number;
+      storageObjectsErased: number;
+      storageObjectsOwed: number;
+    }> => {
+      const ctx = context as Ctx;
+      await assertSuperadmin(ctx);
 
-    const { data: r, error } = await ctx.supabase.rpc("admin_delete_user_if_safe", {
-      _user_id: data.userId,
-      _reason: data.reason,
-      _confirm_email: data.confirmEmail,
-    });
-    if (error) {
-      console.error("[admin-lifecycle] user delete refused", error);
-      throw new Error(extractCode(error, "USER_DELETE_FAILED"));
-    }
-    return { userId: r.user_id as string };
-  });
+      const { data: r, error } = await ctx.supabase.rpc("admin_delete_user_if_safe", {
+        _user_id: data.userId,
+        _reason: data.reason,
+        _confirm_email: data.confirmEmail,
+      });
+      if (error) {
+        console.error("[admin-lifecycle] user delete refused", error);
+        throw new Error(extractCode(error, "USER_DELETE_FAILED"));
+      }
+
+      // The database deleted the Passport evidence ROWS and, in the same
+      // transaction, recorded which Storage objects that orphans. Deleting the
+      // objects is an HTTP call to another service and cannot be part of that
+      // transaction, so it happens here, immediately, while the administrator is
+      // still waiting -- which makes the usual case finish within this request.
+      //
+      // A failure here is deliberately NOT thrown. The account is already erased
+      // and that must not be reported as a failure; the objects stay queued with
+      // their error recorded, the next sweep retries them, and
+      // admin_storage_erasure_backlog() is where an administrator sees what is
+      // still owed.
+      const queued = Number(r.storage_objects_queued ?? 0);
+      let storageObjectsErased = 0;
+      let storageObjectsOwed = queued;
+      if (queued > 0) {
+        try {
+          const { sweepStorageErasureQueue } = await import("./admin-storage-erasure.functions");
+          const sweep = await sweepStorageErasureQueue();
+          storageObjectsErased = sweep.deleted;
+          storageObjectsOwed = sweep.failed;
+        } catch (e) {
+          console.error("[admin-lifecycle] storage erasure sweep failed; objects remain queued", e);
+        }
+      }
+
+      return {
+        userId: r.user_id as string,
+        form: (r.form as string) ?? "erasure",
+        storageObjectsQueued: queued,
+        storageObjectsErased,
+        storageObjectsOwed,
+      };
+    },
+  );
 
 // ---------------------------------------------------------------------------
 // Job lifecycle

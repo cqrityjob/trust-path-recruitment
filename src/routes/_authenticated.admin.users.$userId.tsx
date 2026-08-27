@@ -499,7 +499,11 @@ function AdminUserDetailPage() {
                       label: t("admin.lifecycle.person.enable.label"),
                       consequence: t("admin.lifecycle.person.enable.consequence"),
                       variant: "default" as const,
-                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      blockedReason: isSelf
+                        ? t("admin.lifecycle.error.selfAction")
+                        : impact.data?.alreadyErased
+                          ? t("admin.lifecycle.person.delete.alreadyErased")
+                          : null,
                       onConfirm: ({ reason }: { reason: string }) =>
                         setDisabled.mutate({ disabled: false, reason }),
                     }
@@ -507,7 +511,11 @@ function AdminUserDetailPage() {
                       key: "disable",
                       label: t("admin.lifecycle.person.disable.label"),
                       consequence: t("admin.lifecycle.person.disable.consequence"),
-                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      blockedReason: isSelf
+                        ? t("admin.lifecycle.error.selfAction")
+                        : impact.data?.alreadyErased
+                          ? t("admin.lifecycle.person.delete.alreadyErased")
+                          : null,
                       onConfirm: ({ reason }: { reason: string }) =>
                         setDisabled.mutate({ disabled: true, reason }),
                     },
@@ -526,7 +534,9 @@ function AdminUserDetailPage() {
                     ? t("admin.lifecycle.person.delete.blockedSuperadmin")
                     : isSelf
                       ? t("admin.lifecycle.error.selfAction")
-                      : null,
+                      : impact.data?.alreadyErased
+                        ? t("admin.lifecycle.person.delete.alreadyErased")
+                        : null,
                   onConfirm: ({ reason }: { reason: string }) => anonymise.mutate({ reason }),
                 },
                 {
@@ -547,13 +557,16 @@ function AdminUserDetailPage() {
                       detached={impact.data.detached}
                       preserved={impact.data.preserved}
                       hasHistory={impact.data.hasHistory}
+                      passportEvidenceFiles={impact.data.deleted["sp_evidence.holder_user_id"] ?? 0}
                     />
                   ) : null,
                   blockedReason: !whoAmI.data?.isSuperadmin
                     ? t("admin.lifecycle.person.delete.blockedSuperadmin")
                     : isSelf
                       ? t("admin.lifecycle.error.selfAction")
-                      : null,
+                      : impact.data?.alreadyErased
+                        ? t("admin.lifecycle.person.delete.alreadyErased")
+                        : null,
                   onConfirm: ({ reason }: { reason: string }) => deleteUser.mutate({ reason }),
                 },
               ]}

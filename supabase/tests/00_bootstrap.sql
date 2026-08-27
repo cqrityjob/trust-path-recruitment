@@ -78,6 +78,26 @@ ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS is_sso_user boolean NOT NULL DEF
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_partial_key
   ON auth.users (email) WHERE is_sso_user = false;
 
+-- Sessions and refresh tokens, for the same reason banned_until is stubbed: a
+-- permanent account erasure REVOKES the person's live sessions, and without
+-- these tables the suite would assert a revocation that never touched
+-- anything. Both cascade from auth.users in the real schema.
+CREATE TABLE IF NOT EXISTS auth.sessions (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  not_after  timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS auth.refresh_tokens (
+  id         bigserial PRIMARY KEY,
+  token      text UNIQUE,
+  user_id    text,
+  session_id uuid REFERENCES auth.sessions(id) ON DELETE CASCADE,
+  revoked    boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS auth.identities (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   provider_id     text NOT NULL,

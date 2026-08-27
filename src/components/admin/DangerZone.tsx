@@ -330,11 +330,14 @@ export function AccountDeletionImpactPreview({
   detached,
   preserved,
   hasHistory,
+  passportEvidenceFiles,
 }: {
   deleted: Record<string, number>;
   detached: Record<string, number>;
   preserved: Record<string, number>;
   hasHistory: boolean;
+  /** Evidence documents in Storage that the erasure will also remove. */
+  passportEvidenceFiles: number;
 }) {
   const { t } = useT();
 
@@ -383,6 +386,15 @@ export function AccountDeletionImpactPreview({
       </div>
 
       <p className="text-xs text-muted-foreground">{t("admin.danger.impact.keptNote")}</p>
+
+      {/* Storage is a different service, and the honest thing to say is that
+          the files go straight after the rows -- not that the two are one
+          atomic act. A failure is queued and retried, never dropped. */}
+      {passportEvidenceFiles > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {t("admin.lifecycle.person.delete.storageNote")}
+        </p>
+      ) : null}
     </div>
   );
 }

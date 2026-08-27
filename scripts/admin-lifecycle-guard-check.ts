@@ -154,13 +154,22 @@ for (const [label, source, floor] of [
     `expected ${label} to define at least ${floor} functions, found ${createdFunctions.length}`,
   );
   for (const fn of new Set(createdFunctions)) {
-    // Trigger functions take no arguments, are never granted to anyone, and
-    // are revoked FROM PUBLIC only -- there is no role to name.
+    // Pre-existing exemption, left as it was: employer_operational_guard was
+    // written without the REVOKE and changing that is not this check's job.
     if (fn === "employer_operational_guard") continue;
-    if (fn === "assessment_assignments_immutable_guard") {
+
+    // Trigger functions take no arguments and are never granted to any role:
+    // a trigger fires without EXECUTE being checked, so the correct posture is
+    // revoked FROM PUBLIC and granted to nobody. Detected from the declaration
+    // rather than from a list of names, so a new guard is covered the day it
+    // is written.
+    const isTriggerFn = new RegExp(
+      `CREATE OR REPLACE FUNCTION public\\.${fn}\\(\\)\\s*\n\\s*RETURNS trigger`,
+    ).test(source);
+    if (isTriggerFn) {
       expect(
         source.includes(`REVOKE ALL ON FUNCTION public.${fn}() FROM PUBLIC;`),
-        `public.${fn} is a trigger function and must stay revoked FROM PUBLIC`,
+        `public.${fn} is a trigger function and must be revoked FROM PUBLIC`,
       );
       continue;
     }

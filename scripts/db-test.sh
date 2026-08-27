@@ -1201,9 +1201,9 @@ if [ "$ACC_RC" -ne 0 ]; then
   suite_failed "Admin Control Center lifecycle"
 else
   echo "    ok  ${ACC_PASSED} admin lifecycle assertions passed"
-  if [ "$ACC_PASSED" -lt 128 ]; then
-    echo "FAIL: expected at least 128 admin lifecycle assertions, only ${ACC_PASSED} ran." >&2
-    suite_failed "Admin Control Center lifecycle (assertion shortfall: floor 128)"
+  if [ "$ACC_PASSED" -lt 140 ]; then
+    echo "FAIL: expected at least 140 admin lifecycle assertions, only ${ACC_PASSED} ran." >&2
+    suite_failed "Admin Control Center lifecycle (assertion shortfall: floor 140)"
   fi
 fi
 

@@ -3715,6 +3715,10 @@ export const dictionaries = {
       "Den här åtgärden kan inte ångras. Kontot och personens egna uppgifter raderas. Historik som måste bevaras anonymiseras och kopplas loss från personen.",
     "admin.lifecycle.person.delete.historyHandled":
       "Kontot har historik som måste bevaras. Vid permanent radering anonymiseras sådan historik automatiskt.",
+    "admin.lifecycle.person.delete.alreadyErased":
+      "Kontot är redan permanent raderat. Det finns ingen identitet kvar att öppna, stänga av eller anonymisera.",
+    "admin.lifecycle.person.delete.storageNote":
+      "Passport-underlag i filform tas bort från lagringen direkt efter raderingen. Misslyckas det ligger posten kvar i kön och försöks igen — den försvinner inte tyst.",
     "admin.danger.impact.deletedHeading": "Tas bort",
     "admin.danger.impact.deletedNothing": "Ingenting tas bort.",
     "admin.danger.impact.keptHeading": "Anonymiseras eller behålls",
@@ -7436,6 +7440,10 @@ export const dictionaries = {
       "This action cannot be undone. The account and the person's own data are deleted. History that must be preserved is anonymised and detached from the person.",
     "admin.lifecycle.person.delete.historyHandled":
       "This account has history that must be preserved. Permanent deletion anonymises that history automatically.",
+    "admin.lifecycle.person.delete.alreadyErased":
+      "This account has already been permanently deleted. There is no identity left to reopen, disable or anonymise.",
+    "admin.lifecycle.person.delete.storageNote":
+      "Passport evidence files are removed from Storage immediately after the deletion. If that fails the item stays queued and is retried — it is never dropped silently.",
     "admin.danger.impact.deletedHeading": "Deleted",
     "admin.danger.impact.deletedNothing": "Nothing is deleted.",
     "admin.danger.impact.keptHeading": "Anonymised or kept",
