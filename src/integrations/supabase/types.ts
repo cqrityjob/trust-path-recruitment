@@ -3015,48 +3015,6 @@ export type Database = {
         }
         Relationships: []
       }
-      storage_erasure_queue: {
-        Row: {
-          attempts: number
-          bucket_id: string
-          completed_at: string | null
-          id: string
-          last_attempt_at: string | null
-          last_error: string | null
-          object_path: string
-          reason: string
-          requested_at: string
-          requested_by: string | null
-          subject_user_id: string | null
-        }
-        Insert: {
-          attempts?: number
-          bucket_id: string
-          completed_at?: string | null
-          id?: string
-          last_attempt_at?: string | null
-          last_error?: string | null
-          object_path: string
-          reason: string
-          requested_at?: string
-          requested_by?: string | null
-          subject_user_id?: string | null
-        }
-        Update: {
-          attempts?: number
-          bucket_id?: string
-          completed_at?: string | null
-          id?: string
-          last_attempt_at?: string | null
-          last_error?: string | null
-          object_path?: string
-          reason?: string
-          requested_at?: string
-          requested_by?: string | null
-          subject_user_id?: string | null
-        }
-        Relationships: []
-      }
       employees: {
         Row: {
           cig_profession_slug: string | null
@@ -10228,6 +10186,48 @@ export type Database = {
           },
         ]
       }
+      storage_erasure_queue: {
+        Row: {
+          attempts: number
+          bucket_id: string
+          completed_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          object_path: string
+          reason: string
+          requested_at: string
+          requested_by: string | null
+          subject_user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          bucket_id: string
+          completed_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          object_path: string
+          reason: string
+          requested_at?: string
+          requested_by?: string | null
+          subject_user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          bucket_id?: string
+          completed_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          object_path?: string
+          reason?: string
+          requested_at?: string
+          requested_by?: string | null
+          subject_user_id?: string | null
+        }
+        Relationships: []
+      }
       target_professions: {
         Row: {
           chosen_at: string
@@ -10610,6 +10610,11 @@ export type Database = {
       }
     }
     Functions: {
+      account_deletion_only_released: {
+        Args: { _cols: string[]; _new: Json; _old: Json }
+        Returns: boolean
+      }
+      account_deletion_releases: { Args: { _actor: string }; Returns: boolean }
       admin_anonymise_user: {
         Args: { _confirm_email: string; _reason: string; _user_id: string }
         Returns: Json
@@ -10653,6 +10658,7 @@ export type Database = {
         Args: { _disabled: boolean; _reason: string; _user_id: string }
         Returns: Json
       }
+      admin_storage_erasure_backlog: { Args: never; Returns: Json }
       admin_user_deletion_impact: { Args: { _user_id: string }; Returns: Json }
       approve_access_request: {
         Args: { _decision: string; _granted_role?: string; _request_id: string }
