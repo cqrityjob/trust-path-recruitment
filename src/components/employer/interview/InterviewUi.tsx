@@ -311,6 +311,15 @@ const ERROR_SV: Record<string, string> = {
 
 export function interviewErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? "");
+
+  // A dropped connection surfaces as the browser's own "Failed to fetch",
+  // which tells a recruiter nothing and looks like the product broke. It is
+  // also the case where saying what happened matters most: the save did not
+  // happen, nothing was half-written, and trying again is the right move.
+  if (/failed to fetch|networkerror|load failed|err_network|fetch failed/i.test(raw)) {
+    return "Ingen kontakt med servern. Ingenting sparades — det du skrivit står kvar, så du kan försöka igen.";
+  }
+
   const code = /\b(SCP_[A-Z0-9_]+)\b/.exec(raw)?.[1];
   if (code && ERROR_SV[code]) return ERROR_SV[code];
   // Strip the code prefix even when there is no translation: the sentence after
