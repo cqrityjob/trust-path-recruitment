@@ -19,6 +19,7 @@ import {
   Chip,
   Panel,
   State,
+  TrustStageBanner,
   interviewErrorMessage,
   ProviderModeChip,
   ProviderModeNote,
@@ -35,6 +36,7 @@ import {
   addCaseSource,
   approvePreparation,
   getInterviewCase,
+  getTrustStage,
   markSourcesReady,
   runPreparation,
   startInterviewSession,
@@ -62,6 +64,8 @@ function Page() {
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
+
+  const trustFn = useServerFn(getTrustStage);
   const addSourceFn = useServerFn(addCaseSource);
   const readyFn = useServerFn(markSourcesReady);
   const prepFn = useServerFn(runPreparation);
@@ -71,6 +75,14 @@ function Page() {
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getFn({ data: { caseId } }),
+    retry: false,
+  });
+  // Which CQrity TRUST stage this case is in. Derived in the database from
+  // the case status and the session's PEACE stage, so it cannot disagree
+  // with the workflow the rest of the screen shows.
+  const trustQ = useQuery({
+    queryKey: ["ii", "trust-stage", caseId],
+    queryFn: () => trustFn({ data: { caseId } }),
     retry: false,
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
@@ -189,6 +201,10 @@ function Page() {
           )}
         </div>
       </header>
+
+      <div className="mt-6 max-w-4xl">
+        <TrustStageBanner stage={trustQ.data ?? null} />
+      </div>
 
       <div className="mt-6">
         <CaseSteps current={d.status} />

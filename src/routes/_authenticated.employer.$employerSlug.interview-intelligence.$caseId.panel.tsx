@@ -34,6 +34,7 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   getInterviewCase,
+  getTrustStage,
   getPanel,
   submitToPanel,
   revealPanel,
@@ -48,6 +49,7 @@ import {
   Chip,
   Panel as InfoPanel,
   State,
+  TrustStageBanner,
   interviewErrorMessage,
 } from "@/components/employer/interview/InterviewUi";
 
@@ -61,6 +63,8 @@ function Page() {
   const qc = useQueryClient();
 
   const getCaseFn = useServerFn(getInterviewCase);
+
+  const trustFn = useServerFn(getTrustStage);
   const panelFn = useServerFn(getPanel);
   const submitFn = useServerFn(submitToPanel);
   const revealFn = useServerFn(revealPanel);
@@ -69,6 +73,14 @@ function Page() {
   const caseQ = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getCaseFn({ data: { caseId } }),
+    retry: false,
+  });
+  // Which CQrity TRUST stage this case is in. Derived in the database from
+  // the case status and the session's PEACE stage, so it cannot disagree
+  // with the workflow the rest of the screen shows.
+  const trustQ = useQuery({
+    queryKey: ["ii", "trust-stage", caseId],
+    queryFn: () => trustFn({ data: { caseId } }),
     retry: false,
   });
   const panelQ = useQuery({
@@ -172,6 +184,10 @@ function Page() {
           )}
         </div>
       </header>
+
+      <div className="mt-6 max-w-4xl">
+        <TrustStageBanner stage={trustQ.data ?? null} />
+      </div>
 
       <div className="mt-6">
         <CaseSteps current={d.status} />

@@ -6769,6 +6769,8 @@ export type Database = {
           transcript_lawful_basis_confirmed_by: string | null
           transcript_lawful_basis_statement: string | null
           transcript_purpose_code: string | null
+          trust_method_id: string | null
+          trust_method_version: number | null
           updated_at: string
         }
         Insert: {
@@ -6800,6 +6802,8 @@ export type Database = {
           transcript_lawful_basis_confirmed_by?: string | null
           transcript_lawful_basis_statement?: string | null
           transcript_purpose_code?: string | null
+          trust_method_id?: string | null
+          trust_method_version?: number | null
           updated_at?: string
         }
         Update: {
@@ -6831,6 +6835,8 @@ export type Database = {
           transcript_lawful_basis_confirmed_by?: string | null
           transcript_lawful_basis_statement?: string | null
           transcript_purpose_code?: string | null
+          trust_method_id?: string | null
+          trust_method_version?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -6867,6 +6873,13 @@ export type Database = {
             columns: ["role_version_id"]
             isOneToOne: false
             referencedRelation: "scp_role_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_cases_trust_method_id_fkey"
+            columns: ["trust_method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
             referencedColumns: ["id"]
           },
         ]
@@ -10134,6 +10147,8 @@ export type Database = {
       }
       scp_research_sources: {
         Row: {
+          access_attestation_note: string | null
+          access_attested_by: string | null
           access_status: string
           authors: string | null
           created_at: string
@@ -10158,6 +10173,8 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          access_attestation_note?: string | null
+          access_attested_by?: string | null
           access_status?: string
           authors?: string | null
           created_at?: string
@@ -10182,6 +10199,8 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          access_attestation_note?: string | null
+          access_attested_by?: string | null
           access_status?: string
           authors?: string | null
           created_at?: string
@@ -11080,6 +11099,175 @@ export type Database = {
             columns: ["module_version_id"]
             isOneToOne: false
             referencedRelation: "scp_module_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_trust_stage_ai_tasks: {
+        Row: {
+          ai_task_id: string
+          created_at: string
+          human_gate_sv: string
+          id: string
+          stage_id: string
+        }
+        Insert: {
+          ai_task_id: string
+          created_at?: string
+          human_gate_sv: string
+          id?: string
+          stage_id: string
+        }
+        Update: {
+          ai_task_id?: string
+          created_at?: string
+          human_gate_sv?: string
+          id?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_trust_stage_ai_tasks_ai_task_id_fkey"
+            columns: ["ai_task_id"]
+            isOneToOne: false
+            referencedRelation: "scp_ai_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_trust_stage_ai_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_trust_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_trust_stage_claims: {
+        Row: {
+          claim_id: string
+          created_at: string
+          id: string
+          relation: string
+          stage_id: string
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          id?: string
+          relation: string
+          stage_id: string
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          id?: string
+          relation?: string
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_trust_stage_claims_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "scp_research_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_trust_stage_claims_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_trust_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_trust_stage_prohibitions: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          rationale: string
+          stage_id: string
+          statement_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          rationale: string
+          stage_id: string
+          statement_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          rationale?: string
+          stage_id?: string
+          statement_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_trust_stage_prohibitions_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "scp_trust_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_trust_stages: {
+        Row: {
+          created_at: string
+          human_responsibility_sv: string
+          id: string
+          letter: string
+          method_id: string
+          methodological_basis: string
+          name_en: string
+          name_sv: string
+          ordinal: number
+          output_sv: string
+          purpose_en: string
+          purpose_sv: string
+          stage_key: string
+        }
+        Insert: {
+          created_at?: string
+          human_responsibility_sv: string
+          id?: string
+          letter: string
+          method_id: string
+          methodological_basis: string
+          name_en: string
+          name_sv: string
+          ordinal: number
+          output_sv: string
+          purpose_en: string
+          purpose_sv: string
+          stage_key: string
+        }
+        Update: {
+          created_at?: string
+          human_responsibility_sv?: string
+          id?: string
+          letter?: string
+          method_id?: string
+          methodological_basis?: string
+          name_en?: string
+          name_sv?: string
+          ordinal?: number
+          output_sv?: string
+          purpose_en?: string
+          purpose_sv?: string
+          stage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_trust_stages_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
             referencedColumns: ["id"]
           },
         ]
@@ -14432,6 +14620,7 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["scp_governance_mode"]
       }
+      scp_trust_case_stage: { Args: { _case_id: string }; Returns: string }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
         Returns: {

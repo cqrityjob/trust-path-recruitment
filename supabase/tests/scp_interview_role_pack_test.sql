@@ -249,6 +249,13 @@ LANGUAGE sql AS $$
     -- reveal and a human-written conclusion. No average, no vote.
     'scp_interview_panels','scp_interview_panel_members'])
   UNION ALL
+  SELECT unnest(ARRAY[                             -- CQrity TRUST method (4)
+    -- The five-stage synthesis: stages, the AI tasks each permits with its
+    -- human gate, what may not be concluded there, and the claims that ground
+    -- and limit it.
+    'scp_trust_stages','scp_trust_stage_ai_tasks',
+    'scp_trust_stage_prohibitions','scp_trust_stage_claims'])
+  UNION ALL
   SELECT unnest(ARRAY[                             -- Phase 2 method library (2)
     'scp_interview_methods','scp_interview_method_practices'])
   UNION ALL

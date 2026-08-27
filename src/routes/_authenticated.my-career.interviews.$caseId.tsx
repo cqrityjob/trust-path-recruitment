@@ -56,6 +56,61 @@ type Copy = { sv: string; en: string };
 const c = (sv: string, en: string): Copy => ({ sv, en });
 const L = (x: Copy, lang: string) => (lang === "sv" ? x.sv : x.en);
 
+/**
+ * The five TRUST stages, in the candidate's terms.
+ *
+ * The short form on purpose: what happens and who does it. No methodological
+ * basis, no research claims, and none of the employer's prohibitions — those
+ * are working material, and a candidate who has read the marking scheme answers
+ * to the scheme rather than about their experience.
+ *
+ * Hardcoded rather than read from scp_trust_stages: those rows carry the
+ * internal rationale next to the customer copy, and this route should not be
+ * able to reach that table at all.
+ */
+const TRUST_FOR_CANDIDATE: readonly { letter: string; name: Copy; what: Copy }[] = [
+  {
+    letter: "T",
+    name: c("Målbild", "Target"),
+    what: c(
+      "Arbetsgivaren har definierat vad rollen kräver, innan någon kandidat bedöms.",
+      "The employer defined what the role requires, before any candidate is assessed.",
+    ),
+  },
+  {
+    letter: "R",
+    name: c("Förberedelse", "Ready"),
+    what: c(
+      "Ditt underlag gås igenom och en intervjuplan tas fram. En människa godkänner den.",
+      "Your material is reviewed and an interview plan is prepared. A person approves it.",
+    ),
+  },
+  {
+    letter: "U",
+    name: c("Kontakt", "Understand"),
+    what: c(
+      "Intervjuaren förklarar syftet och ger dig utrymme att svara i din egen takt.",
+      "The interviewer explains the purpose and gives you room to answer at your own pace.",
+    ),
+  },
+  {
+    letter: "S",
+    name: c("Frågorna", "Structure"),
+    what: c(
+      "Du får samma kärnfrågor i samma ordning som alla andra som söker rollen.",
+      "You are asked the same core questions, in the same order, as everyone else applying.",
+    ),
+  },
+  {
+    letter: "T",
+    name: c("Granskning", "Trace"),
+    what: c(
+      "Människor går igenom vad som sagts, bedömer och beslutar. Det dokumenteras.",
+      "People review what was said, assess it and decide. It is documented.",
+    ),
+  },
+];
+
 const STATUS: Record<CandidateInterviewStatus, Copy> = {
   interview_offered: c(
     "Du har erbjudits en intervju. Arbetsgivaren kontaktar dig om tid och plats.",
@@ -198,6 +253,50 @@ function Page() {
               lang,
             )}
           </p>
+
+          {/* The five stages, named and described for the candidate.
+           *
+           *  Deliberately the SHORT form: what happens and who does it. Not the
+           *  stage's methodological basis, not which research claim grounds or
+           *  limits it, and not what the employer may or may not conclude —
+           *  those are the employer's working material, and a candidate reading
+           *  the marking scheme is a candidate answering to the scheme.
+           *
+           *  Hardcoded rather than read from scp_trust_stages, because the
+           *  database rows carry the internal rationale alongside the customer
+           *  copy and a candidate route should not be able to reach that table
+           *  at all. */}
+          <div className="mt-4 rounded-lg border border-border p-4">
+            <p className="text-sm font-medium text-foreground">
+              {L(c("Så går intervjun till", "How the interview works"), lang)}
+            </p>
+            <ol className="mt-2 space-y-2 text-sm text-muted-foreground">
+              {TRUST_FOR_CANDIDATE.map((step) => (
+                <li key={step.letter} className="flex gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border font-mono text-xs font-semibold text-foreground"
+                  >
+                    {step.letter}
+                  </span>
+                  <span>
+                    <span className="font-medium text-foreground">{L(step.name, lang)}</span>
+                    {" — "}
+                    {L(step.what, lang)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {L(
+                c(
+                  "Metoden heter CQrity TRUST. Den är framtagen av CQrityjob och bygger på forskning om strukturerade intervjuer och professionellt intervjuarbete. Den är ännu inte vetenskapligt validerad som helhet.",
+                  "The method is called CQrity TRUST. It was developed by CQrityjob and draws on research into structured interviews and professional interviewing. It is not yet scientifically validated as a whole.",
+                ),
+                lang,
+              )}
+            </p>
+          </div>
         </section>
 
         {/* ── What is being read ── */}

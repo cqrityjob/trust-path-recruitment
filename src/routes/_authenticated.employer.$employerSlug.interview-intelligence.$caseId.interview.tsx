@@ -29,6 +29,7 @@ import {
   Panel,
   PEACE_LABEL,
   State,
+  TrustStageBanner,
   interviewErrorMessage,
   PRACTICE_KIND_LABEL,
   uiLabel,
@@ -38,6 +39,7 @@ import {
 } from "@/components/employer/interview/InterviewUi";
 import {
   getInterviewCase,
+  getTrustStage,
   saveInterviewNote,
   setQuestionState,
   setSessionState,
@@ -62,6 +64,8 @@ function Page() {
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
+
+  const trustFn = useServerFn(getTrustStage);
   const noteFn = useServerFn(saveInterviewNote);
   const qStateFn = useServerFn(setQuestionState);
   const sStateFn = useServerFn(setSessionState);
@@ -69,6 +73,14 @@ function Page() {
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
     queryFn: () => getFn({ data: { caseId } }),
+    retry: false,
+  });
+  // Which CQrity TRUST stage this case is in. Derived in the database from
+  // the case status and the session's PEACE stage, so it cannot disagree
+  // with the workflow the rest of the screen shows.
+  const trustQ = useQuery({
+    queryKey: ["ii", "trust-stage", caseId],
+    queryFn: () => trustFn({ data: { caseId } }),
     retry: false,
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["ii", "case", caseId] });
@@ -244,6 +256,10 @@ function Page() {
           {savedAt && <Chip tone="confirmed">Sparat {savedAt}</Chip>}
         </div>
       </header>
+
+      <div className="mt-6 max-w-4xl">
+        <TrustStageBanner stage={trustQ.data ?? null} />
+      </div>
 
       <div className="mt-6">
         <CaseSteps current={d.status} />

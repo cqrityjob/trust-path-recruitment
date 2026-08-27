@@ -143,8 +143,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 118,
-    'pre-rollback: 118 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review)');
+        AND table_name LIKE 'scp\_%') = 122,
+    'pre-rollback: 122 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST)');
 END $$;
 
 -- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
@@ -181,6 +181,10 @@ DROP TABLE IF EXISTS public.scp_interview_ai_runs                CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_source_passages        CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_case_sources           CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_cases                  CASCADE;
+DROP TABLE IF EXISTS public.scp_trust_stage_claims               CASCADE;
+DROP TABLE IF EXISTS public.scp_trust_stage_prohibitions         CASCADE;
+DROP TABLE IF EXISTS public.scp_trust_stage_ai_tasks             CASCADE;
+DROP TABLE IF EXISTS public.scp_trust_stages                     CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_panel_members          CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_panels                 CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_candidate_corrections  CASCADE;
@@ -229,6 +233,7 @@ DROP FUNCTION IF EXISTS public.scp_iv_panel_reveal(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_conclude(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_visible_assessments(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_guard_panel_preserves_individual();
+DROP FUNCTION IF EXISTS public.scp_trust_case_stage(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_guard_no_career_discovery();
 DROP FUNCTION IF EXISTS public.scp_iv_guard_passport_disclosure();
 -- This one guard lives on ANOTHER domain's table (sp_claims), because that is

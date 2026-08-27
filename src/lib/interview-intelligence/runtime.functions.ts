@@ -1575,6 +1575,105 @@ export const finaliseReport = createServerFn({ method: "POST" })
   });
 
 /* ------------------------------------------------------------------ */
+/* CQrity TRUST — which stage this case is in                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The TRUST stage a case is in, with the plain-language process support for it.
+ *
+ * What this deliberately does NOT return: `methodological_basis`, and the
+ * stage-to-claim links. Those are the internal research rationale. A recruiter
+ * mid-interview needs to know what the stage is for and what may not be
+ * concluded there; they do not need the argument about why ORBIT transfers or
+ * does not transfer from counter-terrorism interrogation, and putting it on the
+ * screen would be the product marking its own homework in front of the user.
+ * It is readable by platform admins, in the admin surface, where the argument
+ * belongs.
+ */
+export interface TrustStageView {
+  readonly stageKey: string | null;
+  readonly letter: string | null;
+  readonly ordinal: number | null;
+  readonly nameSv: string | null;
+  readonly purposeSv: string | null;
+  readonly humanResponsibilitySv: string | null;
+  readonly prohibitions: readonly string[];
+  readonly permittedAiTasks: readonly { readonly taskKey: string; readonly humanGateSv: string }[];
+  readonly methodVersion: number | null;
+}
+
+export const getTrustStage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(async ({ context, data }): Promise<TrustStageView> => {
+    const db = context.supabase;
+
+    const stageRes = await db.rpc("scp_trust_case_stage", { _case_id: data.caseId });
+    if (stageRes.error) throw new Error(stageRes.error.message);
+    const stageKey = (stageRes.data as unknown as string | null) ?? null;
+
+    const empty: TrustStageView = {
+      stageKey: null,
+      letter: null,
+      ordinal: null,
+      nameSv: null,
+      purposeSv: null,
+      humanResponsibilitySv: null,
+      prohibitions: [],
+      permittedAiTasks: [],
+      methodVersion: null,
+    };
+    if (!stageKey) return empty;
+
+    const caseRes = await db
+      .from("scp_interview_cases")
+      .select("trust_method_version")
+      .eq("id", data.caseId)
+      .maybeSingle();
+
+    const defRes = await db
+      .from("scp_trust_stages")
+      .select("id, stage_key, letter, ordinal, name_sv, purpose_sv, human_responsibility_sv")
+      .eq("stage_key", stageKey)
+      .maybeSingle();
+    if (defRes.error) throw new Error(defRes.error.message);
+    if (!defRes.data) return empty;
+
+    const stageId = defRes.data.id as string;
+
+    const prohibRes = await db
+      .from("scp_trust_stage_prohibitions")
+      .select("statement_sv, display_order")
+      .eq("stage_id", stageId)
+      .order("display_order");
+
+    const tasksRes = await db
+      .from("scp_trust_stage_ai_tasks")
+      .select("human_gate_sv, scp_ai_tasks(task_key)")
+      .eq("stage_id", stageId);
+
+    return {
+      stageKey,
+      letter: defRes.data.letter as string,
+      ordinal: defRes.data.ordinal as number,
+      nameSv: defRes.data.name_sv as string,
+      purposeSv: defRes.data.purpose_sv as string,
+      humanResponsibilitySv: defRes.data.human_responsibility_sv as string,
+      prohibitions: ((prohibRes.data ?? []) as Array<Record<string, unknown>>).map(
+        (r) => r.statement_sv as string,
+      ),
+      permittedAiTasks: ((tasksRes.data ?? []) as Array<Record<string, unknown>>).map((r) => {
+        const t = Array.isArray(r.scp_ai_tasks) ? r.scp_ai_tasks[0] : r.scp_ai_tasks;
+        return {
+          taskKey: (t as { task_key?: string } | null)?.task_key ?? "",
+          humanGateSv: r.human_gate_sv as string,
+        };
+      }),
+      methodVersion: (caseRes.data?.trust_method_version as number | null) ?? null,
+    };
+  });
+
+/* ------------------------------------------------------------------ */
 /* Panel Review                                                        */
 /* ------------------------------------------------------------------ */
 

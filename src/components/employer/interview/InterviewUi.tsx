@@ -522,6 +522,102 @@ export function ErrorSummary({
   );
 }
 
+/**
+ * Where this interview is in CQrity TRUST, in the recruiter's own language.
+ *
+ * TRUST is CQrityjob's governed synthesis of structured selection interviewing,
+ * PEACE, ORBIT, the competency graph and the human decision boundary. It is a
+ * research-grounded design hypothesis under controlled validation, not a
+ * validated selection method, and this banner says so once rather than claiming
+ * authority it does not have.
+ *
+ * It shows the stage, what it is for, what the human owes it, and what may not
+ * be concluded there. It deliberately does NOT show the research rationale: a
+ * recruiter mid-interview needs process support, not the argument about whether
+ * ORBIT transfers from counter-terrorism interrogation to recruitment. That
+ * argument lives in the admin surface, where the people who can act on it are.
+ */
+export function TrustStageBanner({
+  stage,
+}: {
+  stage: {
+    readonly letter: string | null;
+    readonly ordinal: number | null;
+    readonly nameSv: string | null;
+    readonly purposeSv: string | null;
+    readonly humanResponsibilitySv: string | null;
+    readonly prohibitions: readonly string[];
+    readonly permittedAiTasks: readonly {
+      readonly taskKey: string;
+      readonly humanGateSv: string;
+    }[];
+    readonly methodVersion: number | null;
+  } | null;
+}) {
+  if (!stage?.letter) return null;
+
+  return (
+    <section aria-labelledby="trust-stage" className="rounded-lg border border-border p-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-700/40 bg-sky-700/10 font-mono text-sm font-semibold text-sky-900 dark:text-sky-200"
+        >
+          {stage.letter}
+        </span>
+        <h2 id="trust-stage" className="text-sm font-semibold text-foreground">
+          <span className="sr-only">CQrity TRUST, steg {stage.ordinal} av 5: </span>
+          {stage.nameSv}
+        </h2>
+        <span className="text-xs text-muted-foreground">
+          CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} · steg {stage.ordinal}{" "}
+          av 5
+        </span>
+      </div>
+
+      {stage.purposeSv && (
+        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{stage.purposeSv}</p>
+      )}
+
+      {stage.humanResponsibilitySv && (
+        <p className="mt-2 max-w-[68ch] text-sm text-foreground">
+          <span className="font-medium">Ditt ansvar i det här steget: </span>
+          {stage.humanResponsibilitySv}
+        </p>
+      )}
+
+      {stage.permittedAiTasks.length === 0 ? (
+        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+          AI-stödet gör ingenting i det här steget. Kontakten med kandidaten är ditt arbete.
+        </p>
+      ) : (
+        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+          AI-stödet får förbereda och föreslå här. Varje förslag måste en människa godkänna innan
+          det används.
+        </p>
+      )}
+
+      {stage.prohibitions.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
+            Vad som inte får slutas i det här steget
+          </summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            {stage.prohibitions.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      <p className="mt-3 text-xs text-muted-foreground">
+        CQrity TRUST är CQrityjobs egen styrda metod. Den är forskningsinformerad och ännu inte
+        vetenskapligt validerad som helhet.
+      </p>
+    </section>
+  );
+}
+
 /** The journey, drawn as steps. Never as a percentage: this is not progress towards a verdict. */
 export function CaseSteps({ current }: { current: string }) {
   const steps: Array<{ key: string; label: string }> = [
