@@ -32,6 +32,8 @@ import { validatePolicy } from "../src/lib/interview-intelligence/ai/policy";
 const REGISTRY_MIGRATION =
   "supabase/migrations/20260919090000_scp_interview_intelligence_registries.sql";
 const RUNTIME_MIGRATION = "supabase/migrations/20260920090000_scp_interview_runtime.sql";
+const HARDENING_MIGRATION =
+  "supabase/migrations/20260921090000_scp_interview_integrity_hardening.sql";
 const AI_DIR = "src/lib/interview-intelligence/ai";
 const RUNTIME_FN = "src/lib/interview-intelligence/runtime.functions.ts";
 const UI_DIR = "src/components/employer/interview";
@@ -401,6 +403,53 @@ for (const screen of EMPLOYER_SCREENS) {
     ok(
       !code.includes(`{${field}}`),
       `${screen.path} renders ${field} raw; the customer sees an internal value`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 4c. "Verified" must not be used to mean two different things          */
+/* ------------------------------------------------------------------ */
+
+// The knowledge graph labelled 228 of its 271 edges `verified`, almost all of
+// them structural -- a foreign key restated, or a fail-closed default the
+// product asserts about itself. An admin screen reading "verified: 228" would
+// have implied 228 confirmed empirical results where there are three read
+// sources. These guards keep the two senses apart.
+
+{
+  const migration = read(HARDENING_MIGRATION);
+  ok(
+    migration.includes("'structurally_derived'"),
+    "the assurance vocabulary no longer separates structural derivation from empirical support",
+  );
+  // WRITES only. The migration still has to READ the old value in order to
+  // relabel it, so "WHERE assurance = 'verified'" is the relabelling working,
+  // not the ambiguity returning.
+  ok(
+    !/SET\s+assurance\s*=\s*'verified'/i.test(migration),
+    "an edge is written with the ambiguous 'verified' again",
+  );
+
+  const uiCode = codeOnly(read(`${UI_DIR}/InterviewUi.tsx`));
+  for (const level of [
+    "structurally_derived",
+    "source_read",
+    "source_verified",
+    "expert_reviewed",
+    "provisional",
+    "hypothesis",
+    "pending_source_verification",
+  ]) {
+    ok(uiCode.includes(level), `the UI vocabulary is missing assurance level "${level}"`);
+  }
+
+  // The phrase itself, in either language, anywhere a customer or admin reads.
+  for (const src of sources) {
+    if (!src.path.endsWith(".tsx")) continue;
+    ok(
+      !/verifierad\s+forskning|verified\s+research/i.test(src.text),
+      `${src.path} claims "verified research"; a structurally generated edge is not a research finding`,
     );
   }
 }

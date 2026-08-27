@@ -149,9 +149,9 @@ BEGIN
 
   IF _edge IS NOT NULL THEN
     PERFORM pg_temp.must_fail(
-      format('UPDATE public.scp_intel_edges SET assurance = %L WHERE id = %L', 'verified', _edge),
+      format('UPDATE public.scp_intel_edges SET assurance = %L WHERE id = %L', 'source_read', _edge),
       'SCP_INTEL_EDGE_ASSURANCE',
-      'I2.2 an edge into an unread research claim cannot be marked verified');
+      'I2.2 an edge into an unread research claim cannot claim its source was read');
   ELSE
     RAISE NOTICE 'ok  I2.2 (vacuous: no edge currently points at an unread claim)';
   END IF;
@@ -165,6 +165,23 @@ BEGIN
     format('UPDATE public.scp_intel_edges SET assurance = %L WHERE id = %L', 'expert_reviewed', _edge),
     'SCP_INTEL_MAPPING_ASSURANCE',
     'I2.4 a provisional mapping cannot be upgraded from the edge side');
+
+  -- "verified" meant two different things -- a foreign key restated, and a
+  -- research finding confirmed -- and an admin screen reading "verified: 228"
+  -- invited exactly the conclusion the research registry exists to prevent.
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM public.scp_intel_edges WHERE assurance = 'verified'),
+    'I2.4a no edge uses the ambiguous "verified" any more');
+
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM public.scp_intel_edges
+                 WHERE assurance IN ('source_verified', 'expert_reviewed')),
+    'I2.4b nothing claims independent verification, because none has taken place');
+
+  SELECT count(*) INTO _n FROM public.scp_intel_edges
+   WHERE assurance = 'structurally_derived' AND relation NOT IN ('addresses', 'implements', 'restricts');
+  PERFORM pg_temp.ok(_n = 0,
+    format('I2.4c only structural relations are labelled structurally_derived (%s strays)', _n));
 
   -- No numeric edge property has appeared. A weight is how a graph starts
   -- computing verdicts.

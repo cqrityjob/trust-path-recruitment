@@ -287,16 +287,10 @@ ALTER TABLE public.scp_intel_edges
   ADD COLUMN IF NOT EXISTS assurance_note text,
   ADD COLUMN IF NOT EXISTS superseded_by uuid REFERENCES public.scp_intel_edges(id) ON DELETE SET NULL;
 
-ALTER TABLE public.scp_intel_edges
-  DROP CONSTRAINT IF EXISTS scp_intel_edges_assurance_check;
-ALTER TABLE public.scp_intel_edges
-  ADD CONSTRAINT scp_intel_edges_assurance_check CHECK (assurance IN (
-    'verified',                    -- rests on a read source or a canonical structural fact
-    'expert_reviewed',             -- a qualified human has confirmed it
-    'provisional',                 -- asserted, not yet confirmed
-    'hypothesis',                  -- a CQrityjob product hypothesis
-    'pending_source_verification', -- rests on a source nobody has read
-    'superseded'));
+-- The permitted values are declared ONCE, in section 11, which splits
+-- "verified" into the several different things it was being used to mean. This
+-- section used to declare them too, and two declarations of the same list in
+-- one migration is how a re-run fails against its own output.
 
 COMMENT ON COLUMN public.scp_intel_edges.assurance IS
   'How well the relationship is KNOWN -- never how strongly it predicts. '
@@ -375,7 +369,7 @@ CREATE TRIGGER scp_intel_edges_assurance
 -- pack, not a scientific claim. A question DOES address the competency it is
 -- linked to, by construction.
 UPDATE public.scp_intel_edges
-   SET assurance = 'verified',
+   SET assurance = 'structurally_derived',
        assurance_note = 'Structural fact about governed content: the relationship is how the pack is built, not an empirical finding.'
  WHERE relation IN ('addresses', 'implements')
    AND from_kind IN ('interview_question', 'evidence_dimension', 'method_practice');
@@ -388,7 +382,7 @@ UPDATE public.scp_intel_edges
 
 -- Anything resting on a research claim inherits the source's read status.
 UPDATE public.scp_intel_edges e
-   SET assurance = CASE WHEN s.access_status = 'verified_read' THEN 'verified'
+   SET assurance = CASE WHEN s.access_status = 'verified_read' THEN 'source_read'
                         ELSE 'pending_source_verification' END,
        assurance_note = CASE WHEN s.access_status = 'verified_read'
                         THEN 'Rests on a source that has been inspected.'
@@ -406,7 +400,7 @@ UPDATE public.scp_intel_edges
 
 -- Prohibited-area restrictions are policy facts we authored and enforce.
 UPDATE public.scp_intel_edges
-   SET assurance = 'verified',
+   SET assurance = 'structurally_derived',
        assurance_note = 'A policy restriction authored and enforced by CQrityjob, and tested.'
  WHERE relation = 'restricts';
 
@@ -837,7 +831,7 @@ $assert$;
 -- ---------------------------------------------------------------------------
 
 INSERT INTO public.scp_intel_edges (from_kind, from_id, relation, to_kind, to_id, assurance, note)
-SELECT 'prohibited_area', a.id, 'restricts', 'ai_task', t.id, 'verified',
+SELECT 'prohibited_area', a.id, 'restricts', 'ai_task', t.id, 'structurally_derived',
        'Fail-closed: every governed prohibition binds every AI task unless an '
        'explicit, reviewed narrowing says otherwise.'
   FROM public.scp_interview_prohibited_areas a
@@ -1649,3 +1643,164 @@ DROP TRIGGER IF EXISTS sp_claims_no_interview_write ON public.sp_claims;
 CREATE TRIGGER sp_claims_no_interview_write
   BEFORE INSERT OR UPDATE ON public.sp_claims
   FOR EACH ROW EXECUTE FUNCTION public.scp_iv_guard_no_passport_write();
+
+
+-- ###########################################################################
+-- SECTION 11 -- "Verified" was doing two jobs, and one of them was a claim
+-- ###########################################################################
+--
+-- 228 of the 271 knowledge edges were labelled `verified`. Almost all of them
+-- are STRUCTURAL: "this evidence dimension belongs to this question" restates a
+-- foreign key, and "this prohibited area restricts this AI task" is a
+-- fail-closed default the product asserts about itself. Neither is a scientific
+-- finding, and neither was ever meant to read as one.
+--
+-- But `verified` next to a research claim means something else entirely, and an
+-- admin screen showing "verified: 228" invites exactly the reading the whole
+-- research registry exists to prevent -- that this product rests on 228
+-- confirmed empirical results. It rests on three sources somebody has read.
+--
+-- So the word is split. Nothing about the graph's shape changes; what changes
+-- is that each edge now says which KIND of confidence it carries.
+-- ---------------------------------------------------------------------------
+
+-- The constraint is dropped first and rebuilt at the end, because the rows
+-- being relabelled below still carry the old value while they are relabelled.
+ALTER TABLE public.scp_intel_edges
+  DROP CONSTRAINT IF EXISTS scp_intel_edges_assurance_check;
+
+-- Structural relations: foreign keys and fail-closed defaults, not findings.
+UPDATE public.scp_intel_edges
+   SET assurance = 'structurally_derived',
+       assurance_note = coalesce(assurance_note,
+         'Restates a relationship authored in this product. True by construction; not an empirical result.')
+ WHERE assurance = 'verified'
+   AND relation IN ('restricts', 'addresses', 'implements');
+
+-- A claim-to-source edge is as good as whether the source was actually read.
+UPDATE public.scp_intel_edges e
+   SET assurance = CASE WHEN s.access_status = 'verified_read' THEN 'source_read'
+                        ELSE 'pending_source_verification' END,
+       assurance_note = CASE WHEN s.access_status = 'verified_read'
+         THEN 'The source document was retrieved and read during the build. No independent party has confirmed it.'
+         ELSE 'The source has not been read.' END
+  FROM public.scp_research_claims c, public.scp_research_sources s
+ WHERE e.assurance = 'verified'
+   AND e.relation IN ('derived_from', 'supports')
+   AND e.from_kind = 'research_claim' AND e.from_id = c.id AND s.id = c.source_id;
+
+-- Anything still called `verified` at this point is a practice-to-claim edge,
+-- which is an assertion by the build.
+UPDATE public.scp_intel_edges
+   SET assurance = 'provisional',
+       assurance_note = coalesce(assurance_note,
+         'Asserted by the build. No independent party has reviewed the connection.')
+ WHERE assurance = 'verified';
+
+ALTER TABLE public.scp_intel_edges
+  DROP CONSTRAINT IF EXISTS scp_intel_edges_assurance_check;
+ALTER TABLE public.scp_intel_edges
+  ADD CONSTRAINT scp_intel_edges_assurance_check CHECK (assurance IN (
+    -- The edge restates a relationship the product itself authored: a foreign
+    -- key, a pack structure, a fail-closed default. True by construction, and
+    -- evidence of nothing about the world.
+    'structurally_derived',
+    -- The underlying source document has been retrieved and read during the
+    -- build. Says the text exists and says what we quote; says nothing about
+    -- whether an independent party agrees.
+    'source_read',
+    -- An independent party confirmed the source supports this. None yet.
+    'source_verified',
+    -- A named domain expert with no involvement in the implementation reviewed
+    -- it. None yet.
+    'expert_reviewed',
+    -- Asserted by the build and not established.
+    'provisional',
+    -- Explicitly a guess, recorded so it can be argued with.
+    'hypothesis',
+    -- The source has not been read at all.
+    'pending_source_verification',
+    'superseded'));
+
+-- The guard from section 2 spoke in terms of `verified`; it now speaks in terms
+-- of the levels that actually make a claim about the world.
+CREATE OR REPLACE FUNCTION public.scp_intel_guard_edge_assurance()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _unread boolean; _state text;
+BEGIN
+  IF (NEW.superseded_by IS NOT NULL) <> (NEW.assurance = 'superseded') THEN
+    RAISE EXCEPTION
+      'SCP_INTEL_EDGE_SUPERSEDED: an edge is superseded exactly when it names what supersedes it.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- Nothing may claim a source was read, verified or expert-reviewed when the
+  -- document behind it has not been opened.
+  IF NEW.assurance IN ('source_read', 'source_verified', 'expert_reviewed') THEN
+    SELECT EXISTS (
+      SELECT 1 FROM public.scp_research_claims c
+      JOIN public.scp_research_sources s ON s.id = c.source_id
+       WHERE ((NEW.from_kind = 'research_claim' AND NEW.from_id = c.id)
+              OR (NEW.to_kind = 'research_claim' AND NEW.to_id = c.id))
+         AND s.access_status <> 'verified_read')
+      INTO _unread;
+    IF _unread THEN
+      RAISE EXCEPTION
+        'SCP_INTEL_EDGE_ASSURANCE: this edge touches a research claim whose source has not been read, so it cannot assert "%".',
+        NEW.assurance USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+
+  -- A competency mapping cannot be promoted from the edge side. The mapping
+  -- state lives on scp_interview_pack_competency_map, one row per
+  -- pack-competency-to-SCC pair, so the weakest of them governs the edge.
+  IF NEW.relation = 'maps_to' AND NEW.from_kind = 'interview_competency'
+     AND NEW.assurance IN ('source_verified', 'expert_reviewed') THEN
+    SELECT min(m.mapping_state) INTO _state
+      FROM public.scp_interview_pack_competency_map m
+     WHERE m.pack_competency_id = NEW.from_id;
+    IF _state IS DISTINCT FROM 'confirmed' THEN
+      RAISE EXCEPTION
+        'SCP_INTEL_MAPPING_ASSURANCE: the underlying competency mapping is "%", so the edge cannot claim "%". A provisional correspondence is not a confirmed equivalence; promote the mapping, not the edge.',
+        coalesce(_state, 'missing'), NEW.assurance USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_intel_guard_edge_assurance() FROM PUBLIC, anon, authenticated;
+
+COMMENT ON COLUMN public.scp_intel_edges.assurance IS
+  'WHICH KIND of confidence this edge carries, not how much. '
+  'structurally_derived = restates something this product authored (a foreign '
+  'key, a pack structure, a fail-closed default) and is evidence of nothing '
+  'about the world. source_read = the document was retrieved and read during '
+  'the build. source_verified / expert_reviewed = an independent party '
+  'confirmed it; there are none yet. Never display "verified research" because '
+  'an edge was structurally generated.';
+
+
+DO $assert11$
+DECLARE _n integer;
+BEGIN
+  SELECT count(*) INTO _n FROM public.scp_intel_edges WHERE assurance = 'verified';
+  IF _n <> 0 THEN
+    RAISE EXCEPTION 'SCP_IIH_ASSERT: % edge(s) still use the ambiguous "verified".', _n;
+  END IF;
+
+  SELECT count(*) INTO _n FROM public.scp_intel_edges
+   WHERE assurance IN ('source_verified', 'expert_reviewed');
+  IF _n <> 0 THEN
+    RAISE EXCEPTION
+      'SCP_IIH_ASSERT: % edge(s) claim independent verification, and no independent review has taken place.', _n;
+  END IF;
+
+  RAISE NOTICE 'SCP_IIH_ASSERT: assurance split -- % structural, % source_read, % provisional, % hypothesis, % pending.',
+    (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'structurally_derived'),
+    (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'source_read'),
+    (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'provisional'),
+    (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'hypothesis'),
+    (SELECT count(*) FROM public.scp_intel_edges WHERE assurance = 'pending_source_verification');
+END
+$assert11$;

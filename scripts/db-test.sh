@@ -1257,9 +1257,9 @@ fi
 
 echo "    ok  ${IVI_PASSED} Interview Intelligence integrity assertions passed"
 
-if [ "$IVI_PASSED" -lt 65 ]; then
-  echo "FAIL: expected at least 65 integrity assertions, only ${IVI_PASSED} ran." >&2
-  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 65)"
+if [ "$IVI_PASSED" -lt 68 ]; then
+  echo "FAIL: expected at least 68 integrity assertions, only ${IVI_PASSED} ran." >&2
+  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 68)"
 fi
 
 # ---------------------------------------------------------------------------

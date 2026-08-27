@@ -276,6 +276,51 @@ export function LevelZeroNote() {
 }
 
 /**
+ * How confident the knowledge graph is, and — more importantly — WHAT KIND of
+ * confidence it is.
+ *
+ * The graph used one word, `verified`, for two unrelated things: an edge that
+ * restates a foreign key, and an edge that rests on a research finding. 228 of
+ * 271 edges were the first kind, so any screen reporting "verified: 228" would
+ * have invited precisely the conclusion the research registry exists to
+ * prevent — that this product rests on 228 confirmed empirical results. It
+ * rests on three sources somebody has read.
+ *
+ * These labels are deliberately long. A one-word chip is what created the
+ * problem.
+ */
+export const ASSURANCE_LABEL: Record<string, string> = {
+  structurally_derived: "Strukturellt härledd — inte ett forskningsresultat",
+  source_read: "Källan är läst",
+  source_verified: "Källan är oberoende bekräftad",
+  expert_reviewed: "Granskad av sakkunnig",
+  provisional: "Preliminär — påstådd, inte fastställd",
+  hypothesis: "Hypotes",
+  pending_source_verification: "Källan är inte läst",
+  superseded: "Ersatt",
+};
+
+/**
+ * The levels that represent an actual claim about the world, as opposed to a
+ * fact about how this product is built. Only these may ever be summarised as
+ * research.
+ */
+export const EMPIRICAL_ASSURANCE: readonly string[] = [
+  "source_read",
+  "source_verified",
+  "expert_reviewed",
+];
+
+export function AssuranceChip({ assurance }: { assurance: string }) {
+  const empirical = EMPIRICAL_ASSURANCE.includes(assurance);
+  return (
+    <Chip tone={empirical ? "confirmed" : "neutral"} srPrefix="Säkerhetsnivå">
+      {ASSURANCE_LABEL[assurance] ?? assurance}
+    </Chip>
+  );
+}
+
+/**
  * Which engine produced this, said plainly.
  *
  * The four states are distinguished because they mean genuinely different
