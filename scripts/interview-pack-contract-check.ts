@@ -16,7 +16,7 @@
  *      not in the migration, not in the server functions, not in the UI.
  *   4. No AI provider, model id, prompt template or credential appears
  *      anywhere in the Interview Intelligence source.
- *   5. The employer navigation gains no Interview Intelligence entry.
+ *   5. The employer never reaches the platform's content-authoring surface.
  *   6. The generic assessment guards are not attached to the new tables.
  *
  * Every check self-tests where it can, and the guard fails closed: a file it
@@ -316,15 +316,23 @@ for (const src of domainSources) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. No employer surface in Phase 1                                    */
+/* 5. The employer never reaches the AUTHORING surface                  */
 /* ------------------------------------------------------------------ */
+//
+// Phase 1 asserted that no employer surface mentioned Interview Intelligence at
+// all, because no employer runtime existed and a link would have led nowhere.
+// Phase 2 ships that runtime, so the rule is now the one that actually matters
+// and always did: an employer may reach their own interview WORKSPACE, and may
+// never reach the platform's content AUTHORING surface.
+//
+// Role-pack authoring stays a platform-governed admin capability. That is owner
+// decision 1, and it is unchanged.
 
 if (existsSync(EMPLOYER_SHELL)) {
   const shell = readFileSync(EMPLOYER_SHELL, "utf8");
   ok(
-    !shell.includes("interview-role-packs") &&
-      !shell.toLowerCase().includes("interview intelligence"),
-    `${EMPLOYER_SHELL} gained an Interview Intelligence entry; the employer navigation item is deliberately deferred`,
+    !shell.includes("interview-role-packs"),
+    `${EMPLOYER_SHELL} links to the platform Role Interview Builder; employers author no governed content`,
   );
 }
 
@@ -346,7 +354,16 @@ const employerRoutes = existsSync("src/routes")
       (f) => f.includes("employer") && f.toLowerCase().includes("interview-role-pack"),
     )
   : [];
-ok(employerRoutes.length === 0, "an employer-facing Role Interview Pack route exists");
+ok(employerRoutes.length === 0, "an employer-facing Role Interview PACK (authoring) route exists");
+
+// And the authoring routes stay admin-only.
+const adminOnlyRoutes = existsSync("src/routes")
+  ? readdirSync("src/routes").filter((f) => f.includes("interview-role-packs"))
+  : [];
+ok(
+  adminOnlyRoutes.every((f) => f.startsWith("_authenticated.admin.")),
+  "a Role Interview Pack authoring route exists outside the admin surface",
+);
 
 /* ------------------------------------------------------------------ */
 /* 6. The generic guards stay off the new tables                        */
