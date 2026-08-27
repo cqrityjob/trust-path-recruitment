@@ -232,6 +232,65 @@ export function LevelZeroNote() {
   );
 }
 
+/**
+ * Source material the engine was not allowed to read.
+ *
+ * Shown, never merely logged. A paragraph gets withheld because it was
+ * addressed to the system rather than describing the candidate — someone tried
+ * to steer the assessment — and that is a fact about the application that a
+ * recruiter is entitled to know and to judge for themselves. Withholding it
+ * silently would leave them reading a summary built from part of a document,
+ * believing it was built from all of it.
+ *
+ * The excerpt is shown so the decision is reviewable. It is deliberately not
+ * presented as a finding about the candidate: a CV can be tampered with by
+ * someone other than its subject, and the product does not know which happened.
+ */
+export function WithheldPanel({
+  withheld,
+}: {
+  withheld: readonly {
+    readonly passageId: string;
+    readonly reason: string;
+    readonly excerpt: string;
+  }[];
+}) {
+  if (withheld.length === 0) return null;
+  return (
+    <Panel
+      tone="attention"
+      role="status"
+      title={
+        withheld.length === 1
+          ? "Ett stycke undanhölls AI-stödet"
+          : `${withheld.length} stycken undanhölls AI-stödet`
+      }
+    >
+      <p>
+        Texten nedan var riktad till systemet i stället för att beskriva kandidaten, och skickades
+        därför aldrig vidare. Övrigt underlag har behandlats som vanligt.
+      </p>
+      <ul className="mt-2 space-y-2">
+        {withheld.map((w) => (
+          <li
+            key={w.passageId}
+            className="rounded-md border border-amber-600/30 bg-background/60 p-2"
+          >
+            <p className="text-xs font-medium">{w.reason}</p>
+            <p className="mt-1 font-mono text-xs leading-relaxed text-muted-foreground">
+              {w.excerpt}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs">
+        Läs originalkällan själv och bedöm den. Det här säger inget om kandidatens lämplighet — ett
+        dokument kan ha ändrats av någon annan än den det handlar om.
+      </p>
+    </Panel>
+  );
+}
+
 /** A form-level error summary whose entries link to the field that produced them. */
 export function ErrorSummary({
   errors,

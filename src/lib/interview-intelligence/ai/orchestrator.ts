@@ -18,6 +18,7 @@ import { AiProviderError, type AiProvider, type AiRequest, type UntrustedBlock }
 import { MockAiProvider } from "./providers/mock";
 import { TASK_REGISTRY, abstentionSchema, type TaskKey } from "./registry";
 import { validatePolicy, type PolicyContext, type PolicyViolation } from "./policy";
+import { screenPassages, type QuarantinedPassage } from "./injection";
 
 /* ------------------------------------------------------------------ */
 /* Provider selection                                                  */
@@ -67,6 +68,12 @@ export interface OrchestratorResult {
   readonly usage: { inputTokens: number; outputTokens: number; costMicros: number };
   readonly latencyMs: number;
   readonly rawResponse: unknown;
+  /**
+   * Passages withheld from the provider because they carried text addressed to
+   * the system rather than describing the candidate. Never empty and silent:
+   * the caller writes these to the run and the screen shows them.
+   */
+  readonly quarantinedPassages: readonly QuarantinedPassage[];
 }
 
 export interface RunInput {
@@ -118,6 +125,14 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
 
   const empty = { inputTokens: 0, outputTokens: 0, costMicros: 0 };
 
+  // Screen the untrusted material BEFORE anything else, so the quarantine list
+  // is available on every exit path — including the ones that never reach a
+  // provider. A recruiter who sees "the engine could not run" and a recruiter
+  // who sees "the engine could not run, and by the way three paragraphs of this
+  // CV were addressed to it" are looking at different situations.
+  const screened = screenPassages(input.passages);
+  const quarantinedPassages = screened.quarantined;
+
   // A task whose registry entry does not demand human review must not run. The
   // database says the same thing; agreeing in two places is the point.
   if (!task.requiresHumanReview) {
@@ -131,13 +146,35 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: empty,
       latencyMs: 0,
       rawResponse: null,
+      quarantinedPassages,
     };
   }
 
   // Withhold anything the task is not allowed to see. Filtering here rather
   // than trusting the prompt means a CV simply never reaches a task that has no
   // business reading one.
-  const permitted = input.passages.filter((p) => task.allowedSourceKinds.includes(p.sourceKind));
+  const permitted = screened.clean.filter((p) => task.allowedSourceKinds.includes(p.sourceKind));
+
+  // If screening removed everything the task had to work with, the honest
+  // result is abstention. Answering from an empty corpus would produce
+  // confident text about a candidate from nothing at all, which is the worst
+  // output this product could emit.
+  if (permitted.length === 0 && quarantinedPassages.length > 0) {
+    return {
+      status: "abstained",
+      output: null,
+      abstentionReason:
+        `Allt underlag för det här steget innehöll text riktad till systemet i stället för information om kandidaten ` +
+        `(${quarantinedPassages.length} stycke(n) undanhölls). Läs källan själv och bedöm den manuellt.`,
+      failureReason: null,
+      violations: [],
+      model: provider.name,
+      usage: empty,
+      latencyMs: 0,
+      rawResponse: null,
+      quarantinedPassages,
+    };
+  }
 
   const request: AiRequest = {
     system: task.system,
@@ -165,6 +202,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: empty,
       latencyMs: Date.now() - started,
       rawResponse: null,
+      quarantinedPassages,
     };
   }
 
@@ -184,6 +222,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: raw.usage,
       latencyMs,
       rawResponse: { text: raw.text.slice(0, 4000) },
+      quarantinedPassages,
     };
   }
 
@@ -201,6 +240,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
+      quarantinedPassages,
     };
   }
 
@@ -219,12 +259,15 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
+      quarantinedPassages,
     };
   }
 
   const ctx: PolicyContext = {
     task,
-    allowedPassageIds: new Set(input.passages.map((p) => p.passageId)),
+    // A quarantined passage was never shown to the provider, so a citation
+    // naming one is fabricated by definition.
+    allowedPassageIds: new Set(permitted.map((p) => p.passageId)),
     allowedProbeIds: new Set(input.allowedProbeIds ?? []),
     governedQuestions: input.governedQuestions ?? new Map(),
   };
@@ -248,6 +291,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
+      quarantinedPassages,
     };
   }
 
@@ -261,5 +305,6 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
     usage: raw.usage,
     latencyMs,
     rawResponse: parsed,
+    quarantinedPassages,
   };
 }

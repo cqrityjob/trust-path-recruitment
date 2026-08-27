@@ -6057,6 +6057,8 @@ export type Database = {
       }
       scp_intel_edges: {
         Row: {
+          assurance: string
+          assurance_note: string | null
           created_at: string
           created_by: string | null
           employer_id: string | null
@@ -6067,11 +6069,14 @@ export type Database = {
           implication_id: string | null
           note: string | null
           relation: string
+          superseded_by: string | null
           to_id: string
           to_kind: string
           to_version: string | null
         }
         Insert: {
+          assurance?: string
+          assurance_note?: string | null
           created_at?: string
           created_by?: string | null
           employer_id?: string | null
@@ -6082,11 +6087,14 @@ export type Database = {
           implication_id?: string | null
           note?: string | null
           relation: string
+          superseded_by?: string | null
           to_id: string
           to_kind: string
           to_version?: string | null
         }
         Update: {
+          assurance?: string
+          assurance_note?: string | null
           created_at?: string
           created_by?: string | null
           employer_id?: string | null
@@ -6097,6 +6105,7 @@ export type Database = {
           implication_id?: string | null
           note?: string | null
           relation?: string
+          superseded_by?: string | null
           to_id?: string
           to_kind?: string
           to_version?: string | null
@@ -6114,6 +6123,13 @@ export type Database = {
             columns: ["implication_id"]
             isOneToOne: false
             referencedRelation: "scp_research_implications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_intel_edges_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "scp_intel_edges"
             referencedColumns: ["id"]
           },
         ]
@@ -6220,6 +6236,7 @@ export type Database = {
           status: string
           task: string
           task_version: string
+          withheld_passages: Json
         }
         Insert: {
           abstention_reason?: string | null
@@ -6248,6 +6265,7 @@ export type Database = {
           status?: string
           task: string
           task_version: string
+          withheld_passages?: Json
         }
         Update: {
           abstention_reason?: string | null
@@ -6276,6 +6294,7 @@ export type Database = {
           status?: string
           task?: string
           task_version?: string
+          withheld_passages?: Json
         }
         Relationships: [
           {
@@ -7609,31 +7628,52 @@ export type Database = {
       }
       scp_interview_pack_pilot_grants: {
         Row: {
+          cohort_user_ids: string[]
           employer_id: string
+          environment: string
+          expires_on: string
           granted_at: string
           granted_by: string | null
           id: string
           pack_version_id: string
           rationale: string
+          revocation_reason: string | null
           revoked_at: string | null
+          revoked_by: string | null
+          starts_on: string
+          usage_mode: string
         }
         Insert: {
+          cohort_user_ids?: string[]
           employer_id: string
+          environment?: string
+          expires_on: string
           granted_at?: string
           granted_by?: string | null
           id?: string
           pack_version_id: string
           rationale: string
+          revocation_reason?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
+          starts_on?: string
+          usage_mode?: string
         }
         Update: {
+          cohort_user_ids?: string[]
           employer_id?: string
+          environment?: string
+          expires_on?: string
           granted_at?: string
           granted_by?: string | null
           id?: string
           pack_version_id?: string
           rationale?: string
+          revocation_reason?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
+          starts_on?: string
+          usage_mode?: string
         }
         Relationships: [
           {
@@ -13638,6 +13678,14 @@ export type Database = {
           severity: string
         }[]
       }
+      scp_interview_pilot_grant_active: {
+        Args: {
+          _employer_id: string
+          _pack_version_id: string
+          _user_id?: string
+        }
+        Returns: boolean
+      }
       scp_interview_publish_version: {
         Args: { _pack_version_id: string; _reason?: string }
         Returns: string
@@ -13737,6 +13785,7 @@ export type Database = {
           _raw_response?: Json
           _run_id: string
           _status: string
+          _withheld_passages?: Json
         }
         Returns: undefined
       }

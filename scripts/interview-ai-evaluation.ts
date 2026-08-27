@@ -142,6 +142,8 @@ interface Metrics {
   abstentions: number;
   expectedAbstentions: number;
   correctAbstentions: number;
+  expectedQuarantines: number;
+  correctQuarantines: number;
   providerErrors: number;
   timeouts: number;
   totalLatencyMs: number;
@@ -171,6 +173,8 @@ const m: Metrics = {
   abstentions: 0,
   expectedAbstentions: 0,
   correctAbstentions: 0,
+  expectedQuarantines: 0,
+  correctQuarantines: 0,
   providerErrors: 0,
   timeouts: 0,
   totalLatencyMs: 0,
@@ -197,6 +201,7 @@ async function evaluateCase(c: GoldCase): Promise<void> {
   const allowedIds = new Set(passages.map((p) => p.passageId));
 
   const aggregateText: string[] = [];
+  const quarantinedText: string[] = [];
   let abstainedAnywhere = false;
 
   for (const taskKey of EVALUATED_TASKS) {
@@ -209,6 +214,14 @@ async function evaluateCase(c: GoldCase): Promise<void> {
       provider: new MockAiProvider(),
       timeoutMs: 15_000,
     });
+
+    // Record the FULL text of every withheld passage, not the trigger excerpt.
+    // The claim being tested is "this passage never reached the provider", and
+    // a passage is the unit that was or was not sent.
+    for (const q of result.quarantinedPassages) {
+      const original = passages.find((p) => p.passageId === q.passageId);
+      quarantinedText.push(original ? original.text : q.excerpt);
+    }
 
     m.runs += 1;
     m.totalLatencyMs += result.latencyMs;
@@ -374,6 +387,24 @@ async function evaluateCase(c: GoldCase): Promise<void> {
     }
   }
 
+  // ---- Injection containment ----------------------------------------------
+  //
+  // Two assertions, and BOTH must hold. The hostile text must be provably
+  // withheld from the provider (here), and must not appear in any output (the
+  // forbiddenConclusions sweep above). Passing one without the other is not
+  // containment: withholding text that the engine reproduces anyway means the
+  // screen missed a path, and an absent output with an unscreened input means
+  // the engine merely happened not to repeat it this time.
+  for (const expected of c.expectQuarantined ?? []) {
+    m.expectedQuarantines += 1;
+    const needle = expected.toLowerCase();
+    if (quarantinedText.some((q) => q.toLowerCase().includes(needle))) {
+      m.correctQuarantines += 1;
+    } else {
+      failures.push(`[${c.id}] hostile text was NOT withheld from the provider: "${expected}"`);
+    }
+  }
+
   // ---- Abstention calibration --------------------------------------------
   if (c.expectAbstention) {
     m.expectedAbstentions += 1;
@@ -488,6 +519,18 @@ async function main(): Promise<void> {
   );
 
   console.log("\nCALIBRATED ABSTENTION");
+  const quarantineAccuracy = pct(m.correctQuarantines, m.expectedQuarantines);
+  line(
+    "injected text withheld from provider",
+    `${(quarantineAccuracy * 100).toFixed(1)}% (${m.correctQuarantines}/${m.expectedQuarantines})`,
+    quarantineAccuracy === 1,
+  );
+  if (quarantineAccuracy !== 1) {
+    failures.push(
+      `injection containment: ${(quarantineAccuracy * 100).toFixed(1)}% (${m.correctQuarantines}/${m.expectedQuarantines})`,
+    );
+  }
+
   const abstentionAccuracy = pct(m.correctAbstentions, m.expectedAbstentions);
   line(
     "correct abstentions",

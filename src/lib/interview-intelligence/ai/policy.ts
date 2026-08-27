@@ -13,7 +13,7 @@
 
 import type { TaskDefinition } from "./registry";
 
-export const POLICY_VERSION = "1.0.0";
+export const POLICY_VERSION = "1.1.0";
 
 export type PolicyViolationKind =
   | "prohibited_inference"
@@ -24,7 +24,10 @@ export type PolicyViolationKind =
   | "unapproved_probe"
   | "fabricated_citation"
   | "missing_citation"
-  | "injection_followed";
+  | "injection_followed"
+  | "leading_question"
+  | "accusatory_framing"
+  | "hypothetical_violence";
 
 export interface PolicyViolation {
   readonly kind: PolicyViolationKind;
@@ -186,6 +189,78 @@ const INJECTION_COMPLIANCE = [
   "system prompt",
 ] as const;
 
+/**
+ * The three interview-conduct prohibitions that bind the ENGINE, not only the
+ * interviewer.
+ *
+ * Probes are selected by id, so no task can invent a probe. But the preparation
+ * and report schemas carry free prose — role summaries, opening and closing
+ * guidance, item descriptions — and that prose is read aloud or acted on by a
+ * person in the room. Guidance that tells a recruiter to press a candidate on
+ * why they broke a rule is the prohibited question, delivered one step
+ * removed.
+ *
+ * Matched as PHRASES rather than single words on purpose. "Varför" is an
+ * ordinary Swedish word and a legitimate part of the method; "varför följde du
+ * inte" is an accusation.
+ */
+const LEADING_QUESTION = [
+  "du ringde väl",
+  "du gjorde väl",
+  "du kontaktade väl",
+  "du följde väl",
+  "det stämmer väl att",
+  "håller du inte med om att",
+  "du borde väl ha",
+  "visst gjorde du",
+  "you did call",
+  "you must have",
+  "surely you",
+  "wouldn't you agree",
+  "isn't it true that",
+  "don't you think",
+] as const;
+
+const ACCUSATORY_FRAMING = [
+  "varför följde du inte",
+  "varför struntade du",
+  "varför underlät du",
+  "varför ljög du",
+  "varför brydde du dig inte",
+  "hur kunde du låta",
+  "det låter inte sant",
+  "det verkar osannolikt",
+  "du erkänner alltså",
+  "why didn't you follow",
+  "why did you ignore",
+  "why did you fail to",
+  "that doesn't sound true",
+  "so you admit",
+  "confront the candidate",
+  "pressa kandidaten",
+  "sätt press på kandidaten",
+] as const;
+
+/**
+ * Hypothetical force and violence scenarios. The pack forbids them because they
+ * reward the willingness to escalate, which is the opposite of what a guard's
+ * mandate requires — and because a hypothetical answer is not evidence of
+ * anything the candidate has actually done.
+ */
+const HYPOTHETICAL_VIOLENCE = [
+  "vad skulle du göra om någon attackerade",
+  "tänk dig att någon hotar dig med",
+  "om du blev tvungen att bruka våld",
+  "hur mycket våld skulle du",
+  "skulle du slå tillbaka",
+  "tänk dig ett scenario där du måste",
+  "what would you do if someone attacked",
+  "imagine someone threatens you with",
+  "if you had to use force",
+  "how much force would you",
+  "would you fight back",
+] as const;
+
 /* ------------------------------------------------------------------ */
 
 function findTerm(haystack: string, terms: readonly string[]): string | null {
@@ -303,6 +378,38 @@ export function validatePolicy(parsed: unknown, ctx: PolicyContext): readonly Po
         });
       }
     }
+  }
+
+  // ---- 2b. Interview conduct the ENGINE must not produce -------------------
+  //
+  // These bind every task that emits prose a person will read out or act on.
+  // A leading or accusatory formulation contaminates the answer it provokes,
+  // so the evidence gathered after one is worth less than no evidence at all.
+  const leading = findTerm(sweepText, LEADING_QUESTION);
+  if (leading) {
+    violations.push({
+      kind: "leading_question",
+      detail: `The output proposes a leading formulation ("${leading}"). A leading question supplies its own answer and destroys the evidential value of the response.`,
+      evidence: excerptAround(sweepText, leading),
+    });
+  }
+
+  const accusatory = findTerm(sweepText, ACCUSATORY_FRAMING);
+  if (accusatory) {
+    violations.push({
+      kind: "accusatory_framing",
+      detail: `The output proposes an accusatory formulation ("${accusatory}"). Facts are established before they are challenged, and the engine does not challenge anyone.`,
+      evidence: excerptAround(sweepText, accusatory),
+    });
+  }
+
+  const violence = findTerm(sweepText, HYPOTHETICAL_VIOLENCE);
+  if (violence) {
+    violations.push({
+      kind: "hypothetical_violence",
+      detail: `The output proposes a hypothetical force scenario ("${violence}"). The pack forbids these: they reward escalation and produce speculation, not evidence.`,
+      evidence: excerptAround(sweepText, violence),
+    });
   }
 
   // ---- 3. Probes are SELECTED, never invented ------------------------------
@@ -449,4 +556,7 @@ export const POLICY_SELF_TEST_VOCABULARIES = {
   HIRING_RECOMMENDATION,
   PROTECTED_CHARACTERISTIC,
   INJECTION_COMPLIANCE,
+  LEADING_QUESTION,
+  ACCUSATORY_FRAMING,
+  HYPOTHETICAL_VIOLENCE,
 } as const;

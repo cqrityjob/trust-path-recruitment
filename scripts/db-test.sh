@@ -534,9 +534,9 @@ if [ "$PL_RC" -ne 0 ]; then
   suite_failed "v3.1 personal layer"
 else
   echo "    ok  ${PL_PASSED} personal layer assertions passed"
-  if [ "$PL_PASSED" -lt 24 ]; then
+  if [ "$PL_PASSED" -lt 28 ]; then
     echo "FAIL: expected at least 24 personal-layer assertions, only ${PL_PASSED} ran." >&2
-    suite_failed "v3.1 personal layer (assertion shortfall: floor 24)"
+    suite_failed "v3.1 personal layer (assertion shortfall: floor 28)"
   fi
 fi
 
@@ -1229,6 +1229,37 @@ echo "    ok  ${IVR_PASSED} Interview Intelligence runtime assertions passed"
 if [ "$IVR_PASSED" -lt 70 ]; then
   echo "FAIL: expected at least 70 runtime assertions, only ${IVR_PASSED} ran." >&2
   suite_failed "Interview Intelligence runtime (assertion shortfall: floor 70)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5n-c. Interview Intelligence -- integrity hardening
+#
+# The three honesty controls, tested as negatives: research cannot outrun its
+# sources, the knowledge graph states its own assurance instead of implying
+# certainty, and a pilot grant is a time-boxed authorisation rather than a way
+# around publication review. Also runs BEFORE the rollback step.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Intelligence integrity assertions"
+set +e
+IVI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_integrity_test.sql 2>&1)"
+IVI_RC=$?
+set -e
+
+echo "$IVI_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IVI_PASSED="$(echo "$IVI_OUT" | grep -c "ok  " || true)"
+
+if [ "$IVI_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Intelligence integrity suite exited with code ${IVI_RC}." >&2
+  echo "$IVI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Intelligence integrity"
+fi
+
+echo "    ok  ${IVI_PASSED} Interview Intelligence integrity assertions passed"
+
+if [ "$IVI_PASSED" -lt 28 ]; then
+  echo "FAIL: expected at least 28 integrity assertions, only ${IVI_PASSED} ran." >&2
+  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 28)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2699,6 +2730,7 @@ echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
 echo "              ${IIP_PASSED} Role Interview Pack governance assertions,"
 echo "              ${IVR_PASSED} Interview Intelligence runtime assertions,"
+echo "              ${IVI_PASSED} Interview Intelligence integrity assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"

@@ -97,8 +97,12 @@ BEGIN
     'R1.1 an unpublished pack cannot be used without an explicit pilot grant');
   RESET ROLE;
 
-  INSERT INTO public.scp_interview_pack_pilot_grants (employer_id, pack_version_id, rationale)
-  VALUES ('33330000-0000-0000-0000-00000000000a', _packv, 'Kontrollerad intern pilot.')
+  -- A grant states its usage mode, its environment and when it ends. There is
+  -- no such thing as an open-ended pilot.
+  INSERT INTO public.scp_interview_pack_pilot_grants
+    (employer_id, pack_version_id, rationale, usage_mode, environment, expires_on)
+  VALUES ('33330000-0000-0000-0000-00000000000a', _packv, 'Kontrollerad intern pilot.',
+          'internal_qa', 'development', current_date + 30)
   ON CONFLICT DO NOTHING;
 
   PERFORM pg_temp.ok(
@@ -757,11 +761,15 @@ SELECT pg_temp.ok(
                WHERE btrim(unsupported_use) = '' OR btrim(limitations) = ''),
   'R9.1 every research claim states what it does NOT support');
 
+-- Reading a document and having an expert review the claims drawn from it are
+-- two different things, and the registry tracks them separately. The invariant
+-- that matters runs one way only: nothing may claim REVIEW it has not had, and
+-- nothing may claim review of a document nobody opened. A source that is read
+-- but unreviewed is the ordinary, honest intermediate state.
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.scp_research_sources
-               WHERE access_status = 'verified_read' AND review_status = 'unreviewed'
-                 AND slug <> 'cqrityjob-vaktare-pack-v1'),
-  'R9.2 no source claims to be both read and reviewed when it is not');
+               WHERE review_status <> 'unreviewed' AND access_status <> 'verified_read'),
+  'R9.2 no source claims to be reviewed when nobody has read it');
 
 SELECT pg_temp.ok(
   NOT EXISTS (

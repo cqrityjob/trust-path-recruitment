@@ -17,6 +17,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { runAiTask } from "./ai/orchestrator";
 import type { UntrustedBlock } from "./ai/provider";
 import type { TaskKey } from "./ai/registry";
+import { QUARANTINE_REASON_SV } from "./ai/injection";
 
 /* ------------------------------------------------------------------ */
 /* Vocabulary                                                          */
@@ -768,6 +769,21 @@ export const markSourcesReady = createServerFn({ method: "POST" })
 /*                                                                     */
 /* Load governed context and passages -> run the task server-side ->   */
 /* record the run and its typed output through the governed RPCs.      */
+/**
+ * What the input screen withheld from the provider, in a shape a server
+ * function may return.
+ *
+ * Surfaced rather than logged: the withheld paragraph is the one the recruiter
+ * most needs to read for themselves, because someone tried to steer the
+ * assessment with it. That is information about the application, not an
+ * internal diagnostic.
+ */
+export interface WithheldPassage {
+  readonly passageId: string;
+  readonly reason: string;
+  readonly excerpt: string;
+}
+
 /* A quarantined run is still RECORDED, so a reviewer can see that the */
 /* engine produced something it was not allowed to produce.            */
 /* ------------------------------------------------------------------ */
@@ -851,6 +867,7 @@ export const runPreparation = createServerFn({ method: "POST" })
       readonly status: string;
       readonly planId: string | null;
       readonly message: string | null;
+      readonly withheld: readonly WithheldPassage[];
     }> => {
       const db = context.supabase;
 
@@ -899,12 +916,23 @@ export const runPreparation = createServerFn({ method: "POST" })
         _output_tokens: result.usage.outputTokens,
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
+        _withheld_passages: result.quarantinedPassages as never,
       });
+
+      // Carried to the caller on every path, including failure: a recruiter
+      // told only "the engine could not run" is missing the more important
+      // half of what happened.
+      const withheld: readonly WithheldPassage[] = result.quarantinedPassages.map((q) => ({
+        passageId: q.passageId,
+        reason: QUARANTINE_REASON_SV[q.reason],
+        excerpt: q.excerpt,
+      }));
 
       if (result.status !== "succeeded" || !result.output) {
         return {
           status: result.status,
           planId: null,
+          withheld,
           message: result.failureReason ?? result.abstentionReason,
         };
       }
@@ -932,7 +960,12 @@ export const runPreparation = createServerFn({ method: "POST" })
       });
       if (planRes.error) throw new Error(planRes.error.message);
 
-      return { status: "succeeded", planId: planRes.data as unknown as string, message: null };
+      return {
+        status: "succeeded",
+        planId: planRes.data as unknown as string,
+        message: null,
+        withheld,
+      };
     },
   );
 
@@ -1070,6 +1103,7 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
       readonly status: string;
       readonly proposals: number;
       readonly message: string | null;
+      readonly withheld: readonly WithheldPassage[];
     }> => {
       const db = context.supabase;
 
@@ -1092,7 +1126,12 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         .limit(1);
       const sessionId = (sessionRes.data ?? [])[0]?.id as string | undefined;
       if (!sessionId)
-        return { status: "no_session", proposals: 0, message: "Ingen intervjusession finns." };
+        return {
+          status: "no_session",
+          proposals: 0,
+          message: "Ingen intervjusession finns.",
+          withheld: [],
+        };
 
       const notesRes = await db
         .from("scp_interview_session_notes")
@@ -1138,13 +1177,24 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _output_tokens: result.usage.outputTokens,
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
+        _withheld_passages: result.quarantinedPassages as never,
       });
+
+      // Carried to the caller on every path, including failure: a recruiter
+      // told only "the engine could not run" is missing the more important
+      // half of what happened.
+      const withheld: readonly WithheldPassage[] = result.quarantinedPassages.map((q) => ({
+        passageId: q.passageId,
+        reason: QUARANTINE_REASON_SV[q.reason],
+        excerpt: q.excerpt,
+      }));
 
       if (result.status !== "succeeded" || !result.output) {
         await db.rpc("scp_iv_begin_evidence_review", { _case_id: data.caseId });
         return {
           status: result.status,
           proposals: 0,
+          withheld,
           message: result.failureReason ?? result.abstentionReason,
         };
       }
@@ -1183,6 +1233,7 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         status: "succeeded",
         proposals: (recRes.data as unknown as number) ?? 0,
         message: null,
+        withheld,
       };
     },
   );

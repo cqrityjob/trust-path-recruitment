@@ -24,6 +24,7 @@ import {
   LevelZeroNote,
   Panel,
   State,
+  WithheldPanel,
   BUTTON,
   FIELD,
   PRIMARY_BUTTON,
@@ -196,6 +197,11 @@ function Page() {
         {extract.isPending && (
           <div className="mt-3 max-w-3xl">
             <State kind="aiRunning" />
+          </div>
+        )}
+        {result && result.withheld.length > 0 && (
+          <div className="mt-3 max-w-3xl">
+            <WithheldPanel withheld={result.withheld} />
           </div>
         )}
         {result && result.status !== "succeeded" && (

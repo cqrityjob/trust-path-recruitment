@@ -19,6 +19,7 @@ import {
   Chip,
   Panel,
   State,
+  WithheldPanel,
   ValidationChip,
   BUTTON,
   FIELD,
@@ -329,6 +330,11 @@ function Page() {
         {generate.isPending && (
           <div className="mt-3 max-w-3xl">
             <State kind="aiRunning" />
+          </div>
+        )}
+        {genResult && genResult.withheld.length > 0 && (
+          <div className="mt-3 max-w-3xl">
+            <WithheldPanel withheld={genResult.withheld} />
           </div>
         )}
         {genResult && genResult.status !== "succeeded" && (
