@@ -919,21 +919,16 @@ $assert5$;
 -- So the run records what it withheld and why, and the case screen shows it.
 -- ---------------------------------------------------------------------------
 
--- The ledger needs a name for it. Withholding source material is not an AI
--- result and not a failure -- it is a distinct thing that happened, and
--- folding it into ai_run_failed would hide it among ordinary provider errors.
-ALTER TABLE public.scp_interview_case_events
-  DROP CONSTRAINT IF EXISTS scp_interview_case_events_event_check;
-ALTER TABLE public.scp_interview_case_events
-  ADD CONSTRAINT scp_interview_case_events_event_check CHECK (event IN (
-    'case_created','source_added','source_erased','transcript_authorised',
-    'ai_run_started','ai_run_succeeded','ai_run_failed','source_passage_withheld',
-    'prep_generated','prep_edited','prep_approved','interview_started',
-    'interview_paused','interview_resumed','interview_completed','probe_used',
-    'evidence_proposed','evidence_confirmed','evidence_edited','evidence_rejected',
-    'evidence_authored','finding_recorded','finding_resolved','assessment_recorded',
-    'assessment_superseded','report_drafted','report_finalised','case_cancelled',
-    'retention_applied'));
+-- The ledger needs a name for withholding source material: it is not an AI
+-- result and not a failure, and folding it into ai_run_failed would hide it
+-- among ordinary provider errors.
+--
+-- The event list itself is declared ONCE, in section 7, which also renames two
+-- transitions. It used to be declared here as well, and that earlier copy
+-- predated the renames -- so on a re-run this statement rebuilt the constraint
+-- without 'sources_marked_ready', section 7 had already written rows using it,
+-- and the migration failed against its own output. A list of permitted values
+-- gets one home.
 
 ALTER TABLE public.scp_interview_ai_runs
   ADD COLUMN IF NOT EXISTS withheld_passages jsonb NOT NULL DEFAULT '[]'::jsonb;
@@ -1495,3 +1490,162 @@ GRANT EXECUTE ON FUNCTION public.scp_iv_ai_run_settle(uuid, text, text, text, js
   TO authenticated, service_role;
 
 DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb);
+
+
+-- ###########################################################################
+-- SECTION 10 -- Two firewalls, enforced rather than observed
+-- ###########################################################################
+--
+-- Auditing found both boundaries intact: the interview domain references no
+-- Career Discovery table and reaches Passport only through the disclosure the
+-- holder created. Both held by ABSENCE -- nobody had written the code that
+-- would break them -- and absence is not a control. Somebody adding a
+-- reasonable-looking join in six months would breach either without noticing.
+-- ---------------------------------------------------------------------------
+
+-- 10.1  Career Discovery cannot enter an interview.
+--
+-- Career Discovery is candidate ORIENTATION: it tells a person which security
+-- roles might suit them. It is not recruitment evidence, it was not produced
+-- under an employer's lawful basis, and the candidate answered it believing it
+-- was for them. A recommended profession or a career-fit result appearing in a
+-- preparation brief would turn a self-exploration tool into a screening
+-- instrument, retroactively, without anyone deciding to.
+--
+-- Publishing a Career Card publicly does not change this. A shared card is the
+-- candidate showing something to the world; it is not evidence about their
+-- suitability for one employer's role.
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_no_career_discovery()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  -- The structural half. A source referencing a Career Discovery session or
+  -- report is refused outright, whatever its declared kind.
+  -- Matched on the label as well as the body, and on the product NAMES rather
+  -- than on English result words: the first version looked for
+  -- "career discovery report" and sailed past "Career Discovery-rapport",
+  -- which is what a Swedish candidate's actually says. Source material has no
+  -- legitimate reason to mention Career Discovery at all, so the whole name is
+  -- the signal.
+  IF coalesce(NEW.content_text, '') || ' ' || coalesce(NEW.label, '') ~*
+       '(\ycd_(sessions|report_snapshots|shared_reports|professions)\y|career[ _-]?discovery|career[ _-]?card|karriärkort)' THEN
+    RAISE EXCEPTION
+      'SCP_IV_CAREER_DISCOVERY_EXCLUDED: Career Discovery output is candidate orientation, not recruitment evidence. It was answered for the candidate''s own use and cannot be entered as interview source material -- including a publicly shared Career Card.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_guard_no_career_discovery() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS scp_interview_case_sources_no_career_discovery
+  ON public.scp_interview_case_sources;
+CREATE TRIGGER scp_interview_case_sources_no_career_discovery
+  BEFORE INSERT OR UPDATE ON public.scp_interview_case_sources
+  FOR EACH ROW EXECUTE FUNCTION public.scp_iv_guard_no_career_discovery();
+
+
+-- 10.2  Passport material requires a live disclosure the holder created.
+--
+-- passport_disclosure is a permitted source kind, and that is correct: a
+-- verified credential the candidate deliberately handed over is exactly the
+-- kind of fact an interview should be able to rest on. What was missing is any
+-- check that the disclosure is real, current and pointed at this employer's
+-- application. A source could be labelled passport_disclosure and contain
+-- anything.
+--
+-- The column is added rather than parsed out of the text: an identifier a guard
+-- can follow is worth more than a string a guard has to trust.
+ALTER TABLE public.scp_interview_case_sources
+  ADD COLUMN IF NOT EXISTS disclosure_id uuid REFERENCES public.sp_disclosures(id) ON DELETE RESTRICT;
+
+COMMENT ON COLUMN public.scp_interview_case_sources.disclosure_id IS
+  'Required for source_kind = passport_disclosure and forbidden otherwise. '
+  'Points at the holder-created disclosure this material came from, so expiry '
+  'and revocation stay attached to the interview rather than being checked once '
+  'at import and forgotten.';
+
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_passport_disclosure()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _d public.sp_disclosures%ROWTYPE; _case_app uuid;
+BEGIN
+  IF NEW.source_kind <> 'passport_disclosure' THEN
+    IF NEW.disclosure_id IS NOT NULL THEN
+      RAISE EXCEPTION
+        'SCP_IV_DISCLOSURE_ON_NON_PASSPORT_SOURCE: only a passport_disclosure source carries a disclosure id.'
+        USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.disclosure_id IS NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_PASSPORT_NO_DISCLOSURE: Passport material requires the holder-created disclosure it came from. Applying for a job is not consent, and neither is labelling a source "passport_disclosure".'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _d FROM public.sp_disclosures WHERE id = NEW.disclosure_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'SCP_IV_PASSPORT_DISCLOSURE_NOT_FOUND' USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _d.revoked_at IS NOT NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_PASSPORT_DISCLOSURE_REVOKED: the holder withdrew this disclosure. Material already confirmed by a human stays in the record; nothing new may be taken from it.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF _d.expires_at IS NOT NULL AND _d.expires_at <= now() THEN
+    RAISE EXCEPTION
+      'SCP_IV_PASSPORT_DISCLOSURE_EXPIRED: this disclosure lapsed on %. A disclosure that has run out is not a smaller permission than one that was withdrawn.',
+      _d.expires_at::date USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- And it must be the disclosure for THIS application. A holder sharing their
+  -- Passport with one employer has not shared it with another, and has not
+  -- shared it for a second unrelated role at the same employer.
+  SELECT application_id INTO _case_app
+    FROM public.scp_interview_cases WHERE id = NEW.case_id;
+  IF _d.application_id IS DISTINCT FROM _case_app THEN
+    RAISE EXCEPTION
+      'SCP_IV_PASSPORT_DISCLOSURE_WRONG_APPLICATION: this disclosure was created for a different application. Consent is per application, not per employer.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_guard_passport_disclosure() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS scp_interview_case_sources_passport_disclosure
+  ON public.scp_interview_case_sources;
+CREATE TRIGGER scp_interview_case_sources_passport_disclosure
+  BEFORE INSERT OR UPDATE ON public.scp_interview_case_sources
+  FOR EACH ROW EXECUTE FUNCTION public.scp_iv_guard_passport_disclosure();
+
+
+-- 10.3  The interview never writes to Passport.
+--
+-- Nothing in the domain does this today. The guard exists so that it stays
+-- true: an interview statement is one person's account, and a Passport claim is
+-- a verified fact with an issuer behind it. Promoting the first into the second
+-- silently would destroy the distinction the Passport exists to make.
+--
+-- The legitimate path is a candidate-visible verification SUGGESTION through
+-- Passport's own governance, which the holder acts on. That is not this table.
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_no_passport_write()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF current_setting('scp_iv.in_interview_write', true) = 'on' THEN
+    RAISE EXCEPTION
+      'SCP_IV_NO_PASSPORT_WRITE: Interview Intelligence cannot create or alter a Passport claim. An interview statement is an account; a Passport claim is a verified fact. Raise a verification suggestion through Passport governance instead.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_guard_no_passport_write() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS sp_claims_no_interview_write ON public.sp_claims;
+CREATE TRIGGER sp_claims_no_interview_write
+  BEFORE INSERT OR UPDATE ON public.sp_claims
+  FOR EACH ROW EXECUTE FUNCTION public.scp_iv_guard_no_passport_write();

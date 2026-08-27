@@ -563,5 +563,188 @@ BEGIN
     format('I6.7 no finalised report payload has a top-level score-like key (%s)', _n));
 END $$;
 
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I7 — the Career Discovery firewall'; END $$;
+-- ===========================================================================
+--
+-- Career Discovery is candidate ORIENTATION. The candidate answered it
+-- believing it was for them, it was not produced under an employer's lawful
+-- basis, and a recommended profession appearing in a preparation brief would
+-- turn a self-exploration tool into a screening instrument retroactively.
+--
+-- The boundary held by ABSENCE before this -- nobody had written the join that
+-- would break it -- and absence is not a control.
+
+DO $$
+DECLARE _case uuid; _n integer;
+BEGIN
+  SELECT id INTO _case FROM public.scp_interview_cases
+   WHERE employer_id = '55550000-0000-0000-0000-00000000000a' ORDER BY created_at LIMIT 1;
+
+  -- Structural: nothing in the domain can reach a Career Discovery table.
+  SELECT count(*) INTO _n
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_class f ON f.oid = c.confrelid
+   WHERE c.contype = 'f' AND t.relname LIKE 'scp_interview%' AND f.relname LIKE 'cd\_%';
+  PERFORM pg_temp.ok(_n = 0,
+    format('I7.1 no interview table has a foreign key into Career Discovery (%s)', _n));
+
+  SELECT count(*) INTO _n
+    FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+   WHERE ns.nspname = 'public' AND p.proname LIKE 'scp_iv\_%'
+     AND p.prosrc ~ '\ycd_(sessions|report_snapshots|shared_reports|professions|evidence)\y';
+  PERFORM pg_temp.ok(_n = 0,
+    format('I7.2 no runtime function reads a Career Discovery table (%s)', _n));
+
+  -- Content: a Career Card cannot be entered as source material, whatever it
+  -- is labelled. Publishing one publicly does not make it recruitment evidence.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', '44440000-0000-0000-0000-0000000000a2', true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_add_source(%L, %L, %L, %L, %L, %L)',
+           _case, 'application_answers', 'Career Card',
+           'Career Discovery-rapport: rekommenderad yrkesroll ordningsvakt.',
+           'recruitment_interview', 'Kandidaten delade sitt Career Card publikt.'),
+    'SCP_IV_CAREER_DISCOVERY_EXCLUDED',
+    'I7.3 a shared Career Card cannot be entered as interview source material');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_add_source(%L, %L, %L, %L, %L, %L)',
+           _case, 'candidate_cv', 'CV',
+           'Erfaren vaktare. Career Discovery result: hog matchning mot larmoperator.',
+           'recruitment_interview', 'Ansokan.'),
+    'SCP_IV_CAREER_DISCOVERY_EXCLUDED',
+    'I7.4 nor smuggled inside an otherwise ordinary CV');
+  RESET ROLE;
+END $$;
+
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I8 — Passport disclosure is the only door'; END $$;
+-- ===========================================================================
+
+DO $$
+DECLARE
+  _case uuid; _app uuid; _holder uuid := '44440000-0000-0000-0000-0000000000a3';
+  _live uuid; _expired uuid; _revoked uuid; _other uuid;
+BEGIN
+  SELECT id, application_id INTO _case, _app FROM public.scp_interview_cases
+   WHERE employer_id = '55550000-0000-0000-0000-00000000000a' ORDER BY created_at LIMIT 1;
+
+  -- The cases above were created without an application, which is legitimate
+  -- (an interview need not come from an advert) but leaves nothing for a
+  -- disclosure to be scoped to. Build the real chain: job -> application ->
+  -- case. The job is inserted as a draft and then published without naming
+  -- published_at, because published_at is moderation-owned and the trigger
+  -- stamps it for any caller that does not try to set it.
+  INSERT INTO public.jobs (id, employer_id, slug, short_id, application_method, title_sv, status)
+  VALUES ('55550000-0000-0000-0000-0000000000d1', '55550000-0000-0000-0000-00000000000a',
+          'integrity-test-job', 'ITJ001', 'internal', 'Vaktare', 'draft')
+  ON CONFLICT (id) DO NOTHING;
+  UPDATE public.jobs SET status = 'published', expires_at = now() + interval '30 days'
+   WHERE id = '55550000-0000-0000-0000-0000000000d1';
+
+  INSERT INTO public.job_applications (id, job_id, applicant_user_id, consent_given_at, status)
+  VALUES ('55550000-0000-0000-0000-0000000000e1', '55550000-0000-0000-0000-0000000000d1',
+          _holder, now(), 'reviewing')
+  ON CONFLICT (id) DO NOTHING;
+  _app := '55550000-0000-0000-0000-0000000000e1';
+
+  UPDATE public.scp_interview_cases
+     SET application_id = _app, job_id = '55550000-0000-0000-0000-0000000000d1'
+   WHERE id = _case;
+
+  -- Passport allows ONE live disclosure per application, so this walks a single
+  -- disclosure through its states rather than creating three at once. That is
+  -- closer to what actually happens to a candidate's consent anyway: it is
+  -- granted, it is used, and then it lapses or is withdrawn.
+  --
+  -- The table's own rule: an application-scoped disclosure carries no token (it
+  -- is reached through the application, not a shareable link).
+  INSERT INTO public.sp_disclosures (holder_user_id, package_code, purpose, application_id, expires_at)
+  VALUES (_holder, 'verified_qualifications', 'recruitment', _app, now() + interval '30 days')
+  RETURNING id INTO _live;
+
+  -- A disclosure for a DIFFERENT application: link-scoped, so it needs a token
+  -- and no application of its own.
+  INSERT INTO public.sp_disclosures (holder_user_id, package_code, token_hash, purpose, expires_at)
+  VALUES (_holder, 'public_card', 'hash-other', 'recruitment', now() + interval '30 days')
+  RETURNING id INTO _other;
+
+  -- ---- with no disclosure at all -----------------------------------------
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.scp_interview_case_sources
+      (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note)
+    VALUES (%L, 'passport_disclosure', 'Passport', 'VU1 verifierad.', 'recruitment_interview', 'x')$q$,
+    _case),
+    'SCP_IV_PASSPORT_NO_DISCLOSURE',
+    'I8.1 Passport material with NO disclosure is refused — a label is not consent');
+
+  -- ---- a disclosure belonging to something else ---------------------------
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.scp_interview_case_sources
+      (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note, disclosure_id)
+    VALUES (%L, 'passport_disclosure', 'Passport', 'VU1.', 'recruitment_interview', 'x', %L)$q$,
+    _case, _other),
+    'SCP_IV_PASSPORT_DISCLOSURE_WRONG_APPLICATION',
+    'I8.2 a disclosure for another application does not apply — consent is per application');
+
+  -- ---- a disclosure id on an ordinary source ------------------------------
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.scp_interview_case_sources
+      (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note, disclosure_id)
+    VALUES (%L, 'candidate_cv', 'CV', 'Vaktare.', 'recruitment_interview', 'x', %L)$q$,
+    _case, _live),
+    'SCP_IV_DISCLOSURE_ON_NON_PASSPORT_SOURCE',
+    'I8.3 a disclosure id cannot be attached to an ordinary CV');
+
+  -- ---- the live one works -------------------------------------------------
+  INSERT INTO public.scp_interview_case_sources
+    (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note, disclosure_id)
+  VALUES (_case, 'passport_disclosure', 'Passport', 'VU1 och VU2 verifierade.',
+          'recruitment_interview', 'Kandidatens delning.', _live);
+  PERFORM pg_temp.ok(true, 'I8.4 a LIVE disclosure for this application is accepted');
+
+  -- ---- then the holder lets it lapse --------------------------------------
+  UPDATE public.sp_disclosures SET expires_at = now() - interval '1 day' WHERE id = _live;
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.scp_interview_case_sources
+      (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note, disclosure_id)
+    VALUES (%L, 'passport_disclosure', 'Passport 2', 'Mer.', 'recruitment_interview', 'x', %L)$q$,
+    _case, _live),
+    'SCP_IV_PASSPORT_DISCLOSURE_EXPIRED',
+    'I8.5 once it EXPIRES nothing further may be taken from it');
+
+  -- ---- and withdraws it ---------------------------------------------------
+  UPDATE public.sp_disclosures
+     SET expires_at = now() + interval '30 days', revoked_at = now() WHERE id = _live;
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.scp_interview_case_sources
+      (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note, disclosure_id)
+    VALUES (%L, 'passport_disclosure', 'Passport 3', 'Mer.', 'recruitment_interview', 'x', %L)$q$,
+    _case, _live),
+    'SCP_IV_PASSPORT_DISCLOSURE_REVOKED',
+    'I8.6 a REVOKED disclosure cannot be newly retrieved from');
+
+  -- What was already taken while the disclosure was live stays. Erasing a
+  -- human-confirmed record because consent later lapsed would rewrite the
+  -- account of a decision that has already been made; withdrawal stops future
+  -- retrieval, which is what it is for.
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM public.scp_interview_case_sources
+             WHERE case_id = _case AND disclosure_id = _live AND retention_state = 'active'),
+    'I8.7 material taken while it was live remains — withdrawal stops future retrieval');
+
+  -- The interview never writes to Passport.
+  PERFORM set_config('scp_iv.in_interview_write', 'on', true);
+  PERFORM pg_temp.must_fail(format($q$
+    INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level)
+    VALUES (%L, 'training', 'VU1 enligt intervju', 'self_asserted')$q$, _holder),
+    'SCP_IV_NO_PASSPORT_WRITE',
+    'I8.8 Interview Intelligence cannot create a Passport claim');
+  PERFORM set_config('scp_iv.in_interview_write', 'off', true);
+END $$;
+
 DO $$ BEGIN RAISE NOTICE 'INTEGRITY SUITE COMPLETE'; END $$;
 ROLLBACK;
