@@ -360,6 +360,35 @@ ok(
 );
 
 /* ------------------------------------------------------------------ */
+/* 4b. The customer sees a workspace, not a database                    */
+/* ------------------------------------------------------------------ */
+
+// Two things reached the employer screens verbatim and should not have: raw
+// database enum values as chips ("job_description", "self_evaluation_question")
+// and an internal English design rationale on a Swedish page. Both looked
+// deliberate in code review and obvious the moment the page was opened, which
+// is why they are guarded here rather than trusted to review.
+
+const EMPLOYER_SCREENS = sources.filter(
+  (s) => s.path.includes("interview-intelligence") && s.path.endsWith(".tsx"),
+);
+
+ok(EMPLOYER_SCREENS.length >= 5, "the employer interview screens are missing from the scan");
+
+for (const screen of EMPLOYER_SCREENS) {
+  const code = codeOnly(screen.text);
+
+  // A bare enum interpolated into JSX. The labelled form -- uiLabel(MAP, x) --
+  // is what should appear instead, and does not match this.
+  for (const field of ["s.kind", "p.practiceKind", "s.purposeCode", "p.rationale"]) {
+    ok(
+      !code.includes(`{${field}}`),
+      `${screen.path} renders ${field} raw; the customer sees an internal value`,
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* 5. There is no retry-until-it-passes loop                           */
 /* ------------------------------------------------------------------ */
 

@@ -19,6 +19,9 @@ import {
   Chip,
   Panel,
   State,
+  SOURCE_KIND_LABEL,
+  PURPOSE_LABEL,
+  uiLabel,
   WithheldPanel,
   ValidationChip,
   BUTTON,
@@ -208,10 +211,12 @@ function Page() {
                   key={s.id}
                   className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-sm"
                 >
-                  <Chip tone="work">{s.kind}</Chip>
+                  <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind)}</Chip>
                   <span className="font-medium text-foreground">{s.label}</span>
                   <span className="text-xs text-muted-foreground">{s.passageCount} avsnitt</span>
-                  <span className="text-xs text-muted-foreground">· ändamål: {s.purposeCode}</span>
+                  <span className="text-xs text-muted-foreground">
+                    · ändamål: {uiLabel(PURPOSE_LABEL, s.purposeCode)}
+                  </span>
                 </li>
               ))}
             </ul>

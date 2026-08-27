@@ -29,6 +29,8 @@ import {
   Panel,
   PEACE_LABEL,
   State,
+  PRACTICE_KIND_LABEL,
+  uiLabel,
   BUTTON,
   FIELD,
   PRIMARY_BUTTON,
@@ -290,11 +292,23 @@ function Page() {
               <li key={p.id} className="rounded-md border border-border p-2.5 text-sm">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Chip tone={p.practiceKind === "warning" ? "attention" : "work"}>
-                    {p.practiceKind}
+                    {uiLabel(PRACTICE_KIND_LABEL, p.practiceKind)}
                   </Chip>
                   <span className="text-foreground">{p.statementSv}</span>
                 </div>
-                {p.rationale && <p className="mt-1 text-xs text-muted-foreground">{p.rationale}</p>}
+                {/*
+                  scp_interview_method_practices.rationale is NOT rendered.
+                  It is the internal, English-language justification for why a
+                  practice is in the method library — written for whoever
+                  reviews the library, not for a recruiter mid-interview. It was
+                  reaching this screen verbatim, so a Swedish interview page
+                  carried lines like "Process fidelity is measurable and is
+                  about the interviewer." Half-translated is worse than absent,
+                  and the provenance line below already tells the recruiter what
+                  backs the practice. If this rationale is ever meant for
+                  customers it needs authoring in Swedish as customer copy,
+                  which is content work rather than a rendering fix.
+                */}
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {p.hasResearchClaim
                     ? "Kopplad till en registrerad forskningsutsaga."

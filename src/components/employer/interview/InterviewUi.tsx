@@ -211,6 +211,49 @@ export function ValidationChip({ label }: { label: string | null }) {
   );
 }
 
+/**
+ * Database enum values, rendered as Swedish.
+ *
+ * These were reaching the screen raw — a recruiter preparing an interview saw
+ * a chip reading "job_description" and another reading
+ * "self_evaluation_question". The product should read like an interview
+ * workspace, and an internal identifier on the page says the opposite: that the
+ * customer is looking at a database.
+ *
+ * Unknown values fall through to the raw string rather than to an empty chip,
+ * so a value added in a migration before it is added here is visible and ugly
+ * rather than invisible.
+ */
+export const SOURCE_KIND_LABEL: Record<string, string> = {
+  job_description: "Annons",
+  employer_requirements: "Kravprofil",
+  candidate_cv: "CV",
+  application_answers: "Ansökningssvar",
+  interviewer_notes: "Intervjuanteckningar",
+  transcript: "Utskrift",
+  passport_disclosure: "Passport-delning",
+};
+
+export const PURPOSE_LABEL: Record<string, string> = {
+  recruitment_interview: "rekryteringsintervju",
+};
+
+export const PRACTICE_KIND_LABEL: Record<string, string> = {
+  checklist_item: "Att kontrollera",
+  opening_script: "Introduktion",
+  engagement_guidance: "Bemötande",
+  listening_prompt: "Lyssna efter",
+  probing_guidance: "Följdfrågor",
+  closure_step: "Avslut",
+  self_evaluation_question: "Fråga till dig själv",
+  warning: "Varning",
+};
+
+/** Look up a label, falling back to the raw value rather than to nothing. */
+export function uiLabel(map: Record<string, string>, value: string): string {
+  return map[value] ?? value;
+}
+
 export const PEACE_LABEL: Record<string, string> = {
   planning: "Planering",
   engage_explain: "Engagera och förklara",
