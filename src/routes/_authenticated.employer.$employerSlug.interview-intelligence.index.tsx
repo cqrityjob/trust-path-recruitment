@@ -77,6 +77,7 @@ function Page() {
         <Link
           to="/employer/$employerSlug/interview-intelligence/new"
           params={{ employerSlug }}
+          search={{ applicationId: undefined, jobId: undefined }}
           className={BUTTON}
         >
           Ny intervju

@@ -229,6 +229,100 @@ export const getInterviewWorkload = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * The Interview Intelligence cases attached to ONE application.
+ *
+ * The link this needed always existed in the schema —
+ * scp_interview_cases.application_id has been there since the runtime
+ * migration, foreign-keyed and cross-tenant guarded. What was missing was any
+ * route that used it, so the employer's application view and the interview
+ * workspace never met and a recruiter had to know both existed and navigate
+ * between them by hand.
+ *
+ * Returns process state only. No level, no evidence, no assessment: the
+ * application page links INTO the interview, it does not restate it.
+ */
+export interface ApplicationInterviewCase {
+  readonly id: string;
+  readonly title: string;
+  readonly status: CaseStatus;
+  readonly updatedAt: string;
+  readonly packName: string | null;
+  readonly validationLabel: string | null;
+  readonly proposalsAwaitingReview: number;
+  readonly reportFinalised: boolean;
+}
+
+const applicationInput = z.object({
+  employerId: z.string().uuid(),
+  applicationId: z.string().uuid(),
+});
+
+export const listInterviewCasesForApplication = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => applicationInput.parse(d))
+  .handler(
+    async ({ context, data }): Promise<{ readonly cases: readonly ApplicationInterviewCase[] }> => {
+      const db = context.supabase;
+
+      // employer_id is filtered as well as application_id. RLS already scopes
+      // this, but an application id is guessable and the belt is cheap.
+      const { data: rows, error } = await db
+        .from("scp_interview_cases")
+        .select(
+          "id, title, status, updated_at, scp_interview_pack_versions(validation_label, scp_interview_packs(name_sv))",
+        )
+        .eq("employer_id", data.employerId)
+        .eq("application_id", data.applicationId)
+        .order("updated_at", { ascending: false });
+      if (error) throw new Error(error.message);
+
+      const ids = (rows ?? []).map((r) => r.id as string);
+      const pending = new Map<string, number>();
+      const finalised = new Set<string>();
+      if (ids.length > 0) {
+        const { data: props } = await db
+          .from("scp_interview_evidence_proposals")
+          .select("case_id")
+          .in("case_id", ids)
+          .eq("review_state", "pending");
+        for (const p of props ?? []) {
+          const key = p.case_id as string;
+          pending.set(key, (pending.get(key) ?? 0) + 1);
+        }
+        const { data: reports } = await db
+          .from("scp_interview_reports")
+          .select("case_id, status")
+          .in("case_id", ids)
+          .eq("status", "final");
+        for (const r of reports ?? []) finalised.add(r.case_id as string);
+      }
+
+      const cases = (rows ?? []).map((r) => {
+        const version = Array.isArray(r.scp_interview_pack_versions)
+          ? r.scp_interview_pack_versions[0]
+          : r.scp_interview_pack_versions;
+        const pack = version
+          ? Array.isArray(version.scp_interview_packs)
+            ? version.scp_interview_packs[0]
+            : version.scp_interview_packs
+          : null;
+        return {
+          id: r.id as string,
+          title: r.title as string,
+          status: r.status as CaseStatus,
+          updatedAt: r.updated_at as string,
+          packName: pack?.name_sv ?? null,
+          validationLabel: version?.validation_label ?? null,
+          proposalsAwaitingReview: pending.get(r.id as string) ?? 0,
+          reportFinalised: finalised.has(r.id as string),
+        };
+      });
+
+      return { cases };
+    },
+  );
+
 /** Pack versions this employer may actually start a case with. */
 export const listUsablePacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

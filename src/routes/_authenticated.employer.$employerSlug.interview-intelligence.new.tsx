@@ -29,10 +29,29 @@ import {
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
-)({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+)({
+  ssr: false,
+  component: Page,
+  errorComponent: EmployerErrorState,
+  // Arriving from an application carries the application with it, so the case
+  // is bound to the real recruitment record rather than floating beside it.
+  // Both are validated as uuids and both are optional: the workspace's own
+  // "Ny intervju" button still opens an unlinked case, which is the right
+  // behaviour for an interview that is not tied to an advert.
+  validateSearch: (search: Record<string, unknown>) => ({
+    applicationId:
+      typeof search.applicationId === "string" && UUID.test(search.applicationId)
+        ? search.applicationId
+        : undefined,
+    jobId: typeof search.jobId === "string" && UUID.test(search.jobId) ? search.jobId : undefined,
+  }),
+});
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Page() {
   const { employerSlug } = Route.useParams();
+  const { applicationId, jobId } = Route.useSearch();
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -59,6 +78,11 @@ function Page() {
           title,
           packVersionId,
           candidateDisplayName: candidate,
+          // scp_iv_create_case re-checks that both belong to this employer and
+          // raises SCP_IV_CROSS_TENANT_* otherwise, so a hand-edited URL cannot
+          // attach a case to somebody else's application.
+          applicationId: applicationId ?? null,
+          jobId: jobId ?? null,
         },
       }),
     onSuccess: ({ caseId }) =>

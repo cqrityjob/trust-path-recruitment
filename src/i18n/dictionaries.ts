@@ -1753,6 +1753,21 @@ export const dictionaries = {
     "employer.candidate.interview.lede":
       "Anteckningar från intervjun förs in i kandidatunderlaget och samlas här.",
     "employer.candidate.interview.empty": "Inga intervjuanteckningar har förts in ännu.",
+
+    // Interview Intelligence, shown BESIDE the notes above rather than merged
+    // with them: the two are different kinds of record and a single list would
+    // say otherwise.
+    "employer.candidate.structuredInterview.heading": "Strukturerad intervju",
+    "employer.candidate.structuredInterview.lede":
+      "Intervju mot ett styrt rollpaket, med evidens som en människa har bekräftat. Öppnas i Interview Intelligence.",
+    "employer.candidate.structuredInterview.empty":
+      "Ingen strukturerad intervju är kopplad till den här ansökan ännu.",
+    "employer.candidate.structuredInterview.start": "Skapa en strukturerad intervju",
+    "employer.candidate.structuredInterview.open": "Öppna intervjun",
+    "employer.candidate.structuredInterview.openReport": "Öppna rapporten",
+    "employer.candidate.structuredInterview.loading": "Läser in intervjuer…",
+    "employer.candidate.structuredInterview.pending.one": "AI-förslag väntar på granskning",
+    "employer.candidate.structuredInterview.pending.other": "AI-förslag väntar på granskning",
     "employer.candidate.interview.open": "Öppna kandidatunderlag",
     "employer.candidate.interview.outcome.confirmed": "Bekräftat i intervju",
     "employer.candidate.interview.outcome.notConfirmed": "Inte bekräftat i intervju",
@@ -5759,6 +5774,19 @@ export const dictionaries = {
     "employer.candidate.interview.lede":
       "Notes from the interview are recorded in the candidate brief and collected here.",
     "employer.candidate.interview.empty": "No interview notes have been recorded yet.",
+
+    // Interview Intelligence, shown beside the notes above rather than merged.
+    "employer.candidate.structuredInterview.heading": "Structured interview",
+    "employer.candidate.structuredInterview.lede":
+      "Interview against a governed role pack, with evidence a human has confirmed. Opens in Interview Intelligence.",
+    "employer.candidate.structuredInterview.empty":
+      "No structured interview is linked to this application yet.",
+    "employer.candidate.structuredInterview.start": "Create a structured interview",
+    "employer.candidate.structuredInterview.open": "Open interview",
+    "employer.candidate.structuredInterview.openReport": "Open report",
+    "employer.candidate.structuredInterview.loading": "Loading interviews…",
+    "employer.candidate.structuredInterview.pending.one": "AI proposal awaiting review",
+    "employer.candidate.structuredInterview.pending.other": "AI proposals awaiting review",
     "employer.candidate.interview.open": "Open candidate brief",
     "employer.candidate.interview.outcome.confirmed": "Confirmed in interview",
     "employer.candidate.interview.outcome.notConfirmed": "Not confirmed in interview",
