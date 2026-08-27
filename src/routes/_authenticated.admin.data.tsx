@@ -16,7 +16,7 @@
 // action of any kind.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
@@ -27,6 +27,11 @@ import {
   adminGetDisposableRecords,
   adminGetIdentityDiagnostics,
 } from "@/lib/job-intelligence/admin-lifecycle.functions";
+import {
+  adminGetStorageErasureBacklog,
+  adminRunStorageErasureSweep,
+} from "@/lib/job-intelligence/admin-storage-erasure.functions";
+import { Button } from "@/components/ui/button";
 import { identityFindingKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 
@@ -48,6 +53,21 @@ function AdminDataPage() {
   const diagnostics = useQuery({
     queryKey: ["admin", "identity-diagnostics"],
     queryFn: () => diagnosticsFn(),
+  });
+
+  // Storage erasure is the one thing on this page that is OWED rather than
+  // merely observed: a pending row means a document that should be gone is
+  // still sitting in a bucket. It is here, and not on the person's page,
+  // because after a permanent deletion that person's page no longer exists.
+  const backlogFn = useServerFn(adminGetStorageErasureBacklog);
+  const sweepFn = useServerFn(adminRunStorageErasureSweep);
+  const backlog = useQuery({
+    queryKey: ["admin", "storage-erasure-backlog"],
+    queryFn: () => backlogFn({ data: {} }),
+  });
+  const sweep = useMutation({
+    mutationFn: () => sweepFn(),
+    onSettled: () => backlog.refetch(),
   });
 
   return (
@@ -92,6 +112,102 @@ function AdminDataPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-lg border border-border bg-background p-5">
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("admin.data.section.storageErasure")}
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            {t("admin.data.storageErasure.intro")}
+          </p>
+
+          {backlog.isError ? (
+            <p className="mt-3 text-sm text-destructive">
+              {t("admin.data.storageErasure.loadFailed")}
+            </p>
+          ) : backlog.data ? (
+            <>
+              <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-3">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("admin.data.storageErasure.pending")}
+                  </dt>
+                  <dd
+                    className={
+                      "text-lg font-semibold tabular-nums " +
+                      (backlog.data.pending > 0 ? "text-foreground" : "text-muted-foreground")
+                    }
+                  >
+                    {backlog.data.pending}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("admin.data.storageErasure.failed")}
+                  </dt>
+                  <dd
+                    className={
+                      "text-lg font-semibold tabular-nums " +
+                      (backlog.data.failed > 0 ? "text-destructive" : "text-muted-foreground")
+                    }
+                  >
+                    {backlog.data.failed}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("admin.data.storageErasure.completed")}
+                  </dt>
+                  <dd className="text-lg font-semibold tabular-nums text-muted-foreground">
+                    {backlog.data.completed}
+                  </dd>
+                </div>
+              </dl>
+
+              {/* The errors are shown verbatim. An operator deciding whether a
+                  failure is transient needs the message, not a category. */}
+              {backlog.data.recentErrors.length > 0 ? (
+                <ul className="mt-3 space-y-1 text-sm text-destructive">
+                  {backlog.data.recentErrors.map((e, i) => (
+                    <li key={`${e.bucket}-${i}`}>
+                      <code className="text-xs">{e.bucket}</code>{" "}
+                      <span className="tabular-nums">({e.attempts})</span> {e.error}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div className="mt-4 flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={sweep.isPending || backlog.data.pending === 0}
+                  onClick={() => sweep.mutate()}
+                >
+                  {sweep.isPending
+                    ? t("admin.data.storageErasure.retrying")
+                    : t("admin.data.storageErasure.retry")}
+                </Button>
+                {sweep.isSuccess ? (
+                  <span className="text-sm text-muted-foreground">
+                    {t("admin.data.storageErasure.sweepDone")
+                      .replace("{erased}", String(sweep.data?.deleted ?? 0))
+                      .replace("{owed}", String(sweep.data?.failed ?? 0))}
+                  </span>
+                ) : null}
+                {sweep.isError ? (
+                  <span className="text-sm text-destructive">
+                    {t("admin.data.storageErasure.sweepFailed")}
+                  </span>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("admin.data.storageErasure.loading")}
+            </p>
           )}
         </section>
 

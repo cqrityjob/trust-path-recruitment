@@ -3604,6 +3604,20 @@ export const dictionaries = {
     "admin.employers.action.confirmArchive.body":
       "Arbetsgivaren kan inte längre använda plattformen. Inga nya jobb, medarbetare eller bedömningar kan skapas. Historik sparas och syns fortsatt för administratörer.",
     "admin.data.section.users": "Konton utan historik",
+    "admin.data.section.storageErasure": "Storage-radering",
+    "admin.data.storageErasure.intro":
+      "Filer som ska ha tagits bort ur lagringen efter en permanent radering — Passport-underlag och kandidaters CV. En post som ligger kvar betyder att dokumentet fortfarande finns kvar och att raderingen inte är klar.",
+    "admin.data.storageErasure.pending": "Väntar",
+    "admin.data.storageErasure.failed": "Misslyckade",
+    "admin.data.storageErasure.completed": "Klara",
+    "admin.data.storageErasure.retry": "Försök igen",
+    "admin.data.storageErasure.retrying": "Försöker…",
+    "admin.data.storageErasure.sweepDone": "{erased} dokument raderade, {owed} kvar.",
+    "admin.data.storageErasure.sweepFailed": "Försöket kunde inte genomföras.",
+    "admin.data.storageErasure.loading": "Hämtar…",
+    "admin.data.storageErasure.loadFailed": "Kunde inte hämta status för Storage-radering.",
+    "admin.data.storageErasure.deletionWarning":
+      "Kontot är permanent raderat, men {count} dokument väntar fortfarande på fysisk radering. Detta kan följas upp under Datahantering.",
     "admin.employers.action.restore": "Återöppna",
     "admin.lifecycle.person.section.employment": "Anställningar",
     "admin.data.section.identity": "Möjliga dubbletter",
@@ -7328,6 +7342,20 @@ export const dictionaries = {
     "admin.employers.action.confirmArchive.body":
       "The employer can no longer use the platform. No new jobs, employees or assessments can be created. History is preserved and stays visible to administrators.",
     "admin.data.section.users": "Accounts with no history",
+    "admin.data.section.storageErasure": "Storage erasure",
+    "admin.data.storageErasure.intro":
+      "Files that should have been removed from Storage after a permanent deletion — Passport evidence and candidate CVs. An item still listed here means the document is still there and the erasure is not finished.",
+    "admin.data.storageErasure.pending": "Pending",
+    "admin.data.storageErasure.failed": "Failed",
+    "admin.data.storageErasure.completed": "Completed",
+    "admin.data.storageErasure.retry": "Try again",
+    "admin.data.storageErasure.retrying": "Trying…",
+    "admin.data.storageErasure.sweepDone": "{erased} document(s) erased, {owed} still owed.",
+    "admin.data.storageErasure.sweepFailed": "The attempt could not be completed.",
+    "admin.data.storageErasure.loading": "Loading…",
+    "admin.data.storageErasure.loadFailed": "Could not load the Storage erasure status.",
+    "admin.data.storageErasure.deletionWarning":
+      "The account is permanently deleted, but {count} document(s) are still waiting for physical erasure. This can be followed up under Data management.",
     "admin.employers.action.restore": "Restore",
     "admin.lifecycle.person.section.employment": "Employment",
     "admin.data.section.identity": "Possible duplicates",

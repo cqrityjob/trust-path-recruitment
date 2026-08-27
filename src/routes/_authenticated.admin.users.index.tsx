@@ -19,10 +19,18 @@ import { formatDateTime } from "@/lib/job-intelligence/date-format";
 export const Route = createFileRoute("/_authenticated/admin/users/")({
   ssr: false,
   component: AdminUsersPage,
+  // Carried here by a permanent deletion that committed but still owes some
+  // Storage objects. It is a warning about unfinished cleanup, never a claim
+  // that the deletion failed.
+  validateSearch: (raw: Record<string, unknown>): { storageOwed?: number } => {
+    const n = Number(raw.storageOwed);
+    return Number.isFinite(n) && n > 0 ? { storageOwed: Math.floor(n) } : {};
+  },
 });
 
 function AdminUsersPage() {
   const { t, lang } = useT();
+  const { storageOwed } = Route.useSearch();
   const listFn = useServerFn(adminListUsers);
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -38,6 +46,18 @@ function AdminUsersPage() {
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
           {t("admin.users.list.heading")}
         </h1>
+
+        {storageOwed ? (
+          <div
+            role="status"
+            className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground"
+          >
+            {t("admin.data.storageErasure.deletionWarning").replace("{count}", String(storageOwed))}{" "}
+            <Link to="/admin/data" className="font-medium underline underline-offset-2">
+              {t("admin.nav.data")}
+            </Link>
+          </div>
+        ) : null}
 
         <form
           className="mt-6 flex gap-2"

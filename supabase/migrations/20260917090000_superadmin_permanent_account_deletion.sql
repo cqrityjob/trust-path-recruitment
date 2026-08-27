@@ -60,10 +60,12 @@
 -- and its access log survive, detached from the holder.
 --
 -- The evidence FILES live in the private `passport-evidence` Storage bucket
--- and are not reachable from SQL. This migration does not pretend otherwise:
--- it records the erasure intent in storage_erasure_queue in the SAME
--- transaction that removes the rows, and a server-side sweep performs the
--- object deletes afterwards and retries until each one succeeds. See section 5.
+-- and are not reachable from SQL, and the candidate's CV lives the same way in
+-- `job-application-cvs`. This migration does not pretend otherwise: it records
+-- the erasure intent for BOTH in storage_erasure_queue in the SAME transaction
+-- that removes or clears the rows naming them, and a server-side sweep performs
+-- the object deletes afterwards and retries until each one succeeds. See
+-- section 6.
 -- =============================================================================
 
 
@@ -657,6 +659,29 @@ BEGIN
   PERFORM set_config('trustpath.deleting_account', _user_id::text, true);
 
   -- ── Storage: record the intent before removing the only rows that name it ──
+  --
+  -- Two buckets, one queue. Both are the PERSON's own uploads, and in both
+  -- cases the database row that names the object is about to disappear or be
+  -- cleared -- so the path has to be captured here, first, or it is lost and
+  -- the file becomes unreachable rubbish nobody can find again.
+  --
+  --   passport-evidence    the holder's own credential documents. The rows go
+  --                        with the account (see the header), so the files do
+  --                        too.
+  --
+  --   job-application-cvs  the candidate's CV. The employer's application
+  --                        record SURVIVES this erasure, but the document the
+  --                        candidate uploaded is theirs, and the governed
+  --                        retention rule is explicit that the row and its CV
+  --                        object are erased together, never partially
+  --                        (docs/job-intelligence/jobs-mvp-v1-spec.md, Part M).
+  --                        That same document anticipated this exact case --
+  --                        "cascade delete alone never removes a Storage
+  --                        object" -- which is what this block is for.
+  --
+  -- Only paths read from THIS person's own rows are queued. Nothing is
+  -- constructed from a prefix or a pattern, so no other applicant's document
+  -- and no employer-owned file can be reached from here.
   INSERT INTO public.storage_erasure_queue
     (bucket_id, object_path, reason, subject_user_id, requested_by)
   SELECT 'passport-evidence', e.storage_path, 'account_permanently_deleted', _user_id, _caller
@@ -664,10 +689,20 @@ BEGIN
    WHERE e.holder_user_id = _user_id AND e.storage_path IS NOT NULL;
   GET DIAGNOSTICS _queued = ROW_COUNT;
 
+  INSERT INTO public.storage_erasure_queue
+    (bucket_id, object_path, reason, subject_user_id, requested_by)
+  SELECT 'job-application-cvs', a.cv_storage_path, 'account_permanently_deleted', _user_id, _caller
+    FROM public.job_applications a
+   WHERE a.applicant_user_id = _user_id AND a.cv_storage_path IS NOT NULL;
+  GET DIAGNOSTICS _n = ROW_COUNT;
+  _queued := _queued + _n;
+
   -- ── Anonymise what survives ───────────────────────────────────────────────
   -- The employer's recruitment record stays, and stays attached to the account
   -- row, which is exactly why that row must survive. What goes is the
-  -- candidate's own contribution to it.
+  -- candidate's own contribution to it -- including the CV, whose Storage
+  -- object was queued above BEFORE this statement clears the only pointer to
+  -- it. Reversing those two would strand the file permanently.
   WITH upd AS (
     UPDATE public.job_applications
        SET phone = NULL, cover_note = NULL, cv_storage_path = NULL,

@@ -134,9 +134,16 @@ function AdminUserDetailPage() {
           confirmEmail: overview.data?.account.email ?? "",
         },
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       refreshPerson();
-      navigate({ to: "/admin/users" });
+      // The account IS erased -- that committed in the database. Any Storage
+      // object still owed is a separate, retryable obligation, so it is
+      // carried to the list as a warning rather than reported as a failed
+      // deletion, which it is not. Datahantering is where it can be chased.
+      navigate({
+        to: "/admin/users",
+        search: result.storageObjectsOwed > 0 ? { storageOwed: result.storageObjectsOwed } : {},
+      });
     },
     onError: (e: Error) => {
       setLifecycleDone(false);

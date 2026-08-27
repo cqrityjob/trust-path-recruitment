@@ -927,14 +927,26 @@ INSERT INTO public.job_applications
 VALUES ('ad100000-3333-0000-0000-0000000000b1','ad100000-2222-0000-0000-000000000031',
         'ad100000-1111-0000-0000-000000000021','ad100000-0000-0000-0000-0000000000b1', now(),
         '+46701234567','Jag heter Full Historik och söker tjänsten.',
-        'ad100000-0000-0000-0000-0000000000b1/cv.pdf','Full-Historik-CV.pdf',
-        'application/pdf', 1234, 'reviewing');
+        'ad100000-0000-0000-0000-0000000000b1/ad100000-3333-0000-0000-0000000000b1/Full-Historik-CV.pdf',
+        'Full-Historik-CV.pdf','application/pdf', 1234, 'reviewing');
 
 INSERT INTO public.job_application_status_events
   (application_id, job_id, employer_id, actor_user_id, actor_role, previous_status, new_status)
 VALUES ('ad100000-3333-0000-0000-0000000000b1','ad100000-2222-0000-0000-000000000031',
         'ad100000-1111-0000-0000-000000000021','ad100000-0000-0000-0000-0000000000ad',
         'employer','submitted','reviewing');
+
+-- A DIFFERENT candidate's application already exists against this advert (the
+-- suite's own CA fixture). Giving it a CV costs one UPDATE and gives the
+-- erasure something it must NOT touch: an employer's document about somebody
+-- who was never deleted.
+UPDATE public.job_applications
+   SET cv_storage_path =
+         'ad100000-0000-0000-0000-0000000000ca/ad100000-3333-0000-0000-000000000041/annan-cv.pdf',
+       cv_original_filename = 'Annan-CV.pdf',
+       cv_mime_type = 'application/pdf',
+       cv_size_bytes = 2048
+ WHERE id = 'ad100000-3333-0000-0000-000000000041';
 
 -- The pseudonymous spine, and a completed, reviewed, reported assessment on it.
 INSERT INTO public.scp_subjects (id) VALUES ('ad100000-4444-0000-0000-0000000000b1');
@@ -1366,12 +1378,40 @@ SELECT pg_temp.ok(
       AND bucket_id = 'passport-evidence'
       AND object_path = 'ad100000-0000-0000-0000-0000000000b1/bevis.pdf'
       AND completed_at IS NULL) = 1,
-  'H26 the evidence object is queued for erasure, by bucket and exact path');
+  'H26 the Passport evidence object is queued for erasure, by bucket and exact path');
+
+-- The CV is the one the employer's RETAINED application pointed at. The record
+-- survives; the candidate's document does not. Clearing the pointer without
+-- queueing the object would strand the file where nothing could ever find it.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.storage_erasure_queue
+    WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
+      AND bucket_id = 'job-application-cvs'
+      AND object_path = 'ad100000-0000-0000-0000-0000000000b1/ad100000-3333-0000-0000-0000000000b1/Full-Historik-CV.pdf'
+      AND completed_at IS NULL) = 1,
+  'H26b the candidate CV object is queued too, from the application that survives');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.storage_erasure_queue
+    WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 2,
+  'H26c exactly two objects are queued -- one per bucket, and nothing else');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.sp_evidence
-    WHERE storage_path = 'ad100000-0000-0000-0000-0000000000b1/bevis.pdf') = 0,
-  'H27 and the row that named it is gone -- the queue is the only thing that still knows the path');
+    WHERE storage_path = 'ad100000-0000-0000-0000-0000000000b1/bevis.pdf') = 0
+  AND (SELECT cv_storage_path FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') IS NULL,
+  'H27 and both database pointers are gone -- the queue is the only thing that still knows the paths');
+
+-- The blast radius, asserted rather than assumed. Only paths read from THIS
+-- person's own rows are queued; nothing is built from a folder prefix.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.storage_erasure_queue
+    WHERE object_path LIKE 'ad100000-0000-0000-0000-0000000000ca/%') = 0
+  AND (SELECT cv_storage_path FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-000000000041')
+        = 'ad100000-0000-0000-0000-0000000000ca/ad100000-3333-0000-0000-000000000041/annan-cv.pdf',
+  'H27b another applicant''s CV is neither queued nor unlinked -- the erasure reached only the deleted person''s own files');
 
 SELECT pg_temp.ok(
   (public.admin_storage_erasure_backlog() ->> 'pending')::int >= 1
@@ -1391,8 +1431,22 @@ SELECT pg_temp.ok(
         = 'simulated storage outage'
   AND (SELECT count(*) FROM public.storage_erasure_queue
         WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
-          AND completed_at IS NULL) = 1,
+          AND completed_at IS NULL) = 2,
   'H29 a failed erasure is visible, still owed, and carries its error -- it is not dropped');
+
+-- A sweep that succeeds for one bucket and not the other must clear only the
+-- one it actually erased. This is the shape a partial Storage outage takes.
+UPDATE public.storage_erasure_queue
+   SET completed_at = now(), last_error = NULL
+ WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
+   AND bucket_id = 'passport-evidence';
+
+SELECT pg_temp.ok(
+  (public.admin_storage_erasure_backlog() ->> 'pending')::int = 1
+  AND (SELECT bucket_id FROM public.storage_erasure_queue
+        WHERE subject_user_id = 'ad100000-0000-0000-0000-0000000000b1'
+          AND completed_at IS NULL) = 'job-application-cvs',
+  'H29b a partial sweep clears only what it erased -- the CV is still owed by name');
 
 UPDATE public.storage_erasure_queue
    SET completed_at = now(), last_error = NULL
@@ -1400,8 +1454,8 @@ UPDATE public.storage_erasure_queue
 
 SELECT pg_temp.ok(
   (public.admin_storage_erasure_backlog() ->> 'pending')::int = 0
-  AND (public.admin_storage_erasure_backlog() ->> 'completed')::int >= 1,
-  'H30 and a retry that succeeds clears it from the backlog');
+  AND (public.admin_storage_erasure_backlog() ->> 'completed')::int >= 2,
+  'H30 and a retry that succeeds drains both objects from the backlog');
 
 
 -- ── 8c. The other form: an account with nothing attached is still hard deleted
@@ -1540,6 +1594,6 @@ SELECT pg_temp.ok(
       AND p.proconfig::text LIKE '%search_path%') = 11,
   'S11 every new function is SECURITY DEFINER with a fixed search_path');
 
-DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 140 assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 144 assertions passed'; END $$;
 
 ROLLBACK;
