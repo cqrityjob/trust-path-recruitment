@@ -1174,3 +1174,235 @@ BEGIN
   RAISE NOTICE 'SCP_IIH_ASSERT: ledger entries name what happened; report blockers own the state precondition.';
 END
 $assert7$;
+
+
+-- ###########################################################################
+-- SECTION 8 -- Privacy controls that exist rather than are declared
+-- ###########################################################################
+--
+-- Auditing the transcript and retention model against the review found three
+-- controls that the schema DESCRIBES and nothing IMPLEMENTS. That is worse
+-- than not having them: a column called retention_state looks like a retention
+-- control to anyone reading the schema, and answers a due-diligence question
+-- with something that has never run.
+--
+--   1. The transcript gate raised "...has met its information/consent
+--      obligations" while checking a single free-text lawful-basis field.
+--      Having a lawful basis and having told the candidate are different
+--      obligations, and the message asserted a check that did not exist.
+--   2. scp_interview_cases.retain_until was declared and never referenced --
+--      never set, never required, never enforced anywhere in the codebase.
+--   3. retention_state = 'erased', erased_at and the 'source_erased' event
+--      were all modelled, and NO FUNCTION COULD REACH THEM. There was no way
+--      to erase a source at all.
+--
+-- None of this is a claim of legal compliance. See §11 of the final report for
+-- what still requires legal and DPIA review.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE public.scp_interview_cases
+  ADD COLUMN IF NOT EXISTS candidate_informed_confirmed_at timestamptz,
+  ADD COLUMN IF NOT EXISTS candidate_informed_confirmed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS candidate_informed_statement text,
+  ADD COLUMN IF NOT EXISTS transcript_purpose_code text,
+  ADD COLUMN IF NOT EXISTS retention_set_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS retention_set_at timestamptz;
+
+COMMENT ON COLUMN public.scp_interview_cases.candidate_informed_statement IS
+  'A SEPARATE confirmation from the lawful basis: what the candidate was told, '
+  'when and how. Recorded apart because "we have a lawful basis" and "we told '
+  'the person" are different obligations and one free-text box covering both '
+  'lets either go unanswered.';
+
+
+-- 8.1  Four confirmations before a transcript, not one.
+CREATE OR REPLACE FUNCTION public.scp_iv_confirm_transcript_basis(
+  _case_id uuid,
+  _statement text,
+  _candidate_informed_statement text DEFAULT NULL,
+  _purpose_code text DEFAULT NULL,
+  _retain_until date DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.has_employer_role(
+       auth.uid(), public.scp_iv_case_employer(_case_id), ARRAY['owner','admin']) THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_CONFIRM_ROLE: confirming a lawful basis for transcript processing requires an employer owner or admin, not any member.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF _statement IS NULL OR btrim(_statement) = '' THEN
+    RAISE EXCEPTION 'SCP_IV_TRANSCRIPT_STATEMENT_REQUIRED: state the lawful basis in writing.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _candidate_informed_statement IS NULL OR btrim(_candidate_informed_statement) = '' THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_CANDIDATE_NOT_INFORMED: state separately what the candidate was told about the recording, when and how. A lawful basis is not the same obligation as informing the person.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF _purpose_code IS NULL OR btrim(_purpose_code) = '' THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_PURPOSE_REQUIRED: name the permitted purpose. A transcript processed for an unstated purpose can be used for any purpose later.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- Retention has to be a decision someone made, not a field left blank. An
+  -- open-ended retention period is indistinguishable from keeping it forever.
+  IF _retain_until IS NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_RETENTION_REQUIRED: set a date after which this material is no longer kept.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+  IF _retain_until <= current_date THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_RETENTION_IN_PAST: the retention date must be in the future.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  PERFORM set_config('scp_iv.governed_transition', 'on', true);
+  UPDATE public.scp_interview_cases
+     SET transcript_lawful_basis_confirmed_at = now(),
+         transcript_lawful_basis_confirmed_by = auth.uid(),
+         transcript_lawful_basis_statement = btrim(_statement),
+         candidate_informed_confirmed_at = now(),
+         candidate_informed_confirmed_by = auth.uid(),
+         candidate_informed_statement = btrim(_candidate_informed_statement),
+         transcript_purpose_code = btrim(_purpose_code),
+         retain_until = _retain_until,
+         retention_set_by = auth.uid(),
+         retention_set_at = now(),
+         updated_at = now()
+   WHERE id = _case_id;
+  PERFORM set_config('scp_iv.governed_transition', 'off', true);
+
+  PERFORM public.scp_iv_record_event(_case_id, 'transcript_authorised', 'human', NULL, NULL, NULL,
+    btrim(_statement),
+    jsonb_build_object('candidate_informed', true,
+                       'purpose_code', btrim(_purpose_code),
+                       'retain_until', _retain_until));
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_confirm_transcript_basis(uuid, text, text, text, date)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_confirm_transcript_basis(uuid, text, text, text, date)
+  TO authenticated, service_role;
+
+-- The two-argument form is dropped, not left alongside. Leaving it would mean
+-- the weaker gate stays reachable and the stronger one is merely available.
+DROP FUNCTION IF EXISTS public.scp_iv_confirm_transcript_basis(uuid, text);
+
+
+-- 8.2  The gate checks all four, and stops claiming what it does not check.
+CREATE OR REPLACE FUNCTION public.scp_iv_guard_transcript_gate()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _enabled boolean; _c public.scp_interview_cases%ROWTYPE;
+BEGIN
+  IF NEW.source_kind <> 'transcript' THEN RETURN NEW; END IF;
+
+  SELECT transcript_enabled INTO _enabled FROM public.scp_interview_ai_config WHERE id;
+  IF NOT coalesce(_enabled, false) THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_DISABLED: transcript ingestion is switched off for this deployment. It is an owner decision, not a per-case setting.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _c FROM public.scp_interview_cases WHERE id = NEW.case_id;
+
+  IF _c.transcript_lawful_basis_confirmed_at IS NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_NO_LAWFUL_BASIS: this case has no recorded lawful basis for transcript processing.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF _c.candidate_informed_confirmed_at IS NULL THEN
+    RAISE EXCEPTION
+      'SCP_IV_TRANSCRIPT_CANDIDATE_NOT_INFORMED: no confirmation that the candidate was told about the recording.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF _c.transcript_purpose_code IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_TRANSCRIPT_PURPOSE_REQUIRED: no permitted purpose recorded.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF _c.retain_until IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_TRANSCRIPT_RETENTION_REQUIRED: no retention date recorded.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  RETURN NEW;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_guard_transcript_gate() FROM PUBLIC, anon, authenticated;
+
+
+-- 8.3  Erasure, which previously could not happen at all.
+--
+-- What erasure does and does not reach is stated rather than implied, because
+-- "erased" that quietly leaves the text somewhere is the worst outcome here:
+--
+--   ERASED   the source text, and the text of every passage split from it.
+--            The rows remain, holding no content, so the audit trail still
+--            shows that a source existed and was erased.
+--   ERASED   AI proposals quoting it. A layer-4 proposal is a machine's
+--            unreviewed reading of the erased text; keeping it keeps the text.
+--   KEPT     evidence a human CONFIRMED, and any finalised report. These are
+--            the employer's record of a judgement a named person made, they
+--            have their own retention basis and their own legal weight, and
+--            silently rewriting them would corrupt the account of a decision
+--            that has already been taken. Erasing those is a separate,
+--            deliberate act with its own authority -- not a side effect.
+--
+-- The candidate-facing consequence of that boundary is a legal question, not a
+-- technical one, and it is listed for DPIA review rather than settled here.
+CREATE OR REPLACE FUNCTION public.scp_iv_erase_source(_source_id uuid, _reason text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _case_id uuid; _passages integer; _proposals integer;
+BEGIN
+  SELECT case_id INTO _case_id FROM public.scp_interview_case_sources WHERE id = _source_id;
+  IF _case_id IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_SOURCE_NOT_FOUND' USING ERRCODE = 'check_violation';
+  END IF;
+
+  IF auth.uid() IS NULL OR NOT public.has_employer_role(
+       auth.uid(), public.scp_iv_case_employer(_case_id), ARRAY['owner','admin']) THEN
+    RAISE EXCEPTION
+      'SCP_IV_ERASE_ROLE: erasing candidate material requires an employer owner or admin.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF _reason IS NULL OR btrim(_reason) = '' THEN
+    RAISE EXCEPTION 'SCP_IV_ERASE_REASON_REQUIRED: state why this material is being erased.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  PERFORM set_config('scp_iv.governed_transition', 'on', true);
+
+  UPDATE public.scp_interview_source_passages
+     SET content = ''
+   WHERE source_id = _source_id AND content <> '';
+  GET DIAGNOSTICS _passages = ROW_COUNT;
+
+  UPDATE public.scp_interview_evidence_proposals
+     SET excerpt = '', relevance_rationale = '[raderat]'
+   WHERE source_passage_id IN (
+     SELECT id FROM public.scp_interview_source_passages WHERE source_id = _source_id);
+  GET DIAGNOSTICS _proposals = ROW_COUNT;
+
+  UPDATE public.scp_interview_case_sources
+     SET content_text = '', retention_state = 'erased', erased_at = now()
+   WHERE id = _source_id;
+
+  PERFORM set_config('scp_iv.governed_transition', 'off', true);
+
+  -- The fourth argument is _ai_run_id, not a generic subject. An erasure has no
+  -- AI run behind it, so it is NULL and the source is named in the metadata.
+  PERFORM public.scp_iv_record_event(_case_id, 'source_erased', 'human', NULL, NULL, NULL,
+    btrim(_reason),
+    jsonb_build_object('source_id', _source_id,
+                       'passages_cleared', _passages,
+                       'proposals_cleared', _proposals,
+                       'confirmed_evidence_kept', true,
+                       'reports_kept', true));
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_erase_source(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_erase_source(uuid, text) TO authenticated, service_role;

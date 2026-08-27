@@ -372,5 +372,196 @@ BEGIN
     'I4.3 the content preconditions are still checked alongside it');
 END $$;
 
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I5 — privacy controls that run, not ones declared'; END $$;
+-- ===========================================================================
+--
+-- Three controls were in the schema and in nothing else: the transcript gate
+-- claimed to check information obligations while reading one lawful-basis
+-- field, retain_until was declared and referenced nowhere, and
+-- retention_state='erased' / erased_at / the source_erased event had no
+-- function that could reach them -- a source could not be erased at all.
+
+DO $$
+DECLARE
+  _packv uuid; _case uuid; _src uuid; _emp uuid := '55550000-0000-0000-0000-00000000000a';
+  _owner uuid := '44440000-0000-0000-0000-0000000000a1';
+  _member uuid := '44440000-0000-0000-0000-0000000000a2';
+  _n integer; _txt text;
+BEGIN
+  SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
+    JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se';
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  _case := public.scp_iv_create_case(_emp, 'Integritet', _packv, 'K.', NULL, 'EXT-PRIV');
+  _src := public.scp_iv_add_source(_case, 'candidate_cv', 'CV',
+    E'Vaktare 2020-2025.\n\nVU1 och VU2.', 'recruitment_interview', 'Kandidatens ansokan.');
+  RESET ROLE;
+
+  -- ---- transcripts are off, and that is a deployment decision -------------
+  PERFORM pg_temp.ok(
+    (SELECT transcript_enabled FROM public.scp_interview_ai_config) = false,
+    'I5.1 transcript ingestion ships switched off');
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_add_source(%L, %L, %L, %L, %L, %L)',
+           _case, 'transcript', 'Utskrift', 'Nagon text.', 'recruitment_interview', 'Grund.'),
+    'SCP_IV_TRANSCRIPT_DISABLED',
+    'I5.2 a transcript cannot be added while the deployment flag is off');
+
+  -- ---- all four confirmations are required, separately --------------------
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L)', _case, '   '),
+    'SCP_IV_TRANSCRIPT_STATEMENT_REQUIRED',
+    'I5.3 an empty lawful-basis statement is refused');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L)', _case, 'Berattigat intresse.'),
+    'SCP_IV_TRANSCRIPT_CANDIDATE_NOT_INFORMED',
+    'I5.4 a lawful basis alone is NOT enough — informing the candidate is a separate confirmation');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L, %L)',
+           _case, 'Berattigat intresse.', 'Kandidaten informerades muntligt och skriftligt.'),
+    'SCP_IV_TRANSCRIPT_PURPOSE_REQUIRED',
+    'I5.5 the permitted purpose must be named');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L, %L, %L)',
+           _case, 'Berattigat intresse.', 'Kandidaten informerades.', 'recruitment_interview'),
+    'SCP_IV_TRANSCRIPT_RETENTION_REQUIRED',
+    'I5.6 a retention date must be set — an open-ended period is keeping it forever');
+
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L, %L, %L, %L)',
+           _case, 'Berattigat intresse.', 'Kandidaten informerades.', 'recruitment_interview',
+           (current_date - 1)::text),
+    'SCP_IV_TRANSCRIPT_RETENTION_IN_PAST',
+    'I5.7 a retention date already past is refused');
+  RESET ROLE;
+
+  -- ---- and only an owner or admin may confirm -----------------------------
+  UPDATE public.employer_memberships SET role = 'member'
+   WHERE user_id = _member AND employer_id = _emp;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _member::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_confirm_transcript_basis(%L, %L, %L, %L, %L)',
+           _case, 'Grund.', 'Informerad.', 'recruitment_interview', (current_date + 30)::text),
+    'SCP_IV_TRANSCRIPT_CONFIRM_ROLE',
+    'I5.8 an ordinary member cannot confirm a lawful basis');
+  RESET ROLE;
+
+  -- ---- the weak two-argument gate is GONE, not merely superseded ----------
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public' AND p.proname = 'scp_iv_confirm_transcript_basis'
+                   AND p.pronargs = 2),
+    'I5.9 the old two-argument confirmation is dropped, so the weaker gate is unreachable');
+
+  -- ---- erasure exists and actually removes the text -----------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_erase_source(%L, %L)', _src, '  '),
+    'SCP_IV_ERASE_REASON_REQUIRED',
+    'I5.10 erasing without a stated reason is refused');
+  PERFORM public.scp_iv_erase_source(_src, 'Kandidaten begarde radering.');
+  RESET ROLE;
+
+  SELECT content_text INTO _txt FROM public.scp_interview_case_sources WHERE id = _src;
+  PERFORM pg_temp.ok(_txt = '', 'I5.11 the source text is actually gone, not flagged');
+
+  PERFORM pg_temp.ok(
+    (SELECT retention_state FROM public.scp_interview_case_sources WHERE id = _src) = 'erased',
+    'I5.12 the source records that it was erased, so the trail still shows it existed');
+
+  SELECT count(*) INTO _n FROM public.scp_interview_source_passages
+   WHERE source_id = _src AND content <> '';
+  PERFORM pg_temp.ok(_n = 0, 'I5.13 every passage split from it is cleared too');
+
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM public.scp_interview_case_events
+             WHERE case_id = _case AND event = 'source_erased'),
+    'I5.14 the erasure is in the ledger — previously this event was unreachable');
+
+  -- ---- a member cannot erase ---------------------------------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _member::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_erase_source(%L, %L)', _src, 'Vill radera.'),
+    'SCP_IV_ERASE_ROLE',
+    'I5.15 an ordinary member cannot erase candidate material');
+  RESET ROLE;
+END $$;
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP I6 — process quality is not a candidate score in disguise'; END $$;
+-- ===========================================================================
+--
+-- The dangerous version of this product is one that measures the INTERVIEW,
+-- calls the result "quality", and lets a recruiter read it as a measure of the
+-- CANDIDATE. Every guard here is about that one confusion.
+
+DO $$
+DECLARE _def text; _n integer; _cols text[];
+BEGIN
+  _def := pg_get_viewdef('public.scp_interview_process_quality'::regclass);
+
+  -- The single most important one. The per-question level (0-4) is a human
+  -- judgement about evidence for one competency. Averaging, summing or
+  -- maximising it across questions manufactures an overall candidate score,
+  -- which is the thing this product exists to not produce.
+  PERFORM pg_temp.ok(
+    _def !~* '(avg|sum|max|min)\s*\([^)]*level',
+    'I6.1 the process-quality view never aggregates the assessment level');
+
+  PERFORM pg_temp.ok(
+    _def !~* '(avg|sum)\s*\([^)]*(confidence|extraction_confidence)',
+    'I6.2 nor does it average extraction confidence into a headline number');
+
+  -- Every column must describe the PROCESS. A column named for the candidate's
+  -- fitness is a score whatever its formula.
+  SELECT array_agg(column_name) INTO _cols
+    FROM information_schema.columns
+   WHERE table_name = 'scp_interview_process_quality'
+     AND column_name ~* 'fit|suitab|rank|overall|score|grade|rating|pass|fail|recommend|candidate_quality';
+  PERFORM pg_temp.ok(_cols IS NULL,
+    format('I6.3 no process-quality column is named for candidate fitness (%s)',
+           coalesce(array_to_string(_cols, ', '), 'none')));
+
+  -- And no such column anywhere in the domain, view or table.
+  SELECT count(*) INTO _n
+    FROM information_schema.columns
+   WHERE table_schema = 'public' AND table_name LIKE 'scp_interview%'
+     AND column_name ~* 'candidate_score|overall_score|total_score|fit_score|suitability|ranking|pass_fail|hire_recommend';
+  PERFORM pg_temp.ok(_n = 0,
+    format('I6.4 no table or view in the domain carries a candidate score column (%s)', _n));
+
+  -- The count of level-0 answers is a process measure -- how much of the
+  -- interview produced usable evidence -- and must not be reachable as a
+  -- penalty. It is a count, not a rate, and there is nothing to divide it by.
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'scp_interview_process_quality'
+               AND column_name = 'insufficient_evidence_count'),
+    'I6.5 level-0 is surfaced as a COUNT of insufficient evidence, not a score');
+
+  PERFORM pg_temp.ok(
+    _def !~* 'insufficient_evidence[a-z_]*\s*(/|::numeric\s*/)',
+    'I6.6 and it is never divided into a rate, which is a score with a percent sign');
+
+  -- The report itself carries no aggregate.
+  SELECT count(*) INTO _n
+    FROM public.scp_interview_reports r,
+         LATERAL jsonb_each(r.payload) e
+   WHERE e.key ~* 'score|total|overall|rank|fit|recommend';
+  PERFORM pg_temp.ok(_n = 0,
+    format('I6.7 no finalised report payload has a top-level score-like key (%s)', _n));
+END $$;
+
 DO $$ BEGIN RAISE NOTICE 'INTEGRITY SUITE COMPLETE'; END $$;
 ROLLBACK;
