@@ -161,6 +161,74 @@ export const listInterviewCases = createServerFn({ method: "GET" })
     return { cases };
   });
 
+/**
+ * Interview workload for the employer overview, by process stage.
+ *
+ * PROCESS counts only. Nothing here describes a candidate, nothing is compared
+ * between candidates, and there is deliberately no total: the overview is a
+ * place to see what needs a person's attention, and a sum of unrelated stages
+ * would be a number with no meaning that people would nonetheless read as one.
+ *
+ * Every count is a real, RLS-scoped read of this employer's own cases. The
+ * overview page shows nothing at zero, so an employer who has never opened
+ * Interview Intelligence sees no interview rows in "Att göra idag" at all.
+ */
+export interface InterviewWorkload {
+  /** Draft or sources gathered — a plan is still being built. */
+  readonly inPreparation: number;
+  /** A generated plan a human has not yet approved. */
+  readonly awaitingPlanApproval: number;
+  /** Approved plan, interview not yet held. */
+  readonly readyToInterview: number;
+  /** Interview held; evidence needs a human review. */
+  readonly inEvidenceReview: number;
+  /** AI proposals across all cases that no human has looked at. */
+  readonly proposalsAwaitingReview: number;
+  /** Assessed and ready for the report to be finalised. */
+  readonly awaitingReport: number;
+  readonly reported: number;
+}
+
+export const getInterviewWorkload = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => employerInput.parse(d))
+  .handler(async ({ context, data }): Promise<InterviewWorkload> => {
+    const db = context.supabase;
+
+    const { data: rows, error } = await db
+      .from("scp_interview_cases")
+      .select("id, status")
+      .eq("employer_id", data.employerId);
+    if (error) throw new Error(error.message);
+
+    const cases = (rows ?? []) as Array<{ id: string; status: string }>;
+    const count = (...statuses: string[]) =>
+      cases.filter((c) => statuses.includes(c.status)).length;
+
+    let proposalsAwaitingReview = 0;
+    const openIds = cases
+      .filter((c) => c.status === "evidence_review" || c.status === "interview_complete")
+      .map((c) => c.id);
+    if (openIds.length > 0) {
+      const { count: pending } = await db
+        .from("scp_interview_evidence_proposals")
+        .select("id", { count: "exact", head: true })
+        .in("case_id", openIds)
+        .eq("review_state", "pending");
+      proposalsAwaitingReview = pending ?? 0;
+    }
+
+    return {
+      inPreparation: count("draft", "sources_ready"),
+      awaitingPlanApproval: count("prep_generated"),
+      readyToInterview: count("prep_approved"),
+      inEvidenceReview: count("interview_complete", "evidence_review"),
+      proposalsAwaitingReview,
+      awaitingReport: count("assessed"),
+      reported: count("reported"),
+    };
+  });
+
 /** Pack versions this employer may actually start a case with. */
 export const listUsablePacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

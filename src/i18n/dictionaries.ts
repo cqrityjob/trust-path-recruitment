@@ -1554,6 +1554,26 @@ export const dictionaries = {
     "employer.actions.testsWithCandidates.one": "test är ute hos en kandidat",
     "employer.actions.testsWithCandidates.other": "tester är ute hos kandidater",
 
+    // Interview Intelligence, in the same shape as every other action: process
+    // stages only, nothing about a candidate, and nothing shown at zero.
+    "employer.actions.interviewPlansToApprove.one": "intervjuplan väntar på godkännande",
+    "employer.actions.interviewPlansToApprove.other": "intervjuplaner väntar på godkännande",
+    "employer.actions.interviewsReady.one": "intervju är redo att genomföras",
+    "employer.actions.interviewsReady.other": "intervjuer är redo att genomföras",
+    "employer.actions.interviewEvidenceToReview.one": "intervju behöver evidensgranskas",
+    "employer.actions.interviewEvidenceToReview.other": "intervjuer behöver evidensgranskas",
+    "employer.actions.interviewReportsToFinalise.one": "intervju väntar på slutrapport",
+    "employer.actions.interviewReportsToFinalise.other": "intervjuer väntar på slutrapport",
+
+    "employer.overview.card.interviews.title": "Intervjuer",
+    "employer.overview.card.interviews.body":
+      "Förbered, genomför och evidensgranska strukturerade intervjuer.",
+    "employer.overview.card.interviews.stat.preparation": "FÖRBEREDELSE",
+    "employer.overview.card.interviews.stat.ready": "REDO FÖR INTERVJU",
+    "employer.overview.card.interviews.stat.evidence": "EVIDENSGRANSKNING",
+    "employer.overview.card.interviews.action.open": "Öppna intervjuer",
+    "employer.overview.card.interviews.action.create": "Skapa intervju",
+
     "employer.attention.heading": "Behöver din uppmärksamhet",
     "employer.attention.empty": "Inget kräver er uppmärksamhet just nu.",
     "employer.attention.severity.critical": "Kritiskt",
@@ -3820,7 +3840,8 @@ export const dictionaries = {
     "ii.state.errorTitle": "Något gick fel",
     "ii.state.errorBody": "Innehållet kunde inte hämtas. Försök igen.",
     "ii.state.deniedTitle": "Åtkomst saknas",
-    "ii.state.deniedBody": "Du saknar behörighet för styrt intervjuinnehåll, eller så finns versionen inte. Rollintervjupaket kräver en plattformsroll för innehåll.",
+    "ii.state.deniedBody":
+      "Du saknar behörighet för styrt intervjuinnehåll, eller så finns versionen inte. Rollintervjupaket kräver en plattformsroll för innehåll.",
     "ii.form.errorSummaryTitle": "Formuläret kunde inte skickas",
     "ii.a11y.status": "Status",
     "ii.a11y.evidenceStatus": "Evidensstatus",
@@ -3836,9 +3857,11 @@ export const dictionaries = {
     "ii.validation.pilot_hypothesis": "Pilothypotes",
     "ii.validation.content_validated": "Innehållsvaliderad",
     "ii.list.heading": "Rollintervjupaket",
-    "ii.list.intro": "Styrt innehåll för strukturerade rollintervjuer: kompetenser, fasta kärnfrågor, godkända följdfrågor, evidensdimensioner, beteendeankare, verifieringsgränser och förbjudna områden.",
+    "ii.list.intro":
+      "Styrt innehåll för strukturerade rollintervjuer: kompetenser, fasta kärnfrågor, godkända följdfrågor, evidensdimensioner, beteendeankare, verifieringsgränser och förbjudna områden.",
     "ii.list.scopeTitle": "Plattformsstyrd authoring",
-    "ii.list.scopeBody": "Endast kvalificerade plattformsredaktörer, granskare och publicerare arbetar här. Arbetsgivare har ingen authoring i fas 1. Ingen AI genererar innehåll.",
+    "ii.list.scopeBody":
+      "Endast kvalificerade plattformsredaktörer, granskare och publicerare arbetar här. Arbetsgivare har ingen authoring i fas 1. Ingen AI genererar innehåll.",
     "ii.list.newPack": "Nytt rollintervjupaket",
     "ii.list.empty": "Inga rollintervjupaket är synliga för dig.",
     "ii.list.tableCaption": "Rollintervjupaket med senaste version och status",
@@ -3850,9 +3873,11 @@ export const dictionaries = {
     "ii.list.noVersion": "Ingen version",
     "ii.list.notPublished": "Ej publicerad",
     "ii.new.heading": "Nytt rollintervjupaket",
-    "ii.new.intro": "Skapar paketets identitet och dess första version. Versionen börjar alltid som utkast.",
+    "ii.new.intro":
+      "Skapar paketets identitet och dess första version. Versionen börjar alltid som utkast.",
     "ii.new.pilotTitle": "Startar som pilothypotes",
-    "ii.new.pilotBody": "Ett nytt paket är inte vetenskapligt validerat och stödjer inga prediktiva påståenden. Publicering kräver dokumenterad expert-, juridisk, kognitiv och produktgranskning.",
+    "ii.new.pilotBody":
+      "Ett nytt paket är inte vetenskapligt validerat och stödjer inga prediktiva påståenden. Publicering kräver dokumenterad expert-, juridisk, kognitiv och produktgranskning.",
     "ii.new.section.identity": "Identitet",
     "ii.new.section.roleContext": "Rollkontext",
     "ii.new.section.source": "Källa",
@@ -3865,8 +3890,10 @@ export const dictionaries = {
     "ii.new.field.source": "Källdokument",
     "ii.new.field.sourceVersion": "Källdokumentets version",
     "ii.new.hint.slug": "Små bokstäver, siffror och bindestreck.",
-    "ii.new.hint.roleVersion": "Paketet låses till en exakt rollversion, inte till rollen. En senare rollrevidering ändrar därför inte vad frågorna handlar om.",
-    "ii.new.hint.source": "Spårbarhet till det styrande dokumentet. Krävs för att en granskare ska kunna jämföra innehållet med källan.",
+    "ii.new.hint.roleVersion":
+      "Paketet låses till en exakt rollversion, inte till rollen. En senare rollrevidering ändrar därför inte vad frågorna handlar om.",
+    "ii.new.hint.source":
+      "Spårbarhet till det styrande dokumentet. Krävs för att en granskare ska kunna jämföra innehållet med källan.",
     "ii.new.error.slug": "Identifieraren måste bestå av små bokstäver, siffror och bindestreck.",
     "ii.new.error.name": "Namn krävs.",
     "ii.new.error.purpose": "Syfte krävs.",
@@ -3892,11 +3919,14 @@ export const dictionaries = {
     "employer.nav.interviewIntelligence": "Intervjuer",
     "ii.detail.backToList": "Tillbaka till rollintervjupaket",
     "ii.detail.pilotTitle": "Pilothypotes — inte validerad urvalsmetod",
-    "ii.detail.pilotBody": "Kompetenser, frågor och ankare är en genomarbetad hypotes. De måste innehållsvalideras genom dokumenterad arbetsanalys och expertpanel innan skarpa urvalsbeslut. Inga prediktiva påståenden får göras.",
+    "ii.detail.pilotBody":
+      "Kompetenser, frågor och ankare är en genomarbetad hypotes. De måste innehållsvalideras genom dokumenterad arbetsanalys och expertpanel innan skarpa urvalsbeslut. Inga prediktiva påståenden får göras.",
     "ii.detail.publishedTitle": "Publicerad och oföränderlig",
-    "ii.detail.publishedBody": "Innehållet är låst. En saklig ändring kräver en ny version; den publicerade versionen bevaras.",
+    "ii.detail.publishedBody":
+      "Innehållet är låst. En saklig ändring kräver en ny version; den publicerade versionen bevaras.",
     "ii.detail.suspendedTitle": "Pausad",
-    "ii.detail.suspendedBody": "Versionen är inte tillgänglig för användning. Detta är en processrisk, inte ett omdöme om någon person.",
+    "ii.detail.suspendedBody":
+      "Versionen är inte tillgänglig för användning. Detta är en processrisk, inte ett omdöme om någon person.",
     "ii.detail.retiredTitle": "Avvecklad",
     "ii.detail.retiredBody": "Versionen är avslutad och bevaras för spårbarhet.",
     "ii.detail.field.purpose": "Syfte",
@@ -3906,9 +3936,11 @@ export const dictionaries = {
     "ii.detail.indicators": "Observerbara indikatorer",
     "ii.detail.mapping": "Mappning till kanoniska kompetensversioner",
     "ii.detail.mapping.none": "Ingen mappning. Paketet kan inte publiceras utan mappning.",
-    "ii.detail.questions.intro": "Alla kandidater i samma process och paketversion får samma kärnfrågor i samma ordning. Generativ AI får aldrig skriva om eller ersätta dem.",
+    "ii.detail.questions.intro":
+      "Alla kandidater i samma process och paketversion får samma kärnfrågor i samma ordning. Generativ AI får aldrig skriva om eller ersätta dem.",
     "ii.detail.generalProbes": "Generella följdfrågor",
-    "ii.detail.generalProbes.hint": "Får användas efter vilken kärnfråga som helst. Endast följdfrågor med godkänt syfte får användas.",
+    "ii.detail.generalProbes.hint":
+      "Får användas efter vilken kärnfråga som helst. Endast följdfrågor med godkänt syfte får användas.",
     "ii.detail.order": "ordning",
     "ii.detail.verbatim": "Läses ordagrant.",
     "ii.detail.primaryCompetency": "Kompetenser",
@@ -3920,13 +3952,15 @@ export const dictionaries = {
     "ii.detail.verification.subsequent": "Efterföljande verifiering",
     "ii.detail.verification.passport": "Passport-gräns",
     "ii.detail.prohibited": "Förbjudna områden",
-    "ii.detail.prohibited.hint": "Dessa dokumenterar förbuden för intervjuaren. Själva förbuden upprätthålls av att ingen kolumn, funktion eller kodväg finns som skulle kunna genomföra dem.",
+    "ii.detail.prohibited.hint":
+      "Dessa dokumenterar förbuden för intervjuaren. Själva förbuden upprätthålls av att ingen kolumn, funktion eller kodväg finns som skulle kunna genomföra dem.",
     "ii.detail.empty.competencies": "Inga kompetenser är definierade ännu.",
     "ii.detail.empty.questions": "Inga kärnfrågor är definierade ännu.",
     "ii.detail.empty.verification": "Inga verifieringskrav är definierade ännu.",
     "ii.detail.empty.prohibited": "Inga förbjudna områden är definierade ännu.",
     "ii.detail.empty.audit": "Ingen historik ännu.",
-    "ii.anchor.zeroRule": "Nivå 0 betyder otillräcklig evidens — inte låg kompetens, inte oärlighet. Den ingår aldrig i en sammanvägning och utlöser inget avslag.",
+    "ii.anchor.zeroRule":
+      "Nivå 0 betyder otillräcklig evidens — inte låg kompetens, inte oärlighet. Den ingår aldrig i en sammanvägning och utlöser inget avslag.",
     "ii.question.type.behavioural": "Beteendebaserad",
     "ii.question.type.situational": "Situationsbaserad",
     "ii.probe.purpose.example": "Exempel",
@@ -3976,17 +4010,20 @@ export const dictionaries = {
     "ii.gov.review.gate": "Grind",
     "ii.gov.review.decision": "Beslut",
     "ii.gov.review.rationale": "Motivering",
-    "ii.gov.review.rationaleHint": "Ett beslut utan motivering är ingen granskning. Motiveringen sparas oföränderligt tillsammans med innehållssumman.",
+    "ii.gov.review.rationaleHint":
+      "Ett beslut utan motivering är ingen granskning. Motiveringen sparas oföränderligt tillsammans med innehållssumman.",
     "ii.gov.review.submit": "Registrera beslut",
     "ii.gov.publication": "Publicering",
     "ii.gov.publish": "Publicera version",
     "ii.gov.publishBlocked": "Publicering är blockerad",
-    "ii.gov.publishBlockedBody": "Åtgärda hindren ovan först. Databasen genomför samma kontroll i publiceringstransaktionen, så ett ofullständigt paket kan aldrig bli publicerat.",
+    "ii.gov.publishBlockedBody":
+      "Åtgärda hindren ovan först. Databasen genomför samma kontroll i publiceringstransaktionen, så ett ofullständigt paket kan aldrig bli publicerat.",
     "ii.gov.suspend": "Pausa version",
     "ii.gov.retire": "Avveckla version",
     "ii.gov.retiredFinal": "Versionen är avvecklad. Skapa en ny version för att fortsätta arbetet.",
     "ii.gov.confirmPublish": "Bekräfta publicering",
-    "ii.gov.confirmPublishBody": "Publicerat innehåll blir oföränderligt. En saklig ändring kräver därefter en ny version.",
+    "ii.gov.confirmPublishBody":
+      "Publicerat innehåll blir oföränderligt. En saklig ändring kräver därefter en ny version.",
     "ii.gov.confirmSuspend": "Bekräfta paus",
     "ii.gov.confirmSuspendBody": "Versionen blir otillgänglig för användning. Ange varför.",
     "ii.gov.confirmRetire": "Bekräfta avveckling",
@@ -3997,8 +4034,8 @@ export const dictionaries = {
     "ii.gov.cancel": "Avbryt",
     "ii.gov.actionFailed": "Åtgärden kunde inte genomföras",
     "ii.gov.readOnlyTitle": "Endast läsbehörighet",
-    "ii.gov.readOnlyBody": "Du kan granska innehållet men saknar behörighet att redigera, granska eller publicera det.",
-
+    "ii.gov.readOnlyBody":
+      "Du kan granska innehållet men saknar behörighet att redigera, granska eller publicera det.",
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -5521,6 +5558,25 @@ export const dictionaries = {
     "employer.actions.draftJobs.other": "draft job ads",
     "employer.actions.testsWithCandidates.one": "test is out with a candidate",
     "employer.actions.testsWithCandidates.other": "tests are out with candidates",
+
+    // Interview Intelligence, in the same shape as every other action.
+    "employer.actions.interviewPlansToApprove.one": "interview plan needs approval",
+    "employer.actions.interviewPlansToApprove.other": "interview plans need approval",
+    "employer.actions.interviewsReady.one": "interview is ready to run",
+    "employer.actions.interviewsReady.other": "interviews are ready to run",
+    "employer.actions.interviewEvidenceToReview.one": "interview needs evidence review",
+    "employer.actions.interviewEvidenceToReview.other": "interviews need evidence review",
+    "employer.actions.interviewReportsToFinalise.one": "interview is waiting on its report",
+    "employer.actions.interviewReportsToFinalise.other": "interviews are waiting on their reports",
+
+    "employer.overview.card.interviews.title": "Interviews",
+    "employer.overview.card.interviews.body":
+      "Prepare, run and evidence-review structured interviews.",
+    "employer.overview.card.interviews.stat.preparation": "PREPARATION",
+    "employer.overview.card.interviews.stat.ready": "READY TO RUN",
+    "employer.overview.card.interviews.stat.evidence": "EVIDENCE REVIEW",
+    "employer.overview.card.interviews.action.open": "Open interviews",
+    "employer.overview.card.interviews.action.create": "Create interview",
 
     "employer.attention.heading": "Needs your attention",
     "employer.attention.empty": "Nothing needs your attention right now.",
@@ -7746,7 +7802,8 @@ export const dictionaries = {
     "ii.state.errorTitle": "Something went wrong",
     "ii.state.errorBody": "The content could not be loaded. Try again.",
     "ii.state.deniedTitle": "No access",
-    "ii.state.deniedBody": "You do not hold a platform content role for governed interview content, or the version does not exist.",
+    "ii.state.deniedBody":
+      "You do not hold a platform content role for governed interview content, or the version does not exist.",
     "ii.form.errorSummaryTitle": "The form could not be submitted",
     "ii.a11y.status": "Status",
     "ii.a11y.evidenceStatus": "Evidence status",
@@ -7762,9 +7819,11 @@ export const dictionaries = {
     "ii.validation.pilot_hypothesis": "Pilot hypothesis",
     "ii.validation.content_validated": "Content validated",
     "ii.list.heading": "Role interview packs",
-    "ii.list.intro": "Governed content for structured role interviews: competencies, fixed core questions, approved probes, evidence dimensions, behavioural anchors, verification boundaries and prohibited areas.",
+    "ii.list.intro":
+      "Governed content for structured role interviews: competencies, fixed core questions, approved probes, evidence dimensions, behavioural anchors, verification boundaries and prohibited areas.",
     "ii.list.scopeTitle": "Platform-governed authoring",
-    "ii.list.scopeBody": "Only qualified platform editors, reviewers and publishers work here. Employers have no authoring in Phase 1. No AI generates content.",
+    "ii.list.scopeBody":
+      "Only qualified platform editors, reviewers and publishers work here. Employers have no authoring in Phase 1. No AI generates content.",
     "ii.list.newPack": "New role interview pack",
     "ii.list.empty": "No role interview packs are visible to you.",
     "ii.list.tableCaption": "Role interview packs with their latest version and status",
@@ -7776,9 +7835,11 @@ export const dictionaries = {
     "ii.list.noVersion": "No version",
     "ii.list.notPublished": "Not published",
     "ii.new.heading": "New role interview pack",
-    "ii.new.intro": "Creates the pack identity and its first version. A version always begins as a draft.",
+    "ii.new.intro":
+      "Creates the pack identity and its first version. A version always begins as a draft.",
     "ii.new.pilotTitle": "Starts as a pilot hypothesis",
-    "ii.new.pilotBody": "A new pack is not scientifically validated and supports no predictive claim. Publication requires documented expert, legal, cognitive and product review.",
+    "ii.new.pilotBody":
+      "A new pack is not scientifically validated and supports no predictive claim. Publication requires documented expert, legal, cognitive and product review.",
     "ii.new.section.identity": "Identity",
     "ii.new.section.roleContext": "Role context",
     "ii.new.section.source": "Source",
@@ -7791,8 +7852,10 @@ export const dictionaries = {
     "ii.new.field.source": "Source document",
     "ii.new.field.sourceVersion": "Source document version",
     "ii.new.hint.slug": "Lower-case letters, digits and hyphens.",
-    "ii.new.hint.roleVersion": "The pack pins an exact role version, not the role. A later role revision therefore cannot change what the questions are about.",
-    "ii.new.hint.source": "Traceability to the governing document, so a reviewer can compare the content against its source.",
+    "ii.new.hint.roleVersion":
+      "The pack pins an exact role version, not the role. A later role revision therefore cannot change what the questions are about.",
+    "ii.new.hint.source":
+      "Traceability to the governing document, so a reviewer can compare the content against its source.",
     "ii.new.error.slug": "The identifier must be lower-case letters, digits and hyphens.",
     "ii.new.error.name": "A name is required.",
     "ii.new.error.purpose": "A purpose is required.",
@@ -7818,11 +7881,14 @@ export const dictionaries = {
     "employer.nav.interviewIntelligence": "Interviews",
     "ii.detail.backToList": "Back to role interview packs",
     "ii.detail.pilotTitle": "Pilot hypothesis — not a validated selection method",
-    "ii.detail.pilotBody": "The competencies, questions and anchors are a considered hypothesis. They must be content-validated through documented job analysis and an expert panel before real selection decisions. No predictive claim may be made.",
+    "ii.detail.pilotBody":
+      "The competencies, questions and anchors are a considered hypothesis. They must be content-validated through documented job analysis and an expert panel before real selection decisions. No predictive claim may be made.",
     "ii.detail.publishedTitle": "Published and immutable",
-    "ii.detail.publishedBody": "The content is locked. A substantive change requires a new version; the published one is preserved.",
+    "ii.detail.publishedBody":
+      "The content is locked. A substantive change requires a new version; the published one is preserved.",
     "ii.detail.suspendedTitle": "Suspended",
-    "ii.detail.suspendedBody": "This version is not available for use. That is a process risk, never a judgement about a person.",
+    "ii.detail.suspendedBody":
+      "This version is not available for use. That is a process risk, never a judgement about a person.",
     "ii.detail.retiredTitle": "Retired",
     "ii.detail.retiredBody": "The version is closed and preserved for traceability.",
     "ii.detail.field.purpose": "Purpose",
@@ -7832,9 +7898,11 @@ export const dictionaries = {
     "ii.detail.indicators": "Observable indicators",
     "ii.detail.mapping": "Mapping to canonical competency versions",
     "ii.detail.mapping.none": "No mapping. The pack cannot be published without one.",
-    "ii.detail.questions.intro": "Every candidate in the same process and pack version gets the same core questions in the same order. Generative AI may never rewrite or replace them.",
+    "ii.detail.questions.intro":
+      "Every candidate in the same process and pack version gets the same core questions in the same order. Generative AI may never rewrite or replace them.",
     "ii.detail.generalProbes": "General probes",
-    "ii.detail.generalProbes.hint": "May be used after any core question. Only probes with an approved purpose may be used.",
+    "ii.detail.generalProbes.hint":
+      "May be used after any core question. Only probes with an approved purpose may be used.",
     "ii.detail.order": "order",
     "ii.detail.verbatim": "Read verbatim.",
     "ii.detail.primaryCompetency": "Competencies",
@@ -7846,13 +7914,15 @@ export const dictionaries = {
     "ii.detail.verification.subsequent": "Subsequent verification",
     "ii.detail.verification.passport": "Passport boundary",
     "ii.detail.prohibited": "Prohibited areas",
-    "ii.detail.prohibited.hint": "These document the prohibitions for the interviewer. The prohibitions themselves are enforced by the absence of any column, function or code path that could implement them.",
+    "ii.detail.prohibited.hint":
+      "These document the prohibitions for the interviewer. The prohibitions themselves are enforced by the absence of any column, function or code path that could implement them.",
     "ii.detail.empty.competencies": "No competencies are defined yet.",
     "ii.detail.empty.questions": "No core questions are defined yet.",
     "ii.detail.empty.verification": "No verification requirements are defined yet.",
     "ii.detail.empty.prohibited": "No prohibited areas are defined yet.",
     "ii.detail.empty.audit": "No history yet.",
-    "ii.anchor.zeroRule": "Level 0 means insufficient evidence — not low competence, not dishonesty. It never enters an aggregation and triggers no rejection.",
+    "ii.anchor.zeroRule":
+      "Level 0 means insufficient evidence — not low competence, not dishonesty. It never enters an aggregation and triggers no rejection.",
     "ii.question.type.behavioural": "Behavioural",
     "ii.question.type.situational": "Situational",
     "ii.probe.purpose.example": "Example",
@@ -7888,7 +7958,8 @@ export const dictionaries = {
     "ii.gate.approved": "Approved",
     "ii.gate.rejected": "Rejected",
     "ii.gate.stale": "Stale",
-    "ii.gate.staleExplain": "The content changed after this approval. The gate must be reviewed again.",
+    "ii.gate.staleExplain":
+      "The content changed after this approval. The gate must be reviewed again.",
     "ii.gov.gates": "Review gates",
     "ii.gov.blockers": "What blocks publication",
     "ii.gov.noBlockers": "Nothing blocks publication.",
@@ -7902,17 +7973,20 @@ export const dictionaries = {
     "ii.gov.review.gate": "Gate",
     "ii.gov.review.decision": "Decision",
     "ii.gov.review.rationale": "Rationale",
-    "ii.gov.review.rationaleHint": "A decision without reasoning is not a review. The rationale is stored immutably together with the content hash it applies to.",
+    "ii.gov.review.rationaleHint":
+      "A decision without reasoning is not a review. The rationale is stored immutably together with the content hash it applies to.",
     "ii.gov.review.submit": "Record decision",
     "ii.gov.publication": "Publication",
     "ii.gov.publish": "Publish version",
     "ii.gov.publishBlocked": "Publication is blocked",
-    "ii.gov.publishBlockedBody": "Resolve the reasons above first. The database performs the same check inside the publishing transaction, so an incomplete pack can never become published.",
+    "ii.gov.publishBlockedBody":
+      "Resolve the reasons above first. The database performs the same check inside the publishing transaction, so an incomplete pack can never become published.",
     "ii.gov.suspend": "Suspend version",
     "ii.gov.retire": "Retire version",
     "ii.gov.retiredFinal": "This version is retired. Create a new version to continue the work.",
     "ii.gov.confirmPublish": "Confirm publication",
-    "ii.gov.confirmPublishBody": "Published content becomes immutable. A substantive change then requires a new version.",
+    "ii.gov.confirmPublishBody":
+      "Published content becomes immutable. A substantive change then requires a new version.",
     "ii.gov.confirmSuspend": "Confirm suspension",
     "ii.gov.confirmSuspendBody": "The version becomes unavailable for use. State why.",
     "ii.gov.confirmRetire": "Confirm retirement",
@@ -7923,8 +7997,8 @@ export const dictionaries = {
     "ii.gov.cancel": "Cancel",
     "ii.gov.actionFailed": "The action could not be completed",
     "ii.gov.readOnlyTitle": "Read-only access",
-    "ii.gov.readOnlyBody": "You can review the content but hold no authority to edit, review or publish it.",
-
+    "ii.gov.readOnlyBody":
+      "You can review the content but hold no authority to edit, review or publish it.",
   },
 } as const;
 
