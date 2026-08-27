@@ -287,3 +287,102 @@ export function DeletionImpactPreview({
     </div>
   );
 }
+
+// Permanent account deletion: what goes, and what stays.
+//
+// The administrator is about to do something irreversible to somebody's
+// account, and the only honest way to ask for that confirmation is to show
+// both halves at once. A single "this will be removed" list would be a lie by
+// omission now that most of the rows survive.
+//
+// Every number here is computed by the database at call time, from the actual
+// foreign keys in the schema. This component sorts them into two columns and
+// renders them; it decides nothing.
+function ImpactList({
+  entries,
+  tone,
+}: {
+  entries: Array<[string, number]>;
+  tone: "removed" | "kept";
+}) {
+  return (
+    <ul
+      className={
+        "mt-2 space-y-1 text-sm " +
+        (tone === "removed" ? "text-destructive" : "text-muted-foreground")
+      }
+    >
+      {entries.map(([key, count]) => (
+        <li key={key} className="flex items-baseline justify-between gap-2">
+          {/* These are table.column names, long and unbreakable at spaces.
+              Without min-w-0 + break-all the count is pushed out of the
+              dialog and the administrator cannot read the number. */}
+          <code className="min-w-0 break-all text-xs">{key}</code>
+          <span className="shrink-0 tabular-nums">{count}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function AccountDeletionImpactPreview({
+  deleted,
+  detached,
+  preserved,
+  hasHistory,
+}: {
+  deleted: Record<string, number>;
+  detached: Record<string, number>;
+  preserved: Record<string, number>;
+  hasHistory: boolean;
+}) {
+  const { t } = useT();
+
+  const deletedEntries = Object.entries(deleted).filter(([, n]) => n > 0);
+  // Detached and preserved answer the same question for the administrator --
+  // "what is still here afterwards?" -- so they are shown as one column, in
+  // that order, rather than as two lists that would have to be compared.
+  const keptEntries = [...Object.entries(detached), ...Object.entries(preserved)].filter(
+    ([, n]) => n > 0,
+  );
+
+  return (
+    <div className="space-y-4">
+      {hasHistory ? (
+        <p className="text-sm text-foreground">
+          {t("admin.lifecycle.person.delete.historyHandled")}
+        </p>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 [&>section]:min-w-0">
+        <section>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-destructive">
+            {t("admin.danger.impact.deletedHeading")}
+          </h4>
+          {deletedEntries.length === 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("admin.danger.impact.deletedNothing")}
+            </p>
+          ) : (
+            <ImpactList entries={deletedEntries} tone="removed" />
+          )}
+        </section>
+
+        <section>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("admin.danger.impact.keptHeading")}
+          </h4>
+          {keptEntries.length === 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("admin.danger.impact.keptNothing")}
+            </p>
+          ) : (
+            <ImpactList entries={keptEntries} tone="kept" />
+          )}
+        </section>
+      </div>
+
+      <p className="text-xs text-muted-foreground">{t("admin.danger.impact.keptNote")}</p>
+    </div>
+  );
+}

@@ -3596,7 +3596,7 @@ export const dictionaries = {
     "admin.lifecycle.blocker.userHoldsPlatformRole": "Personen har en plattformsroll",
     "admin.lifecycle.error.holdsRole": "Ta bort personens plattformsroll först.",
     "admin.lifecycle.person.delete.blockedData":
-      "Kontot har historik som måste bevaras. Stäng av eller anonymisera i stället.",
+      "Kontot har historik som måste bevaras. Vid permanent radering anonymiseras sådan historik automatiskt.",
     "admin.lifecycle.error.notDeletable":
       "Posten kan inte raderas eftersom historik måste bevaras.",
     "admin.lifecycle.person.field.noSubject": "Inget subjekt kopplat",
@@ -3712,7 +3712,15 @@ export const dictionaries = {
     "admin.data.finding.employeeSubjectMismatch":
       "Medarbetare kopplad till ett annat subjekt än kontots",
     "admin.lifecycle.person.delete.consequence":
-      "Den här åtgärden kan inte ångras. Endast ett konto helt utan historik kan raderas.",
+      "Den här åtgärden kan inte ångras. Kontot och personens egna uppgifter raderas. Historik som måste bevaras anonymiseras och kopplas loss från personen.",
+    "admin.lifecycle.person.delete.historyHandled":
+      "Kontot har historik som måste bevaras. Vid permanent radering anonymiseras sådan historik automatiskt.",
+    "admin.danger.impact.deletedHeading": "Tas bort",
+    "admin.danger.impact.deletedNothing": "Ingenting tas bort.",
+    "admin.danger.impact.keptHeading": "Anonymiseras eller behålls",
+    "admin.danger.impact.keptNothing": "Ingenting behålls.",
+    "admin.danger.impact.keptNote":
+      "Poster som behålls tillhör någon annan — en arbetsgivares rekryteringsunderlag, ett bedömningsunderlag på ett pseudonymt subjekt, eller revisionsloggen. Personen kopplas loss och personuppgifter tas bort ur dem.",
     "admin.data.finding.unclaimedSubject": "Bedömningshistorik utan kopplat konto",
     "admin.lifecycle.person.passport.none": "Ingen Passport-data.",
     "admin.lifecycle.employer.delete.consequence":
@@ -7308,7 +7316,7 @@ export const dictionaries = {
     "admin.lifecycle.blocker.userHoldsPlatformRole": "The person holds a platform role",
     "admin.lifecycle.error.holdsRole": "Revoke the person's platform role first.",
     "admin.lifecycle.person.delete.blockedData":
-      "This account has history that must be preserved. Disable or anonymise it instead.",
+      "This account has history that must be preserved. Permanent deletion anonymises that history automatically.",
     "admin.lifecycle.error.notDeletable":
       "This record cannot be deleted because history must be preserved.",
     "admin.lifecycle.person.field.noSubject": "No subject linked",
@@ -7425,7 +7433,15 @@ export const dictionaries = {
     "admin.data.finding.employeeSubjectMismatch":
       "Employee linked to a different subject than the account's",
     "admin.lifecycle.person.delete.consequence":
-      "This action cannot be undone. Only an account with no history at all can be deleted.",
+      "This action cannot be undone. The account and the person's own data are deleted. History that must be preserved is anonymised and detached from the person.",
+    "admin.lifecycle.person.delete.historyHandled":
+      "This account has history that must be preserved. Permanent deletion anonymises that history automatically.",
+    "admin.danger.impact.deletedHeading": "Deleted",
+    "admin.danger.impact.deletedNothing": "Nothing is deleted.",
+    "admin.danger.impact.keptHeading": "Anonymised or kept",
+    "admin.danger.impact.keptNothing": "Nothing is kept.",
+    "admin.danger.impact.keptNote":
+      "Records that are kept belong to somebody else — an employer's recruitment record, assessment evidence on a pseudonymous subject, or the audit log. The person is detached from them and their personal data is removed.",
     "admin.data.finding.unclaimedSubject": "Assessment history with no account attached",
     "admin.lifecycle.person.passport.none": "No Passport data.",
     "admin.lifecycle.employer.delete.consequence":

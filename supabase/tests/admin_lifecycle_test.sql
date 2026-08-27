@@ -457,17 +457,23 @@ SELECT pg_temp.must_fail(
 
 SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-00000000005a';
 
-SELECT pg_temp.must_fail(
-  $$SELECT public.admin_delete_user_if_safe(
-      'ad100000-0000-0000-0000-0000000000ca','städning','candidate@acc.invalid')$$,
-  'USER_HAS_APPLICATIONS',
-  'P10 a candidate with an application cannot be hard deleted');
+-- P10 and P11 previously asserted that history REFUSED the deletion. The
+-- owner's decision reversed that: for a superadmin, history is handled, not a
+-- veto. What the report owes the administrator now is not a refusal but an
+-- accurate account of what will happen to each row, so that is what is
+-- asserted here. The deletion itself is exercised end to end in group 8d,
+-- against a person built specifically to carry every kind of history at once;
+-- the candidate and the holder stay alive here because six later assertions
+-- still read them.
+SELECT pg_temp.ok(
+  public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000ca')
+    -> 'detached' ? 'job_applications.applicant_user_id',
+  'P10 a candidate''s application is reported as DETACHED, not as a refusal');
 
-SELECT pg_temp.must_fail(
-  $$SELECT public.admin_delete_user_if_safe(
-      'ad100000-0000-0000-0000-000000000012','städning','holder@acc.invalid')$$,
-  'USER_HAS_PASSPORT_EVIDENCE',
-  'P11 a Passport holder cannot be hard deleted');
+SELECT pg_temp.ok(
+  public.admin_user_deletion_impact('ad100000-0000-0000-0000-000000000012')
+    -> 'deleted' ? 'sp_claims.holder_user_id',
+  'P11 a Passport holder''s own claim is reported as DELETED, in advance and by name');
 
 SELECT pg_temp.must_fail(
   $$SELECT public.admin_delete_user_if_safe(
@@ -480,7 +486,7 @@ SELECT pg_temp.ok(
     WHERE holder_user_id = 'ad100000-0000-0000-0000-000000000012') = 1
   AND (SELECT count(*) FROM public.job_applications
         WHERE applicant_user_id = 'ad100000-0000-0000-0000-0000000000ca') = 1,
-  'P13 every refused account deletion left the evidence completely intact');
+  'P13 a refused deletion, and a read-only impact report, changed nothing at all');
 
 SELECT public.admin_delete_user_if_safe(
   'ad100000-0000-0000-0000-000000000011','Testkonto.','plain@acc.invalid');
@@ -870,6 +876,449 @@ SELECT pg_temp.must_fail(
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
+-- GROUP 8d — Permanent deletion of an account that has real history
+--
+-- Group 8c proved the two ENDINGS are different. This group proves the ending
+-- is reachable at all for the only kind of account anyone actually wants to
+-- delete: one that has been used.
+--
+-- HI below is built to carry, at once, every kind of history the platform
+-- knows how to attach to a person -- a profile, an application with its status
+-- history, a recruitment assessment assignment, a completed attempt with
+-- reviewed evidence and a released report, a Security Passport with a claim,
+-- evidence, an experience period, a disclosure to an employer and a
+-- verification decision, an organisation membership, a consent record, an
+-- audit trail, and records they ACTED on as an employer person, including two
+-- that the schema forbids anyone from ever editing.
+--
+-- Every assertion below is on real rows after a real call. Nothing is asserted
+-- against the function's source text.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-00000000005a';
+
+INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000b1','historik@acc.invalid',
+   '{"display_name":"Full Historik"}'::jsonb);
+
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000b1','email','historik@acc.invalid',
+   '{"email":"historik@acc.invalid"}'::jsonb);
+
+INSERT INTO public.consent_records (user_id, purpose, policy_version) VALUES
+  ('ad100000-0000-0000-0000-0000000000b1','platform_terms','2026-01');
+
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status, accepted_at) VALUES
+  ('ad100000-1111-0000-0000-000000000021','ad100000-0000-0000-0000-0000000000b1','member','active',now());
+
+-- An application to the live advert, carrying the personal fields a candidate
+-- actually submits, plus one status change the employer made.
+INSERT INTO public.job_applications
+  (id, job_id, employer_id, applicant_user_id, consent_given_at, phone, cover_note,
+   cv_storage_path, cv_original_filename, cv_mime_type, cv_size_bytes, status)
+VALUES ('ad100000-3333-0000-0000-0000000000b1','ad100000-2222-0000-0000-000000000031',
+        'ad100000-1111-0000-0000-000000000021','ad100000-0000-0000-0000-0000000000b1', now(),
+        '+46701234567','Jag heter Full Historik och söker tjänsten.',
+        'ad100000-0000-0000-0000-0000000000b1/cv.pdf','Full-Historik-CV.pdf',
+        'application/pdf', 1234, 'reviewing');
+
+INSERT INTO public.job_application_status_events
+  (application_id, job_id, employer_id, actor_user_id, actor_role, previous_status, new_status)
+VALUES ('ad100000-3333-0000-0000-0000000000b1','ad100000-2222-0000-0000-000000000031',
+        'ad100000-1111-0000-0000-000000000021','ad100000-0000-0000-0000-0000000000ad',
+        'employer','submitted','reviewing');
+
+-- The pseudonymous spine, and a completed, reviewed, reported assessment on it.
+INSERT INTO public.scp_subjects (id) VALUES ('ad100000-4444-0000-0000-0000000000b1');
+INSERT INTO public.scp_subject_identities (subject_id, user_id)
+VALUES ('ad100000-4444-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1');
+
+-- The form has to satisfy two guards that are not under test here, so both
+-- conditions are stated rather than left to whichever row happens to sort
+-- first: the version must be PUBLISHED (or the assign guard refuses for want
+-- of a grant), and every item on the form must be assessment-mode (or the
+-- attempt guard refuses the mode). Ordered by id so the same row is chosen on
+-- every replay.
+WITH fx AS (
+  SELECT av.id AS av_id, f.id AS form_id
+    FROM public.scp_assessment_versions av
+    JOIN public.scp_forms f ON f.assessment_version_id = av.id
+   WHERE av.content_status = 'published'
+     AND NOT EXISTS (
+       SELECT 1 FROM public.scp_form_items fi
+         JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
+        WHERE fi.form_id = f.id AND iv.mode IS DISTINCT FROM 'assessment')
+     AND EXISTS (SELECT 1 FROM public.scp_form_items fi WHERE fi.form_id = f.id)
+   ORDER BY f.id LIMIT 1)
+SELECT av_id AS h_avid, form_id AS h_fid FROM fx \gset
+
+-- Inserted as workforce and relabelled, because no content on this platform is
+-- operationally validated yet and the assign guard correctly refuses to create
+-- a recruitment assignment against content that is not. The rules under test
+-- here are the deletion rules, not the assign guard, which keeps its own
+-- assertions elsewhere.
+INSERT INTO public.assessment_assignments
+  (id, employer_id, use_case, recipient_email, recipient_user_id, assigned_by,
+   invitation_token_hash, expires_at, scp_assessment_version_id, status)
+VALUES ('ad100000-5555-0000-0000-0000000000b1','ad100000-1111-0000-0000-000000000021','workforce',
+        'historik@acc.invalid','ad100000-0000-0000-0000-0000000000b1',
+        'ad100000-0000-0000-0000-0000000000ad','hash-historik', now() + interval '30 days',
+        :'h_avid'::uuid,'started');
+
+UPDATE public.assessment_assignments
+   SET use_case = 'recruitment',
+       application_id = 'ad100000-3333-0000-0000-0000000000b1',
+       job_id = 'ad100000-2222-0000-0000-000000000031'
+ WHERE id = 'ad100000-5555-0000-0000-0000000000b1';
+
+INSERT INTO public.scp_attempts
+  (id, subject_id, issuer_organization_id, assignment_id, mode, form_id,
+   assessment_version_id, status, submitted_at)
+VALUES ('ad100000-6666-0000-0000-0000000000b1','ad100000-4444-0000-0000-0000000000b1',
+        'ad100000-1111-0000-0000-000000000021','ad100000-5555-0000-0000-0000000000b1',
+        'assessment', :'h_fid'::uuid, :'h_avid'::uuid, 'submitted', now());
+
+INSERT INTO public.scp_competency_evidence
+  (subject_id, behaviour_version_id, source_type, source_ref, provenance_type,
+   contribution, confidence, assessor_actor_id)
+SELECT 'ad100000-4444-0000-0000-0000000000b1', bv.id, 'assessment_response',
+       'ad100000-6666-0000-0000-0000000000b1', 'human_review', 0.5, 0.5,
+       'ad100000-0000-0000-0000-0000000000ad'
+  FROM public.scp_behaviour_versions bv ORDER BY bv.id LIMIT 1;
+
+INSERT INTO public.scp_report_snapshots (attempt_id, subject_id, report_version_id, audience, payload)
+SELECT 'ad100000-6666-0000-0000-0000000000b1','ad100000-4444-0000-0000-0000000000b1',
+       rv.id, 'employer', '{"fixture":true}'::jsonb
+  FROM public.scp_report_versions rv ORDER BY rv.id LIMIT 1;
+
+-- The holder's own Security Passport, and one disclosure of it to the employer.
+INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state)
+VALUES ('ad100000-7777-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
+        'certification','Väktarutbildning del 1','active');
+
+INSERT INTO public.sp_evidence (holder_user_id, claim_id, storage_path, file_name, mime_type, size_bytes)
+VALUES ('ad100000-0000-0000-0000-0000000000b1','ad100000-7777-0000-0000-0000000000b1',
+        'ad100000-0000-0000-0000-0000000000b1/bevis.pdf','bevis.pdf','application/pdf', 999);
+
+INSERT INTO public.sp_experience_periods (holder_user_id, employer_name, role_title, started_on)
+VALUES ('ad100000-0000-0000-0000-0000000000b1','Tidigare AB','Väktare', DATE '2023-01-01');
+
+INSERT INTO public.sp_passport_events (holder_user_id, actor_user_id, event_type, detail)
+VALUES ('ad100000-0000-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
+        'claim_created','{}'::jsonb);
+
+INSERT INTO public.sp_verification_requests
+  (id, holder_user_id, claim_id, request_kind, status, decided_at, decided_by)
+VALUES ('ad100000-aaaa-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
+        'ad100000-7777-0000-0000-0000000000b1','cqrityjob_review','approved',
+        now(),'ad100000-0000-0000-0000-0000000000ad');
+
+INSERT INTO public.sp_verification_decisions (request_id, holder_user_id, decided_by, decision)
+VALUES ('ad100000-aaaa-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
+        'ad100000-0000-0000-0000-0000000000ad','approved');
+
+INSERT INTO public.sp_disclosures
+  (id, holder_user_id, package_code, application_id, focus_claim_id, purpose, recipient_hint)
+VALUES ('ad100000-8888-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
+        'employer_review','ad100000-3333-0000-0000-0000000000b1',
+        'ad100000-7777-0000-0000-0000000000b1','recruitment','Live Kund AB');
+
+-- What HI DID, not what was done to them. The invitation is editable and its
+-- actor is released; the interview note and the employer decision are records
+-- the schema forbids anyone from ever editing, and keep the actor they name.
+INSERT INTO public.scp_assessment_invitations
+  (id, employer_id, assessment_version_id, email, invited_name, use_case, invited_by, expires_at)
+VALUES ('ad100000-9999-0000-0000-0000000000b1','ad100000-1111-0000-0000-000000000021',
+        :'h_avid'::uuid,'nagon-annan@acc.invalid','Någon Annan','workforce',
+        'ad100000-0000-0000-0000-0000000000b1', now() + interval '30 days');
+
+INSERT INTO public.scp_interview_notes (attempt_id, employer_id, area_code, outcome, recorded_by)
+VALUES ('ad100000-6666-0000-0000-0000000000b1','ad100000-1111-0000-0000-000000000021',
+        'situational_awareness','additional_context','ad100000-0000-0000-0000-0000000000b1');
+
+INSERT INTO public.scp_employer_report_decisions
+  (attempt_id, employer_id, action, reason_code, decided_by)
+VALUES ('ad100000-6666-0000-0000-0000000000b1','ad100000-1111-0000-0000-000000000021',
+        'no_action_needed','meets_expectation','ad100000-0000-0000-0000-0000000000b1');
+
+INSERT INTO public.audit_logs (actor_id, actor_role, action, subject_type, subject_id, metadata)
+VALUES ('ad100000-0000-0000-0000-0000000000b1','platform_admin','fixture_action','job',
+        'ad100000-2222-0000-0000-000000000031','{}'::jsonb);
+
+
+-- ── 1. The action is available despite the history ─────────────────────────
+
+SELECT pg_temp.ok(
+  jsonb_array_length(public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1')
+    -> 'blockers') >= 5
+  AND (public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1')
+        ->> 'has_history')::boolean,
+  'H1 the account really does carry history -- five or more separate kinds of it');
+
+SELECT pg_temp.ok(
+  public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1')
+    -> 'deleted' ? 'sp_claims.holder_user_id'
+  AND public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1')
+        -> 'detached' ? 'job_applications.applicant_user_id'
+  AND public.admin_user_deletion_impact('ad100000-0000-0000-0000-0000000000b1')
+        -> 'preserved' ? 'scp_interview_notes.recorded_by',
+  'H2 the report tells the administrator, in advance, which rows are deleted, which detached and which preserved');
+
+-- ── 2. Only a superadmin may do it ─────────────────────────────────────────
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-0000000000ad';
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_delete_user_if_safe(
+      'ad100000-0000-0000-0000-0000000000b1','x','historik@acc.invalid')$$,
+  'FORBIDDEN_SUPERADMIN_REQUIRED',
+  'H3 an ordinary platform admin cannot permanently delete an account with history either');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-0000000000ca';
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_delete_user_if_safe(
+      'ad100000-0000-0000-0000-0000000000b1','x','historik@acc.invalid')$$,
+  'FORBIDDEN_SUPERADMIN_REQUIRED',
+  'H4 and an ordinary signed-in person is refused at the same gate');
+RESET ROLE;
+
+-- ── 3. An injected failure rolls the whole operation back ──────────────────
+--
+-- A savepoint stands in for "something raised on the last step". The deletion
+-- runs to completion and is then thrown away, and the assertion is that the
+-- account and every one of its rows came back exactly as they were -- not that
+-- the function refused, which would prove nothing about atomicity.
+
+SET LOCAL request.jwt.claim.sub = 'ad100000-0000-0000-0000-00000000005a';
+
+SAVEPOINT before_failed_deletion;
+SELECT public.admin_delete_user_if_safe(
+  'ad100000-0000-0000-0000-0000000000b1','Avbruten radering.','historik@acc.invalid');
+ROLLBACK TO SAVEPOINT before_failed_deletion;
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.profiles WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.sp_claims WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 1
+  AND (SELECT applicant_user_id FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = 'ad100000-0000-0000-0000-0000000000b1'::uuid
+  AND (SELECT phone FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = '+46701234567'
+  AND (SELECT recipient_email FROM public.assessment_assignments
+        WHERE id = 'ad100000-5555-0000-0000-0000000000b1') = 'historik@acc.invalid'
+  AND (SELECT count(*) FROM public.audit_logs
+        WHERE action = 'user_deleted'
+          AND subject_id = 'ad100000-0000-0000-0000-0000000000b1') = 0,
+  'H5 a deletion that does not commit leaves NOTHING behind -- not a detached application, not a pseudonymised address, not an audit row');
+
+-- ── 4. The deletion itself ─────────────────────────────────────────────────
+
+SELECT public.admin_delete_user_if_safe(
+  'ad100000-0000-0000-0000-0000000000b1','Ägarens begäran om radering.','historik@acc.invalid');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM auth.identities WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0,
+  'H6 the auth account and its sign-in identity are gone');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.profiles WHERE id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.user_roles WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.employer_memberships WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.consent_records WHERE user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0,
+  'H7 the profile, the platform role, the organisation membership and the consent record went with it');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_claims WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.sp_evidence WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.sp_experience_periods WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.sp_passport_events WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0
+  AND (SELECT count(*) FROM public.sp_verification_decisions WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b1') = 0,
+  'H8 the holder''s own Security Passport went with it too, append-only history included');
+
+-- ── 5. What had to survive, survived ───────────────────────────────────────
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.job_applications
+    WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.job_application_status_events
+        WHERE application_id = 'ad100000-3333-0000-0000-0000000000b1') = 1
+  AND (SELECT status FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = 'reviewing',
+  'H9 the employer keeps its recruitment record: the application, its status and its history');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_attempts WHERE id = 'ad100000-6666-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.scp_competency_evidence
+        WHERE subject_id = 'ad100000-4444-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.scp_report_snapshots
+        WHERE subject_id = 'ad100000-4444-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.scp_subjects WHERE id = 'ad100000-4444-0000-0000-0000000000b1') = 1,
+  'H10 the completed assessment, its reviewed evidence and its released report survive on the pseudonymous subject');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_subject_identities
+    WHERE subject_id = 'ad100000-4444-0000-0000-0000000000b1') = 0,
+  'H11 and the subject is no longer attached to any person -- the spine is detached, not deleted');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.sp_disclosures WHERE id = 'ad100000-8888-0000-0000-0000000000b1') = 1
+  AND (SELECT holder_user_id FROM public.sp_disclosures
+        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NULL
+  AND (SELECT holder_detached_at FROM public.sp_disclosures
+        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NOT NULL
+  AND (SELECT focus_claim_id FROM public.sp_disclosures
+        WHERE id = 'ad100000-8888-0000-0000-0000000000b1') IS NULL,
+  'H12 the disclosure the employer received survives the holder AND the deleted claim it pointed at');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_interview_notes
+    WHERE recorded_by = 'ad100000-0000-0000-0000-0000000000b1') = 1
+  AND (SELECT count(*) FROM public.scp_employer_report_decisions
+        WHERE decided_by = 'ad100000-0000-0000-0000-0000000000b1') = 1,
+  'H13 the two records nobody may ever edit are untouched, actor id and all');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.audit_logs
+    WHERE action = 'user_deleted'
+      AND subject_id = 'ad100000-0000-0000-0000-0000000000b1'
+      AND metadata ->> 'email' = 'historik@acc.invalid'
+      AND (metadata ->> 'had_history')::boolean) = 1
+  AND (SELECT count(*) FROM public.audit_logs
+        WHERE subject_id = 'ad100000-2222-0000-0000-000000000031'
+          AND action = 'fixture_action') = 1,
+  'H14 the deletion is on the record, and so is what the person did before it');
+
+-- ── 6. Nothing personal is left where it should have been anonymised ───────
+
+SELECT pg_temp.ok(
+  (SELECT applicant_user_id FROM public.job_applications
+    WHERE id = 'ad100000-3333-0000-0000-0000000000b1') IS NULL
+  AND (SELECT applicant_detached_at FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') IS NOT NULL
+  AND (SELECT coalesce(phone,'') || coalesce(cover_note,'') || coalesce(cv_storage_path,'')
+              || coalesce(cv_original_filename,'')
+         FROM public.job_applications
+        WHERE id = 'ad100000-3333-0000-0000-0000000000b1') = '',
+  'H15 the retained application keeps no phone number, no covering note and no CV');
+
+SELECT pg_temp.ok(
+  (SELECT recipient_email FROM public.assessment_assignments
+    WHERE id = 'ad100000-5555-0000-0000-0000000000b1')
+      = 'raderad+ad100000-0000-0000-0000-0000000000b1@removed.invalid'
+  AND (SELECT recipient_user_id FROM public.assessment_assignments
+        WHERE id = 'ad100000-5555-0000-0000-0000000000b1') IS NULL,
+  'H16 the retained assessment assignment carries a pseudonym, not the person''s address');
+
+SELECT pg_temp.ok(
+  NOT EXISTS (
+    SELECT 1 FROM public.job_applications
+     WHERE id = 'ad100000-3333-0000-0000-0000000000b1'
+       AND (coalesce(phone,'') || coalesce(cover_note,'') || coalesce(employer_note,''))
+             ILIKE '%historik@acc.invalid%')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.assessment_assignments
+     WHERE recipient_email = 'historik@acc.invalid')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.sp_disclosures WHERE recipient_hint = 'historik@acc.invalid'),
+  'H17 the deleted address appears nowhere on any retained row');
+
+-- The invitation the person SENT is somebody else's record of somebody else.
+-- Releasing the sender must not touch the person it was sent to.
+SELECT pg_temp.ok(
+  (SELECT invited_by FROM public.scp_assessment_invitations
+    WHERE id = 'ad100000-9999-0000-0000-0000000000b1') IS NULL
+  AND (SELECT email FROM public.scp_assessment_invitations
+        WHERE id = 'ad100000-9999-0000-0000-0000000000b1') = 'nagon-annan@acc.invalid'
+  AND (SELECT invited_name FROM public.scp_assessment_invitations
+        WHERE id = 'ad100000-9999-0000-0000-0000000000b1') = 'Någon Annan',
+  'H18 an invitation they sent keeps the recipient it named, and loses only the sender');
+
+-- ── 7. No orphans ──────────────────────────────────────────────────────────
+--
+-- Read from the catalogue rather than from a list somebody maintained: every
+-- foreign key in public that still points at auth.users is checked for a value
+-- that no longer resolves. This is the assertion that would catch a column
+-- someone adds later and forgets.
+
+DO $$
+DECLARE _rec record; _n bigint;
+BEGIN
+  FOR _rec IN
+    SELECT c.conrelid::regclass::text AS tbl, a.attname::text AS col
+      FROM pg_constraint c
+      JOIN LATERAL unnest(c.conkey) AS k(attnum) ON true
+      JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+     WHERE c.contype = 'f' AND c.confrelid = 'auth.users'::regclass
+       AND c.connamespace = 'public'::regnamespace
+  LOOP
+    EXECUTE format(
+      'SELECT count(*) FROM %s t WHERE t.%I IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id = t.%I)',
+      _rec.tbl, _rec.col, _rec.col) INTO _n;
+    IF _n > 0 THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: H19 -- %.% holds % row(s) pointing at a deleted account',
+        _rec.tbl, _rec.col, _n;
+    END IF;
+  END LOOP;
+  RAISE NOTICE '    ok  %', 'H19 no foreign key anywhere in the schema still points at the deleted account';
+END $$;
+
+-- ── 8. It cannot be reopened, and the address is free ──────────────────────
+
+SELECT pg_temp.must_fail(
+  $$SELECT public.admin_set_user_disabled(
+      'ad100000-0000-0000-0000-0000000000b1', false, 'Öppna igen.')$$,
+  'USER_NOT_FOUND',
+  'H20 an account deleted with all its history cannot be reopened either');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM auth.users WHERE email = 'historik@acc.invalid') = 0
+  AND (SELECT count(*) FROM auth.identities
+        WHERE provider = 'email' AND provider_id = 'historik@acc.invalid') = 0,
+  'H21 the address is free -- nothing in auth.users and no identity still claims it');
+
+INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000b2','historik@acc.invalid',
+   '{"display_name":"Ny Historik"}'::jsonb);
+INSERT INTO auth.identities (user_id, provider, provider_id, identity_data) VALUES
+  ('ad100000-0000-0000-0000-0000000000b2','email','historik@acc.invalid',
+   '{"email":"historik@acc.invalid"}'::jsonb);
+
+SELECT pg_temp.ok(
+  (SELECT id FROM auth.users WHERE email = 'historik@acc.invalid')
+    = 'ad100000-0000-0000-0000-0000000000b2'::uuid
+  AND (SELECT display_name FROM public.profiles
+        WHERE id = 'ad100000-0000-0000-0000-0000000000b2') = 'Ny Historik',
+  'H22 the same address registers again, as a new account with a new id and a fresh profile');
+
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.user_roles WHERE user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0
+  AND (SELECT count(*) FROM public.employer_memberships WHERE user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0
+  AND (SELECT count(*) FROM public.job_applications WHERE applicant_user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0
+  AND (SELECT count(*) FROM public.scp_subject_identities WHERE user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0
+  AND (SELECT count(*) FROM public.sp_claims WHERE holder_user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0
+  AND (SELECT count(*) FROM public.consent_records WHERE user_id = 'ad100000-0000-0000-0000-0000000000b2') = 0,
+  'H23 the new account inherits nothing: no role, no membership, no application, no subject, no Passport, no consent');
+
+-- ── 9. The exception the guards recognise is not a general licence ─────────
+
+SELECT pg_temp.must_fail(
+  $$UPDATE public.assessment_assignments
+       SET recipient_email = 'nagot-annat@acc.invalid'
+     WHERE id = 'ad100000-5555-0000-0000-0000000000b1'$$,
+  'ASSESSMENT_ASSIGNMENT_IMMUTABLE',
+  'H24 outside a deletion, a superadmin still cannot edit an assignment''s recipient');
+
+SELECT pg_temp.must_fail(
+  $$UPDATE public.scp_interview_notes SET outcome = 'evidence_confirmed'
+     WHERE attempt_id = 'ad100000-6666-0000-0000-0000000000b1'$$,
+  'SCP_INTERVIEW_NOTE_APPEND_ONLY',
+  'H25 and an interview note is still append-only, deletion or no deletion');
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
 -- GROUP 9 — Authorisation boundary
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -945,6 +1394,6 @@ SELECT pg_temp.ok(
       AND p.proconfig::text LIKE '%search_path%') = 11,
   'S11 every new function is SECURITY DEFINER with a fixed search_path');
 
-DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 103 assertions passed'; END $$;
+DO $$ BEGIN RAISE NOTICE '    ok  admin_lifecycle_test: 128 assertions passed'; END $$;
 
 ROLLBACK;

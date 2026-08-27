@@ -31,8 +31,8 @@ import {
   adminAnonymiseUser,
   adminDeleteUser,
 } from "@/lib/job-intelligence/admin-lifecycle.functions";
-import { DangerZone, DeletionImpactPreview } from "@/components/admin/DangerZone";
-import { blockerLabelKey, lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
+import { DangerZone, AccountDeletionImpactPreview } from "@/components/admin/DangerZone";
+import { lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/users/$userId")({
@@ -535,20 +535,25 @@ function AdminUserDetailPage() {
                   consequence: t("admin.lifecycle.person.delete.consequence"),
                   confirmPhrase: overview.data.account.email,
                   confirmPhraseLabel: t("admin.lifecycle.person.delete.confirmPhraseLabel"),
+                  // History no longer blocks the action. It is handled, and
+                  // the dialog says exactly how -- what is deleted, and what
+                  // survives detached or anonymised. The only things that can
+                  // still block are the two that are about the CALLER rather
+                  // than the data: not being a superadmin, and being the
+                  // account in question.
                   impact: impact.data ? (
-                    <DeletionImpactPreview
-                      blockers={impact.data.blockers}
-                      removed={impact.data.removedOnDelete}
-                      translateBlocker={(code) => t(blockerLabelKey(code))}
+                    <AccountDeletionImpactPreview
+                      deleted={impact.data.deleted}
+                      detached={impact.data.detached}
+                      preserved={impact.data.preserved}
+                      hasHistory={impact.data.hasHistory}
                     />
                   ) : null,
                   blockedReason: !whoAmI.data?.isSuperadmin
                     ? t("admin.lifecycle.person.delete.blockedSuperadmin")
                     : isSelf
                       ? t("admin.lifecycle.error.selfAction")
-                      : impact.data && !impact.data.deletable
-                        ? t("admin.lifecycle.person.delete.blockedData")
-                        : null,
+                      : null,
                   onConfirm: ({ reason }: { reason: string }) => deleteUser.mutate({ reason }),
                 },
               ]}

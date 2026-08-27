@@ -269,10 +269,24 @@ export const adminGetPersonOverview = createServerFn({ method: "POST" })
 export type AdminUserDeletionImpact = {
   userId: string;
   email: string | null;
+  /**
+   * True when the account has no history at all. It no longer gates anything:
+   * a superadmin's permanent deletion handles history rather than refusing it.
+   * Kept because the report still says something worth knowing.
+   */
   deletable: boolean;
+  /** What history exists. Advisory since the deletion stopped being conditional. */
   blockers: DeletionBlocker[];
   actedOn: Array<{ table: string; column: string; count: number }>;
+  /** @deprecated Same data as `deleted`, under the name an older client used. */
   removedOnDelete: Record<string, number>;
+  /** Rows that go with the account, by `table.column`. */
+  deleted: Record<string, number>;
+  /** Rows that survive with the person released, by `table.column`. */
+  detached: Record<string, number>;
+  /** Rows that are not touched at all, by spine name or `table.column`. */
+  preserved: Record<string, number>;
+  hasHistory: boolean;
 };
 
 export const adminGetUserDeletionImpact = createServerFn({ method: "POST" })
@@ -296,6 +310,10 @@ export const adminGetUserDeletionImpact = createServerFn({ method: "POST" })
       blockers: (r.blockers ?? []) as DeletionBlocker[],
       actedOn: (r.acted_on ?? []) as Array<{ table: string; column: string; count: number }>,
       removedOnDelete: (r.removed_on_delete ?? {}) as Record<string, number>,
+      deleted: (r.deleted ?? r.removed_on_delete ?? {}) as Record<string, number>,
+      detached: (r.detached ?? {}) as Record<string, number>,
+      preserved: (r.preserved ?? {}) as Record<string, number>,
+      hasHistory: Boolean(r.has_history ?? (r.blockers ?? []).length > 0),
     };
   });
 
