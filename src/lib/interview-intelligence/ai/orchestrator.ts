@@ -35,49 +35,153 @@ import { AnthropicProvider } from "./providers/anthropic";
  * accident.
  */
 /**
- * Choose the engine.
+ * How the engine that produced a run should be described to a human.
  *
- * The deterministic engine is the default and stays the default. A real model
- * is reachable only when the provider is named explicitly AND a credential
- * exists in the SERVER environment AND a platform admin has enabled
- * ai_config.ai_enabled -- the third switch is checked by the server functions
- * before they call in here, because it lives in the database, which is the only
- * place a runtime toggle is auditable.
- *
- * Two behaviours worth stating, because they look like bugs and are not:
- *
- *   An UNRECOGNISED provider name falls back to the deterministic engine with a
- *   warning rather than failing. A typo in a deploy variable must not take
- *   interviews offline; the governed questions, probes and anchors work without
- *   any AI at all, which is the whole point of the pack being governed content.
- *
- *   A RECOGNISED provider with no credential THROWS. That is not a typo, it is
- *   an operator who believes production AI is running. Quietly serving mock
- *   output to someone who thinks they are evaluating a real model would corrupt
- *   every conclusion drawn from it.
+ * This is provenance, not configuration. A recruiter reading a preparation
+ * brief needs to know whether it came from a rule-based stand-in or a language
+ * model, and an auditor reading a run six months later needs the same thing —
+ * so it is written to the run row and shown on screen, never inferred from an
+ * environment variable nobody kept.
  */
-export function selectProvider(env: NodeJS.ProcessEnv = process.env): AiProvider {
-  const configured = (env.INTERVIEW_AI_PROVIDER ?? "mock").toLowerCase();
-  if (configured === "mock") return new MockAiProvider();
+export type ProviderMode = "synthetic" | "development_model" | "production_model";
+
+/**
+ * Where this deployment is running, as an explicit statement rather than a
+ * guess.
+ *
+ * The deterministic engine is a TEST INSTRUMENT. It produces plausible,
+ * well-formed, entirely rule-based output, which is exactly what makes it
+ * dangerous outside a lab: a recruiter cannot tell it apart from a model by
+ * looking, and neither can an evaluation. So the environments that may use it
+ * are named, and everything else is refused.
+ */
+export type AiEnvironment =
+  | "automated_test"
+  | "synthetic_development"
+  | "internal_qa"
+  | "production";
+
+const DETERMINISTIC_PERMITTED: readonly AiEnvironment[] = [
+  "automated_test",
+  "synthetic_development",
+  "internal_qa",
+];
+
+const KNOWN_ENVIRONMENTS: readonly AiEnvironment[] = [...DETERMINISTIC_PERMITTED, "production"];
+
+export interface SelectedProvider {
+  readonly provider: AiProvider;
+  readonly mode: ProviderMode;
+  readonly environment: AiEnvironment;
+}
+
+/**
+ * Choose the engine, failing closed in every direction.
+ *
+ * The previous version defaulted to the deterministic engine when
+ * INTERVIEW_AI_PROVIDER was unset, and fell back to it with a console warning
+ * when the value was unrecognised. The reasoning was that a typo in a deploy
+ * variable should not take interviews offline. That reasoning is wrong, and the
+ * integrity review was right to call it unsafe.
+ *
+ * A typo does not take interviews offline either way: the governed pack —
+ * questions, probes, anchors, prohibitions — works with no AI at all, and the
+ * product is built so a recruiter can run the whole interview without it. What
+ * the fallback actually did was let a deployment believe it was running a model
+ * while it was running a rule-based stand-in, and produce preparation briefs and
+ * evidence proposals that looked real. A silent downgrade to synthetic output
+ * in front of a real candidate is not a smaller failure than an outage. It is a
+ * larger one, because nobody finds out.
+ *
+ * So: every value is stated explicitly, and anything unstated, unrecognised or
+ * unsupported raises. The four rules, each with the failure it prevents:
+ *
+ *   1. INTERVIEW_AI_PROVIDER unset      -> refuse. Nobody decided.
+ *   2. Unrecognised provider name       -> refuse. A typo must not resolve.
+ *   3. Recognised provider, no key      -> refuse. An operator believes a model
+ *                                          is running.
+ *   4. Deterministic outside a lab      -> refuse. Synthetic output must never
+ *                                          reach a real candidate's assessment.
+ */
+export function selectProvider(env: NodeJS.ProcessEnv = process.env): SelectedProvider {
+  const environment = readEnvironment(env);
+  const configured = (env.INTERVIEW_AI_PROVIDER ?? "").trim().toLowerCase();
+
+  if (configured === "") {
+    throw new AiProviderError(
+      'INTERVIEW_AI_PROVIDER is not set. There is no default: the deterministic engine must be chosen deliberately ("deterministic") and a model must be named. Refusing to pick one.',
+      "configuration",
+    );
+  }
+
+  if (configured === "deterministic") {
+    if (!DETERMINISTIC_PERMITTED.includes(environment)) {
+      throw new AiProviderError(
+        `The deterministic engine is a test instrument and is not permitted in environment "${environment}". It produces well-formed synthetic output that a recruiter cannot distinguish from a model's, so it is confined to ${DETERMINISTIC_PERMITTED.join(", ")}.`,
+        "configuration",
+      );
+    }
+    return { provider: new MockAiProvider(), mode: "synthetic", environment };
+  }
+
+  // The old spelling. Kept recognised so an existing deployment gets a precise
+  // instruction instead of the generic "unknown provider" message.
+  if (configured === "mock") {
+    throw new AiProviderError(
+      'INTERVIEW_AI_PROVIDER is "mock". The value is now "deterministic", and it is permitted only in automated_test, synthetic_development or internal_qa. Set INTERVIEW_AI_ENVIRONMENT as well.',
+      "configuration",
+    );
+  }
 
   if (configured === "anthropic") {
     const apiKey = env.ANTHROPIC_API_KEY ?? "";
     if (!apiKey) {
       throw new AiProviderError(
-        'INTERVIEW_AI_PROVIDER is "anthropic" but ANTHROPIC_API_KEY is not set in the server environment. Refusing to fall back to the deterministic engine: an operator who has asked for production AI must not be silently served mock output.',
+        'INTERVIEW_AI_PROVIDER is "anthropic" but ANTHROPIC_API_KEY is not set in the server environment. Refusing to fall back to the deterministic engine: an operator who has asked for a model must not be silently served synthetic output.',
         "configuration",
       );
     }
-    return new AnthropicProvider({
-      apiKey,
-      model: env.INTERVIEW_AI_MODEL ?? "claude-sonnet-5",
-    });
+    return {
+      provider: new AnthropicProvider({
+        apiKey,
+        model: env.INTERVIEW_AI_MODEL ?? "claude-sonnet-5",
+      }),
+      mode: environment === "production" ? "production_model" : "development_model",
+      environment,
+    };
   }
 
-  console.warn(
-    `[interview-ai] provider "${configured}" is not registered in this build; falling back to the deterministic engine.`,
+  throw new AiProviderError(
+    `INTERVIEW_AI_PROVIDER is "${configured}", which is not a registered adapter. Refusing to fall back to the deterministic engine: a typo must not quietly produce synthetic output. Registered values: deterministic, anthropic.`,
+    "configuration",
   );
-  return new MockAiProvider();
+}
+
+function readEnvironment(env: NodeJS.ProcessEnv): AiEnvironment {
+  const raw = (env.INTERVIEW_AI_ENVIRONMENT ?? "").trim().toLowerCase();
+
+  if (raw === "") {
+    // Unstated means production. The safe default is the one that refuses the
+    // test instrument, not the one that permits it.
+    return "production";
+  }
+  if (!KNOWN_ENVIRONMENTS.includes(raw as AiEnvironment)) {
+    throw new AiProviderError(
+      `INTERVIEW_AI_ENVIRONMENT is "${raw}", which is not a recognised environment. Expected one of: ${KNOWN_ENVIRONMENTS.join(", ")}.`,
+      "configuration",
+    );
+  }
+  const declared = raw as AiEnvironment;
+
+  // A production build claiming to be a lab is the one combination that would
+  // let synthetic output reach a real candidate through a deploy-time mistake.
+  if (declared !== "production" && env.NODE_ENV === "production") {
+    throw new AiProviderError(
+      `INTERVIEW_AI_ENVIRONMENT claims "${declared}" while NODE_ENV is "production". A production build does not get to describe itself as a test environment.`,
+      "configuration",
+    );
+  }
+  return declared;
 }
 
 /* ------------------------------------------------------------------ */
@@ -109,6 +213,12 @@ export interface OrchestratorResult {
    * the caller writes these to the run and the screen shows them.
    */
   readonly quarantinedPassages: readonly QuarantinedPassage[];
+  /**
+   * Which kind of engine produced this. Written to the run row and shown on
+   * screen, so "was this a model or a stand-in" is answered by the record
+   * rather than by whoever remembers the deploy configuration.
+   */
+  readonly providerMode: ProviderMode;
 }
 
 export interface RunInput {
@@ -119,6 +229,12 @@ export interface RunInput {
   /** code -> exact governed wording, for the "was a question rewritten" check. */
   readonly governedQuestions?: ReadonlyMap<string, string>;
   readonly provider?: AiProvider;
+  /**
+   * Required when `provider` is injected. A caller that supplies its own engine
+   * also has to say what kind it is; defaulting would let a test harness or a
+   * future adapter record a model run as synthetic, or worse the reverse.
+   */
+  readonly providerMode?: ProviderMode;
   readonly timeoutMs?: number;
 }
 
@@ -154,7 +270,19 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  */
 export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
   const task = TASK_REGISTRY[input.taskKey];
-  const provider = input.provider ?? selectProvider();
+
+  // An injected provider must declare its own mode; otherwise selection decides
+  // both together, so the engine and the label describing it can never drift.
+  let provider: AiProvider;
+  let providerMode: ProviderMode;
+  if (input.provider) {
+    provider = input.provider;
+    providerMode = input.providerMode ?? "synthetic";
+  } else {
+    const selected = selectProvider();
+    provider = selected.provider;
+    providerMode = selected.mode;
+  }
   const timeoutMs = input.timeoutMs ?? 30_000;
   const started = Date.now();
 
@@ -182,6 +310,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs: 0,
       rawResponse: null,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -217,6 +346,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs: 0,
       rawResponse: null,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -247,6 +377,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs: Date.now() - started,
       rawResponse: null,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -267,6 +398,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs,
       rawResponse: { text: raw.text.slice(0, 4000) },
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -285,6 +417,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs,
       rawResponse: parsed,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -304,6 +437,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs,
       rawResponse: parsed,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -336,6 +470,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       latencyMs,
       rawResponse: parsed,
       quarantinedPassages,
+      providerMode,
     };
   }
 
@@ -350,5 +485,6 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
     latencyMs,
     rawResponse: parsed,
     quarantinedPassages,
+    providerMode,
   };
 }

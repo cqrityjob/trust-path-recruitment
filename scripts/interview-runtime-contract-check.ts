@@ -336,16 +336,33 @@ for (const src of sources) {
   }
 }
 
-// The shipped default is the deterministic engine, in both places.
+// There is no shipped default engine any more, and no fallback.
+//
+// These two assertions used to require the OPPOSITE: that the provider
+// defaulted to the deterministic engine and that an unknown name fell back to
+// it. That was the safe-looking arrangement and it was not safe -- it let a
+// deployment believe it was running a model while running a rule-based
+// stand-in. The guard is inverted along with the behaviour.
 const orchestrator = read(join(AI_DIR, "orchestrator.ts"));
+const orchestratorCode = codeOnly(orchestrator);
 ok(
-  orchestrator.includes('(env.INTERVIEW_AI_PROVIDER ?? "mock")'),
-  "the provider no longer defaults to the deterministic engine",
+  !/INTERVIEW_AI_PROVIDER\s*\?\?\s*"mock"/.test(orchestratorCode),
+  "the provider defaults to the deterministic engine again; there must be no default",
 );
 ok(
-  orchestrator.includes("falling back to the deterministic engine"),
-  "an unknown provider no longer falls back safely",
+  !/falling back to the deterministic engine/.test(orchestratorCode),
+  "an unrecognised provider falls back to the deterministic engine again",
 );
+ok(
+  orchestratorCode.includes("DETERMINISTIC_PERMITTED"),
+  "the deterministic engine is no longer confined to named non-production environments",
+);
+for (const mode of ["synthetic", "development_model", "production_model"]) {
+  ok(
+    orchestratorCode.includes(`"${mode}"`),
+    `the orchestrator no longer distinguishes provider mode "${mode}"`,
+  );
+}
 ok(
   runtimeMigration.includes("ai_enabled boolean NOT NULL DEFAULT false"),
   "the database AI flag no longer ships switched off",

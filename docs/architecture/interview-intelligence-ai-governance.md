@@ -128,23 +128,61 @@ against it — gets switched off by whoever is tired of it.
 ```
 provider.ts        the boundary: AiProvider { complete(req) → { text, model, usage } }
 providers/mock.ts  deterministic, rule-based, the SHIPPED DEFAULT
-orchestrator.ts    selectProvider() reads INTERVIEW_AI_PROVIDER, default "mock"
+orchestrator.ts    selectProvider() -- no default, no fallback, fails closed
 ```
 
 Nothing outside `providers/` knows which engine ran. The canonical record is
 always the typed row; the raw exchange is an audit snapshot on the run.
 
-### 4.1 Three independent switches
+### 4.1 Selection fails closed — there is no default engine
 
-Production AI requires **all three**, and none defaults on:
+Every value is stated explicitly. Anything unstated, unrecognised or unsupported
+raises rather than resolving to something plausible.
 
-1. `INTERVIEW_AI_PROVIDER` set to a registered non-mock adapter.
-2. A provider credential in the **server** environment (never committed; the
-   contract guard scans for key patterns and provider endpoints).
-3. `scp_interview_ai_config.ai_enabled = true`, a platform-admin change.
+| Situation | Result |
+|---|---|
+| `INTERVIEW_AI_PROVIDER` unset | **Refused.** Nobody decided. |
+| Unrecognised name (`detrministic`, `anthropc`) | **Refused.** A typo must not resolve to an engine. |
+| `mock` (the old spelling) | **Refused**, with the new value named. |
+| `deterministic` outside a named lab environment | **Refused.** |
+| `anthropic` with no `ANTHROPIC_API_KEY` | **Refused.** |
+| `deterministic` in a named lab environment | Permitted, mode `synthetic`. |
+| `anthropic` + credential, non-production | Permitted, mode `development_model`. |
+| `anthropic` + credential, production | Permitted, mode `production_model`. |
 
-An unrecognised provider value falls back to the deterministic engine **and logs
-a warning** rather than failing the interview.
+`INTERVIEW_AI_ENVIRONMENT` must be one of `automated_test`,
+`synthetic_development`, `internal_qa`, `production`. **Unset means
+production** — the safe default is the one that refuses the test instrument.
+A build with `NODE_ENV=production` cannot declare itself a lab.
+
+Production AI additionally requires `scp_interview_ai_config.ai_enabled = true`,
+a platform-admin change checked by the server functions before they reach the
+orchestrator, because a runtime toggle is only auditable in the database.
+
+#### Why there is no fallback
+
+The earlier design defaulted to the deterministic engine and fell back to it,
+with a console warning, when the provider name was unrecognised. The stated
+reason was that a typo in a deploy variable should not take interviews offline.
+
+That reason does not hold. A typo does not take interviews offline either way:
+the governed pack — questions, probes, anchors, prohibitions — works with no AI
+at all, and the product is built so a recruiter can run the entire interview
+without it. What the fallback bought was a deployment that believed it was
+running a model while running a rule-based stand-in, producing preparation
+briefs and evidence proposals that looked real in front of real candidates.
+
+A silent downgrade to synthetic output is not a smaller failure than an outage.
+It is a larger one, because nobody finds out.
+
+#### Provider mode is provenance, not configuration
+
+Each run records `provider_mode` (`synthetic` / `development_model` /
+`production_model`), chosen *before* the run row is created so a
+misconfiguration leaves no orphaned row. The employer UI shows it, and the
+synthetic case carries a full sentence rather than a chip: the deterministic
+engine produces well-formed, plausible Swedish that a recruiter cannot
+distinguish from a model's by looking.
 
 ### 4.2 Activation and rollback procedure
 

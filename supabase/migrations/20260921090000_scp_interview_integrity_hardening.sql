@@ -1406,3 +1406,92 @@ END; $$;
 
 REVOKE ALL ON FUNCTION public.scp_iv_erase_source(uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.scp_iv_erase_source(uuid, text) TO authenticated, service_role;
+
+
+-- ###########################################################################
+-- SECTION 9 -- Which engine ran, recorded rather than inferred
+-- ###########################################################################
+--
+-- The run row named its provider from a hardcoded literal ("mock"), so a real
+-- model run would have been recorded as synthetic. And nothing distinguished
+-- the deterministic test instrument from a model in a development environment
+-- from a model in production -- three situations a reader of the audit trail
+-- has to be able to tell apart, because only one of them means the output
+-- describes what a language model actually said about a candidate.
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE public.scp_interview_ai_runs
+  ADD COLUMN IF NOT EXISTS provider_mode text NOT NULL DEFAULT 'synthetic';
+
+ALTER TABLE public.scp_interview_ai_runs
+  DROP CONSTRAINT IF EXISTS scp_interview_ai_runs_provider_mode_check;
+ALTER TABLE public.scp_interview_ai_runs
+  ADD CONSTRAINT scp_interview_ai_runs_provider_mode_check
+  CHECK (provider_mode IN ('synthetic', 'development_model', 'production_model'));
+
+COMMENT ON COLUMN public.scp_interview_ai_runs.provider_mode IS
+  'synthetic = the deterministic rule-based engine, permitted only in '
+  'automated_test / synthetic_development / internal_qa. development_model and '
+  'production_model = a real language model, outside and inside production '
+  'respectively. Recorded per run because a reader six months later cannot '
+  'recover it from a deployment variable nobody kept, and because output from '
+  'a rule-based stand-in must never be mistaken for a model''s reading of a '
+  'candidate''s material.';
+
+CREATE OR REPLACE FUNCTION public.scp_iv_ai_run_settle(
+  _run_id uuid, _status text, _failure_reason text DEFAULT NULL,
+  _abstention_reason text DEFAULT NULL, _raw_response jsonb DEFAULT NULL,
+  _input_tokens integer DEFAULT NULL, _output_tokens integer DEFAULT NULL,
+  _latency_ms integer DEFAULT NULL, _cost_micros integer DEFAULT NULL,
+  _withheld_passages jsonb DEFAULT '[]'::jsonb,
+  _provider_mode text DEFAULT 'synthetic')
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE _case_id uuid; _withheld integer;
+BEGIN
+  SELECT case_id INTO _case_id FROM public.scp_interview_ai_runs WHERE id = _run_id;
+  IF _case_id IS NULL THEN
+    RAISE EXCEPTION 'SCP_IV_RUN_NOT_FOUND' USING ERRCODE = 'check_violation';
+  END IF;
+  IF NOT public.scp_iv_can_write_case(_case_id) THEN
+    RAISE EXCEPTION 'SCP_IV_NOT_CASE_MEMBER' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  _withheld := jsonb_array_length(coalesce(_withheld_passages, '[]'::jsonb));
+
+  UPDATE public.scp_interview_ai_runs
+     SET status = _status,
+         failure_reason = _failure_reason,
+         abstention_reason = _abstention_reason,
+         raw_response = _raw_response,
+         input_tokens = _input_tokens,
+         output_tokens = _output_tokens,
+         latency_ms = _latency_ms,
+         cost_micros = _cost_micros,
+         withheld_passages = coalesce(_withheld_passages, '[]'::jsonb),
+         provider_mode = coalesce(_provider_mode, 'synthetic'),
+         finished_at = now()
+   WHERE id = _run_id;
+
+  PERFORM public.scp_iv_record_event(_case_id,
+    CASE WHEN _status = 'succeeded' THEN 'ai_run_succeeded' ELSE 'ai_run_failed' END,
+    'ai', _run_id, NULL, NULL, coalesce(_failure_reason, _abstention_reason),
+    jsonb_build_object('status', _status,
+                       'provider_mode', coalesce(_provider_mode, 'synthetic'),
+                       'withheld_passages', _withheld));
+
+  IF _withheld > 0 THEN
+    PERFORM public.scp_iv_record_event(_case_id, 'source_passage_withheld', 'system',
+      _run_id, NULL, NULL,
+      'Underlag undanhölls AI-stödet: text riktad till systemet i stället för information om kandidaten.',
+      jsonb_build_object('withheld_passages', _withheld,
+                         'reasons', (SELECT jsonb_agg(DISTINCT p->>'reason')
+                                       FROM jsonb_array_elements(_withheld_passages) p)));
+  END IF;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb, text)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb, text)
+  TO authenticated, service_role;
+
+DROP FUNCTION IF EXISTS public.scp_iv_ai_run_settle(uuid, text, text, text, jsonb, integer, integer, integer, integer, jsonb);

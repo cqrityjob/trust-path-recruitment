@@ -18,6 +18,7 @@ import { runAiTask } from "./ai/orchestrator";
 import type { UntrustedBlock } from "./ai/provider";
 import type { TaskKey } from "./ai/registry";
 import { QUARANTINE_REASON_SV, screenPassages } from "./ai/injection";
+import { selectProvider } from "./ai/orchestrator";
 
 /* ------------------------------------------------------------------ */
 /* Vocabulary                                                          */
@@ -770,6 +771,27 @@ export const markSourcesReady = createServerFn({ method: "POST" })
 /* Load governed context and passages -> run the task server-side ->   */
 /* record the run and its typed output through the governed RPCs.      */
 /**
+ * Pick the engine before anything is written.
+ *
+ * Selection is deliberately done FIRST, ahead of scp_iv_ai_run_start. A
+ * misconfigured deployment then fails with nothing recorded, instead of leaving
+ * an orphaned run row that says an AI task started when no engine was ever
+ * chosen. It also means the run row records the engine that actually ran rather
+ * than a hardcoded literal — the previous code wrote "mock" unconditionally,
+ * which would have described a real model run as synthetic.
+ */
+function chooseEngine() {
+  const selected = selectProvider();
+  return {
+    provider: selected.provider,
+    mode: selected.mode,
+    // What goes in the run's provenance columns.
+    providerName: selected.provider.name,
+    modelName: selected.mode === "synthetic" ? "deterministic-rules-1.0.0" : selected.provider.name,
+  };
+}
+
+/**
  * What the input screen withheld from the provider, in a shape a server
  * function may return.
  *
@@ -868,6 +890,7 @@ export const runPreparation = createServerFn({ method: "POST" })
       readonly planId: string | null;
       readonly message: string | null;
       readonly withheld: readonly WithheldPassage[];
+      readonly providerMode: string;
     }> => {
       const db = context.supabase;
 
@@ -883,11 +906,12 @@ export const runPreparation = createServerFn({ method: "POST" })
       const ctx = await loadAiContext(db, data.caseId, packVersionId);
 
       const taskKey: TaskKey = "interview_preparation_generation";
+      const engine = chooseEngine();
       const runRes = await db.rpc("scp_iv_ai_run_start", {
         _case_id: data.caseId,
         _task: taskKey,
-        _provider: "mock",
-        _model: "mock-rules-1.0.0",
+        _provider: engine.providerName,
+        _model: engine.modelName,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -902,6 +926,8 @@ export const runPreparation = createServerFn({ method: "POST" })
         },
         allowedProbeIds: ctx.probes.map((p) => p.id),
         governedQuestions: new Map(ctx.questions.map((q) => [q.code, q.prompt])),
+        provider: engine.provider,
+        providerMode: engine.mode,
       });
 
       // The run is settled FIRST and always, success or not. A quarantined run
@@ -917,6 +943,7 @@ export const runPreparation = createServerFn({ method: "POST" })
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
         _withheld_passages: result.quarantinedPassages as never,
+        _provider_mode: result.providerMode,
       });
 
       // Carried to the caller on every path, including failure: a recruiter
@@ -933,6 +960,7 @@ export const runPreparation = createServerFn({ method: "POST" })
           status: result.status,
           planId: null,
           withheld,
+          providerMode: result.providerMode,
           message: result.failureReason ?? result.abstentionReason,
         };
       }
@@ -965,6 +993,7 @@ export const runPreparation = createServerFn({ method: "POST" })
         planId: planRes.data as unknown as string,
         message: null,
         withheld,
+        providerMode: result.providerMode,
       };
     },
   );
@@ -1104,6 +1133,7 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
       readonly proposals: number;
       readonly message: string | null;
       readonly withheld: readonly WithheldPassage[];
+      readonly providerMode: string;
     }> => {
       const db = context.supabase;
 
@@ -1131,6 +1161,8 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
           proposals: 0,
           message: "Ingen intervjusession finns.",
           withheld: [],
+          // No session, so no run was attempted and no engine was chosen.
+          providerMode: "synthetic",
         };
 
       const notesRes = await db
@@ -1162,11 +1194,12 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
       const withheldNoteIds = new Set(screenedNotes.quarantined.map((q) => q.passageId));
       const notes = allNotes.filter((n) => !withheldNoteIds.has(n.ref));
 
+      const engine = chooseEngine();
       const runRes = await db.rpc("scp_iv_ai_run_start", {
         _case_id: data.caseId,
         _task: "evidence_extraction",
-        _provider: "mock",
-        _model: "mock-rules-1.0.0",
+        _provider: engine.providerName,
+        _model: engine.modelName,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -1182,6 +1215,8 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         },
         allowedProbeIds: ctx.probes.map((p) => p.id),
         governedQuestions: new Map(ctx.questions.map((q) => [q.code, q.prompt])),
+        provider: engine.provider,
+        providerMode: engine.mode,
       });
 
       await db.rpc("scp_iv_ai_run_settle", {
@@ -1215,6 +1250,7 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
           status: result.status,
           proposals: 0,
           withheld,
+          providerMode: result.providerMode,
           message: result.failureReason ?? result.abstentionReason,
         };
       }
@@ -1254,6 +1290,7 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         proposals: (recRes.data as unknown as number) ?? 0,
         message: null,
         withheld,
+        providerMode: result.providerMode,
       };
     },
   );

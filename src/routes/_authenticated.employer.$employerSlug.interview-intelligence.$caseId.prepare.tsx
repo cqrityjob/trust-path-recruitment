@@ -19,6 +19,8 @@ import {
   Chip,
   Panel,
   State,
+  ProviderModeChip,
+  ProviderModeNote,
   SOURCE_KIND_LABEL,
   PURPOSE_LABEL,
   uiLabel,
@@ -335,6 +337,16 @@ function Page() {
         {generate.isPending && (
           <div className="mt-3 max-w-3xl">
             <State kind="aiRunning" />
+          </div>
+        )}
+        {genResult && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <ProviderModeChip mode={genResult.providerMode} />
+          </div>
+        )}
+        {genResult && (
+          <div className="mt-3 max-w-3xl">
+            <ProviderModeNote mode={genResult.providerMode} />
           </div>
         )}
         {genResult && genResult.withheld.length > 0 && (

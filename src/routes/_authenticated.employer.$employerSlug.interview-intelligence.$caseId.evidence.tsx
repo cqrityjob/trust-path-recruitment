@@ -24,6 +24,8 @@ import {
   LevelZeroNote,
   Panel,
   State,
+  ProviderModeChip,
+  ProviderModeNote,
   WithheldPanel,
   BUTTON,
   FIELD,
@@ -197,6 +199,16 @@ function Page() {
         {extract.isPending && (
           <div className="mt-3 max-w-3xl">
             <State kind="aiRunning" />
+          </div>
+        )}
+        {result && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <ProviderModeChip mode={result.providerMode} />
+          </div>
+        )}
+        {result && (
+          <div className="mt-3 max-w-3xl">
+            <ProviderModeNote mode={result.providerMode} />
           </div>
         )}
         {result && result.withheld.length > 0 && (

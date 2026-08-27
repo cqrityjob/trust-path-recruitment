@@ -255,34 +255,152 @@ async function main(): Promise<void> {
     );
   }
 
-  /* ---- 6. Activation is off, and fails loudly when half-configured ------ */
+  /* ---- 6. Selection fails closed in every direction ---------------------- */
+  //
+  // The old behaviour: unset defaulted to the deterministic engine, and an
+  // unrecognised name fell back to it with a console warning. The reasoning was
+  // that a typo should not take interviews offline. It does not — the governed
+  // pack works with no AI at all — and what the fallback actually bought was a
+  // deployment that believed it was running a model while running a rule-based
+  // stand-in, in front of real candidates. These tests exist so that cannot
+  // come back.
+
+  const LAB = { INTERVIEW_AI_ENVIRONMENT: "synthetic_development" };
+
+  function selecting(env: Record<string, string>) {
+    return () => Promise.resolve(selectProvider(env as NodeJS.ProcessEnv));
+  }
+
+  await mustThrow(
+    selecting({ ...LAB }),
+    "INTERVIEW_AI_PROVIDER is not set",
+    "6.1 an unset provider is refused — there is no default engine",
+  );
+
+  await mustThrow(
+    selecting({ ...LAB, INTERVIEW_AI_PROVIDER: "detrministic" }),
+    "not a registered adapter",
+    "6.2 A TYPO CANNOT PRODUCE SYNTHETIC OUTPUT — it is refused, not fallen back from",
+  );
+
+  await mustThrow(
+    selecting({ ...LAB, INTERVIEW_AI_PROVIDER: "anthropc" }),
+    "not a registered adapter",
+    "6.3 a near-miss on a real adapter name is refused too",
+  );
+
+  await mustThrow(
+    selecting({ ...LAB, INTERVIEW_AI_PROVIDER: "mock" }),
+    'The value is now "deterministic"',
+    "6.4 the old spelling gets a precise instruction, not a silent success",
+  );
+
+  await mustThrow(
+    selecting({ INTERVIEW_AI_PROVIDER: "deterministic" }),
+    "not permitted in environment",
+    "6.5 the deterministic engine is refused when the environment is unstated — unstated means production",
+  );
+
+  await mustThrow(
+    selecting({ INTERVIEW_AI_PROVIDER: "deterministic", INTERVIEW_AI_ENVIRONMENT: "production" }),
+    "not permitted in environment",
+    "6.6 and refused outright in production",
+  );
+
+  await mustThrow(
+    selecting({
+      INTERVIEW_AI_PROVIDER: "deterministic",
+      INTERVIEW_AI_ENVIRONMENT: "synthetic_development",
+      NODE_ENV: "production",
+    }),
+    "does not get to describe itself",
+    "6.7 a production build cannot claim to be a lab",
+  );
+
+  await mustThrow(
+    selecting({ ...LAB, INTERVIEW_AI_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "" }),
+    "Refusing to fall back",
+    "6.8 a recognised provider with no credential is refused, not downgraded",
+  );
+
+  await mustThrow(
+    selecting({ INTERVIEW_AI_PROVIDER: "deterministic", INTERVIEW_AI_ENVIRONMENT: "lab" }),
+    "not a recognised environment",
+    "6.9 an unrecognised environment name is refused rather than assumed",
+  );
+
+  // The three environments where a test instrument is legitimate.
+  for (const environment of ["automated_test", "synthetic_development", "internal_qa"]) {
+    const selected = selectProvider({
+      INTERVIEW_AI_PROVIDER: "deterministic",
+      INTERVIEW_AI_ENVIRONMENT: environment,
+    } as NodeJS.ProcessEnv);
+    ok(
+      selected.provider instanceof MockAiProvider && selected.mode === "synthetic",
+      `6.10 the deterministic engine IS available in ${environment}, labelled synthetic`,
+    );
+  }
+
+  // A model outside production is a development model; inside, a production one.
   {
-    ok(
-      selectProvider({} as NodeJS.ProcessEnv) instanceof MockAiProvider,
-      "6.1 with nothing configured, the deterministic engine is the default",
+    const dev = selectProvider({
+      INTERVIEW_AI_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test-key-not-a-real-credential",
+      INTERVIEW_AI_ENVIRONMENT: "internal_qa",
+    } as NodeJS.ProcessEnv);
+    ok(dev.mode === "development_model", "6.11 a model outside production is a development_model");
+
+    const prod = selectProvider({
+      INTERVIEW_AI_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test-key-not-a-real-credential",
+      INTERVIEW_AI_ENVIRONMENT: "production",
+    } as NodeJS.ProcessEnv);
+    ok(prod.mode === "production_model", "6.12 and inside production it is a production_model");
+  }
+
+  ok(
+    !process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY,
+    "6.13 no provider credential exists in this environment — production AI is NOT active",
+  );
+
+  /* ---- 7. The mode reaches the record, not just the log ------------------ */
+  {
+    const runtime = await import("node:fs/promises").then((fs) =>
+      fs.readFile("src/lib/interview-intelligence/runtime.functions.ts", "utf8"),
     );
     ok(
-      selectProvider({ INTERVIEW_AI_PROVIDER: "typo-provider" } as NodeJS.ProcessEnv) instanceof
-        MockAiProvider,
-      "6.2 an unrecognised provider name falls back rather than taking interviews offline",
+      !/_provider:\s*"mock"/.test(runtime),
+      "7.1 the run row no longer names its provider from a hardcoded literal",
+    );
+    ok(
+      /_provider_mode:\s*result\.providerMode/.test(runtime),
+      "7.2 the settled run records the mode the orchestrator actually used",
+    );
+    // Per call site, on code with comments stripped. Comparing raw indexOf over
+    // the whole file matched the sentence in a doc comment that explains this
+    // very rule -- the third time a guard in this repo has flagged its own
+    // explanation, which is a good argument for never grepping prose.
+    const runtimeCode = runtime.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/[^\n]*/gm, " ");
+    const starts = [...runtimeCode.matchAll(/scp_iv_ai_run_start/g)].map((m) => m.index ?? -1);
+    const chooses = [...runtimeCode.matchAll(/chooseEngine\(\)/g)].map((m) => m.index ?? -1);
+    ok(
+      starts.length > 0 && chooses.length > 0,
+      "7.3a both the engine choice and the run start exist",
+    );
+    ok(
+      starts.every((startAt) => chooses.some((chooseAt) => chooseAt < startAt)),
+      "7.3 every run row is preceded by an engine choice, so a misconfiguration leaves no orphan",
     );
 
-    checks += 1;
-    try {
-      selectProvider({ INTERVIEW_AI_PROVIDER: "anthropic" } as NodeJS.ProcessEnv);
-      failures.push(
-        "6.3 a recognised provider with no credential must THROW, not silently serve mock output",
-      );
-    } catch (error) {
-      const isConfig = error instanceof AiProviderError && error.kind === "configuration";
-      if (!isConfig) {
-        failures.push(`6.3 expected a configuration error, got ${String(error)}`);
-      }
+    const ui = await import("node:fs/promises").then((fs) =>
+      fs.readFile("src/components/employer/interview/InterviewUi.tsx", "utf8"),
+    );
+    for (const mode of ["synthetic", "development_model", "production_model"]) {
+      ok(ui.includes(`"${mode}"`), `7.4 the UI distinguishes ${mode}`);
     }
-
     ok(
-      !process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY,
-      "6.4 no provider credential exists in this environment — production AI is NOT active",
+      ui.includes("testmotor"),
+      "7.5 synthetic output is named as a test engine in the recruiter's own language",
     );
   }
 

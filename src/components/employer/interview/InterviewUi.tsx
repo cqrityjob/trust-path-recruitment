@@ -276,6 +276,70 @@ export function LevelZeroNote() {
 }
 
 /**
+ * Which engine produced this, said plainly.
+ *
+ * The four states are distinguished because they mean genuinely different
+ * things to the person reading the output, and the difference is invisible
+ * otherwise — the deterministic engine produces well-formed, plausible Swedish
+ * that looks exactly like a model's. A recruiter who is not told cannot tell.
+ *
+ * Deliberately NOT colour-only: each carries its own words, and the synthetic
+ * case is the one that gets the attention tone, because it is the one where
+ * the output describes a rule rather than a reading of the candidate's
+ * material.
+ */
+export function ProviderModeChip({ mode }: { mode: string }) {
+  if (mode === "synthetic") {
+    return (
+      <Chip tone="attention" srPrefix="AI-läge">
+        Simulerat AI-stöd (testmotor)
+      </Chip>
+    );
+  }
+  if (mode === "development_model") {
+    return (
+      <Chip tone="ai" srPrefix="AI-läge">
+        Språkmodell — utvecklingsmiljö
+      </Chip>
+    );
+  }
+  if (mode === "production_model") {
+    return (
+      <Chip tone="ai" srPrefix="AI-läge">
+        Språkmodell
+      </Chip>
+    );
+  }
+  return (
+    <Chip tone="neutral" srPrefix="AI-läge">
+      AI-stöd ej tillgängligt
+    </Chip>
+  );
+}
+
+/**
+ * The longer form, for the top of a document a recruiter may act on.
+ *
+ * A one-word chip is enough to tell two runs apart; it is not enough to stop
+ * someone treating rule-based output as a model's judgement, which is why the
+ * synthetic case says what it is in a full sentence.
+ */
+export function ProviderModeNote({ mode }: { mode: string }) {
+  if (mode === "synthetic") {
+    return (
+      <Panel tone="attention" role="status" title="Detta underlag kommer från en testmotor">
+        <p>
+          Innehållet är genererat av en regelbaserad testmotor, inte av en språkmodell. Det visar
+          att flödet fungerar och säger ingenting om hur en språkmodell skulle läsa materialet.
+          Använd det inte som beslutsunderlag om en kandidat.
+        </p>
+      </Panel>
+    );
+  }
+  return null;
+}
+
+/**
  * Source material the engine was not allowed to read.
  *
  * Shown, never merely logged. A paragraph gets withheld because it was

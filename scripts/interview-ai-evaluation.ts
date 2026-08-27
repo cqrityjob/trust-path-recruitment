@@ -212,6 +212,10 @@ async function evaluateCase(c: GoldCase): Promise<void> {
       allowedProbeIds: PROBE_IDS,
       governedQuestions: GOVERNED_QUESTIONS,
       provider: new MockAiProvider(),
+      // Declared, not defaulted. The evaluation harness is the clearest case of
+      // a caller that must say what engine it is grading, since every number it
+      // prints is qualified by the answer.
+      providerMode: "synthetic",
       timeoutMs: 15_000,
     });
 
