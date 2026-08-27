@@ -246,6 +246,29 @@ jobs:
       # policy over a table that carries a user_id. The other half runs in the
       # database job, against a replay that reproduces Supabase's own default
       # privileges -- see supabase/tests/security_hardening_test.sql.
+      # Interview Intelligence Phase 1. The database suite proves these
+      # properties of the SCHEMA; this proves them of the REPOSITORY, which is
+      # the half a schema test cannot reach — a prohibited column is added by
+      # editing a migration and an AI provider is enabled by editing a source
+      # file. It asserts Q1–Q8 verbatim and in order, the complete 0–4 anchor
+      # set with level 0 never aggregable, that no total/score/ranking/
+      # threshold/recommendation identifier exists anywhere in the domain, that
+      # no AI provider marker appears, and that no employer surface links to it.
+      - name: Interview Intelligence pack contract check
+        run: bun run interview-pack-contract:check
+
+      # The same invariants, one layer up: what the Role Interview Builder
+      # actually RENDERS. Asserts that every required state (loading, error,
+      # empty, permission-denied, incomplete draft, published, suspended,
+      # retired, unresolved mapping) draws visible text, that no state is
+      # carried by colour alone, that there is no red/green candidate verdict
+      # pair anywhere, that level 0 is explained rather than shown as the
+      # bottom of a scale, and that the UI transition model matches the
+      # database guard exactly — a screen offering a move the database refuses
+      # is a bug the type system cannot catch.
+      - name: Interview Intelligence pack render check
+        run: bun run interview-pack-render:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 

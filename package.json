@@ -75,6 +75,8 @@
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
     "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx",
     "sql-security:check": "bun run scripts/sql-security-guard-check.ts",
+  "interview-pack-contract:check": "bun run scripts/interview-pack-contract-check.ts",
+  "interview-pack-render:check": "bun run scripts/interview-pack-render-check.tsx",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts"
   }, 
   "dependencies": {

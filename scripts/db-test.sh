@@ -301,8 +301,17 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + scp_assessment_invitations (20260831091000): an intent to assess somebody
 #   the platform does not know yet. Deliberately not an assignment -- it holds
 #   no subject and creates no attempt until the invited person claims it.
-if [ "$SCP_TABLES" -ne 74 ]; then
-  echo "FAIL: expected 74 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations), found $SCP_TABLES" >&2
+# + the 13 Role Interview Pack tables of Interview Intelligence Phase 1
+#   (20260918090000): scp_interview_packs, _pack_versions, _pack_competencies,
+#   _pack_competency_map, _core_questions, _question_competencies,
+#   _approved_probes, _evidence_dimensions, _rating_anchors,
+#   _verification_rules, _prohibited_areas, _pack_reviews and _pack_events.
+#   A separate governed CONTENT domain, not a second assessment engine: it holds
+#   no candidate, no attempt and no result, and it leaves the two similarly
+#   named assessment tables (scp_interview_guide_prompts, scp_interview_notes)
+#   exactly as they were.
+if [ "$SCP_TABLES" -ne 87 ]; then
+  echo "FAIL: expected 87 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1151,6 +1160,35 @@ echo "    ok  ${ONB_PASSED} employer onboarding assertions passed"
 if [ "$ONB_PASSED" -lt 26 ]; then
   echo "FAIL: expected at least 26 employer onboarding assertions, only ${ONB_PASSED} ran." >&2
   exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5n. Interview Intelligence Phase 1 -- the Role Interview Pack domain
+#
+# Runs BEFORE the rollback step: it reads scp_roles, scp_role_versions and
+# scp_competency_versions, all of which the rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running Role Interview Pack governance assertions"
+set +e
+IIP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_role_pack_test.sql 2>&1)"
+IIP_RC=$?
+set -e
+
+echo "$IIP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IIP_PASSED="$(echo "$IIP_OUT" | grep -c "ok  " || true)"
+
+if [ "$IIP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Role Interview Pack suite exited with code ${IIP_RC}." >&2
+  echo "$IIP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Role Interview Pack"
+fi
+
+echo "    ok  ${IIP_PASSED} Role Interview Pack assertions passed"
+
+if [ "$IIP_PASSED" -lt 65 ]; then
+  echo "FAIL: expected at least 65 Role Interview Pack assertions, only ${IIP_PASSED} ran." >&2
+  suite_failed "Role Interview Pack (assertion shortfall: floor 65)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2619,6 +2657,7 @@ echo "              ${E2E_PASSED} workforce lifecycle E2E assertions,"
 echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
+echo "              ${IIP_PASSED} Role Interview Pack governance assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"

@@ -127,6 +127,84 @@ END $$;
 -- is, this rollback stops being available -- which is stated in the Phase 0
 -- migration's own header.
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- Interview Intelligence Phase 1 (20260918090000) comes off FIRST: it is the
+-- newest layer and it sits on top of the Competency Graph, pinning
+-- scp_role_versions and scp_competency_versions, both of which the Phase 0
+-- unwind below drops.
+--
+-- The drop set below is the same one, in the same order, as the documented
+-- rollback at supabase/rollback/20260918090000_scp_interview_role_packs_rollback.sql.
+-- Keeping them identical is the point: if the documented rollback is ever
+-- incomplete, the 74-table assertion immediately after this block fails here
+-- rather than in production.
+--
+-- Note what is NOT dropped: scp_interview_guide_prompts and scp_interview_notes.
+-- They share the prefix, belong to the assessment domain, and are counted in
+-- the 74 below exactly as they were before this phase existed.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  RAISE NOTICE 'ROLLBACK TEST -- Interview Intelligence Phase 1 unwinds first';
+  PERFORM pg_temp.assert(
+    (SELECT count(*) FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        AND table_name LIKE 'scp\_%') = 87,
+    'pre-rollback: 87 scp_ base tables exist (74 + 13 role interview pack)');
+END $$;
+
+DROP TABLE IF EXISTS public.scp_interview_pack_events            CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_pack_reviews           CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_prohibited_areas       CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_verification_rules     CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_rating_anchors         CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_evidence_dimensions    CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_approved_probes        CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_question_competencies  CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_core_questions         CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_pack_competency_map    CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_pack_competencies      CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_pack_versions          CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_packs                  CASCADE;
+
+DROP FUNCTION IF EXISTS public.scp_interview_confirm_competency_mapping(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_retire_version(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_suspend_version(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_publish_version(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_record_review(uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_interview_submit_for_review(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_touch_draft(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_create_version(uuid, text, uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_interview_create_pack(text, uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.scp_interview_record_event(uuid, uuid, text, text, text, text, text, jsonb);
+DROP FUNCTION IF EXISTS public.scp_interview_pack_validate(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_pack_content_hash(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_competency_version(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_question_version(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_can_write_version(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_version_is_editable(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_can_edit(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_can_read(uuid);
+DROP FUNCTION IF EXISTS public.scp_interview_guard_reviewer_not_author();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_events_append_only();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_reviews_append_only();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_question_competency_scope();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_probe_scope();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_child_of_locked_parent();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_no_version_delete();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_version_transition();
+DROP FUNCTION IF EXISTS public.scp_interview_guard_version_starts_as_draft();
+
+DO $$
+BEGIN
+  -- The two same-prefix assessment tables must have survived. If the drop set
+  -- above ever grows careless, this is what says so.
+  PERFORM pg_temp.assert(
+    to_regclass('public.scp_interview_guide_prompts') IS NOT NULL
+      AND to_regclass('public.scp_interview_notes') IS NOT NULL,
+    'Interview Intelligence rollback: the assessment-domain interview tables survived');
+END $$;
+
 DO $$
 BEGIN
   RAISE NOTICE 'ROLLBACK TEST -- closed test, Phase 2, Phase 1 (Academy), Phase 0 (Graph) unwind first';

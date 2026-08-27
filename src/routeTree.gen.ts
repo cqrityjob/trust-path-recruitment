@@ -76,6 +76,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminResultsRouteImport } from './routes/_authenticated.admin.results'
 import { Route as AuthenticatedAdminPassportVerificationRouteImport } from './routes/_authenticated.admin.passport-verification'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
+import { Route as AuthenticatedAdminInterviewRolePacksRouteImport } from './routes/_authenticated.admin.interview-role-packs'
 import { Route as AuthenticatedAdminFeedbackRouteImport } from './routes/_authenticated.admin.feedback'
 import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authenticated.admin.employers'
 import { Route as AuthenticatedAdminDataRouteImport } from './routes/_authenticated.admin.data'
@@ -91,6 +92,7 @@ import { Route as AuthenticatedAdminWorkforceIndexRouteImport } from './routes/_
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated.admin.users.index'
 import { Route as AuthenticatedAdminResultsIndexRouteImport } from './routes/_authenticated.admin.results.index'
 import { Route as AuthenticatedAdminJobsIndexRouteImport } from './routes/_authenticated.admin.jobs.index'
+import { Route as AuthenticatedAdminInterviewRolePacksIndexRouteImport } from './routes/_authenticated.admin.interview-role-packs.index'
 import { Route as AuthenticatedAdminEmployersIndexRouteImport } from './routes/_authenticated.admin.employers.index'
 import { Route as AuthenticatedAdminAssignmentsIndexRouteImport } from './routes/_authenticated.admin.assignments.index'
 import { Route as AuthenticatedAdminAssessmentsIndexRouteImport } from './routes/_authenticated.admin.assessments.index'
@@ -111,6 +113,7 @@ import { Route as AuthenticatedAdminWorkforceEmployeeIdRouteImport } from './rou
 import { Route as AuthenticatedAdminUsersUserIdRouteImport } from './routes/_authenticated.admin.users.$userId'
 import { Route as AuthenticatedAdminResultsAssignmentIdRouteImport } from './routes/_authenticated.admin.results.$assignmentId'
 import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenticated.admin.jobs.$id'
+import { Route as AuthenticatedAdminInterviewRolePacksNewRouteImport } from './routes/_authenticated.admin.interview-role-packs.new'
 import { Route as AuthenticatedAdminEmployersEmployerIdRouteImport } from './routes/_authenticated.admin.employers.$employerId'
 import { Route as AuthenticatedAdminCandidateReportsRunIdRouteImport } from './routes/_authenticated.admin.candidate-reports.$runId'
 import { Route as AuthenticatedAdminAssignmentsAssignmentIdRouteImport } from './routes/_authenticated.admin.assignments.$assignmentId'
@@ -142,6 +145,7 @@ import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } fr
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.reviews.$attemptId'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.results.$attemptId'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.assignments.$assignmentId'
+import { Route as AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRouteImport } from './routes/_authenticated.admin.interview-role-packs.$packId.versions.$versionId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -506,6 +510,12 @@ const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
   path: '/jobs',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminInterviewRolePacksRoute =
+  AuthenticatedAdminInterviewRolePacksRouteImport.update({
+    id: '/interview-role-packs',
+    path: '/interview-role-packs',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminFeedbackRoute =
   AuthenticatedAdminFeedbackRouteImport.update({
     id: '/feedback',
@@ -593,6 +603,12 @@ const AuthenticatedAdminJobsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedAdminJobsRoute,
+  } as any)
+const AuthenticatedAdminInterviewRolePacksIndexRoute =
+  AuthenticatedAdminInterviewRolePacksIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminInterviewRolePacksRoute,
   } as any)
 const AuthenticatedAdminEmployersIndexRoute =
   AuthenticatedAdminEmployersIndexRouteImport.update({
@@ -713,6 +729,12 @@ const AuthenticatedAdminJobsIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => AuthenticatedAdminJobsRoute,
+  } as any)
+const AuthenticatedAdminInterviewRolePacksNewRoute =
+  AuthenticatedAdminInterviewRolePacksNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdminInterviewRolePacksRoute,
   } as any)
 const AuthenticatedAdminEmployersEmployerIdRoute =
   AuthenticatedAdminEmployersEmployerIdRouteImport.update({
@@ -908,6 +930,14 @@ const AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute =
       getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
     } as any,
   )
+const AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute =
+  AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRouteImport.update(
+    {
+      id: '/$packId/versions/$versionId',
+      path: '/$packId/versions/$versionId',
+      getParentRoute: () => AuthenticatedAdminInterviewRolePacksRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -959,6 +989,7 @@ export interface FileRoutesByFullPath {
   '/admin/data': typeof AuthenticatedAdminDataRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
+  '/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
@@ -993,6 +1024,7 @@ export interface FileRoutesByFullPath {
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
+  '/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -1013,6 +1045,7 @@ export interface FileRoutesByFullPath {
   '/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/admin/assignments/': typeof AuthenticatedAdminAssignmentsIndexRoute
   '/admin/employers/': typeof AuthenticatedAdminEmployersIndexRoute
+  '/admin/interview-role-packs/': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
   '/admin/results/': typeof AuthenticatedAdminResultsIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
@@ -1035,6 +1068,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/employer/$employerSlug/training/': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/admin/interview-role-packs/$packId/versions/$versionId': typeof AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute
   '/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/employer/$employerSlug/assessments/results/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRoute
   '/employer/$employerSlug/assessments/reviews/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute
@@ -1112,6 +1146,7 @@ export interface FileRoutesByTo {
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
+  '/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
   '/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -1131,6 +1166,7 @@ export interface FileRoutesByTo {
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/admin/assignments': typeof AuthenticatedAdminAssignmentsIndexRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersIndexRoute
+  '/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
   '/admin/results': typeof AuthenticatedAdminResultsIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
@@ -1153,6 +1189,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/jobs': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/employer/$employerSlug/training': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/employer/$employerSlug/workforce': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/admin/interview-role-packs/$packId/versions/$versionId': typeof AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute
   '/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/employer/$employerSlug/assessments/results/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRoute
   '/employer/$employerSlug/assessments/reviews/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute
@@ -1213,6 +1250,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/data': typeof AuthenticatedAdminDataRoute
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
   '/_authenticated/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
+  '/_authenticated/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
   '/_authenticated/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/_authenticated/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
@@ -1247,6 +1285,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
   '/_authenticated/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/_authenticated/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
+  '/_authenticated/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
   '/_authenticated/admin/jobs/$id': typeof AuthenticatedAdminJobsIdRoute
   '/_authenticated/admin/results/$assignmentId': typeof AuthenticatedAdminResultsAssignmentIdRoute
   '/_authenticated/admin/users/$userId': typeof AuthenticatedAdminUsersUserIdRoute
@@ -1267,6 +1306,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/_authenticated/admin/assignments/': typeof AuthenticatedAdminAssignmentsIndexRoute
   '/_authenticated/admin/employers/': typeof AuthenticatedAdminEmployersIndexRoute
+  '/_authenticated/admin/interview-role-packs/': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
   '/_authenticated/admin/results/': typeof AuthenticatedAdminResultsIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
@@ -1289,6 +1329,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/jobs/': typeof AuthenticatedEmployerEmployerSlugJobsIndexRoute
   '/_authenticated/employer/$employerSlug/training/': typeof AuthenticatedEmployerEmployerSlugTrainingIndexRoute
   '/_authenticated/employer/$employerSlug/workforce/': typeof AuthenticatedEmployerEmployerSlugWorkforceIndexRoute
+  '/_authenticated/admin/interview-role-packs/$packId/versions/$versionId': typeof AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute
   '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRoute
   '/_authenticated/employer/$employerSlug/assessments/results/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsResultsAttemptIdRoute
   '/_authenticated/employer/$employerSlug/assessments/reviews/$attemptId': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsAttemptIdRoute
@@ -1349,6 +1390,7 @@ export interface FileRouteTypes {
     | '/admin/data'
     | '/admin/employers'
     | '/admin/feedback'
+    | '/admin/interview-role-packs'
     | '/admin/jobs'
     | '/admin/passport-verification'
     | '/admin/results'
@@ -1383,6 +1425,7 @@ export interface FileRouteTypes {
     | '/admin/assignments/$assignmentId'
     | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
+    | '/admin/interview-role-packs/new'
     | '/admin/jobs/$id'
     | '/admin/results/$assignmentId'
     | '/admin/users/$userId'
@@ -1403,6 +1446,7 @@ export interface FileRouteTypes {
     | '/admin/assessments/'
     | '/admin/assignments/'
     | '/admin/employers/'
+    | '/admin/interview-role-packs/'
     | '/admin/jobs/'
     | '/admin/results/'
     | '/admin/users/'
@@ -1425,6 +1469,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs/'
     | '/employer/$employerSlug/training/'
     | '/employer/$employerSlug/workforce/'
+    | '/admin/interview-role-packs/$packId/versions/$versionId'
     | '/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/employer/$employerSlug/assessments/results/$attemptId'
     | '/employer/$employerSlug/assessments/reviews/$attemptId'
@@ -1502,6 +1547,7 @@ export interface FileRouteTypes {
     | '/admin/assignments/$assignmentId'
     | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
+    | '/admin/interview-role-packs/new'
     | '/admin/jobs/$id'
     | '/admin/results/$assignmentId'
     | '/admin/users/$userId'
@@ -1521,6 +1567,7 @@ export interface FileRouteTypes {
     | '/admin/assessments'
     | '/admin/assignments'
     | '/admin/employers'
+    | '/admin/interview-role-packs'
     | '/admin/jobs'
     | '/admin/results'
     | '/admin/users'
@@ -1543,6 +1590,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs'
     | '/employer/$employerSlug/training'
     | '/employer/$employerSlug/workforce'
+    | '/admin/interview-role-packs/$packId/versions/$versionId'
     | '/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/employer/$employerSlug/assessments/results/$attemptId'
     | '/employer/$employerSlug/assessments/reviews/$attemptId'
@@ -1602,6 +1650,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/data'
     | '/_authenticated/admin/employers'
     | '/_authenticated/admin/feedback'
+    | '/_authenticated/admin/interview-role-packs'
     | '/_authenticated/admin/jobs'
     | '/_authenticated/admin/passport-verification'
     | '/_authenticated/admin/results'
@@ -1636,6 +1685,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/assignments/$assignmentId'
     | '/_authenticated/admin/candidate-reports/$runId'
     | '/_authenticated/admin/employers/$employerId'
+    | '/_authenticated/admin/interview-role-packs/new'
     | '/_authenticated/admin/jobs/$id'
     | '/_authenticated/admin/results/$assignmentId'
     | '/_authenticated/admin/users/$userId'
@@ -1656,6 +1706,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/assessments/'
     | '/_authenticated/admin/assignments/'
     | '/_authenticated/admin/employers/'
+    | '/_authenticated/admin/interview-role-packs/'
     | '/_authenticated/admin/jobs/'
     | '/_authenticated/admin/results/'
     | '/_authenticated/admin/users/'
@@ -1678,6 +1729,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/jobs/'
     | '/_authenticated/employer/$employerSlug/training/'
     | '/_authenticated/employer/$employerSlug/workforce/'
+    | '/_authenticated/admin/interview-role-packs/$packId/versions/$versionId'
     | '/_authenticated/employer/$employerSlug/assessments/assignments/$assignmentId'
     | '/_authenticated/employer/$employerSlug/assessments/results/$attemptId'
     | '/_authenticated/employer/$employerSlug/assessments/reviews/$attemptId'
@@ -2189,6 +2241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminJobsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/interview-role-packs': {
+      id: '/_authenticated/admin/interview-role-packs'
+      path: '/interview-role-packs'
+      fullPath: '/admin/interview-role-packs'
+      preLoaderRoute: typeof AuthenticatedAdminInterviewRolePacksRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/feedback': {
       id: '/_authenticated/admin/feedback'
       path: '/feedback'
@@ -2293,6 +2352,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/jobs/'
       preLoaderRoute: typeof AuthenticatedAdminJobsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminJobsRoute
+    }
+    '/_authenticated/admin/interview-role-packs/': {
+      id: '/_authenticated/admin/interview-role-packs/'
+      path: '/'
+      fullPath: '/admin/interview-role-packs/'
+      preLoaderRoute: typeof AuthenticatedAdminInterviewRolePacksIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminInterviewRolePacksRoute
     }
     '/_authenticated/admin/employers/': {
       id: '/_authenticated/admin/employers/'
@@ -2433,6 +2499,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/jobs/$id'
       preLoaderRoute: typeof AuthenticatedAdminJobsIdRouteImport
       parentRoute: typeof AuthenticatedAdminJobsRoute
+    }
+    '/_authenticated/admin/interview-role-packs/new': {
+      id: '/_authenticated/admin/interview-role-packs/new'
+      path: '/new'
+      fullPath: '/admin/interview-role-packs/new'
+      preLoaderRoute: typeof AuthenticatedAdminInterviewRolePacksNewRouteImport
+      parentRoute: typeof AuthenticatedAdminInterviewRolePacksRoute
     }
     '/_authenticated/admin/employers/$employerId': {
       id: '/_authenticated/admin/employers/$employerId'
@@ -2651,6 +2724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/admin/interview-role-packs/$packId/versions/$versionId': {
+      id: '/_authenticated/admin/interview-role-packs/$packId/versions/$versionId'
+      path: '/$packId/versions/$versionId'
+      fullPath: '/admin/interview-role-packs/$packId/versions/$versionId'
+      preLoaderRoute: typeof AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRouteImport
+      parentRoute: typeof AuthenticatedAdminInterviewRolePacksRoute
+    }
   }
 }
 
@@ -2724,6 +2804,27 @@ const AuthenticatedAdminEmployersRouteChildren: AuthenticatedAdminEmployersRoute
 const AuthenticatedAdminEmployersRouteWithChildren =
   AuthenticatedAdminEmployersRoute._addFileChildren(
     AuthenticatedAdminEmployersRouteChildren,
+  )
+
+interface AuthenticatedAdminInterviewRolePacksRouteChildren {
+  AuthenticatedAdminInterviewRolePacksNewRoute: typeof AuthenticatedAdminInterviewRolePacksNewRoute
+  AuthenticatedAdminInterviewRolePacksIndexRoute: typeof AuthenticatedAdminInterviewRolePacksIndexRoute
+  AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute: typeof AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute
+}
+
+const AuthenticatedAdminInterviewRolePacksRouteChildren: AuthenticatedAdminInterviewRolePacksRouteChildren =
+  {
+    AuthenticatedAdminInterviewRolePacksNewRoute:
+      AuthenticatedAdminInterviewRolePacksNewRoute,
+    AuthenticatedAdminInterviewRolePacksIndexRoute:
+      AuthenticatedAdminInterviewRolePacksIndexRoute,
+    AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute:
+      AuthenticatedAdminInterviewRolePacksPackIdVersionsVersionIdRoute,
+  }
+
+const AuthenticatedAdminInterviewRolePacksRouteWithChildren =
+  AuthenticatedAdminInterviewRolePacksRoute._addFileChildren(
+    AuthenticatedAdminInterviewRolePacksRouteChildren,
   )
 
 interface AuthenticatedAdminJobsRouteChildren {
@@ -2802,6 +2903,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminDataRoute: typeof AuthenticatedAdminDataRoute
   AuthenticatedAdminEmployersRoute: typeof AuthenticatedAdminEmployersRouteWithChildren
   AuthenticatedAdminFeedbackRoute: typeof AuthenticatedAdminFeedbackRoute
+  AuthenticatedAdminInterviewRolePacksRoute: typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
   AuthenticatedAdminPassportVerificationRoute: typeof AuthenticatedAdminPassportVerificationRoute
   AuthenticatedAdminResultsRoute: typeof AuthenticatedAdminResultsRouteWithChildren
@@ -2825,6 +2927,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEmployersRoute:
     AuthenticatedAdminEmployersRouteWithChildren,
   AuthenticatedAdminFeedbackRoute: AuthenticatedAdminFeedbackRoute,
+  AuthenticatedAdminInterviewRolePacksRoute:
+    AuthenticatedAdminInterviewRolePacksRouteWithChildren,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRouteWithChildren,
   AuthenticatedAdminPassportVerificationRoute:
     AuthenticatedAdminPassportVerificationRoute,

@@ -44,7 +44,8 @@ export type AdminNavSection =
   | "feedback"
   | "audit"
   | "data"
-  | "passportVerification";
+  | "passportVerification"
+  | "interviewRolePacks";
 
 export interface AdminShellChromeProps {
   activeSection: AdminNavSection;
@@ -108,6 +109,15 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
       key: "passportVerification",
       labelKey: "admin.nav.passportVerification",
       to: "/admin/passport-verification",
+    },
+    // Interview Intelligence Phase 1. A PLATFORM destination only: the employer
+    // navigation item is deliberately not added here or anywhere else, and
+    // arrives later with the Command Center and an employer runtime that
+    // actually exists.
+    {
+      key: "interviewRolePacks",
+      labelKey: "admin.nav.interviewRolePacks",
+      to: "/admin/interview-role-packs",
     },
   ];
 
