@@ -269,6 +269,17 @@ jobs:
       - name: Interview Intelligence pack render check
         run: bun run interview-pack-render:check
 
+      # The AI evaluation harness. Runs 16 synthetic gold cases through the REAL
+      # orchestrator -- same schema validation, same policy validator, same
+      # citation checks the product uses -- and gates on per-metric floors.
+      # The safety metrics are absolute: one prohibited output, one protected-
+      # information leak, one followed prompt injection or one hiring
+      # recommendation fails the build. There is deliberately no composite
+      # quality score, because averaging safety against recall is how a safety
+      # regression gets hidden by an unrelated improvement.
+      - name: Interview Intelligence AI evaluation
+        run: bun run interview-ai-eval:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
