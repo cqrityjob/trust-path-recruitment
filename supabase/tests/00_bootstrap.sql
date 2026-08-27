@@ -54,6 +54,61 @@ CREATE TABLE IF NOT EXISTS auth.users (
 -- Idempotent for a database bootstrapped before these columns existed.
 ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS banned_until timestamptz;
 ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS last_sign_in_at timestamptz;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS is_sso_user boolean NOT NULL DEFAULT false;
+
+-- ---------------------------------------------------------------------------
+-- What makes an email address "taken"
+--
+-- Permanent account deletion has to leave the address free, so that the same
+-- person can register again from scratch. That claim is only testable if the
+-- harness reproduces the rules Supabase Auth actually enforces when a new
+-- account is created. Both are copied from a running Supabase instance
+-- (auth schema, GoTrue) rather than invented here:
+--
+--   users_email_partial_key                 UNIQUE (email) WHERE is_sso_user = false
+--   identities_provider_id_provider_unique  UNIQUE (provider_id, provider)
+--
+-- The second one is the easy one to forget. An email/password sign-up writes
+-- BOTH an auth.users row and an auth.identities row keyed by the address, so
+-- an identity left behind by a half-done deletion blocks registration even
+-- with auth.users empty. It is stubbed here with the same ON DELETE CASCADE
+-- the real schema has, which is exactly what makes the deletion path's
+-- "the address is free again" assertion mean something.
+-- ---------------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_partial_key
+  ON auth.users (email) WHERE is_sso_user = false;
+
+-- Sessions and refresh tokens, for the same reason banned_until is stubbed: a
+-- permanent account erasure REVOKES the person's live sessions, and without
+-- these tables the suite would assert a revocation that never touched
+-- anything. Both cascade from auth.users in the real schema.
+CREATE TABLE IF NOT EXISTS auth.sessions (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  not_after  timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS auth.refresh_tokens (
+  id         bigserial PRIMARY KEY,
+  token      text UNIQUE,
+  user_id    text,
+  session_id uuid REFERENCES auth.sessions(id) ON DELETE CASCADE,
+  revoked    boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS auth.identities (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider_id     text NOT NULL,
+  user_id         uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  identity_data   jsonb NOT NULL DEFAULT '{}'::jsonb,
+  provider        text NOT NULL,
+  last_sign_in_at timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT identities_provider_id_provider_unique UNIQUE (provider_id, provider)
+);
 
 -- auth.uid() resolves from a transaction-local setting, so a test can act as
 -- a specific user with SET LOCAL and have RLS evaluate exactly as it would
@@ -73,6 +128,7 @@ LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
 
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT SELECT ON auth.users TO anon, authenticated, service_role;
+GRANT SELECT ON auth.identities TO anon, authenticated, service_role;
 
 
 -- ---------------------------------------------------------------------------

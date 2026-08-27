@@ -3596,7 +3596,7 @@ export const dictionaries = {
     "admin.lifecycle.blocker.userHoldsPlatformRole": "Personen har en plattformsroll",
     "admin.lifecycle.error.holdsRole": "Ta bort personens plattformsroll först.",
     "admin.lifecycle.person.delete.blockedData":
-      "Kontot har historik som måste bevaras. Stäng av eller anonymisera i stället.",
+      "Kontot har historik som måste bevaras. Vid permanent radering anonymiseras sådan historik automatiskt.",
     "admin.lifecycle.error.notDeletable":
       "Posten kan inte raderas eftersom historik måste bevaras.",
     "admin.lifecycle.person.field.noSubject": "Inget subjekt kopplat",
@@ -3604,6 +3604,20 @@ export const dictionaries = {
     "admin.employers.action.confirmArchive.body":
       "Arbetsgivaren kan inte längre använda plattformen. Inga nya jobb, medarbetare eller bedömningar kan skapas. Historik sparas och syns fortsatt för administratörer.",
     "admin.data.section.users": "Konton utan historik",
+    "admin.data.section.storageErasure": "Storage-radering",
+    "admin.data.storageErasure.intro":
+      "Filer som ska ha tagits bort ur lagringen efter en permanent radering — Passport-underlag och kandidaters CV. En post som ligger kvar betyder att dokumentet fortfarande finns kvar och att raderingen inte är klar.",
+    "admin.data.storageErasure.pending": "Väntar",
+    "admin.data.storageErasure.failed": "Misslyckade",
+    "admin.data.storageErasure.completed": "Klara",
+    "admin.data.storageErasure.retry": "Försök igen",
+    "admin.data.storageErasure.retrying": "Försöker…",
+    "admin.data.storageErasure.sweepDone": "{erased} dokument raderade, {owed} kvar.",
+    "admin.data.storageErasure.sweepFailed": "Försöket kunde inte genomföras.",
+    "admin.data.storageErasure.loading": "Hämtar…",
+    "admin.data.storageErasure.loadFailed": "Kunde inte hämta status för Storage-radering.",
+    "admin.data.storageErasure.deletionWarning":
+      "Kontot är permanent raderat, men {count} dokument väntar fortfarande på fysisk radering. Detta kan följas upp under Datahantering.",
     "admin.employers.action.restore": "Återöppna",
     "admin.lifecycle.person.section.employment": "Anställningar",
     "admin.data.section.identity": "Möjliga dubbletter",
@@ -3712,7 +3726,19 @@ export const dictionaries = {
     "admin.data.finding.employeeSubjectMismatch":
       "Medarbetare kopplad till ett annat subjekt än kontots",
     "admin.lifecycle.person.delete.consequence":
-      "Den här åtgärden kan inte ångras. Endast ett konto helt utan historik kan raderas.",
+      "Den här åtgärden kan inte ångras. Kontot och personens egna uppgifter raderas. Historik som måste bevaras anonymiseras och kopplas loss från personen.",
+    "admin.lifecycle.person.delete.historyHandled":
+      "Kontot har historik som måste bevaras. Vid permanent radering anonymiseras sådan historik automatiskt.",
+    "admin.lifecycle.person.delete.alreadyErased":
+      "Kontot är redan permanent raderat. Det finns ingen identitet kvar att öppna, stänga av eller anonymisera.",
+    "admin.lifecycle.person.delete.storageNote":
+      "Passport-underlag i filform tas bort från lagringen direkt efter raderingen. Misslyckas det ligger posten kvar i kön och försöks igen — den försvinner inte tyst.",
+    "admin.danger.impact.deletedHeading": "Tas bort",
+    "admin.danger.impact.deletedNothing": "Ingenting tas bort.",
+    "admin.danger.impact.keptHeading": "Anonymiseras eller behålls",
+    "admin.danger.impact.keptNothing": "Ingenting behålls.",
+    "admin.danger.impact.keptNote":
+      "Poster som behålls tillhör någon annan — en arbetsgivares rekryteringsunderlag, ett bedömningsunderlag på ett pseudonymt subjekt, eller revisionsloggen. Personen kopplas loss och personuppgifter tas bort ur dem.",
     "admin.data.finding.unclaimedSubject": "Bedömningshistorik utan kopplat konto",
     "admin.lifecycle.person.passport.none": "Ingen Passport-data.",
     "admin.lifecycle.employer.delete.consequence":
@@ -7308,7 +7334,7 @@ export const dictionaries = {
     "admin.lifecycle.blocker.userHoldsPlatformRole": "The person holds a platform role",
     "admin.lifecycle.error.holdsRole": "Revoke the person's platform role first.",
     "admin.lifecycle.person.delete.blockedData":
-      "This account has history that must be preserved. Disable or anonymise it instead.",
+      "This account has history that must be preserved. Permanent deletion anonymises that history automatically.",
     "admin.lifecycle.error.notDeletable":
       "This record cannot be deleted because history must be preserved.",
     "admin.lifecycle.person.field.noSubject": "No subject linked",
@@ -7316,6 +7342,20 @@ export const dictionaries = {
     "admin.employers.action.confirmArchive.body":
       "The employer can no longer use the platform. No new jobs, employees or assessments can be created. History is preserved and stays visible to administrators.",
     "admin.data.section.users": "Accounts with no history",
+    "admin.data.section.storageErasure": "Storage erasure",
+    "admin.data.storageErasure.intro":
+      "Files that should have been removed from Storage after a permanent deletion — Passport evidence and candidate CVs. An item still listed here means the document is still there and the erasure is not finished.",
+    "admin.data.storageErasure.pending": "Pending",
+    "admin.data.storageErasure.failed": "Failed",
+    "admin.data.storageErasure.completed": "Completed",
+    "admin.data.storageErasure.retry": "Try again",
+    "admin.data.storageErasure.retrying": "Trying…",
+    "admin.data.storageErasure.sweepDone": "{erased} document(s) erased, {owed} still owed.",
+    "admin.data.storageErasure.sweepFailed": "The attempt could not be completed.",
+    "admin.data.storageErasure.loading": "Loading…",
+    "admin.data.storageErasure.loadFailed": "Could not load the Storage erasure status.",
+    "admin.data.storageErasure.deletionWarning":
+      "The account is permanently deleted, but {count} document(s) are still waiting for physical erasure. This can be followed up under Data management.",
     "admin.employers.action.restore": "Restore",
     "admin.lifecycle.person.section.employment": "Employment",
     "admin.data.section.identity": "Possible duplicates",
@@ -7425,7 +7465,19 @@ export const dictionaries = {
     "admin.data.finding.employeeSubjectMismatch":
       "Employee linked to a different subject than the account's",
     "admin.lifecycle.person.delete.consequence":
-      "This action cannot be undone. Only an account with no history at all can be deleted.",
+      "This action cannot be undone. The account and the person's own data are deleted. History that must be preserved is anonymised and detached from the person.",
+    "admin.lifecycle.person.delete.historyHandled":
+      "This account has history that must be preserved. Permanent deletion anonymises that history automatically.",
+    "admin.lifecycle.person.delete.alreadyErased":
+      "This account has already been permanently deleted. There is no identity left to reopen, disable or anonymise.",
+    "admin.lifecycle.person.delete.storageNote":
+      "Passport evidence files are removed from Storage immediately after the deletion. If that fails the item stays queued and is retried — it is never dropped silently.",
+    "admin.danger.impact.deletedHeading": "Deleted",
+    "admin.danger.impact.deletedNothing": "Nothing is deleted.",
+    "admin.danger.impact.keptHeading": "Anonymised or kept",
+    "admin.danger.impact.keptNothing": "Nothing is kept.",
+    "admin.danger.impact.keptNote":
+      "Records that are kept belong to somebody else — an employer's recruitment record, assessment evidence on a pseudonymous subject, or the audit log. The person is detached from them and their personal data is removed.",
     "admin.data.finding.unclaimedSubject": "Assessment history with no account attached",
     "admin.lifecycle.person.passport.none": "No Passport data.",
     "admin.lifecycle.employer.delete.consequence":

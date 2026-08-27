@@ -81,12 +81,21 @@ export const adminListUsers = createServerFn({ method: "POST" })
     }
     const authUsers = page?.users ?? [];
 
-    const [{ data: profileRows }, { data: roleRows }, { data: membershipRows }] = await Promise.all(
-      [
+    const [{ data: profileRows }, { data: roleRows }, { data: membershipRows }, { data: erased }] =
+      await Promise.all([
         supabaseAdmin.from("profiles").select("id, display_name"),
         ctx.supabase.from("user_roles").select("user_id, role"),
         ctx.supabase.from("employer_memberships").select("user_id").eq("status", "active"),
-      ],
+        // Permanently deleted accounts whose auth row had to survive so that
+        // retained records keep their foreign keys. They are tombstones, not
+        // people: no address, no identity, no session, and no way back. The
+        // Auth Admin API still lists them, so they are filtered out here --
+        // this list is of accounts an administrator can act on.
+        ctx.supabase.from("deleted_accounts").select("user_id"),
+      ]);
+
+    const erasedUserIds = new Set(
+      ((erased ?? []) as Array<{ user_id: string }>).map((d) => d.user_id),
     );
 
     const nameByUserId = new Map<string, string | null>();
@@ -116,6 +125,7 @@ export const adminListUsers = createServerFn({ method: "POST" })
           isSuperadmin: roles.has("superadmin"),
         };
       })
+      .filter((u) => !erasedUserIds.has(u.id))
       .filter((u) => {
         if (!search) return true;
         return (

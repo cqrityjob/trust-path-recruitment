@@ -31,8 +31,8 @@ import {
   adminAnonymiseUser,
   adminDeleteUser,
 } from "@/lib/job-intelligence/admin-lifecycle.functions";
-import { DangerZone, DeletionImpactPreview } from "@/components/admin/DangerZone";
-import { blockerLabelKey, lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
+import { DangerZone, AccountDeletionImpactPreview } from "@/components/admin/DangerZone";
+import { lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/admin/users/$userId")({
@@ -134,9 +134,16 @@ function AdminUserDetailPage() {
           confirmEmail: overview.data?.account.email ?? "",
         },
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       refreshPerson();
-      navigate({ to: "/admin/users" });
+      // The account IS erased -- that committed in the database. Any Storage
+      // object still owed is a separate, retryable obligation, so it is
+      // carried to the list as a warning rather than reported as a failed
+      // deletion, which it is not. Datahantering is where it can be chased.
+      navigate({
+        to: "/admin/users",
+        search: result.storageObjectsOwed > 0 ? { storageOwed: result.storageObjectsOwed } : {},
+      });
     },
     onError: (e: Error) => {
       setLifecycleDone(false);
@@ -499,7 +506,11 @@ function AdminUserDetailPage() {
                       label: t("admin.lifecycle.person.enable.label"),
                       consequence: t("admin.lifecycle.person.enable.consequence"),
                       variant: "default" as const,
-                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      blockedReason: isSelf
+                        ? t("admin.lifecycle.error.selfAction")
+                        : impact.data?.alreadyErased
+                          ? t("admin.lifecycle.person.delete.alreadyErased")
+                          : null,
                       onConfirm: ({ reason }: { reason: string }) =>
                         setDisabled.mutate({ disabled: false, reason }),
                     }
@@ -507,7 +518,11 @@ function AdminUserDetailPage() {
                       key: "disable",
                       label: t("admin.lifecycle.person.disable.label"),
                       consequence: t("admin.lifecycle.person.disable.consequence"),
-                      blockedReason: isSelf ? t("admin.lifecycle.error.selfAction") : null,
+                      blockedReason: isSelf
+                        ? t("admin.lifecycle.error.selfAction")
+                        : impact.data?.alreadyErased
+                          ? t("admin.lifecycle.person.delete.alreadyErased")
+                          : null,
                       onConfirm: ({ reason }: { reason: string }) =>
                         setDisabled.mutate({ disabled: true, reason }),
                     },
@@ -526,7 +541,9 @@ function AdminUserDetailPage() {
                     ? t("admin.lifecycle.person.delete.blockedSuperadmin")
                     : isSelf
                       ? t("admin.lifecycle.error.selfAction")
-                      : null,
+                      : impact.data?.alreadyErased
+                        ? t("admin.lifecycle.person.delete.alreadyErased")
+                        : null,
                   onConfirm: ({ reason }: { reason: string }) => anonymise.mutate({ reason }),
                 },
                 {
@@ -535,19 +552,27 @@ function AdminUserDetailPage() {
                   consequence: t("admin.lifecycle.person.delete.consequence"),
                   confirmPhrase: overview.data.account.email,
                   confirmPhraseLabel: t("admin.lifecycle.person.delete.confirmPhraseLabel"),
+                  // History no longer blocks the action. It is handled, and
+                  // the dialog says exactly how -- what is deleted, and what
+                  // survives detached or anonymised. The only things that can
+                  // still block are the two that are about the CALLER rather
+                  // than the data: not being a superadmin, and being the
+                  // account in question.
                   impact: impact.data ? (
-                    <DeletionImpactPreview
-                      blockers={impact.data.blockers}
-                      removed={impact.data.removedOnDelete}
-                      translateBlocker={(code) => t(blockerLabelKey(code))}
+                    <AccountDeletionImpactPreview
+                      deleted={impact.data.deleted}
+                      detached={impact.data.detached}
+                      preserved={impact.data.preserved}
+                      hasHistory={impact.data.hasHistory}
+                      passportEvidenceFiles={impact.data.deleted["sp_evidence.holder_user_id"] ?? 0}
                     />
                   ) : null,
                   blockedReason: !whoAmI.data?.isSuperadmin
                     ? t("admin.lifecycle.person.delete.blockedSuperadmin")
                     : isSelf
                       ? t("admin.lifecycle.error.selfAction")
-                      : impact.data && !impact.data.deletable
-                        ? t("admin.lifecycle.person.delete.blockedData")
+                      : impact.data?.alreadyErased
+                        ? t("admin.lifecycle.person.delete.alreadyErased")
                         : null,
                   onConfirm: ({ reason }: { reason: string }) => deleteUser.mutate({ reason }),
                 },

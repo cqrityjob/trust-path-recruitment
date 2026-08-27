@@ -4,7 +4,7 @@
 // plain, importable-module + source-text check, not a JS/TS unit-test-runner
 // suite (none is configured in this project). The BEHAVIOUR of every RPC is
 // asserted for real against a live database in
-// supabase/tests/admin_lifecycle_test.sql (89 assertions); this script guards
+// supabase/tests/admin_lifecycle_test.sql (128 assertions); this script guards
 // the properties that live in a call SHAPE or a UI contract, where a
 // behavioural test would only be able to observe the symptom.
 //
@@ -32,7 +32,30 @@ function readCode(relPath: string): string {
     .join("\n");
 }
 
-const migration = read("supabase/migrations/20260911090000_admin_control_center_lifecycle.sql");
+// Two migrations now define this feature. The 2026-09-11 one built it; the
+// 2026-09-17 one replaced two of its functions when permanent deletion stopped
+// being conditional on history. Checking only the first would mean guarding a
+// definition the database no longer runs, so the later file is searched first
+// and the earlier one is the fallback -- the same "latest definition wins"
+// rule Postgres itself applies to CREATE OR REPLACE.
+const lifecycleMigration = read(
+  "supabase/migrations/20260911090000_admin_control_center_lifecycle.sql",
+);
+const deletionMigration = read(
+  "supabase/migrations/20260917090000_superadmin_permanent_account_deletion.sql",
+);
+const migration = lifecycleMigration;
+
+/** The live definition of a function: from the newest migration that has one. */
+function definitionOf(fn: string): string {
+  for (const source of [deletionMigration, lifecycleMigration]) {
+    const start = source.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+    if (start === -1) continue;
+    const end = source.indexOf(`REVOKE ALL ON FUNCTION public.${fn}`, start);
+    return source.slice(start, end === -1 ? source.length : end);
+  }
+  return "";
+}
 const lifecycleFns = read("src/lib/job-intelligence/admin-lifecycle.functions.ts");
 const dangerZone = read("src/components/admin/DangerZone.tsx");
 const dangerZoneCode = readCode("src/components/admin/DangerZone.tsx");
@@ -47,10 +70,7 @@ for (const fn of [
   "admin_delete_user_if_safe",
   "admin_anonymise_user",
 ]) {
-  const body = migration.slice(
-    migration.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}`),
-    migration.indexOf(`REVOKE ALL ON FUNCTION public.${fn}`),
-  );
+  const body = definitionOf(fn);
   expect(
     body.length > 0 && body.includes("IF NOT public.is_superadmin(_caller) THEN"),
     `${fn} must require is_superadmin() -- an irreversible operation on a platform identity is never an ordinary admin action`,
@@ -122,19 +142,82 @@ expect(
 //    (Hosted Supabase grants EXECUTE to anon by default on new functions --
 //    an explicit REVOKE is the only thing that stops it.)
 // -----------------------------------------------------------------------
-const createdFunctions = [...migration.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\(/g)].map(
-  (m) => m[1],
-);
-expect(createdFunctions.length >= 10, "expected the migration to define at least ten functions");
-for (const fn of new Set(createdFunctions)) {
-  // Trigger functions take no arguments and are never granted to anyone.
-  if (fn === "employer_operational_guard") continue;
+for (const [label, source, floor] of [
+  ["the lifecycle migration", lifecycleMigration, 10],
+  ["the permanent-deletion migration", deletionMigration, 3],
+] as const) {
+  const createdFunctions = [
+    ...source.matchAll(/CREATE OR REPLACE FUNCTION public\.(\w+)\(/g),
+  ].map((m) => m[1]);
   expect(
-    new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\([^)]*\\) FROM PUBLIC, anon;`).test(
-      migration,
-    ),
-    `public.${fn} must be explicitly revoked FROM PUBLIC, anon -- hosted Supabase grants EXECUTE to anon by default`,
+    createdFunctions.length >= floor,
+    `expected ${label} to define at least ${floor} functions, found ${createdFunctions.length}`,
   );
+  for (const fn of new Set(createdFunctions)) {
+    // Pre-existing exemption, left as it was: employer_operational_guard was
+    // written without the REVOKE and changing that is not this check's job.
+    if (fn === "employer_operational_guard") continue;
+
+    // Trigger functions take no arguments and are never granted to any role:
+    // a trigger fires without EXECUTE being checked, so the correct posture is
+    // revoked FROM PUBLIC and granted to nobody. Detected from the declaration
+    // rather than from a list of names, so a new guard is covered the day it
+    // is written.
+    const isTriggerFn = new RegExp(
+      `CREATE OR REPLACE FUNCTION public\\.${fn}\\(\\)\\s*\n\\s*RETURNS trigger`,
+    ).test(source);
+    if (isTriggerFn) {
+      expect(
+        source.includes(`REVOKE ALL ON FUNCTION public.${fn}() FROM PUBLIC;`),
+        `public.${fn} is a trigger function and must be revoked FROM PUBLIC`,
+      );
+      continue;
+    }
+    expect(
+      new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\([^)]*\\)\\s*\n?\\s*FROM PUBLIC, anon;`).test(
+        source,
+      ),
+      `public.${fn} must be explicitly revoked FROM PUBLIC, anon -- hosted Supabase grants EXECUTE to anon by default`,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------
+// 4b. Permanent deletion handles history rather than refusing it, and the
+//     guard exception that makes that possible stays narrow.
+// -----------------------------------------------------------------------
+{
+  const del = definitionOf("admin_delete_user_if_safe");
+  expect(
+    !del.includes("USER_NOT_DELETABLE"),
+    "admin_delete_user_if_safe must no longer refuse an account because it has history",
+  );
+  expect(
+    del.includes("LAST_SUPERADMIN_PROTECTED"),
+    "the last active superadmin must still be undeletable",
+  );
+  expect(
+    del.includes("set_config('trustpath.deleting_account'"),
+    "admin_delete_user_if_safe must announce the deletion to the immutability guards",
+  );
+  const markerSites = (
+    deletionMigration.match(/set_config\('trustpath\.deleting_account'/g) ?? []
+  ).length;
+  expect(
+    markerSites === 1,
+    `exactly one function may ever set trustpath.deleting_account; found ${markerSites}`,
+  );
+  expect(
+    deletionMigration.includes("public.is_superadmin(auth.uid())"),
+    "account_deletion_releases() must re-check superadmin rather than trusting the marker alone",
+  );
+  const impact = definitionOf("admin_user_deletion_impact");
+  for (const key of ["'deleted', _deleted", "'detached', _detached", "'preserved', _preserved"]) {
+    expect(
+      impact.includes(key),
+      `the impact report must return ${key.split(",")[0]} so the dialog can show what happens to each row`,
+    );
+  }
 }
 
 // -----------------------------------------------------------------------
