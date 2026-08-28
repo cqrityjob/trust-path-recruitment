@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessagesSquare,
   Settings2,
   Sparkles,
   MapPin,
@@ -68,6 +69,7 @@ export type EmployerNavSection =
   | "applications"
   | "workforce"
   | "assessments"
+  | "interviewIntelligence"
   | "competencies"
   | "training"
   | "sites"
@@ -114,6 +116,7 @@ type NavTarget =
   | "/employer/$employerSlug/applications"
   | "/employer/$employerSlug/workforce"
   | "/employer/$employerSlug/assessments"
+  | "/employer/$employerSlug/interview-intelligence"
   | "/employer/$employerSlug/competencies"
   | "/employer/$employerSlug/training"
   | "/employer/$employerSlug/sites"
@@ -191,6 +194,16 @@ const NAV_GROUPS: NavGroup[] = [
         labelKey: "employer.nav.assessments",
         icon: ClipboardCheck,
         to: "/employer/$employerSlug/assessments",
+      },
+      // Interview Intelligence. Added only now that the landing route, the
+      // permission checks and the whole journey behind it actually work --
+      // a navigation item that leads to a "coming soon" page is worse than
+      // no item at all.
+      {
+        key: "interviewIntelligence",
+        icon: MessagesSquare,
+        labelKey: "employer.nav.interviewIntelligence",
+        to: "/employer/$employerSlug/interview-intelligence",
       },
     ],
   },

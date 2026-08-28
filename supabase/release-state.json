@@ -1,386 +1,859 @@
 {
   "states": {
-    "applied": "Applied on the hosted database. REQUIRES an evidenceSource naming how that was established -- a recorded appliedThroughLovable mapping, or a direct owner verification of the hosted schema. release-parity-check refuses an applied entry without one.", 
-    "unverified": "No evidence either way in this repository. Must be confirmed by the owner before release; treated as NOT applied by the guard.", 
+    "applied": "Applied on the hosted database. REQUIRES an evidenceSource naming how that was established -- a recorded appliedThroughLovable mapping, or a direct owner verification of the hosted schema. release-parity-check refuses an applied entry without one.",
+    "unverified": "No evidence either way in this repository. Must be confirmed by the owner before release; treated as NOT applied by the guard.",
     "pending": "Known NOT to be applied on the hosted database yet."
-  }, 
-  "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
+  },
+  "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.",
   "frontier": [
     {
-      "note": "Previously declared unverified: this repository held no appliedThroughLovable record for it and none has been produced, so the hosted generated version and UUID for this migration remain unknown. The APPLIED state rests on the owner's direct observation of the schema, which is recorded above rather than inferred.", 
+      "note": "Previously declared unverified: this repository held no appliedThroughLovable record for it and none has been produced, so the hosted generated version and UUID for this migration remain unknown. The APPLIED state rests on the owner's direct observation of the schema, which is recorded above rather than inferred.",
       "introduces": [
         {
-          "table": "sp_passport_profiles", 
-          "object": "sub_jurisdiction_code", 
+          "table": "sp_passport_profiles",
+          "object": "sub_jurisdiction_code",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "sp_passport_profiles", 
-          "object": "work_location_confirmed_at", 
+          "table": "sp_passport_profiles",
+          "object": "work_location_confirmed_at",
           "kind": "column"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260908093000_sp_profile_work_country.sql", 
-      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: sp_passport_profiles.sub_jurisdiction_code EXISTS and sp_passport_profiles.work_location_confirmed_at EXISTS. Both columns are added by this migration and by no other, so their presence establishes it directly.", 
+      ],
+      "hostedState": "applied",
+      "file": "20260908093000_sp_profile_work_country.sql",
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: sp_passport_profiles.sub_jurisdiction_code EXISTS and sp_passport_profiles.work_location_confirmed_at EXISTS. Both columns are added by this migration and by no other, so their presence establishes it directly.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='sp_passport_profiles' AND column_name IN ('sub_jurisdiction_code','work_location_confirmed_at');"
-    }, 
+    },
     {
-      "note": "Previously declared unverified. The hosted generated version and UUID remain unknown, so no appliedThroughLovable mapping is claimed for it.", 
+      "note": "Previously declared unverified. The hosted generated version and UUID remain unknown, so no appliedThroughLovable mapping is claimed for it.",
       "introduces": [
         {
-          "object": "sp_disclosure_payload", 
+          "object": "sp_disclosure_payload",
           "kind": "function"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260908094000_sp_disclosure_holder_sub_jurisdiction.sql", 
-      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: public.sp_disclosure_payload EXISTS. NOTE THE LIMIT OF THAT OBSERVATION -- this migration REPLACES an existing function rather than creating a new one (it is created by 20260903091000 and replaced again by 20260904090000 and 20260908092000, the last of which is inside the evidence baseline). Existence therefore does not by itself distinguish this body from the previous one. The APPLIED state rests on the owner's verification; the query below makes it decisive by testing for a token that only this version's body contains.", 
+      ],
+      "hostedState": "applied",
+      "file": "20260908094000_sp_disclosure_holder_sub_jurisdiction.sql",
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: public.sp_disclosure_payload EXISTS. NOTE THE LIMIT OF THAT OBSERVATION -- this migration REPLACES an existing function rather than creating a new one (it is created by 20260903091000 and replaced again by 20260904090000 and 20260908092000, the last of which is inside the evidence baseline). Existence therefore does not by itself distinguish this body from the previous one. The APPLIED state rests on the owner's verification; the query below makes it decisive by testing for a token that only this version's body contains.",
       "verify": "SELECT pg_get_functiondef(p.oid) LIKE '%_p.sub_jurisdiction_code%' AS is_holder_body FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname='sp_disclosure_payload';"
-    }, 
+    },
     {
       "introduces": [
         {
-          "object": "jobs_delete_draft", 
+          "object": "jobs_delete_draft",
           "kind": "function"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260909090000_jobs_delete_unpublished_draft.sql", 
+      ],
+      "hostedState": "applied",
+      "file": "20260909090000_jobs_delete_unpublished_draft.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826114820. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "note": "THE MIGRATION THIS GUARD EXISTS FOR, now closed. Deployed application code expected these columns while the hosted schema did not have them, and employers could not save or publish a job at all. It was applied hosted during UAT to end the outage; this repository was never told, which is precisely the staleness release-parity-check exists to make impossible to leave in place. The hosted generated version and UUID for that application are not known here, so no appliedThroughLovable mapping is claimed.", 
+      "note": "THE MIGRATION THIS GUARD EXISTS FOR, now closed. Deployed application code expected these columns while the hosted schema did not have them, and employers could not save or publish a job at all. It was applied hosted during UAT to end the outage; this repository was never told, which is precisely the staleness release-parity-check exists to make impossible to leave in place. The hosted generated version and UUID for that application are not known here, so no appliedThroughLovable mapping is claimed.",
       "introduces": [
         {
-          "table": "jobs", 
-          "object": "family_other", 
+          "table": "jobs",
+          "object": "family_other",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "jobs", 
-          "object": "family_other_text", 
+          "table": "jobs",
+          "object": "family_other_text",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "jobs", 
-          "object": "profession_other", 
+          "table": "jobs",
+          "object": "profession_other",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "jobs", 
-          "object": "profession_other_text", 
+          "table": "jobs",
+          "object": "profession_other_text",
           "kind": "column"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260909092000_jobs_other_profession_selection.sql", 
-      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: jobs.profession_other EXISTS, and jobs.family_other / jobs.family_other_text / jobs.profession_other_text were applied through Lovable during the Fable UAT as the hotfix for the job-publishing outage. All four columns are added by this migration and by no other.", 
+      ],
+      "hostedState": "applied",
+      "file": "20260909092000_jobs_other_profession_selection.sql",
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed: jobs.profession_other EXISTS, and jobs.family_other / jobs.family_other_text / jobs.profession_other_text were applied through Lovable during the Fable UAT as the hotfix for the job-publishing outage. All four columns are added by this migration and by no other.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='jobs' AND column_name IN ('profession_other','profession_other_text','family_other','family_other_text');"
-    }, 
+    },
     {
       "introduces": [
         {
-          "object": "jase_record_notification", 
+          "object": "jase_record_notification",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "jase_notification_payload", 
+          "object": "jase_notification_payload",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "jase_pending_notification_idx", 
+          "object": "jase_pending_notification_idx",
           "kind": "index"
-        }, 
+        },
         {
-          "table": "job_application_status_events", 
-          "object": "notified_at", 
+          "table": "job_application_status_events",
+          "object": "notified_at",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "job_application_status_events", 
-          "object": "notify_error", 
+          "table": "job_application_status_events",
+          "object": "notify_error",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "job_application_status_events", 
-          "object": "notify_attempts", 
+          "table": "job_application_status_events",
+          "object": "notify_attempts",
           "kind": "column"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260909093000_application_status_notifications.sql", 
+      ],
+      "hostedState": "applied",
+      "file": "20260909093000_application_status_notifications.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826114954. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "note": "Vocabulary/lifecycle data only -- introduces no object application code can reference, so it can never produce a code/schema mismatch. It still has to be applied, in order, for the audit vocabulary to be correct.", 
-      "introduces": [], 
-      "hostedState": "applied", 
-      "file": "20260909094000_job_audit_vocabulary_lifecycle.sql", 
+      "note": "Vocabulary/lifecycle data only -- introduces no object application code can reference, so it can never produce a code/schema mismatch. It still has to be applied, in order, for the audit vocabulary to be correct.",
+      "introduces": [],
+      "hostedState": "applied",
+      "file": "20260909094000_job_audit_vocabulary_lifecycle.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826115058. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
       "introduces": [
         {
-          "object": "sp_claims_credential_rules", 
+          "object": "sp_claims_credential_rules",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_dispute_queue", 
+          "object": "sp_dispute_queue",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_resolve_dispute", 
+          "object": "sp_resolve_dispute",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_archive_claim", 
+          "object": "sp_archive_claim",
           "kind": "function"
-        }, 
+        },
         {
-          "table": "sp_credential_types", 
-          "object": "title_is_holder_written", 
+          "table": "sp_credential_types",
+          "object": "title_is_holder_written",
           "kind": "column"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260910090000_sp_pilot_bugfix_1.sql", 
-      "note": "Applied hosted through the tracked Lovable route. Its generated copy was left in the active migration path and is what broke clean full-history replay on origin/main; that copy is now removed and mapped in migrations-policy.json's appliedThroughLovable.", 
-      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed in the hosted ledger as version 20260825171344, name 7f6e501f-fdc5-4150-aa2d-fa22a536703c -- which confirms the appliedThroughLovable mapping recorded in supabase/migrations-policy.json, independently of this branch.", 
+      ],
+      "hostedState": "applied",
+      "file": "20260910090000_sp_pilot_bugfix_1.sql",
+      "note": "Applied hosted through the tracked Lovable route. Its generated copy was left in the active migration path and is what broke clean full-history replay on origin/main; that copy is now removed and mapped in migrations-policy.json's appliedThroughLovable.",
+      "evidenceSource": "Owner verification against the hosted Lovable database, 2026-08-25. Observed in the hosted ledger as version 20260825171344, name 7f6e501f-fdc5-4150-aa2d-fa22a536703c -- which confirms the appliedThroughLovable mapping recorded in supabase/migrations-policy.json, independently of this branch.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260825171344';"
-    }, 
+    },
     {
-      "note": "cd_definition_versions.content_version -> v3.1-draft-4. No new object, but NOT inert: the database stamps every new report snapshot from this row while the payload carries version.ts's CONTENT_VERSION, so shipping the code without this makes each new report disagree with itself about which wording the candidate read.", 
-      "introduces": [], 
-      "hostedState": "applied", 
-      "file": "20260910091000_cd_v31_content_v3_question_refinement.sql", 
+      "note": "cd_definition_versions.content_version -> v3.1-draft-4. No new object, but NOT inert: the database stamps every new report snapshot from this row while the payload carries version.ts's CONTENT_VERSION, so shipping the code without this makes each new report disagree with itself about which wording the candidate read.",
+      "introduces": [],
+      "hostedState": "applied",
+      "file": "20260910091000_cd_v31_content_v3_question_refinement.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826115155. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
       "introduces": [
         {
-          "object": "employer_accepts_operations", 
+          "object": "employer_accepts_operations",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "employer_operational_guard", 
+          "object": "employer_operational_guard",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "moderate_employer", 
+          "object": "moderate_employer",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_employer_deletion_impact", 
+          "object": "admin_employer_deletion_impact",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_delete_employer_if_safe", 
+          "object": "admin_delete_employer_if_safe",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_user_deletion_impact", 
+          "object": "admin_user_deletion_impact",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_set_user_disabled", 
+          "object": "admin_set_user_disabled",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_anonymise_user", 
+          "object": "admin_anonymise_user",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_delete_user_if_safe", 
+          "object": "admin_delete_user_if_safe",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_delete_job_if_safe", 
+          "object": "admin_delete_job_if_safe",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_identity_diagnostics", 
+          "object": "admin_identity_diagnostics",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_disposable_records", 
+          "object": "admin_disposable_records",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "admin_person_overview", 
+          "object": "admin_person_overview",
           "kind": "function"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260911090000_admin_control_center_lifecycle.sql", 
+      ],
+      "hostedState": "applied",
+      "file": "20260911090000_admin_control_center_lifecycle.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826120547. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "note": "Extends the per-match profession eligibility guard to professions.ranked. Replaces an existing function rather than adding one, so a code/schema mismatch here is not a missing-object error -- it is the new candidate-facing recommendation reaching a snapshot UNVALIDATED. Apply before, or with, the code that writes `ranked`.", 
+      "note": "Extends the per-match profession eligibility guard to professions.ranked. Replaces an existing function rather than adding one, so a code/schema mismatch here is not a missing-object error -- it is the new candidate-facing recommendation reaching a snapshot UNVALIDATED. Apply before, or with, the code that writes `ranked`.",
       "introduces": [
         {
-          "object": "cd_v31_complete_session", 
+          "object": "cd_v31_complete_session",
           "kind": "function"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260912090000_cd_ranking_guard_recommendation.sql", 
+      ],
+      "hostedState": "applied",
+      "file": "20260912090000_cd_ranking_guard_recommendation.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123731. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "note": "cd_definition_versions.content_version -> v3.1-draft-5. Same reasoning as the draft-4 migration above.", 
-      "introduces": [], 
-      "hostedState": "applied", 
-      "file": "20260913090000_cd_v31_content_v4_context_intent_separation.sql", 
+      "note": "cd_definition_versions.content_version -> v3.1-draft-5. Same reasoning as the draft-4 migration above.",
+      "introduces": [],
+      "hostedState": "applied",
+      "file": "20260913090000_cd_v31_content_v4_context_intent_separation.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123839. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
       "introduces": [
         {
-          "table": "cd_sessions", 
-          "object": "current_profession_other", 
+          "table": "cd_sessions",
+          "object": "current_profession_other",
           "kind": "column"
         }
-      ], 
-      "hostedState": "applied", 
-      "file": "20260913091000_cd_career_context_other_profession.sql", 
+      ],
+      "hostedState": "applied",
+      "file": "20260913091000_cd_career_context_other_profession.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826123914. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "note": "Two cig_professions rows. Data only: the picker reads whatever rows exist, so the code does not name them and cannot break without them -- the profession list is simply shorter.", 
-      "introduces": [], 
-      "hostedState": "applied", 
-      "file": "20260913092000_cig_security_leadership_professions.sql", 
+      "note": "Two cig_professions rows. Data only: the picker reads whatever rows exist, so the code does not name them and cannot break without them -- the profession list is simply shorter.",
+      "introduces": [],
+      "hostedState": "applied",
+      "file": "20260913092000_cig_security_leadership_professions.sql",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124021. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "file": "20260914090000_sp_uk_vehicle_immobilisation.sql", 
-      "hostedState": "applied", 
-      "introduces": [], 
-      "note": "Introduces NO schema object: it is reference data only -- one sub-jurisdiction (GB-NI), one market pack, one regulated role, one credential type and two derivation rules, all INSERTed into tables that already exist. Nothing in the application references a new column or function because of it, so the parity guard has nothing to gate. It ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has been changed, so the credential is unreachable by any holder until a reviewer signs the pack off. NOT applied hosted.", 
-      "verify": "SELECT code, is_active FROM public.sp_market_packs WHERE code = 'GB-NI';", 
+      "file": "20260914090000_sp_uk_vehicle_immobilisation.sql",
+      "hostedState": "applied",
+      "introduces": [],
+      "note": "Introduces NO schema object: it is reference data only -- one sub-jurisdiction (GB-NI), one market pack, one regulated role, one credential type and two derivation rules, all INSERTed into tables that already exist. Nothing in the application references a new column or function because of it, so the parity guard has nothing to gate. It ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has been changed, so the credential is unreachable by any holder until a reviewer signs the pack off. NOT applied hosted.",
+      "verify": "SELECT code, is_active FROM public.sp_market_packs WHERE code = 'GB-NI';",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124114. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "file": "20260914091000_sp_uae_dubai_cadre_catalogue.sql", 
-      "hostedState": "applied", 
-      "introduces": [], 
-      "note": "Reference data only: twelve further SIRA Security Cadre roles, their twelve cadre-card credential types, nine SIRA courses and their derivation rules. No table, column or function is created. Every row is is_active=false inside the AE-DU pack, which stays legal_review_state='pending'; the migration ABORTS if the pack or any of its credentials has been switched on. NOT applied hosted.", 
-      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'AE\\_DU\\_SIRA\\_CARD\\_%';", 
+      "file": "20260914091000_sp_uae_dubai_cadre_catalogue.sql",
+      "hostedState": "applied",
+      "introduces": [],
+      "note": "Reference data only: twelve further SIRA Security Cadre roles, their twelve cadre-card credential types, nine SIRA courses and their derivation rules. No table, column or function is created. Every row is is_active=false inside the AE-DU pack, which stays legal_review_state='pending'; the migration ABORTS if the pack or any of its credentials has been switched on. NOT applied hosted.",
+      "verify": "SELECT count(*) FROM public.sp_credential_types WHERE code LIKE 'AE\\_DU\\_SIRA\\_CARD\\_%';",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124318. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "file": "20260914092000_sp_uae_abu_dhabi_market_pack.sql", 
-      "hostedState": "applied", 
-      "introduces": [], 
-      "note": "Reference data only: the Abu Dhabi (Ministry of Interior / Private Security Business Department) authority, its regulatory source registered UNREAD, the AE-AZ market pack, seven regulated roles, seven licence credential types and their derivation rules. No schema object is created. The pack ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has changed, because the category list is authored from a regulatory framework nobody in this repository has confirmed against a pinned official page -- that confirmation is the first item of its legal review. NOT applied hosted.", 
-      "verify": "SELECT code, legal_review_state, is_active FROM public.sp_market_packs WHERE code = 'AE-AZ';", 
+      "file": "20260914092000_sp_uae_abu_dhabi_market_pack.sql",
+      "hostedState": "applied",
+      "introduces": [],
+      "note": "Reference data only: the Abu Dhabi (Ministry of Interior / Private Security Business Department) authority, its regulatory source registered UNREAD, the AE-AZ market pack, seven regulated roles, seven licence credential types and their derivation rules. No schema object is created. The pack ships legal_review_state='pending' and is_active=false and the migration ABORTS if either has changed, because the category list is authored from a regulatory framework nobody in this repository has confirmed against a pinned official page -- that confirmation is the first item of its legal review. NOT applied hosted.",
+      "verify": "SELECT code, legal_review_state, is_active FROM public.sp_market_packs WHERE code = 'AE-AZ';",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124459. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
-      "file": "20260915090000_sp_market_pilot_entitlement.sql", 
-      "hostedState": "applied", 
+      "file": "20260915090000_sp_market_pilot_entitlement.sql",
+      "hostedState": "applied",
       "introduces": [
         {
-          "object": "sp_pilot_members", 
+          "object": "sp_pilot_members",
           "kind": "table"
-        }, 
+        },
         {
-          "object": "sp_is_pilot_member", 
+          "object": "sp_is_pilot_member",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_market_access", 
+          "object": "sp_market_access",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_grant_pilot_member", 
+          "object": "sp_grant_pilot_member",
           "kind": "function"
-        }, 
+        },
         {
-          "object": "sp_revoke_pilot_member", 
+          "object": "sp_revoke_pilot_member",
           "kind": "function"
-        }, 
+        },
         {
-          "table": "sp_market_packs", 
-          "object": "pilot_state", 
+          "table": "sp_market_packs",
+          "object": "pilot_state",
           "kind": "column"
-        }, 
+        },
         {
-          "table": "sp_credential_types", 
-          "object": "pilot_state", 
+          "table": "sp_credential_types",
+          "object": "pilot_state",
           "kind": "column"
         }
-      ], 
-      "note": "The internal-pilot market entitlement. Adds sp_market_packs.pilot_state and sp_credential_types.pilot_state as an axis ORTHOGONAL to is_active, a per-user-per-market membership table with admin-only grant and revoke, and the sp_market_access() decision the claim trigger and the candidate read model both consult. It does NOT touch legal_review_state, legal_reviewed_by or is_active for any pack: GB, GB-NI and AE-DU stay pending and publicly inactive, and the migration ABORTS if any of them has gained a legal review, become active, or if a market outside the approved GB / GB-NI / AE-DU scope was opened. Abu Dhabi stays closed. Requires 20260914090000 for the GB-NI pack (its UPDATE is a no-op until then) and 20260914091000 for the full fifteen-category SIRA cadre catalogue.", 
+      ],
+      "note": "The internal-pilot market entitlement. Adds sp_market_packs.pilot_state and sp_credential_types.pilot_state as an axis ORTHOGONAL to is_active, a per-user-per-market membership table with admin-only grant and revoke, and the sp_market_access() decision the claim trigger and the candidate read model both consult. It does NOT touch legal_review_state, legal_reviewed_by or is_active for any pack: GB, GB-NI and AE-DU stay pending and publicly inactive, and the migration ABORTS if any of them has gained a legal review, become active, or if a market outside the approved GB / GB-NI / AE-DU scope was opened. Abu Dhabi stays closed. Requires 20260914090000 for the GB-NI pack (its UPDATE is a no-op until then) and 20260914091000 for the full fifteen-category SIRA cadre catalogue.",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826124732. Applied 2026-08-26 during the owner-approved pending-frontier reconciliation, and confirmed by querying the hosted schema for the objects this migration introduces."
-    }, 
+    },
     {
       "introduces": [
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "cd_record_funnel_event"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "cd_submit_test_feedback"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "cd_assert_session_writable"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "cd_v31_funnel_event_names"
         }
-      ], 
-      "file": "20260916090000_security_hardening_expand.sql", 
-      "hostedState": "applied", 
-      "note": "EXPAND, phase 1 of 2 of the security hardening. Ships on its own, ahead of the application code, deliberately: it ADDS the two governed entry points and the rest of the hardening and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. It is therefore safe to apply hosted while the current main is live, and applying it is the PRECONDITION for merging the application branch. No code on this branch references anything it introduces, so release-parity-check reports no dependency here; once fix/security-hardening-lovable-findings merges, the dependency it then reports is the pairing working as intended. Phase 2 (20260916091000, CONTRACT) withdraws the legacy direct INSERT and arrives with that branch -- it must NOT be applied hosted until the new code is live.", 
-      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');", 
+      ],
+      "file": "20260916090000_security_hardening_expand.sql",
+      "hostedState": "applied",
+      "note": "EXPAND, phase 1 of 2 of the security hardening. Ships on its own, ahead of the application code, deliberately: it ADDS the two governed entry points and the rest of the hardening and withdraws no privilege the currently deployed code exercises -- the only thing main does with cd_test_feedback and cd_v31_funnel_events is INSERT, and INSERT is exactly what survives. It is therefore safe to apply hosted while the current main is live, and applying it is the PRECONDITION for merging the application branch. No code on this branch references anything it introduces, so release-parity-check reports no dependency here; once fix/security-hardening-lovable-findings merges, the dependency it then reports is the pairing working as intended. Phase 2 (20260916091000, CONTRACT) withdraws the legacy direct INSERT and arrives with that branch -- it must NOT be applied hosted until the new code is live.",
+      "verify": "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='public' AND p.proname IN ('cd_record_funnel_event','cd_submit_test_feedback');",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826153409, hosted generated name eb51ffcc-be14-482c-afe7-b656051a7287. SQL equivalence PASS (whitespace-normalised content identical to the canonical file). Applied 2026-08-26 under the owner-approved EXPAND-only step 1 of the expand/contract sequence; confirmed by querying the hosted schema for the objects it introduces, the function ACLs it sets and the search_path pinning it applies. CONTRACT (20260916091000) remains NOT applied hosted."
-    }, 
+    },
     {
-      "note": "CONTRACT, phase 2 of 2, now applied hosted. Introduces no object, which is why `introduces` is empty: it only DROPs the two WITH CHECK (true) INSERT policies and REVOKEs the transitional INSERT grant EXPAND left in place. Its precondition -- that the RPC form of src/lib/career-discovery/v31-feedback.functions.ts is live on main (PR #120) -- held and was verified read-only before apply, together with both governed entry points being anon-executable; the migration also refuses to run at all if EXPAND is missing. The legacy direct write path is now closed: the only write path for anon and authenticated is cd_record_funnel_event() / cd_submit_test_feedback().", 
-      "introduces": [], 
-      "hostedState": "applied", 
-      "file": "20260916091000_security_hardening_contract.sql", 
-      "verify": "SELECT count(*) AS legacy_insert_policies FROM pg_policies WHERE schemaname='public' AND tablename IN ('cd_v31_funnel_events','cd_test_feedback') AND cmd='INSERT';", 
+      "note": "CONTRACT, phase 2 of 2, now applied hosted. Introduces no object, which is why `introduces` is empty: it only DROPs the two WITH CHECK (true) INSERT policies and REVOKEs the transitional INSERT grant EXPAND left in place. Its precondition -- that the RPC form of src/lib/career-discovery/v31-feedback.functions.ts is live on main (PR #120) -- held and was verified read-only before apply, together with both governed entry points being anon-executable; the migration also refuses to run at all if EXPAND is missing. The legacy direct write path is now closed: the only write path for anon and authenticated is cd_record_funnel_event() / cd_submit_test_feedback().",
+      "introduces": [],
+      "hostedState": "applied",
+      "file": "20260916091000_security_hardening_contract.sql",
+      "verify": "SELECT count(*) AS legacy_insert_policies FROM pg_policies WHERE schemaname='public' AND tablename IN ('cd_v31_funnel_events','cd_test_feedback') AND cmd='INSERT';",
       "evidenceSource": "appliedThroughLovable mapping in supabase/migrations-policy.json: canonical file applied verbatim as one tracked Lovable migration, hosted generated version 20260826190538, hosted generated name c2de6c77-f981-49ab-be27-c061c80d1bbd. SQL equivalence PASS (whitespace-normalised content identical to the canonical file; trailing newline only). Applied 2026-08-26 under the owner-approved CONTRACT-only step 2 of the expand/contract sequence, after PR #120 made the governed RPC write path live. Confirmed read-only against the hosted schema: 0 INSERT policies and 0 anon/authenticated INSERT grants on cd_v31_funnel_events and cd_test_feedback, both governed entry points still anon/authenticated/service_role executable, telemetry data preserved (170 funnel / 4 feedback). EXPAND (20260826153409) remains applied."
-    }, 
+    },
     {
-      "file": "20260917090000_superadmin_permanent_account_deletion.sql", 
-      "hostedState": "pending", 
+      "file": "20260917090000_superadmin_permanent_account_deletion.sql",
+      "hostedState": "pending",
       "introduces": [
         {
-          "kind": "table", 
+          "kind": "table",
           "object": "deleted_accounts"
-        }, 
+        },
         {
-          "kind": "table", 
+          "kind": "table",
           "object": "storage_erasure_queue"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "account_deletion_releases"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "account_deletion_only_released"
-        }, 
+        },
         {
-          "kind": "function", 
+          "kind": "function",
           "object": "admin_storage_erasure_backlog"
         }
-      ], 
+      ],
       "note": "Superadmin permanent account deletion. NOT applied hosted and must not be applied before the application branch is live: it replaces admin_delete_user_if_safe(), admin_user_deletion_impact() and admin_set_user_disabled(), and the new impact fields (deleted/detached/preserved/form/already_erased) are what the rewritten confirmation dialog renders. Applying it under the current main would leave the old dialog reading fields it does not know about -- harmless, but the pairing is the point. Not an expand/contract pair: it drops no privilege and removes no column, so it ships as one migration alongside its code. It removes NO foreign key and relaxes NO NOT NULL; the only constraint change anywhere in public is sp_disclosures.focus_claim_id moving from ON DELETE CASCADE to ON DELETE SET NULL, so that erasing a holder's Passport cannot destroy the employer's disclosure record, whose retention is separately governed by docs/passport/privacy-processing-matrix.md."
+    },
+    {
+      "file": "20260918090000_scp_interview_role_packs.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_interview_packs",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_versions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_competencies",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_competency_map",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_core_questions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_question_competencies",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_approved_probes",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_evidence_dimensions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_rating_anchors",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_verification_rules",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_prohibited_areas",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_reviews",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_events",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_content_hash",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_pack_validate",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_can_read",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_can_edit",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_can_write_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_version_is_editable",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_question_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_competency_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_record_event",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_create_pack",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_create_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_touch_draft",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_submit_for_review",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_record_review",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_publish_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_suspend_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_retire_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_confirm_competency_mapping",
+          "kind": "function"
+        }
+      ],
+      "note": "Interview Intelligence Phase 1: the governed Role Interview Pack domain. NOT applied hosted, and it must not be applied without separate owner approval. Purely additive -- thirteen new scp_interview_* tables plus their guards and RPCs; it modifies no existing object and touches neither scp_interview_guide_prompts nor scp_interview_notes, which share the prefix and belong to the assessment domain. It seeds the Vaktare v1 pilot as content_status='draft' with validation_label='pilot_hypothesis' and every competency mapping 'provisional', and the migration ABORTS if that seed could be published without human review. The application code that reads these objects sits behind the platform admin route /admin/interview-role-packs and behind scp_content_roles, so nothing a candidate or an employer can reach depends on this migration. Authored at slot 20260917090000 and moved to 20260918090000 when PR #122 took that slot; only the filename changed.",
+      "verify": "SELECT p.slug, v.content_status, v.validation_label, v.content_hash FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'vaktare-se';"
+    },
+    {
+      "file": "20260919090000_scp_interview_intelligence_registries.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_research_sources",
+          "kind": "table"
+        },
+        {
+          "object": "scp_research_claims",
+          "kind": "table"
+        },
+        {
+          "object": "scp_research_implications",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_methods",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_method_practices",
+          "kind": "table"
+        },
+        {
+          "object": "scp_ai_tasks",
+          "kind": "table"
+        },
+        {
+          "object": "scp_intel_edges",
+          "kind": "table"
+        },
+        {
+          "object": "scp_intel_guard_edge_scope",
+          "kind": "function"
+        }
+      ],
+      "note": "Interview Intelligence Phase 2, part 1: the governed knowledge layer -- Research Evidence Registry, Interview Method Library, AI Task Registry and the Security Recruitment Intelligence Graph. NOT applied hosted; must not be applied without separate owner approval. Purely additive: seven new tables plus one guard, referencing the Phase 1 pack domain and the competency graph read-only. Everything is seeded unreviewed/draft, so nothing claims a review that has not happened, and the edge table deliberately has no weight column and no candidate node kind.",
+      "verify": "SELECT (SELECT count(*) FROM public.scp_research_claims) AS claims, (SELECT count(*) FROM public.scp_ai_tasks WHERE activation_status='active') AS active_tasks, (SELECT count(*) FROM public.scp_intel_edges) AS edges;"
+    },
+    {
+      "file": "20260920090000_scp_interview_runtime.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_interview_cases",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_case_sources",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_source_passages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_runs",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_run_retrievals",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_role_requirements",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_candidate_facts",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_prep_plans",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_prep_items",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_sessions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_session_questions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_session_notes",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_probe_usages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_evidence_proposals",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_evidence",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_findings",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_assessments",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_reports",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_case_events",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_ai_config",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_pack_pilot_grants",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_process_quality",
+          "kind": "view"
+        },
+        {
+          "object": "scp_iv_create_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_add_source",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_mark_sources_ready",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_confirm_transcript_basis",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_ai_run_start",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_ai_run_settle",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_role_requirements",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_candidate_facts",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_prep_plan",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_approve_prep_plan",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_start_session",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_set_session_state",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_evidence_proposals",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_confirm_evidence_proposal",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_author_evidence",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_findings",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_begin_evidence_review",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_assessment",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_report_blockers",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_mark_assessed",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_finalise_report",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_employer_may_read_pack",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_can_read_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_can_write_case",
+          "kind": "function"
+        }
+      ],
+      "note": "Interview Intelligence Phase 2, part 2: the employer runtime -- 21 tables, one process-quality view, the guards and the governed RPCs. NOT applied hosted; must not be applied without separate owner approval. It DEPENDS on 20260919090000 (AI task registry) and 20260918090000 (the pack domain) and aborts if either is missing. It also adds permissive SELECT policies to Phase 1 pack tables so an entitled employer can READ the questions they must ask -- read only, no authoring widened. AI ships disabled (ai_enabled=false) and transcripts ship disabled and double-gated.",
+      "verify": "SELECT (SELECT count(*) FROM public.scp_interview_cases) AS cases, (SELECT ai_enabled FROM public.scp_interview_ai_config) AS ai_enabled, (SELECT transcript_enabled FROM public.scp_interview_ai_config) AS transcript_enabled;"
+    },
+    {
+      "file": "20260921090000_scp_interview_integrity_hardening.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_interview_candidate_corrections",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_panels",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_panel_members",
+          "kind": "table"
+        },
+        {
+          "object": "scp_iv_erase_source",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_candidate_interview_status",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_candidate_interview_detail",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_is_case_candidate",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_pilot_grant_active",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_open",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_submit",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_reveal",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_conclude",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_visible_assessments",
+          "kind": "function"
+        }
+      ],
+      "note": "Integrity hardening: research claims cannot outrun their sources, graph edges carry an assurance level, pilot grants are time-boxed and cohort-scoped, privacy controls that actually execute (four transcript confirmations, required retention, erasure), Panel Review with the individual stage sealed in the database, and the Career Discovery and Passport disclosure firewalls. Additive throughout; drops only its own superseded function signatures."
+    },
+    {
+      "file": "20260922090000_scp_trust_method.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_trust_stages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_ai_tasks",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_prohibitions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_claims",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_case_stage",
+          "kind": "function"
+        }
+      ],
+      "note": "CQrity TRUST registered as a versioned governed method with five stages, each bound to the AI tasks it permits, the human gate that follows, what may not be concluded there, and the research claims that ground AND limit it. Seeds TRUST v1, eight claim cards and four sources -- all draft or pending, none approved. Adds trust_method_id to scp_interview_cases and access_attested_by to scp_research_sources."
+    },
+    {
+      "file": "20260923090000_scp_trust_corrections.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_trust_stage_for_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_case_method_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_eligible_method",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_guard_pin_immutable",
+          "kind": "function"
+        }
+      ],
+      "note": "Owner review corrections for PR #123. Closes the candidate/direct-API disclosure of the internal TRUST tables (platform-admin RLS plus a case-scoped safe projection); enforces the stage-to-AI-task binding inside scp_iv_ai_run_start so a wrong-stage task is refused before a run row exists; and makes versioning real by dropping the single-column UNIQUE(slug) that made a second version impossible, scoping every stage lookup by the case's pinned method, replacing highest-version selection with a fail-closed eligibility rule, and deriving the version from the pinned row instead of storing it twice. DROPS scp_interview_cases.trust_method_version, introduced by the previous migration and never released."
     }
-  ], 
-  "policyVersion": 1, 
-  "activeDirectory": "supabase/migrations", 
+  ],
+  "policyVersion": 1,
+  "activeDirectory": "supabase/migrations",
   "evidenceBaseline": {
-    "source": "supabase/migrations-policy.json appliedThroughLovable", 
-    "note": "Every canonical migration at or below this version has a recorded hosted application in migrations-policy.json and is therefore treated as applied without needing an entry below. Nothing above it is assumed: a migration above the baseline is applied only if it says so AND says how that is known.", 
+    "source": "supabase/migrations-policy.json appliedThroughLovable",
+    "note": "Every canonical migration at or below this version has a recorded hosted application in migrations-policy.json and is therefore treated as applied without needing an entry below. Nothing above it is assumed: a migration above the baseline is applied only if it says so AND says how that is known.",
     "throughVersion": "20260908092000"
   }
 }

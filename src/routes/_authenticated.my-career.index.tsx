@@ -45,6 +45,10 @@ import {
   claimAssessmentAssignment,
 } from "@/lib/job-intelligence/assessment-assignments.functions";
 import { listMyApplications } from "@/lib/job-intelligence/applications.functions";
+import {
+  listMyInterviews,
+  type CandidateInterviewStatus,
+} from "@/lib/interview-intelligence/candidate.functions";
 import { listMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
@@ -67,6 +71,29 @@ import type { ConfidenceLevel } from "@/lib/career-intelligence-engine/types";
  * No new scoring, no schema changes. Confidence is exposed as
  * Low/Medium/High only — the raw score never surfaces.
  */
+/**
+ * The three states a candidate is told about.
+ *
+ * `employer_process_continuing` covers four internal states, and the wording is
+ * chosen to be honest about that rather than to imply a stalled process: the
+ * interview is done and the employer is deciding, which is exactly what is
+ * happening and all the candidate is entitled to know.
+ */
+const CANDIDATE_INTERVIEW_STATUS: Record<CandidateInterviewStatus, { sv: string; en: string }> = {
+  interview_offered: {
+    sv: "Intervju erbjuden — förbered dig inför intervjun",
+    en: "Interview offered — prepare for your interview",
+  },
+  interview_in_progress: {
+    sv: "Intervjun pågår",
+    en: "Interview in progress",
+  },
+  employer_process_continuing: {
+    sv: "Intervjun är genomförd. Arbetsgivarens process fortsätter.",
+    en: "Interview completed. The employer's process continues.",
+  },
+};
+
 export const Route = createFileRoute("/_authenticated/my-career/")({
   ssr: false,
   head: () => ({
@@ -224,12 +251,24 @@ function MyCareerPage() {
   // an applications backend that is briefly unavailable must degrade one
   // number, never the dashboard, hence retry: false and no error UI.
   const fetchMyApplications = useServerFn(listMyApplications);
+  const fetchMyInterviews = useServerFn(listMyInterviews);
   const myApplicationsQ = useQuery({
     queryKey: ["my-career", "applications"],
     queryFn: () => fetchMyApplications(),
     staleTime: 30_000,
     retry: false,
   });
+  // The candidate's own interviews. The status is a coarse projection built in
+  // the database (scp_iv_candidate_interview_status): everything after the
+  // interview itself collapses into one state, because a candidate watching
+  // their case move from evidence review to assessed would be watching the
+  // employer deliberate.
+  const myInterviewsQ = useQuery({
+    queryKey: ["my-career", "interviews"],
+    queryFn: () => fetchMyInterviews(),
+  });
+  const interviews = myInterviewsQ.data ?? [];
+  const nextInterview = interviews.find((i) => i.status !== "employer_process_continuing") ?? null;
 
   // Same query key as MyAcademyWorkCard, so this shares one request.
   const fetchAcademyWork = useServerFn(listMyAcademyWork);
@@ -338,6 +377,44 @@ function MyCareerPage() {
           </p>
         </header>
 
+        {/* ── Next step: an interview is waiting on this person ──
+
+            Above the three cards because it is the one thing on this page with
+            a deadline attached, and only rendered when it exists -- a permanent
+            "no interviews" panel would make an ordinary state look like a
+            shortfall.
+
+            It links to interview INFORMATION, not to the interview: there is
+            nothing for a candidate to do in the employer's workspace, and a
+            link that leads to a permission error is worse than no link. */}
+        {nextInterview && (
+          <section
+            aria-labelledby="next-interview"
+            className="mt-7 rounded-xl border border-border bg-muted/40 p-5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {L(c("Nästa steg", "Next step"), lang)}
+            </p>
+            <h2 id="next-interview" className="mt-1 text-lg font-semibold text-foreground">
+              {L(c("Förbered din intervju", "Prepare for your interview"), lang)}
+              {nextInterview.roleTitle ? ` — ${nextInterview.roleTitle}` : ""}
+            </h2>
+            {nextInterview.employerName && (
+              <p className="mt-0.5 text-sm text-muted-foreground">{nextInterview.employerName}</p>
+            )}
+            <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+              {L(CANDIDATE_INTERVIEW_STATUS[nextInterview.status], lang)}
+            </p>
+            <Link
+              to="/my-career/interviews/$caseId"
+              params={{ caseId: nextInterview.caseId }}
+              className="mt-4 inline-flex h-10 items-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {L(c("Om intervjun", "About this interview"), lang)}
+            </Link>
+          </section>
+        )}
+
         {/* ---------------- Row 1: Passport · Jobs · Profile ----------------
 
             Source of truth for order, on every viewport. The grid places them
@@ -430,6 +507,26 @@ function MyCareerPage() {
                   lang,
                 )}
               </p>
+            )}
+
+            {/* Interview status, on the card the candidate already reads for
+                "where are my applications up to". Not a new card: an interview
+                IS an application's progress, and giving it its own tile would
+                imply the platform runs a second, parallel process. */}
+            {interviews.length > 0 && (
+              <ul className="mt-4 space-y-2 border-t border-border pt-4">
+                {interviews.map((iv) => (
+                  <li key={iv.caseId} className="text-sm">
+                    <p className="font-medium text-foreground">
+                      {iv.roleTitle ?? L(c("Intervju", "Interview"), lang)}
+                      {iv.employerName ? ` · ${iv.employerName}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      {L(CANDIDATE_INTERVIEW_STATUS[iv.status], lang)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
 
             <div className="mt-5 flex flex-wrap gap-2">

@@ -246,6 +246,73 @@ jobs:
       # policy over a table that carries a user_id. The other half runs in the
       # database job, against a replay that reproduces Supabase's own default
       # privileges -- see supabase/tests/security_hardening_test.sql.
+      # Interview Intelligence Phase 1. The database suite proves these
+      # properties of the SCHEMA; this proves them of the REPOSITORY, which is
+      # the half a schema test cannot reach — a prohibited column is added by
+      # editing a migration and an AI provider is enabled by editing a source
+      # file. It asserts Q1–Q8 verbatim and in order, the complete 0–4 anchor
+      # set with level 0 never aggregable, that no total/score/ranking/
+      # threshold/recommendation identifier exists anywhere in the domain, that
+      # no AI provider marker appears, and that no employer surface links to it.
+      - name: Interview Intelligence pack contract check
+        run: bun run interview-pack-contract:check
+
+      # The same invariants, one layer up: what the Role Interview Builder
+      # actually RENDERS. Asserts that every required state (loading, error,
+      # empty, permission-denied, incomplete draft, published, suspended,
+      # retired, unresolved mapping) draws visible text, that no state is
+      # carried by colour alone, that there is no red/green candidate verdict
+      # pair anywhere, that level 0 is explained rather than shown as the
+      # bottom of a scale, and that the UI transition model matches the
+      # database guard exactly — a screen offering a move the database refuses
+      # is a bug the type system cannot catch.
+      - name: Interview Intelligence pack render check
+        run: bun run interview-pack-render:check
+
+      # The AI evaluation harness. Runs 16 synthetic gold cases through the REAL
+      # orchestrator -- same schema validation, same policy validator, same
+      # citation checks the product uses -- and gates on per-metric floors.
+      # The safety metrics are absolute: one prohibited output, one protected-
+      # information leak, one followed prompt injection or one hiring
+      # recommendation fails the build. There is deliberately no composite
+      # quality score, because averaging safety against recall is how a safety
+      # regression gets hidden by an unrelated improvement.
+      - name: Interview Intelligence AI evaluation
+        run: bun run interview-ai-eval:check
+
+      # The Phase 2 source contract. The database suites prove these of the
+      # SCHEMA and the AI evaluation proves them of the ENGINE'S OUTPUT; this
+      # proves them of the REPOSITORY -- the half neither can reach. It asserts
+      # no prohibited identifier exists anywhere in the runtime, the AI engine
+      # or the employer UI; that AI proposals and confirmed evidence remain
+      # separate tables with no client write path between them; that the
+      # TypeScript AI Task Registry and the database registry agree on every
+      # task key and version; that no provider credential is committed and the
+      # shipped default is the deterministic engine; and that the policy
+      # validator still fires on violations AND stays quiet on the product's own
+      # legitimate wording -- a validator that flags correct output gets
+      # switched off, so both directions are tested.
+      - name: Interview Intelligence runtime contract check
+        run: bun run interview-runtime-contract:check
+
+      # The real model adapter, proved against a fake transport with no
+      # credential and no network. Transport failures retry a bounded number of
+      # times; a returned-but-unusable answer is NEVER retried, because
+      # resampling until the model says something acceptable manufactures the
+      # appearance of quality; the same logical request always carries the same
+      # idempotency key; and the credential cannot reach a browser.
+      - name: Interview Intelligence AI provider adapter
+        run: bun run interview-ai-provider:check
+
+      # The answer key must not be writable by the thing it grades. This proves
+      # the gold dataset imports nothing, computes no expectation, and states
+      # its authorship honestly -- currently 0 of 22 cases reviewed by anyone
+      # independent, which means it can prove a regression and cannot prove
+      # correctness. The check prints that limitation on every run so no report
+      # can quote the pass rate without it.
+      - name: Interview Intelligence gold dataset independence
+        run: bun run interview-gold-independence:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
