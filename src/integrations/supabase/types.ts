@@ -6770,7 +6770,6 @@ export type Database = {
           transcript_lawful_basis_statement: string | null
           transcript_purpose_code: string | null
           trust_method_id: string | null
-          trust_method_version: number | null
           updated_at: string
         }
         Insert: {
@@ -6803,7 +6802,6 @@ export type Database = {
           transcript_lawful_basis_statement?: string | null
           transcript_purpose_code?: string | null
           trust_method_id?: string | null
-          trust_method_version?: number | null
           updated_at?: string
         }
         Update: {
@@ -6836,7 +6834,6 @@ export type Database = {
           transcript_lawful_basis_statement?: string | null
           transcript_purpose_code?: string | null
           trust_method_id?: string | null
-          trust_method_version?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -14620,7 +14617,31 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["scp_governance_mode"]
       }
+      scp_trust_case_method_version: {
+        Args: { _case_id: string }
+        Returns: number
+      }
       scp_trust_case_stage: { Args: { _case_id: string }; Returns: string }
+      scp_trust_eligible_method: {
+        Args: { _usage_mode?: string }
+        Returns: string
+      }
+      scp_trust_stage_for_case: {
+        Args: { _case_id: string }
+        Returns: {
+          human_responsibility_sv: string
+          letter: string
+          method_version: number
+          name_en: string
+          name_sv: string
+          ordinal: number
+          permits_ai: boolean
+          prohibitions: string[]
+          purpose_en: string
+          purpose_sv: string
+          stage_key: string
+        }[]
+      }
       set_application_status: {
         Args: { _application_id: string; _new_status: string; _note?: string }
         Returns: {

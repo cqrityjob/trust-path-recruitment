@@ -738,6 +738,115 @@
       ],
       "note": "Interview Intelligence Phase 2, part 2: the employer runtime -- 21 tables, one process-quality view, the guards and the governed RPCs. NOT applied hosted; must not be applied without separate owner approval. It DEPENDS on 20260919090000 (AI task registry) and 20260918090000 (the pack domain) and aborts if either is missing. It also adds permissive SELECT policies to Phase 1 pack tables so an entitled employer can READ the questions they must ask -- read only, no authoring widened. AI ships disabled (ai_enabled=false) and transcripts ship disabled and double-gated.",
       "verify": "SELECT (SELECT count(*) FROM public.scp_interview_cases) AS cases, (SELECT ai_enabled FROM public.scp_interview_ai_config) AS ai_enabled, (SELECT transcript_enabled FROM public.scp_interview_ai_config) AS transcript_enabled;"
+    },
+    {
+      "file": "20260921090000_scp_interview_integrity_hardening.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_interview_candidate_corrections",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_panels",
+          "kind": "table"
+        },
+        {
+          "object": "scp_interview_panel_members",
+          "kind": "table"
+        },
+        {
+          "object": "scp_iv_erase_source",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_candidate_interview_status",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_candidate_interview_detail",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_is_case_candidate",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_pilot_grant_active",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_open",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_submit",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_reveal",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_conclude",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_panel_visible_assessments",
+          "kind": "function"
+        }
+      ],
+      "note": "Integrity hardening: research claims cannot outrun their sources, graph edges carry an assurance level, pilot grants are time-boxed and cohort-scoped, privacy controls that actually execute (four transcript confirmations, required retention, erasure), Panel Review with the individual stage sealed in the database, and the Career Discovery and Passport disclosure firewalls. Additive throughout; drops only its own superseded function signatures."
+    },
+    {
+      "file": "20260922090000_scp_trust_method.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_trust_stages",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_ai_tasks",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_prohibitions",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_stage_claims",
+          "kind": "table"
+        },
+        {
+          "object": "scp_trust_case_stage",
+          "kind": "function"
+        }
+      ],
+      "note": "CQrity TRUST registered as a versioned governed method with five stages, each bound to the AI tasks it permits, the human gate that follows, what may not be concluded there, and the research claims that ground AND limit it. Seeds TRUST v1, eight claim cards and four sources -- all draft or pending, none approved. Adds trust_method_id to scp_interview_cases and access_attested_by to scp_research_sources."
+    },
+    {
+      "file": "20260923090000_scp_trust_corrections.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "scp_trust_stage_for_case",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_case_method_version",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_eligible_method",
+          "kind": "function"
+        },
+        {
+          "object": "scp_trust_guard_pin_immutable",
+          "kind": "function"
+        }
+      ],
+      "note": "Owner review corrections for PR #123. Closes the candidate/direct-API disclosure of the internal TRUST tables (platform-admin RLS plus a case-scoped safe projection); enforces the stage-to-AI-task binding inside scp_iv_ai_run_start so a wrong-stage task is refused before a run row exists; and makes versioning real by dropping the single-column UNIQUE(slug) that made a second version impossible, scoping every stage lookup by the case's pinned method, replacing highest-version selection with a fail-closed eligibility rule, and deriving the version from the pinned row instead of storing it twice. DROPS scp_interview_cases.trust_method_version, introduced by the previous migration and never released."
     }
   ],
   "policyVersion": 1,

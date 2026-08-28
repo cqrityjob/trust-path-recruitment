@@ -355,5 +355,339 @@ BEGIN
     'TM6.5 AI remains disabled');
 END $$;
 
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP TM7 — RLS: candidates and employers cannot read the internal tables'; END $$;
+-- ===========================================================================
+--
+-- Owner review finding 1. The first version granted SELECT to every
+-- `authenticated` identity with USING (true), and a candidate is authenticated.
+-- The candidate route carried a comment saying it "should not be able to reach
+-- that table at all"; the Data API could. A comment is not a policy.
+
+INSERT INTO auth.users (id, email) VALUES
+  ('88880000-0000-4000-8000-0000000000c1', 'trust-candidate@test.local'),
+  ('88880000-0000-4000-8000-0000000000e1', 'trust-employer@test.local')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.employer_memberships (user_id, employer_id, role, status) VALUES
+  ('88880000-0000-4000-8000-0000000000e1','77770000-0000-4000-8000-00000000000a','member','active')
+ON CONFLICT (user_id, employer_id) DO UPDATE SET status = 'active';
+
+DO $$
+DECLARE
+  _n integer;
+  _cand uuid := '88880000-0000-4000-8000-0000000000c1';
+  _emp  uuid := '88880000-0000-4000-8000-0000000000e1';
+BEGIN
+  -- ---- a candidate, using a real authenticated identity -------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _cand::text, true);
+
+  SELECT count(*) INTO _n FROM public.scp_trust_stages;
+  PERFORM pg_temp.ok(_n = 0, format('TM7.1 a CANDIDATE reads zero rows from scp_trust_stages (%s)', _n));
+
+  SELECT count(*) INTO _n FROM public.scp_trust_stage_ai_tasks;
+  PERFORM pg_temp.ok(_n = 0, format('TM7.2 zero from scp_trust_stage_ai_tasks (%s)', _n));
+
+  SELECT count(*) INTO _n FROM public.scp_trust_stage_prohibitions;
+  PERFORM pg_temp.ok(_n = 0, format('TM7.3 zero from scp_trust_stage_prohibitions (%s)', _n));
+
+  SELECT count(*) INTO _n FROM public.scp_trust_stage_claims;
+  PERFORM pg_temp.ok(_n = 0, format('TM7.4 zero from scp_trust_stage_claims (%s)', _n));
+  RESET ROLE;
+
+  -- ---- an ordinary EMPLOYER member gets nothing directly either ----------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _emp::text, true);
+  SELECT count(*) INTO _n FROM public.scp_trust_stages;
+  PERFORM pg_temp.ok(_n = 0,
+    format('TM7.5 an EMPLOYER also reads zero directly — the projection is the only door (%s)', _n));
+  RESET ROLE;
+
+  -- ---- and no policy is permissive any more -------------------------------
+  SELECT count(*) INTO _n FROM pg_policies
+   WHERE tablename LIKE 'scp_trust%' AND qual = 'true';
+  PERFORM pg_temp.ok(_n = 0, format('TM7.6 no TRUST policy uses USING (true) (%s)', _n));
+
+  SELECT count(*) INTO _n FROM pg_policies
+   WHERE tablename LIKE 'scp_trust%' AND qual NOT ILIKE '%is_platform_admin%';
+  PERFORM pg_temp.ok(_n = 0,
+    format('TM7.7 every TRUST policy is platform-admin scoped (%s not)', _n));
+
+  -- ---- anon gets nothing, and holds no grant ------------------------------
+  SELECT count(*) INTO _n FROM information_schema.role_table_grants
+   WHERE grantee = 'anon' AND table_name LIKE 'scp_trust%';
+  PERFORM pg_temp.ok(_n = 0, format('TM7.8 anon holds no grant on any TRUST table (%s)', _n));
+END $$;
+
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP TM8 — the employer projection returns the safe fields only'; END $$;
+-- ===========================================================================
+
+DO $$
+DECLARE
+  _case uuid; _r record; _cols text;
+  _owner uuid := '77770000-0000-4000-8000-000000000001';
+  _cand uuid := '88880000-0000-4000-8000-0000000000c1';
+BEGIN
+  SELECT id INTO _case FROM public.scp_interview_cases
+   WHERE employer_id = '77770000-0000-4000-8000-00000000000a' ORDER BY created_at LIMIT 1;
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  SELECT * INTO _r FROM public.scp_trust_stage_for_case(_case);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_r.stage_key IS NOT NULL,
+    'TM8.1 an employer who can read the case gets the stage through the projection');
+  PERFORM pg_temp.ok(_r.name_sv IS NOT NULL AND _r.purpose_sv IS NOT NULL,
+    'TM8.2 it carries the plain-language name and purpose the banner needs');
+  PERFORM pg_temp.ok(_r.method_version IS NOT NULL,
+    'TM8.3 and the pinned method version');
+
+  -- methodological_basis is ABSENT FROM THE RETURN TYPE, not filtered by the
+  -- caller. No future caller can select it by accident.
+  SELECT string_agg(p.attname, ',') INTO _cols
+    FROM pg_proc f
+    JOIN unnest(f.proallargtypes, f.proargnames) AS p(atttypid, attname) ON true
+   WHERE f.oid = 'public.scp_trust_stage_for_case(uuid)'::regprocedure;
+  PERFORM pg_temp.ok(_cols NOT ILIKE '%methodological%',
+    'TM8.4 methodological_basis is not in the projection''s return type at all');
+  PERFORM pg_temp.ok(_cols NOT ILIKE '%claim%',
+    'TM8.5 nor is any claim link');
+
+  -- A candidate cannot read the case, so the projection returns nothing.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _cand::text, true);
+  PERFORM pg_temp.ok(
+    NOT EXISTS (SELECT 1 FROM public.scp_trust_stage_for_case(_case)),
+    'TM8.6 a candidate gets nothing from the projection either — same answer as the table');
+  RESET ROLE;
+END $$;
+
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP TM9 — stage/task permission enforced at EXECUTION'; END $$;
+-- ===========================================================================
+--
+-- Owner review finding 2. TM2.6 proved the Understand stage has no rows in the
+-- binding table. It did not prove the product refuses to run there, because
+-- scp_iv_ai_run_start never consulted the table. This group attempts every
+-- active task in Understand and checks the database refuses each one.
+
+DO $$
+DECLARE
+  _case uuid; _plan uuid; _session uuid; _task text;
+  _runs_before integer; _runs_after integer;
+  _events_before integer; _events_after integer;
+  _attempted integer := 0; _refused integer := 0;
+  _owner uuid := '77770000-0000-4000-8000-000000000001';
+BEGIN
+  -- A case of its own. TM3 walked its case to the end of the journey, and this
+  -- group needs one sitting in Understand.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  _case := public.scp_iv_create_case(
+    '77770000-0000-4000-8000-00000000000a', 'TRUST-stage-test',
+    (SELECT ver.id FROM public.scp_interview_pack_versions ver
+       JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se'),
+    'K.', NULL, 'EXT-STAGE');
+  RESET ROLE;
+
+  INSERT INTO public.scp_interview_prep_plans (case_id, status, approved_at, approved_by)
+  VALUES (_case, 'approved', now(), _owner) RETURNING id INTO _plan;
+
+  PERFORM set_config('scp_iv.governed_transition', 'on', true);
+  UPDATE public.scp_interview_cases SET status = 'sources_ready' WHERE id = _case;
+  UPDATE public.scp_interview_cases SET status = 'prep_generated' WHERE id = _case;
+  UPDATE public.scp_interview_cases SET status = 'prep_approved' WHERE id = _case;
+  PERFORM set_config('scp_iv.governed_transition', 'off', true);
+  -- scp_iv_start_session makes the move to interview_in_progress itself, and
+  -- refuses to start from anything but an approved plan.
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  _session := public.scp_iv_start_session(_case, 'Testintervjuare');
+  PERFORM public.scp_iv_set_session_state(_session, NULL, 'engage_explain', NULL, NULL);
+  PERFORM pg_temp.ok(public.scp_trust_case_stage(_case) = 'understand',
+    'TM9.1 the case is in U — Understand');
+  RESET ROLE;
+
+  SELECT count(*) INTO _runs_before FROM public.scp_interview_ai_runs WHERE case_id = _case;
+  SELECT count(*) INTO _events_before FROM public.scp_interview_case_events WHERE case_id = _case;
+
+  -- EVERY active task, one at a time.
+  FOR _task IN SELECT task_key FROM public.scp_ai_tasks WHERE activation_status = 'active' ORDER BY 1
+  LOOP
+    _attempted := _attempted + 1;
+    BEGIN
+      SET LOCAL ROLE authenticated;
+      PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+      PERFORM public.scp_iv_ai_run_start(_case, _task, 'deterministic', 'test');
+      RESET ROLE;
+      RAISE EXCEPTION
+        'ASSERTION FAILED: TM9.2 task "%" STARTED in the Understand stage', _task;
+    EXCEPTION WHEN insufficient_privilege THEN
+      RESET ROLE;
+      IF SQLERRM NOT LIKE '%SCP_TRUST_TASK_WRONG_STAGE%'
+         AND SQLERRM NOT LIKE '%SCP_TRUST_TASK_UNBOUND%' THEN
+        RAISE EXCEPTION 'ASSERTION FAILED: TM9.2 task "%" refused for the wrong reason: %',
+          _task, SQLERRM;
+      END IF;
+      _refused := _refused + 1;
+    END;
+  END LOOP;
+
+  PERFORM pg_temp.ok(_attempted > 0 AND _refused = _attempted,
+    format('TM9.2 EVERY active AI task (%s of %s) is refused in Understand — proved at execution, not in a table',
+           _refused, _attempted));
+
+  -- A refused attempt leaves nothing behind.
+  SELECT count(*) INTO _runs_after FROM public.scp_interview_ai_runs WHERE case_id = _case;
+  SELECT count(*) INTO _events_after FROM public.scp_interview_case_events WHERE case_id = _case;
+  PERFORM pg_temp.ok(_runs_after = _runs_before,
+    format('TM9.3 no run row was created by any refused attempt (%s -> %s)', _runs_before, _runs_after));
+  PERFORM pg_temp.ok(_events_after = _events_before,
+    format('TM9.4 and no ledger event (%s -> %s)', _events_before, _events_after));
+
+  -- The SAME task succeeds in the stage that permits it.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM public.scp_iv_set_session_state(_session, NULL, 'account', NULL, NULL);
+  PERFORM pg_temp.ok(public.scp_trust_case_stage(_case) = 'structure',
+    'TM9.5 moving to the account phase puts the case in S — Structure');
+
+  PERFORM public.scp_iv_ai_run_start(_case, 'evidence_extraction', 'deterministic', 'test');
+  PERFORM pg_temp.ok(true,
+    'TM9.6 evidence_extraction, refused a moment ago, now runs — the gate is the STAGE, not the task');
+
+  -- And a task belonging to a different stage is still refused here.
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_ai_run_start(%L, %L, %L, %L)',
+           _case, 'role_requirement_extraction', 'deterministic', 'test'),
+    'SCP_TRUST_TASK_WRONG_STAGE',
+    'TM9.7 a task belonging to Target is refused in Structure, and the error names where it does belong');
+  RESET ROLE;
+END $$;
+
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP TM10 — a v1 case stays v1 after v2 exists'; END $$;
+-- ===========================================================================
+--
+-- Owner review finding 3. A single-column UNIQUE(slug) made a second version
+-- impossible to insert, so "pinning" could never be tested. It is gone.
+
+DO $$
+DECLARE
+  _v1 uuid; _v2 uuid; _v1_case uuid; _v2_case uuid; _packv uuid;
+  _stage record; _n integer;
+  _owner uuid := '77770000-0000-4000-8000-000000000001';
+  _emp uuid := '77770000-0000-4000-8000-00000000000a';
+BEGIN
+  SELECT id INTO _v1 FROM public.scp_interview_methods
+   WHERE slug = 'cqrity-trust' AND version_number = 1;
+  -- The case TM9 left in Structure, so the execution half of this group is
+  -- exercised in a stage where v1 and v2 genuinely differ.
+  SELECT id INTO _v1_case FROM public.scp_interview_cases
+   WHERE employer_id = _emp AND title = 'TRUST-stage-test' LIMIT 1;
+
+  PERFORM pg_temp.ok(
+    (SELECT trust_method_id FROM public.scp_interview_cases WHERE id = _v1_case) = _v1,
+    'TM10.1 the existing case is pinned to TRUST v1');
+
+  -- ---- a v2 fixture, which the old schema could not even hold -------------
+  INSERT INTO public.scp_interview_methods
+    (slug, version_number, name, method_family, purpose, intended_context,
+     supported_behaviours, prohibited_interpretations, product_implementation, approval_state)
+  VALUES ('cqrity-trust', 2, 'CQrity TRUST Interview Method', 'cqrity_trust',
+          'v2-fixture.', 'v2-fixture. Research-grounded design hypothesis.',
+          ARRAY['v2'], ARRAY['v2 är inte vetenskapligt validerad'], 'v2-fixture', 'draft')
+  RETURNING id INTO _v2;
+  PERFORM pg_temp.ok(_v2 IS NOT NULL,
+    'TM10.2 a SECOND method version can now be inserted — UNIQUE(slug) made this impossible before');
+
+  -- v2 gets its own stages, deliberately differing: it permits NOTHING in
+  -- Structure, so "which version governs" is observable rather than academic.
+  INSERT INTO public.scp_trust_stages
+    (method_id, stage_key, ordinal, letter, name_sv, name_en, purpose_sv, purpose_en,
+     methodological_basis, human_responsibility_sv, output_sv)
+  SELECT _v2, s.stage_key, s.ordinal, s.letter, s.name_sv || ' (v2)', s.name_en,
+         s.purpose_sv, s.purpose_en, s.methodological_basis, s.human_responsibility_sv, s.output_sv
+    FROM public.scp_trust_stages s WHERE s.method_id = _v1;
+
+  -- v2 binds evidence_extraction to Trace instead of Structure.
+  INSERT INTO public.scp_trust_stage_ai_tasks (stage_id, ai_task_id, human_gate_sv)
+  SELECT s2.id, t.id, 'v2-gate'
+    FROM public.scp_trust_stages s2, public.scp_ai_tasks t
+   WHERE s2.method_id = _v2 AND s2.stage_key = 'trace' AND t.task_key = 'evidence_extraction';
+
+  -- ---- the v1 case still renders and executes under v1 --------------------
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  SELECT * INTO _stage FROM public.scp_trust_stage_for_case(_v1_case);
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(_stage.method_version = 1,
+    format('TM10.3 the v1 case still RENDERS as v1 after v2 exists (%s)', _stage.method_version));
+  PERFORM pg_temp.ok(_stage.name_sv NOT LIKE '%(v2)%',
+    format('TM10.4 and shows v1''s stage definition, not v2''s (%s)', _stage.name_sv));
+
+  -- Executes under v1 too: evidence_extraction is a Structure task in v1 and a
+  -- Trace task in v2, and the v1 case is in Structure.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM public.scp_iv_ai_run_start(_v1_case, 'evidence_extraction', 'deterministic', 'test');
+  RESET ROLE;
+  PERFORM pg_temp.ok(true,
+    'TM10.5 and EXECUTES under v1''s bindings — the same task would be wrong-stage under v2');
+
+  -- ---- the pin cannot be moved --------------------------------------------
+  PERFORM pg_temp.must_fail(
+    format('UPDATE public.scp_interview_cases SET trust_method_id = %L WHERE id = %L', _v2, _v1_case),
+    'SCP_TRUST_PIN_IMMUTABLE',
+    'TM10.6 the pinned method cannot be moved to v2 — that would rewrite what the interview was');
+
+  -- ---- a NEW case pins v2, deliberately, under the internal-QA rule -------
+  SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
+    JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se';
+
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  _v2_case := public.scp_iv_create_case(_emp, 'v2-fall', _packv, 'K.', NULL, 'EXT-V2');
+  RESET ROLE;
+
+  PERFORM pg_temp.ok(
+    (SELECT trust_method_id FROM public.scp_interview_cases WHERE id = _v2_case) = _v2,
+    'TM10.7 a NEW case pins v2 — the newest eligible version, chosen by rule');
+
+  PERFORM pg_temp.ok(
+    (SELECT trust_method_id FROM public.scp_interview_cases WHERE id = _v1_case) = _v1,
+    'TM10.8 while the old case is untouched by that — two cases, two methods, at once');
+
+  -- ---- the eligibility rule is a rule, not "the highest number" -----------
+  PERFORM pg_temp.must_fail(
+    'SELECT public.scp_trust_eligible_method(''production'')',
+    'SCP_TRUST_NO_APPROVED_METHOD',
+    'TM10.9 production use fails closed — no TRUST version is approved, and newest is not governed');
+
+  PERFORM pg_temp.must_fail(
+    'SELECT public.scp_trust_eligible_method(''whatever'')',
+    'SCP_TRUST_UNKNOWN_USAGE_MODE',
+    'TM10.10 an unrecognised usage mode is refused rather than assumed');
+
+  -- Retiring v2 falls back to v1 rather than to nothing.
+  UPDATE public.scp_interview_methods SET approval_state = 'retired' WHERE id = _v2;
+  PERFORM pg_temp.ok(public.scp_trust_eligible_method('internal_qa') = _v1,
+    'TM10.11 retiring v2 falls back to v1 — retirement actually withdraws a version');
+
+  -- The redundant stored version is gone, so nothing can disagree.
+  SELECT count(*) INTO _n FROM information_schema.columns
+   WHERE table_name = 'scp_interview_cases' AND column_name = 'trust_method_version';
+  PERFORM pg_temp.ok(_n = 0,
+    'TM10.12 the version is derived from the pinned row, not stored a second time');
+END $$;
+
 DO $$ BEGIN RAISE NOTICE 'TRUST METHOD SUITE COMPLETE'; END $$;
 ROLLBACK;

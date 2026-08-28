@@ -1291,9 +1291,9 @@ fi
 
 echo "    ok  ${TRUST_PASSED} CQrity TRUST assertions passed"
 
-if [ "$TRUST_PASSED" -lt 41 ]; then
-  echo "FAIL: expected at least 41 TRUST assertions, only ${TRUST_PASSED} ran." >&2
-  suite_failed "CQrity TRUST method (assertion shortfall: floor 41)"
+if [ "$TRUST_PASSED" -lt 74 ]; then
+  echo "FAIL: expected at least 74 TRUST assertions, only ${TRUST_PASSED} ran." >&2
+  suite_failed "CQrity TRUST method (assertion shortfall: floor 74)"
 fi
 
 # ---------------------------------------------------------------------------

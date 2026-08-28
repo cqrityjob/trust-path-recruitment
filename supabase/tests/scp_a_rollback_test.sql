@@ -234,6 +234,10 @@ DROP FUNCTION IF EXISTS public.scp_iv_panel_conclude(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_visible_assessments(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_guard_panel_preserves_individual();
 DROP FUNCTION IF EXISTS public.scp_trust_case_stage(uuid);
+DROP FUNCTION IF EXISTS public.scp_trust_stage_for_case(uuid);
+DROP FUNCTION IF EXISTS public.scp_trust_case_method_version(uuid);
+DROP FUNCTION IF EXISTS public.scp_trust_eligible_method(text);
+DROP FUNCTION IF EXISTS public.scp_trust_guard_pin_immutable();
 DROP FUNCTION IF EXISTS public.scp_iv_guard_no_career_discovery();
 DROP FUNCTION IF EXISTS public.scp_iv_guard_passport_disclosure();
 -- This one guard lives on ANOTHER domain's table (sp_claims), because that is

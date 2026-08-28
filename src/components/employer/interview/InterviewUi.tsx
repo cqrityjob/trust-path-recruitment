@@ -547,10 +547,7 @@ export function TrustStageBanner({
     readonly purposeSv: string | null;
     readonly humanResponsibilitySv: string | null;
     readonly prohibitions: readonly string[];
-    readonly permittedAiTasks: readonly {
-      readonly taskKey: string;
-      readonly humanGateSv: string;
-    }[];
+    readonly permitsAi: boolean;
     readonly methodVersion: number | null;
   } | null;
 }) {
@@ -586,7 +583,7 @@ export function TrustStageBanner({
         </p>
       )}
 
-      {stage.permittedAiTasks.length === 0 ? (
+      {!stage.permitsAi ? (
         <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
           AI-stödet gör ingenting i det här steget. Kontakten med kandidaten är ditt arbete.
         </p>

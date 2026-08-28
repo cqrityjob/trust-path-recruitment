@@ -1598,7 +1598,12 @@ export interface TrustStageView {
   readonly purposeSv: string | null;
   readonly humanResponsibilitySv: string | null;
   readonly prohibitions: readonly string[];
-  readonly permittedAiTasks: readonly { readonly taskKey: string; readonly humanGateSv: string }[];
+  /**
+   * Whether the stage permits any AI task at all. A boolean rather than the
+   * task list: the individual task keys are internal registry identifiers, and
+   * the banner only needs to say whether AI does anything here.
+   */
+  readonly permitsAi: boolean;
   readonly methodVersion: number | null;
 }
 
@@ -1606,70 +1611,46 @@ export const getTrustStage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
   .handler(async ({ context, data }): Promise<TrustStageView> => {
-    const db = context.supabase;
+    // One call, through the case-scoped projection.
+    //
+    // The previous version read scp_trust_stages, _prohibitions and _ai_tasks
+    // directly and filtered in the caller. That worked only because those
+    // tables were readable by every authenticated identity -- which is the
+    // disclosure the owner review found, since a candidate is authenticated
+    // too. The projection is now the only door: it refuses a case the caller
+    // cannot read, scopes the lookup by the case's PINNED method version, and
+    // does not carry methodological_basis or claim links in its return type at
+    // all.
+    const { data: rows, error } = await context.supabase.rpc("scp_trust_stage_for_case", {
+      _case_id: data.caseId,
+    });
+    if (error) throw new Error(error.message);
 
-    const stageRes = await db.rpc("scp_trust_case_stage", { _case_id: data.caseId });
-    if (stageRes.error) throw new Error(stageRes.error.message);
-    const stageKey = (stageRes.data as unknown as string | null) ?? null;
-
-    const empty: TrustStageView = {
-      stageKey: null,
-      letter: null,
-      ordinal: null,
-      nameSv: null,
-      purposeSv: null,
-      humanResponsibilitySv: null,
-      prohibitions: [],
-      permittedAiTasks: [],
-      methodVersion: null,
-    };
-    if (!stageKey) return empty;
-
-    const caseRes = await db
-      .from("scp_interview_cases")
-      .select("trust_method_version")
-      .eq("id", data.caseId)
-      .maybeSingle();
-
-    const defRes = await db
-      .from("scp_trust_stages")
-      .select("id, stage_key, letter, ordinal, name_sv, purpose_sv, human_responsibility_sv")
-      .eq("stage_key", stageKey)
-      .maybeSingle();
-    if (defRes.error) throw new Error(defRes.error.message);
-    if (!defRes.data) return empty;
-
-    const stageId = defRes.data.id as string;
-
-    const prohibRes = await db
-      .from("scp_trust_stage_prohibitions")
-      .select("statement_sv, display_order")
-      .eq("stage_id", stageId)
-      .order("display_order");
-
-    const tasksRes = await db
-      .from("scp_trust_stage_ai_tasks")
-      .select("human_gate_sv, scp_ai_tasks(task_key)")
-      .eq("stage_id", stageId);
+    const r = ((rows ?? []) as Array<Record<string, unknown>>)[0];
+    if (!r) {
+      return {
+        stageKey: null,
+        letter: null,
+        ordinal: null,
+        nameSv: null,
+        purposeSv: null,
+        humanResponsibilitySv: null,
+        prohibitions: [],
+        permitsAi: false,
+        methodVersion: null,
+      };
+    }
 
     return {
-      stageKey,
-      letter: defRes.data.letter as string,
-      ordinal: defRes.data.ordinal as number,
-      nameSv: defRes.data.name_sv as string,
-      purposeSv: defRes.data.purpose_sv as string,
-      humanResponsibilitySv: defRes.data.human_responsibility_sv as string,
-      prohibitions: ((prohibRes.data ?? []) as Array<Record<string, unknown>>).map(
-        (r) => r.statement_sv as string,
-      ),
-      permittedAiTasks: ((tasksRes.data ?? []) as Array<Record<string, unknown>>).map((r) => {
-        const t = Array.isArray(r.scp_ai_tasks) ? r.scp_ai_tasks[0] : r.scp_ai_tasks;
-        return {
-          taskKey: (t as { task_key?: string } | null)?.task_key ?? "",
-          humanGateSv: r.human_gate_sv as string,
-        };
-      }),
-      methodVersion: (caseRes.data?.trust_method_version as number | null) ?? null,
+      stageKey: r.stage_key as string,
+      letter: r.letter as string,
+      ordinal: r.ordinal as number,
+      nameSv: r.name_sv as string,
+      purposeSv: r.purpose_sv as string,
+      humanResponsibilitySv: (r.human_responsibility_sv as string | null) ?? null,
+      prohibitions: (r.prohibitions as string[] | null) ?? [],
+      permitsAi: Boolean(r.permits_ai),
+      methodVersion: (r.method_version as number | null) ?? null,
     };
   });
 
