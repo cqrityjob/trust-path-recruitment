@@ -301,8 +301,29 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + scp_assessment_invitations (20260831091000): an intent to assess somebody
 #   the platform does not know yet. Deliberately not an assignment -- it holds
 #   no subject and creates no attempt until the invited person claims it.
-if [ "$SCP_TABLES" -ne 74 ]; then
-  echo "FAIL: expected 74 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations), found $SCP_TABLES" >&2
+# + the 13 Role Interview Pack tables of Interview Intelligence Phase 1
+#   (20260918090000): scp_interview_packs, _pack_versions, _pack_competencies,
+#   _pack_competency_map, _core_questions, _question_competencies,
+#   _approved_probes, _evidence_dimensions, _rating_anchors,
+#   _verification_rules, _prohibited_areas, _pack_reviews and _pack_events.
+#   A separate governed CONTENT domain, not a second assessment engine: it holds
+#   no candidate, no attempt and no result, and it leaves the two similarly
+#   named assessment tables (scp_interview_guide_prompts, scp_interview_notes)
+#   exactly as they were.
+# + the Interview Intelligence Phase 2 layers (20260919090000 / 20260920090000):
+#   7 governed-knowledge tables (scp_research_sources / _claims / _implications,
+#   scp_interview_methods / _method_practices, scp_ai_tasks, scp_intel_edges)
+#   and 21 runtime tables (cases, sources, passages, AI runs and retrievals,
+#   extracted requirements and facts, prep plans and items, sessions, session
+#   questions, session notes, probe usages, evidence proposals, confirmed
+#   evidence, findings, assessments, reports, case events, plus the AI config
+#   and pilot-grant tables). The runtime holds candidate interview material and
+#   is tenant-scoped; the knowledge layer is platform content.
+# + scp_interview_candidate_corrections: a candidate's statement that a FACT in
+#   their own material is wrong. Read by a human, never applied automatically,
+#   and structurally unable to reach an assessment or a report.
+if [ "$SCP_TABLES" -ne 122 ]; then
+  echo "FAIL: expected 122 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1151,6 +1172,128 @@ echo "    ok  ${ONB_PASSED} employer onboarding assertions passed"
 if [ "$ONB_PASSED" -lt 26 ]; then
   echo "FAIL: expected at least 26 employer onboarding assertions, only ${ONB_PASSED} ran." >&2
   exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 5n. Interview Intelligence Phase 1 -- the Role Interview Pack domain
+#
+# Runs BEFORE the rollback step: it reads scp_roles, scp_role_versions and
+# scp_competency_versions, all of which the rollback drops.
+# ---------------------------------------------------------------------------
+echo "==> Running Role Interview Pack governance assertions"
+set +e
+IIP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_role_pack_test.sql 2>&1)"
+IIP_RC=$?
+set -e
+
+echo "$IIP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IIP_PASSED="$(echo "$IIP_OUT" | grep -c "ok  " || true)"
+
+if [ "$IIP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Role Interview Pack suite exited with code ${IIP_RC}." >&2
+  echo "$IIP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Role Interview Pack"
+fi
+
+echo "    ok  ${IIP_PASSED} Role Interview Pack assertions passed"
+
+if [ "$IIP_PASSED" -lt 70 ]; then
+  echo "FAIL: expected at least 70 Role Interview Pack assertions, only ${IIP_PASSED} ran." >&2
+  suite_failed "Role Interview Pack (assertion shortfall: floor 70)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5n-b. Interview Intelligence Phase 2 -- the employer runtime, end to end
+#
+# Drives the WHOLE product journey against the governed pack: case, sources,
+# AI run, preparation, human approval, interview, AI-proposed evidence, human
+# confirmation, assessment and an immutable report -- then proves the
+# boundaries around it. Runs BEFORE the rollback step, like the Phase 1 suite.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Intelligence runtime assertions"
+set +e
+IVR_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_runtime_test.sql 2>&1)"
+IVR_RC=$?
+set -e
+
+echo "$IVR_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IVR_PASSED="$(echo "$IVR_OUT" | grep -c "ok  " || true)"
+
+if [ "$IVR_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Intelligence runtime suite exited with code ${IVR_RC}." >&2
+  echo "$IVR_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Intelligence runtime"
+fi
+
+echo "    ok  ${IVR_PASSED} Interview Intelligence runtime assertions passed"
+
+if [ "$IVR_PASSED" -lt 70 ]; then
+  echo "FAIL: expected at least 70 runtime assertions, only ${IVR_PASSED} ran." >&2
+  suite_failed "Interview Intelligence runtime (assertion shortfall: floor 70)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5n-c. Interview Intelligence -- integrity hardening
+#
+# The three honesty controls, tested as negatives: research cannot outrun its
+# sources, the knowledge graph states its own assurance instead of implying
+# certainty, and a pilot grant is a time-boxed authorisation rather than a way
+# around publication review. Also runs BEFORE the rollback step.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Intelligence integrity assertions"
+set +e
+IVI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_integrity_test.sql 2>&1)"
+IVI_RC=$?
+set -e
+
+echo "$IVI_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+IVI_PASSED="$(echo "$IVI_OUT" | grep -c "ok  " || true)"
+
+if [ "$IVI_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Intelligence integrity suite exited with code ${IVI_RC}." >&2
+  echo "$IVI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Intelligence integrity"
+fi
+
+echo "    ok  ${IVI_PASSED} Interview Intelligence integrity assertions passed"
+
+if [ "$IVI_PASSED" -lt 98 ]; then
+  echo "FAIL: expected at least 98 integrity assertions, only ${IVI_PASSED} ran." >&2
+  suite_failed "Interview Intelligence integrity (assertion shortfall: floor 98)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5n-d. CQrity TRUST -- the five-stage method contract
+#
+# TRUST is the binding orchestration model: five stages, each with the AI tasks
+# it permits, the human gate that follows each one, what may not be concluded
+# there, and which research claim grounds it AND which one limits it. The suite
+# is deterministic -- no AI is invoked and no network is touched.
+# ---------------------------------------------------------------------------
+echo "==> Running CQrity TRUST method assertions"
+set +e
+TRUST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_trust_method_test.sql 2>&1)"
+TRUST_RC=$?
+set -e
+
+echo "$TRUST_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+TRUST_PASSED="$(echo "$TRUST_OUT" | grep -c "ok  " || true)"
+
+if [ "$TRUST_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the CQrity TRUST suite exited with code ${TRUST_RC}." >&2
+  echo "$TRUST_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "CQrity TRUST method"
+fi
+
+echo "    ok  ${TRUST_PASSED} CQrity TRUST assertions passed"
+
+if [ "$TRUST_PASSED" -lt 74 ]; then
+  echo "FAIL: expected at least 74 TRUST assertions, only ${TRUST_PASSED} ran." >&2
+  suite_failed "CQrity TRUST method (assertion shortfall: floor 74)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -2619,6 +2762,10 @@ echo "              ${E2E_PASSED} workforce lifecycle E2E assertions,"
 echo "              ${LIB_PASSED} content library + maturity-isolation assertions,"
 echo "              ${TRJ_PASSED} training delivery journey assertions,"
 echo "              ${PM_PASSED} employer people model assertions,"
+echo "              ${IIP_PASSED} Role Interview Pack governance assertions,"
+echo "              ${IVR_PASSED} Interview Intelligence runtime assertions,"
+echo "              ${IVI_PASSED} Interview Intelligence integrity assertions,"
+echo "              ${TRUST_PASSED} CQrity TRUST method assertions,"
 echo "              ${ROLLBACK_PASSED} rollback assertions,"
 echo "              ${SPAP_PASSED} application-disclosure assertions,"
 echo "              ${SPSK_PASSED} skill/language taxonomy assertions,"

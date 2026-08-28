@@ -76,6 +76,12 @@
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
     "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx",
     "sql-security:check": "bun run scripts/sql-security-guard-check.ts",
+  "interview-pack-contract:check": "bun run scripts/interview-pack-contract-check.ts",
+  "interview-pack-render:check": "bun run scripts/interview-pack-render-check.tsx",
+  "interview-ai-eval:check": "bun run scripts/interview-ai-evaluation.ts",
+  "interview-runtime-contract:check": "bun run scripts/interview-runtime-contract-check.ts",
+  "interview-ai-provider:check": "bun run scripts/interview-ai-provider-check.ts",
+  "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts"
   }, 
   "dependencies": {

@@ -59,6 +59,8 @@ import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { RecruitmentPage } from "@/components/academy/AcademyWorkspace";
 import { ApplicationAssessmentPanel } from "@/components/academy/ApplicationAssessmentPanel";
 import { ApplicationPassportPanel } from "@/components/employer/ApplicationPassportPanel";
+import { listInterviewCasesForApplication } from "@/lib/interview-intelligence/runtime.functions";
+import { CaseStatusChip, ValidationChip } from "@/components/employer/interview/InterviewUi";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import {
   getApplicationCvSignedUrl,
@@ -112,12 +114,13 @@ function Candidate360({
   applicationId: string;
   canAssign: boolean;
 }) {
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const candidateFn = useServerFn(getApplicationCandidate);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const hiredEmployeeFn = useServerFn(getHiredEmployeeForApplication);
+  const interviewCasesFn = useServerFn(listInterviewCasesForApplication);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const candidateKey = ["employer", employerId, "application", applicationId, "candidate"];
@@ -126,6 +129,18 @@ function Candidate360({
     queryKey: candidateKey,
     queryFn: () => candidateFn({ data: { applicationId } }),
   });
+
+  // Interview Intelligence cases for THIS application.
+  //
+  // scp_interview_cases.application_id has existed since the runtime migration;
+  // nothing read it, so the application view and the interview workspace never
+  // met. A recruiter had to know both existed and navigate between them by
+  // hand, which is the gap the reuse audit was looking for.
+  const interviewCasesQuery = useQuery({
+    queryKey: ["interview-intelligence", "application", applicationId],
+    queryFn: () => interviewCasesFn({ data: { employerId, applicationId } }),
+  });
+  const interviewCases = interviewCasesQuery.data?.cases ?? [];
 
   // ── WHERE THE HIRED PERSON NOW LIVES ──────────────────────────────────
   //
@@ -398,6 +413,88 @@ function Candidate360({
         )}
       </section>
 
+      {/* ── Structured interview (Interview Intelligence) ───────────── */}
+      {/*  A SEPARATE block from the notes above, not a replacement.
+       *
+       *  Phase 1's coexistence decision holds: scp_interview_notes is the
+       *  assessment-era record of "an interview happened and here is what was
+       *  written down", and it keeps working exactly as before. Interview
+       *  Intelligence is a different thing -- a governed pack, pinned to a
+       *  content hash, with evidence a human confirmed one item at a time --
+       *  and blending the two into one list would tell a recruiter they are the
+       *  same kind of record when they are not.
+       *
+       *  What this shows is PROCESS: which stage the case is at, whether a
+       *  human still owes it a review, and whether the report is final. No
+       *  level, no evidence, no assessment. The application page links into the
+       *  interview; it does not restate it. */}
+      <section className="mt-10" aria-labelledby="candidate-structured-interview">
+        <h2 id="candidate-structured-interview" className="text-lg font-semibold text-foreground">
+          {t("employer.candidate.structuredInterview.heading")}
+        </h2>
+        <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
+          {t("employer.candidate.structuredInterview.lede")}
+        </p>
+
+        {interviewCasesQuery.isLoading ? (
+          <p role="status" className="mt-4 text-sm text-muted-foreground">
+            {t("employer.candidate.structuredInterview.loading")}
+          </p>
+        ) : interviewCases.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-6">
+            <p className="text-sm text-muted-foreground">
+              {t("employer.candidate.structuredInterview.empty")}
+            </p>
+            <Link
+              to="/employer/$employerSlug/interview-intelligence/new"
+              params={{ employerSlug }}
+              search={{ applicationId, jobId: undefined }}
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
+            >
+              {t("employer.candidate.structuredInterview.start")}
+            </Link>
+          </div>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {interviewCases.map((ic) => (
+              <li
+                key={ic.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-background p-3"
+              >
+                <MessagesSquare
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <span className="text-sm font-medium text-foreground">{ic.title}</span>
+                <CaseStatusChip status={ic.status} />
+                <ValidationChip label={ic.validationLabel} />
+                {ic.proposalsAwaitingReview > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {tp(
+                      "employer.candidate.structuredInterview.pending",
+                      ic.proposalsAwaitingReview,
+                    )}
+                  </span>
+                )}
+                <Link
+                  to={
+                    ic.reportFinalised
+                      ? "/employer/$employerSlug/interview-intelligence/$caseId/report"
+                      : "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+                  }
+                  params={{ employerSlug, caseId: ic.id }}
+                  className="ml-auto inline-flex min-h-11 items-center text-xs font-medium text-accent hover:underline"
+                >
+                  {ic.reportFinalised
+                    ? t("employer.candidate.structuredInterview.openReport")
+                    : t("employer.candidate.structuredInterview.open")}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* ── Security Passport ───────────────────────────────────────── */}
       {/*  The section this page has always had, and the same guarantee.
        *
@@ -439,6 +536,47 @@ function Candidate360({
         <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
           {t("employer.candidate.decision.lede")}
         </p>
+        {/* The interview report, referenced rather than restated.
+         *
+         *  §12's requirement, and the reason it is a reference: the decision is
+         *  taken here, and the evidence behind it is a finalised, immutable
+         *  document with its own content hash. Copying its contents into this
+         *  page would create a second version that could drift; naming the hash
+         *  means the person deciding, and anybody reviewing the decision later,
+         *  can tell exactly which document informed it.
+         *
+         *  Every section above keeps its own source identity -- application,
+         *  assessment observations, Passport-verified facts, human-confirmed
+         *  interview evidence -- and nothing is blended into a total. There is
+         *  no overall score anywhere on this page, and this block adds none. */}
+        {interviewCases
+          .filter((ic) => ic.reportFinalised)
+          .map((ic) => (
+            <div
+              key={ic.id}
+              className="mt-4 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm"
+            >
+              <p className="font-medium text-foreground">
+                {t("employer.candidate.decision.interviewReport")}
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                {t("employer.candidate.decision.interviewReportNote")}
+              </p>
+              {ic.reportContentHash && (
+                <p className="mt-2 font-mono text-xs text-muted-foreground">
+                  {ic.reportContentHash.slice(0, 16)}
+                </p>
+              )}
+              <Link
+                to="/employer/$employerSlug/interview-intelligence/$caseId/report"
+                params={{ employerSlug, caseId: ic.id }}
+                className="mt-2 inline-flex min-h-11 items-center text-xs font-medium text-accent hover:underline"
+              >
+                {t("employer.candidate.structuredInterview.openReport")}
+              </Link>
+            </div>
+          ))}
+
         {nextStatuses.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">
             {t("employer.candidate.decision.closed")}

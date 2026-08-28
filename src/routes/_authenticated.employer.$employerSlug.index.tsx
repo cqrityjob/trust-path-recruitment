@@ -36,6 +36,7 @@ import {
   Hourglass,
   Inbox,
   Info,
+  MessagesSquare,
   ShieldCheck,
   Sparkles,
   UserCheck,
@@ -56,6 +57,10 @@ import {
   type EmployerDashboardStats,
 } from "@/lib/job-intelligence/employer-dashboard.functions";
 import { getEmployerOrganisation } from "@/lib/job-intelligence/employer-settings.functions";
+import {
+  getInterviewWorkload,
+  type InterviewWorkload,
+} from "@/lib/interview-intelligence/runtime.functions";
 import {
   listEmployerJobs,
   type EmployerJobRow,
@@ -233,6 +238,7 @@ function EmployerOverview({
   const loadWorkforce = useServerFn(getEmployerWorkforceSummary);
   const loadAssignments = useServerFn(listAssignmentsForEmployer);
   const loadTraining = useServerFn(listTrainingStatus);
+  const loadInterviewWorkload = useServerFn(getInterviewWorkload);
   const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
   const loadReviewBoard = useServerFn(getEmployerReviewBoard);
 
@@ -267,6 +273,13 @@ function EmployerOverview({
   const trainingQuery = useQuery({
     queryKey: ["academy", "training-status", employerId],
     queryFn: () => loadTraining({ data: { employerId } }),
+  });
+  // Shared cache key with the Interview Intelligence workspace, for the same
+  // reason as the assessment pipeline above: one fetch, one set of numbers, and
+  // the overview can never show a count the workspace disagrees with.
+  const interviewQuery = useQuery({
+    queryKey: ["interview-intelligence", "workload", employerId],
+    queryFn: () => loadInterviewWorkload({ data: { employerId } }),
   });
   // Shared cache key with the assessment workspace: one fetch, one set of numbers,
   // and the card can never show a total the workspace disagrees with.
@@ -323,6 +336,18 @@ function EmployerOverview({
     (r) => r.status === "assigned" || r.status === "in_progress",
   ).length;
   const trainingCompletedCount = training.filter((r) => r.status === "completed").length;
+
+  // Interview workload, by process stage. Never a total: summing unrelated
+  // stages produces a number with no meaning that people read as one anyway.
+  const interviews: InterviewWorkload = interviewQuery.data ?? {
+    inPreparation: 0,
+    awaitingPlanApproval: 0,
+    readyToInterview: 0,
+    inEvidenceReview: 0,
+    proposalsAwaitingReview: 0,
+    awaitingReport: 0,
+    reported: 0,
+  };
 
   const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
   const recruitmentAttemptIds = new Set(pipeline.map((r) => r.attemptId));
@@ -429,6 +454,69 @@ function EmployerOverview({
       count: data.draftJobs,
       text: tp("employer.actions.draftJobs", data.draftJobs),
       linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  // Interview Intelligence. Process stages only -- nothing here describes a
+  // candidate, and each row is zero-suppressed like every other action, so an
+  // employer who has never opened the workspace sees none of them.
+  if (interviews.awaitingPlanApproval > 0) {
+    actions.push({
+      key: "interview-plans-to-approve",
+      icon: <MessagesSquare className="h-4 w-4" />,
+      count: interviews.awaitingPlanApproval,
+      text: tp("employer.actions.interviewPlansToApprove", interviews.awaitingPlanApproval),
+      linkProps: {
+        to: "/employer/$employerSlug/interview-intelligence",
+        params: { employerSlug },
+      },
+      actionLabel: t("employer.actions.review"),
+      tone: "todo",
+    });
+  }
+
+  if (interviews.readyToInterview > 0) {
+    actions.push({
+      key: "interviews-ready",
+      icon: <MessagesSquare className="h-4 w-4" />,
+      count: interviews.readyToInterview,
+      text: tp("employer.actions.interviewsReady", interviews.readyToInterview),
+      linkProps: {
+        to: "/employer/$employerSlug/interview-intelligence",
+        params: { employerSlug },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  if (interviews.inEvidenceReview > 0) {
+    actions.push({
+      key: "interview-evidence-to-review",
+      icon: <ShieldCheck className="h-4 w-4" />,
+      count: interviews.inEvidenceReview,
+      text: tp("employer.actions.interviewEvidenceToReview", interviews.inEvidenceReview),
+      linkProps: {
+        to: "/employer/$employerSlug/interview-intelligence",
+        params: { employerSlug },
+      },
+      actionLabel: t("employer.actions.review"),
+      tone: "todo",
+    });
+  }
+
+  if (interviews.awaitingReport > 0) {
+    actions.push({
+      key: "interview-reports-to-finalise",
+      icon: <FileCheck2 className="h-4 w-4" />,
+      count: interviews.awaitingReport,
+      text: tp("employer.actions.interviewReportsToFinalise", interviews.awaitingReport),
+      linkProps: {
+        to: "/employer/$employerSlug/interview-intelligence",
+        params: { employerSlug },
+      },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
     });
@@ -790,6 +878,54 @@ function EmployerOverview({
               label: t("employer.overview.card.development.action.participants"),
               linkProps: {
                 to: "/employer/$employerSlug/training/participants",
+                params: { employerSlug },
+              },
+            },
+          ]}
+        />
+
+        {/* Interview Intelligence, in the same card family as the four above
+            and at the same weight. Three PROCESS counts and nothing else: no
+            candidate is named, described, scored or compared here, and there is
+            no total, because a sum of unrelated stages is a number people read
+            as a measure of something. */}
+        <PrimaryCard
+          icon={<MessagesSquare className="h-4 w-4" />}
+          title={t("employer.overview.card.interviews.title")}
+          body={t("employer.overview.card.interviews.body")}
+          linkProps={{
+            to: "/employer/$employerSlug/interview-intelligence",
+            params: { employerSlug },
+          }}
+          stats={[
+            {
+              label: t("employer.overview.card.interviews.stat.preparation"),
+              value: interviews.inPreparation + interviews.awaitingPlanApproval,
+              loading: interviewQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.interviews.stat.ready"),
+              value: interviews.readyToInterview,
+              loading: interviewQuery.isLoading,
+            },
+            {
+              label: t("employer.overview.card.interviews.stat.evidence"),
+              value: interviews.inEvidenceReview,
+              loading: interviewQuery.isLoading,
+            },
+          ]}
+          actions={[
+            {
+              label: t("employer.overview.card.interviews.action.open"),
+              linkProps: {
+                to: "/employer/$employerSlug/interview-intelligence",
+                params: { employerSlug },
+              },
+            },
+            {
+              label: t("employer.overview.card.interviews.action.create"),
+              linkProps: {
+                to: "/employer/$employerSlug/interview-intelligence/new",
                 params: { employerSlug },
               },
             },
