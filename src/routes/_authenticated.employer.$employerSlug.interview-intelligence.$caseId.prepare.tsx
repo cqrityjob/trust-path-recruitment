@@ -333,13 +333,30 @@ function Page() {
         )}
       </section>
 
-      {/* ---- 2. AI preparation ---- */}
+      {/* ---- 2. Preparation ---- */}
       <section className="mt-10" aria-labelledby="s-prep">
         <h2 id="s-prep" className="text-lg font-semibold text-foreground">
-          2. AI-förberedelse
+          2. Förberedelse
         </h2>
 
-        {d.status === "sources_ready" && (
+        {/* An AI control that cannot run must not look like one. The flag used
+            to be OR'd with true, so this button rendered as executable however
+            the governed configuration was set, and clicking it produced a
+            runtime failure. The structured interview does not need it: the
+            questions, probes and anchors come from the governed pack. */}
+        {!d.aiAvailable && (
+          <div className="mt-3 max-w-3xl">
+            <Panel tone="neutral" title="AI-stöd är ännu inte aktiverat i pilotversionen">
+              <p>
+                Ni genomför intervjun med det styrda frågeunderlaget nedan. Frågorna, de godkända
+                följdfrågorna och beteendeexemplen kommer från rollpaketet och ändras inte av att
+                AI-stödet är avstängt.
+              </p>
+            </Panel>
+          </div>
+        )}
+
+        {d.aiAvailable && d.status === "sources_ready" && (
           <div className="mt-3">
             <button
               type="button"

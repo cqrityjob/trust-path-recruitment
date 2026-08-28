@@ -14146,6 +14146,7 @@ export type Database = {
           _latency_ms?: number
           _output_tokens?: number
           _provider_mode?: string
+          _resolved_model?: string
           _raw_response?: Json
           _run_id: string
           _status: string
@@ -14159,6 +14160,7 @@ export type Database = {
           _input_hash?: string
           _model: string
           _provider: string
+          _provider_mode?: string
           _raw_request?: Json
           _task: string
         }

@@ -878,7 +878,10 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         // NULL is honest: plenty of good practice is craft, not literature.
         hasResearchClaim: p.claim_id !== null,
       })),
-      aiAvailable: Boolean(configRes.data?.ai_enabled) || true,
+      // The governed flag, and nothing else. This read `|| true` -- so the
+      // screen reported AI as available whatever the configuration said, and
+      // offered a control whose only possible outcome was a runtime failure.
+      aiAvailable: Boolean(configRes.data?.ai_enabled),
     };
   });
 
@@ -984,9 +987,12 @@ function chooseEngine() {
   return {
     provider: selected.provider,
     mode: selected.mode,
-    // What goes in the run's provenance columns.
+    // What goes in the run's provenance columns. Two different facts: the
+    // vendor, and the exact model. This used to write the provider NAME into
+    // the model column for real-model runs, so a run recorded "anthropic" as
+    // its model and could never be reproduced or counted in an evaluation.
     providerName: selected.provider.name,
-    modelName: selected.mode === "synthetic" ? "deterministic-rules-1.0.0" : selected.provider.name,
+    modelName: selected.provider.modelId,
   };
 }
 
@@ -1111,6 +1117,9 @@ export const runPreparation = createServerFn({ method: "POST" })
         _task: taskKey,
         _provider: engine.providerName,
         _model: engine.modelName,
+        // The gate lives in the database: a non-synthetic mode is refused
+        // outright while scp_interview_ai_config.ai_enabled is false.
+        _provider_mode: engine.mode,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -1143,6 +1152,9 @@ export const runPreparation = createServerFn({ method: "POST" })
         _cost_micros: result.usage.costMicros,
         _withheld_passages: result.quarantinedPassages as never,
         _provider_mode: result.providerMode,
+        // The provider's own answer beats the start-time intent, and only
+        // then is the stored id marked provider-confirmed.
+        _resolved_model: result.resolvedModel ?? undefined,
       });
 
       // Carried to the caller on every path, including failure: a recruiter
@@ -1399,6 +1411,9 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _task: "evidence_extraction",
         _provider: engine.providerName,
         _model: engine.modelName,
+        // The gate lives in the database: a non-synthetic mode is refused
+        // outright while scp_interview_ai_config.ai_enabled is false.
+        _provider_mode: engine.mode,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -1429,6 +1444,8 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
         _withheld_passages: [...result.quarantinedPassages, ...screenedNotes.quarantined] as never,
+        _provider_mode: result.providerMode,
+        _resolved_model: result.resolvedModel ?? undefined,
       });
 
       // Carried to the caller on every path, including failure: a recruiter

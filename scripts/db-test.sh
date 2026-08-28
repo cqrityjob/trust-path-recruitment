@@ -1247,6 +1247,38 @@ if [ "$START_PASSED" -lt 32 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5i. The AI execution gate and model provenance
+#
+# ai_enabled was documented as THE gate and enforced nowhere, and the run row
+# recorded the provider NAME in its model column. Both are database-boundary
+# facts, so both are tested here rather than in the UI: the gate holds at run
+# start, at settlement and at the table, the deterministic engine keeps
+# working, and the structured interview stays reachable with AI off.
+# ---------------------------------------------------------------------------
+echo "==> Running AI gate and provenance assertions"
+set +e
+AIG_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_ai_gate_test.sql 2>&1)"
+AIG_RC=$?
+set -e
+
+echo "$AIG_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+AIG_PASSED="$(echo "$AIG_OUT" | grep -c "ok  " || true)"
+
+if [ "$AIG_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the AI gate suite exited with code ${AIG_RC}." >&2
+  echo "$AIG_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "AI gate and provenance"
+fi
+
+echo "    ok  ${AIG_PASSED} AI gate and provenance assertions passed"
+
+if [ "$AIG_PASSED" -lt 27 ]; then
+  echo "FAIL: expected at least 27 AI gate assertions, only ${AIG_PASSED} ran." >&2
+  suite_failed "AI gate and provenance (assertion shortfall: floor 27)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"

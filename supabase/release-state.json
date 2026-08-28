@@ -25,6 +25,31 @@
       ],
       "note": "P0 from owner UAT: the new-interview selector and scp_iv_create_case answered different questions, so a pack could be offered and then refused. Introduces the single shared start contract both now call. Not applied hosted.",
       "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('scp_iv_case_start_basis','scp_iv_startable_pack_versions','scp_iv_employer_can_start_interviews');"
+    },
+    {
+      "file": "20260927090000_scp_interview_ai_gate_and_provenance.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "table": "scp_interview_ai_runs",
+          "object": "model_confirmed_by_provider",
+          "kind": "column"
+        },
+        {
+          "object": "scp_iv_ai_real_model_permitted",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_guard_ai_disabled",
+          "kind": "function"
+        },
+        {
+          "object": "scp_iv_record_manual_prep_plan",
+          "kind": "function"
+        }
+      ],
+      "note": "Enforces scp_interview_ai_config.ai_enabled at the database boundary (run start, settlement and the table), separates the exact model id from the provider name in run provenance, and adds the manual preparation path so the structured interview stays reachable while AI is disabled. Does not enable AI. Not applied hosted.",
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';"
     }
   ],
   "policyVersion": 2,

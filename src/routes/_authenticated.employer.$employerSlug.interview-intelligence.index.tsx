@@ -5,6 +5,7 @@
 // anything about a candidate.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useT } from "@/i18n/context";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
@@ -21,6 +22,12 @@ import {
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
 
+/** Bilingual copy for this screen. The interview module was built Swedish-first
+ *  and its shell already switches language, so a Swedish page under an English
+ *  chrome was the visible half of the gap. */
+const c = (sv: string, en: string) => ({ sv, en });
+const L = (v: { sv: string; en: string }, lang: "sv" | "en") => v[lang];
+
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
@@ -28,6 +35,7 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { lang } = useT();
   const listFn = useServerFn(listInterviewCases);
 
   const q = useQuery({
@@ -63,15 +71,28 @@ function Page() {
           Interview Intelligence
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Strukturerade, evidensbaserade intervjuer mot ett styrt rollpaket. AI förbereder,
-          extraherar och föreslår. Människor bekräftar, bedömer och beslutar.
+          {L(
+            c(
+              "Strukturerade, evidensbaserade intervjuer mot ett styrt rollpaket. AI förbereder, extraherar och föreslår. Människor bekräftar, bedömer och beslutar.",
+              "Structured, evidence-based interviews against a governed role package. AI prepares, extracts and suggests. People confirm, assess and decide.",
+            ),
+            lang,
+          )}
         </p>
       </header>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label="Aktiva intervjuer" value={active.length} />
-        <Stat label="Väntar på evidensgranskning" value={awaiting.length} tone="attention" />
-        <Stat label="Färdiga rapporter" value={done.length} tone="confirmed" />
+        <Stat label={L(c("Aktiva intervjuer", "Active interviews"), lang)} value={active.length} />
+        <Stat
+          label={L(c("Väntar på evidensgranskning", "Awaiting evidence review"), lang)}
+          value={awaiting.length}
+          tone="attention"
+        />
+        <Stat
+          label={L(c("Färdiga rapporter", "Completed reports"), lang)}
+          value={done.length}
+          tone="confirmed"
+        />
       </div>
 
       <div className="mt-6">
@@ -81,13 +102,13 @@ function Page() {
           search={{ applicationId: undefined, jobId: undefined }}
           className={BUTTON}
         >
-          Ny intervju
+          {L(c("Ny intervju", "New interview"), lang)}
         </Link>
       </div>
 
       <section className="mt-8" aria-labelledby="ii-cases-heading">
         <h2 id="ii-cases-heading" className="text-lg font-semibold text-foreground">
-          Intervjuer
+          {L(c("Intervjuer", "Interviews"), lang)}
         </h2>
 
         <div className="mt-4">
@@ -95,28 +116,41 @@ function Page() {
           {q.isError && <State kind="error" message={interviewErrorMessage(q.error)} />}
           {q.isSuccess && cases.length === 0 && (
             <State kind="empty">
-              Inga intervjuer ännu. Skapa en för att förbereda, genomföra och dokumentera en
-              strukturerad intervju.
+              {L(
+                c(
+                  "Inga intervjuer ännu. Skapa en för att förbereda, genomföra och dokumentera en strukturerad intervju.",
+                  "No interviews yet. Create one to prepare, conduct and document a structured interview.",
+                ),
+                lang,
+              )}
             </State>
           )}
 
           {q.isSuccess && cases.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[760px] text-left text-sm">
-                <caption className="sr-only">Intervjuer med status och väntande granskning</caption>
+                <caption className="sr-only">
+                  {L(
+                    c(
+                      "Intervjuer med status och väntande granskning",
+                      "Interviews with status and pending review",
+                    ),
+                    lang,
+                  )}
+                </caption>
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-3">
-                      Intervju
+                      {L(c("Intervju", "Interview"), lang)}
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      Rollpaket
+                      {L(c("Rollpaket", "Role package"), lang)}
                     </th>
                     <th scope="col" className="px-4 py-3">
                       Status
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      Väntar på granskning
+                      {L(c("Väntar på granskning", "Awaiting review"), lang)}
                     </th>
                   </tr>
                 </thead>
@@ -159,11 +193,18 @@ function Page() {
       </section>
 
       <div className="mt-8 max-w-3xl">
-        <Panel tone="work" title="Vad produkten inte gör">
+        <Panel
+          tone="work"
+          title={L(c("Vad produkten inte gör", "What this product does not do"), lang)}
+        >
           <p>
-            Ingen totalpoäng, ingen rangordning, ingen automatisk rekommendation och inget
-            anställningsbeslut. Underlaget är beslutsstöd; beslutet fattas och dokumenteras av
-            behörig människa hos er.
+            {L(
+              c(
+                "Ingen totalpoäng, ingen rangordning, ingen automatisk rekommendation och inget anställningsbeslut. Underlaget är beslutsstöd; beslutet fattas och dokumenteras av behörig människa hos er.",
+                "No total score, no ranking, no automatic recommendation and no hiring decision. This is decision support; the decision is made and documented by an authorised person at your organisation.",
+              ),
+              lang,
+            )}
           </p>
         </Panel>
       </div>

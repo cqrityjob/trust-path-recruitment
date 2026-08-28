@@ -175,6 +175,16 @@ jobs:
       - name: Release parity bookkeeping check
         run: bun run release-parity:check
 
+      # Five defects this repository actually shipped: seven interview routes
+      # highlighting "Tester & bedömningar"; `ai_enabled || true` rendering an
+      # AI control that could only fail; the provider NAME stored as the model
+      # id; the new-interview selector built from a generic RLS read so it
+      # offered packs create then refused; and copy demanding a
+      # "pilotmedgivande" the owner decision had removed. Source-only and
+      # deterministic; it self-tests by failing when any of them is restored.
+      - name: Interview UX and safety contract guard
+        run: bun run interview-ux-contract:check
+
       # Owner decision 3 forbids claiming verification with an authority,
       # government endorsement, cross-border equivalence or Arabic legal
       # review. It looks for CLAIMS, not for authority names — truthful

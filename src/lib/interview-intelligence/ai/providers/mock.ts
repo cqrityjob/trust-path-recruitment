@@ -134,6 +134,9 @@ interface GovernedContext {
 
 export class MockAiProvider implements AiProvider {
   readonly name = "mock";
+  /** The deterministic engine names its own version, so a synthetic run is
+   *  as reproducible as a model run and can never be mistaken for one. */
+  readonly modelId = "deterministic-rules-1.0.0";
 
   async complete(request: AiRequest): Promise<AiResponse> {
     const ctx = (request.governedContext ?? {}) as GovernedContext;

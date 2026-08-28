@@ -203,7 +203,19 @@ export interface OrchestratorResult {
   readonly abstentionReason: string | null;
   readonly failureReason: string | null;
   readonly violations: readonly PolicyViolation[];
+  /**
+   * The EXACT model identifier, never the provider name. On a path that never
+   * reached the provider this is the configured intent; where the provider
+   * answered it is what the provider reported.
+   */
   readonly model: string;
+  /**
+   * What the PROVIDER itself reported, or null when the run never reached one.
+   * Settlement prefers this over the start-time intent and marks the stored id
+   * provider-confirmed, so a shadow evaluation can count only runs whose model
+   * is known rather than assumed.
+   */
+  readonly resolvedModel: string | null;
   readonly usage: { inputTokens: number; outputTokens: number; costMicros: number };
   readonly latencyMs: number;
   readonly rawResponse: unknown;
@@ -305,7 +317,8 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       abstentionReason: null,
       failureReason: `Task ${task.key} does not require human review; refusing to execute it.`,
       violations: [],
-      model: provider.name,
+      model: provider.modelId,
+      resolvedModel: null,
       usage: empty,
       latencyMs: 0,
       rawResponse: null,
@@ -341,7 +354,8 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
         `(${quarantinedPassages.length} stycke(n) undanhölls). Läs källan själv och bedöm den manuellt.`,
       failureReason: null,
       violations: [],
-      model: provider.name,
+      model: provider.modelId,
+      resolvedModel: null,
       usage: empty,
       latencyMs: 0,
       rawResponse: null,
@@ -372,7 +386,8 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       abstentionReason: null,
       failureReason: error instanceof Error ? error.message : String(error),
       violations: [],
-      model: provider.name,
+      model: provider.modelId,
+      resolvedModel: null,
       usage: empty,
       latencyMs: Date.now() - started,
       rawResponse: null,
@@ -394,6 +409,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       failureReason: `The response was not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
       violations: [],
       model: raw.model,
+      resolvedModel: raw.model,
       usage: raw.usage,
       latencyMs,
       rawResponse: { text: raw.text.slice(0, 4000) },
@@ -413,6 +429,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       failureReason: null,
       violations: [],
       model: raw.model,
+      resolvedModel: raw.model,
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
@@ -433,6 +450,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
         .join("; "),
       violations: [],
       model: raw.model,
+      resolvedModel: raw.model,
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
@@ -466,6 +484,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
       failureReason: violations.map((v) => `${v.kind}: ${v.detail}`).join(" | "),
       violations,
       model: raw.model,
+      resolvedModel: raw.model,
       usage: raw.usage,
       latencyMs,
       rawResponse: parsed,
@@ -481,6 +500,7 @@ export async function runAiTask(input: RunInput): Promise<OrchestratorResult> {
     failureReason: null,
     violations: [],
     model: raw.model,
+    resolvedModel: raw.model,
     usage: raw.usage,
     latencyMs,
     rawResponse: parsed,
