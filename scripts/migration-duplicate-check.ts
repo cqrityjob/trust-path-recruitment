@@ -57,7 +57,9 @@ function normalise(sql: string): string {
 }
 
 const hashOf = (dir: string, file: string): string =>
-  createHash("sha256").update(normalise(readFileSync(join(dir, file), "utf8"))).digest("hex");
+  createHash("sha256")
+    .update(normalise(readFileSync(join(dir, file), "utf8")))
+    .digest("hex");
 
 const activeFiles = readdirSync(policy.activeDirectory)
   .filter((f) => f.endsWith(".sql"))

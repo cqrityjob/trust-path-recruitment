@@ -313,11 +313,10 @@ jobs:
       - name: Interview Intelligence gold dataset independence
         run: bun run interview-gold-independence:check
 
-      # Lovable historically synced 18 content-identical generated copies.
-      # They are a closed, hosted-verified legacy set because removing them in
-      # isolation breaks the historical dependency order. The terminal ledger
-      # migration reconciles their seed events. Every new unrecorded duplicate
-      # fails here and must use canonical migration + appliedThroughLovable.
+      # The legacy generated chain (Lovable's content-identical and partially
+      # overlapping re-issues) was retired to supabase/archive/parked-migrations
+      # on 2026-08-28. This guard now tolerates NO content-equivalent pair in
+      # the active path, and fails if parked content returns under any name.
       - name: Migration content-duplicate check
         run: bun run migrations-duplicate:check
 
@@ -413,9 +412,10 @@ jobs:
           echo "PostgreSQL did not become ready in time" >&2
           exit 1
 
-      # Replays every migration in order, asserts the failure baseline has not
-      # moved, runs supabase/tests/scp_a1_domain_model_test.sql (83 assertions)
-      # and supabase/tests/scp_a_rollback_test.sql (15 assertions), and fails
-      # the job on any assertion failure or on a shortfall in assertion count.
+      # Replays every active migration in order under the STRICT replay
+      # contract — every file must apply cleanly, there is no expected-failure
+      # allowlist — then runs the full assertion-suite sequence and the
+      # rollback verification, failing the job on any migration failure, any
+      # assertion failure or a shortfall in assertion count.
       - name: Migration replay + database assertions + rollback verification
         run: bash scripts/db-test.sh
