@@ -897,11 +897,11 @@
       "hostedName": "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3",
       "appliedAt": "2026-07-18T15:36:33Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260718153633';"
     },
     {
@@ -911,11 +911,11 @@
       "hostedName": "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153",
       "appliedAt": "2026-07-20T07:20:17Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260720072017';"
     },
     {
@@ -925,11 +925,11 @@
       "hostedName": "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c",
       "appliedAt": "2026-07-24T10:16:10Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260724101610';"
     },
     {
@@ -939,11 +939,11 @@
       "hostedName": "45a611f0-6060-4479-8c7c-36ddc5d85eb5",
       "appliedAt": "2026-07-31T10:55:31Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260731105531_45a611f0-6060-4479-8c7c-36ddc5d85eb5.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260731105531_45a611f0-6060-4479-8c7c-36ddc5d85eb5.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260731105531';"
     },
     {
@@ -953,11 +953,11 @@
       "hostedName": "c4c23c34-4fcb-4691-b9dd-de2d12a912b9",
       "appliedAt": "2026-07-31T10:56:25Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260731105625_c4c23c34-4fcb-4691-b9dd-de2d12a912b9.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260731105625_c4c23c34-4fcb-4691-b9dd-de2d12a912b9.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260731105625';"
     },
     {
@@ -967,11 +967,11 @@
       "hostedName": "b8f08ec6-eeb3-4acd-baa7-762de05a3b44",
       "appliedAt": "2026-08-04T06:36:01Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260804063601_b8f08ec6-eeb3-4acd-baa7-762de05a3b44.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260804063601_b8f08ec6-eeb3-4acd-baa7-762de05a3b44.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260804063601';"
     },
     {
@@ -981,11 +981,11 @@
       "hostedName": "54aff8d4-a8fe-4904-8f49-30025561d9b8",
       "appliedAt": "2026-08-05T05:30:26Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805053026_54aff8d4-a8fe-4904-8f49-30025561d9b8.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805053026_54aff8d4-a8fe-4904-8f49-30025561d9b8.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805053026';"
     },
     {
@@ -995,11 +995,11 @@
       "hostedName": "64cee415-920d-4d95-9b9a-65488066cfbd",
       "appliedAt": "2026-08-05T05:34:16Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805053416_64cee415-920d-4d95-9b9a-65488066cfbd.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805053416_64cee415-920d-4d95-9b9a-65488066cfbd.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805053416';"
     },
     {
@@ -1009,11 +1009,11 @@
       "hostedName": "505b877a-5596-493d-a7b2-5c2e8e35192c",
       "appliedAt": "2026-08-05T05:36:28Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805053628_505b877a-5596-493d-a7b2-5c2e8e35192c.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805053628_505b877a-5596-493d-a7b2-5c2e8e35192c.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805053628';"
     },
     {
@@ -1023,11 +1023,11 @@
       "hostedName": "06bf64f1-6c91-4331-a7cd-2f91a28fd8f4",
       "appliedAt": "2026-08-05T05:40:10Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805054010_06bf64f1-6c91-4331-a7cd-2f91a28fd8f4.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805054010_06bf64f1-6c91-4331-a7cd-2f91a28fd8f4.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805054010';"
     },
     {
@@ -1037,11 +1037,11 @@
       "hostedName": "a764df1f-735a-42a9-a86d-36199159b65e",
       "appliedAt": "2026-08-05T05:42:36Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805054236_a764df1f-735a-42a9-a86d-36199159b65e.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805054236_a764df1f-735a-42a9-a86d-36199159b65e.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805054236';"
     },
     {
@@ -1051,11 +1051,11 @@
       "hostedName": "7595e4fa-c1e1-44d6-b389-a117aa34789f",
       "appliedAt": "2026-08-05T05:44:09Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805054409_7595e4fa-c1e1-44d6-b389-a117aa34789f.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805054409_7595e4fa-c1e1-44d6-b389-a117aa34789f.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805054409';"
     },
     {
@@ -1065,11 +1065,11 @@
       "hostedName": "e7c94245-d141-468e-9c5d-9d479d6a322a",
       "appliedAt": "2026-08-05T05:48:37Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805054837_e7c94245-d141-468e-9c5d-9d479d6a322a.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805054837_e7c94245-d141-468e-9c5d-9d479d6a322a.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805054837';"
     },
     {
@@ -1079,11 +1079,11 @@
       "hostedName": "f8dcce61-6485-4205-babe-0a6c7dfca734",
       "appliedAt": "2026-08-05T05:49:15Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805054915_f8dcce61-6485-4205-babe-0a6c7dfca734.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805054915_f8dcce61-6485-4205-babe-0a6c7dfca734.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805054915';"
     },
     {
@@ -1093,11 +1093,11 @@
       "hostedName": "68826607-5d85-490f-890b-367e2dbbd135",
       "appliedAt": "2026-08-05T05:50:49Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260805055049_68826607-5d85-490f-890b-367e2dbbd135.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260805055049_68826607-5d85-490f-890b-367e2dbbd135.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260805055049';"
     },
     {
@@ -1107,11 +1107,11 @@
       "hostedName": "aa33afbd-687d-4c68-96d3-1c7b65056086",
       "appliedAt": "2026-08-14T05:46:17Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260814054617_aa33afbd-687d-4c68-96d3-1c7b65056086.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260814054617_aa33afbd-687d-4c68-96d3-1c7b65056086.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260814054617';"
     },
     {
@@ -1121,11 +1121,11 @@
       "hostedName": "9ae58010-10dc-4d5f-901f-cc7fa3eecdf4",
       "appliedAt": "2026-08-25T16:41:05Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260825164105_9ae58010-10dc-4d5f-901f-cc7fa3eecdf4.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260825164105_9ae58010-10dc-4d5f-901f-cc7fa3eecdf4.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260825164105';"
     },
     {
@@ -1135,22 +1135,22 @@
       "hostedName": "58fc45db-729a-4d5b-a545-7c0e40d74175",
       "appliedAt": "2026-08-27T11:24:44Z",
       "mechanism": "Lovable-generated hosted application mapped to the canonical GitHub migration after read-only ledger verification on 2026-08-28.",
-      "generatedFileOnMain": "supabase/migrations/20260827112444_58fc45db-729a-4d5b-a545-7c0e40d74175.sql (REMOVED from active path in PR #124; retained in git history as deployment evidence)",
+      "generatedFileOnMain": "supabase/migrations/20260827112444_58fc45db-729a-4d5b-a545-7c0e40d74175.sql (LEGACY ACTIVE COPY; retained only because earlier generated dependants require its historical execution order)",
       "sqlEquivalence": "Verified comment-stripped and whitespace-normalised identical to the canonical file; raw files differ only by a trailing newline.",
       "equivalenceVerified": true,
       "doNotReExecute": true,
-      "reason": "Canonical migration remains the only active schema history; the Lovable UUID/version is deployment evidence, not a second schema change.",
+      "reason": "Legacy execution-order exception: canonical remains the source of truth and hosted UUID/version is deployment evidence. The generated copy remains active only until the full early generated chain can be retired atomically; no new duplicate may use this exception.",
       "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260827112444';"
     }
   ],
   "canonicalProject": {
     "lovableProject": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
     "hostedSupabaseRef": "zrahptwsnjcdyzfywbeh",
-    "ledgerRowsAtSnapshot": 108,
-    "ledgerSnapshotNote": "100 after C1; 108 after the eight PR #51 migrations were applied through Lovable.",
+    "ledgerRowsAtSnapshot": 180,
+    "ledgerSnapshotNote": "Read-only verification on 2026-08-28: 180 hosted ledger rows through 20260906100000. All 18 generated hosted versions are present; scp_content_events contains 88 rows and 88 distinct semantic events, with each of the 12 legacy migration seed keys present exactly once.",
     "note": "Owner-locked. The earlier 172-row analysis was project mlvzmiutmyyqeuvjglco and is formally excluded from any production conclusion."
   },
-  "removedContentDuplicates": [
+  "contentDuplicates": [
     {
       "canonical": "20260718083056_security_career_profiles.sql",
       "duplicate": "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql",
@@ -1260,5 +1260,5 @@
       "decidedIn": "docs/technical/migration-ledger-duplicate-reconciliation.md"
     }
   ],
-  "$removedContentDuplicatesComment": "Historical pairs reconciled in PR #124. Each Lovable-generated duplicate was verified content-equivalent, mapped under appliedThroughLovable using the actual hosted ledger version/name, and removed from the active migration directory. GitHub canonical migrations are now the sole active schema history. This array preserves the review inventory; scripts/migration-duplicate-check.ts intentionally ignores it and fails if any active duplicate reappears."
+  "$contentDuplicatesComment": "Closed legacy allowlist of 18 historical pairs. Every pair is content-equivalent and mapped under appliedThroughLovable using the actual hosted ledger version/name. The generated copies remain active only because removing them in isolation changes the early generated chain's historical dependency order; CI #435 proved that failure. A terminal reconciliation migration makes their seed events deterministic. New active duplicates are forbidden and must use the canonical-migration/appliedThroughLovable model instead."
 }

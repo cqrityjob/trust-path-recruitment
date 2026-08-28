@@ -2,9 +2,8 @@
 
 **Date:** 2026-08-28
 **Baseline:** `main` `889eaad`
-**Scope:** ledger bookkeeping, removal of generated hosted copies from the
-active migration path, and one new CI guard. No canonical migration is edited.
-No hosted SQL is executed.
+**Scope:** ledger bookkeeping, one terminal reconciliation migration and one
+new CI guard. No historical migration is edited. No hosted SQL is executed.
 
 ---
 
@@ -55,8 +54,8 @@ idempotent, or may carry data statements, and nothing in CI would have said so.
 ## What the guard found
 
 `scripts/migration-duplicate-check.ts` hashes every active migration's SQL with
-comments and whitespace stripped, and fails on every identical pair. There is
-no active-duplicate allowlist.
+comments and whitespace stripped. The 18 fully reviewed historical pairs are a
+closed legacy allowlist. Every new pair fails CI.
 
 Run against `889eaad` it found **18 pairs**, not one. The pattern has been
 running since 2026-07-18 and covers the Career Discovery, Security Competency,
@@ -67,8 +66,7 @@ underlying fact that two files contain the same change.
 
 All 18 are now mapped in `migrations-policy.json` under
 `appliedThroughLovable`, using the exact hosted version and name read from the
-canonical Lovable/Supabase project's migration ledger. The generated copies are
-removed from the active migration path; their historical blobs remain in git.
+canonical Lovable/Supabase project's migration ledger.
 
 ## Hosted evidence — correct production project
 
@@ -88,20 +86,29 @@ The canonical project reported:
 
 No hosted mutation or cleanup is required.
 
-## Why the generated copies leave the active path
+## Why the 18 generated copies remain temporarily
 
-GitHub canonical migrations are the sole schema history. Lovable's generated
-UUID/version is deployment evidence, not another schema change. Keeping both in
-`supabase/migrations` made clean replay execute identical DDL twice and caused
-append-only governance events to be duplicated locally. Removing the generated
-copy from the current tree does not erase history: the blob remains in git, and
-the exact hosted version/name is recorded in `appliedThroughLovable`.
+The first cleanup attempt removed the 18 generated copies and CI correctly
+stopped it: some early generated migrations depend on the generated copy's
+earlier filename order. Removing only the identical pairs changes historical
+execution order and makes `20260805054801_4f577347-…` run before the Learning
+Mode content it validates.
+
+Retiring the whole early generated chain atomically is a separate, larger
+reconstruction. The narrow safe repair therefore keeps the 18 legacy files,
+maps every hosted UUID/version, and adds
+`20260924090000_migration_ledger_seed_event_reconciliation.sql`. That terminal
+migration removes only repeated seed events for the exact 12 known migration
+keys and adds a partial unique index covering the same closed set. It changes no
+runtime event and deletes nothing on the hosted database, where every key
+already occurs once.
 
 ## What changes for a reviewer
 
-There is no duplicate allowlist. A new active content-identical pair fails CI.
-The reconciliation is always: prove equivalence, keep the canonical file,
-record the hosted UUID/version as evidence, remove the generated active copy.
+The legacy allowlist is closed at 18. A new active content-identical pair fails
+CI. From this point forward the rule is: keep the canonical file, record the
+hosted UUID/version as `appliedThroughLovable`, and do not accept a generated
+copy into the active migration path.
 
 ## Scope discipline
 
@@ -112,7 +119,7 @@ This branch deliberately contains only:
   historical review inventory
 * `package.json` / CI — the guard registration
 * this document
-* deletion of 18 generated copies from the active migration directory
+* `20260924090000_migration_ledger_seed_event_reconciliation.sql`
 
 It carries **no** Interview Intelligence work. Baseline repair and product work
 belong on separate branches, and this is the baseline half.

@@ -8,16 +8,18 @@
  * 20260917090000_superadmin_permanent_account_deletion.sql apart from a
  * trailing newline.
  *
- * That particular duplicate is HARMLESS — the migration is written idempotently
- * throughout and carries no data statements, so applying it twice changes
- * nothing and a clean replay passes. But it was harmless by luck, not by
- * design, and nothing in CI would have said otherwise.
+ * The repository also contains a closed set of older generated copies whose
+ * historical execution order is required by later generated migrations. They
+ * are grandfathered explicitly in migrations-policy.json; they are not a
+ * precedent for accepting another schema writer. A terminal reconciliation
+ * migration makes the affected legacy seed events deterministic.
  *
- * This guard enforces the single-writer rule: it hashes every ACTIVE
- * migration's SQL (ignoring comments and whitespace, so a re-indent is not a
- * false alarm) and fails whenever two files share a hash. Lovable's generated
- * UUID/version belongs in migrations-policy.json as appliedThroughLovable
- * deployment evidence; it must not remain as a second active migration.
+ * This guard makes the class visible: it hashes every migration's SQL (ignoring
+ * comments and whitespace, so a re-indent is not a false alarm) and fails when
+ * two files share a hash unless the pair is explicitly recorded in
+ * migrations-policy.json. Recording one is then a deliberate diff a human
+ * approves. New duplicates must use the canonical migration plus
+ * appliedThroughLovable evidence model and must not be added to the legacy set.
  *
  * Run: bun run scripts/migration-duplicate-check.ts
  */
@@ -26,12 +28,21 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+interface DuplicatePair {
+  readonly canonical: string;
+  readonly duplicate: string;
+  readonly reason: string;
+  readonly decidedIn?: string;
+}
+
 interface Policy {
   readonly activeDirectory: string;
+  readonly contentDuplicates?: readonly DuplicatePair[];
 }
 
 const policy = JSON.parse(readFileSync("supabase/migrations-policy.json", "utf8")) as Policy;
 const dir = policy.activeDirectory;
+const recorded = policy.contentDuplicates ?? [];
 
 /**
  * Normalise before hashing: strip line comments, block comments and all
@@ -60,6 +71,12 @@ for (const file of files) {
   else byHash.set(hash, [file]);
 }
 
+const isRecorded = (a: string, b: string): boolean =>
+  recorded.some(
+    (p) =>
+      (p.canonical === a && p.duplicate === b) || (p.canonical === b && p.duplicate === a),
+  );
+
 const findings: string[] = [];
 let duplicateGroups = 0;
 
@@ -68,11 +85,34 @@ for (const [hash, group] of byHash) {
   duplicateGroups += 1;
   for (let i = 0; i < group.length; i += 1) {
     for (let j = i + 1; j < group.length; j += 1) {
+      if (isRecorded(group[i], group[j])) continue;
       findings.push(
-        `${group[i]}\n      and ${group[j]}\n      contain the same active SQL (${hash.slice(0, 12)}…).\n\n` +
-          `      Keep the GitHub canonical file active. If the other file is a Lovable\n` +
-          `      re-issue, record its hosted UUID/version under appliedThroughLovable\n` +
-          `      and remove the generated copy from the active migration directory.`,
+        `${group[i]}\n      and ${group[j]}\n      contain the same SQL (${hash.slice(0, 12)}…) but are not recorded as a\n      content duplicate in supabase/migrations-policy.json.\n\n` +
+          `      If this is a Lovable re-issue of a canonical migration, add it to\n` +
+          `      "contentDuplicates" with the reason. If it is NOT, one of them is an\n` +
+          `      accidental copy and should be removed before it reaches the ledger.`,
+      );
+    }
+  }
+}
+
+// Every recorded pair must still exist and still be identical — a stale record
+// is as misleading as a missing one.
+for (const pair of recorded) {
+  const both = [pair.canonical, pair.duplicate];
+  for (const f of both) {
+    if (!files.includes(f)) {
+      findings.push(
+        `migrations-policy.json records a content duplicate involving ${f}, which no longer exists.`,
+      );
+    }
+  }
+  if (both.every((f) => files.includes(f))) {
+    const [a, b] = both.map((f) => normalise(readFileSync(join(dir, f), "utf8")));
+    if (a !== b) {
+      findings.push(
+        `${pair.canonical} and ${pair.duplicate} are recorded as content duplicates but have DIVERGED. ` +
+          `One of them has been edited; the ledger no longer describes reality.`,
       );
     }
   }
@@ -87,4 +127,4 @@ if (findings.length > 0) {
 console.log("migration-duplicate-check passed");
 console.log(`  migrations hashed:          ${files.length}`);
 console.log(`  identical content groups:   ${duplicateGroups}`);
-console.log("  active duplicate pairs:     0");
+console.log(`  recorded (approved) pairs:  ${recorded.length}`);
