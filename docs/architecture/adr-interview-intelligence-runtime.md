@@ -35,6 +35,14 @@ then use it in `internal_qa` mode — no employer-by-employer switch. An explici
 per-employer grant (`scp_interview_pack_pilot_grants`) remains for restricted or
 private cohorts. Neither path weakens the publish gate.
 
+Precisely: ACTIVE is enforced on **every case-creation path** and on open-pilot
+**discovery**. One read branch is deliberately wider: a case already pinned to a
+version keeps that version readable for the employer's members — continuity
+access to work that exists, not permission to start a new interview. The
+availability helper itself (`scp_iv_open_pilot_available`) is internal — no
+browser principal, candidate or employer, can execute it directly; entitlement
+reaches the client only through the SECURITY DEFINER read/create functions.
+
 ---
 
 ## 2. The six trust layers, as tables

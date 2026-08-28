@@ -18,7 +18,14 @@
 --                           review-ladder state)                 (internal_qa)
 --                   OR employer-specific pilot grant row         (kept, for
 --                       future restricted / private cohorts)
---            AND the employer is ACTIVE (any path)
+--            AND the employer is ACTIVE
+--
+--   ACTIVE is enforced on every CASE-CREATION path and on open-pilot
+--   discovery. The read entitlement keeps one deliberate exception: a case
+--   already pinned to a version stays readable by that employer's members
+--   (continuity access to work that exists) -- continuity is not permission
+--   to start a new interview, which scp_iv_create_case() refuses for any
+--   employer that is not active.
 --
 -- "Available" is a governed CONTENT property set by the platform publisher on
 -- one pack version — the same kind of act as publish/suspend/retire, recorded
@@ -154,14 +161,23 @@ AS $$
        AND v.content_status IN ('draft', 'expert_review', 'legal_review', 'cognitive_review'));
 $$;
 
-REVOKE ALL ON FUNCTION public.scp_iv_open_pilot_available(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.scp_iv_open_pilot_available(uuid) TO authenticated, service_role;
+-- INTERNAL. No browser principal may call this directly: candidates are
+-- authenticated too, and this function names a governed availability state
+-- for ANY version id, membership or none. Its only legitimate callers are
+-- the SECURITY DEFINER entitlement functions below, which execute as the
+-- function owner and therefore need no role grant at all.
+REVOKE ALL ON FUNCTION public.scp_iv_open_pilot_available(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.scp_iv_open_pilot_available(uuid) TO service_role;
 
 COMMENT ON FUNCTION public.scp_iv_open_pilot_available(uuid) IS
-  'True when this unpublished pack version has been made openly available for '
-  'pilot use and is still in a pre-publication review-ladder state. The '
-  'open-pilot half of the interview entitlement; the caller supplies the '
-  'ACTIVE-employer half.';
+  'INTERNAL: true when this unpublished pack version has been made openly '
+  'available for pilot use and is still in a pre-publication review-ladder '
+  'state. The open-pilot half of the interview entitlement; the caller '
+  'supplies the ACTIVE-employer half. Not executable by browser principals '
+  '(anon or authenticated) -- candidates are authenticated principals, and '
+  'availability state reaches an employer only through '
+  'scp_iv_employer_may_read_pack() / scp_iv_create_case(), which run as the '
+  'function owner.';
 
 
 -- ────────────────────────────────────────────────────────────────────────────
@@ -188,7 +204,11 @@ AS $$
     OR EXISTS (SELECT 1 FROM public.employer_memberships em
                WHERE em.user_id = auth.uid() AND em.status = 'active'
                  AND public.scp_interview_pilot_grant_active(em.employer_id, _pack_version_id, auth.uid()))
-    -- Or a case this user's employer already pinned to it.
+    -- Or a case this user's employer already pinned to it. CONTINUITY
+    -- access: work that exists stays readable even if the employer is later
+    -- suspended -- deliberately NOT gated on employer_is_active_status().
+    -- Continuity is not permission to start anything new; creation is
+    -- refused for inactive employers in scp_iv_create_case().
     OR EXISTS (SELECT 1 FROM public.scp_interview_cases c
                 JOIN public.employer_memberships em ON em.employer_id = c.employer_id
                WHERE c.pack_version_id = _pack_version_id
@@ -203,7 +223,9 @@ COMMENT ON FUNCTION public.scp_iv_employer_may_read_pack(uuid) IS
   'May the calling employer principal read this pack version and its content? '
   'Published + any active membership; or openly available pilot content + '
   'active membership of an ACTIVE employer; or a live pilot grant; or a case '
-  'already pinned to it. Every pack content read policy routes through here.';
+  'already pinned to it (continuity access to existing work, deliberately '
+  'not re-gated on employer status -- creation is where ACTIVE is enforced). '
+  'Every pack content read policy routes through here.';
 
 
 -- ────────────────────────────────────────────────────────────────────────────

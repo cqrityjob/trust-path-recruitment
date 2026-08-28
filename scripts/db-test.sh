@@ -1324,9 +1324,9 @@ fi
 
 echo "    ok  ${OPILOT_PASSED} open pilot entitlement assertions passed"
 
-if [ "$OPILOT_PASSED" -lt 43 ]; then
-  echo "FAIL: expected at least 43 open pilot assertions, only ${OPILOT_PASSED} ran." >&2
-  suite_failed "open pilot entitlement (assertion shortfall: floor 43)"
+if [ "$OPILOT_PASSED" -lt 50 ]; then
+  echo "FAIL: expected at least 50 open pilot assertions, only ${OPILOT_PASSED} ran." >&2
+  suite_failed "open pilot entitlement (assertion shortfall: floor 50)"
 fi
 
 # ---------------------------------------------------------------------------

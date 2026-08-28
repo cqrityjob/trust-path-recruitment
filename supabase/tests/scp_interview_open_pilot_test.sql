@@ -480,4 +480,68 @@ BEGIN
     'OP8.3 used_pilot_grant stays truthful on the grant path');
 END $$;
 
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP OP9 — the availability helper is internal; candidates learn nothing'; END $$;
+-- ===========================================================================
+
+-- Candidates are authenticated principals. A helper that names a governed
+-- availability state for any version id must therefore not be executable by
+-- `authenticated` at all -- entitlement reaches an employer only through the
+-- SECURITY DEFINER read/create functions, which run as the function owner.
+DO $$
+DECLARE
+  _packv uuid; _n integer;
+  _candidate uuid := '88880000-0000-4000-8000-000000000003';
+  _owner uuid := '88880000-0000-4000-8000-000000000001';
+BEGIN
+  SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
+    JOIN public.scp_interview_packs p ON p.id = ver.pack_id WHERE p.slug = 'vaktare-se';
+
+  -- The ACL itself, stated directly.
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('authenticated', 'public.scp_iv_open_pilot_available(uuid)', 'EXECUTE'),
+    'OP9.1 authenticated holds no EXECUTE on the availability helper');
+  PERFORM pg_temp.ok(
+    NOT has_function_privilege('anon', 'public.scp_iv_open_pilot_available(uuid)', 'EXECUTE')
+    AND has_function_privilege('service_role', 'public.scp_iv_open_pilot_available(uuid)', 'EXECUTE'),
+    'OP9.2 anon is refused too; only service_role retains direct execution');
+
+  -- A real authenticated CANDIDATE identity is denied outright.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _candidate::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_open_pilot_available(%L)', _packv),
+    'permission denied',
+    'OP9.3 a candidate cannot ask the availability question directly');
+  RESET ROLE;
+
+  -- Internal means internal: an active employer member is denied direct
+  -- execution exactly the same way.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.scp_iv_open_pilot_available(%L)', _packv),
+    'permission denied',
+    'OP9.4 even an employer member cannot call the helper directly');
+
+  -- ...and yet the SECURITY DEFINER entitlement path is untouched: it runs
+  -- as the function owner, so revoking authenticated cost it nothing.
+  PERFORM pg_temp.ok(public.scp_iv_employer_may_read_pack(_packv),
+    'OP9.5 the definer read entitlement still admits the employer after the revoke');
+  RESET ROLE;
+
+  -- No candidate-visible alternative reveals availability: the one
+  -- authenticated-callable consumer returns a bare false for a candidate,
+  -- and RLS shows the candidate no version row and no question to infer from.
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', _candidate::text, true);
+  PERFORM pg_temp.ok(NOT public.scp_iv_employer_may_read_pack(_packv),
+    'OP9.6 the read entitlement answers a candidate with a bare false');
+  SELECT count(*) INTO _n FROM public.scp_interview_pack_versions;
+  PERFORM pg_temp.ok(_n = 0,
+    'OP9.7 and RLS gives a candidate zero pack version rows to infer availability from');
+  RESET ROLE;
+END $$;
+
 ROLLBACK;
