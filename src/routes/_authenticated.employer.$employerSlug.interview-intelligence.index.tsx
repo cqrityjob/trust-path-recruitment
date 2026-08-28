@@ -88,7 +88,7 @@ function Page() {
 
       <section className="mt-8" aria-labelledby="ii-cases-heading">
         <h2 id="ii-cases-heading" className="text-lg font-semibold text-foreground">
-          {t("iiu.rail.interview")}
+          {t("iiu.ix.heading")}
         </h2>
 
         <div className="mt-4">

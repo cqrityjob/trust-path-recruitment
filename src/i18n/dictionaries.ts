@@ -4439,6 +4439,7 @@ export const dictionaries = {
     "iiu.new.cancel": "Avbryt",
     "iiu.ix.lead":
       "Strukturerade, evidensbaserade intervjuer mot ett styrt rollpaket. AI förbereder, extraherar och föreslår. Människor bekräftar, bedömer och beslutar.",
+    "iiu.ix.heading": "Intervjuer",
     "iiu.ix.active": "Aktiva intervjuer",
     "iiu.ix.awaiting": "Väntar på evidensgranskning",
     "iiu.ix.done": "Färdiga rapporter",
@@ -8818,6 +8819,7 @@ export const dictionaries = {
     "iiu.new.cancel": "Cancel",
     "iiu.ix.lead":
       "Structured, evidence-based interviews against a governed role package. AI prepares, extracts and suggests. People confirm, assess and decide.",
+    "iiu.ix.heading": "Interviews",
     "iiu.ix.active": "Active interviews",
     "iiu.ix.awaiting": "Awaiting evidence review",
     "iiu.ix.done": "Completed reports",
