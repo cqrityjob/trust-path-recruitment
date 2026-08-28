@@ -1,48 +1,47 @@
 /**
- * Migration content-duplicate detection.
+ * Migration content-duplicate detection — zero-tolerance form.
  *
  * Lovable applies migrations under its own generated filenames and syncs them
  * back, so the repository periodically gains a second file containing the same
- * DDL as a canonical one. That happened on 2026-08-27:
- * 20260827112444_58fc45db-….sql is byte-identical to
- * 20260917090000_superadmin_permanent_account_deletion.sql apart from a
- * trailing newline.
+ * DDL as a canonical one. Until 2026-08-28 a "closed legacy set" of 18 such
+ * copies was allowlisted in migrations-policy.json contentDuplicates and
+ * tolerated in the active path; the strict replay contract retired that set to
+ * supabase/archive/parked-migrations/ (policy "parked" entries, each with its
+ * canonicalReplacement and hosted evidence), and this guard no longer accepts
+ * ANY allowlist.
  *
- * The repository also contains a closed set of older generated copies whose
- * historical execution order is required by later generated migrations. They
- * are grandfathered explicitly in migrations-policy.json; they are not a
- * precedent for accepting another schema writer. A terminal reconciliation
- * migration makes the affected legacy seed events deterministic.
- *
- * This guard makes the class visible: it hashes every migration's SQL (ignoring
- * comments and whitespace, so a re-indent is not a false alarm) and fails when
- * two files share a hash unless the pair is explicitly recorded in
- * migrations-policy.json. Recording one is then a deliberate diff a human
- * approves. New duplicates must use the canonical migration plus
- * appliedThroughLovable evidence model and must not be added to the legacy set.
+ * It fails when:
+ *   1. two ACTIVE migrations share the same comment/whitespace-normalised SQL
+ *      — there is no approved-pair escape hatch any more;
+ *   2. an ACTIVE migration's normalised SQL matches a PARKED migration that is
+ *      not its recorded canonicalReplacement — i.e. a parked file has come
+ *      back under a new name;
+ *   3. a parked entry recorded as equivalence "identical" has DIVERGED from
+ *      its canonical replacement — one of them was edited, so the evidence
+ *      record no longer describes reality.
  *
  * Run: bun run scripts/migration-duplicate-check.ts
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-interface DuplicatePair {
-  readonly canonical: string;
-  readonly duplicate: string;
+interface ParkedEntry {
+  readonly version: string;
+  readonly file: string;
+  readonly canonicalReplacement?: readonly string[];
+  readonly equivalence?: string;
   readonly reason: string;
-  readonly decidedIn?: string;
 }
 
 interface Policy {
   readonly activeDirectory: string;
-  readonly contentDuplicates?: readonly DuplicatePair[];
+  readonly parkedDirectory: string;
+  readonly parked: readonly ParkedEntry[];
 }
 
 const policy = JSON.parse(readFileSync("supabase/migrations-policy.json", "utf8")) as Policy;
-const dir = policy.activeDirectory;
-const recorded = policy.contentDuplicates ?? [];
 
 /**
  * Normalise before hashing: strip line comments, block comments and all
@@ -57,62 +56,76 @@ function normalise(sql: string): string {
     .toLowerCase();
 }
 
-const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
-const byHash = new Map<string, string[]>();
+const hashOf = (dir: string, file: string): string =>
+  createHash("sha256")
+    .update(normalise(readFileSync(join(dir, file), "utf8")))
+    .digest("hex");
 
-for (const file of files) {
-  const sql = readFileSync(join(dir, file), "utf8");
+const activeFiles = readdirSync(policy.activeDirectory)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
+const parkedFiles = readdirSync(policy.parkedDirectory)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
+
+const findings: string[] = [];
+
+// --- 1. No two active migrations may share content --------------------------
+const activeByHash = new Map<string, string[]>();
+for (const file of activeFiles) {
+  const sql = readFileSync(join(policy.activeDirectory, file), "utf8");
   const body = normalise(sql);
   // A migration whose entire body is comments has nothing to duplicate.
   if (body.length < 40) continue;
   const hash = createHash("sha256").update(body).digest("hex");
-  const list = byHash.get(hash);
+  const list = activeByHash.get(hash);
   if (list) list.push(file);
-  else byHash.set(hash, [file]);
+  else activeByHash.set(hash, [file]);
 }
 
-const isRecorded = (a: string, b: string): boolean =>
-  recorded.some(
-    (p) =>
-      (p.canonical === a && p.duplicate === b) || (p.canonical === b && p.duplicate === a),
-  );
-
-const findings: string[] = [];
-let duplicateGroups = 0;
-
-for (const [hash, group] of byHash) {
+for (const [hash, group] of activeByHash) {
   if (group.length < 2) continue;
-  duplicateGroups += 1;
-  for (let i = 0; i < group.length; i += 1) {
-    for (let j = i + 1; j < group.length; j += 1) {
-      if (isRecorded(group[i], group[j])) continue;
+  findings.push(
+    `Content-identical migrations in the ACTIVE path (${hash.slice(0, 12)}…):\n` +
+      group.map((f) => `      - ${f}`).join("\n") +
+      `\n      A clean replay would run the same SQL twice. Keep the canonical file,\n` +
+      `      park the generated copy (migrations-policy.json "parked" + move the file\n` +
+      `      to ${policy.parkedDirectory}/). There is no allowlist.`,
+  );
+}
+
+// --- 2. Parked content must not return under any name -----------------------
+const parkedMeta = new Map(policy.parked.map((p) => [p.file, p]));
+for (const parked of parkedFiles) {
+  const parkedHash = hashOf(policy.parkedDirectory, parked);
+  const canonical = new Set(parkedMeta.get(parked)?.canonicalReplacement ?? []);
+  for (const [hash, group] of activeByHash) {
+    if (hash !== parkedHash) continue;
+    for (const active of group) {
+      if (canonical.has(active)) continue; // the recorded canonical twin
       findings.push(
-        `${group[i]}\n      and ${group[j]}\n      contain the same SQL (${hash.slice(0, 12)}…) but are not recorded as a\n      content duplicate in supabase/migrations-policy.json.\n\n` +
-          `      If this is a Lovable re-issue of a canonical migration, add it to\n` +
-          `      "contentDuplicates" with the reason. If it is NOT, one of them is an\n` +
-          `      accidental copy and should be removed before it reaches the ledger.`,
+        `Parked migration content is back in the active path:\n` +
+          `      parked  ${parked}\n` +
+          `      active  ${active}\n` +
+          `      The active file carries the same normalised SQL but is not the parked\n` +
+          `      entry's recorded canonicalReplacement. A parked migration must never\n` +
+          `      re-enter the active path, under its own name or another.`,
       );
     }
   }
 }
 
-// Every recorded pair must still exist and still be identical — a stale record
-// is as misleading as a missing one.
-for (const pair of recorded) {
-  const both = [pair.canonical, pair.duplicate];
-  for (const f of both) {
-    if (!files.includes(f)) {
+// --- 3. "identical" parked entries must still match their canonical ---------
+for (const entry of policy.parked) {
+  if (entry.equivalence !== "identical") continue;
+  if (!existsSync(join(policy.parkedDirectory, entry.file))) continue; // safety check reports this
+  const parkedHash = hashOf(policy.parkedDirectory, entry.file);
+  for (const canonical of entry.canonicalReplacement ?? []) {
+    if (!existsSync(join(policy.activeDirectory, canonical))) continue; // safety check reports this
+    if (hashOf(policy.activeDirectory, canonical) !== parkedHash) {
       findings.push(
-        `migrations-policy.json records a content duplicate involving ${f}, which no longer exists.`,
-      );
-    }
-  }
-  if (both.every((f) => files.includes(f))) {
-    const [a, b] = both.map((f) => normalise(readFileSync(join(dir, f), "utf8")));
-    if (a !== b) {
-      findings.push(
-        `${pair.canonical} and ${pair.duplicate} are recorded as content duplicates but have DIVERGED. ` +
-          `One of them has been edited; the ledger no longer describes reality.`,
+        `${entry.file} is recorded as content-identical to ${canonical}, but they have DIVERGED.\n` +
+          `      One of them has been edited; the evidence record no longer describes reality.`,
       );
     }
   }
@@ -125,6 +138,6 @@ if (findings.length > 0) {
 }
 
 console.log("migration-duplicate-check passed");
-console.log(`  migrations hashed:          ${files.length}`);
-console.log(`  identical content groups:   ${duplicateGroups}`);
-console.log(`  recorded (approved) pairs:  ${recorded.length}`);
+console.log(`  active migrations hashed:  ${activeFiles.length}`);
+console.log(`  parked migrations hashed:  ${parkedFiles.length}`);
+console.log(`  active duplicate groups:   0 (required)`);
