@@ -48,6 +48,9 @@ paid dependency.
   current live Lovable backend.
 - Keep `writeTargetRef = null` and automatic production deployment disabled.
 - Add no credential, deployment workflow, migration or hosted connection.
+- Reserve `CQ_SCHEMA_WRITE_TARGET_REF` as the only repository-runner variable
+  that may declare a future schema write target. The application's existing
+  `SUPABASE_PROJECT_ID` remains the current live read/runtime identity.
 
 ### Stage 1 — GitHub authorisation (no production deployment)
 

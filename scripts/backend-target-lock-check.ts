@@ -79,12 +79,17 @@ function parseEnv(source: string): Map<string, string> {
   return entries;
 }
 
-const targets = JSON.parse(read("supabase/deployment-targets.json")) as DeploymentTargets;
-const migrationPolicy = JSON.parse(read("supabase/migrations-policy.json")) as MigrationPolicy;
+const targets = JSON.parse(
+  read("supabase/deployment-targets.json"),
+) as DeploymentTargets;
+const migrationPolicy = JSON.parse(
+  read("supabase/migrations-policy.json"),
+) as MigrationPolicy;
 const appEnv = parseEnv(read(".env"));
 const configToml = read("supabase/config.toml");
 
-if (targets.schemaVersion !== 1) fail(`unsupported deployment-targets schemaVersion ${targets.schemaVersion}`);
+if (targets.schemaVersion !== 1)
+  fail(`unsupported deployment-targets schemaVersion ${targets.schemaVersion}`);
 if (targets.lovableProjectId !== OWNER_LOCKED.lovableProjectId) {
   fail(`Lovable project identity changed: expected ${OWNER_LOCKED.lovableProjectId}`);
 }
@@ -103,27 +108,37 @@ const allRefs = [
   targets.candidateProduction.projectRef,
   ...targets.excluded.map((entry) => entry.projectRef),
 ];
-if (new Set(allRefs).size !== allRefs.length) fail("a Supabase project appears in more than one target class");
-if (allRefs.some((ref) => !/^[a-z]{20}$/.test(ref))) fail("every Supabase project ref must be exactly 20 lowercase letters");
+if (new Set(allRefs).size !== allRefs.length)
+  fail("a Supabase project appears in more than one target class");
+if (allRefs.some((ref) => !/^[a-z]{20}$/.test(ref)))
+  fail("every Supabase project ref must be exactly 20 lowercase letters");
 
 if (targets.releaseMode !== "transition_preparation") {
-  fail(`this preparation guard only accepts releaseMode=transition_preparation, got ${targets.releaseMode}`);
+  fail(
+    `this preparation guard only accepts releaseMode=transition_preparation, got ${targets.releaseMode}`,
+  );
 }
-if (targets.automaticProductionDeployEnabled) fail("automatic production deployment must remain disabled during preparation");
+if (targets.automaticProductionDeployEnabled)
+  fail("automatic production deployment must remain disabled during preparation");
 if (targets.verificationStrategy !== "github_ci_disposable_postgres") {
   fail("transition verification must use the existing disposable-Postgres GitHub CI path");
 }
-if (targets.writeTargetRef !== null) fail("writeTargetRef must remain null until an owner-approved bootstrap PR");
+if (targets.writeTargetRef !== null)
+  fail("writeTargetRef must remain null until an owner-approved bootstrap PR");
 if (targets.candidateProduction.state !== "provisioned_empty") {
-  fail(`candidate production must remain recorded as provisioned_empty, got ${targets.candidateProduction.state}`);
+  fail(
+    `candidate production must remain recorded as provisioned_empty, got ${targets.candidateProduction.state}`,
+  );
 }
 
 const expectedUrl = `https://${OWNER_LOCKED.currentLiveRef}.supabase.co`;
 for (const key of ["SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"] as const) {
-  if (appEnv.get(key) !== OWNER_LOCKED.currentLiveRef) fail(`${key} must still point to current live during preparation`);
+  if (appEnv.get(key) !== OWNER_LOCKED.currentLiveRef)
+    fail(`${key} must still point to current live during preparation`);
 }
 for (const key of ["SUPABASE_URL", "VITE_SUPABASE_URL"] as const) {
-  if (appEnv.get(key) !== expectedUrl) fail(`${key} must still point to current live during preparation`);
+  if (appEnv.get(key) !== expectedUrl)
+    fail(`${key} must still point to current live during preparation`);
 }
 if (!configToml.includes(`project_id = "${OWNER_LOCKED.currentLiveRef}"`)) {
   fail("supabase/config.toml must still identify the current live backend during preparation");
@@ -147,9 +162,14 @@ for (const file of readdirSync(workflowDir).filter((name) => /\.ya?ml$/.test(nam
   }
 }
 
-const processTarget = process.env.SUPABASE_PROJECT_ID;
+// Bun loads the tracked .env automatically, so SUPABASE_PROJECT_ID is the
+// shipping application's current backend. A later deployment workflow must
+// declare this dedicated write-target variable explicitly.
+const processTarget = process.env.CQ_SCHEMA_WRITE_TARGET_REF;
 if (processTarget && processTarget !== OWNER_LOCKED.candidateProductionRef) {
-  fail(`runner SUPABASE_PROJECT_ID is ${processTarget}; only the candidate ref may be staged for the later bootstrap`);
+  fail(
+    `runner CQ_SCHEMA_WRITE_TARGET_REF is ${processTarget}; only the candidate ref may be staged for the later bootstrap`,
+  );
 }
 
 if (failures.length > 0) {
