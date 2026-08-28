@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "releaseMode": "transition_preparation",
+  "automaticProductionDeployEnabled": false,
+  "verificationStrategy": "github_ci_disposable_postgres",
+  "writeTargetRef": null,
+  "lovableProjectId": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
+  "currentLive": {
+    "kind": "lovable_cloud",
+    "projectRef": "zrahptwsnjcdyzfywbeh",
+    "writePolicy": "legacy_tracked_release_only"
+  },
+  "candidateProduction": {
+    "kind": "owned_supabase",
+    "projectRef": "vcgwvtmzftmulmoxmufv",
+    "region": "eu-central-1",
+    "state": "provisioned_empty",
+    "writePolicy": "blocked_until_owner_approved_bootstrap"
+  },
+  "excluded": [
+    {
+      "projectRef": "mlvzmiutmyyqeuvjglco",
+      "reason": "Previously confused with production; permanently excluded from CQrityjob deployment and production conclusions."
+    }
+  ]
+}
