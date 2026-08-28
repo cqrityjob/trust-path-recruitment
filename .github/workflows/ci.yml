@@ -321,6 +321,15 @@ jobs:
       - name: Migration content-duplicate check
         run: bun run migrations-duplicate:check
 
+      # One Lovable project and three Supabase identities have previously been
+      # confused. During the owner-backend transition this credential-free
+      # guard keeps the shipping app on the current live backend, records the
+      # new owner project only as an empty candidate, permanently excludes the
+      # stale project, and refuses any hosted write workflow before the
+      # bootstrap/cutover PR explicitly enables one.
+      - name: Backend deployment target lock
+        run: bun run backend-target-lock:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
