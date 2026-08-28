@@ -121,156 +121,41 @@ $SCP_MIGRATION_LIST
 EOF
 
 # ---------------------------------------------------------------------------
-# 3. Replay the full migration history, in order
+# 3. Replay the full migration history, in order — STRICTLY.
 #
-# Seventeen migrations are known to fail on a clean replay and fail
-# identically on origin/main: they are duplicate Lovable-generated files that
-# re-create objects an earlier migration already made. They are
-# allowlisted BY NAME, so a NEW failure -- or one of these starting to pass --
-# is caught rather than silently absorbed.
+# Every file in supabase/migrations/ must execute successfully, in filename
+# order, on an empty database. There is no allowlist, no expected-error
+# matching and no tolerated SQLSTATE: the KNOWN_FAILURES mechanism that used
+# to absorb 24 historical duplicate/re-issue failures was removed on
+# 2026-08-28 when the legacy generated chain was retired to
+# supabase/archive/parked-migrations/ (see migrations-policy.json "parked").
 #
-# The two storage migrations that used to sit on this list no longer do:
-# Phase 5 stubs storage.buckets and storage.objects in 00_bootstrap.sql, so
-# the bucket policies this repository authors now actually execute and are
-# asserted rather than assumed.
+# That mechanism is also BANNED from returning: scripts/migration-safety-check.ts
+# fails the build if this file reintroduces KNOWN_FAILURES, expected-error
+# matching, or any error suppression inside the contract region below.
 #
-# The 20260728 17:59-18:22 block is Lovable Cloud's own re-issue of the
-# Security Competency and Career Discovery migrations, generated when the
-# Cloud database was synced. Cloud applies them under its generated
-# filenames while this repository already carries the authored originals, so
-# on a clean replay the second copy hits "relation ... already exists". The
-# resulting schema is identical either way; only the replay double-applies.
-# Verified failing on origin/main at e1056e0 before being added here.
+# Rationale: the official Supabase GitHub integration applies this directory
+# strictly and stops on the first error — which is exactly how the owner
+# Supabase bootstrap of vcgwvtmzftmulmoxmufv failed on 2026-08-28. A replay
+# that passes only because errors are tolerated proves nothing about a real
+# deployment.
 # ---------------------------------------------------------------------------
-# Each entry is  <filename>|||<expected error substring>
-#
-# The expected error is asserted, not merely the filename. A file on this
-# list that fails for a DIFFERENT reason, stops at a different statement,
-# or starts passing, is reported as a deviation. Blanket-suppressing every
-# error from a named file would hide exactly the drift this list exists to
-# make visible.
-KNOWN_FAILURES=(
-  "20260718153627_f2b32c5d-cd50-4838-bc2c-369fc02ef5a3.sql|||relation \"security_career_profiles\" already exists"
-  "20260719115332_aa5ec826-c781-4d2d-a03e-f6c744d43272.sql|||column \"status\" of relation \"employers\" already exists"
-  "20260719220600_0e43ff83-6b6a-4bd0-ab65-f16e86f79946.sql|||column \"registration_number\" of relation \"employers\" already exists"
-  "20260720072016_c58d0842-55aa-437c-8260-4f0cefd56153.sql|||policy \"employers_owner_admin_update\" for table \"employers\" already exists"
-  "20260720124636_c5e57833-aa14-4466-a5ec-03c29424eac0.sql|||relation \"employer_moderation_events\" already exists"
-  "20260720150000_h3_4a_candidate_application_core.sql|||relation \"job_application_status_events\" already exists"
-  "20260720160000_h3_4b_beta_feedback.sql|||relation \"beta_feedback\" already exists"
-  "20260723192846_096c5154-1c66-4089-bd18-b5b349d69f18.sql|||relation \"employees\" already exists"
-  "20260724101608_64a91a93-b7af-45a5-aae2-a2ef7de6a81c.sql|||relation \"assessment_assignments\" already exists"
-  "20260724130000_admin_portal_operational_scope.sql|||policy \"employees_admin_select\" for table \"employees\" already exists"
-  # ---- Lovable Cloud sync re-issue (see the note above) ----
-  "20260728175944_126362c3-0bfe-4872-9364-decdeffaa734.sql|||relation \"supabase_migrations.schema_migrations\" does not exist"
-  "20260728181422_cff0d76a-c34f-46c1-98c1-dd28126902fb.sql|||relation \"scp_content_roles\" already exists"
-  "20260728181803_500542a9-3dc2-4e13-8505-7113dc859560.sql|||relation \"scp_scoring_versions\" already exists"
-  "20260728181901_0db6ed3c-faa0-4b55-8509-c24ed96e7b4a.sql|||trigger \"scp_competency_versions_insert_status\" for relation \"scp_competency_versions\" already exists"
-  "20260728181922_8a907474-dd2f-45cc-a56e-44be6760ebca.sql|||relation \"scp_scoring_version_lineage\" already exists"
-  "20260728182046_75665c93-b819-4d78-a0ef-722d21dbaab1.sql|||relation \"cd_definition_versions\" already exists"
-  "20260728182219_bf31c515-b722-498b-8447-c7021a73b41b.sql|||relation \"cd_definition_items\" already exists"
-  # ---- Lovable Cloud sync re-issue, 2026-08-04 block ----
-  #
-  # These six were allowlisted in 2429463 and are deliberately NOT listed here
-  # any more. The four Cloud re-issues, the authored Phase 1F file and the
-  # 20260804063418 reconciliation were repaired instead, so they now replay
-  # cleanly rather than being expected to fail. Re-adding them would make this
-  # script report "allowlisted as a known failure but PASSED".
-  # Cloud re-issued 20260729090000 as 20260729075534, i.e. under an EARLIER
-  # timestamp, so on replay Cloud's copy runs first and the authored file
-  # then hits "already exists". Section 0 of the authored file (the
-  # scp_item_versions guard repair) still commits before that point, which
-  # the 6-guarded-tables assertion below independently confirms.
-  "20260729090000_career_discovery_v3_internal_test.sql|||relation \"cd_internal_testers\" already exists"
-  # ---- Lovable Cloud sync re-issue, 2026-08-05 block (Phase 1G .. Phase 2l) ----
-  #
-  # Cloud re-issued twelve migrations under generated 20260805 05xxxx filenames.
-  # Those sort BEFORE the authored originals (20260805 09xxxx onward), so on a
-  # clean replay Cloud's copy runs first and the authored file is then a SECOND
-  # application of the same change. Each expected error below is the signature
-  # of that second application, not a defect: the live database was verified
-  # independently (0 real content published, 0 assessment options carrying
-  # learning feedback, external AI disabled).
-  #
-  # 1G's content correction is refused by the Phase 2h guard, which is the guard
-  # working as designed -- re-writing learning feedback onto an assessment-mode
-  # option is exactly what 2h made impossible.
-  "20260805090000_scp_phase1g_content_correction.sql|||SCP_LEARNING_FEEDBACK_ON_ASSESSMENT_ITEM"
-  # The remaining three boundary assertions read "no published Academy content".
-  # On replay the fixtures were already published by Cloud's earlier-timestamped
-  # copies of 2c/2f, so the assertion fires on ordering, not on real content.
-  "20260805100000_scp_phase1g_learning_and_anchors.sql|||SCP_P1G_BOUNDARY_BREACHED"
-  "20260806090000_scp_phase1h_foundation_corrections.sql|||SCP_P1H_ACADEMY_PUBLISHED"
-  "20260807090000_scp_phase2_read_models_and_identity_rpc.sql|||SCP_P2_BOUNDARY_BREACHED"
-  # Literal second inserts of the two fixture programmes.
-  "20260808100000_scp_phase2c_test_fixture_programme.sql|||duplicate key value violates unique constraint \"scp_assessment_versions_definition_id_version_number_key\""
-  "20260809100000_scp_phase2f_learning_fixture.sql|||duplicate key value violates unique constraint \"scp_program_versions_program_id_version_number_key\""
-)
-
-# Returns 0 and echoes the expected error when the file is allowlisted.
-expected_failure_for() {
-  local name="$1" entry
-  for entry in "${KNOWN_FAILURES[@]}"; do
-    case "$entry" in
-      "$name|||"*) printf '%s' "${entry#*|||}"; return 0 ;;
-    esac
-  done
-  return 1
-}
-
-echo "==> Replaying full migration history"
-UNEXPECTED=()
+# STRICT-REPLAY-CONTRACT BEGIN
+echo "==> Replaying full migration history (strict: first failure aborts)"
+REPLAYED=0
 for f in supabase/migrations/*.sql; do
-  name="$(basename "$f")"
-  set +e
-  ERR_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" 2>&1 >/dev/null)"
-  RC=$?
-  set -e
-
-  EXPECTED=""
-  if EXPECTED="$(expected_failure_for "$name")"; then IS_KNOWN=1; else IS_KNOWN=0; fi
-
-  if [ "$RC" -eq 0 ]; then
-    if [ "$IS_KNOWN" -eq 1 ]; then
-      echo "    !!  $name is allowlisted as a known failure but PASSED."
-      echo "        Remove it from KNOWN_FAILURES in scripts/db-test.sh."
-      UNEXPECTED+=("$name (unexpectedly passed)")
-    fi
-    continue
+  if ! psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" >/dev/null; then
+    echo "" >&2
+    echo "FAIL: $(basename "$f") did not apply cleanly (see the error above)." >&2
+    echo "      The active migration history must replay on an empty database with" >&2
+    echo "      ZERO failures. There is no allowlist: fix the migration set (or park" >&2
+    echo "      a generated re-issue via migrations-policy.json), never this script." >&2
+    exit 1
   fi
-
-  # Failed. The first reported error line is the one that stopped it.
-  ACTUAL="$(printf '%s' "$ERR_OUT" | grep -m1 -E '(ERROR|FEL):' || true)"
-
-  if [ "$IS_KNOWN" -eq 0 ]; then
-    echo "    XX  $name FAILED (not allowlisted)"
-    printf '%s\n' "$ERR_OUT" | grep -iE "error|FEL" | head -3 || true
-    UNEXPECTED+=("$name")
-    continue
-  fi
-
-  # Allowlisted: the failure must be the EXPECTED one. A different error, a
-  # different failing statement, or an earlier stop is a deviation, not a
-  # known failure.
-  case "$ACTUAL" in
-    *"$EXPECTED"*)
-      echo "    --  $name (known failure, expected error confirmed)"
-      ;;
-    *)
-      echo "    XX  $name failed with an UNEXPECTED error."
-      echo "        expected: $EXPECTED"
-      echo "        actual:   $ACTUAL"
-      UNEXPECTED+=("$name (error changed)")
-      ;;
-  esac
+  REPLAYED=$((REPLAYED + 1))
 done
-
-if [ "${#UNEXPECTED[@]}" -gt 0 ]; then
-  echo ""
-  echo "FAIL: ${#UNEXPECTED[@]} migration(s) deviated from the expected baseline:" >&2
-  printf '  - %s\n' "${UNEXPECTED[@]}" >&2
-  exit 1
-fi
-echo "    ok  migration replay matches the documented baseline"
+echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
+# STRICT-REPLAY-CONTRACT END
 
 # ---------------------------------------------------------------------------
 # 4. Both Security Competency migrations must genuinely be applied
