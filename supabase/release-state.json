@@ -379,7 +379,7 @@
     },
     {
       "file": "20260918090000_scp_interview_role_packs.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_interview_packs",
@@ -507,11 +507,12 @@
         }
       ],
       "note": "Interview Intelligence Phase 1: the governed Role Interview Pack domain. NOT applied hosted, and it must not be applied without separate owner approval. Purely additive -- thirteen new scp_interview_* tables plus their guards and RPCs; it modifies no existing object and touches neither scp_interview_guide_prompts nor scp_interview_notes, which share the prefix and belong to the assessment domain. It seeds the Vaktare v1 pilot as content_status='draft' with validation_label='pilot_hypothesis' and every competency mapping 'provisional', and the migration ABORTS if that seed could be published without human review. The application code that reads these objects sits behind the platform admin route /admin/interview-role-packs and behind scp_content_roles, so nothing a candidate or an employer can reach depends on this migration. Authored at slot 20260917090000 and moved to 20260918090000 when PR #122 took that slot; only the filename changed.",
-      "verify": "SELECT p.slug, v.content_status, v.validation_label, v.content_hash FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'vaktare-se';"
+      "verify": "SELECT p.slug, v.content_status, v.validation_label, v.content_hash FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = 'vaktare-se';",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260919090000_scp_interview_intelligence_registries.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_research_sources",
@@ -547,11 +548,12 @@
         }
       ],
       "note": "Interview Intelligence Phase 2, part 1: the governed knowledge layer -- Research Evidence Registry, Interview Method Library, AI Task Registry and the Security Recruitment Intelligence Graph. NOT applied hosted; must not be applied without separate owner approval. Purely additive: seven new tables plus one guard, referencing the Phase 1 pack domain and the competency graph read-only. Everything is seeded unreviewed/draft, so nothing claims a review that has not happened, and the edge table deliberately has no weight column and no candidate node kind.",
-      "verify": "SELECT (SELECT count(*) FROM public.scp_research_claims) AS claims, (SELECT count(*) FROM public.scp_ai_tasks WHERE activation_status='active') AS active_tasks, (SELECT count(*) FROM public.scp_intel_edges) AS edges;"
+      "verify": "SELECT (SELECT count(*) FROM public.scp_research_claims) AS claims, (SELECT count(*) FROM public.scp_ai_tasks WHERE activation_status='active') AS active_tasks, (SELECT count(*) FROM public.scp_intel_edges) AS edges;",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260920090000_scp_interview_runtime.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_interview_cases",
@@ -739,11 +741,12 @@
         }
       ],
       "note": "Interview Intelligence Phase 2, part 2: the employer runtime -- 21 tables, one process-quality view, the guards and the governed RPCs. NOT applied hosted; must not be applied without separate owner approval. It DEPENDS on 20260919090000 (AI task registry) and 20260918090000 (the pack domain) and aborts if either is missing. It also adds permissive SELECT policies to Phase 1 pack tables so an entitled employer can READ the questions they must ask -- read only, no authoring widened. AI ships disabled (ai_enabled=false) and transcripts ship disabled and double-gated.",
-      "verify": "SELECT (SELECT count(*) FROM public.scp_interview_cases) AS cases, (SELECT ai_enabled FROM public.scp_interview_ai_config) AS ai_enabled, (SELECT transcript_enabled FROM public.scp_interview_ai_config) AS transcript_enabled;"
+      "verify": "SELECT (SELECT count(*) FROM public.scp_interview_cases) AS cases, (SELECT ai_enabled FROM public.scp_interview_ai_config) AS ai_enabled, (SELECT transcript_enabled FROM public.scp_interview_ai_config) AS transcript_enabled;",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260921090000_scp_interview_integrity_hardening.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_interview_candidate_corrections",
@@ -798,11 +801,12 @@
           "kind": "function"
         }
       ],
-      "note": "Integrity hardening: research claims cannot outrun their sources, graph edges carry an assurance level, pilot grants are time-boxed and cohort-scoped, privacy controls that actually execute (four transcript confirmations, required retention, erasure), Panel Review with the individual stage sealed in the database, and the Career Discovery and Passport disclosure firewalls. Additive throughout; drops only its own superseded function signatures."
+      "note": "Integrity hardening: research claims cannot outrun their sources, graph edges carry an assurance level, pilot grants are time-boxed and cohort-scoped, privacy controls that actually execute (four transcript confirmations, required retention, erasure), Panel Review with the individual stage sealed in the database, and the Career Discovery and Passport disclosure firewalls. Additive throughout; drops only its own superseded function signatures.",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260922090000_scp_trust_method.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_trust_stages",
@@ -825,11 +829,12 @@
           "kind": "function"
         }
       ],
-      "note": "CQrity TRUST registered as a versioned governed method with five stages, each bound to the AI tasks it permits, the human gate that follows, what may not be concluded there, and the research claims that ground AND limit it. Seeds TRUST v1, eight claim cards and four sources -- all draft or pending, none approved. Adds trust_method_id to scp_interview_cases and access_attested_by to scp_research_sources."
+      "note": "CQrity TRUST registered as a versioned governed method with five stages, each bound to the AI tasks it permits, the human gate that follows, what may not be concluded there, and the research claims that ground AND limit it. Seeds TRUST v1, eight claim cards and four sources -- all draft or pending, none approved. Adds trust_method_id to scp_interview_cases and access_attested_by to scp_research_sources.",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260923090000_scp_trust_corrections.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_trust_stage_for_case",
@@ -848,22 +853,24 @@
           "kind": "function"
         }
       ],
-      "note": "Owner review corrections for PR #123. Closes the candidate/direct-API disclosure of the internal TRUST tables (platform-admin RLS plus a case-scoped safe projection); enforces the stage-to-AI-task binding inside scp_iv_ai_run_start so a wrong-stage task is refused before a run row exists; and makes versioning real by dropping the single-column UNIQUE(slug) that made a second version impossible, scoping every stage lookup by the case's pinned method, replacing highest-version selection with a fail-closed eligibility rule, and deriving the version from the pinned row instead of storing it twice. DROPS scp_interview_cases.trust_method_version, introduced by the previous migration and never released."
+      "note": "Owner review corrections for PR #123. Closes the candidate/direct-API disclosure of the internal TRUST tables (platform-admin RLS plus a case-scoped safe projection); enforces the stage-to-AI-task binding inside scp_iv_ai_run_start so a wrong-stage task is refused before a run row exists; and makes versioning real by dropping the single-column UNIQUE(slug) that made a second version impossible, scoping every stage lookup by the case's pinned method, replacing highest-version selection with a fail-closed eligibility rule, and deriving the version from the pinned row instead of storing it twice. DROPS scp_interview_cases.trust_method_version, introduced by the previous migration and never released.",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260924090000_migration_ledger_seed_event_reconciliation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "kind": "index",
           "object": "scp_content_events_legacy_migration_seed_once_idx"
         }
       ],
-      "note": "Narrow legacy ledger reconciliation. Clean replay executes 12 historical canonical/Lovable pairs twice because early generated dependants require the old file order. The migration removes only duplicate seeded governance events for those exact 12 migration keys and adds a partial unique index for the same closed set. Read-only hosted verification found one row per key and zero semantic duplicates, so hosted application deletes nothing. No product code depends on this index."
+      "note": "Narrow legacy ledger reconciliation. Clean replay executes 12 historical canonical/Lovable pairs twice because early generated dependants require the old file order. The migration removes only duplicate seeded governance events for those exact 12 migration keys and adds a partial unique index for the same closed set. Read-only hosted verification found one row per key and zero semantic duplicates, so hosted application deletes nothing. No product code depends on this index.",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     },
     {
       "file": "20260925090000_scp_interview_open_pilot_entitlement.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "table": "scp_interview_pack_versions",
@@ -880,14 +887,15 @@
         }
       ],
       "note": "Owner decision 2026-08-28: openly available pilot content is usable by ACTIVE employers without an employer-specific pilot grant. Adds the availability marker and its governed publisher RPC, redefines the read/execution entitlement, freezes content while open, and flips the seeded vaktare-se v1 to open. The grants table survives untouched for restricted cohorts.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_pack_versions' AND column_name='pilot_availability';"
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_pack_versions' AND column_name='pilot_availability';",
+      "evidenceSource": "Official Supabase GitHub integration clean bootstrap on owner project wrygicdfxwjnrugduxnt. Canonical main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 applied successfully; GitHub check run 98963493163 completed success on 2026-08-28. Direct hosted-ledger verification found 225 canonical migrations, first 20260716153446 and last 20260925090000."
     }
   ],
-  "policyVersion": 1,
+  "policyVersion": 2,
   "activeDirectory": "supabase/migrations",
   "evidenceBaseline": {
-    "source": "supabase/migrations-policy.json appliedThroughLovable",
-    "note": "Every canonical migration at or below this version has a recorded hosted application in migrations-policy.json and is therefore treated as applied without needing an entry below. Nothing above it is assumed: a migration above the baseline is applied only if it says so AND says how that is known.",
-    "throughVersion": "20260908092000"
+    "source": "Official Supabase GitHub integration on owner project wrygicdfxwjnrugduxnt",
+    "note": "Fresh empty-project bootstrap from canonical GitHub main commit ee0dda59808cbdb9a74c7766be4456fdedccaea1 completed successfully on 2026-08-28 (GitHub check run 98963493163). Direct hosted-ledger verification found exactly 225 active canonical migrations, first 20260716153446 and last 20260925090000. Future migrations above this version remain pending until the official integration applies them and release evidence is recorded.",
+    "throughVersion": "20260925090000"
   }
 }
