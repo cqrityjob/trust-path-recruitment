@@ -25,7 +25,7 @@ import {
 } from "@/components/employer/interview/InterviewUi";
 import {
   createInterviewCase,
-  listUsablePacks,
+  listStartableInterviewPacks,
 } from "@/lib/interview-intelligence/runtime.functions";
 
 export const Route = createFileRoute(
@@ -57,7 +57,7 @@ function Page() {
   const ws = useEmployerWorkspace(employerSlug);
   const summaryRef = useRef<HTMLDivElement>(null);
 
-  const packsFn = useServerFn(listUsablePacks);
+  const packsFn = useServerFn(listStartableInterviewPacks);
   const createFn = useServerFn(createInterviewCase);
 
   const packs = useQuery({
@@ -91,6 +91,15 @@ function Page() {
         to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
         params: { employerSlug, caseId },
       }),
+    // The list and the create call share one entitlement definition, so a
+    // refusal here means the state changed after the list was drawn -- the
+    // package was withdrawn, or the account stopped being active. Re-read the
+    // list so the screen stops offering something that can no longer be
+    // started, rather than leaving a stale option under an error message.
+    onError: () => {
+      setPackVersionId("");
+      void packs.refetch();
+    },
   });
 
   if (ws.isLoading)
@@ -156,7 +165,16 @@ function Page() {
         </div>
       )}
 
-      {packs.isSuccess && packs.data.packs.length === 0 && (
+      {packs.isSuccess && !packs.data.canStart && (
+        <div className="mt-6 max-w-3xl">
+          <State kind="empty">
+            Ert företagskonto är inte aktivt just nu, så nya intervjuer kan inte startas. Redan
+            påbörjade intervjuer och färdiga rapporter finns kvar. Kontakta plattformen.
+          </State>
+        </div>
+      )}
+
+      {packs.isSuccess && packs.data.canStart && packs.data.packs.length === 0 && (
         <div className="mt-6 max-w-3xl">
           <State kind="empty">
             Inget rollpaket är tillgängligt just nu. Paket görs tillgängliga av plattformen — försök
@@ -165,7 +183,7 @@ function Page() {
         </div>
       )}
 
-      {packs.isSuccess && packs.data.packs.length > 0 && (
+      {packs.isSuccess && packs.data.canStart && packs.data.packs.length > 0 && (
         <form onSubmit={onSubmit} noValidate className="mt-6 max-w-3xl space-y-5">
           <div ref={summaryRef} tabIndex={-1}>
             <ErrorSummary errors={errors} />

@@ -334,49 +334,75 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
     },
   );
 
-/** Pack versions this employer may actually start a case with. */
-export const listUsablePacks = createServerFn({ method: "GET" })
+/**
+ * The pack versions this employer can start a NEW interview with right now.
+ *
+ * Backed by scp_iv_startable_pack_versions(), which shares its entitlement
+ * decision with scp_iv_create_case(). That sharing is the point: the previous
+ * implementation ran a plain RLS-filtered SELECT, accepted an employerId it
+ * never used, and therefore answered "may this USER READ a pack?" while the
+ * create button answered "may THIS EMPLOYER START one?". The two disagreed
+ * whenever a version was readable for continuity (a case already pinned it)
+ * or the user belonged to more than one employer -- so the screen offered a
+ * pack and then refused it on submit.
+ */
+export const listStartableInterviewPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => employerInput.parse(d))
   .handler(
     async ({
       context,
+      data,
     }): Promise<{
+      readonly canStart: boolean;
       readonly packs: readonly {
         readonly packVersionId: string;
         readonly name: string;
+        readonly nameEn: string | null;
         readonly versionNumber: number;
         readonly contentStatus: string;
         readonly validationLabel: string;
         readonly locale: string;
+        /** published | open_pilot | pilot_grant. Server-side provenance; the
+         *  customer screen never renders it. */
+        readonly entitlementBasis: string;
       }[];
     }> => {
-      // RLS already narrows this to published-or-entitled versions, so the
-      // query does not need to restate the entitlement rule — and cannot
-      // accidentally contradict it.
-      const { data, error } = await context.supabase
-        .from("scp_interview_pack_versions")
-        .select(
-          "id, version_number, content_status, validation_label, locale, scp_interview_packs(name_sv)",
-        )
-        .order("version_number", { ascending: false });
+      // Asked separately so the screen can say "your account is not active"
+      // instead of rendering an unexplained empty selector.
+      const canStartRes = await context.supabase.rpc("scp_iv_employer_can_start_interviews", {
+        _employer_id: data.employerId,
+      });
+      if (canStartRes.error) throw new Error(canStartRes.error.message);
 
+      const { data: rows, error } = await context.supabase.rpc("scp_iv_startable_pack_versions", {
+        _employer_id: data.employerId,
+      });
       if (error) throw new Error(error.message);
 
-      const packs = (data ?? []).map((v) => {
-        const pack = Array.isArray(v.scp_interview_packs)
-          ? v.scp_interview_packs[0]
-          : v.scp_interview_packs;
-        return {
-          packVersionId: v.id as string,
-          name: pack?.name_sv ?? "—",
-          versionNumber: v.version_number as number,
-          contentStatus: v.content_status as string,
-          validationLabel: v.validation_label as string,
-          locale: v.locale as string,
-        };
-      });
-      return { packs };
+      const packs = (
+        (rows ?? []) as Array<{
+          pack_version_id: string;
+          name_sv: string;
+          name_en: string | null;
+          version_number: number;
+          content_status: string;
+          validation_label: string;
+          locale: string;
+          entitlement_basis: string;
+        }>
+      ).map((r) => ({
+        packVersionId: r.pack_version_id,
+        name: r.name_sv,
+        nameEn: r.name_en,
+        versionNumber: r.version_number,
+        contentStatus: r.content_status,
+        validationLabel: r.validation_label,
+        locale: r.locale,
+        entitlementBasis: r.entitlement_basis,
+      }));
+
+      return { canStart: canStartRes.data === true, packs };
     },
   );
 

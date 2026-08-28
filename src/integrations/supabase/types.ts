@@ -14201,6 +14201,10 @@ export type Database = {
         }[]
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
+      scp_iv_case_start_basis: {
+        Args: { _employer_id: string; _pack_version_id: string; _user_id?: string }
+        Returns: string
+      }
       scp_iv_confirm_evidence_proposal: {
         Args: {
           _correction_class?: string
@@ -14236,6 +14240,10 @@ export type Database = {
       }
       scp_iv_employer_may_read_pack: {
         Args: { _pack_version_id: string }
+        Returns: boolean
+      }
+      scp_iv_employer_can_start_interviews: {
+        Args: { _employer_id: string }
         Returns: boolean
       }
       scp_iv_erase_source: {
@@ -14355,6 +14363,21 @@ export type Database = {
       scp_iv_start_session: {
         Args: { _case_id: string; _interviewer_names?: string }
         Returns: string
+      }
+      scp_iv_startable_pack_versions: {
+        Args: { _employer_id: string }
+        Returns: {
+          content_status: string
+          entitlement_basis: string
+          locale: string
+          name_en: string
+          name_sv: string
+          pack_id: string
+          pack_slug: string
+          pack_version_id: string
+          validation_label: string
+          version_number: number
+        }[]
       }
       scp_join_human: {
         Args: { _items: string[]; _lang: string }

@@ -1215,6 +1215,38 @@ if [ "$OPILOT_PASSED" -lt 50 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5h. The start contract (P0, owner UAT 2026-08-28)
+#
+# The new-interview selector and scp_iv_create_case must answer the SAME
+# question. They did not: the selector was built from the READ entitlement,
+# whose pinned-case branch is continuity access, so a withdrawn pack with an
+# existing case was offered and then refused on submit. Every assertion here
+# uses one employer identity and one pack version id across BOTH calls.
+# ---------------------------------------------------------------------------
+echo "==> Running interview start-contract assertions"
+set +e
+START_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_startable_contract_test.sql 2>&1)"
+START_RC=$?
+set -e
+
+echo "$START_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+START_PASSED="$(echo "$START_OUT" | grep -c "ok  " || true)"
+
+if [ "$START_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the interview start-contract suite exited with code ${START_RC}." >&2
+  echo "$START_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "interview start contract"
+fi
+
+echo "    ok  ${START_PASSED} interview start-contract assertions passed"
+
+if [ "$START_PASSED" -lt 32 ]; then
+  echo "FAIL: expected at least 32 start-contract assertions, only ${START_PASSED} ran." >&2
+  suite_failed "interview start contract (assertion shortfall: floor 32)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"
