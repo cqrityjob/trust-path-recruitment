@@ -4046,6 +4046,19 @@ export const dictionaries = {
     "ii.gov.confirmSuspendBody": "Versionen blir otillgänglig för användning. Ange varför.",
     "ii.gov.confirmRetire": "Bekräfta avveckling",
     "ii.gov.confirmRetireBody": "Versionen avslutas permanent men raderas aldrig. Ange varför.",
+    "ii.gov.pilot": "Pilottillgänglighet",
+    "ii.gov.pilot.openState": "Öppen för aktiva arbetsgivare (pilothypotes)",
+    "ii.gov.pilot.restrictedState": "Begränsad — inte tillgänglig för arbetsgivare",
+    "ii.gov.pilot.hint":
+      "Ett innehållsbeslut för hela plattformen: en öppen version kan användas direkt av alla aktiva arbetsgivare, som pilothypotes i internt kvalitetsläge. Inga arbetsgivarspecifika medgivanden behövs. Så länge versionen är öppen är innehållet fryst — dra tillbaka tillgängligheten för att redigera.",
+    "ii.gov.pilot.open": "Gör tillgänglig för pilot",
+    "ii.gov.pilot.withdraw": "Dra tillbaka pilottillgänglighet",
+    "ii.gov.confirmPilotOpen": "Bekräfta pilottillgänglighet",
+    "ii.gov.confirmPilotOpenBody":
+      "Alla aktiva arbetsgivare kan då starta intervjuer mot versionen som pilothypotes. Innehållet fryses tills tillgängligheten dras tillbaka. Ange varför.",
+    "ii.gov.confirmPilotWithdraw": "Bekräfta tillbakadragande",
+    "ii.gov.confirmPilotWithdrawBody":
+      "Nya intervjuer kan inte längre startas mot versionen. Pågående intervjuer och färdiga rapporter påverkas inte. Ange varför.",
     "ii.gov.reasonRequired": "Orsak (krävs)",
     "ii.gov.reasonOptional": "Orsak (frivillig)",
     "ii.gov.confirm": "Bekräfta",
@@ -8025,6 +8038,19 @@ export const dictionaries = {
     "ii.gov.confirmSuspendBody": "The version becomes unavailable for use. State why.",
     "ii.gov.confirmRetire": "Confirm retirement",
     "ii.gov.confirmRetireBody": "The version is permanently closed but never deleted. State why.",
+    "ii.gov.pilot": "Pilot availability",
+    "ii.gov.pilot.openState": "Open to active employers (pilot hypothesis)",
+    "ii.gov.pilot.restrictedState": "Restricted — not available to employers",
+    "ii.gov.pilot.hint":
+      "A platform-wide content decision: an open version can be used immediately by every active employer, as a pilot hypothesis in internal QA mode. No employer-specific grants are needed. While the version is open its content is frozen — withdraw availability to edit.",
+    "ii.gov.pilot.open": "Make available for pilot",
+    "ii.gov.pilot.withdraw": "Withdraw pilot availability",
+    "ii.gov.confirmPilotOpen": "Confirm pilot availability",
+    "ii.gov.confirmPilotOpenBody":
+      "Every active employer can then start interviews against this version as a pilot hypothesis. The content is frozen until availability is withdrawn. State why.",
+    "ii.gov.confirmPilotWithdraw": "Confirm withdrawal",
+    "ii.gov.confirmPilotWithdrawBody":
+      "New interviews can no longer be started against this version. Ongoing interviews and finished reports are unaffected. State why.",
     "ii.gov.reasonRequired": "Reason (required)",
     "ii.gov.reasonOptional": "Reason (optional)",
     "ii.gov.confirm": "Confirm",

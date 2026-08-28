@@ -7834,6 +7834,7 @@ export type Database = {
           id: string
           locale: string
           pack_id: string
+          pilot_availability: string
           published_at: string | null
           published_by: string | null
           retired_at: string | null
@@ -7858,6 +7859,7 @@ export type Database = {
           id?: string
           locale: string
           pack_id: string
+          pilot_availability?: string
           published_at?: string | null
           published_by?: string | null
           retired_at?: string | null
@@ -7882,6 +7884,7 @@ export type Database = {
           id?: string
           locale?: string
           pack_id?: string
+          pilot_availability?: string
           published_at?: string | null
           published_by?: string | null
           retired_at?: string | null
@@ -14076,6 +14079,10 @@ export type Database = {
         Args: { _pack_version_id: string; _reason: string }
         Returns: undefined
       }
+      scp_interview_set_pilot_availability: {
+        Args: { _available: boolean; _pack_version_id: string; _reason: string }
+        Returns: undefined
+      }
       scp_interview_submit_for_review: {
         Args: { _gate: string; _pack_version_id: string }
         Returns: string
@@ -14244,6 +14251,10 @@ export type Database = {
       scp_iv_mark_sources_ready: {
         Args: { _case_id: string }
         Returns: undefined
+      }
+      scp_iv_open_pilot_available: {
+        Args: { _pack_version_id: string }
+        Returns: boolean
       }
       scp_iv_pack_competency_pack: {
         Args: { _pack_competency_id: string }

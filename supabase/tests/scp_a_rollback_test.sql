@@ -246,6 +246,7 @@ DROP FUNCTION IF EXISTS public.scp_iv_guard_passport_disclosure();
 -- Interview Intelligence must not leave a dangling trigger on Passport.
 DROP TRIGGER IF EXISTS sp_claims_no_interview_write ON public.sp_claims;
 DROP FUNCTION IF EXISTS public.scp_iv_guard_no_passport_write();
+DROP FUNCTION IF EXISTS public.scp_iv_open_pilot_available(uuid);
 DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_active(uuid, uuid, uuid);
 DROP FUNCTION IF EXISTS public.scp_interview_guard_pilot_grant();
 DROP FUNCTION IF EXISTS public.scp_interview_pilot_grant_audit();
@@ -332,6 +333,7 @@ DROP TABLE IF EXISTS public.scp_interview_packs                  CASCADE;
 
 DROP FUNCTION IF EXISTS public.scp_interview_confirm_competency_mapping(uuid);
 DROP FUNCTION IF EXISTS public.scp_interview_retire_version(uuid, text);
+DROP FUNCTION IF EXISTS public.scp_interview_set_pilot_availability(uuid, boolean, text);
 DROP FUNCTION IF EXISTS public.scp_interview_suspend_version(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_interview_publish_version(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_interview_record_review(uuid, text, text, text);

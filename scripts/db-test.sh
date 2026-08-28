@@ -1297,6 +1297,39 @@ if [ "$TRUST_PASSED" -lt 74 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5g. Open pilot entitlement (owner decision 2026-08-28)
+#
+# An ACTIVE employer uses openly available pilot content directly — no
+# per-employer grant. The suite proves the new rule and that every boundary
+# around it survived: suspended employers, withdrawn/retired content,
+# production governance, tenant isolation, candidates, and the grant
+# instrument that remains for restricted cohorts. Registered BEFORE the
+# destructive rollback step, like every non-destructive suite.
+# ---------------------------------------------------------------------------
+echo "==> Running open pilot entitlement assertions"
+set +e
+OPILOT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_open_pilot_test.sql 2>&1)"
+OPILOT_RC=$?
+set -e
+
+echo "$OPILOT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+OPILOT_PASSED="$(echo "$OPILOT_OUT" | grep -c "ok  " || true)"
+
+if [ "$OPILOT_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the open pilot entitlement suite exited with code ${OPILOT_RC}." >&2
+  echo "$OPILOT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "open pilot entitlement"
+fi
+
+echo "    ok  ${OPILOT_PASSED} open pilot entitlement assertions passed"
+
+if [ "$OPILOT_PASSED" -lt 50 ]; then
+  echo "FAIL: expected at least 50 open pilot assertions, only ${OPILOT_PASSED} ran." >&2
+  suite_failed "open pilot entitlement (assertion shortfall: floor 50)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"

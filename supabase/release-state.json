@@ -860,6 +860,27 @@
         }
       ],
       "note": "Narrow legacy ledger reconciliation. Clean replay executes 12 historical canonical/Lovable pairs twice because early generated dependants require the old file order. The migration removes only duplicate seeded governance events for those exact 12 migration keys and adds a partial unique index for the same closed set. Read-only hosted verification found one row per key and zero semantic duplicates, so hosted application deletes nothing. No product code depends on this index."
+    },
+    {
+      "file": "20260925090000_scp_interview_open_pilot_entitlement.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "table": "scp_interview_pack_versions",
+          "object": "pilot_availability",
+          "kind": "column"
+        },
+        {
+          "object": "scp_iv_open_pilot_available",
+          "kind": "function"
+        },
+        {
+          "object": "scp_interview_set_pilot_availability",
+          "kind": "function"
+        }
+      ],
+      "note": "Owner decision 2026-08-28: openly available pilot content is usable by ACTIVE employers without an employer-specific pilot grant. Adds the availability marker and its governed publisher RPC, redefines the read/execution entitlement, freezes content while open, and flips the seeded vaktare-se v1 to open. The grants table survives untouched for restricted cohorts.",
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_pack_versions' AND column_name='pilot_availability';"
     }
   ],
   "policyVersion": 1,

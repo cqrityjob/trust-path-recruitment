@@ -94,8 +94,18 @@ ON CONFLICT DO NOTHING;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP R1 — the pack pilot boundary'; END $$;
 
--- The Vaktare pack is draft/pilot_hypothesis. Without a grant it cannot be used
--- at all: the owner decision permits a controlled pilot, not free use.
+-- Since 20260925090000 the seeded Vaktare v1 is OPENLY available (the owner
+-- decision: active employers use available pilot content without a grant).
+-- This group is about the GRANT boundary, which now governs RESTRICTED
+-- content — so restrict the version again for the duration of this suite.
+-- The open-pilot rule itself has its own suite (scp_interview_open_pilot_test).
+UPDATE public.scp_interview_pack_versions ver
+   SET pilot_availability = 'restricted'
+  FROM public.scp_interview_packs p
+ WHERE p.id = ver.pack_id AND p.slug = 'vaktare-se';
+
+-- The Vaktare pack is draft/pilot_hypothesis. While RESTRICTED it cannot be
+-- used without a grant: a controlled cohort pilot, not free use.
 DO $$
 DECLARE _packv uuid;
 BEGIN

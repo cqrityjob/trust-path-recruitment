@@ -253,6 +253,7 @@ export interface PackVersionDetail {
     readonly sourceReference: string;
     readonly sourceDocumentVersion: string;
     readonly contentHash: string | null;
+    readonly pilotAvailability: "restricted" | "open";
     readonly summarySv: string | null;
     readonly roleVersionId: string;
     readonly roleNameSv: string | null;
@@ -370,7 +371,7 @@ export const getRolePackVersion = createServerFn({ method: "GET" })
     const versionRes = await db
       .from("scp_interview_pack_versions")
       .select(
-        "id, pack_id, version_number, content_status, validation_label, locale, role_version_id, source_reference, source_document_version, content_hash, summary_sv, created_at, updated_at, published_at, suspended_at, suspended_reason, retired_at, retired_reason",
+        "id, pack_id, version_number, content_status, validation_label, locale, role_version_id, source_reference, source_document_version, content_hash, pilot_availability, summary_sv, created_at, updated_at, published_at, suspended_at, suspended_reason, retired_at, retired_reason",
       )
       .eq("id", data.versionId)
       .maybeSingle();
@@ -718,6 +719,7 @@ export const getRolePackVersion = createServerFn({ method: "GET" })
         sourceReference: v.source_reference,
         sourceDocumentVersion: v.source_document_version,
         contentHash: v.content_hash,
+        pilotAvailability: (v.pilot_availability ?? "restricted") as "restricted" | "open",
         summarySv: v.summary_sv,
         roleVersionId: v.role_version_id,
         roleNameSv: roleRes.data?.name_sv ?? null,
@@ -988,6 +990,33 @@ export const retireRolePackVersion = createServerFn({ method: "POST" })
   .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
     const { error } = await context.supabase.rpc("scp_interview_retire_version", {
       _pack_version_id: data.versionId,
+      _reason: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Make one unpublished version openly available to ACTIVE employers for pilot
+ * use, or withdraw it. A platform-wide CONTENT decision (publisher role, with
+ * a mandatory reason, into the pack ledger) — never an employer-by-employer
+ * switch. Opening freezes the version's content until withdrawn.
+ */
+export const setRolePackPilotAvailability = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        versionId: z.string().uuid(),
+        available: z.boolean(),
+        reason: z.string().trim().min(1, "REASON_REQUIRED").max(2000),
+      })
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<{ readonly ok: true }> => {
+    const { error } = await context.supabase.rpc("scp_interview_set_pilot_availability", {
+      _pack_version_id: data.versionId,
+      _available: data.available,
       _reason: data.reason,
     });
     if (error) throw new Error(error.message);

@@ -402,7 +402,9 @@ insufficient data.** Nothing in this phase computes one.
 No real candidate data.
 
 **Phase B — controlled internal pilot**, after owner, legal and expert approval,
-under a `scp_interview_pack_pilot_grants` row per employer.
+on pack content the platform publisher has made openly available to active
+employers (`pilot_availability = 'open'`, owner decision 2026-08-28), or under a
+`scp_interview_pack_pilot_grants` row for a restricted cohort.
 
 Compare Interview-Intelligence-supported interviewing against the current
 process on **process measures**:
