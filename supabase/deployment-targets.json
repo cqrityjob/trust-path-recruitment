@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "releaseMode": "transition_preparation",
-  "automaticProductionDeployEnabled": false,
+  "releaseMode": "bootstrap_authorised",
+  "automaticProductionDeployEnabled": true,
   "verificationStrategy": "github_ci_disposable_postgres",
-  "writeTargetRef": null,
+  "writeTargetRef": "vcgwvtmzftmulmoxmufv",
   "lovableProjectId": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
   "currentLive": {
     "kind": "lovable_cloud",
@@ -14,8 +14,8 @@
     "kind": "owned_supabase",
     "projectRef": "vcgwvtmzftmulmoxmufv",
     "region": "eu-central-1",
-    "state": "provisioned_empty",
-    "writePolicy": "blocked_until_owner_approved_bootstrap"
+    "state": "schema_bootstrap_authorised",
+    "writePolicy": "supabase_github_integration_only"
   },
   "excluded": [
     {

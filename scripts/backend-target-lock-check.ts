@@ -1,22 +1,16 @@
 /**
  * CQrityjob backend target lock.
  *
- * This repository is in a controlled transition from the Lovable Cloud
- * backend to an owner-controlled Supabase project. The failure to prevent is
- * not a bad SQL statement; it is a correct statement reaching the wrong
- * project, or application code moving before its schema.
+ * The repository is moving from the Lovable Cloud backend to an owner-controlled
+ * Supabase project. The critical failure mode is a correct migration reaching
+ * the wrong project, or the application moving before its replacement backend
+ * has been proven.
  *
- * This guard is deliberately credential-free and performs no network access.
- * During transition_preparation it proves that:
- *   - the three immutable project identities are not confused;
- *   - the shipping app still points to the current live Lovable backend;
- *   - the new project is recorded only as an empty candidate;
- *   - no GitHub workflow can link to or write any hosted database yet; and
- *   - the old excluded project can never become a deployment target silently.
- *
- * The later bootstrap/cutover PR must change this guard and the registry in a
- * reviewed diff. Dashboard deployment must remain off until that reviewed
- * change; this guard makes any repository-hosted write path fail closed.
+ * This guard is credential-free and performs no network access. It locks the
+ * immutable project identities and enforces the currently authorised release
+ * phase. During schema bootstrap the shipping application MUST still use the
+ * existing Lovable Cloud backend; only Supabase's official GitHub integration
+ * may bootstrap the owner project.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -25,9 +19,11 @@ import { fileURLToPath } from "node:url";
 
 type ProjectRef = string;
 
+type ReleaseMode = "transition_preparation" | "bootstrap_authorised" | "cutover_complete";
+
 interface DeploymentTargets {
   schemaVersion: number;
-  releaseMode: "transition_preparation" | "bootstrap_authorised" | "cutover_complete";
+  releaseMode: ReleaseMode;
   automaticProductionDeployEnabled: boolean;
   verificationStrategy: "github_ci_disposable_postgres";
   writeTargetRef: ProjectRef | null;
@@ -79,22 +75,19 @@ function parseEnv(source: string): Map<string, string> {
   return entries;
 }
 
-const targets = JSON.parse(
-  read("supabase/deployment-targets.json"),
-) as DeploymentTargets;
-const migrationPolicy = JSON.parse(
-  read("supabase/migrations-policy.json"),
-) as MigrationPolicy;
+const targets = JSON.parse(read("supabase/deployment-targets.json")) as DeploymentTargets;
+const migrationPolicy = JSON.parse(read("supabase/migrations-policy.json")) as MigrationPolicy;
 const appEnv = parseEnv(read(".env"));
 const configToml = read("supabase/config.toml");
 
-if (targets.schemaVersion !== 1)
+if (targets.schemaVersion !== 1) {
   fail(`unsupported deployment-targets schemaVersion ${targets.schemaVersion}`);
+}
 if (targets.lovableProjectId !== OWNER_LOCKED.lovableProjectId) {
   fail(`Lovable project identity changed: expected ${OWNER_LOCKED.lovableProjectId}`);
 }
 if (targets.currentLive.projectRef !== OWNER_LOCKED.currentLiveRef) {
-  fail(`current-live ref changed during preparation: expected ${OWNER_LOCKED.currentLiveRef}`);
+  fail(`current-live ref changed before cutover: expected ${OWNER_LOCKED.currentLiveRef}`);
 }
 if (targets.candidateProduction.projectRef !== OWNER_LOCKED.candidateProductionRef) {
   fail(`candidate-production ref changed: expected ${OWNER_LOCKED.candidateProductionRef}`);
@@ -108,54 +101,79 @@ const allRefs = [
   targets.candidateProduction.projectRef,
   ...targets.excluded.map((entry) => entry.projectRef),
 ];
-if (new Set(allRefs).size !== allRefs.length)
+if (new Set(allRefs).size !== allRefs.length) {
   fail("a Supabase project appears in more than one target class");
-if (allRefs.some((ref) => !/^[a-z]{20}$/.test(ref)))
-  fail("every Supabase project ref must be exactly 20 lowercase letters");
-
-if (targets.releaseMode !== "transition_preparation") {
-  fail(
-    `this preparation guard only accepts releaseMode=transition_preparation, got ${targets.releaseMode}`,
-  );
 }
-if (targets.automaticProductionDeployEnabled)
-  fail("automatic production deployment must remain disabled during preparation");
+if (allRefs.some((ref) => !/^[a-z]{20}$/.test(ref))) {
+  fail("every Supabase project ref must be exactly 20 lowercase letters");
+}
 if (targets.verificationStrategy !== "github_ci_disposable_postgres") {
   fail("transition verification must use the existing disposable-Postgres GitHub CI path");
 }
-if (targets.writeTargetRef !== null)
-  fail("writeTargetRef must remain null until an owner-approved bootstrap PR");
-if (targets.candidateProduction.state !== "provisioned_empty") {
-  fail(
-    `candidate production must remain recorded as provisioned_empty, got ${targets.candidateProduction.state}`,
-  );
+
+if (targets.releaseMode === "transition_preparation") {
+  if (targets.automaticProductionDeployEnabled) {
+    fail("automatic production deployment must remain disabled during preparation");
+  }
+  if (targets.writeTargetRef !== null) {
+    fail("writeTargetRef must remain null until an owner-approved bootstrap PR");
+  }
+  if (targets.candidateProduction.state !== "provisioned_empty") {
+    fail(
+      `candidate production must remain recorded as provisioned_empty during preparation, got ${targets.candidateProduction.state}`,
+    );
+  }
+} else if (targets.releaseMode === "bootstrap_authorised") {
+  if (!targets.automaticProductionDeployEnabled) {
+    fail("bootstrap_authorised must declare Supabase production deployment enabled");
+  }
+  if (targets.writeTargetRef !== OWNER_LOCKED.candidateProductionRef) {
+    fail(`bootstrap writeTargetRef must be ${OWNER_LOCKED.candidateProductionRef}`);
+  }
+  if (targets.candidateProduction.state !== "schema_bootstrap_authorised") {
+    fail(
+      `candidate production state must be schema_bootstrap_authorised, got ${targets.candidateProduction.state}`,
+    );
+  }
+  if (targets.candidateProduction.writePolicy !== "supabase_github_integration_only") {
+    fail("bootstrap writes must be restricted to the official Supabase GitHub integration");
+  }
+} else {
+  fail("cutover_complete is intentionally unsupported by this guard until the final cutover PR");
 }
 
-const expectedUrl = `https://${OWNER_LOCKED.currentLiveRef}.supabase.co`;
+// The application remains on Lovable Cloud throughout preparation and schema
+// bootstrap. Moving any of these values before end-to-end UAT is a stop condition.
+const expectedLiveUrl = `https://${OWNER_LOCKED.currentLiveRef}.supabase.co`;
 for (const key of ["SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"] as const) {
-  if (appEnv.get(key) !== OWNER_LOCKED.currentLiveRef)
-    fail(`${key} must still point to current live during preparation`);
+  if (appEnv.get(key) !== OWNER_LOCKED.currentLiveRef) {
+    fail(`${key} must still point to current live until the cutover PR`);
+  }
 }
 for (const key of ["SUPABASE_URL", "VITE_SUPABASE_URL"] as const) {
-  if (appEnv.get(key) !== expectedUrl)
-    fail(`${key} must still point to current live during preparation`);
+  if (appEnv.get(key) !== expectedLiveUrl) {
+    fail(`${key} must still point to current live until the cutover PR`);
+  }
 }
 if (!configToml.includes(`project_id = "${OWNER_LOCKED.currentLiveRef}"`)) {
-  fail("supabase/config.toml must still identify the current live backend during preparation");
+  fail("supabase/config.toml must remain on the live backend until the cutover PR");
 }
 if (migrationPolicy.canonicalProject?.hostedSupabaseRef !== OWNER_LOCKED.currentLiveRef) {
-  fail("migrations-policy canonicalProject must remain the current live backend until cutover");
+  fail("migrations-policy canonicalProject remains the current live backend until cutover");
 }
 if (migrationPolicy.canonicalProject?.lovableProject !== OWNER_LOCKED.lovableProjectId) {
   fail("migrations-policy Lovable project identity does not match the owner lock");
 }
 
+// No repository workflow may use Supabase CLI hosted-write commands during this
+// transition. Schema bootstrap is intentionally delegated to the Supabase
+// project-level GitHub integration, whose target is fixed in the dashboard.
 const workflowDir = path.join(root, ".github/workflows");
 const hostedWritePattern = /\bsupabase\s+(?:link|db\s+push|migration\s+repair)\b/i;
 for (const file of readdirSync(workflowDir).filter((name) => /\.ya?ml$/.test(name))) {
   const source = readFileSync(path.join(workflowDir, file), "utf8");
   if (hostedWritePattern.test(source)) {
-    fail(`${file} contains a hosted Supabase write/link command while deployment is disabled`);
+    fail(`${file} contains a hosted Supabase write/link command; use the official Supabase GitHub integration`);
   }
   if (source.includes(OWNER_LOCKED.permanentlyExcludedRef)) {
     fail(`${file} references the permanently excluded Supabase project`);
@@ -163,13 +181,16 @@ for (const file of readdirSync(workflowDir).filter((name) => /\.ya?ml$/.test(nam
 }
 
 // Bun loads the tracked .env automatically, so SUPABASE_PROJECT_ID is the
-// shipping application's current backend. A later deployment workflow must
-// declare this dedicated write-target variable explicitly.
+// runtime backend. Any runner-level schema target, if present, must name only
+// the candidate owner project and can never silently point at live or excluded.
 const processTarget = process.env.CQ_SCHEMA_WRITE_TARGET_REF;
 if (processTarget && processTarget !== OWNER_LOCKED.candidateProductionRef) {
   fail(
-    `runner CQ_SCHEMA_WRITE_TARGET_REF is ${processTarget}; only the candidate ref may be staged for the later bootstrap`,
+    `runner CQ_SCHEMA_WRITE_TARGET_REF is ${processTarget}; only ${OWNER_LOCKED.candidateProductionRef} is permitted`,
   );
+}
+if (targets.releaseMode === "bootstrap_authorised" && processTarget && processTarget !== targets.writeTargetRef) {
+  fail("runner schema target and deployment-target registry disagree");
 }
 
 if (failures.length > 0) {
@@ -179,7 +200,10 @@ if (failures.length > 0) {
 }
 
 console.log("BACKEND TARGET LOCK: PASS");
-console.log(`  live (unchanged):       ${targets.currentLive.projectRef} [Lovable Cloud]`);
-console.log(`  candidate (no writes): ${targets.candidateProduction.projectRef} [owner Supabase]`);
-console.log(`  excluded permanently:  ${OWNER_LOCKED.permanentlyExcludedRef}`);
-console.log("  production deploy:     DISABLED");
+console.log(`  release mode:           ${targets.releaseMode}`);
+console.log(`  live runtime unchanged: ${targets.currentLive.projectRef} [Lovable Cloud]`);
+console.log(`  owner schema target:    ${targets.candidateProduction.projectRef}`);
+console.log(`  excluded permanently:   ${OWNER_LOCKED.permanentlyExcludedRef}`);
+console.log(
+  `  Supabase production deploy: ${targets.automaticProductionDeployEnabled ? "AUTHORISED FOR SCHEMA BOOTSTRAP" : "DISABLED"}`,
+);
