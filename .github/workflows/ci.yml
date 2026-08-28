@@ -251,9 +251,9 @@ jobs:
       # the same DDL. On 889eaad there were EIGHTEEN such pairs and none was
       # recorded anywhere. Each was harmless -- but harmless by luck, because
       # those particular migrations happen to be idempotent, not by design.
-      # This hashes every migration's SQL (comments and whitespace stripped) and
-      # fails on an UNRECORDED identical pair, so the next one is a diff a human
-      # approves rather than something that quietly enters the ledger.
+      # This hashes every active migration's SQL (comments and whitespace
+      # stripped) and fails on ANY identical pair. A Lovable UUID is deployment
+      # evidence in migrations-policy.json, never a second active migration.
       - name: Migration content-duplicate check
         run: bun run migrations-duplicate:check
 
