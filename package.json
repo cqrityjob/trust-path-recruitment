@@ -42,6 +42,7 @@
     "format": "prettier --write .", 
     "db:test": "bash scripts/db-test.sh", 
     "migrations:check": "bun run scripts/migration-safety-check.ts",
+  "migrations-duplicate:check": "bun run scripts/migration-duplicate-check.ts",
     "release-parity:check": "bun run scripts/release-parity-check.ts",
     "release-parity:gate": "bun run scripts/release-parity-check.ts --release",
     "regulatory-sources:check": "bun run scripts/regulatory-source-monitor.ts",

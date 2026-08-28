@@ -350,7 +350,7 @@
     },
     {
       "file": "20260917090000_superadmin_permanent_account_deletion.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "kind": "table",
@@ -373,7 +373,9 @@
           "object": "admin_storage_erasure_backlog"
         }
       ],
-      "note": "Superadmin permanent account deletion. NOT applied hosted and must not be applied before the application branch is live: it replaces admin_delete_user_if_safe(), admin_user_deletion_impact() and admin_set_user_disabled(), and the new impact fields (deleted/detached/preserved/form/already_erased) are what the rewritten confirmation dialog renders. Applying it under the current main would leave the old dialog reading fields it does not know about -- harmless, but the pairing is the point. Not an expand/contract pair: it drops no privilege and removes no column, so it ships as one migration alongside its code. It removes NO foreign key and relaxes NO NOT NULL; the only constraint change anywhere in public is sp_disclosures.focus_claim_id moving from ON DELETE CASCADE to ON DELETE SET NULL, so that erasing a holder's Passport cannot destroy the employer's disclosure record, whose retention is separately governed by docs/passport/privacy-processing-matrix.md."
+      "note": "Superadmin permanent account deletion. Applied hosted through Lovable under generated version 20260827112444/name 58fc45db-729a-4d5b-a545-7c0e40d74175. The generated file is content-equivalent to this canonical migration apart from a trailing newline. It replaces admin_delete_user_if_safe(), admin_user_deletion_impact() and admin_set_user_disabled(), drops no privilege or column, removes no foreign key and relaxes no NOT NULL constraint.",
+      "evidenceSource": "Read directly on 2026-08-28 from the owner-locked canonical Lovable project 9ec625ef-34a1-4b4b-8cbb-712cae168579 / Supabase zrahptwsnjcdyzfywbeh: supabase_migrations.schema_migrations contains version 20260827112444, name 58fc45db-729a-4d5b-a545-7c0e40d74175. Exact canonical-to-hosted mapping is recorded in supabase/migrations-policy.json appliedThroughLovable.",
+      "verify": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20260827112444';"
     },
     {
       "file": "20260918090000_scp_interview_role_packs.sql",
@@ -847,6 +849,17 @@
         }
       ],
       "note": "Owner review corrections for PR #123. Closes the candidate/direct-API disclosure of the internal TRUST tables (platform-admin RLS plus a case-scoped safe projection); enforces the stage-to-AI-task binding inside scp_iv_ai_run_start so a wrong-stage task is refused before a run row exists; and makes versioning real by dropping the single-column UNIQUE(slug) that made a second version impossible, scoping every stage lookup by the case's pinned method, replacing highest-version selection with a fail-closed eligibility rule, and deriving the version from the pinned row instead of storing it twice. DROPS scp_interview_cases.trust_method_version, introduced by the previous migration and never released."
+    },
+    {
+      "file": "20260924090000_migration_ledger_seed_event_reconciliation.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "index",
+          "object": "scp_content_events_legacy_migration_seed_once_idx"
+        }
+      ],
+      "note": "Narrow legacy ledger reconciliation. Clean replay executes 12 historical canonical/Lovable pairs twice because early generated dependants require the old file order. The migration removes only duplicate seeded governance events for those exact 12 migration keys and adds a partial unique index for the same closed set. Read-only hosted verification found one row per key and zero semantic duplicates, so hosted application deletes nothing. No product code depends on this index."
     }
   ],
   "policyVersion": 1,

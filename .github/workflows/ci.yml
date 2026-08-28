@@ -313,6 +313,14 @@ jobs:
       - name: Interview Intelligence gold dataset independence
         run: bun run interview-gold-independence:check
 
+      # Lovable historically synced 18 content-identical generated copies.
+      # They are a closed, hosted-verified legacy set because removing them in
+      # isolation breaks the historical dependency order. The terminal ledger
+      # migration reconciles their seed events. Every new unrecorded duplicate
+      # fails here and must use canonical migration + appliedThroughLovable.
+      - name: Migration content-duplicate check
+        run: bun run migrations-duplicate:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 
