@@ -1083,6 +1083,37 @@ async function loadAiContext(db: CallerDb, caseId: string, packVersionId: string
   return { passages, questions, probes, competencies };
 }
 
+/**
+ * Record a preparation plan the interviewer wrote themselves.
+ *
+ * A session starts from an APPROVED plan, and the only way to create one used
+ * to be an AI run — so with AI disabled the structured interview was
+ * unreachable. This is the manual path: same human approval gate, and a
+ * disclosure that says plainly that no AI was involved.
+ */
+export const recordManualPreparation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        timePlan: z.string().trim().max(2000).optional(),
+        openingGuidance: z.string().trim().max(2000).optional(),
+        closingGuidance: z.string().trim().max(2000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ readonly planId: string }> => {
+    const { data: id, error } = await context.supabase.rpc("scp_iv_record_manual_prep_plan", {
+      _case_id: data.caseId,
+      _time_plan: data.timePlan || undefined,
+      _opening_guidance: data.openingGuidance || undefined,
+      _closing_guidance: data.closingGuidance || undefined,
+    });
+    if (error) throw new Error(error.message);
+    return { planId: id as unknown as string };
+  });
+
 export const runPreparation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
@@ -1561,6 +1592,18 @@ export const authorEvidence = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly evidenceId: string }> => {
+    // Writing the first piece of evidence by hand IS the start of evidence
+    // review. The transition used to ride on the AI extraction run, so with
+    // AI off the case stayed at interview_complete for ever and the "finished
+    // assessing" gate — which requires evidence_review — never appeared.
+    const { error: beginError } = await context.supabase.rpc("scp_iv_begin_evidence_review", {
+      _case_id: data.caseId,
+    });
+    // Already in review is not a failure; only a real refusal is.
+    if (beginError && !/SCP_IV_ILLEGAL_TRANSITION/.test(beginError.message)) {
+      throw new Error(beginError.message);
+    }
+
     const { data: id, error } = await context.supabase.rpc("scp_iv_author_evidence", {
       _case_id: data.caseId,
       _question_id: data.questionId,
@@ -1638,9 +1681,15 @@ export interface TrustStageView {
   readonly letter: string | null;
   readonly ordinal: number | null;
   readonly nameSv: string | null;
+  readonly nameEn: string | null;
   readonly purposeSv: string | null;
+  readonly purposeEn: string | null;
   readonly humanResponsibilitySv: string | null;
+  readonly humanResponsibilityEn: string | null;
+  /** Swedish — authoritative. */
   readonly prohibitions: readonly string[];
+  /** English rendering, falling back to the Swedish statement per item. */
+  readonly prohibitionsEn: readonly string[];
   /**
    * Whether the stage permits any AI task at all. A boolean rather than the
    * task list: the individual task keys are internal registry identifiers, and
@@ -1676,9 +1725,13 @@ export const getTrustStage = createServerFn({ method: "GET" })
         letter: null,
         ordinal: null,
         nameSv: null,
+        nameEn: null,
         purposeSv: null,
+        purposeEn: null,
         humanResponsibilitySv: null,
+        humanResponsibilityEn: null,
         prohibitions: [],
+        prohibitionsEn: [],
         permitsAi: false,
         methodVersion: null,
       };
@@ -1689,9 +1742,13 @@ export const getTrustStage = createServerFn({ method: "GET" })
       letter: r.letter as string,
       ordinal: r.ordinal as number,
       nameSv: r.name_sv as string,
+      nameEn: (r.name_en as string | null) ?? null,
       purposeSv: r.purpose_sv as string,
+      purposeEn: (r.purpose_en as string | null) ?? null,
       humanResponsibilitySv: (r.human_responsibility_sv as string | null) ?? null,
+      humanResponsibilityEn: (r.human_responsibility_en as string | null) ?? null,
       prohibitions: (r.prohibitions as string[] | null) ?? [],
+      prohibitionsEn: (r.prohibitions_en as string[] | null) ?? [],
       permitsAi: Boolean(r.permits_ai),
       methodVersion: (r.method_version as number | null) ?? null,
     };

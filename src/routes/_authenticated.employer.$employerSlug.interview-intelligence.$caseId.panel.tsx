@@ -24,6 +24,7 @@
 // defeat the point of having assessed separately at all.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -60,6 +61,7 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const qc = useQueryClient();
 
   const getCaseFn = useServerFn(getInterviewCase);
@@ -176,17 +178,17 @@ function Page() {
           {p?.state && (
             <Chip tone={p.state === "individual" ? "attention" : "work"} srPrefix="Panelsteg">
               {p.state === "individual"
-                ? "Enskild bedömning pågår"
+                ? t("iiu.pl.state.individual")
                 : p.state === "revealed"
-                  ? "Bedömningarna är öppnade"
-                  : "Panelen är avslutad"}
+                  ? t("iiu.pl.state.revealed")
+                  : t("iiu.pl.state.closed")}
             </Chip>
           )}
         </div>
       </header>
 
       <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} />
+        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
       </div>
 
       <div className="mt-6">
@@ -194,19 +196,12 @@ function Page() {
       </div>
 
       <h2 className="mt-8 text-lg font-semibold text-foreground">Panelgranskning</h2>
-      <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
-        Varje bedömare gör sin egen bedömning först, utan att se de andras. När alla har lämnat in
-        öppnas bedömningarna samtidigt. Panelen väger sedan samman i text — det finns inget
-        medelvärde och ingen omröstning.
-      </p>
+      <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">{t("iiu.pl.intro")}</p>
 
       {!p?.exists ? (
         <div className="mt-4 max-w-3xl">
-          <InfoPanel tone="neutral" title="Ingen panel är öppnad för den här intervjun">
-            <p>
-              En panel öppnas med minst två bedömare från er organisation. En ensam bedömare behöver
-              ingen panel — det är en vanlig bedömning, och den gör ni på Evidenssidan.
-            </p>
+          <InfoPanel tone="neutral" title={t("iiu.pl.none.title")}>
+            <p>{t("iiu.pl.none.body")}</p>
           </InfoPanel>
         </div>
       ) : (
@@ -214,7 +209,7 @@ function Page() {
           {/* Who is on the panel and who still owes their own view. */}
           <section className="mt-6" aria-labelledby="panel-members">
             <h3 id="panel-members" className="text-sm font-semibold text-foreground">
-              Bedömare
+              {t("iiu.pl.assessors")}
             </h3>
             <ul className="mt-2 space-y-1.5">
               {p.members.map((m) => (
@@ -224,11 +219,11 @@ function Page() {
                   </span>
                   {m.submittedAt ? (
                     <Chip tone="confirmed" srPrefix="Status">
-                      Har lämnat in
+                      {t("iiu.pl.submitted")}
                     </Chip>
                   ) : (
                     <Chip tone="attention" srPrefix="Status">
-                      Bedömer fortfarande
+                      {t("iiu.pl.stillassessing")}
                     </Chip>
                   )}
                 </li>
@@ -238,11 +233,8 @@ function Page() {
 
           {sealed && (
             <div className="mt-4 max-w-3xl">
-              <InfoPanel tone="attention" role="status" title="Bedömningarna är förseglade">
-                <p>
-                  Du ser bara dina egna bedömningar tills alla har lämnat in. Det är avsiktligt: när
-                  du väl har sett en kollegas nivå går den inte att sluta veta.
-                </p>
+              <InfoPanel tone="attention" role="status" title={t("iiu.pl.sealed.title")}>
+                <p>{t("iiu.pl.sealed.body")}</p>
               </InfoPanel>
             </div>
           )}
@@ -252,10 +244,10 @@ function Page() {
                 those. */}
           <section className="mt-6" aria-labelledby="panel-assessments">
             <h3 id="panel-assessments" className="text-sm font-semibold text-foreground">
-              {sealed ? "Dina bedömningar" : "Bedömningar per fråga"}
+              {sealed ? t("iiu.pl.mine") : t("iiu.pl.perquestion")}
             </h3>
             {byQuestion.size === 0 ? (
-              <p className="mt-2 text-sm text-muted-foreground">Inga bedömningar att visa ännu.</p>
+              <p className="mt-2 text-sm text-muted-foreground">{t("iiu.pl.noassessments")}</p>
             ) : (
               <ul className="mt-3 space-y-3">
                 {[...byQuestion.entries()].map(([qid, rows]) => {
@@ -269,7 +261,7 @@ function Page() {
                         </span>
                         {divergent && (
                           <Chip tone="attention" srPrefix="Panel">
-                            Bedömarna gör olika bedömning
+                            {t("iiu.pl.disagree")}
                           </Chip>
                         )}
                       </div>
@@ -280,7 +272,9 @@ function Page() {
                               <span className="font-mono text-xs text-muted-foreground">
                                 {r.isMine ? "Du" : r.assessorId.slice(0, 8)}
                               </span>
-                              <span className="text-foreground">Nivå {r.level}</span>
+                              <span className="text-foreground">
+                                {t("iiu.ev.level")} {r.level}
+                              </span>
                             </p>
                             <p className="mt-0.5 text-muted-foreground">{r.rationale}</p>
                           </li>
@@ -296,44 +290,39 @@ function Page() {
           {/* Actions, each gated by the stage it belongs to. */}
           <section className="mt-8 max-w-3xl space-y-4">
             {(submit.isError || reveal.isError || conclude.isError) && (
-              <InfoPanel tone="governance" role="alert" title="Åtgärden kunde inte genomföras">
+              <InfoPanel tone="governance" role="alert" title={t("iiu.pl.actionfailed")}>
                 <p className="whitespace-pre-line">
-                  {interviewErrorMessage(submit.error ?? reveal.error ?? conclude.error)}
+                  {interviewErrorMessage(submit.error ?? reveal.error ?? conclude.error, t)}
                 </p>
               </InfoPanel>
             )}
 
             {p.iAmMember && !p.iHaveSubmitted && (
               <div className="rounded-lg border border-border p-4">
-                <p className="text-sm font-semibold text-foreground">Lämna in din egen bedömning</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Du kan lämna in när du har bedömt samtliga kärnfrågor. Efter det ser du de andras
-                  bedömningar när alla är klara.
-                </p>
+                <p className="text-sm font-semibold text-foreground">{t("iiu.pl.submit.title")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pl.submit.body")}</p>
                 <button
                   type="button"
                   className={`${PRIMARY_BUTTON} mt-3`}
                   onClick={() => submit.mutate()}
                   disabled={submit.isPending}
                 >
-                  {submit.isPending ? "Lämnar in …" : "Lämna in min bedömning"}
+                  {submit.isPending ? t("iiu.pl.submitting") : t("iiu.pl.submitcta")}
                 </button>
               </div>
             )}
 
             {sealed && p.members.every((m) => m.submittedAt) && (
               <div className="rounded-lg border border-border p-4">
-                <p className="text-sm font-semibold text-foreground">Alla har lämnat in</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Öppna bedömningarna så att panelen kan diskutera dem.
-                </p>
+                <p className="text-sm font-semibold text-foreground">{t("iiu.pl.allsubmitted")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pl.reveal.body")}</p>
                 <button
                   type="button"
                   className={`${PRIMARY_BUTTON} mt-3`}
                   onClick={() => reveal.mutate()}
                   disabled={reveal.isPending}
                 >
-                  {reveal.isPending ? "Öppnar …" : "Öppna bedömningarna"}
+                  {reveal.isPending ? t("iiu.pl.revealing") : t("iiu.pl.revealcta")}
                 </button>
               </div>
             )}
@@ -343,11 +332,7 @@ function Page() {
                 <label htmlFor="panel-conclusion" className="text-sm font-semibold text-foreground">
                   Panelens slutsats
                 </label>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Skriv vad panelen kom fram till och varför, inklusive var ni var oense. Det finns
-                  inget medelvärde och ingen omröstning — slutsatsen är ett resonemang, inte ett
-                  tal.
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pl.conclusion.hint")}</p>
                 <textarea
                   id="panel-conclusion"
                   className={`${FIELD} min-h-32`}
@@ -369,9 +354,7 @@ function Page() {
               <div className="rounded-lg border border-teal-700/30 bg-teal-700/10 p-4">
                 <p className="text-sm font-semibold text-foreground">Panelens slutsats</p>
                 <p className="mt-1 whitespace-pre-line text-sm text-foreground">{p.conclusion}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Skriven av en människa. De enskilda bedömningarna ovan står kvar oförändrade.
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">{t("iiu.pl.humanwritten")}</p>
               </div>
             )}
           </section>

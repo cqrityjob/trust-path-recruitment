@@ -6,6 +6,7 @@
 // contradict it.
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
@@ -55,6 +56,7 @@ function Page() {
   const { applicationId, jobId } = Route.useSearch();
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const summaryRef = useRef<HTMLDivElement>(null);
 
   const packsFn = useServerFn(listStartableInterviewPacks);
@@ -116,11 +118,10 @@ function Page() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     const next: Array<{ fieldId: string; message: string }> = [];
-    if (title.trim() === "")
-      next.push({ fieldId: "ii-title", message: "Ange en rubrik för intervjun." });
+    if (title.trim() === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
     if (candidate.trim() === "")
       next.push({ fieldId: "ii-candidate", message: "Ange kandidatens namn eller referens." });
-    if (packVersionId === "") next.push({ fieldId: "ii-pack", message: "Välj ett rollpaket." });
+    if (packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
     setErrors(next);
     if (next.length > 0) {
       window.requestAnimationFrame(() => summaryRef.current?.focus());
@@ -138,7 +139,7 @@ function Page() {
       activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
-      <nav aria-label="Brödsmulor" className="text-sm">
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
@@ -148,10 +149,11 @@ function Page() {
         </Link>
       </nav>
 
-      <h1 className="mt-3 text-2xl font-semibold text-foreground sm:text-3xl">Ny intervju</h1>
+      <h1 className="mt-3 text-2xl font-semibold text-foreground sm:text-3xl">
+        {t("iiu.new.title")}
+      </h1>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        Intervjun låses till en exakt version av rollpaketet. En senare ändring av paketet påverkar
-        därför aldrig en pågående intervju eller en färdig rapport.
+        {t("iiu.new.lead")}
       </p>
 
       {packs.isLoading && (
@@ -161,25 +163,19 @@ function Page() {
       )}
       {packs.isError && (
         <div className="mt-6 max-w-3xl">
-          <State kind="error" message={interviewErrorMessage(packs.error)} />
+          <State kind="error" message={interviewErrorMessage(packs.error, t)} />
         </div>
       )}
 
       {packs.isSuccess && !packs.data.canStart && (
         <div className="mt-6 max-w-3xl">
-          <State kind="empty">
-            Ert företagskonto är inte aktivt just nu, så nya intervjuer kan inte startas. Redan
-            påbörjade intervjuer och färdiga rapporter finns kvar. Kontakta plattformen.
-          </State>
+          <State kind="empty">{t("iiu.new.notactive")}</State>
         </div>
       )}
 
       {packs.isSuccess && packs.data.canStart && packs.data.packs.length === 0 && (
         <div className="mt-6 max-w-3xl">
-          <State kind="empty">
-            Inget rollpaket är tillgängligt just nu. Paket görs tillgängliga av plattformen — försök
-            igen senare eller kontakta plattformen om du väntar dig ett paket här.
-          </State>
+          <State kind="empty">{t("iiu.new.nopacks")}</State>
         </div>
       )}
 
@@ -190,14 +186,14 @@ function Page() {
           </div>
 
           {create.isError && (
-            <Panel tone="governance" role="alert" title="Intervjun kunde inte skapas">
-              <p className="whitespace-pre-line">{interviewErrorMessage(create.error)}</p>
+            <Panel tone="governance" role="alert" title={t("iiu.new.failed")}>
+              <p className="whitespace-pre-line">{interviewErrorMessage(create.error, t)}</p>
             </Panel>
           )}
 
           <div>
             <label htmlFor="ii-title" className="text-sm font-medium text-foreground">
-              Rubrik
+              {t("iiu.new.field.title")}
             </label>
             <input
               id="ii-title"
@@ -216,7 +212,7 @@ function Page() {
 
           <div>
             <label htmlFor="ii-candidate" className="text-sm font-medium text-foreground">
-              Kandidat (namn eller referens)
+              {t("iiu.new.field.candidate")}
             </label>
             <input
               id="ii-candidate"
@@ -231,7 +227,7 @@ function Page() {
               className={FIELD}
             />
             <p id="ii-candidate-hint" className="mt-1 text-xs text-muted-foreground">
-              Används för att identifiera underlaget internt.
+              {t("iiu.new.candidatehint")}
             </p>
             {errorFor("ii-candidate") && (
               <p id="ii-candidate-error" className="mt-1 text-xs text-destructive">
@@ -242,7 +238,7 @@ function Page() {
 
           <div>
             <label htmlFor="ii-pack" className="text-sm font-medium text-foreground">
-              Rollpaket
+              {t("iiu.new.field.pack")}
             </label>
             <select
               id="ii-pack"
@@ -252,7 +248,7 @@ function Page() {
               aria-describedby={errorFor("ii-pack") ? "ii-pack-error" : undefined}
               className={FIELD}
             >
-              <option value="">Välj rollpaket …</option>
+              <option value="">{t("iiu.new.choosepack")}</option>
               {packs.data.packs.map((p) => (
                 <option key={p.packVersionId} value={p.packVersionId}>
                   {p.name} — v{p.versionNumber} ({p.locale})
@@ -267,13 +263,8 @@ function Page() {
           </div>
 
           {chosen && chosen.validationLabel === "pilot_hypothesis" && (
-            <Panel tone="attention" title="Detta paket är en pilothypotes">
-              <p>
-                Innehållet är en genomarbetad hypotes som ännu inte är innehållsvaliderad genom
-                dokumenterad arbetsanalys och expertpanel. Det får användas i en kontrollerad pilot
-                och för intervjustöd, men inga vetenskapliga eller prediktiva påståenden får göras
-                om det.
-              </p>
+            <Panel tone="attention" title={t("iiu.new.pilot.title")}>
+              <p>{t("iiu.new.pilot.body")}</p>
               <p>
                 <ValidationChip label={chosen.validationLabel} />
               </p>
@@ -282,14 +273,14 @@ function Page() {
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button type="submit" disabled={create.isPending} className={PRIMARY_BUTTON}>
-              {create.isPending ? "Skapar …" : "Skapa intervju"}
+              {create.isPending ? t("iiu.new.creating") : t("iiu.new.create")}
             </button>
             <Link
               to="/employer/$employerSlug/interview-intelligence"
               params={{ employerSlug }}
               className={BUTTON}
             >
-              Avbryt
+              {t("iiu.new.cancel")}
             </Link>
           </div>
         </form>

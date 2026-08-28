@@ -10,6 +10,8 @@
 // is exactly how it gets read as "a low score".
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -39,6 +41,7 @@ import {
   markAssessed,
   recordAssessment,
   reviewEvidenceProposal,
+  authorEvidence,
   runEvidenceExtraction,
 } from "@/lib/interview-intelligence/runtime.functions";
 
@@ -47,24 +50,26 @@ export const Route = createFileRoute(
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
 
 const CORRECTION_CLASSES = [
-  ["ai_model_error", "AI:t hade fel"],
-  ["ambiguous_source", "Källan var tvetydig"],
-  ["missing_source", "Källa saknades"],
-  ["incorrect_mapping", "Fel koppling till fråga/dimension"],
-  ["policy_violation", "Bröt mot en produktregel"],
-  ["user_preference", "Jag föredrar en annan formulering"],
-  ["reviewer_disagreement", "Granskare är oense"],
-] as const;
+  ["ai_model_error", "iiu.ev.reason.ai_model_error"],
+  ["ambiguous_source", "iiu.ev.reason.ambiguous_source"],
+  ["missing_source", "iiu.ev.reason.missing_source"],
+  ["incorrect_mapping", "iiu.ev.reason.incorrect_mapping"],
+  ["policy_violation", "iiu.ev.reason.policy_violation"],
+  ["user_preference", "iiu.ev.reason.user_preference"],
+  ["reviewer_disagreement", "iiu.ev.reason.reviewer_disagreement"],
+] as const satisfies ReadonlyArray<readonly [string, TranslationKey]>;
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
 
   const trustFn = useServerFn(getTrustStage);
   const extractFn = useServerFn(runEvidenceExtraction);
+  const authorFn = useServerFn(authorEvidence);
   const reviewFn = useServerFn(reviewEvidenceProposal);
   const assessFn = useServerFn(recordAssessment);
   const doneFn = useServerFn(markAssessed);
@@ -90,6 +95,18 @@ function Page() {
   const [note, setNote] = useState("");
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [rationales, setRationales] = useState<Record<string, string>>({});
+  // Writing evidence by hand. With AI off this is the ONLY way evidence
+  // reaches the case — the extraction section cannot run — so the journey
+  // dead-ended here before this existed.
+  const [evQuestion, setEvQuestion] = useState("");
+  const [evExcerpt, setEvExcerpt] = useState("");
+  const authorEv = useMutation({
+    mutationFn: () => authorFn({ data: { caseId, questionId: evQuestion, excerpt: evExcerpt } }),
+    onSuccess: () => {
+      setEvExcerpt("");
+      void q.refetch();
+    },
+  });
 
   const extract = useMutation({
     mutationFn: () => extractFn({ data: { caseId } }),
@@ -156,7 +173,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : interviewErrorMessage(q.error)}
+        message={nf ? undefined : interviewErrorMessage(q.error, t)}
       />,
     );
   }
@@ -168,7 +185,7 @@ function Page() {
 
   return shell(
     <>
-      <nav aria-label="Brödsmulor" className="text-sm">
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
@@ -187,276 +204,345 @@ function Page() {
       </header>
 
       <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} />
+        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
       </div>
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
       </div>
 
-      {/* ---- AI extraction ---- */}
-      <section className="mt-8" aria-labelledby="s-extract">
-        <h2 id="s-extract" className="text-lg font-semibold text-foreground">
-          1. AI-förslag på evidens
-        </h2>
-        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          AI läser intervjuanteckningarna och föreslår avgränsade utdrag. Ingenting av detta är
-          evidens förrän en människa har bekräftat det.
-        </p>
-        {["interview_complete", "evidence_review"].includes(d.status) && (
-          <button
-            type="button"
-            className={`${PRIMARY_BUTTON} mt-3`}
-            onClick={() => extract.mutate()}
-            disabled={extract.isPending}
+      {/* ---- Human evidence authoring ----
+           Shown when AI is off, because then it is the only way evidence is
+           created at all. The AI extraction section below is hidden in that
+           state rather than left as an empty machine with a dead button. */}
+      {!d.aiAvailable && ["interview_complete", "evidence_review"].includes(d.status) && (
+        <section className="mt-8 max-w-4xl" aria-labelledby="s-author">
+          <h2 id="s-author" className="text-lg font-semibold text-foreground">
+            {t("iiu.ev.manual.title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.manual.body")}</p>
+          <form
+            className="mt-3 space-y-3 rounded-lg border border-border p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (evQuestion === "" || evExcerpt.trim() === "") return;
+              authorEv.mutate();
+            }}
           >
-            {extract.isPending ? "Arbetar …" : "Föreslå evidens"}
-          </button>
-        )}
-        {extract.isPending && (
-          <div className="mt-3 max-w-3xl">
-            <State kind="aiRunning" />
-          </div>
-        )}
-        {result && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ProviderModeChip mode={result.providerMode} />
-          </div>
-        )}
-        {result && (
-          <div className="mt-3 max-w-3xl">
-            <ProviderModeNote mode={result.providerMode} />
-          </div>
-        )}
-        {result && result.withheld.length > 0 && (
-          <div className="mt-3 max-w-3xl">
-            <WithheldPanel withheld={result.withheld} />
-          </div>
-        )}
-        {result && result.status !== "succeeded" && (
-          <div className="mt-3 max-w-3xl">
-            <State
-              kind={
-                result.status === "abstained"
-                  ? "aiAbstained"
-                  : result.status === "provider_error" || result.status === "timed_out"
-                    ? "aiUnavailable"
-                    : "aiInvalid"
-              }
-              message={result.message ?? undefined}
-            />
-          </div>
-        )}
-      </section>
+            <div>
+              <label htmlFor="ev-q" className="text-xs font-medium text-foreground">
+                {t("iiu.ev.manual.question")}
+              </label>
+              <select
+                id="ev-q"
+                value={evQuestion}
+                onChange={(e) => setEvQuestion(e.target.value)}
+                className={FIELD}
+                required
+              >
+                <option value="">{t("iiu.ev.manual.choose")}</option>
+                {d.questions.map((qq) => (
+                  <option key={qq.id} value={qq.id}>
+                    {qq.code} — {qq.promptSv}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="ev-x" className="text-xs font-medium text-foreground">
+                {t("iiu.ev.manual.excerpt")}
+              </label>
+              <textarea
+                id="ev-x"
+                rows={4}
+                value={evExcerpt}
+                onChange={(e) => setEvExcerpt(e.target.value)}
+                className={FIELD}
+                required
+              />
+            </div>
+            {authorEv.isError && (
+              <Panel tone="governance" role="alert" title={t("iiu.ev.manual.failed")}>
+                <p>{interviewErrorMessage(authorEv.error, t)}</p>
+              </Panel>
+            )}
+            <button type="submit" className={PRIMARY_BUTTON} disabled={authorEv.isPending}>
+              {authorEv.isPending ? t("iiu.pp.saving") : t("iiu.ev.manual.save")}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {/* ---- AI extraction ---- */}
+      {d.aiAvailable && (
+        <section className="mt-8" aria-labelledby="s-extract">
+          <h2 id="s-extract" className="text-lg font-semibold text-foreground">
+            {t("iiu.ev.s1.title")}
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{t("iiu.ev.s1.body")}</p>
+          {["interview_complete", "evidence_review"].includes(d.status) && (
+            <button
+              type="button"
+              className={`${PRIMARY_BUTTON} mt-3`}
+              onClick={() => extract.mutate()}
+              disabled={extract.isPending}
+            >
+              {extract.isPending ? t("iiu.ev.working") : t("iiu.ev.propose")}
+            </button>
+          )}
+          {extract.isPending && (
+            <div className="mt-3 max-w-3xl">
+              <State kind="aiRunning" />
+            </div>
+          )}
+          {result && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <ProviderModeChip mode={result.providerMode} />
+            </div>
+          )}
+          {result && (
+            <div className="mt-3 max-w-3xl">
+              <ProviderModeNote mode={result.providerMode} />
+            </div>
+          )}
+          {result && result.withheld.length > 0 && (
+            <div className="mt-3 max-w-3xl">
+              <WithheldPanel withheld={result.withheld} />
+            </div>
+          )}
+          {result && result.status !== "succeeded" && (
+            <div className="mt-3 max-w-3xl">
+              <State
+                kind={
+                  result.status === "abstained"
+                    ? "aiAbstained"
+                    : result.status === "provider_error" || result.status === "timed_out"
+                      ? "aiUnavailable"
+                      : "aiInvalid"
+                }
+                message={result.message ?? undefined}
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ---- Human review ---- */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-review">
-        <h2 id="s-review" className="text-lg font-semibold text-foreground">
-          2. Mänsklig granskning
-          {pending.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({pending.length} väntar)
-            </span>
-          )}
-        </h2>
+      {/* This section reviews AI PROPOSALS. With AI off there are never any, so
+          showing it would be an empty machine above the evidence that matters.
+          The confirmed-evidence list below is rendered either way. */}
+      {(d.aiAvailable || d.proposals.length > 0) && (
+        <section className="mt-8 max-w-4xl" aria-labelledby="s-review">
+          <h2 id="s-review" className="text-lg font-semibold text-foreground">
+            {t("iiu.ev.s2.title")}
+            {pending.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({pending.length} {t("iiu.ev.pending")})
+              </span>
+            )}
+          </h2>
 
-        {d.proposals.length === 0 ? (
-          <div className="mt-3">
-            <State kind="empty">Inga förslag ännu.</State>
-          </div>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {d.proposals.map((p) => {
-              const qq = d.questions.find((x) => x.id === p.questionId);
-              const reviewed = p.reviewState !== "pending";
-              return (
-                <li key={p.id} className="rounded-lg border border-border p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Chip tone="ai" srPrefix="Ursprung">
-                      AI-förslag
-                    </Chip>
-                    {qq && <Chip>{qq.code}</Chip>}
-                    <Chip
-                      tone={
-                        reviewed
-                          ? p.reviewState === "rejected"
-                            ? "governance"
-                            : "confirmed"
-                          : "attention"
-                      }
-                      srPrefix="Granskning"
-                    >
-                      {p.reviewState === "pending"
-                        ? "Väntar på granskning"
-                        : p.reviewState === "confirmed"
-                          ? "Bekräftad"
-                          : p.reviewState === "edited"
-                            ? "Redigerad"
-                            : p.reviewState === "rejected"
-                              ? "Avvisad"
-                              : "Olöst"}
-                    </Chip>
-                    {p.extractionConfidence !== null && (
-                      <Chip srPrefix="Extraktionssäkerhet">
-                        extraktion {Math.round(p.extractionConfidence * 100)}%
+          {d.proposals.length === 0 ? (
+            <div className="mt-3">
+              <State kind="empty">{t("iiu.ev.noproposals")}</State>
+            </div>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {d.proposals.map((p) => {
+                const qq = d.questions.find((x) => x.id === p.questionId);
+                const reviewed = p.reviewState !== "pending";
+                return (
+                  <li key={p.id} className="rounded-lg border border-border p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip tone="ai" srPrefix="Ursprung">
+                        {t("iiu.ev.aiproposal")}
                       </Chip>
-                    )}
-                  </div>
-
-                  <blockquote className="mt-3 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
-                    {p.excerpt}
-                  </blockquote>
-
-                  <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
-                    <div>
-                      <dt className="inline font-medium">Varför relevant: </dt>
-                      <dd className="inline">{p.relevanceRationale || "—"}</dd>
+                      {qq && <Chip>{qq.code}</Chip>}
+                      <Chip
+                        tone={
+                          reviewed
+                            ? p.reviewState === "rejected"
+                              ? "governance"
+                              : "confirmed"
+                            : "attention"
+                        }
+                        srPrefix="Granskning"
+                      >
+                        {p.reviewState === "pending"
+                          ? t("iiu.ev.state.awaiting")
+                          : p.reviewState === "confirmed"
+                            ? t("iiu.ev.state.confirmed")
+                            : p.reviewState === "edited"
+                              ? "Redigerad"
+                              : p.reviewState === "rejected"
+                                ? "Avvisad"
+                                : t("iiu.ev.state.unresolved")}
+                      </Chip>
+                      {p.extractionConfidence !== null && (
+                        <Chip srPrefix={t("iiu.ev.extraction.srprefix")}>
+                          extraktion {Math.round(p.extractionConfidence * 100)}%
+                        </Chip>
+                      )}
                     </div>
-                    {p.uncertaintyNote && (
-                      <div>
-                        <dt className="inline font-medium">Osäkerhet: </dt>
-                        <dd className="inline">{p.uncertaintyNote}</dd>
-                      </div>
-                    )}
-                    {p.prohibitedConclusionNote && (
-                      <div>
-                        <dt className="inline font-medium">Får inte tolkas som: </dt>
-                        <dd className="inline">{p.prohibitedConclusionNote}</dd>
-                      </div>
-                    )}
-                    <div className="pt-1 text-[11px]">
-                      Extraktionssäkerhet beskriver hur säker extraktionen är — inte kandidatens
-                      kvalitet, trovärdighet eller lämplighet. Den vägs aldrig samman.
-                    </div>
-                  </dl>
 
-                  {!reviewed && (
-                    <div className="mt-3">
-                      {editing === p.id ? (
-                        <div className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3">
-                          <label
-                            htmlFor={`edit-${p.id}`}
-                            className="text-xs font-medium text-foreground"
-                          >
-                            Korrigerat utdrag
-                          </label>
-                          <textarea
-                            id={`edit-${p.id}`}
-                            rows={3}
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            className={FIELD}
-                          />
-                          <label
-                            htmlFor={`corr-${p.id}`}
-                            className="mt-2 block text-xs font-medium text-foreground"
-                          >
-                            Varför ändrade du det?
-                          </label>
-                          <select
-                            id={`corr-${p.id}`}
-                            value={correction}
-                            onChange={(e) => setCorrection(e.target.value)}
-                            className={FIELD}
-                          >
-                            {CORRECTION_CLASSES.map(([v, l]) => (
-                              <option key={v} value={v}>
-                                {l}
-                              </option>
-                            ))}
-                          </select>
-                          <label
-                            htmlFor={`note-${p.id}`}
-                            className="mt-2 block text-xs font-medium text-foreground"
-                          >
-                            Anteckning
-                          </label>
-                          <input
-                            id={`note-${p.id}`}
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            className={FIELD}
-                          />
-                          <div className="mt-2 flex flex-wrap gap-2">
+                    <blockquote className="mt-3 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
+                      {p.excerpt}
+                    </blockquote>
+
+                    <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      <div>
+                        <dt className="inline font-medium">{t("iiu.ev.whyrelevant")}</dt>
+                        <dd className="inline">{p.relevanceRationale || "—"}</dd>
+                      </div>
+                      {p.uncertaintyNote && (
+                        <div>
+                          <dt className="inline font-medium">{t("iiu.ev.uncertainty")}</dt>
+                          <dd className="inline">{p.uncertaintyNote}</dd>
+                        </div>
+                      )}
+                      {p.prohibitedConclusionNote && (
+                        <div>
+                          <dt className="inline font-medium">{t("iiu.ev.mustnot")}</dt>
+                          <dd className="inline">{p.prohibitedConclusionNote}</dd>
+                        </div>
+                      )}
+                      <div className="pt-1 text-[11px]">{t("iiu.ev.extraction.note")}</div>
+                    </dl>
+
+                    {!reviewed && (
+                      <div className="mt-3">
+                        {editing === p.id ? (
+                          <div className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3">
+                            <label
+                              htmlFor={`edit-${p.id}`}
+                              className="text-xs font-medium text-foreground"
+                            >
+                              Korrigerat utdrag
+                            </label>
+                            <textarea
+                              id={`edit-${p.id}`}
+                              rows={3}
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className={FIELD}
+                            />
+                            <label
+                              htmlFor={`corr-${p.id}`}
+                              className="mt-2 block text-xs font-medium text-foreground"
+                            >
+                              {t("iiu.ev.whychanged")}
+                            </label>
+                            <select
+                              id={`corr-${p.id}`}
+                              value={correction}
+                              onChange={(e) => setCorrection(e.target.value)}
+                              className={FIELD}
+                            >
+                              {CORRECTION_CLASSES.map(([v, key]) => (
+                                <option key={v} value={v}>
+                                  {t(key)}
+                                </option>
+                              ))}
+                            </select>
+                            <label
+                              htmlFor={`note-${p.id}`}
+                              className="mt-2 block text-xs font-medium text-foreground"
+                            >
+                              Anteckning
+                            </label>
+                            <input
+                              id={`note-${p.id}`}
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                              className={FIELD}
+                            />
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className={PRIMARY_BUTTON}
+                                disabled={review.isPending || editText.trim() === ""}
+                                onClick={() =>
+                                  review.mutate({ proposalId: p.id, decision: "edit" })
+                                }
+                              >
+                                Spara korrigering
+                              </button>
+                              <button
+                                type="button"
+                                className={BUTTON}
+                                onClick={() => setEditing(null)}
+                              >
+                                Avbryt
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
-                              className={PRIMARY_BUTTON}
-                              disabled={review.isPending || editText.trim() === ""}
-                              onClick={() => review.mutate({ proposalId: p.id, decision: "edit" })}
+                              className={BUTTON}
+                              disabled={review.isPending}
+                              onClick={() =>
+                                review.mutate({ proposalId: p.id, decision: "accept" })
+                              }
                             >
-                              Spara korrigering
+                              {t("iiu.ev.confirm")}
                             </button>
                             <button
                               type="button"
                               className={BUTTON}
-                              onClick={() => setEditing(null)}
+                              onClick={() => {
+                                setEditing(p.id);
+                                setEditText(p.excerpt);
+                              }}
                             >
-                              Avbryt
+                              Redigera
+                            </button>
+                            <button
+                              type="button"
+                              className={BUTTON}
+                              disabled={review.isPending}
+                              onClick={() =>
+                                review.mutate({ proposalId: p.id, decision: "reject" })
+                              }
+                            >
+                              Avvisa
+                            </button>
+                            <button
+                              type="button"
+                              className={BUTTON}
+                              disabled={review.isPending}
+                              onClick={() =>
+                                review.mutate({ proposalId: p.id, decision: "unresolved" })
+                              }
+                            >
+                              {t("iiu.ev.markunresolved")}
                             </button>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            className={BUTTON}
-                            disabled={review.isPending}
-                            onClick={() => review.mutate({ proposalId: p.id, decision: "accept" })}
-                          >
-                            Bekräfta
-                          </button>
-                          <button
-                            type="button"
-                            className={BUTTON}
-                            onClick={() => {
-                              setEditing(p.id);
-                              setEditText(p.excerpt);
-                            }}
-                          >
-                            Redigera
-                          </button>
-                          <button
-                            type="button"
-                            className={BUTTON}
-                            disabled={review.isPending}
-                            onClick={() => review.mutate({ proposalId: p.id, decision: "reject" })}
-                          >
-                            Avvisa
-                          </button>
-                          <button
-                            type="button"
-                            className={BUTTON}
-                            disabled={review.isPending}
-                            onClick={() =>
-                              review.mutate({ proposalId: p.id, decision: "unresolved" })
-                            }
-                          >
-                            Olöst
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-        {review.isError && (
-          <div className="mt-3">
-            <Panel tone="governance" role="alert" title="Granskningen kunde inte sparas">
-              <p>{interviewErrorMessage(review.error)}</p>
-            </Panel>
-          </div>
-        )}
-      </section>
+          {review.isError && (
+            <div className="mt-3">
+              <Panel tone="governance" role="alert" title="Granskningen kunde inte sparas">
+                <p>{interviewErrorMessage(review.error, t)}</p>
+              </Panel>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ---- Confirmed evidence ---- */}
       {d.evidence.length > 0 && (
         <section className="mt-8 max-w-4xl" aria-labelledby="s-confirmed">
           <h2 id="s-confirmed" className="text-lg font-semibold text-foreground">
-            Bekräftad evidens
+            {t("iiu.ev.confirmed.title")}
           </h2>
           <ul className="mt-3 space-y-2">
             {d.evidence.map((e) => {
@@ -470,10 +556,10 @@ function Page() {
                     {qq && <Chip>{qq.code}</Chip>}
                     <Chip tone="confirmed" srPrefix="Ursprung">
                       {e.origin === "human_authored"
-                        ? "Skriven av människa"
+                        ? t("iiu.ev.origin.human")
                         : e.origin === "ai_proposed_edited"
-                          ? "AI-förslag, korrigerat"
-                          : "AI-förslag, bekräftat"}
+                          ? t("iiu.ev.origin.ai_corrected")
+                          : t("iiu.ev.origin.ai_confirmed")}
                     </Chip>
                   </div>
                   <p className="mt-2 text-foreground">{e.excerpt}</p>
@@ -493,12 +579,9 @@ function Page() {
       {/* ---- Human assessment ---- */}
       <section className="mt-10 max-w-4xl" aria-labelledby="s-assess">
         <h2 id="s-assess" className="text-lg font-semibold text-foreground">
-          3. Mänsklig bedömning
+          {t("iiu.ev.s3.title")}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          En bedömning görs mot paketets ankare och kräver en skriven motivering. Det finns ingen
-          totalpoäng, ingen viktning och ingen rangordning.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.s3.body")}</p>
         <div className="mt-2">
           <LevelZeroNote />
         </div>
@@ -512,14 +595,14 @@ function Page() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Chip tone="work">{qq.code}</Chip>
                   <Chip tone={evidenceCount > 0 ? "confirmed" : "attention"}>
-                    {evidenceCount} bekräftad evidens
+                    {evidenceCount} {t("iiu.ev.confirmedcount")}
                   </Chip>
                   {existing && (
                     <Chip
                       tone={existing.level === 0 ? "attention" : "confirmed"}
-                      srPrefix="Bedömd nivå"
+                      srPrefix={t("iiu.ev.level.srprefix")}
                     >
-                      Nivå {existing.level}
+                      {t("iiu.ev.level")} {existing.level}
                     </Chip>
                   )}
                 </div>
@@ -542,7 +625,9 @@ function Page() {
                     }}
                   >
                     <fieldset>
-                      <legend className="text-xs font-medium text-foreground">Nivå</legend>
+                      <legend className="text-xs font-medium text-foreground">
+                        {t("iiu.ev.level")}
+                      </legend>
                       <div className="mt-1 flex flex-wrap gap-2">
                         {[...qq.anchors]
                           .sort((a, b) => a.level - b.level)
@@ -573,7 +658,7 @@ function Page() {
                         htmlFor={`rat-${qq.id}`}
                         className="text-xs font-medium text-foreground"
                       >
-                        Motivering (krävs)
+                        {t("iiu.ev.rationale")}
                       </label>
                       <textarea
                         id={`rat-${qq.id}`}
@@ -584,7 +669,7 @@ function Page() {
                       />
                     </div>
                     <button type="submit" className={BUTTON} disabled={assess.isPending}>
-                      Spara bedömning
+                      {t("iiu.ev.save")}
                     </button>
                   </form>
                 )}
@@ -595,8 +680,8 @@ function Page() {
 
         {assess.isError && (
           <div className="mt-3">
-            <Panel tone="governance" role="alert" title="Bedömningen kunde inte sparas">
-              <p className="whitespace-pre-line">{interviewErrorMessage(assess.error)}</p>
+            <Panel tone="governance" role="alert" title={t("iiu.ev.savefailed")}>
+              <p className="whitespace-pre-line">{interviewErrorMessage(assess.error, t)}</p>
             </Panel>
           </div>
         )}
@@ -608,7 +693,7 @@ function Page() {
             onClick={() => finishAssessing.mutate()}
             disabled={finishAssessing.isPending}
           >
-            Klar med bedömningen
+            {t("iiu.ev.done")}
           </button>
         )}
       </section>

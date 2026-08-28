@@ -6,6 +6,8 @@
 // unapproved plan is refused there, not just here.
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -38,6 +40,7 @@ import {
   getInterviewCase,
   getTrustStage,
   markSourcesReady,
+  recordManualPreparation,
   runPreparation,
   startInterviewSession,
 } from "@/lib/interview-intelligence/runtime.functions";
@@ -46,20 +49,21 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/prepare",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
 
-const ITEM_LABEL: Record<string, string> = {
-  focus_area: "Fokusområde",
-  relevant_experience: "Relevant erfarenhet",
-  missing_information: "Saknad information",
-  ambiguity: "Oklarhet",
-  verification_point: "Verifieringspunkt",
-  probe: "Godkänd följdfråga",
-  clarification: "Förtydligande",
-  prohibited_reminder: "Påminnelse",
+const ITEM_LABEL: Record<string, TranslationKey> = {
+  focus_area: "iiu.pp.item.focus_area",
+  relevant_experience: "iiu.pp.item.relevant_experience",
+  missing_information: "iiu.pp.item.missing_information",
+  ambiguity: "iiu.pp.item.ambiguity",
+  verification_point: "iiu.pp.item.verification_point",
+  probe: "iiu.pp.item.probe",
+  clarification: "iiu.pp.item.clarification",
+  prohibited_reminder: "iiu.pp.item.prohibited_reminder",
 };
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -69,6 +73,7 @@ function Page() {
   const addSourceFn = useServerFn(addCaseSource);
   const readyFn = useServerFn(markSourcesReady);
   const prepFn = useServerFn(runPreparation);
+  const manualPrepFn = useServerFn(recordManualPreparation);
   const approveFn = useServerFn(approvePreparation);
   const startFn = useServerFn(startInterviewSession);
 
@@ -92,7 +97,7 @@ function Page() {
   >("job_description");
   const [label, setLabel] = useState("");
   const [text, setText] = useState("");
-  const [basis, setBasis] = useState("Berättigat intresse, rekrytering.");
+  const [basis, setBasis] = useState(t("iiu.pp.basis.default"));
   const [approvalNote, setApprovalNote] = useState("");
 
   const addSource = useMutation({
@@ -121,6 +126,25 @@ function Page() {
     mutationFn: () => readyFn({ data: { caseId } }),
     onSuccess: refresh,
   });
+  // The manual preparation path. With AI disabled this is how a case reaches
+  // an approved plan at all — the questions and probes come from the governed
+  // pack either way, so what the interviewer adds is the conduct plan.
+  const [timePlan, setTimePlan] = useState("");
+  const [opening, setOpening] = useState("");
+  const [closing, setClosing] = useState("");
+  const manualPrep = useMutation({
+    mutationFn: () =>
+      manualPrepFn({
+        data: {
+          caseId,
+          timePlan: timePlan || undefined,
+          openingGuidance: opening || undefined,
+          closingGuidance: closing || undefined,
+        },
+      }),
+    onSuccess: () => void q.refetch(),
+  });
+
   const generate = useMutation({
     mutationFn: () => prepFn({ data: { caseId } }),
     onSuccess: refresh,
@@ -166,7 +190,7 @@ function Page() {
     return shell(
       <State
         kind={notFound ? "denied" : "error"}
-        message={notFound ? undefined : interviewErrorMessage(q.error)}
+        message={notFound ? undefined : interviewErrorMessage(q.error, t)}
       />,
     );
   }
@@ -177,7 +201,7 @@ function Page() {
 
   return shell(
     <>
-      <nav aria-label="Brödsmulor" className="text-sm">
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
@@ -195,7 +219,7 @@ function Page() {
           <ValidationChip label={d.validationLabel} />
           <Chip>{d.packName ?? "—"}</Chip>
           {d.packContentHash && (
-            <Chip srPrefix="Låst innehållssumma">
+            <Chip srPrefix={t("iiu.pp.contenthash")}>
               <code className="font-mono text-[11px]">{d.packContentHash.slice(0, 10)}</code>
             </Chip>
           )}
@@ -203,7 +227,7 @@ function Page() {
       </header>
 
       <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} />
+        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
       </div>
 
       <div className="mt-6">
@@ -213,16 +237,13 @@ function Page() {
       {/* ---- 1. Sources ---- */}
       <section className="mt-8" aria-labelledby="s-sources">
         <h2 id="s-sources" className="text-lg font-semibold text-foreground">
-          1. Underlag
+          {t("iiu.pp.s1.title")}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Varje källa delas upp i citerbara avsnitt. AI får bara påstå saker om kandidaten som pekar
-          tillbaka på ett sådant avsnitt.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pp.s1.body")}</p>
 
         <div className="mt-4">
           {d.sources.length === 0 ? (
-            <State kind="empty">Inget underlag ännu.</State>
+            <State kind="empty">{t("iiu.pp.nosources")}</State>
           ) : (
             <ul className="space-y-2">
               {d.sources.map((s) => (
@@ -230,11 +251,11 @@ function Page() {
                   key={s.id}
                   className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-sm"
                 >
-                  <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind)}</Chip>
+                  <Chip tone="work">{uiLabel(SOURCE_KIND_LABEL, s.kind, t)}</Chip>
                   <span className="font-medium text-foreground">{s.label}</span>
                   <span className="text-xs text-muted-foreground">{s.passageCount} avsnitt</span>
                   <span className="text-xs text-muted-foreground">
-                    · ändamål: {uiLabel(PURPOSE_LABEL, s.purposeCode)}
+                    · {t("iiu.pp.purpose")}: {uiLabel(PURPOSE_LABEL, s.purposeCode, t)}
                   </span>
                 </li>
               ))}
@@ -250,7 +271,7 @@ function Page() {
               if (label && text) addSource.mutate();
             }}
           >
-            <h3 className="text-sm font-semibold text-foreground">Lägg till underlag</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t("iiu.pp.addsource")}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="src-kind" className="text-xs font-medium text-foreground">
@@ -262,15 +283,17 @@ function Page() {
                   onChange={(e) => setKind(e.target.value as typeof kind)}
                   className={FIELD}
                 >
-                  <option value="job_description">Annons / rollbeskrivning</option>
-                  <option value="employer_requirements">Kravprofil</option>
-                  <option value="candidate_cv">Kandidatens CV</option>
-                  <option value="application_answers">Ansökningssvar</option>
+                  <option value="job_description">{t("iiu.source.job_description")}</option>
+                  <option value="employer_requirements">
+                    {t("iiu.source.employer_requirements")}
+                  </option>
+                  <option value="candidate_cv">{t("iiu.source.candidate_cv")}</option>
+                  <option value="application_answers">{t("iiu.source.application_answers")}</option>
                 </select>
               </div>
               <div>
                 <label htmlFor="src-label" className="text-xs font-medium text-foreground">
-                  Etikett
+                  {t("iiu.pp.label")}
                 </label>
                 <input
                   id="src-label"
@@ -283,7 +306,7 @@ function Page() {
             </div>
             <div>
               <label htmlFor="src-text" className="text-xs font-medium text-foreground">
-                Innehåll
+                {t("iiu.pp.content")}
               </label>
               <textarea
                 id="src-text"
@@ -295,12 +318,12 @@ function Page() {
                 aria-describedby="src-text-hint"
               />
               <p id="src-text-hint" className="mt-1 text-xs text-muted-foreground">
-                Tomrad separerar avsnitt. Varje avsnitt blir en citerbar enhet.
+                {t("iiu.pp.contenthint")}
               </p>
             </div>
             <div>
               <label htmlFor="src-basis" className="text-xs font-medium text-foreground">
-                Rättslig grund
+                {t("iiu.pp.legalbasis")}
               </label>
               <input
                 id="src-basis"
@@ -311,12 +334,12 @@ function Page() {
               />
             </div>
             {addSource.isError && (
-              <Panel tone="governance" role="alert" title="Underlaget kunde inte sparas">
-                <p>{interviewErrorMessage(addSource.error)}</p>
+              <Panel tone="governance" role="alert" title={t("iiu.pp.sourcefailed")}>
+                <p>{interviewErrorMessage(addSource.error, t)}</p>
               </Panel>
             )}
             <button type="submit" className={BUTTON} disabled={addSource.isPending}>
-              {addSource.isPending ? "Sparar …" : "Lägg till"}
+              {addSource.isPending ? t("iiu.pp.saving") : t("iiu.pp.add")}
             </button>
           </form>
         )}
@@ -336,7 +359,7 @@ function Page() {
       {/* ---- 2. Preparation ---- */}
       <section className="mt-10" aria-labelledby="s-prep">
         <h2 id="s-prep" className="text-lg font-semibold text-foreground">
-          2. Förberedelse
+          {t("iiu.pp.s2.title")}
         </h2>
 
         {/* An AI control that cannot run must not look like one. The flag used
@@ -346,14 +369,71 @@ function Page() {
             questions, probes and anchors come from the governed pack. */}
         {!d.aiAvailable && (
           <div className="mt-3 max-w-3xl">
-            <Panel tone="neutral" title="AI-stöd är ännu inte aktiverat i pilotversionen">
-              <p>
-                Ni genomför intervjun med det styrda frågeunderlaget nedan. Frågorna, de godkända
-                följdfrågorna och beteendeexemplen kommer från rollpaketet och ändras inte av att
-                AI-stödet är avstängt.
-              </p>
+            <Panel tone="neutral" title={t("iiu.pp.aidisabled.title")}>
+              <p>{t("iiu.pp.aidisabled.body")}</p>
             </Panel>
           </div>
+        )}
+
+        {/* The manual path to an approved plan. Without it, a case cannot
+            reach prep_approved while AI is off, and the structured interview
+            — the whole pilot — could never be started. */}
+        {!d.aiAvailable && d.status === "sources_ready" && (
+          <form
+            className="mt-4 max-w-3xl space-y-4 rounded-lg border border-border p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              manualPrep.mutate();
+            }}
+          >
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">{t("iiu.pp.manual.title")}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{t("iiu.pp.manual.body")}</p>
+            </div>
+            <div>
+              <label htmlFor="mp-time" className="text-xs font-medium text-foreground">
+                {t("iiu.pp.manual.timeplan")}
+              </label>
+              <input
+                id="mp-time"
+                value={timePlan}
+                onChange={(e) => setTimePlan(e.target.value)}
+                className={FIELD}
+              />
+            </div>
+            <div>
+              <label htmlFor="mp-open" className="text-xs font-medium text-foreground">
+                {t("iiu.pp.manual.opening")}
+              </label>
+              <textarea
+                id="mp-open"
+                rows={2}
+                value={opening}
+                onChange={(e) => setOpening(e.target.value)}
+                className={FIELD}
+              />
+            </div>
+            <div>
+              <label htmlFor="mp-close" className="text-xs font-medium text-foreground">
+                {t("iiu.pp.manual.closing")}
+              </label>
+              <textarea
+                id="mp-close"
+                rows={2}
+                value={closing}
+                onChange={(e) => setClosing(e.target.value)}
+                className={FIELD}
+              />
+            </div>
+            {manualPrep.isError && (
+              <Panel tone="governance" role="alert" title={t("iiu.pp.approve.failed")}>
+                <p>{interviewErrorMessage(manualPrep.error, t)}</p>
+              </Panel>
+            )}
+            <button type="submit" className={PRIMARY_BUTTON} disabled={manualPrep.isPending}>
+              {manualPrep.isPending ? t("iiu.pp.saving") : t("iiu.pp.manual.save")}
+            </button>
+          </form>
         )}
 
         {d.aiAvailable && d.status === "sources_ready" && (
@@ -405,7 +485,7 @@ function Page() {
 
         {d.plan && (
           <div className="mt-4 max-w-4xl space-y-4">
-            <Panel tone="ai" title="AI-stödets roll i detta underlag">
+            <Panel tone="ai" title={t("iiu.pp.airole")}>
               <p>{d.plan.aiDisclosure}</p>
             </Panel>
 
@@ -425,15 +505,15 @@ function Page() {
                   <li key={i.id} className="rounded-md border border-border p-3 text-sm">
                     <div className="flex flex-wrap items-center gap-2">
                       <Chip tone={i.itemKind === "missing_information" ? "attention" : "work"}>
-                        {ITEM_LABEL[i.itemKind] ?? i.itemKind}
+                        {uiLabel(ITEM_LABEL, i.itemKind, t)}
                       </Chip>
                       {q8 && <Chip>{q8.code}</Chip>}
                       <Chip tone={i.claimClass === "source_grounded" ? "confirmed" : "neutral"}>
                         {i.claimClass === "source_grounded"
-                          ? "Källbelagd"
+                          ? t("iiu.pp.origin.sourced")
                           : i.claimClass === "governed_content"
-                            ? "Styrt innehåll"
-                            : "AI-förslag"}
+                            ? t("iiu.pp.origin.governed")
+                            : t("iiu.pp.origin.ai")}
                       </Chip>
                     </div>
                     <p className="mt-1.5 text-foreground">{i.statement}</p>
@@ -449,16 +529,15 @@ function Page() {
 
             {d.plan.status === "draft" && (
               <div className="rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
-                <h3 className="text-sm font-semibold text-foreground">Godkänn intervjuplanen</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Ett utkast är ett förslag. Först när du godkänner det blir det den aktiva planen,
-                  och först då kan intervjun startas.
-                </p>
+                <h3 className="text-sm font-semibold text-foreground">
+                  {t("iiu.pp.approve.title")}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pp.approve.body")}</p>
                 <label
                   htmlFor="approve-note"
                   className="mt-3 block text-xs font-medium text-foreground"
                 >
-                  Anteckning (frivillig) — vad ändrade du innan du godkände?
+                  {t("iiu.pp.approve.note")}
                 </label>
                 <textarea
                   id="approve-note"
@@ -468,8 +547,8 @@ function Page() {
                   className={FIELD}
                 />
                 {approve.isError && (
-                  <Panel tone="governance" role="alert" title="Kunde inte godkännas">
-                    <p>{interviewErrorMessage(approve.error)}</p>
+                  <Panel tone="governance" role="alert" title={t("iiu.pp.approve.failed")}>
+                    <p>{interviewErrorMessage(approve.error, t)}</p>
                   </Panel>
                 )}
                 <button
@@ -478,14 +557,14 @@ function Page() {
                   onClick={() => approve.mutate(d.plan!.id)}
                   disabled={approve.isPending}
                 >
-                  Godkänn intervjuplanen
+                  {t("iiu.pp.approve.title")}
                 </button>
               </div>
             )}
 
             {d.plan.status === "approved" && (
-              <Panel tone="confirmed" title="Intervjuplanen är godkänd">
-                <p>Planen är den aktiva. Intervjun kan startas.</p>
+              <Panel tone="confirmed" title={t("iiu.pp.approved.title")}>
+                <p>{t("iiu.pp.approved.body")}</p>
               </Panel>
             )}
           </div>
@@ -496,12 +575,12 @@ function Page() {
       {d.status === "prep_approved" && (
         <section className="mt-10" aria-labelledby="s-start">
           <h2 id="s-start" className="text-lg font-semibold text-foreground">
-            3. Genomför intervjun
+            {t("iiu.pp.s3.title")}
           </h2>
           {startSession.isError && (
             <div className="mt-3 max-w-3xl">
               <Panel tone="governance" role="alert" title="Intervjun kunde inte startas">
-                <p>{interviewErrorMessage(startSession.error)}</p>
+                <p>{interviewErrorMessage(startSession.error, t)}</p>
               </Panel>
             </div>
           )}

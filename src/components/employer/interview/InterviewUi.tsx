@@ -16,6 +16,8 @@
 //      not the person.
 
 import type { ReactNode } from "react";
+import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 export type Tone = "neutral" | "work" | "confirmed" | "attention" | "governance" | "ai";
@@ -98,82 +100,74 @@ export function State({
   message?: string;
   children?: ReactNode;
 }) {
+  const { t } = useT();
   if (kind === "loading") {
     return (
       <p role="status" className="text-sm text-muted-foreground">
-        Laddar …
+        {t("iiu.loading")}
       </p>
     );
   }
   if (kind === "aiRunning") {
     return (
-      <Panel tone="ai" role="status" title="AI-stödet arbetar">
-        <p>Underlaget struktureras. Inget publiceras utan att du bekräftar det.</p>
+      <Panel tone="ai" role="status" title={t("iiu.ai.running.title")}>
+        <p>{t("iiu.ai.running.body")}</p>
       </Panel>
     );
   }
   if (kind === "aiUnavailable") {
     return (
-      <Panel tone="attention" role="alert" title="AI-stödet är inte tillgängligt">
-        <p>
-          {message ??
-            "Du kan fortsätta manuellt. Kärnfrågorna, följdfrågorna och ankarna kommer från det styrda rollpaketet och fungerar utan AI."}
-        </p>
+      <Panel tone="attention" role="alert" title={t("iiu.ai.unavailable.title")}>
+        <p>{message ?? t("iiu.ai.unavailable.body")}</p>
       </Panel>
     );
   }
   if (kind === "aiInvalid") {
     return (
-      <Panel tone="governance" role="alert" title="AI-svaret avvisades">
-        <p>
-          {message ??
-            "Svaret bröt mot en produktregel eller saknade källhänvisning och har satts i karantän. Ingenting av det har sparats som evidens."}
-        </p>
+      <Panel tone="governance" role="alert" title={t("iiu.ai.invalid.title")}>
+        <p>{message ?? t("iiu.ai.invalid.body")}</p>
       </Panel>
     );
   }
   if (kind === "aiAbstained") {
     return (
-      <Panel tone="attention" role="status" title="AI-stödet avstod">
-        <p>
-          {message ??
-            "Underlaget räcker inte för ett svar. Det säger något om materialet, inte om kandidaten."}
-        </p>
+      <Panel tone="attention" role="status" title={t("iiu.ai.abstained.title")}>
+        <p>{message ?? t("iiu.ai.abstained.body")}</p>
       </Panel>
     );
   }
   if (kind === "denied") {
     return (
-      <Panel tone="governance" role="alert" title="Åtkomst saknas">
-        <p>Du saknar behörighet till detta intervjuunderlag, eller så finns det inte.</p>
+      <Panel tone="governance" role="alert" title={t("iiu.denied.title")}>
+        <p>{t("iiu.denied.body")}</p>
       </Panel>
     );
   }
   if (kind === "error") {
     return (
-      <Panel tone="governance" role="alert" title="Något gick fel">
-        <p>{message ?? "Innehållet kunde inte hämtas."}</p>
+      <Panel tone="governance" role="alert" title={t("iiu.error.title")}>
+        <p>{message ?? t("iiu.error.body")}</p>
       </Panel>
     );
   }
   return (
     <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-      {children ?? "Inget att visa ännu."}
+      {children ?? t("iiu.empty")}
     </div>
   );
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Utkast",
-  sources_ready: "Underlag klart",
-  prep_generated: "Förberedelse att godkänna",
-  prep_approved: "Godkänd intervjuplan",
-  interview_in_progress: "Intervju pågår",
-  interview_complete: "Intervju genomförd",
-  evidence_review: "Evidensgranskning",
-  assessed: "Bedömd",
-  reported: "Rapport klar",
-  cancelled: "Avbruten",
+const STATUS_LABEL: Record<string, TranslationKey> = {
+  draft: "iiu.status.draft",
+  sources_ready: "iiu.status.sources_ready",
+  prep_generated: "iiu.status.prep_generated",
+  prep_approved: "iiu.status.prep_approved",
+  interview_in_progress: "iiu.status.interview_in_progress",
+  interview_complete: "iiu.status.interview_complete",
+  evidence_review: "iiu.status.evidence_review",
+  assessed: "iiu.status.assessed",
+  reported: "iiu.status.reported",
+  cancelled: "iiu.status.cancelled",
 };
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -190,9 +184,10 @@ const STATUS_TONE: Record<string, Tone> = {
 };
 
 export function CaseStatusChip({ status }: { status: string }) {
+  const { t } = useT();
   return (
-    <Chip tone={STATUS_TONE[status] ?? "neutral"} srPrefix="Status">
-      {STATUS_LABEL[status] ?? status}
+    <Chip tone={STATUS_TONE[status] ?? "neutral"} srPrefix={t("iiu.chip.status")}>
+      {uiLabel(STATUS_LABEL, status, t)}
     </Chip>
   );
 }
@@ -203,10 +198,16 @@ export function CaseStatusChip({ status }: { status: string }) {
  * must never have to infer one from the other.
  */
 export function ValidationChip({ label }: { label: string | null }) {
+  const { t } = useT();
   if (!label) return null;
   return (
-    <Chip tone={label === "pilot_hypothesis" ? "attention" : "confirmed"} srPrefix="Evidensstatus">
-      {label === "pilot_hypothesis" ? "Pilothypotes" : "Innehållsvaliderad"}
+    <Chip
+      tone={label === "pilot_hypothesis" ? "attention" : "confirmed"}
+      srPrefix={t("iiu.chip.validation")}
+    >
+      {t(
+        label === "pilot_hypothesis" ? "iiu.label.pilot_hypothesis" : "iiu.label.content_validated",
+      )}
     </Chip>
   );
 }
@@ -224,42 +225,52 @@ export function ValidationChip({ label }: { label: string | null }) {
  * so a value added in a migration before it is added here is visible and ugly
  * rather than invisible.
  */
-export const SOURCE_KIND_LABEL: Record<string, string> = {
-  job_description: "Annons",
-  employer_requirements: "Kravprofil",
-  candidate_cv: "CV",
-  application_answers: "Ansökningssvar",
-  interviewer_notes: "Intervjuanteckningar",
-  transcript: "Utskrift",
-  passport_disclosure: "Passport-delning",
+export const SOURCE_KIND_LABEL: Record<string, TranslationKey> = {
+  job_description: "iiu.source.job_description_short",
+  employer_requirements: "iiu.source.employer_requirements",
+  candidate_cv: "iiu.source.candidate_cv_short",
+  application_answers: "iiu.source.application_answers",
+  interviewer_notes: "iiu.source.interviewer_notes",
+  transcript: "iiu.source.transcript_short",
+  passport_disclosure: "iiu.source.passport_disclosure",
 };
 
-export const PURPOSE_LABEL: Record<string, string> = {
-  recruitment_interview: "rekryteringsintervju",
+export const PURPOSE_LABEL: Record<string, TranslationKey> = {
+  recruitment_interview: "iiu.purpose.recruitment_interview",
 };
 
-export const PRACTICE_KIND_LABEL: Record<string, string> = {
-  checklist_item: "Att kontrollera",
-  opening_script: "Introduktion",
-  engagement_guidance: "Bemötande",
-  listening_prompt: "Lyssna efter",
-  probing_guidance: "Följdfrågor",
-  closure_step: "Avslut",
-  self_evaluation_question: "Fråga till dig själv",
-  warning: "Varning",
+export const PRACTICE_KIND_LABEL: Record<string, TranslationKey> = {
+  checklist_item: "iiu.practice.checklist_item",
+  opening_script: "iiu.practice.opening_script",
+  engagement_guidance: "iiu.practice.engagement_guidance",
+  listening_prompt: "iiu.practice.listening_prompt",
+  probing_guidance: "iiu.practice.probing_guidance",
+  closure_step: "iiu.practice.closure_step",
+  self_evaluation_question: "iiu.practice.self_evaluation_question",
+  warning: "iiu.practice.warning",
 };
 
-/** Look up a label, falling back to the raw value rather than to nothing. */
-export function uiLabel(map: Record<string, string>, value: string): string {
-  return map[value] ?? value;
+/** Look up a label, falling back to the raw value rather than to nothing.
+ *
+ *  The maps hold TRANSLATION KEYS, not Swedish: a screen resolves them through
+ *  its own `t()` so the same enum reads correctly in either language. An
+ *  unmapped value still falls through to the raw string, so a value added in a
+ *  migration before it is added here is visible and ugly rather than invisible. */
+export function uiLabel(
+  map: Record<string, TranslationKey>,
+  value: string,
+  t: (key: TranslationKey) => string,
+): string {
+  const key = map[value];
+  return key ? t(key) : value;
 }
 
-export const PEACE_LABEL: Record<string, string> = {
-  planning: "Planering",
-  engage_explain: "Engagera och förklara",
-  account: "Redogörelse",
-  closure: "Avslut",
-  evaluation: "Utvärdering",
+export const PEACE_LABEL: Record<string, TranslationKey> = {
+  planning: "iiu.peace.planning",
+  engage_explain: "iiu.practice.engage_explain",
+  account: "iiu.practice.account",
+  closure: "iiu.practice.closure",
+  evaluation: "iiu.practice.evaluation",
 };
 
 /**
@@ -267,10 +278,10 @@ export const PEACE_LABEL: Record<string, string> = {
  * thing in this product to get wrong on screen.
  */
 export function LevelZeroNote() {
+  const { t } = useT();
   return (
     <p className="text-xs font-medium leading-relaxed text-amber-900 dark:text-amber-200">
-      Nivå 0 betyder otillräcklig evidens — inte låg kompetens, inte oärlighet. Den ingår aldrig i
-      en sammanvägning och utlöser inget avslag.
+      {t("iiu.level0.note")}
     </p>
   );
 }
@@ -289,29 +300,22 @@ export function LevelZeroNote() {
  * than to a generic apology: an unhelpful specific error beats a helpful-
  * sounding vague one, and it makes the gap visible enough to fix.
  */
-const ERROR_SV: Record<string, string> = {
-  SCP_IV_PANEL_INCOMPLETE:
-    "Du har inte bedömt alla kärnfrågor ännu. Lämna in när din egen bedömning är komplett — att se de andras medan du fortfarande har frågor kvar är precis det som ordningen ska förhindra.",
-  SCP_IV_PANEL_REVEAL_TOO_EARLY:
-    "Alla bedömare har inte lämnat in ännu. Att öppna nu skulle låta någon bedöma efter att ha läst de andra.",
-  SCP_IV_PANEL_NOT_A_MEMBER: "Du ingår inte i den här panelen.",
-  SCP_IV_PANEL_TOO_SMALL:
-    "En panel behöver minst två bedömare. En ensam bedömare gör en vanlig bedömning.",
-  SCP_IV_PANEL_MEMBER_NOT_EMPLOYER: "Alla bedömare måste tillhöra er organisation.",
-  SCP_IV_PANEL_CONCLUSION_REQUIRED:
-    "Skriv vad panelen kom fram till. Det finns ingen beräknad slutsats — varken medelvärde eller omröstning.",
-  SCP_IV_PANEL_NOT_REVEALED: "Panelen avslutas efter att bedömningarna har öppnats, inte före.",
-  SCP_IV_NOT_CASE_MEMBER: "Du saknar behörighet till den här intervjun.",
-  SCP_IV_ILLEGAL_TRANSITION: "Det steget går inte att ta härifrån. Gå igenom stegen i ordning.",
-  SCP_IV_ASSESSMENT_EDITED_IN_PLACE:
-    "En registrerad bedömning ändras genom att ersättas, så att originalet finns kvar.",
-  SCP_IV_PACK_NOT_USABLE:
-    "Det här rollpaketet är inte tillgängligt för er just nu. Välj ett annat paket eller kontakta plattformen.",
-  SCP_IV_EMPLOYER_NOT_ACTIVE:
-    "Ert företagskonto är inte aktivt, så nya intervjuer kan inte startas. Kontakta plattformen.",
+const ERROR_KEY: Record<string, TranslationKey> = {
+  SCP_IV_PANEL_INCOMPLETE: "iiu.err.panel_incomplete",
+  SCP_IV_PANEL_NOT_ALL_SUBMITTED: "iiu.err.panel_not_all_submitted",
+  SCP_IV_PANEL_NOT_A_MEMBER: "iiu.err.panel_not_a_member",
+  SCP_IV_PANEL_TOO_SMALL: "iiu.err.panel_too_small",
+  SCP_IV_PANEL_MEMBER_NOT_EMPLOYER: "iiu.err.panel_member_not_employer",
+  SCP_IV_PANEL_CONCLUSION_REQUIRED: "iiu.err.panel_conclusion_required",
+  SCP_IV_PANEL_NOT_REVEALED: "iiu.err.panel_not_revealed",
+  SCP_IV_NOT_CASE_MEMBER: "iiu.err.not_case_member",
+  SCP_IV_ILLEGAL_TRANSITION: "iiu.err.illegal_transition",
+  SCP_IV_ASSESSMENT_EDITED_IN_PLACE: "iiu.err.assessment_edited",
+  SCP_IV_PACK_NOT_USABLE: "iiu.err.pack_not_usable",
+  SCP_IV_EMPLOYER_NOT_ACTIVE: "iiu.err.employer_not_active",
 };
 
-export function interviewErrorMessage(error: unknown): string {
+export function interviewErrorMessage(error: unknown, t: (key: TranslationKey) => string): string {
   const raw = error instanceof Error ? error.message : String(error ?? "");
 
   // A dropped connection surfaces as the browser's own "Failed to fetch",
@@ -319,11 +323,12 @@ export function interviewErrorMessage(error: unknown): string {
   // also the case where saying what happened matters most: the save did not
   // happen, nothing was half-written, and trying again is the right move.
   if (/failed to fetch|networkerror|load failed|err_network|fetch failed/i.test(raw)) {
-    return "Ingen kontakt med servern. Ingenting sparades — det du skrivit står kvar, så du kan försöka igen.";
+    return t("iiu.err.network");
   }
 
   const code = /\b(SCP_[A-Z0-9_]+)\b/.exec(raw)?.[1];
-  if (code && ERROR_SV[code]) return ERROR_SV[code];
+  const key = code ? ERROR_KEY[code] : undefined;
+  if (key) return t(key);
   // Strip the code prefix even when there is no translation: the sentence after
   // it is usually readable, and the identifier never is.
   return raw.replace(/^SCP_[A-Z0-9_]+:\s*/, "");
@@ -343,15 +348,14 @@ export function interviewErrorMessage(error: unknown): string {
  * These labels are deliberately long. A one-word chip is what created the
  * problem.
  */
-export const ASSURANCE_LABEL: Record<string, string> = {
-  structurally_derived: "Strukturellt härledd — inte ett forskningsresultat",
-  source_read: "Källan är läst",
-  source_verified: "Källan är oberoende bekräftad",
-  expert_reviewed: "Granskad av sakkunnig",
-  provisional: "Preliminär — påstådd, inte fastställd",
-  hypothesis: "Hypotes",
-  pending_source_verification: "Källan är inte läst",
-  superseded: "Ersatt",
+export const ASSURANCE_LABEL: Record<string, TranslationKey> = {
+  structurally_derived: "iiu.assurance.structurally_derived",
+  source_read: "iiu.assurance.source_read",
+  source_verified: "iiu.assurance.source_verified",
+  expert_reviewed: "iiu.assurance.expert_reviewed",
+  provisional: "iiu.assurance.provisional",
+  hypothesis: "iiu.assurance.hypothesis",
+  pending_source_verification: "iiu.assurance.pending_source_verification",
 };
 
 /**
@@ -366,10 +370,11 @@ export const EMPIRICAL_ASSURANCE: readonly string[] = [
 ];
 
 export function AssuranceChip({ assurance }: { assurance: string }) {
+  const { t } = useT();
   const empirical = EMPIRICAL_ASSURANCE.includes(assurance);
   return (
-    <Chip tone={empirical ? "confirmed" : "neutral"} srPrefix="Säkerhetsnivå">
-      {ASSURANCE_LABEL[assurance] ?? assurance}
+    <Chip tone={empirical ? "confirmed" : "neutral"} srPrefix={t("iiu.assurance.srprefix")}>
+      {uiLabel(ASSURANCE_LABEL, assurance, t)}
     </Chip>
   );
 }
@@ -388,30 +393,31 @@ export function AssuranceChip({ assurance }: { assurance: string }) {
  * material.
  */
 export function ProviderModeChip({ mode }: { mode: string }) {
+  const { t } = useT();
   if (mode === "synthetic") {
     return (
-      <Chip tone="attention" srPrefix="AI-läge">
-        Simulerat AI-stöd (testmotor)
+      <Chip tone="attention" srPrefix={t("iiu.mode.srprefix")}>
+        {t("iiu.mode.synthetic")}
       </Chip>
     );
   }
   if (mode === "development_model") {
     return (
-      <Chip tone="ai" srPrefix="AI-läge">
-        Språkmodell — utvecklingsmiljö
+      <Chip tone="ai" srPrefix={t("iiu.mode.srprefix")}>
+        {t("iiu.mode.development")}
       </Chip>
     );
   }
   if (mode === "production_model") {
     return (
-      <Chip tone="ai" srPrefix="AI-läge">
-        Språkmodell
+      <Chip tone="ai" srPrefix={t("iiu.mode.srprefix")}>
+        {t("iiu.mode.production")}
       </Chip>
     );
   }
   return (
-    <Chip tone="neutral" srPrefix="AI-läge">
-      AI-stöd ej tillgängligt
+    <Chip tone="neutral" srPrefix={t("iiu.mode.srprefix")}>
+      {t("iiu.mode.unavailable")}
     </Chip>
   );
 }
@@ -424,14 +430,11 @@ export function ProviderModeChip({ mode }: { mode: string }) {
  * synthetic case says what it is in a full sentence.
  */
 export function ProviderModeNote({ mode }: { mode: string }) {
+  const { t } = useT();
   if (mode === "synthetic") {
     return (
-      <Panel tone="attention" role="status" title="Detta underlag kommer från en testmotor">
-        <p>
-          Innehållet är genererat av en regelbaserad testmotor, inte av en språkmodell. Det visar
-          att flödet fungerar och säger ingenting om hur en språkmodell skulle läsa materialet.
-          Använd det inte som beslutsunderlag om en kandidat.
-        </p>
+      <Panel tone="attention" role="status" title={t("iiu.mode.note.title")}>
+        <p>{t("iiu.mode.note.body")}</p>
       </Panel>
     );
   }
@@ -461,6 +464,7 @@ export function WithheldPanel({
     readonly excerpt: string;
   }[];
 }) {
+  const { t } = useT();
   if (withheld.length === 0) return null;
   return (
     <Panel
@@ -468,14 +472,11 @@ export function WithheldPanel({
       role="status"
       title={
         withheld.length === 1
-          ? "Ett stycke undanhölls AI-stödet"
-          : `${withheld.length} stycken undanhölls AI-stödet`
+          ? t("iiu.withheld.one")
+          : `${withheld.length} ${t("iiu.withheld.many")}`
       }
     >
-      <p>
-        Texten nedan var riktad till systemet i stället för att beskriva kandidaten, och skickades
-        därför aldrig vidare. Övrigt underlag har behandlats som vanligt.
-      </p>
+      <p>{t("iiu.withheld.body")}</p>
       <ul className="mt-2 space-y-2">
         {withheld.map((w) => (
           <li
@@ -489,10 +490,7 @@ export function WithheldPanel({
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs">
-        Läs originalkällan själv och bedöm den. Det här säger inget om kandidatens lämplighet — ett
-        dokument kan ha ändrats av någon annan än den det handlar om.
-      </p>
+      <p className="mt-2 text-xs">{t("iiu.withheld.advice")}</p>
     </Panel>
   );
 }
@@ -503,6 +501,7 @@ export function ErrorSummary({
 }: {
   errors: readonly { readonly fieldId: string; readonly message: string }[];
 }) {
+  const { t } = useT();
   if (errors.length === 0) return null;
   return (
     <div
@@ -510,7 +509,7 @@ export function ErrorSummary({
       tabIndex={-1}
       className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
     >
-      <p className="font-semibold">Formuläret kunde inte skickas</p>
+      <p className="font-semibold">{t("iiu.form.error.title")}</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {errors.map((e) => (
           <li key={e.fieldId}>
@@ -541,19 +540,42 @@ export function ErrorSummary({
  */
 export function TrustStageBanner({
   stage,
+  aiAvailable = true,
 }: {
+  /** Whether the governed configuration currently permits AI at all. The
+   *  stage's own permission describes the METHOD; this describes the runtime.
+   *  Saying "AI may prepare and suggest here" while AI is switched off is
+   *  true about TRUST and misleading about the product. */
+  aiAvailable?: boolean;
   stage: {
     readonly letter: string | null;
     readonly ordinal: number | null;
     readonly nameSv: string | null;
+    readonly nameEn: string | null;
     readonly purposeSv: string | null;
+    readonly purposeEn: string | null;
     readonly humanResponsibilitySv: string | null;
+    readonly humanResponsibilityEn: string | null;
     readonly prohibitions: readonly string[];
+    readonly prohibitionsEn: readonly string[];
     readonly permitsAi: boolean;
     readonly methodVersion: number | null;
   } | null;
 }) {
+  const { t, lang } = useT();
   if (!stage?.letter) return null;
+
+  // The stage copy is governed CONTENT, held per language in the database
+  // rather than in the dictionary. Swedish stays authoritative and is the
+  // fallback, so a stage added without a translation reads as untranslated
+  // Swedish rather than disappearing.
+  const name = (lang === "en" ? stage.nameEn : stage.nameSv) ?? stage.nameSv;
+  const purpose = (lang === "en" ? stage.purposeEn : stage.purposeSv) ?? stage.purposeSv;
+  const responsibility =
+    (lang === "en" ? stage.humanResponsibilityEn : stage.humanResponsibilitySv) ??
+    stage.humanResponsibilitySv;
+  const prohibitions =
+    lang === "en" && stage.prohibitionsEn.length > 0 ? stage.prohibitionsEn : stage.prohibitions;
 
   return (
     <section aria-labelledby="trust-stage" className="rounded-lg border border-border p-4">
@@ -565,67 +587,62 @@ export function TrustStageBanner({
           {stage.letter}
         </span>
         <h2 id="trust-stage" className="text-sm font-semibold text-foreground">
-          <span className="sr-only">CQrity TRUST, steg {stage.ordinal} av 5: </span>
-          {stage.nameSv}
+          <span className="sr-only">
+            {t("iiu.trust.srstage")} {stage.ordinal} {t("iiu.trust.of5")}:{" "}
+          </span>
+          {name}
         </h2>
         <span className="text-xs text-muted-foreground">
-          CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} · steg {stage.ordinal}{" "}
-          av 5
+          CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} ·{" "}
+          {t("iiu.trust.step")} {stage.ordinal} {t("iiu.trust.of5")}
         </span>
       </div>
 
-      {stage.purposeSv && (
-        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{stage.purposeSv}</p>
-      )}
+      {purpose && <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{purpose}</p>}
 
-      {stage.humanResponsibilitySv && (
+      {responsibility && (
         <p className="mt-2 max-w-[68ch] text-sm text-foreground">
-          <span className="font-medium">Ditt ansvar i det här steget: </span>
-          {stage.humanResponsibilitySv}
+          <span className="font-medium">{t("iiu.trust.responsibility")}</span>
+          {responsibility}
         </p>
       )}
 
-      {!stage.permitsAi ? (
-        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
-          AI-stödet gör ingenting i det här steget. Kontakten med kandidaten är ditt arbete.
-        </p>
-      ) : (
-        <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
-          AI-stödet får förbereda och föreslå här. Varje förslag måste en människa godkänna innan
-          det används.
-        </p>
-      )}
+      <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">
+        {!stage.permitsAi
+          ? t("iiu.trust.noai")
+          : aiAvailable
+            ? t("iiu.trust.ai")
+            : t("iiu.trust.ai.disabled")}
+      </p>
 
-      {stage.prohibitions.length > 0 && (
+      {prohibitions.length > 0 && (
         <details className="mt-3">
           <summary className="cursor-pointer text-sm font-medium text-foreground">
-            Vad som inte får slutas i det här steget
+            {t("iiu.trust.prohibitions")}
           </summary>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {stage.prohibitions.map((p) => (
+            {prohibitions.map((p) => (
               <li key={p}>{p}</li>
             ))}
           </ul>
         </details>
       )}
 
-      <p className="mt-3 text-xs text-muted-foreground">
-        CQrity TRUST är CQrityjobs egen styrda metod. Den är forskningsinformerad och ännu inte
-        vetenskapligt validerad som helhet.
-      </p>
+      <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
     </section>
   );
 }
 
 /** The journey, drawn as steps. Never as a percentage: this is not progress towards a verdict. */
 export function CaseSteps({ current }: { current: string }) {
+  const { t } = useT();
   const steps: Array<{ key: string; label: string }> = [
-    { key: "draft", label: "Underlag" },
-    { key: "prep_approved", label: "Förberedelse" },
-    { key: "interview_in_progress", label: "Intervju" },
-    { key: "evidence_review", label: "Evidens" },
-    { key: "assessed", label: "Bedömning" },
-    { key: "reported", label: "Rapport" },
+    { key: "draft", label: t("iiu.rail.sources") },
+    { key: "prep_approved", label: t("iiu.rail.prep") },
+    { key: "interview_in_progress", label: t("iiu.rail.interview") },
+    { key: "evidence_review", label: t("iiu.rail.evidence") },
+    { key: "assessed", label: t("iiu.rail.assessment") },
+    { key: "reported", label: t("iiu.rail.report") },
   ];
   const order = [
     "draft",
@@ -654,7 +671,7 @@ export function CaseSteps({ current }: { current: string }) {
                 )}
               >
                 {i + 1}. {s.label}
-                {reached && <span className="sr-only"> (uppnått)</span>}
+                {reached && <span className="sr-only">{t("iiu.rail.reached")}</span>}
               </span>
               {i < steps.length - 1 && (
                 <span aria-hidden="true" className="text-muted-foreground">

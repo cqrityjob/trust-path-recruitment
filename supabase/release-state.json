@@ -50,6 +50,24 @@
       ],
       "note": "Enforces scp_interview_ai_config.ai_enabled at the database boundary (run start, settlement and the table), separates the exact model id from the provider name in run provenance, and adds the manual preparation path so the structured interview stays reachable while AI is disabled. Does not enable AI. Not applied hosted.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';"
+    },
+    {
+      "file": "20260928090000_scp_trust_stage_english_copy.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "table": "scp_trust_stages",
+          "object": "human_responsibility_en",
+          "kind": "column"
+        },
+        {
+          "table": "scp_trust_stage_prohibitions",
+          "object": "statement_en",
+          "kind": "column"
+        }
+      ],
+      "note": "Translation only: adds English columns for the TRUST stage responsibility and the stage prohibitions, fills them for TRUST v1, and widens scp_trust_stage_for_case to carry both languages. No stage, permission, ordinal or claim changes; Swedish remains authoritative. Not applied hosted.",
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';"
     }
   ],
   "policyVersion": 2,

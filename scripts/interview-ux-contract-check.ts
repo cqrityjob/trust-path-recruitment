@@ -116,13 +116,25 @@ ok(
   "the preparation screen must render an explanation when AI is unavailable",
 );
 
-// And say so in the customer's words rather than leaving a silent gap.
-const prepareRaw = read(
-  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx",
+// And say so in the customer's words rather than leaving a silent gap. The
+// copy lives in the dictionary now, so it is asserted there — in BOTH
+// locales, because an English pilot user must be told the same thing.
+const dictionaryRaw = read("src/i18n/dictionaries.ts");
+ok(
+  /"iiu\.pp\.aidisabled\.title":\s*"AI-stöd är ännu inte aktiverat/.test(dictionaryRaw),
+  "the disabled-AI state needs Swedish customer copy, not an empty section",
 );
 ok(
-  /AI-stöd är ännu inte aktiverat/.test(prepareRaw),
-  "the disabled-AI state needs customer copy, not an empty section",
+  /"iiu\.pp\.aidisabled\.title":\s*"AI assistance is not yet enabled/.test(dictionaryRaw),
+  "the disabled-AI state needs English customer copy too",
+);
+ok(
+  /d\.aiAvailable \? "iiu\.rp\.noblockers" : "iiu\.rp\.noblockers\.manual"/.test(
+    read(
+      "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx",
+    ),
+  ),
+  "the report must not claim AI reviewed anything when no AI was used",
 );
 
 /* ------------------------------------------------------------------ */
@@ -249,12 +261,176 @@ for (const file of employerSurfaces) {
 /* ------------------------------------------------------------------ */
 
 ok(
-  /pilothypotes/i.test(read("src/components/employer/interview/InterviewUi.tsx")) ||
-    interviewRoutes.some((f) => /pilothypotes/i.test(read(f))),
-  "the pilot-hypothesis disclosure must be present in the employer surfaces",
+  /"iiu\.label\.pilot_hypothesis":\s*"Pilothypotes"/.test(dictionaryRaw) &&
+    /"iiu\.label\.pilot_hypothesis":\s*"Pilot hypothesis"/.test(dictionaryRaw),
+  "the pilot-hypothesis label must exist in both locales",
+);
+ok(
+  /"iiu\.new\.pilot\.body":\s*"Innehållet är en genomarbetad hypotes/.test(dictionaryRaw),
+  "the pilot-hypothesis disclosure body must survive in Swedish",
+);
+ok(
+  /"iiu\.new\.pilot\.body":\s*"The content is a considered hypothesis/.test(dictionaryRaw),
+  "and in English — a boundary nobody can read is not a boundary",
+);
+ok(
+  interviewRoutes.some((f) => /iiu\.new\.pilot\.title/.test(read(f))),
+  "the new-interview screen must still render the pilot disclosure",
+);
+// The no-scoring boundary must survive translation in both directions.
+ok(
+  /"iiu\.ix\.boundary\.body":\s*"Ingen totalpoäng, ingen rangordning/.test(dictionaryRaw) &&
+    /"iiu\.ix\.boundary\.body":\s*"No total score, no ranking/.test(dictionaryRaw),
+  "the no-score/no-ranking boundary must read the same in both locales",
+);
+ok(
+  /"iiu\.level0\.note":\s*"Nivå 0 betyder otillräcklig evidens/.test(dictionaryRaw) &&
+    /"iiu\.level0\.note":\s*"Level 0 means insufficient evidence/.test(dictionaryRaw),
+  "the level-0 rule must read the same in both locales",
 );
 
 /* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/* 8 · SV/EN parity for the governed Interview Intelligence surfaces    */
+/* ------------------------------------------------------------------ */
+
+// The module was built Swedish-first while its shell already switched
+// language, so an English-speaking pilot user got Swedish governance copy
+// under an English chrome. That is not a cosmetic gap: "Pilothypotes",
+// "Nivå 0 betyder otillräcklig evidens" and "Ingen totalpoäng, ingen
+// rangordning" are the safety boundary, and a boundary nobody can read is
+// not a boundary.
+//
+// Two directions are checked, because `t()` falls back
+// (dictionaries[lang][key] ?? dictionaries.sv[key] ?? key) and a missing
+// English entry therefore renders SILENTLY as Swedish.
+
+const I18N_SURFACES = [...interviewRoutes, "src/components/employer/interview/InterviewUi.tsx"];
+
+/** Blank out block comments while PRESERVING line numbers, so a reported
+ *  line points at the real one. */
+function codeLines(source: string): string[] {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ""))
+    .split("\n")
+    .map((l) => (/^\s*(\/\/|\*)/.test(l) ? "" : l));
+}
+
+const SWEDISH_GLYPH = /[åäöÅÄÖ]/;
+
+for (const file of I18N_SURFACES) {
+  const lines = codeLines(read(file));
+  const offenders: number[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (SWEDISH_GLYPH.test(lines[i])) offenders.push(i + 1);
+  }
+  ok(
+    offenders.length === 0,
+    `${file} still holds Swedish literals at line(s) ${offenders.slice(0, 6).join(", ")}${
+      offenders.length > 6 ? ` (+${offenders.length - 6} more)` : ""
+    } — customer copy belongs in src/i18n/dictionaries.ts, not in the component`,
+  );
+}
+
+// Every ii*/iiu* key must exist in BOTH locales. A key present only in `sv`
+// renders Swedish in EN mode through the fallback and no test would notice.
+{
+  const dict = read("src/i18n/dictionaries.ts");
+  const svStart = dict.indexOf("  sv: {");
+  const enStart = dict.indexOf("  en: {");
+  ok(svStart > 0 && enStart > svStart, "dictionaries.ts must define both locales");
+
+  const keysIn = (segment: string): Set<string> =>
+    new Set([...segment.matchAll(/^\s{4}"((?:ii|iiu)\.[^"]+)":/gm)].map((m) => m[1]));
+
+  const sv = keysIn(dict.slice(svStart, enStart));
+  const en = keysIn(dict.slice(enStart));
+
+  const missingEn = [...sv].filter((k) => !en.has(k));
+  const missingSv = [...en].filter((k) => !sv.has(k));
+
+  ok(
+    missingEn.length === 0,
+    `interview keys missing an English entry (they would render as Swedish): ${missingEn.slice(0, 5).join(", ")}`,
+  );
+  ok(
+    missingSv.length === 0,
+    `interview keys missing a Swedish entry: ${missingSv.slice(0, 5).join(", ")}`,
+  );
+  ok(sv.size >= 350, `expected the interview key set to be populated, found ${sv.size}`);
+
+  // An identical pair is almost always a forgotten translation. The
+  // exceptions are genuinely language-neutral and are listed by name, so
+  // adding one is a deliberate act rather than a silent allowance.
+  // Each entry is a word that is genuinely identical in Swedish and English,
+  // documented one by one so that adding to this list is a deliberate act
+  // rather than a way to silence a missing translation.
+  const LANGUAGE_NEUTRAL = new Set([
+    "ii.a11y.status", //           "Status" — the same word in both languages
+    "ii.list.column.status", //    likewise, as a table column heading
+    "iiu.chip.status", //          likewise, as a screen-reader prefix
+    "iiu.iv.sess.srprefix", //     "Session" — the same word in both
+    "iiu.source.candidate_cv_short", // "CV" — the same abbreviation in both
+  ]);
+  const svPairs = new Map(
+    [
+      ...dict
+        .slice(svStart, enStart)
+        .matchAll(/^\s{4}"((?:ii|iiu)\.[^"]+)":\s*\n?\s*("(?:[^"\\]|\\.)*")/gm),
+    ].map((m) => [m[1], m[2]] as const),
+  );
+  const enPairs = new Map(
+    [
+      ...dict.slice(enStart).matchAll(/^\s{4}"((?:ii|iiu)\.[^"]+)":\s*\n?\s*("(?:[^"\\]|\\.)*")/gm),
+    ].map((m) => [m[1], m[2]] as const),
+  );
+  // Strict: ANY identical pair fails unless it is named in LANGUAGE_NEUTRAL.
+  // Relying on a Swedish glyph to detect this misses the common case --
+  // "Aktiva intervjuer" copied verbatim into the English locale carries no
+  // å, ä or ö and would sail through.
+  const identical = [...svPairs.entries()]
+    .filter(([k, v]) => enPairs.get(k) === v && !LANGUAGE_NEUTRAL.has(k))
+    .map(([k]) => k);
+  ok(
+    identical.length === 0,
+    `these interview keys have an identical Swedish value in the English locale: ${identical.slice(0, 5).join(", ")}`,
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 9 · A translation key must never reach the screen                    */
+/* ------------------------------------------------------------------ */
+
+// Found by walking the real interview: the PEACE stage buttons rendered
+// `PEACE_LABEL[stage]` directly, so after the maps were converted to hold
+// translation KEYS the screen showed a literal "iiu.peace.planning" to the
+// interviewer. Indexing a key map without resolving it through t() is the
+// whole failure mode, so it is banned by shape rather than by memory.
+
+const KEY_MAPS = [
+  "STATUS_LABEL",
+  "SOURCE_KIND_LABEL",
+  "PURPOSE_LABEL",
+  "PRACTICE_KIND_LABEL",
+  "PEACE_LABEL",
+  "ASSURANCE_LABEL",
+  "STATE_LABEL",
+  "ITEM_LABEL",
+];
+
+for (const file of I18N_SURFACES) {
+  const body = codeOnly(read(file));
+  for (const map of KEY_MAPS) {
+    // `{MAP[x]}` inside JSX renders the key itself. Reading a map inside a
+    // uiLabel(...) call or a t(...) call is how it is supposed to be done.
+    const raw = new RegExp(`\\{\\s*${map}\\[`);
+    ok(
+      !raw.test(body),
+      `${file} renders ${map}[…] directly — that puts a translation key on screen; resolve it with uiLabel(${map}, value, t)`,
+    );
+  }
+}
 
 console.log(`\n  assertions passed: ${passes}`);
 if (failures > 0) {

@@ -14331,6 +14331,15 @@ export type Database = {
         Args: { _items: Json; _run_id: string }
         Returns: number
       }
+      scp_iv_record_manual_prep_plan: {
+        Args: {
+          _case_id: string
+          _closing_guidance?: string
+          _opening_guidance?: string
+          _time_plan?: string
+        }
+        Returns: string
+      }
       scp_iv_record_prep_plan: {
         Args: { _items: Json; _plan: Json; _run_id: string }
         Returns: string
@@ -14665,6 +14674,7 @@ export type Database = {
       scp_trust_stage_for_case: {
         Args: { _case_id: string }
         Returns: {
+          human_responsibility_en: string
           human_responsibility_sv: string
           letter: string
           method_version: number
@@ -14673,6 +14683,7 @@ export type Database = {
           ordinal: number
           permits_ai: boolean
           prohibitions: string[]
+          prohibitions_en: string[]
           purpose_en: string
           purpose_sv: string
           stage_key: string

@@ -6,6 +6,7 @@
 // and records no outcome, because this engine does not make or store one.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
@@ -36,6 +37,7 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
@@ -86,7 +88,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : interviewErrorMessage(q.error)}
+        message={nf ? undefined : interviewErrorMessage(q.error, t)}
       />,
     );
   }
@@ -100,7 +102,7 @@ function Page() {
 
   return shell(
     <>
-      <nav aria-label="Brödsmulor" className="text-sm">
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
@@ -117,11 +119,11 @@ function Page() {
           <CaseStatusChip status={d.status} />
           {isFinal && (
             <Chip tone="confirmed" srPrefix="Rapport">
-              Slutlig och oföränderlig
+              {t("iiu.rp.final")}
             </Chip>
           )}
           {report?.contentHash && (
-            <Chip srPrefix="Innehållssumma">
+            <Chip srPrefix={t("iiu.rp.hash")}>
               <code className="font-mono text-[11px]">{report.contentHash.slice(0, 12)}</code>
             </Chip>
           )}
@@ -136,37 +138,32 @@ function Page() {
       {!isFinal && (
         <section className="mt-8 max-w-4xl" aria-labelledby="s-block">
           <h2 id="s-block" className="text-lg font-semibold text-foreground">
-            Vad som återstår
+            {t("iiu.rp.remaining")}
           </h2>
           {d.blockers.length === 0 ? (
             <div className="mt-3">
               <Panel tone="confirmed" title="Inget hindrar rapporten">
-                <p>
-                  Allt AI föreslog har granskats av en människa och varje fråga har en bedömning.
-                </p>
+                <p>{t(d.aiAvailable ? "iiu.rp.noblockers" : "iiu.rp.noblockers.manual")}</p>
               </Panel>
               {finalise.isError && (
                 <div className="mt-3">
-                  <Panel tone="governance" role="alert" title="Rapporten kunde inte slutföras">
-                    <p className="whitespace-pre-line">{interviewErrorMessage(finalise.error)}</p>
+                  <Panel tone="governance" role="alert" title={t("iiu.rp.failed")}>
+                    <p className="whitespace-pre-line">
+                      {interviewErrorMessage(finalise.error, t)}
+                    </p>
                   </Panel>
                 </div>
               )}
               <div className="mt-3 rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
-                <p className="text-sm font-semibold text-foreground">
-                  Bekräfta att rapporten ska slutföras
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  En slutförd rapport är oföränderlig. En senare ändring kräver en ny version, och
-                  den här bevaras.
-                </p>
+                <p className="text-sm font-semibold text-foreground">{t("iiu.rp.confirm")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.confirm.body")}</p>
                 <button
                   type="button"
                   className={`${PRIMARY_BUTTON} mt-3`}
                   onClick={() => finalise.mutate()}
                   disabled={finalise.isPending}
                 >
-                  {finalise.isPending ? "Slutför …" : "Slutför rapporten"}
+                  {finalise.isPending ? t("iiu.rp.finalising") : t("iiu.rp.finalise")}
                 </button>
               </div>
             </div>
@@ -194,23 +191,20 @@ function Page() {
           </h2>
 
           <div className="mt-3">
-            <Panel tone="confirmed" title="Slutlig och oföränderlig">
-              <p>
-                Rapporten bygger enbart på evidens som en namngiven människa har bekräftat och på
-                mänskliga bedömningar. Ett AI-förslag kan inte nå hit.
-              </p>
+            <Panel tone="confirmed" title={t("iiu.rp.final")}>
+              <p>{t("iiu.rp.final.body")}</p>
             </Panel>
           </div>
 
           <div className="mt-4 rounded-lg border border-border p-4">
-            <h3 className="text-sm font-semibold text-foreground">Låst innehåll</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.locked")}</h3>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase text-muted-foreground">Rollpaket</dt>
                 <dd className="text-foreground">{d.packName}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase text-muted-foreground">Paketets innehållssumma</dt>
+                <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.packhash")}</dt>
                 <dd>
                   <code className="font-mono text-xs">
                     {String((payload.pinned as Record<string, unknown>)?.pack_content_hash ?? "—")}
@@ -233,12 +227,14 @@ function Page() {
                       {level !== null && (
                         <Chip
                           tone={level === 0 ? "attention" : "confirmed"}
-                          srPrefix="Mänsklig bedömning"
+                          srPrefix={t("iiu.rp.humanassessment")}
                         >
-                          Nivå {level} — {String(assessment?.level_meaning ?? "")}
+                          {t("iiu.ev.level")} {level} — {String(assessment?.level_meaning ?? "")}
                         </Chip>
                       )}
-                      <Chip>{evidence.length} bekräftad evidens</Chip>
+                      <Chip>
+                        {evidence.length} {t("iiu.rp.confirmedevidence")}
+                      </Chip>
                     </div>
                     <p className="mt-2 text-sm text-foreground">{String(qq.prompt)}</p>
 
@@ -268,7 +264,7 @@ function Page() {
                         </p>
                         {assessment.uncertainty ? (
                           <p className="mt-0.5">
-                            <span className="font-medium">Osäkerhet: </span>
+                            <span className="font-medium">{t("iiu.ev.uncertainty")}</span>
                             {String(assessment.uncertainty)}
                           </p>
                         ) : null}
@@ -291,9 +287,7 @@ function Page() {
 
           {Array.isArray(payload.unresolved) && (payload.unresolved as unknown[]).length > 0 && (
             <div className="mt-4">
-              <h3 className="text-sm font-semibold text-foreground">
-                Kvarstående och att verifiera
-              </h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.outstanding")}</h3>
               <ul className="mt-2 space-y-1.5">
                 {(payload.unresolved as Array<Record<string, unknown>>).map((f, i) => (
                   <li
@@ -325,30 +319,27 @@ function Page() {
           <h2 id="s-quality" className="text-lg font-semibold text-foreground">
             Processkvalitet
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mått på hur intervjun genomfördes och hur fullständigt underlaget är. Inget här är ett
-            mått på kandidaten, och ingenting jämförs mellan kandidater.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.quality.note")}</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric
-              label="Frågor besvarade"
+              label={t("iiu.rp.m.answered")}
               value={`${qual.questions_answered}/${qual.questions_in_pack}`}
             />
             <Metric
-              label="Dimensioner med bekräftad evidens"
+              label={t("iiu.rp.m.dimensions")}
               value={`${qual.dimensions_with_confirmed_evidence}/${qual.dimensions_in_pack}`}
             />
             <Metric
-              label="AI-förslag korrigerade"
+              label={t("iiu.rp.m.corrected")}
               value={`${qual.proposals_corrected}/${qual.proposals_total}`}
             />
             <Metric
-              label="Väntar på granskning"
+              label={t("iiu.rp.m.awaiting")}
               value={qual.proposals_awaiting_review}
               tone={qual.proposals_awaiting_review > 0 ? "attention" : "neutral"}
             />
             <Metric
-              label="Otillräcklig evidens (nivå 0)"
+              label={t("iiu.rp.m.level0")}
               value={qual.insufficient_evidence_count}
               tone="attention"
             />
@@ -357,7 +348,7 @@ function Page() {
               value={qual.verifications_outstanding}
               tone={qual.verifications_outstanding > 0 ? "attention" : "neutral"}
             />
-            <Metric label="Bedömare" value={qual.assessors_involved} />
+            <Metric label={t("iiu.rp.m.assessors")} value={qual.assessors_involved} />
             <Metric
               label="Intervjuaren reflekterade"
               value={qual.interviewer_reflected ? "Ja" : "Nej"}
@@ -369,23 +360,23 @@ function Page() {
       {/* ---- Audit ---- */}
       <section className="mt-10 max-w-4xl" aria-labelledby="s-audit">
         <h2 id="s-audit" className="text-lg font-semibold text-foreground">
-          Spårbarhet
+          {t("iiu.rp.traceability")}
         </h2>
         {d.events.length === 0 ? (
           <div className="mt-3">
-            <State kind="empty">Ingen historik ännu.</State>
+            <State kind="empty">{t("iiu.rp.nohistory")}</State>
           </div>
         ) : (
           <div className="mt-3 overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[600px] text-left text-sm">
-              <caption className="sr-only">Händelsehistorik för intervjun</caption>
+              <caption className="sr-only">{t("iiu.rp.historycaption")}</caption>
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th scope="col" className="px-4 py-2">
-                    Händelse
+                    {t("iiu.rp.event")}
                   </th>
                   <th scope="col" className="px-4 py-2">
-                    Utförd av
+                    {t("iiu.rp.actor")}
                   </th>
                   <th scope="col" className="px-4 py-2">
                     Orsak
@@ -415,7 +406,7 @@ function Page() {
                           ? "AI"
                           : e.actorKind === "system"
                             ? "System"
-                            : "Människa"}
+                            : t("iiu.rp.actor.human")}
                       </Chip>
                     </td>
                     <td className="px-4 py-2 text-muted-foreground">{e.reason ?? "—"}</td>

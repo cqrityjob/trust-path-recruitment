@@ -22,12 +22,6 @@ import {
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
 
-/** Bilingual copy for this screen. The interview module was built Swedish-first
- *  and its shell already switches language, so a Swedish page under an English
- *  chrome was the visible half of the gap. */
-const c = (sv: string, en: string) => ({ sv, en });
-const L = (v: { sv: string; en: string }, lang: "sv" | "en") => v[lang];
-
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
@@ -35,7 +29,7 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { lang } = useT();
+  const { t } = useT();
   const listFn = useServerFn(listInterviewCases);
 
   const q = useQuery({
@@ -71,28 +65,14 @@ function Page() {
           Interview Intelligence
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {L(
-            c(
-              "Strukturerade, evidensbaserade intervjuer mot ett styrt rollpaket. AI förbereder, extraherar och föreslår. Människor bekräftar, bedömer och beslutar.",
-              "Structured, evidence-based interviews against a governed role package. AI prepares, extracts and suggests. People confirm, assess and decide.",
-            ),
-            lang,
-          )}
+          {t("iiu.ix.lead")}
         </p>
       </header>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label={L(c("Aktiva intervjuer", "Active interviews"), lang)} value={active.length} />
-        <Stat
-          label={L(c("Väntar på evidensgranskning", "Awaiting evidence review"), lang)}
-          value={awaiting.length}
-          tone="attention"
-        />
-        <Stat
-          label={L(c("Färdiga rapporter", "Completed reports"), lang)}
-          value={done.length}
-          tone="confirmed"
-        />
+        <Stat label={t("iiu.ix.active")} value={active.length} />
+        <Stat label={t("iiu.ix.awaiting")} value={awaiting.length} tone="attention" />
+        <Stat label={t("iiu.ix.done")} value={done.length} tone="confirmed" />
       </div>
 
       <div className="mt-6">
@@ -102,55 +82,37 @@ function Page() {
           search={{ applicationId: undefined, jobId: undefined }}
           className={BUTTON}
         >
-          {L(c("Ny intervju", "New interview"), lang)}
+          {t("iiu.new.title")}
         </Link>
       </div>
 
       <section className="mt-8" aria-labelledby="ii-cases-heading">
         <h2 id="ii-cases-heading" className="text-lg font-semibold text-foreground">
-          {L(c("Intervjuer", "Interviews"), lang)}
+          {t("iiu.rail.interview")}
         </h2>
 
         <div className="mt-4">
           {q.isLoading && <State kind="loading" />}
-          {q.isError && <State kind="error" message={interviewErrorMessage(q.error)} />}
-          {q.isSuccess && cases.length === 0 && (
-            <State kind="empty">
-              {L(
-                c(
-                  "Inga intervjuer ännu. Skapa en för att förbereda, genomföra och dokumentera en strukturerad intervju.",
-                  "No interviews yet. Create one to prepare, conduct and document a structured interview.",
-                ),
-                lang,
-              )}
-            </State>
-          )}
+          {q.isError && <State kind="error" message={interviewErrorMessage(q.error, t)} />}
+          {q.isSuccess && cases.length === 0 && <State kind="empty">{t("iiu.ix.empty")}</State>}
 
           {q.isSuccess && cases.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[760px] text-left text-sm">
-                <caption className="sr-only">
-                  {L(
-                    c(
-                      "Intervjuer med status och väntande granskning",
-                      "Interviews with status and pending review",
-                    ),
-                    lang,
-                  )}
-                </caption>
+                <caption className="sr-only">{t("iiu.ix.caption")}</caption>
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-3">
-                      {L(c("Intervju", "Interview"), lang)}
+                      {t("iiu.ix.col.interview")}
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      {L(c("Rollpaket", "Role package"), lang)}
+                      {t("iiu.ix.col.pack")}
                     </th>
                     <th scope="col" className="px-4 py-3">
                       Status
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      {L(c("Väntar på granskning", "Awaiting review"), lang)}
+                      {t("iiu.ix.col.awaiting")}
                     </th>
                   </tr>
                 </thead>
@@ -180,7 +142,7 @@ function Page() {
                       </td>
                       <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {c.proposalsAwaitingReview > 0
-                          ? `${c.proposalsAwaitingReview} förslag`
+                          ? `${c.proposalsAwaitingReview} ${t("iiu.ix.proposals")}`
                           : "—"}
                       </td>
                     </tr>
@@ -193,19 +155,8 @@ function Page() {
       </section>
 
       <div className="mt-8 max-w-3xl">
-        <Panel
-          tone="work"
-          title={L(c("Vad produkten inte gör", "What this product does not do"), lang)}
-        >
-          <p>
-            {L(
-              c(
-                "Ingen totalpoäng, ingen rangordning, ingen automatisk rekommendation och inget anställningsbeslut. Underlaget är beslutsstöd; beslutet fattas och dokumenteras av behörig människa hos er.",
-                "No total score, no ranking, no automatic recommendation and no hiring decision. This is decision support; the decision is made and documented by an authorised person at your organisation.",
-              ),
-              lang,
-            )}
-          </p>
+        <Panel tone="work" title={t("iiu.ix.boundary.title")}>
+          <p>{t("iiu.ix.boundary.body")}</p>
         </Panel>
       </div>
     </EmployerAppShell>
