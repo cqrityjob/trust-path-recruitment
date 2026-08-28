@@ -126,7 +126,7 @@ function Page() {
       employerName={ws.workspace.employerName}
       role={ws.workspace.role}
       status={ws.workspace.employerStatus}
-      activeSection="assessments"
+      activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <nav aria-label="Brödsmulor" className="text-sm">
@@ -159,8 +159,8 @@ function Page() {
       {packs.isSuccess && packs.data.packs.length === 0 && (
         <div className="mt-6 max-w-3xl">
           <State kind="empty">
-            Inget rollpaket är tillgängligt för er ännu. Ett paket måste vara publicerat, eller så
-            behöver ni ett pilotmedgivande från plattformen.
+            Inget rollpaket är tillgängligt just nu. Paket görs tillgängliga av plattformen — försök
+            igen senare eller kontakta plattformen om du väntar dig ett paket här.
           </State>
         </div>
       )}

@@ -306,7 +306,9 @@ const ERROR_SV: Record<string, string> = {
   SCP_IV_ASSESSMENT_EDITED_IN_PLACE:
     "En registrerad bedömning ändras genom att ersättas, så att originalet finns kvar.",
   SCP_IV_PACK_NOT_USABLE:
-    "Rollpaketet är inte publicerat och ni har inget giltigt pilotmedgivande för det.",
+    "Det här rollpaketet är inte tillgängligt för er just nu. Välj ett annat paket eller kontakta plattformen.",
+  SCP_IV_EMPLOYER_NOT_ACTIVE:
+    "Ert företagskonto är inte aktivt, så nya intervjuer kan inte startas. Kontakta plattformen.",
 };
 
 export function interviewErrorMessage(error: unknown): string {

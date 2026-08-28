@@ -203,6 +203,15 @@ END $$;
 DO $$ BEGIN RAISE NOTICE 'GROUP I3 — a pilot grant is a boundary, not a bypass'; END $$;
 -- ===========================================================================
 
+-- Since 20260925090000 the seeded Vaktare v1 is OPENLY available to active
+-- employers. This group tests the GRANT boundary, which now governs
+-- RESTRICTED content — so restrict the version again for this suite. The
+-- open-pilot entitlement has its own suite (scp_interview_open_pilot_test).
+UPDATE public.scp_interview_pack_versions ver
+   SET pilot_availability = 'restricted'
+  FROM public.scp_interview_packs p
+ WHERE p.id = ver.pack_id AND p.slug = 'vaktare-se';
+
 INSERT INTO auth.users (id, email) VALUES
   ('44440000-0000-0000-0000-0000000000a1', 'pilot-owner@test.local'),
   ('44440000-0000-0000-0000-0000000000a2', 'pilot-cohort@test.local'),

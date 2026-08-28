@@ -43,6 +43,7 @@ import {
   publishRolePackVersion,
   recordRolePackReview,
   retireRolePackVersion,
+  setRolePackPilotAvailability,
   submitRolePackForReview,
   suspendRolePackVersion,
   type PackVersionDetail,
@@ -646,13 +647,16 @@ function GovernancePanel({
   const [decision, setDecision] = useState<"approved" | "rejected">("approved");
   const [rationale, setRationale] = useState("");
   const [reason, setReason] = useState("");
-  const [confirming, setConfirming] = useState<"publish" | "suspend" | "retire" | null>(null);
+  const [confirming, setConfirming] = useState<
+    "publish" | "suspend" | "retire" | "pilotOpen" | "pilotWithdraw" | null
+  >(null);
 
   const submitFn = useServerFn(submitRolePackForReview);
   const reviewFn = useServerFn(recordRolePackReview);
   const publishFn = useServerFn(publishRolePackVersion);
   const suspendFn = useServerFn(suspendRolePackVersion);
   const retireFn = useServerFn(retireRolePackVersion);
+  const pilotFn = useServerFn(setRolePackPilotAvailability);
 
   const settle = { onSuccess: onChanged };
 
@@ -691,6 +695,14 @@ function GovernancePanel({
       onChanged();
     },
   });
+  const pilot = useMutation({
+    mutationFn: (available: boolean) => pilotFn({ data: { versionId, available, reason } }),
+    onSuccess: () => {
+      setReason("");
+      setConfirming(null);
+      onChanged();
+    },
+  });
 
   const busyError =
     (submit.error as Error | null) ??
@@ -698,6 +710,7 @@ function GovernancePanel({
     (publish.error as Error | null) ??
     (suspend.error as Error | null) ??
     (retire.error as Error | null) ??
+    (pilot.error as Error | null) ??
     null;
 
   const { canEdit, canReview, canPublish } = detail.capabilities;
@@ -985,6 +998,65 @@ function GovernancePanel({
           )}
         </div>
       )}
+
+      {/* ---- publisher: open pilot availability (content decision) ---- */}
+      {canPublish &&
+        ["draft", "expert_review", "legal_review", "cognitive_review"].includes(status) && (
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="text-sm font-semibold text-foreground">{t("ii.gov.pilot")}</h3>
+            <div className="mt-2">
+              {detail.version.pilotAvailability === "open" ? (
+                <StateBadge tone="confirmed">{t("ii.gov.pilot.openState")}</StateBadge>
+              ) : (
+                <StateBadge tone="neutral">{t("ii.gov.pilot.restrictedState")}</StateBadge>
+              )}
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              {t("ii.gov.pilot.hint")}
+            </p>
+            <div className="mt-3">
+              {confirming === "pilotOpen" ? (
+                <ConfirmBlock
+                  titleKey="ii.gov.confirmPilotOpen"
+                  bodyKey="ii.gov.confirmPilotOpenBody"
+                  reason={reason}
+                  setReason={setReason}
+                  reasonRequired
+                  pending={pilot.isPending}
+                  onConfirm={() => pilot.mutate(true)}
+                  onCancel={() => setConfirming(null)}
+                />
+              ) : confirming === "pilotWithdraw" ? (
+                <ConfirmBlock
+                  titleKey="ii.gov.confirmPilotWithdraw"
+                  bodyKey="ii.gov.confirmPilotWithdrawBody"
+                  reason={reason}
+                  setReason={setReason}
+                  reasonRequired
+                  pending={pilot.isPending}
+                  onConfirm={() => pilot.mutate(false)}
+                  onCancel={() => setConfirming(null)}
+                />
+              ) : detail.version.pilotAvailability === "open" ? (
+                <button
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => setConfirming("pilotWithdraw")}
+                >
+                  {t("ii.gov.pilot.withdraw")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => setConfirming("pilotOpen")}
+                >
+                  {t("ii.gov.pilot.open")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
     </div>
   );
 }

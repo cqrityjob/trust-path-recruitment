@@ -26,10 +26,14 @@ of the pack as validated content (Phase 1 already enforces that) and they block 
 scientific claim. They do not block synthetic fixtures or a controlled internal pilot.
 Nothing in this phase marks a mapping expert-validated.
 
-Implementation consequence: a runtime `pilot_authorised` path exists alongside
-`published`, so an internal pilot can run a `draft`/`pilot_hypothesis` pack **without
-the pack ever claiming to be validated**. It is gated by an explicit admin grant per
-employer (`scp_interview_pack_pilot_grants`), not by weakening the publish gate.
+Implementation consequence: a runtime pilot path exists alongside `published`, so
+a pilot can run a `draft`/`pilot_hypothesis` pack **without the pack ever claiming
+to be validated**. Since 20260925090000 (owner decision 2026-08-28) the ordinary
+gate is a governed CONTENT decision: the platform publisher makes one pack version
+openly available (`pilot_availability = 'open'`), and every ACTIVE employer may
+then use it in `internal_qa` mode — no employer-by-employer switch. An explicit
+per-employer grant (`scp_interview_pack_pilot_grants`) remains for restricted or
+private cohorts. Neither path weakens the publish gate.
 
 ---
 

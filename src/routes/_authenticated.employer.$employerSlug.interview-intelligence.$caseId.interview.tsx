@@ -182,7 +182,7 @@ function Page() {
       employerName={ws.workspace!.employerName}
       role={ws.workspace!.role}
       status={ws.workspace!.employerStatus}
-      activeSection="assessments"
+      activeSection="interviewIntelligence"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       {children}
