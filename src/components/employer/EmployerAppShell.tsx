@@ -355,7 +355,12 @@ function SidebarHeader({
         {t("employer.workspace.label")}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <h1 className="min-w-0 truncate text-base font-semibold text-foreground">{employerName}</h1>
+        {/* Not an h1. This is the workspace the user is inside, shown in the
+            sidebar chrome; the page's own subject -- a candidate, a job, a
+            report -- is the document heading. Two h1s on every employer page
+            gave screen-reader users two competing answers to "what is this
+            page about", and the sidebar always won because it comes first. */}
+        <p className="min-w-0 truncate text-base font-semibold text-foreground">{employerName}</p>
         <Badge variant={STATUS_BADGE_VARIANT[status]}>{t(STATUS_LABEL_KEY[status])}</Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
