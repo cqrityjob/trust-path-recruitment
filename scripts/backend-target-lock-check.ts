@@ -201,7 +201,9 @@ const hostedWritePattern = /\bsupabase\s+(?:link|db\s+push|migration\s+repair)\b
 for (const file of readdirSync(workflowDir).filter((name) => /\.ya?ml$/.test(name))) {
   const source = readFileSync(path.join(workflowDir, file), "utf8");
   if (hostedWritePattern.test(source)) {
-    fail(`${file} contains a hosted Supabase write/link command; use the official Supabase GitHub integration`);
+    fail(
+      `${file} contains a hosted Supabase write/link command; use the official Supabase GitHub integration`,
+    );
   }
   if (source.includes(OWNER_LOCKED.permanentlyExcludedRef)) {
     fail(`${file} references the permanently excluded Supabase project`);
@@ -217,7 +219,11 @@ if (processTarget && processTarget !== OWNER_LOCKED.candidateProductionRef) {
     `runner CQ_SCHEMA_WRITE_TARGET_REF is ${processTarget}; only ${OWNER_LOCKED.candidateProductionRef} is permitted`,
   );
 }
-if (targets.releaseMode === "bootstrap_authorised" && processTarget && processTarget !== targets.writeTargetRef) {
+if (
+  targets.releaseMode === "bootstrap_authorised" &&
+  processTarget &&
+  processTarget !== targets.writeTargetRef
+) {
   fail("runner schema target and deployment-target registry disagree");
 }
 
