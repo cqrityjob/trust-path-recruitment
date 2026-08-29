@@ -29,7 +29,7 @@ interface DeploymentTargets {
   writeTargetRef: ProjectRef | null;
   lovableProjectId: string;
   currentLive: {
-    kind: "lovable_cloud";
+    kind: "lovable_cloud" | "owned_supabase";
     projectRef: ProjectRef;
     writePolicy: string;
   };
@@ -53,7 +53,8 @@ const failures: string[] = [];
 
 const OWNER_LOCKED = {
   lovableProjectId: "9ec625ef-34a1-4b4b-8cbb-712cae168579",
-  currentLiveRef: "zrahptwsnjcdyzfywbeh",
+  productionRef: "wrygicdfxwjnrugduxnt",
+  legacyLiveRef: "zrahptwsnjcdyzfywbeh",
   // The owner schema target. This was vcgwvtmzftmulmoxmufv until 2026-08-29.
   //
   // vcgw was the INTENDED target in the 2026-08-28 bootstrap runbook, and its
@@ -94,16 +95,15 @@ const migrationPolicy = JSON.parse(read("supabase/migrations-policy.json")) as M
 const appEnv = parseEnv(read(".env"));
 const configToml = read("supabase/config.toml");
 
-// v2 added `retired` and the evidence fields when the schema target was
-// corrected from the failed vcgw bootstrap to wryg.
-if (targets.schemaVersion !== 2) {
+// v3 records the completed runtime cutover and permanently retires zrah.
+if (targets.schemaVersion !== 3) {
   fail(`unsupported deployment-targets schemaVersion ${targets.schemaVersion}`);
 }
 if (targets.lovableProjectId !== OWNER_LOCKED.lovableProjectId) {
   fail(`Lovable project identity changed: expected ${OWNER_LOCKED.lovableProjectId}`);
 }
-if (targets.currentLive.projectRef !== OWNER_LOCKED.currentLiveRef) {
-  fail(`current-live ref changed before cutover: expected ${OWNER_LOCKED.currentLiveRef}`);
+if (targets.currentLive.projectRef !== OWNER_LOCKED.productionRef) {
+  fail(`current-live ref must remain owner production: expected ${OWNER_LOCKED.productionRef}`);
 }
 if (targets.candidateProduction.projectRef !== OWNER_LOCKED.candidateProductionRef) {
   fail(`candidate-production ref changed: expected ${OWNER_LOCKED.candidateProductionRef}`);
@@ -118,6 +118,15 @@ if (!(targets.retired ?? []).some((e) => e.projectRef === OWNER_LOCKED.retiredSc
     `retired schema target ${OWNER_LOCKED.retiredSchemaTargetRef} must stay recorded as retired, not removed`,
   );
 }
+if (!(targets.retired ?? []).some((e) => e.projectRef === OWNER_LOCKED.legacyLiveRef)) {
+  fail(`legacy live backend ${OWNER_LOCKED.legacyLiveRef} must remain recorded as retired`);
+}
+if (
+  targets.currentLive.projectRef === OWNER_LOCKED.legacyLiveRef ||
+  targets.writeTargetRef === OWNER_LOCKED.legacyLiveRef
+) {
+  fail(`${OWNER_LOCKED.legacyLiveRef} is retired and may never become runtime or write target again`);
+}
 if (targets.writeTargetRef === OWNER_LOCKED.retiredSchemaTargetRef) {
   fail(
     `${OWNER_LOCKED.retiredSchemaTargetRef} is a RETIRED schema target whose bootstrap failed; it may never be a write target again`,
@@ -126,7 +135,10 @@ if (targets.writeTargetRef === OWNER_LOCKED.retiredSchemaTargetRef) {
 
 const allRefs = [
   targets.currentLive.projectRef,
-  targets.candidateProduction.projectRef,
+  ...(targets.candidateProduction.projectRef === targets.currentLive.projectRef
+    ? []
+    : [targets.candidateProduction.projectRef]),
+  ...(targets.retired ?? []).map((entry) => entry.projectRef),
   ...targets.excluded.map((entry) => entry.projectRef),
 ];
 if (new Set(allRefs).size !== allRefs.length) {
@@ -166,28 +178,45 @@ if (targets.releaseMode === "transition_preparation") {
   if (targets.candidateProduction.writePolicy !== "supabase_github_integration_only") {
     fail("bootstrap writes must be restricted to the official Supabase GitHub integration");
   }
-} else {
-  fail("cutover_complete is intentionally unsupported by this guard until the final cutover PR");
+} else if (targets.releaseMode === "cutover_complete") {
+  if (!targets.automaticProductionDeployEnabled) {
+    fail("cutover_complete requires automatic schema deployment on main");
+  }
+  if (targets.writeTargetRef !== OWNER_LOCKED.productionRef) {
+    fail(`cutover writeTargetRef must be ${OWNER_LOCKED.productionRef}`);
+  }
+  if (targets.currentLive.projectRef !== targets.writeTargetRef) {
+    fail("runtime and schema write target must be identical after cutover");
+  }
+  if (targets.currentLive.kind !== "owned_supabase") {
+    fail("current live backend must be owner-controlled Supabase after cutover");
+  }
+  if (targets.candidateProduction.state !== "production_active") {
+    fail(`candidate production must be production_active after cutover`);
+  }
+  if (targets.currentLive.writePolicy !== "supabase_github_integration_only") {
+    fail("production writes must remain restricted to the official Supabase GitHub integration");
+  }
 }
 
-// The application remains on Lovable Cloud throughout preparation and schema
-// bootstrap. Moving any of these values before end-to-end UAT is a stop condition.
-const expectedLiveUrl = `https://${OWNER_LOCKED.currentLiveRef}.supabase.co`;
+// After cutover, every tracked runtime identifier must name the same owner
+// project as the official schema deployment integration.
+const expectedLiveUrl = `https://${OWNER_LOCKED.productionRef}.supabase.co`;
 for (const key of ["SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"] as const) {
-  if (appEnv.get(key) !== OWNER_LOCKED.currentLiveRef) {
-    fail(`${key} must still point to current live until the cutover PR`);
+  if (appEnv.get(key) !== OWNER_LOCKED.productionRef) {
+    fail(`${key} must point to owner production after cutover`);
   }
 }
 for (const key of ["SUPABASE_URL", "VITE_SUPABASE_URL"] as const) {
   if (appEnv.get(key) !== expectedLiveUrl) {
-    fail(`${key} must still point to current live until the cutover PR`);
+    fail(`${key} must point to owner production after cutover`);
   }
 }
-if (!configToml.includes(`project_id = "${OWNER_LOCKED.currentLiveRef}"`)) {
-  fail("supabase/config.toml must remain on the live backend until the cutover PR");
+if (!configToml.includes(`project_id = "${OWNER_LOCKED.productionRef}"`)) {
+  fail("supabase/config.toml must point to owner production after cutover");
 }
-if (migrationPolicy.canonicalProject?.hostedSupabaseRef !== OWNER_LOCKED.currentLiveRef) {
-  fail("migrations-policy canonicalProject remains the current live backend until cutover");
+if (migrationPolicy.canonicalProject?.hostedSupabaseRef !== OWNER_LOCKED.productionRef) {
+  fail("migrations-policy canonicalProject must be owner production after cutover");
 }
 if (migrationPolicy.canonicalProject?.lovableProject !== OWNER_LOCKED.lovableProjectId) {
   fail("migrations-policy Lovable project identity does not match the owner lock");
@@ -235,9 +264,9 @@ if (failures.length > 0) {
 
 console.log("BACKEND TARGET LOCK: PASS");
 console.log(`  release mode:           ${targets.releaseMode}`);
-console.log(`  live runtime unchanged: ${targets.currentLive.projectRef} [Lovable Cloud]`);
-console.log(`  owner schema target:    ${targets.candidateProduction.projectRef}`);
+console.log(`  live runtime:           ${targets.currentLive.projectRef} [owner Supabase]`);
+console.log(`  schema write target:    ${targets.candidateProduction.projectRef}`);
 console.log(`  excluded permanently:   ${OWNER_LOCKED.permanentlyExcludedRef}`);
 console.log(
-  `  Supabase production deploy: ${targets.automaticProductionDeployEnabled ? "AUTHORISED FOR SCHEMA BOOTSTRAP" : "DISABLED"}`,
+  `  Supabase production deploy: ${targets.automaticProductionDeployEnabled ? "ENABLED ON MAIN" : "DISABLED"}`,
 );
