@@ -215,6 +215,21 @@ function DevCareerDiscoveryPreview() {
         </p>
       )}
 
+      {/* The harness lost its way into the card when the profession picker
+          was removed 2026-08-29 — the tier cards used to open it. Without a
+          trigger the modal is unreachable on `npm run dev`, which is the
+          only place its layout and its share panel can actually be looked
+          at. Dev-only, like the rest of this route. */}
+      {matches.ranked.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setCardOpen(true)}
+          className="mt-8 inline-flex h-11 items-center justify-center rounded-[10px] bg-accent px-5 text-sm font-semibold text-accent-foreground"
+        >
+          Open Career Card
+        </button>
+      )}
+
       {matches.ranked.length > 0 && (
         <CareerCardCreator
           open={cardOpen}
