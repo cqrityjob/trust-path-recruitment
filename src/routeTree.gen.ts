@@ -143,6 +143,7 @@ import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssessmentSlugRout
 import { Route as AuthenticatedEmployerEmployerSlugApplicationsApplicationIdRouteImport } from './routes/_authenticated.employer.$employerSlug.applications.$applicationId'
 import { Route as AuthenticatedAcademyTrainingAssignmentIdModuleVersionIdRouteImport } from './routes/_authenticated.academy.training.$assignmentId.$moduleVersionId'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.index'
+import { Route as AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.reviews.index'
 import { Route as AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRouteImport } from './routes/_authenticated.employer.$employerSlug.assessments.assignments.index'
 import { Route as AuthenticatedEmployerEmployerSlugJobsJobIdEditRouteImport } from './routes/_authenticated.employer.$employerSlug.jobs.$jobId.edit'
@@ -923,6 +924,15 @@ const AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute =
     path: '/jobs/$jobId/',
     getParentRoute: () => AuthenticatedEmployerEmployerSlugRoute,
   } as any)
+const AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute =
+  AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRouteImport.update(
+    {
+      id: '/$caseId/',
+      path: '/$caseId/',
+      getParentRoute: () =>
+        AuthenticatedEmployerEmployerSlugInterviewIntelligenceRoute,
+    } as any,
+  )
 const AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute =
   AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRouteImport.update({
     id: '/assessments/reviews/',
@@ -1166,6 +1176,7 @@ export interface FileRoutesByFullPath {
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
   '/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/employer/$employerSlug/assessments/reviews/': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
+  '/employer/$employerSlug/interview-intelligence/$caseId/': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute
   '/employer/$employerSlug/jobs/$jobId/': typeof AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -1295,6 +1306,7 @@ export interface FileRoutesByTo {
   '/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
   '/employer/$employerSlug/assessments/assignments': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/employer/$employerSlug/assessments/reviews': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
+  '/employer/$employerSlug/interview-intelligence/$caseId': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute
   '/employer/$employerSlug/jobs/$jobId': typeof AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute
 }
 export interface FileRoutesById {
@@ -1444,6 +1456,7 @@ export interface FileRoutesById {
   '/_authenticated/employer/$employerSlug/jobs/$jobId/edit': typeof AuthenticatedEmployerEmployerSlugJobsJobIdEditRoute
   '/_authenticated/employer/$employerSlug/assessments/assignments/': typeof AuthenticatedEmployerEmployerSlugAssessmentsAssignmentsIndexRoute
   '/_authenticated/employer/$employerSlug/assessments/reviews/': typeof AuthenticatedEmployerEmployerSlugAssessmentsReviewsIndexRoute
+  '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/': typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute
   '/_authenticated/employer/$employerSlug/jobs/$jobId/': typeof AuthenticatedEmployerEmployerSlugJobsJobIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -1593,6 +1606,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs/$jobId/edit'
     | '/employer/$employerSlug/assessments/assignments/'
     | '/employer/$employerSlug/assessments/reviews/'
+    | '/employer/$employerSlug/interview-intelligence/$caseId/'
     | '/employer/$employerSlug/jobs/$jobId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1722,6 +1736,7 @@ export interface FileRouteTypes {
     | '/employer/$employerSlug/jobs/$jobId/edit'
     | '/employer/$employerSlug/assessments/assignments'
     | '/employer/$employerSlug/assessments/reviews'
+    | '/employer/$employerSlug/interview-intelligence/$caseId'
     | '/employer/$employerSlug/jobs/$jobId'
   id:
     | '__root__'
@@ -1870,6 +1885,7 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/$employerSlug/jobs/$jobId/edit'
     | '/_authenticated/employer/$employerSlug/assessments/assignments/'
     | '/_authenticated/employer/$employerSlug/assessments/reviews/'
+    | '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/'
     | '/_authenticated/employer/$employerSlug/jobs/$jobId/'
   fileRoutesById: FileRoutesById
 }
@@ -2844,6 +2860,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugJobsJobIdIndexRouteImport
       parentRoute: typeof AuthenticatedEmployerEmployerSlugRoute
     }
+    '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/': {
+      id: '/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/'
+      path: '/$caseId'
+      fullPath: '/employer/$employerSlug/interview-intelligence/$caseId/'
+      preLoaderRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRouteImport
+      parentRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceRoute
+    }
     '/_authenticated/employer/$employerSlug/assessments/reviews/': {
       id: '/_authenticated/employer/$employerSlug/assessments/reviews/'
       path: '/assessments/reviews'
@@ -3167,6 +3190,7 @@ interface AuthenticatedEmployerEmployerSlugInterviewIntelligenceRouteChildren {
   AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdPanelRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdPanelRoute
   AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdPrepareRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdPrepareRoute
   AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdReportRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdReportRoute
+  AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute: typeof AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute
 }
 
 const AuthenticatedEmployerEmployerSlugInterviewIntelligenceRouteChildren: AuthenticatedEmployerEmployerSlugInterviewIntelligenceRouteChildren =
@@ -3185,6 +3209,8 @@ const AuthenticatedEmployerEmployerSlugInterviewIntelligenceRouteChildren: Authe
       AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdPrepareRoute,
     AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdReportRoute:
       AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdReportRoute,
+    AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute:
+      AuthenticatedEmployerEmployerSlugInterviewIntelligenceCaseIdIndexRoute,
   }
 
 const AuthenticatedEmployerEmployerSlugInterviewIntelligenceRouteWithChildren =

@@ -17,7 +17,6 @@ import {
   Panel,
   State,
   interviewErrorMessage,
-  ValidationChip,
   BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
@@ -61,8 +60,11 @@ function Page() {
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <header>
+        {/* "Interview Intelligence" is what we call the capability; a
+            recruiter opening their week is looking for their interviews. The
+            sidebar already says Intervjuer, and the page disagreed with it. */}
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          Interview Intelligence
+          {t("iiu.ix.heading")}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           {t("iiu.ix.lead")}
@@ -120,22 +122,25 @@ function Page() {
                   {cases.map((c) => (
                     <tr key={c.id} className="align-top">
                       <th scope="row" className="px-4 py-3 font-medium text-foreground">
+                        {/* The candidate is the row. The case title is
+                            internal bookkeeping, and leading with it made the
+                            list read as a list of records rather than of
+                            people. The link lands on the overview, so opening
+                            a candidate answers "who and what next" before it
+                            asks for work. */}
                         <Link
-                          to="/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+                          to="/employer/$employerSlug/interview-intelligence/$caseId"
                           params={{ employerSlug, caseId: c.id }}
                           className="text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         >
-                          {c.title}
+                          {c.candidateDisplayName}
                         </Link>
                         <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                          {c.candidateDisplayName}
+                          {c.title}
                         </span>
                       </th>
                       <td className="px-4 py-3">
                         <span className="text-muted-foreground">{c.packName ?? "—"}</span>
-                        <span className="mt-1 block">
-                          <ValidationChip label={c.validationLabel} />
-                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <CaseStatusChip status={c.status} />

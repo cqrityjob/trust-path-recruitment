@@ -720,6 +720,59 @@ for (const file of [
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 14 · The recruiter's entry point                                     */
+/* ------------------------------------------------------------------ */
+
+// The product failure this fixes: opening a candidate landed the recruiter
+// inside /prepare, whose first screenful was the TRUST stage banner -- the
+// method's name, which of five stages this is, what may not be concluded here,
+// and a note about scientific validation. Who the candidate was, what the role
+// needed and what to do next appeared nowhere.
+//
+// The method still governs every screen underneath. It must not be the first
+// thing between a recruiter and their work.
+{
+  const OV =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const ov = read(OV);
+
+  ok(
+    ov.includes("{d.candidateDisplayName}") &&
+      ov.indexOf("{d.candidateDisplayName}") < ov.indexOf("iiu.ov.whereyouare"),
+    "the overview must lead with the candidate, not with process state",
+  );
+  ok(
+    ov.includes('t("iiu.ov.nextaction")') && ov.includes("NEXT[d.status]"),
+    "the overview must tell the recruiter what to do next, derived from the case status",
+  );
+  ok(
+    !ov.includes("TrustStageBanner"),
+    "the TRUST stage banner is back on the overview — methodology must not be the entry point",
+  );
+  // A progress bar or percentage over an interview reads as a score for the
+  // candidate the moment two candidates are compared.
+  ok(
+    !/(?:progress|width):\s*[`'"]?\$?\{?[^}]*%/i.test(ov) && !ov.includes("toFixed"),
+    "the overview must not express progress as a percentage or a bar",
+  );
+
+  const list = "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx";
+  const li = read(list);
+  ok(
+    li.includes('to="/employer/$employerSlug/interview-intelligence/$caseId"'),
+    "the interview list must open the overview, not drop the recruiter inside a work surface",
+  );
+  ok(
+    !li.includes("ValidationChip"),
+    "the pack's validation label is governance metadata and does not belong on every list row",
+  );
+  ok(
+    !/>\s*Interview Intelligence\s*</.test(li),
+    "the list must be titled in the recruiter's language, and match the sidebar",
+  );
+}
+
 console.log(`\n  assertions passed: ${passes}`);
 if (failures > 0) {
   console.error(`\ninterview-ux-contract-check FAILED (${failures} issue(s))`);
