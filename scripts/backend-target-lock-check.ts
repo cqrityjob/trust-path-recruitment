@@ -29,7 +29,7 @@ interface DeploymentTargets {
   writeTargetRef: ProjectRef | null;
   lovableProjectId: string;
   currentLive: {
-    kind: "lovable_cloud";
+    kind: "owned_supabase";
     projectRef: ProjectRef;
     writePolicy: string;
   };
