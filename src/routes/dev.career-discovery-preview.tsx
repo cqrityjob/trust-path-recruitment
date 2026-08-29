@@ -29,9 +29,9 @@ import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardC
 import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
 import { PossiblePathway } from "@/components/career-discovery/v31/PossiblePathway";
 import { ProfessionRecommendations } from "@/components/career-discovery/v31/ProfessionRecommendations";
-import { DIMENSION_IDS, type DimensionId } from "@/lib/career-discovery/v31/dimensions";
+import { DIMENSION_IDS, DIMENSIONS, type DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import { GOLDEN_PERSONAS } from "@/lib/career-discovery/v31/golden-persona-fixtures";
-import { matchProfessionsDiagnostics, type ProfessionMatch } from "@/lib/career-discovery/v31/professions";
+import { matchProfessionsDiagnostics } from "@/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "@/lib/career-discovery/v31/scoring";
 import type { ExperienceBand } from "@/lib/career-discovery/career-context";
 // eslint-disable-next-line no-restricted-imports -- dev-only fixture harness, see file header
@@ -77,7 +77,7 @@ function DevCareerDiscoveryPreview() {
   const [personaId, setPersonaId] = useState(GOLDEN_PERSONAS[0].id);
   const [previewLocale, setPreviewLocale] = useState<"sv" | "en">("sv");
   const [experienceBand, setExperienceBand] = useState<ExperienceBand | "">("");
-  const [cardMatch, setCardMatch] = useState<ProfessionMatch | null>(null);
+  const [cardOpen, setCardOpen] = useState(false);
 
   const persona = GOLDEN_PERSONAS.find((p) => p.id === personaId) ?? GOLDEN_PERSONAS[0];
   const dims = makeDims(persona.dims);
@@ -94,9 +94,15 @@ function DevCareerDiscoveryPreview() {
   const currentTitle = persona.currentProfessionCigSlug
     ? CIG_TITLES[persona.currentProfessionCigSlug]
     : undefined;
-  const dimensionScores = Object.fromEntries(
-    DIMENSION_IDS.map((id) => [id, persona.dims[id] ?? null]),
-  ) as Record<DimensionId, number | null>;
+  // The card reads only these three fields (CardDimensionScore). Built from
+  // the persona's own scores rather than a fabricated snapshot — this is a
+  // preview harness, and CID15 is excluded here exactly as the real
+  // snapshot's `usedForMatching` excludes it (owner decision A-4).
+  const previewDimensions = DIMENSION_IDS.map((id) => ({
+    id,
+    score: persona.dims[id] ?? null,
+    usedForMatching: DIMENSIONS[id].matchingWeight === 1,
+  }));
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
@@ -184,7 +190,6 @@ function DevCareerDiscoveryPreview() {
             careerPivots={matches.careerPivots}
             currentProfessionMatch={matches.currentProfessionMatch}
             locale={previewLocale}
-            onOpenCareerCard={setCardMatch}
           />
           <PossiblePathway
             snapshot={{
@@ -210,15 +215,12 @@ function DevCareerDiscoveryPreview() {
         </p>
       )}
 
-      {matches.matches.length > 0 && (
+      {matches.ranked.length > 0 && (
         <CareerCardCreator
-          open={cardMatch !== null}
-          onOpenChange={(next) => {
-            if (!next) setCardMatch(null);
-          }}
-          matches={matches.matches}
-          initialProfessionId={cardMatch?.professionId}
-          dimensionScores={dimensionScores}
+          open={cardOpen}
+          onOpenChange={setCardOpen}
+          ranked={matches.ranked}
+          dimensions={previewDimensions}
           locale={previewLocale}
           definitionVersion="dev-preview"
           generatedAt={new Date().toISOString()}

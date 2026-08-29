@@ -32,6 +32,7 @@ import {
   matchProfessions,
   validateDomainOnlyCentralRule,
   type ProfessionMatch,
+  type ProfessionMatchResult,
 } from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
 import { GOLDEN_PERSONAS } from "../src/lib/career-discovery/v31/golden-persona-fixtures";
@@ -88,24 +89,39 @@ report.push(
     "Test-only — `approved_for_ranking` is untouched.\n",
 );
 
-function describeMatch(m: ProfessionMatch, dims: DimensionResult): string {
+function describeMatch(m: ProfessionMatch): string {
   const explanation = explainMatch(m, "sv");
-  const dimensionScores = Object.fromEntries(
-    DIMENSION_IDS.map((id) => [id, dims.dimensions[id].score]),
-  ) as Record<DimensionId, number | null>;
-  const card = buildCareerCardData({
-    match: m,
-    dimensionScores,
-    locale: "sv",
-    definitionVersion: "2026-scd-v3.1.0",
-    generatedAt: "2026-08-15T00:00:00.000Z",
-  });
   return [
     `  - **${m.titleSv}** (${m.professionId}) — stage: ${m.stage}, fit: ${m.fitTier}`,
     `    why: ${explanation.rationale}`,
     `    ${explanation.stageSentence}`,
     `    aligned: ${explanation.alignedDimensionNames.join(", ") || "—"}`,
-    `    card indicators: ${card.indicators.map((i) => `${i.label} (${Math.round(i.value * 100)}% bar)`).join(", ") || "none"}`,
+  ].join("\n");
+}
+
+/** The persona's Career Card, reported once per persona rather than once per
+ *  match. The card used to be built FROM a single ProfessionMatch, which is
+ *  why this line lived inside describeMatch; it is now built from the whole
+ *  canonical ranking (see career-card.ts), so a per-match card no longer
+ *  exists to describe. */
+function describeCareerCard(result: ProfessionMatchResult, dims: DimensionResult): string {
+  const card = buildCareerCardData({
+    ranked: result.ranked,
+    dimensions: DIMENSION_IDS.map((id) => ({
+      id,
+      score: dims.dimensions[id].score,
+      usedForMatching: DIMENSIONS[id].matchingWeight === 1,
+    })),
+    locale: "sv",
+    definitionVersion: "2026-scd-v3.1.0",
+    generatedAt: "2026-08-15T00:00:00.000Z",
+  });
+  return [
+    `### Career Card (shareable artefact — the canonical top 3, no picker)`,
+    card.entries.map((e) => `  ${e.rank}. **${e.title}** — ${e.confidenceLabel}`).join("\n") ||
+      "  (no ranking)",
+    `  strongest indicators: ${card.strengths.join(" · ") || "—"}`,
+    "",
   ].join("\n");
 }
 
@@ -154,11 +170,12 @@ for (const persona of GOLDEN_PERSONAS) {
   if (!result.available) {
     report.push("No professions cleared matching (insufficient coverage or fit) — shown honestly as unavailable, not padded.\n");
   } else {
-    report.push(`### Strongest directions to explore\n${result.strongestDirections.map((m) => describeMatch(m, dims)).join("\n")}\n`);
-    report.push(`### Also worth exploring\n${result.alsoWorthExploring.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
-    report.push(`### Longer-term possibilities\n${result.longerTermPossibilities.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
-    report.push(`### Career pivot — real affinity, different direction\n${result.careerPivots.map((m) => describeMatch(m, dims)).join("\n") || "  (none)"}\n`);
+    report.push(`### Strongest directions to explore\n${result.strongestDirections.map((m) => describeMatch(m)).join("\n")}\n`);
+    report.push(`### Also worth exploring\n${result.alsoWorthExploring.map((m) => describeMatch(m)).join("\n") || "  (none)"}\n`);
+    report.push(`### Longer-term possibilities\n${result.longerTermPossibilities.map((m) => describeMatch(m)).join("\n") || "  (none)"}\n`);
+    report.push(`### Career pivot — real affinity, different direction\n${result.careerPivots.map((m) => describeMatch(m)).join("\n") || "  (none)"}\n`);
   }
+  report.push(describeCareerCard(result, dims));
 
   // No hard-coded "must include profession X" assertions beyond what the
   // persona's design intends to prove — see each group's checks below.

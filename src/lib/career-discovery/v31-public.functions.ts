@@ -1,15 +1,52 @@
-// The public v3.1 assessment: availability, and replay-on-login persistence.
+// The public v3.1 assessment: availability, the canonical result, and
+// replay-on-login persistence.
 //
 // ── WHAT MAKES THIS PUBLIC WITHOUT BEING ANONYMOUS ─────────────────────
 //
 // A signed-out visitor answers into sessionStorage (v31-public-buffer.ts). The
-// database is not touched at all until they sign in. Then `persistPublicV31Run`
+// database is not WRITTEN at all until they sign in. Then `persistPublicV31Run`
 // replays the buffer through the NORMAL authenticated pipeline: a real
 // cd_sessions row owned by their user_id, real cd_evidence rows, and
 // cd_v31_complete_session for the atomic snapshot.
 //
 // So there is no anonymous grant, no anonymous RLS policy, and no anonymous
 // report ownership. A report cannot exist before its owner does.
+//
+// ── ONE COMPLETED ATTEMPT = ONE CANONICAL RESULT ───────────────────────
+//
+// CORRECTED 2026-08-29. Until now the anonymous result and the saved result
+// were built by two DIFFERENT callers of `buildValidatedSnapshot` with
+// DIFFERENT inputs, and they disagreed:
+//
+//   * PublicAssessmentFlow.tsx computed the pre-login report in the browser
+//     and passed NO `professionCatalog` and NO `cigReachableSlugs` —
+//     `cd_professions` is granted to `authenticated` only, so the browser had
+//     nothing to pass. `matchProfessions` short-circuits on an empty
+//     catalogue (professions.ts), so `professions.available` was false and
+//     `ranked` was empty: no Top 3, no career card, a "matching not included"
+//     note.
+//   * `persistPublicV31Run` built the same run server-side WITH the approved
+//     catalogue and the real CIG transition edges, producing the full ranked
+//     recommendation.
+//
+// A candidate who completed the assessment signed out and then signed in saw
+// their career recommendations appear out of nowhere. Same answers, same
+// engine, different inputs — so authentication silently changed the result.
+//
+// The fix is not a second implementation that agrees by inspection. There is
+// now exactly ONE place that turns a buffered run into a report —
+// `buildCanonicalSnapshot` below — and both the anonymous preview
+// (`previewPublicV31Run`, reads only, writes nothing) and the save path
+// (`persistPublicV31Run`) call it with the same inputs. Byte-identical by
+// construction, not by convention. `scripts/career-discovery-canonical-
+// result-check.ts` asserts it.
+//
+// The anonymous preview reads the approved catalogue through the service-role
+// client, SERVER-SIDE ONLY (dynamic import, never in the client bundle). That
+// is a read of owner-approved product content — the professions the owner
+// published for ranking — scoped to producing this one caller's own report.
+// It grants `anon` nothing: no RLS policy changed, no calibration band is
+// returned to the browser, and nothing is written. See `previewPublicV31Run`.
 //
 // ── LIFECYCLE vs. ACCESS: TWO SEPARATE GATES ────────────────────────────
 //
@@ -62,7 +99,11 @@ import type {
   ProfessionCatalogEntry,
   ProfessionDimensionBand,
 } from "./v31/professions";
-import { buildValidatedSnapshot, SnapshotValidationError } from "./v31/snapshot";
+import {
+  buildValidatedSnapshot,
+  SnapshotValidationError,
+  type ReportSnapshot,
+} from "./v31/snapshot";
 import { fetchCigProfessionTitle, fetchCigReachableSlugs } from "./career-context.functions";
 import type { Answer } from "./v31/scoring";
 import { DEFINITION_VERSION, PATTERN_DEFINITION_VERSION, type Locale } from "./v31/version";
@@ -267,6 +308,225 @@ const bufferedAnswerSchema = z.union([
   }),
 ]);
 
+/** The career-context self-report, as it crosses the wire. Shared by the
+ *  preview and the save path so the two can never validate it differently —
+ *  a difference here is a difference in the report (experienceBand and
+ *  currentProfessionSlug both reach professions.ts). */
+const careerContextSchema = z.object({
+  currentProfessionStatus: z.enum(["selected", "not_listed", "prefer_not_to_say"]),
+  currentProfessionSlug: z.string().nullable(),
+  // Free text, bounded here as well as by the column's CHECK — the client
+  // bound is a courtesy, this one is the boundary.
+  currentProfessionOther: z.string().max(120).nullable().optional(),
+  experienceBand: z.enum(["under_1y", "1_3y", "4_7y", "8_plus_y"]).nullable(),
+});
+
+type CareerContextInput = z.infer<typeof careerContextSchema>;
+
+type BufferedAnswer = z.infer<typeof bufferedAnswerSchema>;
+
+/** A buffered run, split into its scored and unscored halves and validated
+ *  against both banks. */
+interface ValidatedRun {
+  /** Scored Career DNA answers only — the ONLY thing that reaches
+   *  dimension scoring. */
+  readonly answers: readonly Answer[];
+  /** Context + Discovery Path answers, by item id. Never scored. */
+  readonly personal: ReadonlyMap<string, string>;
+  readonly contextStatus: ContextStatus;
+  /** Report tags from the four Discovery Path answers — explanation layer
+   *  and Recommendation Priority bonus only, never scoring. */
+  readonly discoveryTags: readonly string[];
+}
+
+/**
+ * Split one buffered run into its scored and unscored halves, and validate
+ * each against its own bank.
+ *
+ * THE SPLIT IS THE SCORING BOUNDARY. Only `answers` reaches
+ * `buildValidatedSnapshot`. A personal answer cannot enter it, because
+ * `CORE_ITEM_BY_ID` does not contain personal item ids and a `personal`
+ * answer carries neither a scale value nor an option id.
+ *
+ * Shared by the preview and the save path. Extracted so the two cannot drift:
+ * a run the preview accepts is exactly a run the save path accepts, and both
+ * derive `contextStatus` and `discoveryTags` the same way — all three feed the
+ * report, so a difference in any of them is a difference in the result.
+ *
+ * Throws rather than repairing. Called before any write, so an incomplete
+ * buffer never creates a half-finished session.
+ */
+export function splitAndValidateRun(rawAnswers: readonly BufferedAnswer[]): ValidatedRun {
+  const byItem = new Map<string, Answer>();
+  const personal = new Map<string, string>();
+
+  for (const a of rawAnswers) {
+    if (a.format === "personal") {
+      if (!isValidPersonalAnswer(a.itemId, a.value)) {
+        throw new V31PublicError("invalid_answers", "unknown context or discovery-path answer");
+      }
+      personal.set(a.itemId, a.value);
+      continue;
+    }
+
+    const item = CORE_ITEM_BY_ID[a.itemId];
+    if (!item) throw new V31PublicError("invalid_answers", "unknown item");
+    if (item.format !== a.format) {
+      throw new V31PublicError("invalid_answers", "format does not match the registry");
+    }
+    if (a.format === "single_choice" && !a.optionId.startsWith(`${a.itemId}_`)) {
+      throw new V31PublicError("invalid_answers", "option does not belong to its item");
+    }
+    byItem.set(a.itemId, a as Answer);
+  }
+
+  if (byItem.size !== CORE_ITEMS.length) {
+    throw new V31PublicError("incomplete_buffer", `${byItem.size} of ${CORE_ITEMS.length}`);
+  }
+
+  // The personal layer: 2 context answers, then exactly the four Discovery
+  // Path items the candidate's own path serves.
+  const rawStatus = personal.get(CONTEXT_STATUS_ITEM_ID);
+  if (!isContextStatus(rawStatus)) {
+    throw new V31PublicError("incomplete_buffer", "no routing answer");
+  }
+  const contextStatus: ContextStatus = rawStatus;
+
+  for (const item of CONTEXT_ITEMS) {
+    if (!personal.has(item.id)) {
+      throw new V31PublicError("incomplete_buffer", `context item ${item.id}`);
+    }
+  }
+
+  const servedAdaptive = adaptiveItemsForStatus(contextStatus);
+  for (const item of servedAdaptive) {
+    if (!personal.has(item.id)) {
+      throw new V31PublicError("incomplete_buffer", `discovery-path item ${item.id}`);
+    }
+  }
+  // Mandate item 6: the same tags written to cd_evidence.answer_tags, read
+  // here to feed Recommendation Priority's explanation layer (see
+  // professions.ts's contextCorroborated) — contextual self-report, never
+  // scored.
+  const discoveryTags = servedAdaptive.flatMap((item) =>
+    reportTagsFor(item.id, personal.get(item.id) ?? ""),
+  );
+  // An answer to an item outside this run's own path is rejected rather than
+  // dropped. The database would refuse it too (CD_ADAPTIVE_PATH_MISMATCH);
+  // failing here means failing before a session row exists, so nothing partial
+  // is left behind.
+  const expectedPersonal = new Set([
+    ...CONTEXT_ITEMS.map((i) => i.id),
+    ...servedAdaptive.map((i) => i.id),
+  ]);
+  for (const id of personal.keys()) {
+    if (!expectedPersonal.has(id)) {
+      throw new V31PublicError("invalid_answers", "answer from another Discovery Path");
+    }
+  }
+  if (servedAdaptive.length !== ADAPTIVE_ITEMS_PER_SESSION) {
+    throw new V31PublicError("invalid_answers", "discovery path is not four items");
+  }
+
+  return { answers: [...byItem.values()], personal, contextStatus, discoveryTags };
+}
+
+/**
+ * THE canonical result for one completed run.
+ *
+ * ── WHY THIS IS THE ONLY BUILDER ────────────────────────────────────────
+ *
+ * `buildValidatedSnapshot` is a pure function of its inputs, so "same engine"
+ * guarantees nothing on its own — the anonymous/authenticated divergence this
+ * function exists to end was two callers passing DIFFERENT inputs to the same
+ * pure engine (see the file header). Every input that can move the ranking is
+ * resolved here, once:
+ *
+ *   * `professionCatalog`   — the owner-approved catalogue
+ *   * `professionCalibrationVersion`
+ *   * `cigReachableSlugs`   — real, published CIG transition edges
+ *   * `currentProfessionTitle`
+ *   * `contextStatus`, `discoveryTags`, `experienceBand`
+ *
+ * Given the same run, the same `completedAt` and the same catalogue state,
+ * this returns a byte-identical snapshot whether the caller is anonymous or
+ * signed in. That is the invariant; nothing about authentication is visible
+ * from in here, which is what makes it true.
+ *
+ * `supabase` is whichever client the caller is entitled to use — the
+ * candidate's own RLS-scoped client on the save path, the service-role client
+ * for the anonymous preview. Both read the same rows: `approved_for_ranking`
+ * professions and published CIG edges are owner-published product content,
+ * not user data.
+ */
+export async function buildCanonicalSnapshot(
+  supabase: Ctx["supabase"],
+  input: {
+    readonly run: ValidatedRun;
+    readonly locale: Locale;
+    readonly completedAt: string;
+    readonly careerContext?: CareerContextInput;
+  },
+): Promise<ReportSnapshot> {
+  const { run, locale, completedAt, careerContext } = input;
+
+  const currentProfessionCigSlug =
+    careerContext?.currentProfessionStatus === "selected"
+      ? (careerContext.currentProfessionSlug ?? null)
+      : null;
+
+  const [
+    { catalog: professionCatalog, calibrationVersion: professionCalibrationVersion },
+    cigReachableSlugs,
+    currentProfessionTitle,
+  ] = await Promise.all([
+    fetchApprovedProfessionCatalog(supabase),
+    // Item 7: real, published CIG transition edges from the candidate's
+    // current profession — never fabricated, empty when current profession is
+    // unknown or has no documented transitions.
+    fetchCigReachableSlugs(supabase, currentProfessionCigSlug),
+    // Item 8: resolved once, at build time, and frozen onto the snapshot —
+    // never re-looked-up when an old report is reopened.
+    fetchCigProfessionTitle(supabase, currentProfessionCigSlug),
+  ]);
+
+  try {
+    return buildValidatedSnapshot({
+      answers: run.answers,
+      locale,
+      completedAt,
+      professionCatalog,
+      contextStatus: run.contextStatus,
+      currentProfessionCigSlug,
+      currentProfessionTitle,
+      discoveryTags: run.discoveryTags,
+      cigReachableSlugs,
+      professionCalibrationVersion,
+      // Owner Security Manager scenario fix: the coarse C1 baseline alone was
+      // still deciding career-stage even after a concrete current profession +
+      // experience were known. Threaded through so resolveStageBaseline
+      // (professions.ts) can prefer the known profession's own career level,
+      // refined by real experience.
+      experienceBand: careerContext?.experienceBand ?? null,
+    });
+  } catch (err) {
+    if (err instanceof SnapshotValidationError) {
+      throw new V31PublicError("invalid_answers", err.failures.map((f) => f.code).join(","));
+    }
+    throw err;
+  }
+}
+
+/** Clamp a self-reported completion time to a real instant not in the future.
+ *  Only ever used for display — nothing scores or gates on it — so a client
+ *  lying about it costs nothing; still bounded so a broken client cannot write
+ *  a nonsensical date. Shared so the preview and the saved report agree on
+ *  when the run finished, which `completedAt` feeds straight into the
+ *  snapshot. */
+function resolveCompletedAt(claimed: string | undefined, now: string): string {
+  return claimed && Date.parse(claimed) <= Date.parse(now) ? claimed : now;
+}
+
 export interface PersistResult {
   readonly snapshotId: string;
   readonly created: boolean;
@@ -332,6 +592,81 @@ export function buildEvidenceRows(
   return [...core, ...personal];
 }
 
+export interface PreviewResult {
+  readonly snapshot: ReportSnapshot;
+  /** Echoed back so the client renders — and later saves — the exact instant
+   *  the server built this report for. Without it a refresh could produce a
+   *  snapshot that differs from this one in `completedAt` alone. */
+  readonly completedAt: string;
+}
+
+/**
+ * THE anonymous result — the canonical report, computed but not stored.
+ *
+ * ── WHY THIS EXISTS ─────────────────────────────────────────────────────
+ *
+ * The pre-login report used to be computed in the browser. The browser cannot
+ * read `cd_professions` (granted to `authenticated` only), so it built the
+ * report with an EMPTY catalogue and the candidate got no Top 3 and no career
+ * card — until they signed in, at which point the server rebuilt the same
+ * answers WITH the catalogue and the recommendations appeared. Same answers,
+ * same engine, different inputs, different result. See the file header.
+ *
+ * Moving the build here is what makes one attempt produce one result. The
+ * report a signed-out candidate reads is now the same object the save path
+ * will store, produced by the same `buildCanonicalSnapshot` call.
+ *
+ * ── WHAT IT IS ALLOWED TO TOUCH ─────────────────────────────────────────
+ *
+ * Reads only. No `cd_sessions` row, no `cd_evidence` row, no snapshot,
+ * nothing keyed to a user — a report still cannot exist before its owner
+ * does, and this function cannot create one.
+ *
+ * It reads the approved profession catalogue and published CIG edges through
+ * the service-role client, imported DYNAMICALLY so the key never enters the
+ * client bundle (see client.server.ts's own note). Deliberate, and narrow:
+ *
+ *   * it grants `anon` nothing — no RLS policy is added or relaxed, and the
+ *     browser still cannot query `cd_professions` itself;
+ *   * the rows it reads are owner-published product content (professions the
+ *     owner explicitly set `approved_for_ranking = true`), not user data;
+ *   * calibration bands never leave this function — they are consumed by the
+ *     matcher and only the resulting report is returned, so the catalogue's
+ *     IP is not exposed by the response;
+ *   * the response contains nothing but the caller's OWN report, built from
+ *     answers the caller supplied in the request.
+ *
+ * The tester allowlist is unchanged and still gates `persistPublicV31Run`: a
+ * non-tester can read their result here exactly as they always could, and
+ * still cannot save one.
+ */
+export const previewPublicV31Run = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        locale: z.enum(["sv", "en"]),
+        answers: z.array(bufferedAnswerSchema).min(1),
+        completedAt: z.string().datetime().optional(),
+        careerContext: careerContextSchema.optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }): Promise<PreviewResult> => {
+    // Server-side only. A top-level import would put the service-role key in
+    // the client bundle — *.functions.ts modules ship to the browser.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const run = splitAndValidateRun(data.answers);
+    const completedAt = resolveCompletedAt(data.completedAt, new Date().toISOString());
+    const snapshot = await buildCanonicalSnapshot(supabaseAdmin, {
+      run,
+      locale: data.locale as Locale,
+      completedAt,
+      careerContext: data.careerContext,
+    });
+    return { snapshot, completedAt };
+  });
+
 /**
  * Replay a buffered public run into the authenticated v3.1 pipeline.
  *
@@ -362,16 +697,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
         // — never scored, never read by anything in v31/scoring.ts. Absent
         // when the step was never shown (candidate not yet working in
         // security) or the run predates this field.
-        careerContext: z
-          .object({
-            currentProfessionStatus: z.enum(["selected", "not_listed", "prefer_not_to_say"]),
-            currentProfessionSlug: z.string().nullable(),
-            // Free text, bounded here as well as by the column's CHECK — the
-            // client bound is a courtesy, this one is the boundary.
-            currentProfessionOther: z.string().max(120).nullable().optional(),
-            experienceBand: z.enum(["under_1y", "1_3y", "4_7y", "8_plus_y"]).nullable(),
-          })
-          .optional(),
+        careerContext: careerContextSchema.optional(),
       })
       .parse(d),
   )
@@ -379,10 +705,10 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
 
     // 0. Access gate — see the file header. Checked before any parsing or
-    //    writing so a non-tester never creates a partial session, and never
-    //    learns anything about their answers beyond what the client already
-    //    computed (nothing; the client is a pure input buffer, see
-    //    PublicAssessmentFlow.tsx).
+    //    writing so a non-tester never creates a partial session. It gates
+    //    SAVING, not reading: the candidate has already seen this exact
+    //    report via previewPublicV31Run, which is how the result can be the
+    //    same before and after signing in. Nothing new is disclosed here.
     const [tester, admin] = await Promise.all([
       ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
       ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
@@ -391,84 +717,11 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
       throw new V31PublicError("not_available", "test_group_only");
     }
 
-    // 1. Split the run into its scored and unscored halves, and validate each
-    //    against its own bank. Checked before any write, so an incomplete
-    //    buffer never creates a half-finished session.
-    //
-    //    THE SPLIT IS THE SCORING BOUNDARY. `byItem` — and only `byItem` —
-    //    reaches `buildValidatedSnapshot`. A personal answer cannot enter it,
-    //    because `CORE_ITEM_BY_ID` does not contain personal item ids and a
-    //    `personal` answer carries neither a scale value nor an option id.
-    const byItem = new Map<string, Answer>();
-    const personal = new Map<string, string>();
-
-    for (const a of data.answers) {
-      if (a.format === "personal") {
-        if (!isValidPersonalAnswer(a.itemId, a.value)) {
-          throw new V31PublicError("invalid_answers", "unknown context or discovery-path answer");
-        }
-        personal.set(a.itemId, a.value);
-        continue;
-      }
-
-      const item = CORE_ITEM_BY_ID[a.itemId];
-      if (!item) throw new V31PublicError("invalid_answers", "unknown item");
-      if (item.format !== a.format) {
-        throw new V31PublicError("invalid_answers", "format does not match the registry");
-      }
-      if (a.format === "single_choice" && !a.optionId.startsWith(`${a.itemId}_`)) {
-        throw new V31PublicError("invalid_answers", "option does not belong to its item");
-      }
-      byItem.set(a.itemId, a as Answer);
-    }
-
-    if (byItem.size !== CORE_ITEMS.length) {
-      throw new V31PublicError("incomplete_buffer", `${byItem.size} of ${CORE_ITEMS.length}`);
-    }
-
-    // 1b. The personal layer: 2 context answers, then exactly the four
-    //     Discovery Path items the candidate's own path serves.
-    const rawStatus = personal.get(CONTEXT_STATUS_ITEM_ID);
-    if (!isContextStatus(rawStatus)) {
-      throw new V31PublicError("incomplete_buffer", "no routing answer");
-    }
-    const contextStatus: ContextStatus = rawStatus;
-
-    for (const item of CONTEXT_ITEMS) {
-      if (!personal.has(item.id)) {
-        throw new V31PublicError("incomplete_buffer", `context item ${item.id}`);
-      }
-    }
-
-    const servedAdaptive = adaptiveItemsForStatus(contextStatus);
-    for (const item of servedAdaptive) {
-      if (!personal.has(item.id)) {
-        throw new V31PublicError("incomplete_buffer", `discovery-path item ${item.id}`);
-      }
-    }
-    // Mandate item 6: the same tags written to cd_evidence.answer_tags
-    // below, read here to feed Recommendation Priority's explanation layer
-    // (see professions.ts's contextCorroborated) — contextual self-report,
-    // never scored.
-    const discoveryTags = servedAdaptive.flatMap((item) =>
-      reportTagsFor(item.id, personal.get(item.id) ?? ""),
-    );
-    // An answer to an item outside this run's own path is rejected rather
-    // than dropped. The database would refuse it too
-    // (CD_ADAPTIVE_PATH_MISMATCH); failing here means failing before a session
-    // row exists, so nothing partial is left behind.
-    const expectedPersonal = new Set([
-      ...CONTEXT_ITEMS.map((i) => i.id),
-      ...servedAdaptive.map((i) => i.id),
-    ]);
-    for (const id of personal.keys()) {
-      if (!expectedPersonal.has(id)) {
-        throw new V31PublicError("invalid_answers", "answer from another Discovery Path");
-      }
-    }
-    if (servedAdaptive.length !== ADAPTIVE_ITEMS_PER_SESSION) {
-      throw new V31PublicError("invalid_answers", "discovery path is not four items");
-    }
+    // 1. Split and validate — the SAME function the anonymous preview uses,
+    //    so a run the candidate already saw a report for is never rejected
+    //    here, and `contextStatus`/`discoveryTags` are derived identically.
+    const run = splitAndValidateRun(data.answers);
+    const { answers, personal, contextStatus } = run;
 
     // 2. Resolve the definition version. Its lifecycle is enforced by the
     //    database on insert; this read is for a clear error, not a gate.
@@ -481,51 +734,29 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
 
     // 3. Build and validate the report BEFORE writing anything. A run that
     //    cannot produce a valid report must not leave a session behind.
-    const now = new Date().toISOString();
-    const completedAt =
-      data.completedAt && Date.parse(data.completedAt) <= Date.parse(now) ? data.completedAt : now;
-    const answers = [...byItem.values()];
-    const { catalog: professionCatalog, calibrationVersion: professionCalibrationVersion } =
-      await fetchApprovedProfessionCatalog(ctx.supabase);
-    const currentProfessionCigSlug =
-      data.careerContext?.currentProfessionStatus === "selected"
-        ? (data.careerContext.currentProfessionSlug ?? null)
-        : null;
-    // Item 7: real, published CIG transition edges from the candidate's
-    // current profession — never fabricated, empty when current profession
-    // is unknown or has no documented transitions.
-    const [cigReachableSlugs, currentProfessionTitle] = await Promise.all([
-      fetchCigReachableSlugs(ctx.supabase, currentProfessionCigSlug),
-      // Item 8: resolved once, at build time, and frozen onto the snapshot —
-      // never re-looked-up when an old report is reopened.
-      fetchCigProfessionTitle(ctx.supabase, currentProfessionCigSlug),
-    ]);
-    let snapshot;
-    try {
-      snapshot = buildValidatedSnapshot({
-        answers,
-        locale: data.locale as Locale,
-        completedAt,
-        professionCatalog,
-        contextStatus,
-        currentProfessionCigSlug,
-        currentProfessionTitle,
-        discoveryTags,
-        cigReachableSlugs,
-        professionCalibrationVersion,
-        // Owner Security Manager scenario fix: the coarse C1 baseline alone
-        // was still deciding career-stage even after a concrete current
-        // profession + experience were known. Threaded through so
-        // resolveStageBaseline (professions.ts) can prefer the known
-        // profession's own career level, refined by real experience.
-        experienceBand: data.careerContext?.experienceBand ?? null,
-      });
-    } catch (err) {
-      if (err instanceof SnapshotValidationError) {
-        throw new V31PublicError("invalid_answers", err.failures.map((f) => f.code).join(","));
-      }
-      throw err;
-    }
+    //
+    //    THE canonical builder — byte-identical to what `previewPublicV31Run`
+    //    already returned for this same run and the same `completedAt`. This
+    //    is what makes signing in a SAVE rather than a recomputation with
+    //    different inputs (see the file header).
+    //
+    //    Read through the SAME service-role client the preview uses, not
+    //    `ctx.supabase`. Both clients see the same rows today — the grant on
+    //    `cd_professions` is role-level, with no per-user row filter — so
+    //    this changes no behaviour now. It removes the possibility: a future
+    //    RLS policy that narrowed the catalogue per user would otherwise
+    //    reintroduce exactly this bug, silently, as two paths reading
+    //    different catalogues again. Reads only; every WRITE below stays on
+    //    the caller's own RLS-scoped client, so a run is still only ever
+    //    written as its own owner.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const completedAt = resolveCompletedAt(data.completedAt, new Date().toISOString());
+    const snapshot = await buildCanonicalSnapshot(supabaseAdmin, {
+      run,
+      locale: data.locale as Locale,
+      completedAt,
+      careerContext: data.careerContext,
+    });
 
     // 4. Session. `context_status` carries the C1 answer; `adaptive_path` is
     //    deliberately NOT sent. `cd_guard_derive_adaptive_path` derives it

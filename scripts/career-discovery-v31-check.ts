@@ -1429,13 +1429,19 @@ group(
 // self-reported current profession -- ReportSnapshot.currentProfession
 // requires BOTH a slug and a resolved title (see v31/snapshot.ts), so "YOU
 // ARE HERE" could never render for an anonymous candidate no matter which
-// profession they picked. Root cause: CareerContextStep never captured the
-// title text it already had in hand from the picker's own fetched list.
-// Proves the underlying contract buildValidatedSnapshot/PublicAssessmentFlow
-// rely on: supplying currentProfessionCigSlug + currentProfessionTitle +
-// experienceBand -- exactly what the fixed client path now does -- produces
-// a frozen snapshot with currentProfession correctly populated, with NO
-// professionCatalog present (the real anonymous-path condition).
+// profession they picked.
+//
+// SUPERSEDED as a description of the anonymous PATH, 2026-08-29: there is no
+// client-computed report any more. The anonymous result is built server-side
+// by previewPublicV31Run, with the same catalogue the save path uses, and
+// resolves the title through fetchCigProfessionTitle like everything else --
+// see v31-public.functions.ts's "ONE COMPLETED ATTEMPT = ONE CANONICAL
+// RESULT" header and career-discovery-canonical-result-check.ts.
+//
+// The assertions below are kept and still earn their place: they test the
+// PURE ENGINE's contract, which is unchanged. An empty catalogue is still a
+// legitimate state of the product (nothing approved for ranking yet), and
+// currentProfession must still resolve independently of it.
 const anonymousCurrentProfessionSnap = buildValidatedSnapshot({
   answers: archetype("CP08"), // CP08: Strategic Security Leader pattern -- the persona this scenario represents
   locale: "sv",
@@ -1443,8 +1449,8 @@ const anonymousCurrentProfessionSnap = buildValidatedSnapshot({
   currentProfessionCigSlug: "sakerhetschef",
   currentProfessionTitle: { sv: "Säkerhetschef", en: "Head of Security" },
   experienceBand: "8_plus_y",
-  // No professionCatalog -- exactly the anonymous client-computed path's
-  // real condition (RLS grants cd_professions to `authenticated` only).
+  // No professionCatalog -- the "nothing approved for ranking" state, which
+  // both the preview and the save path reach identically.
 });
 ok(
   anonymousCurrentProfessionSnap.currentProfession !== null &&

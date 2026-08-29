@@ -27,6 +27,8 @@
     "career-discovery-v31-golden-personas:check": "bun run scripts/career-discovery-v31-golden-personas.ts", 
     "career-discovery-recommendation:check": "bun run scripts/career-discovery-recommendation-check.ts",
     "career-discovery-claim:check": "bun run scripts/career-discovery-claim-check.ts",
+    "career-discovery-canonical-result:check": "bun run scripts/career-discovery-canonical-result-check.ts",
+    "career-discovery-career-card:check": "bun run scripts/career-discovery-career-card-check.ts",
     "prepilot-candidate-surface:check": "bun run scripts/prepilot-candidate-surface-check.tsx",
     "lint": "eslint .", 
     "academy-parity:check": "bun run scripts/academy-parity-check.ts", 
