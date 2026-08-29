@@ -186,6 +186,25 @@ jobs:
       - name: Release parity bookkeeping check
         run: bun run release-parity:check
 
+      # THE MERGE GATE.
+      #
+      # release-parity --release computes the right thing at the wrong moment:
+      # it is a RELEASE gate, and with Lovable the deploy happens at MERGE. A
+      # gate placed after the thing it guards is a report, not a gate — which
+      # is why it "already predicted this and did not help" above.
+      #
+      # This runs on the pull request and fails closed: application code that
+      # depends on a migration not yet recorded as applied on the owner
+      # Supabase project cannot merge. A feature needing both is split into a
+      # schema release and an application release automatically, so the order
+      # does not depend on anybody remembering it.
+      #
+      # On main this reports the standing state. If it is red on main, that is
+      # not a broken check — it means main's code is asking the database for
+      # something that is not there yet, and the migrations must be applied.
+      - name: Schema-first release contract
+        run: bun run schema-first-release:check
+
       # Five defects this repository actually shipped: seven interview routes
       # highlighting "Tester & bedömningar"; `ai_enabled || true` rendering an
       # AI control that could only fail; the provider NAME stored as the model
