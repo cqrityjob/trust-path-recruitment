@@ -1,15 +1,24 @@
 {
   "schemaVersion": 3,
   "$comment": [
-    "Which Supabase project the application talks to, and which one receives schema.",
+    "Which Supabase project may receive schema, and which one the application talks to.",
+    "These are two different projects until the cutover PR, and conflating them is the",
+    "failure this file exists to prevent.",
     "",
-    "2026-08-29 runtime cutover. The legacy Lovable Cloud backend zrahptwsnjcdyzfywbeh was",
-    "permanently disconnected/deleted by the owner after a completed data and Storage",
-    "migration. The single canonical production backend is now the owner-controlled external",
-    "Supabase project wrygicdfxwjnrugduxnt, which already holds the canonical migration",
-    "history. Runtime identifiers (.env, supabase/config.toml, migrations-policy",
-    "canonicalProject) therefore all name wryg. zrah is retired below so it can never quietly",
-    "return as a runtime or write target; mlvz remains permanently excluded."
+    "2026-08-29 identity repair. This file named vcgwvtmzftmulmoxmufv as the owner",
+    "schema target. That was the INTENDED target in the 2026-08-28 17:13 bootstrap",
+    "runbook. The bootstrap against it FAILED that same day (recorded in",
+    "scripts/db-test.sh), and the owner then recorded a successful fresh bootstrap on",
+    "wrygicdfxwjnrugduxnt at 21:43 in supabase/release-state.json, citing GitHub check",
+    "run 98963493163 and a verified 225-row canonical ledger through 20260925090000.",
+    "The later outcome record wins over the earlier plan. vcgw is retired below rather",
+    "than deleted, so it can never quietly become a write target again and the history",
+    "stays readable.",
+    "",
+    "2026-08-29 runtime cutover. The owner disconnected the legacy Lovable Cloud",
+    "database. Application runtime and canonical schema deployment now share the same",
+    "owner-controlled Supabase project: wrygicdfxwjnrugduxnt. CI treats any future",
+    "split between those targets as a release-blocking defect."
   ],
   "releaseMode": "cutover_complete",
   "automaticProductionDeployEnabled": true,
@@ -20,21 +29,21 @@
     "kind": "owned_supabase",
     "projectRef": "wrygicdfxwjnrugduxnt",
     "writePolicy": "supabase_github_integration_only",
-    "note": "Runtime cutover completed 2026-08-29. The application authenticates and queries this project only."
+    "note": "Canonical application runtime and schema target after the owner-authorised 2026-08-29 cutover."
   },
   "candidateProduction": {
     "kind": "owned_supabase",
     "projectRef": "wrygicdfxwjnrugduxnt",
     "region": "eu-central-1",
-    "state": "live_production",
+    "state": "production_active",
     "writePolicy": "supabase_github_integration_only",
     "canonicalLedgerThrough": "20261003090000",
-    "evidence": "supabase/release-state.json evidenceBaseline: fresh empty-project bootstrap from canonical main ee0dda59808cbdb9a74c7766be4456fdedccaea1, GitHub check run 98963493163, 225 active canonical migrations verified 2026-08-28."
+    "evidence": "supabase/release-state.json: 233 active canonical migrations verified on the owner project on 2026-08-29, including the eight Interview Intelligence migrations applied by the official Supabase GitHub integration."
   },
   "retired": [
     {
       "projectRef": "zrahptwsnjcdyzfywbeh",
-      "reason": "Former Lovable Cloud runtime backend. Permanently disconnected/deleted by the owner on 2026-08-29 after data and Storage migration to wrygicdfxwjnrugduxnt. Never a runtime or write target again.",
+      "reason": "Legacy Lovable Cloud runtime disconnected by the owner on 2026-08-29. Historical deployment evidence only; never a runtime or write target again.",
       "supersededBy": "wrygicdfxwjnrugduxnt"
     },
     {

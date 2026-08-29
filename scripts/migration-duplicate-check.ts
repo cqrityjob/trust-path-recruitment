@@ -11,12 +11,13 @@
  * ANY allowlist.
  *
  * It fails when:
- *   1. two ACTIVE migrations share the same comment/whitespace-normalised SQL
+ *   1. two ACTIVE migrations share the same 14-digit version prefix;
+ *   2. two ACTIVE migrations share the same comment/whitespace-normalised SQL
  *      — there is no approved-pair escape hatch any more;
- *   2. an ACTIVE migration's normalised SQL matches a PARKED migration that is
+ *   3. an ACTIVE migration's normalised SQL matches a PARKED migration that is
  *      not its recorded canonicalReplacement — i.e. a parked file has come
  *      back under a new name;
- *   3. a parked entry recorded as equivalence "identical" has DIVERGED from
+ *   4. a parked entry recorded as equivalence "identical" has DIVERGED from
  *      its canonical replacement — one of them was edited, so the evidence
  *      record no longer describes reality.
  *
@@ -70,7 +71,33 @@ const parkedFiles = readdirSync(policy.parkedDirectory)
 
 const findings: string[] = [];
 
-// --- 1. No two active migrations may share content --------------------------
+// --- 1. No two active migrations may share a ledger version -----------------
+// Supabase keys schema_migrations by the numeric prefix only. Two different
+// files with the same prefix do not both run: the second is silently treated
+// as already applied. Content hashing cannot catch that class of collision.
+const activeByVersion = new Map<string, string[]>();
+for (const file of activeFiles) {
+  const version = file.match(/^(\d{14})_/)?.[1];
+  if (!version) {
+    findings.push(`Active migration has no 14-digit version prefix: ${file}`);
+    continue;
+  }
+  const list = activeByVersion.get(version);
+  if (list) list.push(file);
+  else activeByVersion.set(version, [file]);
+}
+
+for (const [version, group] of activeByVersion) {
+  if (group.length < 2) continue;
+  findings.push(
+    `Migration ledger version ${version} is used by multiple ACTIVE files:\n` +
+      group.map((f) => `      - ${f}`).join("\n") +
+      `\n      Supabase records only the version prefix, so one file would be skipped.\n` +
+      `      Give the new migration a unique later version before merge.`,
+  );
+}
+
+// --- 2. No two active migrations may share content --------------------------
 const activeByHash = new Map<string, string[]>();
 for (const file of activeFiles) {
   const sql = readFileSync(join(policy.activeDirectory, file), "utf8");
@@ -94,7 +121,7 @@ for (const [hash, group] of activeByHash) {
   );
 }
 
-// --- 2. Parked content must not return under any name -----------------------
+// --- 3. Parked content must not return under any name -----------------------
 const parkedMeta = new Map(policy.parked.map((p) => [p.file, p]));
 for (const parked of parkedFiles) {
   const parkedHash = hashOf(policy.parkedDirectory, parked);
@@ -115,7 +142,7 @@ for (const parked of parkedFiles) {
   }
 }
 
-// --- 3. "identical" parked entries must still match their canonical ---------
+// --- 4. "identical" parked entries must still match their canonical ---------
 for (const entry of policy.parked) {
   if (entry.equivalence !== "identical") continue;
   if (!existsSync(join(policy.parkedDirectory, entry.file))) continue; // safety check reports this
@@ -140,4 +167,5 @@ if (findings.length > 0) {
 console.log("migration-duplicate-check passed");
 console.log(`  active migrations hashed:  ${activeFiles.length}`);
 console.log(`  parked migrations hashed:  ${parkedFiles.length}`);
+console.log(`  active version collisions: 0 (required)`);
 console.log(`  active duplicate groups:   0 (required)`);
