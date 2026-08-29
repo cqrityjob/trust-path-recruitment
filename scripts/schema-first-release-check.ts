@@ -210,16 +210,22 @@ if (SPLIT_BACKEND) {
   console.log("");
   console.log("  These are different projects. release-state.json below describes the");
   console.log("  SCHEMA TARGET only. It is NOT evidence that the live database can serve");
-  console.log("  this code, and it must not be read as though it were. Until the runtime");
-  console.log("  cutover, every migration this branch depends on has to reach BOTH, or");
-  console.log("  the application must tolerate its absence on the live one.");
+  console.log("  application code. Schema-only recovery work remains permitted; every");
+  console.log("  application release is blocked until the runtime cutover is complete.");
   console.log("");
+}
+
+if (SPLIT_BACKEND && !isSchemaOnlyBranch) {
+  console.error("  BLOCKED — runtime and schema deployment point to different databases.\n");
+  console.error("  Only a schema-only recovery PR may merge in this state. Complete the");
+  console.error("  owner-Supabase runtime cutover before releasing application code.\n");
+  process.exit(1);
 }
 
 if (blockers.length === 0) {
   console.log("  OK: no application code depends on a migration unapplied on the schema target.");
   if (SPLIT_BACKEND) {
-    console.log("      NOTE: that is not the live database. See the split-backend warning above.");
+    console.log("      Schema-only recovery remains eligible during the cutover freeze.");
   } else {
     console.log("      This branch is application-release eligible.");
   }
