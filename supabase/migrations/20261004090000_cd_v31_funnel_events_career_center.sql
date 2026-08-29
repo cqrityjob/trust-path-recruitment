@@ -5,8 +5,10 @@
 -- mirroring v31-feedback.functions.ts's FUNNEL_EVENT_NAMES. Additive only:
 -- drop and recreate the same CHECK with two more allowed values, exactly as
 -- 20260816162000_cd_v31_funnel_event_result_downloaded.sql did for
--- 'result_downloaded'. Nothing else about the table, its policies or its
--- SECURITY DEFINER entry point changes.
+-- 'result_downloaded'. The SECURITY DEFINER entry point validates against
+-- cd_v31_funnel_event_names(), so that function must be extended in the same
+-- migration. Nothing else about the table, its policies or its entry point
+-- changes.
 --
 -- Why two new names rather than reusing existing ones:
 --
@@ -49,3 +51,22 @@ ALTER TABLE public.cd_v31_funnel_events
     'career_center_test_started'::text,
     'career_filter_used'::text
   ]));
+
+-- Keep the RPC allowlist identical to the table CHECK. The security-hardening
+-- suite asserts both directions of this invariant (S2.16/S2.17), and the RPC
+-- rejects any event name not returned here before attempting the insert.
+CREATE OR REPLACE FUNCTION public.cd_v31_funnel_event_names()
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+  SELECT ARRAY[
+    'assessment_started', 'assessment_completed', 'career_context_completed',
+    'result_viewed', 'profession_explored', 'pathway_opened', 'jobs_clicked',
+    'career_card_opened', 'career_card_generated', 'share_initiated',
+    'image_saved', 'save_journey_clicked', 'result_claimed',
+    'feedback_submitted', 'result_downloaded',
+    'career_center_test_started', 'career_filter_used'
+  ]::text[];
+$$;
