@@ -939,7 +939,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         noteId: (p.note_id as string) ?? null,
         fiveE: fiveE(p),
       })),
-      evidence: ((evidenceRes.data ?? []) as Array<Record<string, unknown>>).map((e) => ({
+      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((e) => ({
         id: e.id as string,
         excerpt: e.excerpt as string,
         originalExcerpt: (e.original_excerpt as string) ?? null,
