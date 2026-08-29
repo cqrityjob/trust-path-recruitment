@@ -19,8 +19,12 @@
 //      acceptable, which manufactures the appearance of quality and destroys
 //      the meaning of the evaluation. A rejected run stays rejected and a
 //      person is told.
-//   4. IDEMPOTENCY. Each attempt carries a key derived from the request, so a
-//      retry after a timeout cannot be billed or recorded as a second run.
+//   4. HONEST RETRY ACCOUNTING. A transport retry after a LOST response can
+//      reach the provider twice. Anthropic's Messages API documents no
+//      idempotency-key header and no request deduplication, so this adapter
+//      does not pretend otherwise: it bounds the retries, records the request
+//      digest so a duplicate is identifiable afterwards, and says plainly that
+//      a lost-then-retried request can cost twice.
 //
 // Not activated. Reaching this adapter requires all three switches described in
 // docs/architecture/interview-intelligence-ai-governance.md §4.1, and no
@@ -29,6 +33,7 @@
 import { AiProviderError, type AiProvider, type AiRequest, type AiResponse } from "../provider";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
+const MODELS_URL = "https://api.anthropic.com/v1/models";
 const API_VERSION = "2023-06-01";
 
 /** Transport retries only. Four attempts total, then the run fails honestly. */
@@ -52,26 +57,100 @@ export interface AnthropicAdapterOptions {
  * human can check against an invoice rather than anything clever.
  */
 const PRICE_MICROS_PER_MTOK: Record<string, { in: number; out: number }> = {
-  "claude-opus-5": { in: 5_000_000, out: 25_000_000 },
-  "claude-sonnet-5": { in: 3_000_000, out: 15_000_000 },
-  "claude-haiku-4-5-20251001": { in: 1_000_000, out: 5_000_000 },
+  // Source: Anthropic, "Pricing" (platform.claude.com/docs/en/about-claude/
+  // pricing), model pricing table, read 2026-08-29.
+  "claude-opus-5": { in: 5_000_000, out: 25_000_000 }, //        $5  / $25  per MTok
+  // Sonnet 5's launch pricing of $2/$10 was announced as introductory through
+  // 2026-08-31; the same page now records that it is the STANDARD price and
+  // that the scheduled rise to $3/$15 will not happen. The table previously
+  // carried $3/$15, which would have overstated every Sonnet 5 run by 50%.
+  "claude-sonnet-5": { in: 2_000_000, out: 10_000_000 }, //      $2  / $10  per MTok
+  "claude-haiku-4-5-20251001": { in: 1_000_000, out: 5_000_000 }, // $1 / $5 per MTok
 };
 
-function costMicros(model: string, inputTokens: number, outputTokens: number): number {
-  const price = PRICE_MICROS_PER_MTOK[model];
-  if (!price) return 0;
-  return Math.round((inputTokens * price.in + outputTokens * price.out) / 1_000_000);
+/**
+ * Which models still accept a sampling parameter — an ALLOWLIST, on purpose.
+ *
+ * Anthropic's Messages API reference marks `temperature`, `top_p` and `top_k`
+ * deprecated and states that "Models released after Claude Opus 4.6 do not
+ * support setting temperature" (and the same for top_p and top_k), rejecting
+ * other values with a 400.
+ *
+ * A denylist of the models known to refuse them is the wrong shape for that
+ * rule: it is right about today and wrong about every model released after it
+ * is written, and the failure lands on the first real call of a newly
+ * configured model. So the default is to OMIT, and a model earns a sampling
+ * parameter only by being named here after someone checked. An unknown or new
+ * id is treated as a modern model, which is the safe assumption in both
+ * directions — omitting on a model that would have accepted it costs nothing
+ * this engine needs, and sending on a model that rejects it is a 400.
+ *
+ * Nothing here is a quality decision. The determinism this product depends on
+ * is schema validation, citation checking against the passages actually
+ * supplied, and human confirmation — not decoding parameters.
+ */
+const LEGACY_SAMPLING_MODELS = new Set<string>([
+  "claude-haiku-4-5-20251001",
+  "claude-sonnet-4-5-20250929",
+  "claude-opus-4-5-20251101",
+]);
+
+/** True only for a model explicitly verified to still accept sampling params. */
+export function acceptsSamplingParams(model: string): boolean {
+  return LEGACY_SAMPLING_MODELS.has(model);
 }
 
 /**
- * A stable key for one logical request.
+ * The sampling parameters to send, which for every current model is none.
  *
- * Derived from the content, not from a clock or a counter, so the retry of a
- * request whose response was lost carries the same key as the original and the
- * provider can collapse them. FNV-1a: not cryptographic, and does not need to
- * be — this identifies a request, it does not authenticate one.
+ * Returned as an object to spread so the request body has no key at all,
+ * rather than a key set to undefined that JSON.stringify would drop silently
+ * and a reader would misread as "we send this".
  */
-export function idempotencyKey(request: AiRequest): string {
+export function samplingParams(model: string): Record<string, number> {
+  return acceptsSamplingParams(model) ? { temperature: 0 } : {};
+}
+
+/** Exported so the guard can assert the allowlist has not become a denylist. */
+export const SAMPLING_ALLOWLIST: ReadonlySet<string> = LEGACY_SAMPLING_MODELS;
+
+/**
+ * Cost, or an honest absence of it.
+ *
+ * An unpriced model returns null rather than 0: zero is a claim that the run
+ * was free, and a cost ledger that quietly reports 0 for every new model is
+ * worse than one that admits it does not know. The caller records null as
+ * "not known" instead of writing a false zero into the run.
+ */
+function costMicros(model: string, inputTokens: number, outputTokens: number): number | null {
+  const price = PRICE_MICROS_PER_MTOK[model];
+  if (!price) return null;
+  return Math.round((inputTokens * price.in + outputTokens * price.out) / 1_000_000);
+}
+
+/** Exported so the provider guard can check the table against the invoice. */
+export const MODEL_PRICING = PRICE_MICROS_PER_MTOK;
+
+/**
+ * A stable digest of one logical request. NOT an idempotency guarantee.
+ *
+ * This used to be sent as an `idempotency-key` header, with a comment claiming
+ * the provider would collapse a retry of the same request. Anthropic's Messages
+ * API reference documents no such header -- the documented request headers are
+ * `x-api-key` / `Authorization`, `anthropic-workspace-id`, `anthropic-version`
+ * and `content-type` -- and documents no request deduplication. The header was
+ * therefore doing nothing except making a promise this product could not keep,
+ * so it is gone.
+ *
+ * What remains is true and useful: the digest is derived from the content, not
+ * from a clock or a counter, so two attempts at the same logical request carry
+ * the same value and a duplicate is IDENTIFIABLE in our own ledger afterwards.
+ * That is reconciliation, not prevention. See DUPLICATE_REQUEST_RISK below.
+ *
+ * FNV-1a: not cryptographic, and does not need to be -- this identifies a
+ * request, it does not authenticate one.
+ */
+export function requestDigest(request: AiRequest): string {
   const material = JSON.stringify([
     request.taskKey,
     request.promptVersion,
@@ -89,6 +168,23 @@ export function idempotencyKey(request: AiRequest): string {
   }
   return `iv-${request.taskKey}-${h1.toString(16)}${h2.toString(16)}`;
 }
+
+/**
+ * The honest statement of what a transport retry can cost.
+ *
+ * Stated in code, exported, and asserted by the provider guard, so that the
+ * next person to add a retry has to look straight at it. A request that was
+ * received and answered, where the ANSWER was lost on the way back, is
+ * indistinguishable from a request that never arrived. Retrying it may create
+ * a second provider request and a second charge. Bounding the retries limits
+ * how bad that gets; nothing here prevents it.
+ */
+export const DUPLICATE_REQUEST_RISK = {
+  providerDeduplicates: false,
+  documentedIdempotencyHeader: false,
+  lostResponseRetryMayCostTwice: true,
+  mitigation: "bounded transport retries, plus a stable request digest recorded for reconciliation",
+} as const;
 
 /**
  * Render untrusted source material.
@@ -133,6 +229,16 @@ export class AnthropicProvider implements AiProvider {
   private readonly model: string;
   private readonly fetchImpl: typeof fetch;
   private readonly sleep: (ms: number) => Promise<void>;
+  /**
+   * Verification is per-adapter-instance and only ever caches SUCCESS.
+   *
+   * A model that exists does not stop existing mid-session, so re-asking on
+   * every run would be a network round trip per interview step for an answer
+   * that cannot have changed. A FAILURE is deliberately not cached: the cause
+   * is usually a fixable configuration or credential problem, and a cached
+   * failure would keep failing after the fix until the process restarted.
+   */
+  private modelVerified = false;
 
   constructor(options: AnthropicAdapterOptions) {
     // A provider credential must never be reachable from a page. This is a
@@ -157,14 +263,96 @@ export class AnthropicProvider implements AiProvider {
     this.sleep = options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
+  /**
+   * Ask the provider whether the configured model actually exists, before any
+   * candidate material is sent to it.
+   *
+   * A model id is a configuration value, and configuration drifts: a name that
+   * was valid when it was written can be retired. Discovering that on the
+   * first real interview means a recruiter meets the failure. This is called
+   * at activation instead, and it NEVER substitutes another model -- an
+   * unavailable id is an activation failure to be fixed by a human, not a
+   * reason to quietly interview a candidate with a different engine.
+   */
+  async verifyModelAvailable(): Promise<{ readonly available: boolean; readonly detail: string }> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(`${MODELS_URL}/${encodeURIComponent(this.model)}`, {
+        method: "GET",
+        headers: {
+          "x-api-key": this.apiKey,
+          "anthropic-version": API_VERSION,
+        },
+      });
+    } catch (error) {
+      return {
+        available: false,
+        detail: `Could not reach the provider to verify "${this.model}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+
+    if (response.status === 404) {
+      return {
+        available: false,
+        detail: `The provider does not offer a model called "${this.model}". Fix the configured model id; the adapter will not substitute a different model.`,
+      };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return {
+        available: false,
+        detail: `The credential was rejected when verifying "${this.model}" (HTTP ${response.status}).`,
+      };
+    }
+    if (!response.ok) {
+      return {
+        available: false,
+        detail: `Model verification for "${this.model}" failed with HTTP ${response.status}.`,
+      };
+    }
+    return { available: true, detail: `Provider confirms "${this.model}" is available.` };
+  }
+
+  /**
+   * The preflight. Nothing about a candidate travels before this succeeds.
+   *
+   * `verifyModelAvailable` existed and had no caller, which meant the check
+   * was documented rather than performed: a retired or mistyped model id would
+   * have been discovered by sending a real interview's notes to the Messages
+   * endpoint and reading the 404 that came back. That is the wrong order. The
+   * cheap metadata request goes first, carries no candidate material, and a
+   * failure stops the run.
+   *
+   * It never substitutes another model. An unavailable id is a configuration
+   * fault for a human to fix, not a reason to quietly interview a candidate
+   * with an engine nobody chose.
+   */
+  private async ensureModelVerified(): Promise<void> {
+    if (this.modelVerified) return;
+    const result = await this.verifyModelAvailable();
+    if (!result.available) {
+      throw new AiProviderError(
+        `Model verification failed, so nothing was sent to the model. ${result.detail}`,
+        "configuration",
+      );
+    }
+    this.modelVerified = true;
+  }
+
   async complete(request: AiRequest): Promise<AiResponse> {
-    const key = idempotencyKey(request);
+    // Model availability is settled BEFORE any candidate material is built
+    // into a request, let alone sent. See ensureModelVerified.
+    await this.ensureModelVerified();
+
+    const digest = requestDigest(request);
 
     const body = {
       model: this.model,
       max_tokens: request.maxOutputTokens,
-      // Deterministic decoding. A creative interview engine is not a feature.
-      temperature: 0,
+      // Sampling parameters go ONLY to models explicitly verified to accept
+      // them. Every current model gets none. See samplingParams.
+      ...samplingParams(this.model),
       system: request.system,
       messages: [
         {
@@ -197,9 +385,9 @@ export class AnthropicProvider implements AiProvider {
             "content-type": "application/json",
             "x-api-key": this.apiKey,
             "anthropic-version": API_VERSION,
-            // The same logical request always carries the same key, so a retry
-            // after a lost response is collapsed rather than charged twice.
-            "idempotency-key": key,
+            // No idempotency header: the Messages API documents none, and
+            // sending one would imply a deduplication guarantee that does not
+            // exist. `digest` is recorded on our side instead.
           },
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(request.timeoutMs),
@@ -241,8 +429,21 @@ export class AnthropicProvider implements AiProvider {
       const payload = (await response.json()) as {
         content?: Array<{ type: string; text?: string }>;
         model?: string;
+        stop_reason?: string;
         usage?: { input_tokens?: number; output_tokens?: number };
       };
+
+      // A refusal is a real answer, not a transport hiccup. Retrying it would
+      // be asking the same question until the model changes its mind, which is
+      // exactly the resampling this adapter refuses to do everywhere else. It
+      // is reported as a refusal so the run records why, and the recruiter is
+      // told the engine declined rather than that something broke.
+      if (payload.stop_reason === "refusal") {
+        throw new AiProviderError(
+          "The model declined to answer this request. The run is recorded as refused and is not retried: asking again until the answer changes is not a governed use of a model.",
+          "refused",
+        );
+      }
 
       const text = (payload.content ?? [])
         .filter((c) => c.type === "text" && typeof c.text === "string")
@@ -274,9 +475,9 @@ export class AnthropicProvider implements AiProvider {
     }
 
     throw new AiProviderError(
-      `Provider unreachable after ${MAX_TRANSPORT_ATTEMPTS} attempts: ${
+      `Provider unreachable after ${MAX_TRANSPORT_ATTEMPTS} attempts (request ${digest}): ${
         lastError instanceof Error ? lastError.message : String(lastError)
-      }`,
+      }. Attempts after a lost response may each have reached the provider; the provider does not deduplicate them.`,
       "transport",
     );
   }

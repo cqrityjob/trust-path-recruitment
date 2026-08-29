@@ -154,6 +154,20 @@ export const evidenceProposalsOutput = z.object({
          * aggregates it.
          */
         extractionConfidence: z.number().min(0).max(1),
+        /**
+         * 5E -- CQrityjob's model for structuring an account so a reader can
+         * see which parts of it are present. Descriptive text, all optional.
+         *
+         * A missing field is a GAP the interviewer can ask about, never a
+         * mark against the candidate, and nothing counts how many are filled:
+         * the moment completeness became a number it would start being
+         * compared between people, which this product does not do.
+         */
+        e1Situation: z.string().max(600).nullish(),
+        e2OwnRole: z.string().max(600).nullish(),
+        e3Action: z.string().max(600).nullish(),
+        e4Effect: z.string().max(600).nullish(),
+        e5Reflection: z.string().max(600).nullish(),
         ...explainabilityFields,
       }),
     )
@@ -331,7 +345,7 @@ export const TASK_REGISTRY: Readonly<Record<TaskKey, TaskDefinition>> = {
   evidence_extraction: task("evidence_extraction", {
     allowedSourceKinds: ["interviewer_notes", "transcript"],
     instruction:
-      'Föreslå avgränsade evidensutdrag ur intervjuanteckningarna. Ett utdrag ska vara kandidatens beskrivna handlande, inte din tolkning. Ange för varje förslag varför det är relevant (relevanceRationale), vad som är osäkert och vad man INTE får dra för slutsats. Returnera {"proposals": [...]}.',
+      'Föreslå avgränsade evidensutdrag ur intervjuanteckningarna. Ett utdrag ska vara kandidatens beskrivna handlande, inte din tolkning. Ange för varje förslag varför det är relevant (relevanceRationale), vad som är osäkert och vad man INTE får dra för slutsats. Strukturera dessutom varje utdrag enligt 5E där underlaget faktiskt räcker: e1Situation (situationen), e2OwnRole (kandidatens egen roll), e3Action (vad kandidaten gjorde), e4Effect (resultatet), e5Reflection (reflektion/lärdom). Lämna ett 5E-fält tomt när anteckningen inte innehåller det — ett tomt fält är en lucka att fråga om, aldrig något negativt om kandidaten, och antalet ifyllda fält får aldrig räknas eller jämföras. Returnera {"proposals": [...]}.',
     outputSchema: evidenceProposalsOutput,
   }),
 

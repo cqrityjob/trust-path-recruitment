@@ -207,8 +207,11 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + scp_interview_candidate_corrections: a candidate's statement that a FACT in
 #   their own material is wrong. Read by a human, never applied automatically,
 #   and structurally unable to reach an assessment or a report.
-if [ "$SCP_TABLES" -ne 122 ]; then
-  echo "FAIL: expected 122 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST), found $SCP_TABLES" >&2
+# + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
+#   techniques, and the Target/Ready/Trace guidance. Deterministic governed
+#   content read by a human -- the Understand stage still permits zero AI tasks.
+if [ "$SCP_TABLES" -ne 125 ]; then
+  echo "FAIL: expected 125 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -1276,6 +1279,69 @@ echo "    ok  ${AIG_PASSED} AI gate and provenance assertions passed"
 if [ "$AIG_PASSED" -lt 27 ]; then
   echo "FAIL: expected at least 27 AI gate assertions, only ${AIG_PASSED} ran." >&2
   suite_failed "AI gate and provenance (assertion shortfall: floor 27)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5j. Interview Copilot -- the first real AI vertical
+#
+# An AI may read what a recruiter wrote, organise it and PROPOSE evidence, and
+# only in the TRUST stage that permits the task. Everything after that is a
+# human's. These assertions are the difference between that claim and a story:
+# every active task refused during the live interview, evidence tasks confined
+# to Structure, the original note byte-identical after extraction/edit/reject,
+# no proposal becoming evidence without a named human, and no scoring
+# vocabulary anywhere in the schema.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Copilot assertions"
+set +e
+CP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_copilot_test.sql 2>&1)"
+CP_RC=$?
+set -e
+
+echo "$CP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CP_PASSED="$(echo "$CP_OUT" | grep -c "ok  " || true)"
+
+if [ "$CP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Copilot suite exited with code ${CP_RC}." >&2
+  echo "$CP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Copilot"
+fi
+
+echo "    ok  ${CP_PASSED} Interview Copilot assertions passed"
+
+if [ "$CP_PASSED" -lt 63 ]; then
+  echo "FAIL: expected at least 63 Copilot assertions, only ${CP_PASSED} ran." >&2
+  suite_failed "Interview Copilot (assertion shortfall: floor 63)"
+fi
+
+# ---------------------------------------------------------------------------
+# The TRUST conduct layer: six ordered conduct steps, eight named prohibited
+# techniques, Target/Ready/Trace guidance, Understand still permitting zero AI
+# tasks, notes staying notes until a human confirms, and no score, ranking,
+# credibility judgement or employment recommendation anywhere in the schema.
+# ---------------------------------------------------------------------------
+echo "==> Running TRUST conduct layer assertions"
+set +e
+CD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_conduct_test.sql 2>&1)"
+CD_RC=$?
+set -e
+
+echo "$CD_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CD_PASSED="$(echo "$CD_OUT" | grep -c "ok  " || true)"
+
+if [ "$CD_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the TRUST conduct suite exited with code ${CD_RC}." >&2
+  echo "$CD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "TRUST conduct layer"
+fi
+
+echo "    ok  ${CD_PASSED} TRUST conduct layer assertions passed"
+
+if [ "$CD_PASSED" -lt 62 ]; then
+  echo "FAIL: expected at least 62 conduct assertions, only ${CD_PASSED} ran." >&2
+  suite_failed "TRUST conduct layer (assertion shortfall: floor 62)"
 fi
 
 # ---------------------------------------------------------------------------

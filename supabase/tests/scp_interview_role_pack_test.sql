@@ -259,6 +259,16 @@ LANGUAGE sql AS $$
   SELECT unnest(ARRAY[                             -- Phase 2 method library (2)
     'scp_interview_methods','scp_interview_method_practices'])
   UNION ALL
+  SELECT unnest(ARRAY[                             -- TRUST conduct layer (3)
+    -- How the interviewer behaves, as governed content rather than as
+    -- remembered advice: the six-step conduct sequence for the live
+    -- conversation, the techniques that may never be used whatever the
+    -- subject, and the Target/Ready/Trace guidance either side of it.
+    -- Deterministic rows read by a human; the Understand stage still permits
+    -- zero AI tasks and none of these is ever an AI task's governed context.
+    'scp_interview_conduct_steps','scp_interview_conduct_prohibitions',
+    'scp_interview_conduct_guidance'])
+  UNION ALL
   SELECT unnest(ARRAY[                             -- pre-existing assessment domain (2)
     'scp_interview_guide_prompts','scp_interview_notes']);
 $$;

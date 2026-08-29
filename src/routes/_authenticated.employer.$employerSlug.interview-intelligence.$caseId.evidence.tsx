@@ -29,6 +29,8 @@ import {
   State,
   TrustStageBanner,
   interviewErrorMessage,
+  FiveEPanel,
+  uiLabel,
   ProviderModeChip,
   ProviderModeNote,
   WithheldPanel,
@@ -43,7 +45,7 @@ import {
   recordAssessment,
   reviewEvidenceProposal,
   authorEvidence,
-  runEvidenceExtraction,
+  runInterviewAnalysis,
 } from "@/lib/interview-intelligence/runtime.functions";
 
 export const Route = createFileRoute(
@@ -60,16 +62,25 @@ const CORRECTION_CLASSES = [
   ["reviewer_disagreement", "iiu.ev.reason.reviewer_disagreement"],
 ] as const satisfies ReadonlyArray<readonly [string, TranslationKey]>;
 
+/** The governed tasks behind the single "analyse" action, in the recruiter's
+ *  words rather than as registry identifiers. */
+const ANALYSIS_TASK_LABEL: Record<string, TranslationKey> = {
+  evidence_extraction: "iiu.ev.task.evidence_extraction",
+  evidence_dimension_mapping: "iiu.ev.task.evidence_dimension_mapping",
+  gap_and_contradiction_detection: "iiu.ev.task.gap_and_contradiction_detection",
+  enter_evidence_review: "iiu.ev.task.enter_evidence_review",
+};
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
 
   const trustFn = useServerFn(getTrustStage);
-  const extractFn = useServerFn(runEvidenceExtraction);
+  const analyseFn = useServerFn(runInterviewAnalysis);
   const authorFn = useServerFn(authorEvidence);
   const reviewFn = useServerFn(reviewEvidenceProposal);
   const assessFn = useServerFn(recordAssessment);
@@ -110,9 +121,12 @@ function Page() {
     },
   });
 
-  const extract = useMutation({
-    mutationFn: () => extractFn({ data: { caseId } }),
-    onSuccess: refresh,
+  // One recruiter action; several governed runs underneath, each in the TRUST
+  // stage that permits it. The result reports per-step outcomes, so a later
+  // failure shows as partial completion rather than erasing what worked.
+  const analyse = useMutation({
+    mutationFn: () => analyseFn({ data: { caseId } }),
+    onSuccess: () => void q.refetch(),
   });
   const review = useMutation({
     mutationFn: (v: {
@@ -183,7 +197,6 @@ function Page() {
   if (!d) return shell(<State kind="loading" />);
 
   const pending = d.proposals.filter((p) => p.reviewState === "pending");
-  const result = extract.data;
 
   return shell(
     <>
@@ -213,6 +226,124 @@ function Page() {
         <CaseSteps current={d.status} />
         <NextStep status={d.status} />
       </div>
+
+      {/* ---- The interview notes, carried here automatically ----
+           The recruiter wrote these under Q1-Q8 during the interview. They
+           arrive under the same question, with the same text, and are never
+           retyped. A note is SOURCE material: it becomes evidence only when a
+           human confirms an extract from it. */}
+      {["interview_complete", "evidence_review", "assessed", "reported"].includes(d.status) && (
+        <section className="mt-8 max-w-4xl" aria-labelledby="s-notes">
+          <h2 id="s-notes" className="text-lg font-semibold text-foreground">
+            {t("iiu.ev.notes.title")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.notes.body")}</p>
+          <ul className="mt-3 space-y-2">
+            {d.questions.map((qq) => {
+              const qNotes = (d.session?.notes ?? []).filter((n) => n.questionId === qq.id);
+              return (
+                <li key={qq.id} className="rounded-lg border border-border p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip tone="work">{qq.code}</Chip>
+                    {qNotes.length === 0 && <Chip tone="attention">{t("iiu.ev.notes.none")}</Chip>}
+                  </div>
+                  {qNotes.map((n) => (
+                    <div key={n.id} className="mt-2">
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
+                        {n.body}
+                      </p>
+                      <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                        {t("iiu.ev.notes.source")}
+                      </p>
+                    </div>
+                  ))}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/* ---- The one AI action ---- */}
+      {d.aiAvailable && ["interview_complete", "evidence_review"].includes(d.status) && (
+        <section className="mt-8 max-w-4xl" aria-labelledby="s-analyse">
+          <h2 id="s-analyse" className="text-lg font-semibold text-foreground">
+            {t("iiu.ev.analyse")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.analyse.body")}</p>
+          <button
+            type="button"
+            className={`${PRIMARY_BUTTON} mt-3`}
+            onClick={() => analyse.mutate()}
+            disabled={analyse.isPending}
+          >
+            {analyse.isPending ? t("iiu.ev.analysing") : t("iiu.ev.analyse")}
+          </button>
+
+          {analyse.isPending && (
+            <div className="mt-3 max-w-3xl">
+              <State kind="aiRunning" />
+            </div>
+          )}
+          {analyse.isError && (
+            <div className="mt-3 max-w-3xl">
+              <State kind="aiUnavailable" message={interviewErrorMessage(analyse.error, t)} />
+            </div>
+          )}
+
+          {analyse.data && (
+            <div className="mt-3 rounded-lg border border-border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("iiu.ev.analyse.steps")}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {analyse.data.steps.map((st) => (
+                  <li key={st.task} className="flex flex-wrap items-center gap-2">
+                    <Chip
+                      tone={
+                        st.status === "succeeded"
+                          ? "confirmed"
+                          : st.status === "abstained"
+                            ? "attention"
+                            : "governance"
+                      }
+                    >
+                      {st.status === "succeeded"
+                        ? t("iiu.ev.step.ok")
+                        : st.status === "abstained"
+                          ? t("iiu.ev.step.abstained")
+                          : t("iiu.ev.step.failed")}
+                    </Chip>
+                    <span className="text-foreground">
+                      {uiLabel(ANALYSIS_TASK_LABEL, st.task, t)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("iiu.ev.stage")}: {st.trustStage}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {analyse.data.steps.some((st) => st.status !== "succeeded") && (
+                <p className="mt-2 text-sm text-muted-foreground">{t("iiu.ev.partial")}</p>
+              )}
+              {analyse.data.providerMode && (
+                <div className="mt-3">
+                  <ProviderModeChip mode={analyse.data.providerMode} />
+                  <div className="mt-2">
+                    <ProviderModeNote mode={analyse.data.providerMode} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {analyse.data && analyse.data.withheld.length > 0 && (
+            <div className="mt-3 max-w-3xl">
+              <WithheldPanel withheld={analyse.data.withheld} />
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ---- Human evidence authoring ----
            Shown when AI is off, because then it is the only way evidence is
@@ -276,60 +407,6 @@ function Page() {
         </section>
       )}
 
-      {/* ---- AI extraction ---- */}
-      {d.aiAvailable && (
-        <section className="mt-8" aria-labelledby="s-extract">
-          <h2 id="s-extract" className="text-lg font-semibold text-foreground">
-            {t("iiu.ev.s1.title")}
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{t("iiu.ev.s1.body")}</p>
-          {["interview_complete", "evidence_review"].includes(d.status) && (
-            <button
-              type="button"
-              className={`${PRIMARY_BUTTON} mt-3`}
-              onClick={() => extract.mutate()}
-              disabled={extract.isPending}
-            >
-              {extract.isPending ? t("iiu.ev.working") : t("iiu.ev.propose")}
-            </button>
-          )}
-          {extract.isPending && (
-            <div className="mt-3 max-w-3xl">
-              <State kind="aiRunning" />
-            </div>
-          )}
-          {result && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <ProviderModeChip mode={result.providerMode} />
-            </div>
-          )}
-          {result && (
-            <div className="mt-3 max-w-3xl">
-              <ProviderModeNote mode={result.providerMode} />
-            </div>
-          )}
-          {result && result.withheld.length > 0 && (
-            <div className="mt-3 max-w-3xl">
-              <WithheldPanel withheld={result.withheld} />
-            </div>
-          )}
-          {result && result.status !== "succeeded" && (
-            <div className="mt-3 max-w-3xl">
-              <State
-                kind={
-                  result.status === "abstained"
-                    ? "aiAbstained"
-                    : result.status === "provider_error" || result.status === "timed_out"
-                      ? "aiUnavailable"
-                      : "aiInvalid"
-                }
-                message={result.message ?? undefined}
-              />
-            </div>
-          )}
-        </section>
-      )}
-
       {/* ---- Human review ---- */}
       {/* This section reviews AI PROPOSALS. With AI off there are never any, so
           showing it would be an empty machine above the evidence that matters.
@@ -357,7 +434,7 @@ function Page() {
                 return (
                   <li key={p.id} className="rounded-lg border border-border p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone="ai" srPrefix="Ursprung">
+                      <Chip tone="ai" srPrefix={t("iiu.ev.srprefix.origin")}>
                         {t("iiu.ev.aiproposal")}
                       </Chip>
                       {qq && <Chip>{qq.code}</Chip>}
@@ -369,28 +446,51 @@ function Page() {
                               : "confirmed"
                             : "attention"
                         }
-                        srPrefix="Granskning"
+                        srPrefix={t("iiu.ev.srprefix.review")}
                       >
                         {p.reviewState === "pending"
                           ? t("iiu.ev.state.awaiting")
                           : p.reviewState === "confirmed"
                             ? t("iiu.ev.state.confirmed")
                             : p.reviewState === "edited"
-                              ? "Redigerad"
+                              ? t("iiu.ev.state.edited")
                               : p.reviewState === "rejected"
-                                ? "Avvisad"
+                                ? t("iiu.ev.state.rejected")
                                 : t("iiu.ev.state.unresolved")}
                       </Chip>
                       {p.extractionConfidence !== null && (
                         <Chip srPrefix={t("iiu.ev.extraction.srprefix")}>
-                          extraktion {Math.round(p.extractionConfidence * 100)}%
+                          {t("iiu.ev.extraction.chip")} {Math.round(p.extractionConfidence * 100)}%
                         </Chip>
                       )}
                     </div>
 
-                    <blockquote className="mt-3 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
+                    {/* The recruiter's own words first, then what the model
+                        made of them. Read in this order the proposal is
+                        checkable; read the other way round it is an assertion. */}
+                    {(() => {
+                      const src = (d.session?.notes ?? []).find((n) => n.id === p.noteId);
+                      if (!src) return null;
+                      return (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            {t("iiu.ev.fromnote")}
+                          </p>
+                          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                            {src.body}
+                          </p>
+                        </div>
+                      );
+                    })()}
+
+                    <p className="mt-3 text-xs font-medium text-muted-foreground">
+                      {t("iiu.ev.proposed")}
+                    </p>
+                    <blockquote className="mt-1 border-l-2 border-violet-700/40 pl-3 text-sm leading-relaxed text-foreground">
                       {p.excerpt}
                     </blockquote>
+
+                    <FiveEPanel value={p.fiveE} />
 
                     <dl className="mt-3 space-y-1 text-xs text-muted-foreground">
                       <div>
@@ -420,7 +520,7 @@ function Page() {
                               htmlFor={`edit-${p.id}`}
                               className="text-xs font-medium text-foreground"
                             >
-                              Korrigerat utdrag
+                              {t("iiu.ev.editedexcerpt")}
                             </label>
                             <textarea
                               id={`edit-${p.id}`}
@@ -451,7 +551,7 @@ function Page() {
                               htmlFor={`note-${p.id}`}
                               className="mt-2 block text-xs font-medium text-foreground"
                             >
-                              Anteckning
+                              {t("iiu.ev.notelabel")}
                             </label>
                             <input
                               id={`note-${p.id}`}
@@ -557,7 +657,7 @@ function Page() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {qq && <Chip>{qq.code}</Chip>}
-                    <Chip tone="confirmed" srPrefix="Ursprung">
+                    <Chip tone="confirmed" srPrefix={t("iiu.ev.srprefix.origin")}>
                       {e.origin === "human_authored"
                         ? t("iiu.ev.origin.human")
                         : e.origin === "ai_proposed_edited"
@@ -699,7 +799,7 @@ function Page() {
                                   checked={levels[qq.id] === a.level}
                                   onChange={() => setLevels((st) => ({ ...st, [qq.id]: a.level }))}
                                 />
-                                {a.level} — {a.labelSv}
+                                {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
                                 {locked && (
                                   <span className="sr-only">
                                     {" "}
