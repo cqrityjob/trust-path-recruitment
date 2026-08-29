@@ -227,7 +227,6 @@ function ProfessionCard({
   locale,
   detail,
   variant,
-  onOpenCareerCard,
   sessionId,
   isGoal,
   onSetGoal,
@@ -239,7 +238,6 @@ function ProfessionCard({
   locale: Locale;
   detail: ProfessionDetail | undefined;
   variant: CardVariant;
-  onOpenCareerCard?: (match: ProfessionMatch) => void;
   /** Present only once a result is claimed — setting a goal needs a real
    *  owned cd_sessions row (see setCareerGoal). Absent for an anonymous
    *  preview, so the action is hidden rather than shown and failing. */
@@ -413,15 +411,6 @@ function ProfessionCard({
             requirementsAnchorId={requirementsAnchorId}
           />
           <div className="mt-6 flex flex-wrap gap-3">
-            {onOpenCareerCard && (
-              <button
-                type="button"
-                onClick={() => onOpenCareerCard(match)}
-                className="inline-flex h-10 items-center rounded-[10px] border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)]"
-              >
-                {t("careerDiscovery.report.v31.createCareerCardFor")}
-              </button>
-            )}
             {sessionId && onSetGoal && (
               <button
                 type="button"
@@ -453,7 +442,6 @@ function Tier({
   locale,
   variant,
   detailsBySlug,
-  onOpenCareerCard,
   sessionId,
   goalProfessionId,
   onSetGoal,
@@ -467,7 +455,6 @@ function Tier({
   locale: Locale;
   variant: CardVariant;
   detailsBySlug: Record<string, ProfessionDetail>;
-  onOpenCareerCard?: (match: ProfessionMatch) => void;
   sessionId?: string | null;
   goalProfessionId?: string | null;
   onSetGoal?: (match: ProfessionMatch) => void;
@@ -500,7 +487,6 @@ function Tier({
             locale={locale}
             variant={variant}
             detail={m.cigProfessionSlug ? detailsBySlug[m.cigProfessionSlug] : undefined}
-            onOpenCareerCard={onOpenCareerCard}
             sessionId={sessionId}
             isGoal={goalProfessionId === m.professionId}
             onSetGoal={onSetGoal}
@@ -521,7 +507,6 @@ export function ProfessionRecommendations({
   careerPivots,
   currentProfessionMatch,
   locale,
-  onOpenCareerCard,
   sessionId,
   goalProfessionId,
   onSetGoal,
@@ -542,7 +527,6 @@ export function ProfessionRecommendations({
    *  backward-compatibility reason as careerPivots. */
   currentProfessionMatch?: ProfessionMatch | null;
   locale: Locale;
-  onOpenCareerCard?: (match: ProfessionMatch) => void;
   /** Present only for a claimed (authenticated, owned) result. */
   sessionId?: string | null;
   goalProfessionId?: string | null;
@@ -617,7 +601,6 @@ export function ProfessionRecommendations({
           locale={locale}
           variant="primary"
           detailsBySlug={detailsBySlug}
-          onOpenCareerCard={onOpenCareerCard}
           sessionId={sessionId}
           goalProfessionId={goalProfessionId}
           onSetGoal={onSetGoal}
@@ -632,7 +615,6 @@ export function ProfessionRecommendations({
         locale={locale}
         variant="primary"
         detailsBySlug={detailsBySlug}
-        onOpenCareerCard={onOpenCareerCard}
         sessionId={sessionId}
         goalProfessionId={goalProfessionId}
         onSetGoal={onSetGoal}
@@ -657,7 +639,6 @@ export function ProfessionRecommendations({
               locale={locale}
               variant="compact"
               detailsBySlug={detailsBySlug}
-              onOpenCareerCard={onOpenCareerCard}
               sessionId={sessionId}
               goalProfessionId={goalProfessionId}
               onSetGoal={onSetGoal}

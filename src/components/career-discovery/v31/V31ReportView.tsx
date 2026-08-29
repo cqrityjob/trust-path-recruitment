@@ -101,7 +101,11 @@ export function V31ReportView({
   // the real defect behind "Swedish assessment showed English content" —
   // see v31-layer4-implementation-state.md.
   const { t } = useT();
-  const [careerCardMatch, setCareerCardMatch] = useState<ProfessionMatch | null>(null);
+  // One card, one result. There is no per-profession card any more, so
+  // there is nothing to remember except whether the dialog is open — the
+  // previous `careerCardMatch` state existed only to carry the profession
+  // the candidate had picked, which is exactly the choice that has gone.
+  const [careerCardOpen, setCareerCardOpen] = useState(false);
   const [goalProfessionId, setGoalProfessionId] = useState<string | null>(null);
   const [settingGoal, setSettingGoal] = useState(false);
   const setGoal = useServerFn(setCareerGoal);
@@ -119,10 +123,6 @@ export function V31ReportView({
     }
   }
 
-  const dimensionScores: Readonly<Record<DimensionId, number | null>> = Object.fromEntries(
-    snapshot.outputA.dimensions.map((d) => [d.id, d.score]),
-  ) as Record<DimensionId, number | null>;
-
   const outputA = snapshot.outputA;
   const outputB = snapshot.outputB;
   const headings = (outputB?.headings ?? {}) as Record<string, string>;
@@ -137,12 +137,11 @@ export function V31ReportView({
     day: "numeric",
   }).format(new Date(snapshot.completedAt ?? generatedAt));
 
-  // The single best recommendation, for the standalone Career Card CTA
-  // (§26 Section 3) — the same "strongest first" ordering matchProfessions
-  // itself already guarantees, never a separate ranking.
-  const topMatch = snapshot.professions?.available
-    ? (snapshot.professions.strongestDirections[0] ?? snapshot.professions.matches[0] ?? null)
-    : null;
+  // The canonical top 3, straight from the snapshot. The Career Card is
+  // built from THIS — the same array RecommendedProfessions renders three
+  // lines above the CTA — so the card cannot name a different #1 from the
+  // report the candidate is looking at while they press the button.
+  const rankedTop3 = snapshot.professions?.ranked ?? [];
 
   return (
     <div data-report-contract="v3.1">
@@ -237,6 +236,36 @@ export function V31ReportView({
         locale={snapshot.locale === "en" ? "en" : "sv"}
       />
 
+      {/* 2b · CREATE YOUR CAREER CARD — placed right under the ranking it
+          shares its data with (§26 Section 3), so pressing it is visibly a
+          way to share THAT, not to start a new choice. Gated on `ranked`
+          rather than `available`: a balanced profile gets a real ranking and
+          no cleared tiers, and used to be denied a card for it. */}
+      {rankedTop3.length > 0 && (
+        <div className="no-print relative mt-12 overflow-hidden rounded-2xl border border-accent/30 bg-[color:var(--secondary)] p-7 text-center sm:p-10">
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent"
+          />
+          <h2
+            className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {t("careerDiscovery.report.v31.createCareerCardCta")}
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+            {t("careerDiscovery.report.v31.createCareerCardCtaBody")}
+          </p>
+          <button
+            type="button"
+            onClick={() => setCareerCardOpen(true)}
+            className="mt-6 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold uppercase tracking-wide text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {t("careerDiscovery.report.v31.createCareerCardCta")}
+          </button>
+        </div>
+      )}
+
       {/* The "pending" note now means what it says: there is no approved
           profession catalogue at all. It used to appear whenever nothing
           cleared the fit gates, which told a candidate that matching was
@@ -263,7 +292,6 @@ export function V31ReportView({
               careerPivots={snapshot.professions.careerPivots}
               currentProfessionMatch={snapshot.professions.currentProfessionMatch}
               locale={snapshot.locale === "en" ? "en" : "sv"}
-              onOpenCareerCard={setCareerCardMatch}
               sessionId={sessionId}
               goalProfessionId={goalProfessionId}
               onSetGoal={(match) => void handleSetGoal(match)}
@@ -271,34 +299,6 @@ export function V31ReportView({
               onEvent={onCareerCardEvent}
             />
           </div>
-
-          {/* 3 · CREATE YOUR CAREER CARD — placed early enough to feel like
-              a reward, right after the candidate has seen their top
-              direction (§26 Section 3), not buried after methodology. */}
-          {topMatch && (
-            <div className="no-print relative mt-12 overflow-hidden rounded-2xl border border-accent/30 bg-[color:var(--secondary)] p-7 text-center sm:p-10">
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent"
-              />
-              <h2
-                className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                {t("careerDiscovery.report.v31.createCareerCardCta")}
-              </h2>
-              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-                {t("careerDiscovery.report.v31.createCareerCardCtaBody")}
-              </p>
-              <button
-                type="button"
-                onClick={() => setCareerCardMatch(topMatch)}
-                className="mt-6 inline-flex h-12 items-center justify-center rounded-[10px] bg-accent px-7 text-sm font-semibold uppercase tracking-wide text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {t("careerDiscovery.report.v31.createCareerCardCta")}
-              </button>
-            </div>
-          )}
 
           {/* 4 · YOUR POSSIBLE PATH — Master Completion Mandate item 9: a
               visual pathway distinct from the accordion list above.
@@ -496,15 +496,19 @@ export function V31ReportView({
         </div>
       </details>
 
-      {snapshot.professions?.available === true && (
+      {/* The card is available whenever the report NAMES a career — i.e.
+          whenever `ranked` is non-empty — not only when the gated tiers
+          cleared (`available === true`). Those are different facts, and
+          gating the card on the second one hid it from exactly the balanced
+          profiles the always-present ranking was built to serve. It carries
+          `ranked` itself, so the card and the report cannot disagree about
+          who is #1. */}
+      {rankedTop3.length > 0 && (
         <CareerCardCreator
-          open={careerCardMatch !== null}
-          onOpenChange={(next) => {
-            if (!next) setCareerCardMatch(null);
-          }}
-          matches={snapshot.professions.matches}
-          initialProfessionId={careerCardMatch?.professionId}
-          dimensionScores={dimensionScores}
+          open={careerCardOpen}
+          onOpenChange={setCareerCardOpen}
+          ranked={rankedTop3}
+          dimensions={snapshot.outputA.dimensions}
           locale={snapshot.locale === "en" ? "en" : "sv"}
           definitionVersion={snapshot.versions.definitionVersion}
           generatedAt={snapshot.completedAt ?? generatedAt}

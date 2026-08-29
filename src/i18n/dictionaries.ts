@@ -699,15 +699,19 @@ export const dictionaries = {
     "careerDiscovery.report.v31.showMoreDirections": "Visa fler riktningar",
     "careerDiscovery.report.v31.showFewerDirections": "Visa färre",
     "careerDiscovery.report.v31.strongestLead": "Starkaste riktningarna",
-    "careerDiscovery.report.v31.createCareerCardFor":
-      "Skapa mitt Career Card för den här riktningen",
     "careerDiscovery.report.v31.setAsGoal": "Sätt som karriärmål",
     "careerDiscovery.report.v31.goalSet": "Karriärmål ✓",
     "careerDiscovery.report.v31.card.title": "Skapa mitt Career Card",
-    "careerDiscovery.report.v31.card.chooseDirection": "Välj riktning",
+    // The card is the candidate's OWN result, not a direction they pick --
+    // the "Välj riktning" picker and the Career DNA toggle were removed
+    // 2026-08-29 (see CareerCardCreator.tsx). The lede says so plainly, so
+    // nobody opens the modal looking for the choice that used to be here.
+    "careerDiscovery.report.v31.card.lede":
+      "Ditt kort byggs direkt från din rapport — dina tre främsta matchningar, i din ordning.",
     "careerDiscovery.report.v31.card.firstNameLabel": "Förnamn (valfritt)",
     "careerDiscovery.report.v31.card.firstNamePlaceholder": "Visas inte om du lämnar det tomt",
-    "careerDiscovery.report.v31.card.showIndicators": "Visa Career DNA-indikatorer",
+    "careerDiscovery.report.v31.card.firstNameHint":
+      "Bara ditt förnamn hamnar på kortet. Inget annat från din profil delas.",
     "careerDiscovery.report.v31.card.format": "Format",
     "careerDiscovery.report.v31.card.format.story": "Story",
     "careerDiscovery.report.v31.card.format.square": "Kvadrat",
@@ -835,6 +839,13 @@ export const dictionaries = {
     "cd.public.saveNow": "Spara i din karriärresa",
     "cd.public.answersKept":
       "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
+    // The canonical result is built server-side for signed-out visitors too,
+    // so that it cannot differ from the one they get after signing in (see
+    // v31-public.functions.ts). These two cover the wait and the failure.
+    "cd.public.buildingResult": "Sammanställer ditt resultat…",
+    "cd.public.resultUnavailable":
+      "Vi kunde inte hämta ditt resultat just nu. Dina svar finns kvar — försök igen.",
+    "cd.public.retryResult": "Försök igen",
     "cd.public.downloadResult": "Ladda ner resultat",
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
@@ -5339,14 +5350,15 @@ export const dictionaries = {
     "careerDiscovery.report.v31.showMoreDirections": "Show more directions",
     "careerDiscovery.report.v31.showFewerDirections": "Show fewer",
     "careerDiscovery.report.v31.strongestLead": "Strongest directions",
-    "careerDiscovery.report.v31.createCareerCardFor": "Create my Career Card for this direction",
     "careerDiscovery.report.v31.setAsGoal": "Set as career goal",
     "careerDiscovery.report.v31.goalSet": "Career goal ✓",
     "careerDiscovery.report.v31.card.title": "Create my Career Card",
-    "careerDiscovery.report.v31.card.chooseDirection": "Choose a direction",
+    "careerDiscovery.report.v31.card.lede":
+      "Your card is built straight from your report — your top three matches, in your order.",
     "careerDiscovery.report.v31.card.firstNameLabel": "First name (optional)",
     "careerDiscovery.report.v31.card.firstNamePlaceholder": "Not shown if left blank",
-    "careerDiscovery.report.v31.card.showIndicators": "Show Career DNA indicators",
+    "careerDiscovery.report.v31.card.firstNameHint":
+      "Only your first name goes on the card. Nothing else from your profile is shared.",
     "careerDiscovery.report.v31.card.format": "Format",
     "careerDiscovery.report.v31.card.format.story": "Story",
     "careerDiscovery.report.v31.card.format.square": "Square",
@@ -5470,6 +5482,10 @@ export const dictionaries = {
     "cd.public.saveNow": "Save to your Career Journey",
     "cd.public.answersKept":
       "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
+    "cd.public.buildingResult": "Putting your result together…",
+    "cd.public.resultUnavailable":
+      "We couldn't load your result just now. Your answers are safe — please try again.",
+    "cd.public.retryResult": "Try again",
     "cd.public.downloadResult": "Download result",
     "cd.public.shareResult": "Share result",
     "cd.public.shareTitle": "My Security Career DNA",

@@ -23,7 +23,7 @@ import { ProfessionRecommendations } from "@/components/career-discovery/v31/Pro
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { listCigProfessionsForPicker } from "@/lib/career-discovery/career-context.functions";
 import { listMyDiscoveryReports } from "@/lib/career-discovery/discovery.functions";
-import { DIMENSION_IDS, type DimensionId } from "@/lib/career-discovery/v31/dimensions";
+import { DIMENSION_IDS, DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
 import { GOLDEN_PERSONAS } from "@/lib/career-discovery/v31/golden-persona-fixtures";
 import type {
   ProfessionAffinityDiagnostic,
@@ -242,10 +242,16 @@ function CareerDiscoveryPreview() {
   const selectedCurrentProfession = currentProfessionSlug
     ? cigProfessionsQuery.data?.find((p) => p.slug === currentProfessionSlug)
     : undefined;
-  const [cardMatch, setCardMatch] = useState<ProfessionMatch | null>(null);
-  const dimensionScores = Object.fromEntries(
-    DIMENSION_IDS.map((id) => [id, persona.dims[id] ?? null]),
-  ) as Record<DimensionId, number | null>;
+  const [cardOpen, setCardOpen] = useState(false);
+  // The card reads only these three fields (CardDimensionScore). Built from
+  // the persona's own scores rather than a fabricated snapshot — this is a
+  // preview harness, and CID15 is excluded here exactly as the real
+  // snapshot's `usedForMatching` excludes it (owner decision A-4).
+  const previewDimensions = DIMENSION_IDS.map((id) => ({
+    id,
+    score: persona.dims[id] ?? null,
+    usedForMatching: DIMENSIONS[id].matchingWeight === 1,
+  }));
 
   return (
     <SiteLayout>
@@ -630,7 +636,6 @@ function CareerDiscoveryPreview() {
                     careerPivots={matches.careerPivots}
                     currentProfessionMatch={matches.currentProfessionMatch}
                     locale={previewLocale}
-                    onOpenCareerCard={setCardMatch}
                   />
                   <PossiblePathway
                     snapshot={{
@@ -662,15 +667,12 @@ function CareerDiscoveryPreview() {
               )}
             </div>
 
-            {matches && matches.matches.length > 0 && (
+            {matches && matches.ranked.length > 0 && (
               <CareerCardCreator
-                open={cardMatch !== null}
-                onOpenChange={(next) => {
-                  if (!next) setCardMatch(null);
-                }}
-                matches={matches.matches}
-                initialProfessionId={cardMatch?.professionId}
-                dimensionScores={dimensionScores}
+                open={cardOpen}
+                onOpenChange={setCardOpen}
+                ranked={matches.ranked}
+                dimensions={previewDimensions}
                 locale={previewLocale}
                 definitionVersion="owner-preview"
                 generatedAt={new Date().toISOString()}
