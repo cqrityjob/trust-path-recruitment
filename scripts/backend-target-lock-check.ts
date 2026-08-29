@@ -263,10 +263,9 @@ if (failures.length > 0) {
 }
 
 console.log("BACKEND TARGET LOCK: PASS");
-console.log(`  release mode:           ${targets.releaseMode}`);
-console.log(`  live runtime unchanged: ${targets.currentLive.projectRef} [Lovable Cloud]`);
-console.log(`  owner schema target:    ${targets.candidateProduction.projectRef}`);
-console.log(`  excluded permanently:   ${OWNER_LOCKED.permanentlyExcludedRef}`);
-console.log(
-  `  Supabase production deploy: ${targets.automaticProductionDeployEnabled ? "AUTHORISED FOR SCHEMA BOOTSTRAP" : "DISABLED"}`,
-);
+console.log(`  release mode:          ${targets.releaseMode}`);
+console.log(`  live runtime:          ${targets.currentLive.projectRef} [owner Supabase]`);
+console.log(`  owner schema target:   ${targets.candidateProduction.projectRef}`);
+console.log(`  retired runtime:       ${OWNER_LOCKED.retiredRuntimeRef}`);
+console.log(`  retired schema target: ${OWNER_LOCKED.retiredSchemaTargetRef}`);
+console.log(`  excluded permanently:  ${OWNER_LOCKED.permanentlyExcludedRef}`);
