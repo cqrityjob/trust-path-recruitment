@@ -252,11 +252,7 @@ if (processTarget && processTarget !== OWNER_LOCKED.candidateProductionRef) {
     `runner CQ_SCHEMA_WRITE_TARGET_REF is ${processTarget}; only ${OWNER_LOCKED.candidateProductionRef} is permitted`,
   );
 }
-if (
-  targets.releaseMode === "bootstrap_authorised" &&
-  processTarget &&
-  processTarget !== targets.writeTargetRef
-) {
+if (processTarget && processTarget !== targets.writeTargetRef) {
   fail("runner schema target and deployment-target registry disagree");
 }
 
