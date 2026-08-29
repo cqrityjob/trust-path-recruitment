@@ -5,6 +5,7 @@
 // anything about a candidate.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useT } from "@/i18n/context";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
@@ -28,6 +29,7 @@ export const Route = createFileRoute(
 function Page() {
   const { employerSlug } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t } = useT();
   const listFn = useServerFn(listInterviewCases);
 
   const q = useQuery({
@@ -63,15 +65,14 @@ function Page() {
           Interview Intelligence
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Strukturerade, evidensbaserade intervjuer mot ett styrt rollpaket. AI förbereder,
-          extraherar och föreslår. Människor bekräftar, bedömer och beslutar.
+          {t("iiu.ix.lead")}
         </p>
       </header>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label="Aktiva intervjuer" value={active.length} />
-        <Stat label="Väntar på evidensgranskning" value={awaiting.length} tone="attention" />
-        <Stat label="Färdiga rapporter" value={done.length} tone="confirmed" />
+        <Stat label={t("iiu.ix.active")} value={active.length} />
+        <Stat label={t("iiu.ix.awaiting")} value={awaiting.length} tone="attention" />
+        <Stat label={t("iiu.ix.done")} value={done.length} tone="confirmed" />
       </div>
 
       <div className="mt-6">
@@ -81,42 +82,37 @@ function Page() {
           search={{ applicationId: undefined, jobId: undefined }}
           className={BUTTON}
         >
-          Ny intervju
+          {t("iiu.new.title")}
         </Link>
       </div>
 
       <section className="mt-8" aria-labelledby="ii-cases-heading">
         <h2 id="ii-cases-heading" className="text-lg font-semibold text-foreground">
-          Intervjuer
+          {t("iiu.ix.heading")}
         </h2>
 
         <div className="mt-4">
           {q.isLoading && <State kind="loading" />}
-          {q.isError && <State kind="error" message={interviewErrorMessage(q.error)} />}
-          {q.isSuccess && cases.length === 0 && (
-            <State kind="empty">
-              Inga intervjuer ännu. Skapa en för att förbereda, genomföra och dokumentera en
-              strukturerad intervju.
-            </State>
-          )}
+          {q.isError && <State kind="error" message={interviewErrorMessage(q.error, t)} />}
+          {q.isSuccess && cases.length === 0 && <State kind="empty">{t("iiu.ix.empty")}</State>}
 
           {q.isSuccess && cases.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full min-w-[760px] text-left text-sm">
-                <caption className="sr-only">Intervjuer med status och väntande granskning</caption>
+                <caption className="sr-only">{t("iiu.ix.caption")}</caption>
                 <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-3">
-                      Intervju
+                      {t("iiu.ix.col.interview")}
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      Rollpaket
+                      {t("iiu.ix.col.pack")}
                     </th>
                     <th scope="col" className="px-4 py-3">
                       Status
                     </th>
                     <th scope="col" className="px-4 py-3">
-                      Väntar på granskning
+                      {t("iiu.ix.col.awaiting")}
                     </th>
                   </tr>
                 </thead>
@@ -146,7 +142,7 @@ function Page() {
                       </td>
                       <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {c.proposalsAwaitingReview > 0
-                          ? `${c.proposalsAwaitingReview} förslag`
+                          ? `${c.proposalsAwaitingReview} ${t("iiu.ix.proposals")}`
                           : "—"}
                       </td>
                     </tr>
@@ -159,12 +155,8 @@ function Page() {
       </section>
 
       <div className="mt-8 max-w-3xl">
-        <Panel tone="work" title="Vad produkten inte gör">
-          <p>
-            Ingen totalpoäng, ingen rangordning, ingen automatisk rekommendation och inget
-            anställningsbeslut. Underlaget är beslutsstöd; beslutet fattas och dokumenteras av
-            behörig människa hos er.
-          </p>
+        <Panel tone="work" title={t("iiu.ix.boundary.title")}>
+          <p>{t("iiu.ix.boundary.body")}</p>
         </Panel>
       </div>
     </EmployerAppShell>

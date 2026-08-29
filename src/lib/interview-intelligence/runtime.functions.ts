@@ -334,49 +334,75 @@ export const listInterviewCasesForApplication = createServerFn({ method: "GET" }
     },
   );
 
-/** Pack versions this employer may actually start a case with. */
-export const listUsablePacks = createServerFn({ method: "GET" })
+/**
+ * The pack versions this employer can start a NEW interview with right now.
+ *
+ * Backed by scp_iv_startable_pack_versions(), which shares its entitlement
+ * decision with scp_iv_create_case(). That sharing is the point: the previous
+ * implementation ran a plain RLS-filtered SELECT, accepted an employerId it
+ * never used, and therefore answered "may this USER READ a pack?" while the
+ * create button answered "may THIS EMPLOYER START one?". The two disagreed
+ * whenever a version was readable for continuity (a case already pinned it)
+ * or the user belonged to more than one employer -- so the screen offered a
+ * pack and then refused it on submit.
+ */
+export const listStartableInterviewPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => employerInput.parse(d))
   .handler(
     async ({
       context,
+      data,
     }): Promise<{
+      readonly canStart: boolean;
       readonly packs: readonly {
         readonly packVersionId: string;
         readonly name: string;
+        readonly nameEn: string | null;
         readonly versionNumber: number;
         readonly contentStatus: string;
         readonly validationLabel: string;
         readonly locale: string;
+        /** published | open_pilot | pilot_grant. Server-side provenance; the
+         *  customer screen never renders it. */
+        readonly entitlementBasis: string;
       }[];
     }> => {
-      // RLS already narrows this to published-or-entitled versions, so the
-      // query does not need to restate the entitlement rule — and cannot
-      // accidentally contradict it.
-      const { data, error } = await context.supabase
-        .from("scp_interview_pack_versions")
-        .select(
-          "id, version_number, content_status, validation_label, locale, scp_interview_packs(name_sv)",
-        )
-        .order("version_number", { ascending: false });
+      // Asked separately so the screen can say "your account is not active"
+      // instead of rendering an unexplained empty selector.
+      const canStartRes = await context.supabase.rpc("scp_iv_employer_can_start_interviews", {
+        _employer_id: data.employerId,
+      });
+      if (canStartRes.error) throw new Error(canStartRes.error.message);
 
+      const { data: rows, error } = await context.supabase.rpc("scp_iv_startable_pack_versions", {
+        _employer_id: data.employerId,
+      });
       if (error) throw new Error(error.message);
 
-      const packs = (data ?? []).map((v) => {
-        const pack = Array.isArray(v.scp_interview_packs)
-          ? v.scp_interview_packs[0]
-          : v.scp_interview_packs;
-        return {
-          packVersionId: v.id as string,
-          name: pack?.name_sv ?? "—",
-          versionNumber: v.version_number as number,
-          contentStatus: v.content_status as string,
-          validationLabel: v.validation_label as string,
-          locale: v.locale as string,
-        };
-      });
-      return { packs };
+      const packs = (
+        (rows ?? []) as Array<{
+          pack_version_id: string;
+          name_sv: string;
+          name_en: string | null;
+          version_number: number;
+          content_status: string;
+          validation_label: string;
+          locale: string;
+          entitlement_basis: string;
+        }>
+      ).map((r) => ({
+        packVersionId: r.pack_version_id,
+        name: r.name_sv,
+        nameEn: r.name_en,
+        versionNumber: r.version_number,
+        contentStatus: r.content_status,
+        validationLabel: r.validation_label,
+        locale: r.locale,
+        entitlementBasis: r.entitlement_basis,
+      }));
+
+      return { canStart: canStartRes.data === true, packs };
     },
   );
 
@@ -406,7 +432,12 @@ export interface CaseDetail {
     readonly displayOrder: number;
     readonly questionType: string;
     readonly promptSv: string;
-    readonly dimensions: readonly { id: string; code: string; labelSv: string }[];
+    readonly dimensions: readonly {
+      id: string;
+      code: string;
+      labelSv: string;
+      labelEn: string | null;
+    }[];
     readonly anchors: readonly {
       id: string;
       level: number;
@@ -417,7 +448,12 @@ export interface CaseDetail {
     readonly probes: readonly { id: string; purpose: string; wordingSv: string }[];
   }[];
   readonly generalProbes: readonly { id: string; purpose: string; wordingSv: string }[];
-  readonly prohibitedAreas: readonly { id: string; statementSv: string; areaType: string }[];
+  readonly prohibitedAreas: readonly {
+    id: string;
+    statementSv: string;
+    statementEn: string | null;
+    areaType: string;
+  }[];
   readonly plan: {
     readonly id: string;
     readonly status: string;
@@ -428,6 +464,7 @@ export interface CaseDetail {
     readonly openingGuidance: string | null;
     readonly closingGuidance: string | null;
     readonly aiDisclosure: string;
+    readonly aiDisclosureEn: string | null;
     readonly items: readonly {
       readonly id: string;
       readonly itemKind: string;
@@ -502,6 +539,7 @@ export interface CaseDetail {
     readonly peaceStage: string | null;
     readonly practiceKind: string;
     readonly statementSv: string;
+    readonly statementEn: string | null;
     readonly rationale: string | null;
     readonly hasResearchClaim: boolean;
   }[];
@@ -565,7 +603,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order"),
       db
         .from("scp_interview_evidence_dimensions")
-        .select("id, question_id, code, label_sv")
+        .select("id, question_id, code, label_sv, label_en")
         .order("display_order"),
       db
         .from("scp_interview_rating_anchors")
@@ -578,13 +616,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order"),
       db
         .from("scp_interview_prohibited_areas")
-        .select("id, statement_sv, area_type")
+        .select("id, statement_sv, statement_en, area_type")
         .eq("pack_version_id", packVersionId)
         .order("display_order"),
       db
         .from("scp_interview_prep_plans")
         .select(
-          "id, status, version_number, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure",
+          "id, status, version_number, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure, ai_disclosure_en",
         )
         .eq("case_id", caseId)
         .order("version_number", { ascending: false })
@@ -632,7 +670,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .limit(200),
       db
         .from("scp_interview_method_practices")
-        .select("id, peace_stage, practice_kind, statement_sv, rationale, claim_id")
+        .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
         .order("display_order"),
       db.from("scp_interview_ai_config").select("ai_enabled, transcript_enabled").maybeSingle(),
     ]);
@@ -674,6 +712,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         openingGuidance: (planRow.opening_guidance as string) ?? null,
         closingGuidance: (planRow.closing_guidance as string) ?? null,
         aiDisclosure: planRow.ai_disclosure as string,
+        aiDisclosureEn: (planRow.ai_disclosure_en as string | null) ?? null,
         items: ((itemsRes.data ?? []) as Array<Record<string, unknown>>).map((i) => ({
           id: i.id as string,
           itemKind: i.item_kind as string,
@@ -761,6 +800,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
             id: d.id as string,
             code: d.code as string,
             labelSv: d.label_sv as string,
+            labelEn: (d.label_en as string | null) ?? null,
           })),
         anchors: anchors
           .filter((a) => a.question_id === q.id)
@@ -789,6 +829,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       prohibitedAreas: ((prohibitedRes.data ?? []) as Array<Record<string, unknown>>).map((a) => ({
         id: a.id as string,
         statementSv: a.statement_sv as string,
+        statementEn: (a.statement_en as string | null) ?? null,
         areaType: a.area_type as string,
       })),
       plan,
@@ -847,12 +888,16 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         peaceStage: (p.peace_stage as string) ?? null,
         practiceKind: p.practice_kind as string,
         statementSv: p.statement_sv as string,
+        statementEn: (p.statement_en as string | null) ?? null,
         rationale: (p.rationale as string) ?? null,
         // Whether this interviewer practice cites a registered research claim.
         // NULL is honest: plenty of good practice is craft, not literature.
         hasResearchClaim: p.claim_id !== null,
       })),
-      aiAvailable: Boolean(configRes.data?.ai_enabled) || true,
+      // The governed flag, and nothing else. This read `|| true` -- so the
+      // screen reported AI as available whatever the configuration said, and
+      // offered a control whose only possible outcome was a runtime failure.
+      aiAvailable: Boolean(configRes.data?.ai_enabled),
     };
   });
 
@@ -958,9 +1003,12 @@ function chooseEngine() {
   return {
     provider: selected.provider,
     mode: selected.mode,
-    // What goes in the run's provenance columns.
+    // What goes in the run's provenance columns. Two different facts: the
+    // vendor, and the exact model. This used to write the provider NAME into
+    // the model column for real-model runs, so a run recorded "anthropic" as
+    // its model and could never be reproduced or counted in an evaluation.
     providerName: selected.provider.name,
-    modelName: selected.mode === "synthetic" ? "deterministic-rules-1.0.0" : selected.provider.name,
+    modelName: selected.provider.modelId,
   };
 }
 
@@ -998,7 +1046,9 @@ async function loadAiContext(db: CallerDb, caseId: string, packVersionId: string
       .select("id, code, prompt_sv")
       .eq("pack_version_id", packVersionId)
       .order("display_order"),
-    db.from("scp_interview_evidence_dimensions").select("id, question_id, code, label_sv"),
+    db
+      .from("scp_interview_evidence_dimensions")
+      .select("id, question_id, code, label_sv, label_en"),
     db
       .from("scp_interview_approved_probes")
       .select("id, question_id, purpose, wording_sv")
@@ -1051,6 +1101,37 @@ async function loadAiContext(db: CallerDb, caseId: string, packVersionId: string
   return { passages, questions, probes, competencies };
 }
 
+/**
+ * Record a preparation plan the interviewer wrote themselves.
+ *
+ * A session starts from an APPROVED plan, and the only way to create one used
+ * to be an AI run — so with AI disabled the structured interview was
+ * unreachable. This is the manual path: same human approval gate, and a
+ * disclosure that says plainly that no AI was involved.
+ */
+export const recordManualPreparation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        caseId: z.string().uuid(),
+        timePlan: z.string().trim().max(2000).optional(),
+        openingGuidance: z.string().trim().max(2000).optional(),
+        closingGuidance: z.string().trim().max(2000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ readonly planId: string }> => {
+    const { data: id, error } = await context.supabase.rpc("scp_iv_record_manual_prep_plan", {
+      _case_id: data.caseId,
+      _time_plan: data.timePlan || undefined,
+      _opening_guidance: data.openingGuidance || undefined,
+      _closing_guidance: data.closingGuidance || undefined,
+    });
+    if (error) throw new Error(error.message);
+    return { planId: id as unknown as string };
+  });
+
 export const runPreparation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
@@ -1085,6 +1166,9 @@ export const runPreparation = createServerFn({ method: "POST" })
         _task: taskKey,
         _provider: engine.providerName,
         _model: engine.modelName,
+        // The gate lives in the database: a non-synthetic mode is refused
+        // outright while scp_interview_ai_config.ai_enabled is false.
+        _provider_mode: engine.mode,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -1117,6 +1201,9 @@ export const runPreparation = createServerFn({ method: "POST" })
         _cost_micros: result.usage.costMicros,
         _withheld_passages: result.quarantinedPassages as never,
         _provider_mode: result.providerMode,
+        // The provider's own answer beats the start-time intent, and only
+        // then is the stored id marked provider-confirmed.
+        _resolved_model: result.resolvedModel ?? undefined,
       });
 
       // Carried to the caller on every path, including failure: a recruiter
@@ -1209,13 +1296,20 @@ export const saveInterviewNote = createServerFn({ method: "POST" })
         sessionId: z.string().uuid(),
         questionId: z.string().uuid().nullable(),
         noteKind: z.enum(["observation", "clarification", "process", "closing_summary"]),
-        body: z.string().min(1).max(20_000),
+        // An UPDATE may carry an empty body: clearing a note is a real thing
+        // an interviewer does, and silently keeping the old text would leave
+        // the record saying something they retracted. An INSERT still may
+        // not -- creating an empty note means nothing. Enforced below.
+        body: z.string().max(20_000),
         noteId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly noteId: string }> => {
     const db = context.supabase;
+    if (!data.noteId && data.body.trim() === "") {
+      throw new Error("SCP_IV_NOTE_EMPTY: an empty note is not created.");
+    }
     if (data.noteId) {
       const { error } = await db
         .from("scp_interview_session_notes")
@@ -1373,6 +1467,9 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _task: "evidence_extraction",
         _provider: engine.providerName,
         _model: engine.modelName,
+        // The gate lives in the database: a non-synthetic mode is refused
+        // outright while scp_interview_ai_config.ai_enabled is false.
+        _provider_mode: engine.mode,
       });
       if (runRes.error) throw new Error(runRes.error.message);
       const runId = runRes.data as unknown as string;
@@ -1403,6 +1500,8 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
         _latency_ms: result.latencyMs,
         _cost_micros: result.usage.costMicros,
         _withheld_passages: [...result.quarantinedPassages, ...screenedNotes.quarantined] as never,
+        _provider_mode: result.providerMode,
+        _resolved_model: result.resolvedModel ?? undefined,
       });
 
       // Carried to the caller on every path, including failure: a recruiter
@@ -1518,6 +1617,18 @@ export const authorEvidence = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly evidenceId: string }> => {
+    // Writing the first piece of evidence by hand IS the start of evidence
+    // review. The transition used to ride on the AI extraction run, so with
+    // AI off the case stayed at interview_complete for ever and the "finished
+    // assessing" gate — which requires evidence_review — never appeared.
+    const { error: beginError } = await context.supabase.rpc("scp_iv_begin_evidence_review", {
+      _case_id: data.caseId,
+    });
+    // Already in review is not a failure; only a real refusal is.
+    if (beginError && !/SCP_IV_ILLEGAL_TRANSITION/.test(beginError.message)) {
+      throw new Error(beginError.message);
+    }
+
     const { data: id, error } = await context.supabase.rpc("scp_iv_author_evidence", {
       _case_id: data.caseId,
       _question_id: data.questionId,
@@ -1595,9 +1706,15 @@ export interface TrustStageView {
   readonly letter: string | null;
   readonly ordinal: number | null;
   readonly nameSv: string | null;
+  readonly nameEn: string | null;
   readonly purposeSv: string | null;
+  readonly purposeEn: string | null;
   readonly humanResponsibilitySv: string | null;
+  readonly humanResponsibilityEn: string | null;
+  /** Swedish — authoritative. */
   readonly prohibitions: readonly string[];
+  /** English rendering, falling back to the Swedish statement per item. */
+  readonly prohibitionsEn: readonly string[];
   /**
    * Whether the stage permits any AI task at all. A boolean rather than the
    * task list: the individual task keys are internal registry identifiers, and
@@ -1633,9 +1750,13 @@ export const getTrustStage = createServerFn({ method: "GET" })
         letter: null,
         ordinal: null,
         nameSv: null,
+        nameEn: null,
         purposeSv: null,
+        purposeEn: null,
         humanResponsibilitySv: null,
+        humanResponsibilityEn: null,
         prohibitions: [],
+        prohibitionsEn: [],
         permitsAi: false,
         methodVersion: null,
       };
@@ -1646,9 +1767,13 @@ export const getTrustStage = createServerFn({ method: "GET" })
       letter: r.letter as string,
       ordinal: r.ordinal as number,
       nameSv: r.name_sv as string,
+      nameEn: (r.name_en as string | null) ?? null,
       purposeSv: r.purpose_sv as string,
+      purposeEn: (r.purpose_en as string | null) ?? null,
       humanResponsibilitySv: (r.human_responsibility_sv as string | null) ?? null,
+      humanResponsibilityEn: (r.human_responsibility_en as string | null) ?? null,
       prohibitions: (r.prohibitions as string[] | null) ?? [],
+      prohibitionsEn: (r.prohibitions_en as string[] | null) ?? [],
       permitsAi: Boolean(r.permits_ai),
       methodVersion: (r.method_version as number | null) ?? null,
     };

@@ -398,9 +398,24 @@ async function main(): Promise<void> {
     for (const mode of ["synthetic", "development_model", "production_model"]) {
       ok(ui.includes(`"${mode}"`), `7.4 the UI distinguishes ${mode}`);
     }
+    // The copy moved into src/i18n/dictionaries.ts when the module was made
+    // bilingual, so the assertion follows it — and now demands BOTH languages.
+    // "This came from a test engine" is exactly the sentence an English-
+    // reading recruiter must not lose.
+    const dict = await import("node:fs/promises").then((fs) =>
+      fs.readFile("src/i18n/dictionaries.ts", "utf8"),
+    );
     ok(
-      ui.includes("testmotor"),
+      /"iiu\.mode\.synthetic": "[^"]*testmotor/.test(dict),
       "7.5 synthetic output is named as a test engine in the recruiter's own language",
+    );
+    ok(
+      /"iiu\.mode\.synthetic": "[^"]*test engine/.test(dict),
+      "7.5b and in English, so the same warning survives the language toggle",
+    );
+    ok(
+      ui.includes("iiu.mode.synthetic"),
+      "7.5c and the provider-mode chip still renders that label",
     );
   }
 

@@ -8125,6 +8125,7 @@ export type Database = {
       scp_interview_prep_plans: {
         Row: {
           ai_disclosure: string
+          ai_disclosure_en: string | null
           ai_run_id: string | null
           approval_note: string | null
           approved_at: string | null
@@ -8143,6 +8144,7 @@ export type Database = {
         }
         Insert: {
           ai_disclosure?: string
+          ai_disclosure_en?: string | null
           ai_run_id?: string | null
           approval_note?: string | null
           approved_at?: string | null
@@ -8161,6 +8163,7 @@ export type Database = {
         }
         Update: {
           ai_disclosure?: string
+          ai_disclosure_en?: string | null
           ai_run_id?: string | null
           approval_note?: string | null
           approved_at?: string | null
@@ -8265,6 +8268,7 @@ export type Database = {
           id: string
           pack_version_id: string
           rationale_sv: string
+          statement_en: string | null
           statement_sv: string
         }
         Insert: {
@@ -8275,6 +8279,7 @@ export type Database = {
           id?: string
           pack_version_id: string
           rationale_sv: string
+          statement_en: string | null
           statement_sv: string
         }
         Update: {
@@ -8285,6 +8290,7 @@ export type Database = {
           id?: string
           pack_version_id?: string
           rationale_sv?: string
+          statement_en?: string | null
           statement_sv?: string
         }
         Relationships: [
@@ -14146,6 +14152,7 @@ export type Database = {
           _latency_ms?: number
           _output_tokens?: number
           _provider_mode?: string
+          _resolved_model?: string
           _raw_response?: Json
           _run_id: string
           _status: string
@@ -14159,6 +14166,7 @@ export type Database = {
           _input_hash?: string
           _model: string
           _provider: string
+          _provider_mode?: string
           _raw_request?: Json
           _task: string
         }
@@ -14201,6 +14209,10 @@ export type Database = {
         }[]
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
+      scp_iv_case_start_basis: {
+        Args: { _employer_id: string; _pack_version_id: string; _user_id?: string }
+        Returns: string
+      }
       scp_iv_confirm_evidence_proposal: {
         Args: {
           _correction_class?: string
@@ -14236,6 +14248,10 @@ export type Database = {
       }
       scp_iv_employer_may_read_pack: {
         Args: { _pack_version_id: string }
+        Returns: boolean
+      }
+      scp_iv_employer_can_start_interviews: {
+        Args: { _employer_id: string }
         Returns: boolean
       }
       scp_iv_erase_source: {
@@ -14321,6 +14337,15 @@ export type Database = {
         Args: { _items: Json; _run_id: string }
         Returns: number
       }
+      scp_iv_record_manual_prep_plan: {
+        Args: {
+          _case_id: string
+          _closing_guidance?: string
+          _opening_guidance?: string
+          _time_plan?: string
+        }
+        Returns: string
+      }
       scp_iv_record_prep_plan: {
         Args: { _items: Json; _plan: Json; _run_id: string }
         Returns: string
@@ -14355,6 +14380,21 @@ export type Database = {
       scp_iv_start_session: {
         Args: { _case_id: string; _interviewer_names?: string }
         Returns: string
+      }
+      scp_iv_startable_pack_versions: {
+        Args: { _employer_id: string }
+        Returns: {
+          content_status: string
+          entitlement_basis: string
+          locale: string
+          name_en: string
+          name_sv: string
+          pack_id: string
+          pack_slug: string
+          pack_version_id: string
+          validation_label: string
+          version_number: number
+        }[]
       }
       scp_join_human: {
         Args: { _items: string[]; _lang: string }
@@ -14640,6 +14680,7 @@ export type Database = {
       scp_trust_stage_for_case: {
         Args: { _case_id: string }
         Returns: {
+          human_responsibility_en: string
           human_responsibility_sv: string
           letter: string
           method_version: number
@@ -14648,6 +14689,7 @@ export type Database = {
           ordinal: number
           permits_ai: boolean
           prohibitions: string[]
+          prohibitions_en: string[]
           purpose_en: string
           purpose_sv: string
           stage_key: string

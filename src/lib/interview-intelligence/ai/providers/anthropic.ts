@@ -124,6 +124,10 @@ function isRetryableStatus(status: number): boolean {
 
 export class AnthropicProvider implements AiProvider {
   readonly name = "anthropic";
+  /** The exact model this adapter is configured to call. Never the vendor. */
+  get modelId(): string {
+    return this.model;
+  }
 
   private readonly apiKey: string;
   private readonly model: string;

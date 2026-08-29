@@ -14,6 +14,8 @@
 //   happens after the account is complete.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { useT } from "@/i18n/context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
@@ -26,6 +28,7 @@ import {
   CaseSteps,
   Chip,
   LevelZeroNote,
+  NextStep,
   Panel,
   PEACE_LABEL,
   State,
@@ -49,18 +52,19 @@ export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/interview",
 )({ ssr: false, component: Page, errorComponent: EmployerErrorState });
 
-const STATE_LABEL: Record<string, string> = {
-  not_started: "Ej påbörjad",
-  in_progress: "Pågår",
-  answered: "Besvarad",
-  incomplete: "Ofullständig",
-  revisit: "Återkom",
-  skipped: "Överhoppad",
+const STATE_LABEL: Record<string, TranslationKey> = {
+  not_started: "iiu.iv.state.not_started",
+  in_progress: "iiu.iv.state.in_progress",
+  answered: "iiu.iv.state.answered",
+  incomplete: "iiu.iv.state.incomplete",
+  revisit: "iiu.iv.state.revisit",
+  skipped: "iiu.iv.state.skipped",
 };
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
+  const { t, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
@@ -90,6 +94,14 @@ function Page() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [reflection, setReflection] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [noteError, setNoteError] = useState(false);
+  const [blockedNotice, setBlockedNotice] = useState(false);
+  // The draft and its target read through refs as well as state, because
+  // flushNote() is called from event handlers that must see the CURRENT value,
+  // not the one captured when the handler was created.
+  const draftRef = useRef("");
+  const storedRef = useRef<{ id: string | null; body: string; questionId: string } | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const saveNote = useMutation({
     mutationFn: (vars: {
@@ -108,10 +120,21 @@ function Page() {
         },
       }),
     onSuccess: () => {
-      setSavedAt(new Date().toLocaleTimeString("sv-SE"));
+      setSavedAt(new Date().toLocaleTimeString(lang === "en" ? "en-GB" : "sv-SE"));
+      setNoteError(false);
       void refresh();
     },
+    onError: () => setNoteError(true),
   });
+  // Optimistic question state. The chip used to wait for a refetch, so
+  // "Markera besvarad" looked like it had done nothing for a beat -- exactly
+  // the doubt the owner reported.
+  const [pendingState, setPendingState] = useState<Record<string, string>>({});
+  const [qStateError, setQStateError] = useState<{
+    sessionId: string;
+    questionId: string;
+    state: "answered" | "incomplete" | "revisit" | "in_progress";
+  } | null>(null);
   const setQState = useMutation({
     mutationFn: (vars: {
       sessionId: string;
@@ -121,7 +144,29 @@ function Page() {
       qStateFn({
         data: { sessionId: vars.sessionId, questionId: vars.questionId, state: vars.state },
       }),
-    onSuccess: refresh,
+    onMutate: (vars) => {
+      setPendingState((st) => ({ ...st, [vars.questionId]: vars.state }));
+      setQStateError(null);
+    },
+    onSuccess: async (_result, vars) => {
+      await refresh();
+      setPendingState((st) => {
+        const next = { ...st };
+        delete next[vars.questionId];
+        return next;
+      });
+    },
+    // Roll the chip BACK. An optimistic update with no failure path is a lie
+    // told confidently: the chip would keep saying "Besvarad" after the write
+    // had failed, which is worse than never showing it early at all.
+    onError: (_err, vars) => {
+      setPendingState((st) => {
+        const next = { ...st };
+        delete next[vars.questionId];
+        return next;
+      });
+      setQStateError(vars);
+    },
   });
   const setSState = useMutation({
     mutationFn: (vars: {
@@ -144,8 +189,69 @@ function Page() {
   useEffect(() => {
     setDraft(existingNote?.body ?? "");
     setSavedAt(null);
+    setNoteError(false);
+    setBlockedNotice(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
+
+  // Mirror into refs so flushNote() always sees the live values.
+  draftRef.current = draft;
+  storedRef.current = question
+    ? { id: existingNote?.id ?? null, body: existingNote?.body ?? "", questionId: question.id }
+    : null;
+  sessionIdRef.current = session?.id ?? null;
+
+  const noteDirty = storedRef.current !== null && draft !== storedRef.current.body;
+
+  /**
+   * Write the pending note NOW and report whether it landed.
+   *
+   * The debounce used to be cancelled by its own cleanup whenever the
+   * interviewer changed question, so a note typed in the last second before
+   * pressing Next was discarded without anybody being told. Every action that
+   * moves away from the current question awaits this first, and does not
+   * proceed unless it returns true.
+   *
+   * An empty draft over a stored note is a deliberate clearing, not a
+   * no-op: the stored body is overwritten so the record stops saying
+   * something the interviewer has retracted.
+   */
+  const flushNote = async (): Promise<boolean> => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const stored = storedRef.current;
+    const sessionId = sessionIdRef.current;
+    if (!stored || !sessionId) return true;
+    const body = draftRef.current;
+    if (body === stored.body) return true;
+    // Nothing stored and nothing typed: there is no note to write.
+    if (stored.id === null && body.trim() === "") return true;
+    try {
+      await saveNote.mutateAsync({
+        sessionId,
+        questionId: stored.questionId,
+        body,
+        noteId: stored.id,
+      });
+      return true;
+    } catch {
+      setNoteError(true);
+      return false;
+    }
+  };
+
+  /** Run an action only if the pending note is safely stored first. */
+  const guarded = async (action: () => void | Promise<void>) => {
+    const ok = await flushNote();
+    if (!ok) {
+      setBlockedNotice(true);
+      return;
+    }
+    setBlockedNotice(false);
+    await action();
+  };
 
   // Autosave. An interview is a live conversation; nobody should have to
   // remember to press save while a person is talking to them.
@@ -154,7 +260,9 @@ function Page() {
     if (draft === (existingNote?.body ?? "")) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      if (draft.trim() === "") return;
+      // An empty draft with no stored note is nothing to save; an empty draft
+      // OVER a stored note is a clearing, and does save.
+      if (draft.trim() === "" && !existingNote?.id) return;
       saveNote.mutate({
         sessionId: session.id,
         questionId: question.id,
@@ -167,6 +275,32 @@ function Page() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
+
+  // Leaving the route entirely -- a reload, a closed tab, a link elsewhere --
+  // is the one exit the guarded handlers cannot intercept.
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (draftRef.current !== (storedRef.current?.body ?? "")) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      // A best-effort write on unmount. It cannot be awaited, so it is a
+      // safety net rather than the mechanism -- the guarded handlers are.
+      const stored = storedRef.current;
+      const sessionId = sessionIdRef.current;
+      if (!stored || !sessionId) return;
+      if (draftRef.current === stored.body) return;
+      if (stored.id === null && draftRef.current.trim() === "") return;
+      saveNote.mutate({
+        sessionId,
+        questionId: stored.questionId,
+        body: draftRef.current,
+        noteId: stored.id,
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (ws.isLoading)
     return (
@@ -195,7 +329,7 @@ function Page() {
     return shell(
       <State
         kind={nf ? "denied" : "error"}
-        message={nf ? undefined : interviewErrorMessage(q.error)}
+        message={nf ? undefined : interviewErrorMessage(q.error, t)}
       />,
     );
   }
@@ -206,29 +340,26 @@ function Page() {
       <>
         <h1 className="text-2xl font-semibold text-foreground">{d.title}</h1>
         <div className="mt-4 max-w-3xl">
-          <State kind="empty">
-            Ingen intervjusession har startats. Gå till förberedelsen, godkänn intervjuplanen och
-            starta intervjun därifrån.
-          </State>
+          <State kind="empty">{t("iiu.iv.nosession")}</State>
         </div>
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId/prepare"
           params={{ employerSlug, caseId }}
           className={`${BUTTON} mt-4`}
         >
-          Till förberedelsen
+          {t("iiu.iv.toprep")}
         </Link>
       </>,
     );
   }
 
   const qState = (id: string) =>
-    session.questions.find((s) => s.questionId === id)?.state ?? "not_started";
+    pendingState[id] ?? session.questions.find((s) => s.questionId === id)?.state ?? "not_started";
   const stagePractices = d.methodPractices.filter((p) => p.peaceStage === session.peaceStage);
 
   return shell(
     <>
-      <nav aria-label="Brödsmulor" className="text-sm">
+      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
           to="/employer/$employerSlug/interview-intelligence"
           params={{ employerSlug }}
@@ -243,51 +374,75 @@ function Page() {
         <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
-          <Chip tone={session.status === "paused" ? "attention" : "work"} srPrefix="Session">
+          <Chip
+            tone={session.status === "paused" ? "attention" : "work"}
+            srPrefix={t("iiu.iv.sess.srprefix")}
+          >
             {session.status === "paused"
-              ? "Pausad"
+              ? t("iiu.iv.sess.paused")
               : session.status === "completed"
-                ? "Avslutad"
-                : "Pågår"}
+                ? t("iiu.iv.sess.completed")
+                : t("iiu.iv.sess.inprogress")}
           </Chip>
-          <Chip tone="work" srPrefix="PEACE-steg">
-            {PEACE_LABEL[session.peaceStage]}
+          <Chip tone="work" srPrefix={t("iiu.iv.peacestep")}>
+            {uiLabel(PEACE_LABEL, session.peaceStage, t)}
           </Chip>
-          {savedAt && <Chip tone="confirmed">Sparat {savedAt}</Chip>}
+          {savedAt && (
+            <Chip tone="confirmed">
+              {t("iiu.iv.saved")} {savedAt}
+            </Chip>
+          )}
         </div>
       </header>
 
       <div className="mt-6 max-w-4xl">
-        <TrustStageBanner stage={trustQ.data ?? null} />
+        <TrustStageBanner stage={trustQ.data ?? null} aiAvailable={d.aiAvailable} />
       </div>
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       {session.status === "paused" && (
         <div className="mt-6 max-w-3xl">
-          <Panel tone="attention" role="status" title="Intervjun är pausad">
-            <p>Anteckningarna är sparade. Fortsätt när ni är redo.</p>
+          <Panel tone="attention" role="status" title={t("iiu.iv.paused.title")}>
+            <p>{t("iiu.iv.paused.body")}</p>
             <button
               type="button"
               className={`${BUTTON} mt-2`}
               onClick={() => setSState.mutate({ sessionId: session.id, status: "in_progress" })}
             >
-              Återuppta
+              {t("iiu.iv.resume")}
             </button>
           </Panel>
         </div>
       )}
 
+      {/* Owner UAT: the interview page worked but did not tell the
+          interviewer how to actually run it. Seven lines, collapsed by
+          default so it does not sit between them and the candidate. */}
+      <details className="mt-6 max-w-3xl rounded-lg border border-border p-4" open>
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">
+          {t("iiu.iv.howto.title")}
+        </summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted-foreground">
+          <li>{t("iiu.iv.howto.1")}</li>
+          <li>{t("iiu.iv.howto.2")}</li>
+          <li>{t("iiu.iv.howto.3")}</li>
+          <li>{t("iiu.iv.howto.4")}</li>
+          <li>{t("iiu.iv.howto.5")}</li>
+          <li>{t("iiu.iv.howto.6")}</li>
+          <li className="font-medium text-foreground">{t("iiu.iv.howto.7")}</li>
+        </ol>
+      </details>
+
       {/* PEACE stage control */}
       <section className="mt-6" aria-labelledby="s-peace">
         <h2 id="s-peace" className="text-sm font-semibold text-foreground">
-          PEACE-steg
+          {t("iiu.iv.peacestep")}
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          PEACE strukturerar intervjuarens arbete. Det säger ingenting om kandidaten.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.peace.note")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {(["planning", "engage_explain", "account", "closure", "evaluation"] as const).map(
             (stage) => (
@@ -298,7 +453,7 @@ function Page() {
                 className={`${BUTTON} ${session.peaceStage === stage ? "border-accent font-semibold" : ""}`}
                 onClick={() => setSState.mutate({ sessionId: session.id, peaceStage: stage })}
               >
-                {PEACE_LABEL[stage]}
+                {uiLabel(PEACE_LABEL, stage, t)}
               </button>
             ),
           )}
@@ -309,9 +464,11 @@ function Page() {
               <li key={p.id} className="rounded-md border border-border p-2.5 text-sm">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <Chip tone={p.practiceKind === "warning" ? "attention" : "work"}>
-                    {uiLabel(PRACTICE_KIND_LABEL, p.practiceKind)}
+                    {uiLabel(PRACTICE_KIND_LABEL, p.practiceKind, t)}
                   </Chip>
-                  <span className="text-foreground">{p.statementSv}</span>
+                  <span className="text-foreground">
+                    {(lang === "en" ? p.statementEn : p.statementSv) ?? p.statementSv}
+                  </span>
                 </div>
                 {/*
                   scp_interview_method_practices.rationale is NOT rendered.
@@ -327,9 +484,7 @@ function Page() {
                   which is content work rather than a rendering fix.
                 */}
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {p.hasResearchClaim
-                    ? "Kopplad till en registrerad forskningsutsaga."
-                    : "Beprövad praxis, inte ett forskningsresultat."}
+                  {p.hasResearchClaim ? t("iiu.iv.practice.claim") : t("iiu.iv.practice.craft")}
                 </p>
               </li>
             ))}
@@ -340,61 +495,98 @@ function Page() {
       {/* Question navigation — buttons, never drag-and-drop, order is fixed */}
       <section className="mt-8" aria-labelledby="s-questions">
         <h2 id="s-questions" className="text-lg font-semibold text-foreground">
-          Kärnfrågor{" "}
+          {t("iiu.iv.questions")}{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            ({d.questions.length} i fast ordning)
+            ({d.questions.length} {t("iiu.iv.fixedorder")})
           </span>
         </h2>
-        <nav aria-label="Kärnfrågor" className="mt-3 flex flex-wrap gap-2">
+        <nav aria-label={t("iiu.iv.questions")} className="mt-3 flex flex-wrap gap-2">
           {d.questions.map((qq, i) => {
             const st = qState(qq.id);
             return (
               <button
                 key={qq.id}
                 type="button"
-                onClick={() => setActive(i)}
+                onClick={() => void guarded(() => setActive(i))}
                 aria-current={i === active ? "true" : undefined}
                 className={`${BUTTON} ${i === active ? "border-accent font-semibold" : ""}`}
               >
                 {qq.code}
-                <span className="ml-1.5 text-xs text-muted-foreground">{STATE_LABEL[st]}</span>
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  {uiLabel(STATE_LABEL, st, t)}
+                  {pendingState[qq.id] !== undefined && ` · ${t("iiu.iv.qstate.pending")}`}
+                </span>
               </button>
             );
           })}
         </nav>
       </section>
 
+      {qStateError && (
+        <div className="mt-3 max-w-3xl">
+          <Panel tone="governance" role="alert" title={t("iiu.iv.qstate.failed")}>
+            <p>
+              <button
+                type="button"
+                className={BUTTON}
+                disabled={setQState.isPending}
+                onClick={() => setQState.mutate(qStateError)}
+              >
+                {t("iiu.iv.qstate.retry")}
+              </button>
+            </p>
+          </Panel>
+        </div>
+      )}
+
       {question && (
         <section className="mt-6 max-w-4xl" aria-labelledby="s-current">
           <h3 id="s-current" className="sr-only">
-            Aktuell fråga
+            {t("iiu.iv.current")}
           </h3>
+
+          {/* Where the interviewer is in the fixed set. A count, never a
+              percentage or a score: this measures the conversation's progress
+              through eight governed questions, not the candidate. */}
+          {/* Q1-Q8 are governed content locked to the package version and must
+              never be rewritten — including by translation. An English-reading
+              interviewer needs to know that is deliberate, not a gap. */}
+          {lang === "en" && (
+            <p className="mb-2 max-w-[68ch] text-xs text-muted-foreground">
+              {t("iiu.iv.packlocale")}
+            </p>
+          )}
+
+          <p className="mb-2 text-sm font-medium text-muted-foreground" aria-live="polite">
+            {t("iiu.iv.progress.question")} {active + 1} {t("iiu.iv.progress.of")}{" "}
+            {d.questions.length}
+          </p>
 
           <div className="rounded-lg border border-border p-4">
             <div className="flex flex-wrap items-center gap-2">
               <Chip tone="work">{question.code}</Chip>
               <Chip>
-                {question.questionType === "behavioural" ? "Beteendebaserad" : "Situationsbaserad"}
+                {question.questionType === "behavioural"
+                  ? t("iiu.iv.type.behavioural")
+                  : t("iiu.iv.type.situational")}
               </Chip>
               <Chip
                 tone={qState(question.id) === "answered" ? "confirmed" : "neutral"}
-                srPrefix="Frågestatus"
+                srPrefix={t("iiu.iv.questionstatus")}
               >
-                {STATE_LABEL[qState(question.id)]}
+                {uiLabel(STATE_LABEL, qState(question.id), t)}
               </Chip>
             </div>
 
             <blockquote className="mt-3 border-l-2 border-accent pl-3 text-base leading-relaxed text-foreground">
               {question.promptSv}
             </blockquote>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Läses ordagrant. Formuleringen kommer från den låsta paketversionen.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.verbatim")}</p>
 
             {question.probes.length > 0 && (
               <>
                 <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Godkända följdfrågor
+                  {t("iiu.iv.approvedprobes")}
                 </h4>
                 <ul className="mt-2 space-y-1">
                   {question.probes.map((p) => (
@@ -409,7 +601,7 @@ function Page() {
             {d.generalProbes.length > 0 && (
               <>
                 <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Generella följdfrågor
+                  {t("iiu.iv.generalprobes")}
                 </h4>
                 <ul className="mt-2 flex flex-wrap gap-1.5">
                   {d.generalProbes.map((p) => (
@@ -424,12 +616,12 @@ function Page() {
             {question.dimensions.length > 0 && (
               <>
                 <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Evidens att söka
+                  {t("iiu.iv.evidencetoseek")}
                 </h4>
                 <ul className="mt-2 flex flex-wrap gap-1.5">
                   {question.dimensions.map((dim) => (
                     <li key={dim.id}>
-                      <Chip>{dim.labelSv}</Chip>
+                      <Chip>{(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}</Chip>
                     </li>
                   ))}
                 </ul>
@@ -439,12 +631,56 @@ function Page() {
             {/* Notes. A SOURCE, and labelled as one. */}
             <div className="mt-5">
               <label htmlFor="note" className="text-sm font-medium text-foreground">
-                Anteckningar
+                {t("iiu.iv.notes")}
               </label>
               <p id="note-hint" className="mt-0.5 text-xs text-muted-foreground">
-                Detta är ett underlag, inte evidens och inte en bedömning. Evidens bekräftas efter
-                intervjun. Sparas automatiskt.
+                {t("iiu.iv.notes.hint")}
               </p>
+              {/* Owner UAT: the interviewer could not tell whether what they
+                  had typed was actually stored. The timestamp existed but sat
+                  far away in the header, so it read as page furniture rather
+                  than as an answer to "did that save?". */}
+              {/* A pending or failed save is never reported as saved. The
+                  three states are distinct on purpose: "saving", "not saved
+                  yet" and "saved at HH:MM" mean different things to somebody
+                  about to press Next. */}
+              <p
+                role="status"
+                aria-live="polite"
+                className={`mt-1 text-xs font-medium ${
+                  noteError ? "text-destructive" : "text-muted-foreground"
+                }`}
+              >
+                {saveNote.isPending
+                  ? t("iiu.iv.saving")
+                  : noteError
+                    ? t("iiu.iv.note.unsaved")
+                    : noteDirty
+                      ? t("iiu.iv.note.unsaved")
+                      : savedAt
+                        ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
+                        : "\u00a0"}
+              </p>
+
+              {noteError && (
+                <div className="mt-2">
+                  <Panel tone="governance" role="alert" title={t("iiu.iv.note.savefailed")}>
+                    {blockedNotice && <p>{t("iiu.iv.note.blocked")}</p>}
+                    <p className="mt-2">
+                      <button
+                        type="button"
+                        className={BUTTON}
+                        disabled={saveNote.isPending}
+                        onClick={() => void flushNote()}
+                      >
+                        {saveNote.isPending
+                          ? t("iiu.iv.note.savingbefore")
+                          : t("iiu.iv.note.retry")}
+                      </button>
+                    </p>
+                  </Panel>
+                </div>
+              )}
               <textarea
                 id="note"
                 rows={8}
@@ -467,7 +703,7 @@ function Page() {
                   })
                 }
               >
-                Markera besvarad
+                {t("iiu.iv.markanswered")}
               </button>
               <button
                 type="button"
@@ -480,7 +716,7 @@ function Page() {
                   })
                 }
               >
-                Ofullständig
+                {t("iiu.iv.state.incomplete")}
               </button>
               <button
                 type="button"
@@ -493,23 +729,25 @@ function Page() {
                   })
                 }
               >
-                Återkom
+                {t("iiu.iv.state.revisit")}
               </button>
               <button
                 type="button"
                 className={BUTTON}
                 disabled={active === 0}
-                onClick={() => setActive((i) => Math.max(0, i - 1))}
+                onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
               >
-                Föregående
+                {t("iiu.iv.previous")}
               </button>
               <button
                 type="button"
                 className={BUTTON}
                 disabled={active >= d.questions.length - 1}
-                onClick={() => setActive((i) => Math.min(d.questions.length - 1, i + 1))}
+                onClick={() =>
+                  void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
+                }
               >
-                Nästa
+                {t("iiu.iv.next")}
               </button>
             </div>
           </div>
@@ -517,11 +755,9 @@ function Page() {
           {/* Anchors shown as behaviour to listen for — never as a control */}
           <div className="mt-4 rounded-lg border border-border p-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Beteendeankare — för att lyssna efter, inte för att bedöma nu
+              {t("iiu.iv.anchors.title")}
             </h4>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Bedömningen görs efter avslutad redogörelse, mot citerad evidens.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.anchors.note")}</p>
             <div className="mt-3 space-y-2">
               {question.anchors
                 .filter((a) => a.level === 0)
@@ -563,7 +799,7 @@ function Page() {
       {d.prohibitedAreas.length > 0 && (
         <section className="mt-8 max-w-4xl" aria-labelledby="s-prohibited">
           <h2 id="s-prohibited" className="text-lg font-semibold text-foreground">
-            Förbjudna områden
+            {t("iiu.iv.prohibited")}
           </h2>
           <ul className="mt-3 space-y-1.5">
             {d.prohibitedAreas.slice(0, 8).map((a) => (
@@ -571,7 +807,7 @@ function Page() {
                 key={a.id}
                 className="rounded-md border border-border p-2.5 text-sm text-foreground"
               >
-                {a.statementSv}
+                {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
               </li>
             ))}
           </ul>
@@ -581,16 +817,15 @@ function Page() {
       {/* Session controls */}
       <section className="mt-10 max-w-3xl" aria-labelledby="s-session">
         <h2 id="s-session" className="text-lg font-semibold text-foreground">
-          Sessionen
+          {t("iiu.iv.session")}
         </h2>
         {session.status !== "completed" ? (
           <>
             <label htmlFor="reflect" className="mt-3 block text-sm font-medium text-foreground">
-              Intervjuarens egen reflektion (ORBIT)
+              {t("iiu.iv.reflection.title")}
             </label>
             <p id="reflect-hint" className="mt-0.5 text-xs text-muted-foreground">
-              Om ditt eget genomförande — ställde du frågorna i ordning, var bemötandet respektfullt
-              och autonomistödjande? Detta handlar om dig, inte om kandidaten.
+              {t("iiu.iv.reflection.note")}
             </p>
             <textarea
               id="reflect"
@@ -604,40 +839,41 @@ function Page() {
               <button
                 type="button"
                 className={BUTTON}
-                onClick={() => setSState.mutate({ sessionId: session.id, status: "paused" })}
+                onClick={() =>
+                  void guarded(() => setSState.mutate({ sessionId: session.id, status: "paused" }))
+                }
               >
-                Pausa
+                {t("iiu.iv.pause")}
               </button>
               <button
                 type="button"
                 className={PRIMARY_BUTTON}
                 onClick={() =>
-                  setSState.mutate({
-                    sessionId: session.id,
-                    status: "completed",
-                    peaceStage: "evaluation",
-                    processReflection: reflection || undefined,
-                  })
+                  void guarded(() =>
+                    setSState.mutate({
+                      sessionId: session.id,
+                      status: "completed",
+                      peaceStage: "evaluation",
+                      processReflection: reflection || undefined,
+                    }),
+                  )
                 }
               >
-                Avsluta intervjun
+                {t("iiu.iv.finish")}
               </button>
             </div>
           </>
         ) : (
           <div className="mt-3">
-            <Panel tone="confirmed" title="Intervjun är genomförd">
-              <p>
-                Nästa steg är evidensgranskning: AI föreslår utdrag, du bekräftar, redigerar eller
-                avvisar.
-              </p>
+            <Panel tone="confirmed" title={t("iiu.iv.completed.title")}>
+              <p>{t(d.aiAvailable ? "iiu.iv.completed.body" : "iiu.iv.completed.body.manual")}</p>
             </Panel>
             <Link
               to="/employer/$employerSlug/interview-intelligence/$caseId/evidence"
               params={{ employerSlug, caseId }}
               className={`${PRIMARY_BUTTON} mt-3`}
             >
-              Till evidensgranskning
+              {t("iiu.iv.toevidence")}
             </Link>
           </div>
         )}

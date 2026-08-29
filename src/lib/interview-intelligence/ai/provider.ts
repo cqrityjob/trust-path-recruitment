@@ -53,7 +53,18 @@ export interface AiResponse {
 }
 
 export interface AiProvider {
+  /** The vendor or engine family: "anthropic", "deterministic". */
   readonly name: string;
+  /**
+   * The EXACT model identifier this provider is configured to call, never the
+   * vendor name. "anthropic" is not a model; "claude-sonnet-5" is. Provenance
+   * keeps the two apart because a run that cannot name its model cannot be
+   * reproduced or counted in a shadow evaluation.
+   *
+   * This is the INTENT. The response may report a more precise id (a dated
+   * point release), and settlement prefers that over this.
+   */
+  readonly modelId: string;
   complete(request: AiRequest): Promise<AiResponse>;
 }
 
