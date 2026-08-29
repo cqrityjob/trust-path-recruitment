@@ -40,6 +40,7 @@ interface DeploymentTargets {
     state: string;
     writePolicy: string;
   };
+  retired?: Array<{ projectRef: ProjectRef; reason: string; supersededBy?: ProjectRef }>;
   excluded: Array<{ projectRef: ProjectRef; reason: string }>;
 }
 
@@ -53,7 +54,20 @@ const failures: string[] = [];
 const OWNER_LOCKED = {
   lovableProjectId: "9ec625ef-34a1-4b4b-8cbb-712cae168579",
   currentLiveRef: "zrahptwsnjcdyzfywbeh",
-  candidateProductionRef: "vcgwvtmzftmulmoxmufv",
+  // The owner schema target. This was vcgwvtmzftmulmoxmufv until 2026-08-29.
+  //
+  // vcgw was the INTENDED target in the 2026-08-28 bootstrap runbook, and its
+  // canonical bootstrap FAILED partway through the migration history that same
+  // day. The owner then recorded a successful fresh bootstrap on wryg at 21:43
+  // in release-state.json, with a GitHub check run id and a verified 225-row
+  // ledger through 20260925090000. The later outcome record wins over the
+  // earlier plan, and this lock now names the project that actually holds the
+  // canonical history rather than the one that was supposed to.
+  candidateProductionRef: "wrygicdfxwjnrugduxnt",
+  // Named so it can never quietly return as a write target. A retired project
+  // is not the same as an excluded one: vcgw was legitimately attempted and
+  // failed, mlvz was never ours to write to at all.
+  retiredSchemaTargetRef: "vcgwvtmzftmulmoxmufv",
   permanentlyExcludedRef: "mlvzmiutmyyqeuvjglco",
 } as const;
 
@@ -80,7 +94,9 @@ const migrationPolicy = JSON.parse(read("supabase/migrations-policy.json")) as M
 const appEnv = parseEnv(read(".env"));
 const configToml = read("supabase/config.toml");
 
-if (targets.schemaVersion !== 1) {
+// v2 added `retired` and the evidence fields when the schema target was
+// corrected from the failed vcgw bootstrap to wryg.
+if (targets.schemaVersion !== 2) {
   fail(`unsupported deployment-targets schemaVersion ${targets.schemaVersion}`);
 }
 if (targets.lovableProjectId !== OWNER_LOCKED.lovableProjectId) {
@@ -94,6 +110,18 @@ if (targets.candidateProduction.projectRef !== OWNER_LOCKED.candidateProductionR
 }
 if (!targets.excluded.some((entry) => entry.projectRef === OWNER_LOCKED.permanentlyExcludedRef)) {
   fail(`permanently excluded ref ${OWNER_LOCKED.permanentlyExcludedRef} is missing`);
+}
+// The failed bootstrap target must stay recorded as retired. Dropping the entry
+// is how it would silently become available again.
+if (!(targets.retired ?? []).some((e) => e.projectRef === OWNER_LOCKED.retiredSchemaTargetRef)) {
+  fail(
+    `retired schema target ${OWNER_LOCKED.retiredSchemaTargetRef} must stay recorded as retired, not removed`,
+  );
+}
+if (targets.writeTargetRef === OWNER_LOCKED.retiredSchemaTargetRef) {
+  fail(
+    `${OWNER_LOCKED.retiredSchemaTargetRef} is a RETIRED schema target whose bootstrap failed; it may never be a write target again`,
+  );
 }
 
 const allRefs = [

@@ -43,6 +43,7 @@
     "db:test": "bash scripts/db-test.sh", 
     "migrations:check": "bun run scripts/migration-safety-check.ts",
   "migrations-duplicate:check": "bun run scripts/migration-duplicate-check.ts",
+    "schema-first-release:check": "bun run scripts/schema-first-release-check.ts", 
     "release-parity:check": "bun run scripts/release-parity-check.ts",
     "release-parity:gate": "bun run scripts/release-parity-check.ts --release",
     "backend-target-lock:check": "bun run scripts/backend-target-lock-check.ts",

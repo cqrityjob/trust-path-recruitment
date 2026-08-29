@@ -1,22 +1,47 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "$comment": [
+    "Which Supabase project may receive schema, and which one the application talks to.",
+    "These are two different projects until the cutover PR, and conflating them is the",
+    "failure this file exists to prevent.",
+    "",
+    "2026-08-29 identity repair. This file named vcgwvtmzftmulmoxmufv as the owner",
+    "schema target. That was the INTENDED target in the 2026-08-28 17:13 bootstrap",
+    "runbook. The bootstrap against it FAILED that same day (recorded in",
+    "scripts/db-test.sh), and the owner then recorded a successful fresh bootstrap on",
+    "wrygicdfxwjnrugduxnt at 21:43 in supabase/release-state.json, citing GitHub check",
+    "run 98963493163 and a verified 225-row canonical ledger through 20260925090000.",
+    "The later outcome record wins over the earlier plan. vcgw is retired below rather",
+    "than deleted, so it can never quietly become a write target again and the history",
+    "stays readable."
+  ],
   "releaseMode": "bootstrap_authorised",
   "automaticProductionDeployEnabled": true,
   "verificationStrategy": "github_ci_disposable_postgres",
-  "writeTargetRef": "vcgwvtmzftmulmoxmufv",
+  "writeTargetRef": "wrygicdfxwjnrugduxnt",
   "lovableProjectId": "9ec625ef-34a1-4b4b-8cbb-712cae168579",
   "currentLive": {
     "kind": "lovable_cloud",
     "projectRef": "zrahptwsnjcdyzfywbeh",
-    "writePolicy": "legacy_tracked_release_only"
+    "writePolicy": "legacy_tracked_release_only",
+    "note": "The application still runs against Lovable Cloud. Runtime cutover is separate, later, verified work and is NOT part of the schema release."
   },
   "candidateProduction": {
     "kind": "owned_supabase",
-    "projectRef": "vcgwvtmzftmulmoxmufv",
+    "projectRef": "wrygicdfxwjnrugduxnt",
     "region": "eu-central-1",
     "state": "schema_bootstrap_authorised",
-    "writePolicy": "supabase_github_integration_only"
+    "writePolicy": "supabase_github_integration_only",
+    "canonicalLedgerThrough": "20260925090000",
+    "evidence": "supabase/release-state.json evidenceBaseline: fresh empty-project bootstrap from canonical main ee0dda59808cbdb9a74c7766be4456fdedccaea1, GitHub check run 98963493163, 225 active canonical migrations verified 2026-08-28."
   },
+  "retired": [
+    {
+      "projectRef": "vcgwvtmzftmulmoxmufv",
+      "reason": "Intended owner schema target on 2026-08-28; its canonical bootstrap FAILED partway through the migration history and was abandoned in favour of a fresh empty project. Never a valid write target again.",
+      "supersededBy": "wrygicdfxwjnrugduxnt"
+    }
+  ],
   "excluded": [
     {
       "projectRef": "mlvzmiutmyyqeuvjglco",
