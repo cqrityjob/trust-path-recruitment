@@ -387,6 +387,19 @@ jobs:
       # A type-check is not a build. This compiles the real production bundle,
       # which is where route generation, SSR entry points and bundler-level
       # failures actually surface.
+      # The Security Career Center was rebuilt from eleven sections to six.
+      # This guard holds the shape that made it a product rather than a
+      # catalogue of unfinished content: the six sections in order, the four
+      # merged discovery sections and four empty-content panels staying
+      # retired, publishability computed from the guides themselves (so a
+      # stub cannot be carded, linked or reached by direct URL), every
+      # displayed count derived, the explorer's URL round-trip / clear-all /
+      # zero-result recovery, career routes that assert no progression the
+      # data does not record, the translated competency label, SV/EN parity
+      # and the accessibility contract.
+      - name: Security Career Center check
+        run: bun run career-center:check
+
       - name: Production build
         run: bun run build
 

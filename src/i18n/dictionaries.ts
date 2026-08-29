@@ -2477,90 +2477,182 @@ export const dictionaries = {
     "sca.disclaimer.footer":
       "Ditt resultat ger karriärvägledning, inte ett behörighetsbeslut. CQrityjob fattar inga anställningsbeslut.",
 
-    "cc.hero.eyebrow": "Säkerhetskarriärcenter",
-    "cc.hero.title": "Din karriär inom säkerhet börjar här.",
+    // ── Security Career Center ──────────────────────────────────────────
+    //
+    // Six sections, in this order: hero, "where are you today", career test,
+    // profession explorer, career routes, how the content is built. Keys are
+    // grouped the same way so a copy change is findable from the screen.
+    //
+    // Numbers are NEVER written into copy. The published-guide count, the
+    // question count and the result count are derived and rendered beside
+    // these strings — that is why several keys read as a bare noun.
+
+    // § 1 — Hero
+    "cc.hero.eyebrow": "Yrkesguider · Karriärvägar · Karriärtest",
+    "cc.hero.title": "Säkerhetskarriärcenter",
     "cc.hero.lead":
-      "Utforska yrken, karriärvägar, kompetens och utbildning inom hela säkerhetsbranschen — samlat på ett ställe.",
-    "cc.hero.cta.assessment": "Gör karriärtestet",
-    "cc.hero.cta.browse": "Bläddra bland yrken",
+      "Här får du veta vad yrkena inom säkerhetsbranschen faktiskt innebär, vad som krävs för att komma in i dem och vilket steg som är rimligt för dig härnäst.",
+    "cc.hero.cta.test": "Starta karriärtestet — ca 5 min, inget konto",
+    "cc.hero.cta.explore": "Utforska yrken",
+    "cc.hero.trust":
+      "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cc.hero.fact.guides": "färdiga yrkesguider",
+    "cc.hero.fact.sources.title": "Källhänvisade och granskade",
+    "cc.hero.fact.sources.body":
+      "Varje guide anger sina källor och datumet den senast granskades.",
+    "cc.hero.fact.market.title": "För svenska säkerhetsbranschen",
+    "cc.hero.fact.market.body":
+      "Reglering, krav och yrkesbenämningar beskrivs utifrån svenska förhållanden.",
 
-    "cc.hero.stats.lead":
-      "Sveriges karriärplattform för säkerhetsbranschen — verifierade yrken, tydliga vägar, mätbar kompetens.",
-    "cc.hero.stats.professions.label": "Yrken",
-    "cc.hero.stats.professions.value": "60+",
-    // Value is derived from the taxonomy (professionFamilies minus the entry path).
-    "cc.hero.stats.areas.label": "Yrkesområden",
-    "cc.hero.stats.languages.label": "Språk",
-    "cc.hero.stats.languages.value": "SV · EN",
-    "cc.hero.stats.model.label": "Modell",
-    "cc.hero.stats.model.value": "v1.0",
+    // § 2 — Var står du i dag?
+    "cc.where.title": "Var står du i dag?",
+    "cc.where.subtitle":
+      "Tre ingångar. Var och en tar dig till en annan del av innehållet — välj den som stämmer.",
+    "cc.where.curious.title": "Jag är nyfiken på säkerhetsbranschen",
+    "cc.where.curious.body":
+      "Du har ingen tidigare erfarenhet från branschen och vill veta var man faktiskt börjar.",
+    "cc.where.curious.cta": "Se roller du kan börja i utan tidigare erfarenhet",
+    "cc.where.working.title": "Jag arbetar redan inom säkerhet",
+    "cc.where.working.body":
+      "Du kan yrket och vill se vilka roller som ligger ett eller två steg längre fram.",
+    "cc.where.working.cta": "Se roller på nästa nivå",
+    "cc.where.org.title": "Jag representerar en organisation",
+    "cc.where.org.body":
+      "Du ska rekrytera, bedöma eller utveckla personal med säkerhetsansvar.",
+    "cc.where.org.cta": "Se hur ni kan bedöma säkerhetskompetens",
 
-    "cc.featured.title": "Utvalda yrken",
-    "cc.featured.subtitle": "En första uppsättning yrkesguider. Fler tillkommer löpande.",
-    "cc.categories.title": "Bläddra efter kategori",
-    "cc.categories.subtitle": "Säkerhetsbranschen består av många specialiserade områden.",
-    "cc.pathways.title": "Karriärvägar",
-    "cc.pathways.subtitle": "Se hur roller kopplas ihop över tid och över specialiseringar.",
-    "cc.pathways.example.title": "Exempel: från student till säkerhetschef",
-    "cc.education.title": "Utbildning",
-    "cc.education.subtitle": "Vi kurerar information om relevanta utbildningsvägar inom säkerhet.",
-    "cc.education.placeholder": "Utbildningsinformation byggs upp löpande.",
-    "cc.certs.title": "Certifikat",
-    "cc.certs.subtitle": "Erkända certifieringar och specialiseringar per yrke.",
-    "cc.certs.placeholder": "Certifikatsdatabasen är under uppbyggnad.",
-    "cc.assessment.title": "Karriärtest",
-    "cc.assessment.body":
-      "Osäker på var du passar in? Gör det kostnadsfria karriärtestet och få vägledning.",
-    "cc.articles.title": "Senaste artiklar",
-    "cc.articles.subtitle": "Artiklar och guider byggs upp löpande.",
-    "cc.articles.placeholder": "Redaktionellt innehåll är under uppbyggnad.",
-    "cc.jobs.title": "Utvalda jobb",
-    "cc.jobs.subtitle": "Jobbportalen är under utveckling. Utvalda jobb kommer att visas här.",
-    "cc.jobs.placeholder": "Utvalda jobb visas här när jobbportalen är i drift.",
-    "cc.cta.jobs": "Bläddra bland jobb",
+    // § 3 — Karriärtestet
+    "cc.test.eyebrow": "Karriärtest",
+    "cc.test.title": "Vet du inte var du passar in? Börja här.",
+    "cc.test.body":
+      "Frågorna handlar om hur du föredrar att arbeta. Du får en karriärprofil och tydliga yrkesförslag att läsa vidare om. Inga rätta eller felaktiga svar — det är ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cc.test.fact.questions": "frågor",
+    "cc.test.fact.time": "Cirka 5 minuter",
+    "cc.test.fact.account": "Inget konto krävs",
+    "cc.test.fact.noright": "Inga rätta eller felaktiga svar",
+    "cc.test.cta": "Starta karriärtestet",
+
+    // § 4 — Utforska yrken
+    "cc.explore.title": "Utforska yrken",
+    "cc.explore.subtitle":
+      "Yrkesguider inom säkerhetsbranschen — sök eller hitta en väg som passar dig.",
+    "cc.explore.search.label": "Sök bland yrkesguiderna",
+    "cc.explore.search.placeholder": "Sök på yrkestitel eller vad rollen gör",
+    "cc.explore.filter.family": "Område / Yrkesfamilj",
+    "cc.explore.filter.level": "Nivå",
+    "cc.explore.filter.all": "Alla",
+    "cc.explore.filter.more": "Fler filter",
+    "cc.explore.filter.less": "Dölj fler filter",
+    "cc.explore.filter.regulated": "Reglering",
+    "cc.explore.filter.sector": "Sektor",
+    "cc.explore.filter.orientation": "Inriktning",
+    "cc.explore.filter.country": "Land",
+    "cc.explore.count.one": "yrke",
+    "cc.explore.count.other": "yrken",
+    "cc.explore.active_filters": "Aktiva filter",
+    "cc.explore.remove_filter": "Ta bort filtret",
+    "cc.explore.clear_all": "Rensa alla",
+    "cc.explore.clear_filters": "Rensa filter",
+    "cc.explore.empty.title": "Inga yrken matchar just den kombinationen.",
+    "cc.explore.empty.body":
+      "Den närmaste sökningen som ger träffar är den här:",
+    "cc.explore.relax.family": "Visa alla yrkesfamiljer",
+    "cc.explore.relax.level": "Visa alla nivåer",
+    "cc.explore.relax.regulated": "Visa både reglerade och ej reglerade yrken",
+    "cc.explore.relax.sector": "Visa alla sektorer",
+    "cc.explore.relax.orientation": "Visa alla inriktningar",
+    "cc.explore.relax.country": "Visa alla länder",
+    "cc.explore.relax.q": "Ta bort sökordet",
+    "cc.explore.upcoming.title": "Kommer",
+    "cc.explore.upcoming.body":
+      "Yrken vi arbetar med. De får en egen guide när innehållet är källhänvisat och granskat.",
+
+    // § 5 — Karriärvägar
+    "cc.routes.title": "Karriärvägar",
+    "cc.routes.subtitle":
+      "Tre riktningar genom branschen, byggda av de yrkesguider som finns publicerade. Varje steg går att läsa.",
+    "cc.routes.disclaimer": "Karriärvägar är exempel — utvecklingen är inte linjär för alla.",
+    "cc.routes.stage": "Steg",
+    "cc.routes.or": "eller",
+    "cc.routes.shift.title": "Det här förändras på vägen hit",
+    "cc.routes.shift.level": "Nivå",
+    "cc.routes.shift.regulated":
+      "Steget kräver ett eget förordnande eller godkännande utöver det föregående.",
+    "cc.routes.shift.orientation": "Ny inriktning i arbetet",
+    "cc.routes.shift.competencies": "Högre krav på",
+
+    // § 6 — Så bygger vi innehållet
+    "cc.trust.title": "Så bygger vi innehållet",
+    "cc.trust.subtitle":
+      "En yrkesguide publiceras först när den håller ihop. Så här ser kraven ut.",
+    "cc.trust.sources.title": "Namngivna källor",
+    "cc.trust.sources.body":
+      "Varje publicerad guide anger vilka källor uppgifterna bygger på, med länk där en sådan finns.",
+    "cc.trust.jurisdiction.title": "Angiven jurisdiktion",
+    "cc.trust.jurisdiction.body":
+      "Guiden säger vilket land eller vilken region uppgifterna gäller för. Regler ser olika ut mellan länder.",
+    "cc.trust.reviewed.title": "Granskningsdatum",
+    "cc.trust.reviewed.body":
+      "Datumet då innehållet senast stämdes av visas i guiden, så du kan bedöma hur färskt det är.",
+    "cc.trust.regulatory.title": "Reglering länkas till källan",
+    "cc.trust.regulatory.body":
+      "Där ett yrke är reglerat länkar vi till lagtexten eller myndigheten, inte till vår egen sammanfattning.",
+    "cc.trust.closing":
+      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+
+    // ── Yrkesguide ──────────────────────────────────────────────────────
+    "cc.p.fact.family": "Yrkesfamilj",
+    "cc.p.fact.level": "Nivå",
+    "cc.p.fact.sector": "Sektor",
+    "cc.p.fact.regulation": "Reglering",
+    "cc.p.fact.jurisdiction": "Land",
+    "cc.p.regulated": "Reglerat yrke",
+    "cc.p.not_regulated": "Ej reglerat",
+    "cc.p.regulatory.title": "Reglering",
+    "cc.p.about": "Om yrket",
+    "cc.p.day": "En dag i rollen",
+    "cc.p.day.environments": "Typiska arbetsmiljöer",
+    "cc.p.fit": "Passar dig som…",
+    "cc.p.notfit": "Passar mindre bra om…",
+    "cc.p.notfit.note":
+      "Det här är arbetsförhållanden, inte omdömen om dig. De följer av vad rollen kräver.",
+    "cc.p.competencies": "Kompetenser som efterfrågas",
+    "cc.p.competencies.scale":
+      "Nivåerna beskriver vilken behärskning rollen typiskt kräver, på en skala från 1 till 5. De är ett riktmärke, inte ett individuellt krav.",
+    "cc.p.competencies.level": "Nivå",
+    "cc.p.competencies.of": "av 5",
+    "cc.p.competencies.critical": "Kritisk kompetens",
+    "cc.p.competencies.critical.explainer":
+      "Rollen bygger på den här kompetensen — den efterfrågas i praktiskt taget varje uppdrag.",
+    "cc.p.formal": "Formella krav",
+    "cc.p.entry": "Så kommer du in",
+    "cc.p.entry.subtitle": "De steg som går att belägga för den här rollen.",
+    "cc.p.education": "Utbildning och certifikat",
+    "cc.p.education.education": "Utbildning",
+    "cc.p.education.certifications": "Certifikat",
+    "cc.p.path": "Karriärväg",
+    "cc.p.path.previous": "Vanliga vägar hit",
+    "cc.p.path.next": "Vanliga steg härifrån",
+    "cc.p.test.title": "Osäker på om den här rollen passar dig?",
+    "cc.p.test.body":
+      "Karriärtestet tar cirka 5 minuter och ger dig en karriärprofil med yrkesförslag att läsa vidare om. Det bedömer inte din kompetens eller anställningsbarhet.",
+    "cc.p.related": "Relaterade yrken",
+    "cc.p.faq": "Vanliga frågor",
+    "cc.p.sources": "Källor",
+    "cc.p.reviewed": "Senast granskad",
+    "cc.p.jurisdiction": "Gäller för",
+    "cc.p.disclaimer":
+      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+    "cc.p.unavailable.title": "Den här yrkesguiden är inte publicerad ännu.",
+    "cc.p.unavailable.body":
+      "Vi publicerar en guide först när den har källhänvisat innehåll, angiven jurisdiktion och ett granskningsdatum. Tills dess visar vi ingenting hellre än något ofärdigt.",
+    "cc.p.unavailable.cta": "Utforska publicerade yrkesguider",
+
+    // Används även av kandidatens resultatvy (assessment/result) — den enda
+    // cc.*-nyckeln som konsumeras utanför Karriärcentret.
     "cc.cta.explore": "Utforska yrket",
 
-    "cc.search.title": "Hitta rätt roll",
-    "cc.search.subtitle": "Sök bland yrken, filtrera efter kategori och erfarenhetsnivå.",
-    "cc.search.placeholder": "Sök yrke, kompetens eller kategori",
-    "cc.search.category": "Kategori",
-    "cc.search.level": "Erfarenhetsnivå",
-    "cc.search.all": "Alla",
-    "cc.search.empty": "Inga yrken matchar din sökning ännu.",
-
-    "cc.profession.about": "Om yrket",
-    "cc.profession.responsibilities": "Typiska ansvarsområden",
-    "cc.profession.role_for": "Vem passar rollen för?",
-    "cc.profession.skills": "Kompetenser som efterfrågas",
-    "cc.profession.skills.subtitle": "Kärnkompetenser som är återkommande i denna roll.",
-    "cc.profession.education": "Utbildning",
-    "cc.profession.education.subtitle": "Vi kurerar utbildningsvägar för rollen.",
-    "cc.profession.education.placeholder":
-      "Utbildningsinformation för denna roll byggs upp löpande.",
-    "cc.profession.certifications": "Certifikat",
-    "cc.profession.certifications.subtitle": "Erkända certifieringar som ofta efterfrågas.",
-    "cc.profession.certifications.placeholder":
-      "Certifikatsinformation för denna roll byggs upp löpande.",
-    "cc.profession.certifications.placeholder.name": "Certifikat",
-    "cc.profession.certifications.placeholder.name2": "Certifikat",
-    "cc.profession.certifications.placeholder.provider": "Innehåll byggs upp",
-    "cc.profession.path": "Karriärväg",
-    "cc.profession.path.subtitle":
-      "Ett exempel på utveckling över tid — vägen är inte linjär för alla.",
-    "cc.profession.assessment.eyebrow": "Rekommenderad bedömning",
-    "cc.profession.assessment.body":
-      "Se hur din profil matchar denna roll — och andra roller inom säkerhet.",
-    "cc.profession.related_jobs": "Relaterade jobb",
-    "cc.profession.related_jobs.subtitle": "Jobbportalen är under utveckling.",
-    "cc.profession.related_jobs.placeholder":
-      "Utvalda jobb för denna roll kommer att visas här när jobbportalen är i drift.",
-    "cc.profession.related": "Relaterade yrken",
-    "cc.profession.faq": "Vanliga frågor",
-    "cc.profession.notfound.title": "Vi hittade inte det yrket.",
-    "cc.profession.notfound.body":
-      "Länken kan vara felaktig eller så är guiden inte publicerad ännu.",
-    "cc.profession.notfound.cta": "Tillbaka till karriärcentret",
-
+    // Nivåer, sektorer och inriktningar — delade etiketter
     "cc.level.entry": "Ingångsnivå",
     "cc.level.mid": "Mellannivå",
     "cc.level.senior": "Senior",
@@ -2572,77 +2664,8 @@ export const dictionaries = {
     "cc.orientation.technical": "Teknisk",
     "cc.orientation.analytical": "Analytisk",
     "cc.orientation.leadership": "Ledarskap",
-    "cc.regulated": "Reglerad",
-    "cc.status.developing": "Under utveckling",
-    "cc.status.under_development":
-      "Guiden är under utveckling. Delar av innehållet är strukturella platshållare och behöver granskas mot lands­specifika krav.",
-    "cc.profession.level": "Nivå",
-    "cc.profession.formal": "Formella krav",
-    "cc.profession.environments": "Typiska arbetsmiljöer",
-    "cc.profession.sources": "Källor",
-    "cc.profession.last_reviewed": "Senast granskad",
-    "cc.profession.applicable": "Tillämpligt land/region",
-    "cc.profession.disclaimer":
-      "Innehållet är utbildningsmaterial och ersätter inte myndighets- eller arbetsgivarbeslut. Reglering kan variera mellan länder.",
-
-    "cc.search.family": "Yrkesfamilj",
-    "cc.search.regulated": "Reglering",
-    "cc.search.regulated.regulated": "Reglerad",
-    "cc.search.regulated.not_regulated": "Ej reglerad",
-    "cc.search.sector": "Sektor",
-    "cc.search.orientation": "Inriktning",
-    "cc.search.region": "Land / region",
-
-    "cc.paths.title": "Tre ingångar till karriärcentret",
-    "cc.paths.subtitle": "Välj den väg som beskriver var du står i dag.",
-    "cc.paths.explore.eyebrow": "För individer",
-    "cc.paths.explore.title": "Jag är intresserad av säkerhet",
-    "cc.paths.explore.body": "För studenter, unga och karriärbytare som utforskar branschen.",
-    "cc.paths.professional.eyebrow": "För yrkesverksamma",
-    "cc.paths.professional.title": "Jag arbetar redan inom säkerhet",
-    "cc.paths.professional.body":
-      "För dig som vill utvecklas, specialisera dig eller gå mot ledarroll.",
-    "cc.paths.employer.eyebrow": "För organisationer",
-    "cc.paths.employer.title": "Jag representerar en organisation",
-    "cc.paths.employer.body":
-      "För arbetsgivare som ska rekrytera, bedöma eller utveckla säkerhetspersonal.",
-
-    "start.meta.title": "Intresserad av säkerhet? — CQrityjob",
-    "start.meta.desc":
-      "En guidad ingång till karriärer inom säkerhet — för studenter, karriärbytare och yrkesverksamma.",
-    "start.hero.eyebrow": "Utforska säkerhetsbranschen",
-    "start.hero.title": "Intresserad av säkerhet?",
-    "start.hero.lead":
-      "Säkerhetsbranschen består av många olika karriärvägar. Välj det som beskriver dig så visar vi vart du kan gå härnäst.",
-    "start.choose.title": "Beskriv dig själv",
-    "start.audience.first_career": "Jag utforskar mitt första yrke",
-    "start.audience.first_career.desc": "Student eller ny på arbetsmarknaden.",
-    "start.audience.student": "Jag är student",
-    "start.audience.student.desc": "Söker inriktning inför utbildning eller praktik.",
-    "start.audience.changer": "Jag byter karriär",
-    "start.audience.changer.desc": "Har erfarenhet från ett annat område.",
-    "start.audience.professional": "Jag arbetar redan inom säkerhet",
-    "start.audience.professional.desc": "Vill utvecklas eller specialisera mig.",
-    "start.audience.public_service": "Jag har polis-, militär- eller myndighetserfarenhet",
-    "start.audience.public_service.desc": "Utforskar möjliga civila fortsättningar.",
-    "start.audience.specialist": "Jag vill bli specialist eller ledare",
-    "start.audience.specialist.desc": "Söker fördjupning inom ett specifikt område.",
-    "start.next.title": "Föreslagna nästa steg",
-    "start.next.assessment.title": "Gör karriärtestet",
-    "start.next.assessment.body": "Cirka 5 minuter. Kostnadsfri. Inget konto krävs.",
-    "start.next.families.title": "Utforska yrkesfamiljer",
-    "start.next.families.body": "Bläddra bland områden inom säkerhetsbranschen.",
-    "start.next.entry.title": "Se roller på ingångsnivå",
-    "start.next.entry.body": "Yrken där man kan börja utan tidigare erfarenhet av branschen.",
-    "start.next.transition.title": "Se karriärbyten",
-    "start.next.transition.body":
-      "Vägar från polis-, militär- eller andra bakgrunder in i säkerhet.",
-    "start.next.education.title": "Läs om utbildning",
-    "start.next.education.body": "Utbildningsvägar och krav.",
-    "start.families.title": "Yrkesfamiljer",
-    "start.families.subtitle": "Så här är säkerhetsbranschen strukturerad hos oss.",
-    "start.disclaimer":
-      "Vi lagrar ingenting från valen du gör här. Sidan är en guide, inte ett beslut om lämplighet.",
+    "cc.regulated.regulated": "Reglerad",
+    "cc.regulated.not_regulated": "Ej reglerad",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Kompetensutveckling",
     "academy.intro.title": "Bedömning av yrkeskompetens",
@@ -7055,171 +7078,188 @@ export const dictionaries = {
     "sca.disclaimer.footer":
       "Your result provides career guidance, not an eligibility decision. CQrityjob does not make any employment decisions.",
 
-    "cc.hero.eyebrow": "Security Career Center",
-    "cc.hero.title": "Your career in security starts here.",
+    // ── Security Career Center ──────────────────────────────────────────
+    // Mirrors the Swedish block key for key. See it for the section order and
+    // for why no number is written into any of these strings.
+
+    // § 1 — Hero
+    "cc.hero.eyebrow": "Profession guides · Career routes · Career test",
+    "cc.hero.title": "Security Career Center",
     "cc.hero.lead":
-      "Explore professions, career paths, competences and education across the security industry — all in one place.",
-    "cc.hero.cta.assessment": "Take the Career Assessment",
-    "cc.hero.cta.browse": "Browse professions",
+      "Find out what the professions in the security industry actually involve, what it takes to get into them, and which step makes sense for you next.",
+    "cc.hero.cta.test": "Start the career test — about 5 min, no account",
+    "cc.hero.cta.explore": "Explore professions",
+    "cc.hero.trust":
+      "Free. Not an assessment of your competence or your employability.",
+    "cc.hero.fact.guides": "completed profession guides",
+    "cc.hero.fact.sources.title": "Sourced and reviewed",
+    "cc.hero.fact.sources.body":
+      "Every guide states its sources and the date it was last reviewed.",
+    "cc.hero.fact.market.title": "For the Swedish security industry",
+    "cc.hero.fact.market.body":
+      "Regulation, requirements and job titles are described as they apply in Sweden.",
 
-    "cc.hero.stats.lead":
-      "Sweden's career platform for the security industry — verified professions, clear pathways, measurable competence.",
-    "cc.hero.stats.professions.label": "Professions",
-    "cc.hero.stats.professions.value": "60+",
-    // Value is derived from the taxonomy (professionFamilies minus the entry path).
-    "cc.hero.stats.areas.label": "Career areas",
-    "cc.hero.stats.languages.label": "Languages",
-    "cc.hero.stats.languages.value": "SV · EN",
-    "cc.hero.stats.model.label": "Model",
-    "cc.hero.stats.model.value": "v1.0",
+    // § 2 — Where are you today?
+    "cc.where.title": "Where are you today?",
+    "cc.where.subtitle":
+      "Three ways in. Each one takes you to a different part of the content — pick the one that fits.",
+    "cc.where.curious.title": "I am curious about the security industry",
+    "cc.where.curious.body":
+      "You have no prior industry experience and want to know where people actually start.",
+    "cc.where.curious.cta": "See roles you can start in with no prior experience",
+    "cc.where.working.title": "I already work in security",
+    "cc.where.working.body":
+      "You know the work and want to see the roles that sit one or two steps ahead.",
+    "cc.where.working.cta": "See roles at the next level",
+    "cc.where.org.title": "I represent an organisation",
+    "cc.where.org.body":
+      "You need to recruit, assess or develop people with security responsibilities.",
+    "cc.where.org.cta": "See how you can assess security competence",
 
-    "cc.featured.title": "Featured professions",
-    "cc.featured.subtitle": "An initial set of profession guides. More are added continuously.",
-    "cc.categories.title": "Browse by category",
-    "cc.categories.subtitle": "The security industry spans many specialized areas.",
-    "cc.pathways.title": "Career pathways",
-    "cc.pathways.subtitle": "See how roles connect over time and across specializations.",
-    "cc.pathways.example.title": "Example: from student to security manager",
-    "cc.education.title": "Education",
-    "cc.education.subtitle": "We curate relevant education pathways across the security industry.",
-    "cc.education.placeholder": "Education information is being built.",
-    "cc.certs.title": "Certifications",
-    "cc.certs.subtitle": "Recognized certifications and specializations per profession.",
-    "cc.certs.placeholder": "The certifications database is being built.",
-    "cc.assessment.title": "Career Assessment",
-    "cc.assessment.body":
-      "Unsure where you fit? Take the free Security Career Assessment for personalized guidance.",
-    "cc.articles.title": "Latest articles",
-    "cc.articles.subtitle": "Editorial articles and guides are being built.",
-    "cc.articles.placeholder": "Editorial content is under construction.",
-    "cc.jobs.title": "Featured jobs",
-    "cc.jobs.subtitle": "The job experience is in development. Featured jobs will appear here.",
-    "cc.jobs.placeholder": "Featured jobs will appear here once the job experience is live.",
-    "cc.cta.jobs": "Browse jobs",
-    "cc.cta.explore": "Explore the profession",
+    // § 3 — The career test
+    "cc.test.eyebrow": "Career test",
+    "cc.test.title": "Not sure where you fit? Start here.",
+    "cc.test.body":
+      "The questions are about how you prefer to work. You get a career profile and concrete professions to read more about. There are no right or wrong answers — this is not an assessment of your competence or your employability.",
+    "cc.test.fact.questions": "questions",
+    "cc.test.fact.time": "About 5 minutes",
+    "cc.test.fact.account": "No account required",
+    "cc.test.fact.noright": "No right or wrong answers",
+    "cc.test.cta": "Start the career test",
 
-    "cc.search.title": "Find the right role",
-    "cc.search.subtitle": "Search professions and filter by category and experience level.",
-    "cc.search.placeholder": "Search profession, skill or category",
-    "cc.search.category": "Category",
-    "cc.search.level": "Experience level",
-    "cc.search.all": "All",
-    "cc.search.empty": "No professions match your search yet.",
+    // § 4 — Explore professions
+    "cc.explore.title": "Explore professions",
+    "cc.explore.subtitle":
+      "Profession guides across the security industry — search, or find a direction that suits you.",
+    "cc.explore.search.label": "Search the profession guides",
+    "cc.explore.search.placeholder": "Search by job title or by what the role does",
+    "cc.explore.filter.family": "Area / Profession family",
+    "cc.explore.filter.level": "Level",
+    "cc.explore.filter.all": "All",
+    "cc.explore.filter.more": "More filters",
+    "cc.explore.filter.less": "Hide extra filters",
+    "cc.explore.filter.regulated": "Regulation",
+    "cc.explore.filter.sector": "Sector",
+    "cc.explore.filter.orientation": "Orientation",
+    "cc.explore.filter.country": "Country",
+    "cc.explore.count.one": "profession",
+    "cc.explore.count.other": "professions",
+    "cc.explore.active_filters": "Active filters",
+    "cc.explore.remove_filter": "Remove filter",
+    "cc.explore.clear_all": "Clear all",
+    "cc.explore.clear_filters": "Clear filters",
+    "cc.explore.empty.title": "No professions match that particular combination.",
+    "cc.explore.empty.body": "The closest search that does return results is this one:",
+    "cc.explore.relax.family": "Show all profession families",
+    "cc.explore.relax.level": "Show all levels",
+    "cc.explore.relax.regulated": "Show both regulated and unregulated professions",
+    "cc.explore.relax.sector": "Show all sectors",
+    "cc.explore.relax.orientation": "Show all orientations",
+    "cc.explore.relax.country": "Show all countries",
+    "cc.explore.relax.q": "Drop the search term",
+    "cc.explore.upcoming.title": "Coming",
+    "cc.explore.upcoming.body":
+      "Professions we are working on. Each gets its own guide once the content is sourced and reviewed.",
 
-    "cc.profession.about": "About the profession",
-    "cc.profession.responsibilities": "Typical responsibilities",
-    "cc.profession.role_for": "Who is the role for?",
-    "cc.profession.skills": "Required skills",
-    "cc.profession.skills.subtitle": "Core competences that recur in this role.",
-    "cc.profession.education": "Education",
-    "cc.profession.education.subtitle": "We curate education pathways for this role.",
-    "cc.profession.education.placeholder": "Education information for this role is being built.",
-    "cc.profession.certifications": "Certifications",
-    "cc.profession.certifications.subtitle":
-      "Recognized certifications commonly requested for this role.",
-    "cc.profession.certifications.placeholder":
-      "Certification information for this role is being built.",
-    "cc.profession.certifications.placeholder.name": "Certification",
-    "cc.profession.certifications.placeholder.name2": "Certification",
-    "cc.profession.certifications.placeholder.provider": "Content being built",
-    "cc.profession.path": "Career path",
-    "cc.profession.path.subtitle":
-      "An example of progression over time — the path is not linear for everyone.",
-    "cc.profession.assessment.eyebrow": "Recommended assessment",
-    "cc.profession.assessment.body":
-      "See how your profile matches this role — and other roles across security.",
-    "cc.profession.related_jobs": "Related jobs",
-    "cc.profession.related_jobs.subtitle": "The job experience is in development.",
-    "cc.profession.related_jobs.placeholder":
-      "Featured jobs for this role will appear here once the job experience is live.",
-    "cc.profession.related": "Related professions",
-    "cc.profession.faq": "Frequently asked questions",
-    "cc.profession.notfound.title": "We couldn't find that profession.",
-    "cc.profession.notfound.body": "The link may be incorrect or the guide isn't published yet.",
-    "cc.profession.notfound.cta": "Back to the Career Center",
+    // § 5 — Career routes
+    "cc.routes.title": "Career routes",
+    "cc.routes.subtitle":
+      "Three directions through the industry, assembled from the guides that are published. Every step is readable.",
+    "cc.routes.disclaimer": "Career routes are examples — progression is not linear for everyone.",
+    "cc.routes.stage": "Stage",
+    "cc.routes.or": "or",
+    "cc.routes.shift.title": "What changes on the way here",
+    "cc.routes.shift.level": "Level",
+    "cc.routes.shift.regulated":
+      "This step requires its own appointment or approval beyond the previous one.",
+    "cc.routes.shift.orientation": "New orientation in the work",
+    "cc.routes.shift.competencies": "Higher demands on",
 
-    "cc.level.entry": "Entry",
-    "cc.level.mid": "Mid",
+    // § 6 — How we build the content
+    "cc.trust.title": "How we build the content",
+    "cc.trust.subtitle":
+      "A profession guide is published only once it holds together. These are the requirements.",
+    "cc.trust.sources.title": "Named sources",
+    "cc.trust.sources.body":
+      "Every published guide states which sources it rests on, with a link where one exists.",
+    "cc.trust.jurisdiction.title": "Stated jurisdiction",
+    "cc.trust.jurisdiction.body":
+      "The guide says which country or region the information applies to. Rules differ between countries.",
+    "cc.trust.reviewed.title": "Review date",
+    "cc.trust.reviewed.body":
+      "The date the content was last checked is shown in the guide, so you can judge how current it is.",
+    "cc.trust.regulatory.title": "Regulation links to the source",
+    "cc.trust.regulatory.body":
+      "Where a profession is regulated we link to the legislation or the authority, not to our own summary.",
+    "cc.trust.closing":
+      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+
+    // ── Profession guide ────────────────────────────────────────────────
+    "cc.p.fact.family": "Profession family",
+    "cc.p.fact.level": "Level",
+    "cc.p.fact.sector": "Sector",
+    "cc.p.fact.regulation": "Regulation",
+    "cc.p.fact.jurisdiction": "Country",
+    "cc.p.regulated": "Regulated profession",
+    "cc.p.not_regulated": "Not regulated",
+    "cc.p.regulatory.title": "Regulation",
+    "cc.p.about": "About the profession",
+    "cc.p.day": "A day in the role",
+    "cc.p.day.environments": "Typical work environments",
+    "cc.p.fit": "Suits you if…",
+    "cc.p.notfit": "Suits you less well if…",
+    "cc.p.notfit.note":
+      "These are working conditions, not judgements about you. They follow from what the role requires.",
+    "cc.p.competencies": "Competences in demand",
+    "cc.p.competencies.scale":
+      "The levels describe the mastery the role typically requires, on a scale from 1 to 5. They are a benchmark, not an individual requirement.",
+    "cc.p.competencies.level": "Level",
+    "cc.p.competencies.of": "of 5",
+    "cc.p.competencies.critical": "Critical competence",
+    "cc.p.competencies.critical.explainer":
+      "The role is built on this competence — it is demanded in practically every assignment.",
+    "cc.p.formal": "Formal requirements",
+    "cc.p.entry": "How you get in",
+    "cc.p.entry.subtitle": "The steps that can be evidenced for this role.",
+    "cc.p.education": "Education and certification",
+    "cc.p.education.education": "Education",
+    "cc.p.education.certifications": "Certification",
+    "cc.p.path": "Career path",
+    "cc.p.path.previous": "Common routes here",
+    "cc.p.path.next": "Common steps from here",
+    "cc.p.test.title": "Not sure whether this role suits you?",
+    "cc.p.test.body":
+      "The career test takes about 5 minutes and gives you a career profile with professions to read more about. It does not assess your competence or your employability.",
+    "cc.p.related": "Related professions",
+    "cc.p.faq": "Common questions",
+    "cc.p.sources": "Sources",
+    "cc.p.reviewed": "Last reviewed",
+    "cc.p.jurisdiction": "Applies to",
+    "cc.p.disclaimer":
+      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+    "cc.p.unavailable.title": "This profession guide is not published yet.",
+    "cc.p.unavailable.body":
+      "We publish a guide only once it has sourced content, a stated jurisdiction and a review date. Until then we would rather show nothing than something unfinished.",
+    "cc.p.unavailable.cta": "Explore the published profession guides",
+
+    // Also consumed by the candidate result view (assessment/result) — the
+    // only cc.* key read outside the Career Center.
+    "cc.cta.explore": "Explore this profession",
+
+    // Levels, sectors and orientations — shared labels
+    "cc.level.entry": "Entry level",
+    "cc.level.mid": "Mid level",
     "cc.level.senior": "Senior",
     "cc.level.executive": "Executive",
     "cc.sector.public": "Public sector",
     "cc.sector.private": "Private sector",
-    "cc.sector.hybrid": "Hybrid",
+    "cc.sector.hybrid": "Mixed",
     "cc.orientation.operational": "Operational",
     "cc.orientation.technical": "Technical",
     "cc.orientation.analytical": "Analytical",
     "cc.orientation.leadership": "Leadership",
-    "cc.regulated": "Regulated",
-    "cc.status.developing": "Under development",
-    "cc.status.under_development":
-      "This guide is under development. Some content is a structural placeholder and needs to be reviewed against country-specific requirements.",
-    "cc.profession.level": "Level",
-    "cc.profession.formal": "Formal requirements",
-    "cc.profession.environments": "Typical work environments",
-    "cc.profession.sources": "Sources",
-    "cc.profession.last_reviewed": "Last reviewed",
-    "cc.profession.applicable": "Applicable country / region",
-    "cc.profession.disclaimer":
-      "This content is educational and does not replace authority or employer decisions. Regulation can differ between countries.",
-
-    "cc.search.family": "Profession family",
-    "cc.search.regulated": "Regulation",
-    "cc.search.regulated.regulated": "Regulated",
-    "cc.search.regulated.not_regulated": "Not regulated",
-    "cc.search.sector": "Sector",
-    "cc.search.orientation": "Orientation",
-    "cc.search.region": "Country / region",
-
-    "cc.paths.title": "Three entry paths into the Career Center",
-    "cc.paths.subtitle": "Pick the path that describes where you are today.",
-    "cc.paths.explore.eyebrow": "For individuals",
-    "cc.paths.explore.title": "I am interested in security",
-    "cc.paths.explore.body":
-      "For students, young people and career changers exploring the industry.",
-    "cc.paths.professional.eyebrow": "For professionals",
-    "cc.paths.professional.title": "I already work in security",
-    "cc.paths.professional.body":
-      "For people who want to develop, specialise or move into leadership.",
-    "cc.paths.employer.eyebrow": "For organisations",
-    "cc.paths.employer.title": "I represent an organisation",
-    "cc.paths.employer.body": "For employers who recruit, assess or develop security personnel.",
-
-    "start.meta.title": "Interested in a career in security? — CQrityjob",
-    "start.meta.desc":
-      "A guided entry into careers in security — for students, career changers and existing professionals.",
-    "start.hero.eyebrow": "Explore the security industry",
-    "start.hero.title": "Interested in a career in security?",
-    "start.hero.lead":
-      "The security industry spans many different career paths. Pick what describes you and we'll suggest where to go next.",
-    "start.choose.title": "Describe yourself",
-    "start.audience.first_career": "I'm exploring my first career",
-    "start.audience.first_career.desc": "Student or new to the workforce.",
-    "start.audience.student": "I'm a student",
-    "start.audience.student.desc": "Looking for direction ahead of studies or an internship.",
-    "start.audience.changer": "I'm changing careers",
-    "start.audience.changer.desc": "Coming in from another industry.",
-    "start.audience.professional": "I already work in security",
-    "start.audience.professional.desc": "Want to develop or specialise.",
-    "start.audience.public_service": "I have police, military or government experience",
-    "start.audience.public_service.desc": "Exploring possible civilian continuations.",
-    "start.audience.specialist": "I want to become a specialist or leader",
-    "start.audience.specialist.desc": "Looking to go deeper in a specific area.",
-    "start.next.title": "Suggested next steps",
-    "start.next.assessment.title": "Take the Career Assessment",
-    "start.next.assessment.body": "About 5 minutes. Free. No account required.",
-    "start.next.families.title": "Explore profession families",
-    "start.next.families.body": "Browse the different areas within the security industry.",
-    "start.next.entry.title": "See entry-level roles",
-    "start.next.entry.body": "Roles you can start in without prior industry experience.",
-    "start.next.transition.title": "See career-change paths",
-    "start.next.transition.body":
-      "Paths from police, military and other backgrounds into security.",
-    "start.next.education.title": "Read about education",
-    "start.next.education.body": "Education pathways and requirements.",
-    "start.families.title": "Profession families",
-    "start.families.subtitle": "This is how we structure the security industry.",
-    "start.disclaimer":
-      "Nothing you choose here is stored. This page is a guide, not a suitability decision.",
+    "cc.regulated.regulated": "Regulated",
+    "cc.regulated.not_regulated": "Not regulated",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Competence development",
     "academy.intro.title": "Professional competence assessment",

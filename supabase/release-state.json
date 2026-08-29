@@ -153,10 +153,11 @@
     },
     {
       "file": "20261004090000_cd_v31_funnel_events_career_center.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [],
-      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check with two additional allowed values, 'career_center_test_started' and 'career_filter_used', exactly as 20260816162000 did for 'result_downloaded'. Nothing renders differently before or after it runs -- trackV31FunnelEvent is fire-and-forget and never throws to its caller, so until this is applied those two events are rejected by the CHECK and logged, and no other event or surface is affected. Not applied hosted.",
-      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';"
+      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() with two additional allowed values, 'career_center_test_started' and 'career_filter_used'. Nothing renders differently before or after it runs; trackV31FunnelEvent is fire-and-forget and never throws to its caller. Applied through the official Supabase GitHub integration.",
+      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';",
+      "evidenceSource": "Official Supabase GitHub integration check run 99141209788 completed successfully against owner project wrygicdfxwjnrugduxnt for main merge ecbe91b18dbf9d95f8847f5a98cc34d921ef79ea on 2026-08-29. The merged migration keeps cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() aligned; clean replay, RLS, S2.16/S2.17 and rollback verification were green before merge."
     }
   ],
   "policyVersion": 2,

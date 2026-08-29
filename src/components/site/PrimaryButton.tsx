@@ -8,12 +8,9 @@ const base =
   "inline-flex h-11 items-center justify-center rounded-md px-5 text-sm font-semibold tracking-tight transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
 
 const styles: Record<Variant, string> = {
-  primary:
-    `${base} bg-primary text-primary-foreground shadow-sm hover:bg-[color:var(--primary-hover)] hover:shadow-md active:translate-y-px`,
-  accent:
-    `${base} bg-accent text-accent-foreground shadow-sm hover:bg-[color:var(--accent-hover)] hover:shadow-md active:translate-y-px`,
-  ghost:
-    `${base} border border-border bg-background text-foreground hover:bg-secondary hover:border-[color:var(--accent)]/40`,
+  primary: `${base} bg-primary text-primary-foreground shadow-sm hover:bg-[color:var(--primary-hover)] hover:shadow-md active:translate-y-px`,
+  accent: `${base} bg-accent text-accent-foreground shadow-sm hover:bg-[color:var(--accent-hover)] hover:shadow-md active:translate-y-px`,
+  ghost: `${base} border border-border bg-background text-foreground hover:bg-secondary hover:border-[color:var(--accent)]/40`,
 };
 
 export const PrimaryButton = forwardRef<
@@ -28,14 +25,18 @@ export function PrimaryLink({
   variant = "primary",
   className,
   children,
+  onClick,
 }: {
   to: string;
   variant?: Variant;
   className?: string;
   children: ReactNode;
+  /** Fired alongside navigation -- used for fire-and-forget funnel tracking,
+   *  which must never delay or block the click it is measuring. */
+  onClick?: () => void;
 }) {
   return (
-    <Link to={to} className={cn(styles[variant], className)}>
+    <Link to={to} className={cn(styles[variant], className)} onClick={onClick}>
       {children}
     </Link>
   );
