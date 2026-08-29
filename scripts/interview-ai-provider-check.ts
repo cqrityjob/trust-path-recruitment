@@ -8,12 +8,18 @@
 //   * transport failures are retried, a bounded number of times;
 //   * a returned-but-unusable answer is NEVER retried, because resampling until
 //     the model says something acceptable manufactures quality;
-//   * the same logical request always carries the same idempotency key, so a
-//     retry after a lost response is one run, not two.
+//   * the model is verified to exist BEFORE any candidate material is sent;
+//   * sampling parameters are omitted by default, so a model released after
+//     this file was written does not 400 on its first real call;
+//   * the cost table matches Anthropic's published prices.
 
 import {
   AnthropicProvider,
-  idempotencyKey,
+  acceptsSamplingParams,
+  DUPLICATE_REQUEST_RISK,
+  MODEL_PRICING,
+  requestDigest,
+  SAMPLING_ALLOWLIST,
   TRANSPORT_RETRY_POLICY,
 } from "../src/lib/interview-intelligence/ai/providers/anthropic";
 import { AiProviderError, type AiRequest } from "../src/lib/interview-intelligence/ai/provider";
@@ -60,6 +66,20 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
   });
 }
 
+/**
+ * Every adapter call now begins with a model-availability request. These fakes
+ * answer that one with a bland 200 and hand everything else to the behaviour
+ * under test, so the Messages call counters keep counting Messages calls.
+ */
+function withModelOk(messages: (url: string, init: RequestInit) => Promise<Response>) {
+  return (async (url: string, init: RequestInit) => {
+    if (String(url).includes("/v1/models")) {
+      return jsonResponse({ id: "claude-sonnet-5", type: "model" });
+    }
+    return messages(String(url), init);
+  }) as unknown as typeof fetch;
+}
+
 const GOOD_BODY = {
   content: [{ type: "text", text: '{"facts":[]}' }],
   model: "claude-sonnet-5",
@@ -76,11 +96,11 @@ async function main(): Promise<void> {
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async () => {
+      fetchImpl: withModelOk(async () => {
         calls += 1;
         if (calls < 3) throw new Error("ECONNRESET");
         return jsonResponse(GOOD_BODY);
-      }) as unknown as typeof fetch,
+      }),
     });
 
     const result = await provider.complete(REQUEST);
@@ -95,10 +115,10 @@ async function main(): Promise<void> {
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async () => {
+      fetchImpl: withModelOk(async () => {
         calls += 1;
         throw new Error("ECONNRESET");
-      }) as unknown as typeof fetch,
+      }),
     });
 
     await mustThrow(
@@ -119,12 +139,12 @@ async function main(): Promise<void> {
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async () => {
+      fetchImpl: withModelOk(async () => {
         calls += 1;
         return calls === 1
           ? jsonResponse({ error: "rate limited" }, 429, { "retry-after": "0" })
           : jsonResponse(GOOD_BODY);
-      }) as unknown as typeof fetch,
+      }),
     });
     await provider.complete(REQUEST);
     ok(calls === 2, "2.1 a 429 is retried, honouring Retry-After");
@@ -136,10 +156,10 @@ async function main(): Promise<void> {
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async () => {
+      fetchImpl: withModelOk(async () => {
         calls += 1;
         return jsonResponse({ error: "bad request" }, 400);
-      }) as unknown as typeof fetch,
+      }),
     });
     await mustThrow(() => provider.complete(REQUEST), "400", "2.2 a 400 is not retried");
     ok(calls === 1, `2.3 a client error is attempted exactly once (calls=${calls})`);
@@ -157,10 +177,10 @@ async function main(): Promise<void> {
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async () => {
+      fetchImpl: withModelOk(async () => {
         calls += 1;
         return jsonResponse({ content: [], model: "claude-sonnet-5", usage: {} });
-      }) as unknown as typeof fetch,
+      }),
     });
     await mustThrow(
       () => provider.complete(REQUEST),
@@ -192,33 +212,58 @@ async function main(): Promise<void> {
     );
   }
 
-  /* ---- 4. Idempotency ---------------------------------------------------- */
+  /* ---- 4. The request digest, and what it does NOT promise -------------- */
+  //
+  // This section used to assert that an `idempotency-key` header was sent and
+  // that the provider would therefore collapse a retry. Anthropic's Messages
+  // API reference documents no such header and no request deduplication, so
+  // that was a guarantee this product could not keep. The digest survives as a
+  // reconciliation aid; the header is gone, and the risk is stated.
   {
-    const a = idempotencyKey(REQUEST);
-    const b = idempotencyKey({ ...REQUEST, timeoutMs: 99_999, maxOutputTokens: 42 });
-    ok(a === b, "4.1 the key is stable across a retry of the same logical request");
+    const a = requestDigest(REQUEST);
+    const b = requestDigest({ ...REQUEST, timeoutMs: 99_999, maxOutputTokens: 42 });
+    ok(a === b, "4.1 the digest is stable across a retry of the same logical request");
 
-    const c = idempotencyKey({
+    const c = requestDigest({
       ...REQUEST,
       untrustedBlocks: [{ passageId: "p1", sourceKind: "candidate_cv", text: "Något helt annat." }],
     });
     ok(a !== c, "4.2 different source material is a different request");
 
-    const d = idempotencyKey({ ...REQUEST, promptVersion: "2.0.0" });
+    const d = requestDigest({ ...REQUEST, promptVersion: "2.0.0" });
     ok(a !== d, "4.3 a new prompt version is a different request");
 
-    let seen: string | null = null;
+    let headers: Record<string, string> = {};
     const provider = new AnthropicProvider({
       apiKey: "test-key-not-a-real-credential",
       model: "claude-sonnet-5",
       sleep: noSleep,
-      fetchImpl: (async (_url: string, init: RequestInit) => {
-        seen = (init.headers as Record<string, string>)["idempotency-key"];
+      fetchImpl: withModelOk(async (_url, init) => {
+        headers = init.headers as Record<string, string>;
         return jsonResponse(GOOD_BODY);
-      }) as unknown as typeof fetch,
+      }),
     });
     await provider.complete(REQUEST);
-    ok(seen === a, "4.4 the key is actually sent on the wire");
+    ok(
+      !("idempotency-key" in headers),
+      "4.4 NO idempotency header is sent — the Messages API documents none, and sending one would imply a guarantee that does not exist",
+    );
+    ok(
+      Object.keys(headers).every((h) =>
+        ["content-type", "x-api-key", "anthropic-version"].includes(h.toLowerCase()),
+      ),
+      `4.5 only documented request headers are sent (found ${Object.keys(headers).join(", ")})`,
+    );
+    ok(
+      DUPLICATE_REQUEST_RISK.providerDeduplicates === false &&
+        DUPLICATE_REQUEST_RISK.lostResponseRetryMayCostTwice === true,
+      "4.6 the adapter states honestly that a lost-then-retried request can reach the provider twice",
+    );
+    ok(
+      TRANSPORT_RETRY_POLICY.maxAttempts > 0 &&
+        TRANSPORT_RETRY_POLICY.retriesSemanticRejection === false,
+      "4.7 bounded transport retry and the ban on semantic rerolls both survive the correction",
+    );
   }
 
   /* ---- 5. The credential cannot reach a browser ------------------------- */
@@ -416,6 +461,208 @@ async function main(): Promise<void> {
     ok(
       ui.includes("iiu.mode.synthetic"),
       "7.5c and the provider-mode chip still renders that label",
+    );
+  }
+
+  /* ---- 8. Sampling parameters — the ACTUAL request body ----------------- */
+  //
+  // Anthropic's Messages API reference marks temperature, top_p and top_k
+  // deprecated: "Models released after Claude Opus 4.6 do not support setting
+  // temperature", rejecting other values with a 400. A denylist of models known
+  // to refuse them is right about today and wrong about every model released
+  // afterwards, and the failure lands on the first real call. So the default is
+  // to omit, and these assertions read the serialised body rather than the
+  // helper, because the helper being right is not the same as the wire being
+  // right.
+  {
+    async function bodyFor(model: string): Promise<Record<string, unknown>> {
+      let sent: Record<string, unknown> = {};
+      const provider = new AnthropicProvider({
+        apiKey: "test-key-not-a-real-credential",
+        model,
+        sleep: noSleep,
+        fetchImpl: withModelOk(async (_url, init) => {
+          sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+          return jsonResponse({ ...GOOD_BODY, model });
+        }),
+      });
+      await provider.complete(REQUEST);
+      return sent;
+    }
+
+    const SAMPLING_KEYS = ["temperature", "top_p", "top_k"];
+
+    for (const model of ["claude-sonnet-5", "claude-opus-5", "a-model-that-does-not-exist-yet"]) {
+      const body = await bodyFor(model);
+      const present = SAMPLING_KEYS.filter((k) => k in body);
+      ok(
+        present.length === 0,
+        `8.x ${model} receives no sampling parameter (found ${present.join(", ") || "none"})`,
+      );
+      ok(
+        Object.keys(body).sort().join(",") === "max_tokens,messages,model,system",
+        `8.x ${model}'s body is exactly {model, max_tokens, system, messages} (found ${Object.keys(body).sort().join(",")})`,
+      );
+    }
+
+    // The one explicitly verified legacy model still gets its zero. This is the
+    // assertion that stops the fix being "omit everything, always", which would
+    // pass just as green while quietly changing behaviour for older models.
+    const haiku = await bodyFor("claude-haiku-4-5-20251001");
+    ok(haiku.temperature === 0, "8.4 claude-haiku-4-5-20251001 still receives temperature: 0");
+    ok(!("top_p" in haiku) && !("top_k" in haiku), "8.5 and never top_p or top_k");
+
+    ok(
+      acceptsSamplingParams("claude-sonnet-5") === false &&
+        acceptsSamplingParams("claude-opus-5") === false &&
+        acceptsSamplingParams("something-released-next-month") === false &&
+        acceptsSamplingParams("claude-haiku-4-5-20251001") === true,
+      "8.6 the helper is an allowlist: unknown models default to OMITTING",
+    );
+    ok(
+      !SAMPLING_ALLOWLIST.has("claude-sonnet-5") && !SAMPLING_ALLOWLIST.has("claude-opus-5"),
+      "8.7 no model released after Opus 4.6 is on the sampling allowlist",
+    );
+  }
+
+  /* ---- 9. Model verification runs BEFORE the Messages endpoint ---------- */
+  //
+  // verifyModelAvailable existed with no caller, which made the check a
+  // document rather than a behaviour: a retired or mistyped model id would have
+  // been discovered by sending a real interview's notes and reading the 404.
+  {
+    const seen: string[] = [];
+    const provider = new AnthropicProvider({
+      apiKey: "test-key-not-a-real-credential",
+      model: "claude-sonnet-5",
+      sleep: noSleep,
+      fetchImpl: (async (url: string) => {
+        seen.push(String(url));
+        return String(url).includes("/v1/models")
+          ? jsonResponse({ id: "claude-sonnet-5" })
+          : jsonResponse(GOOD_BODY);
+      }) as unknown as typeof fetch,
+    });
+    await provider.complete(REQUEST);
+    ok(
+      seen[0]?.includes("/v1/models") && seen[1]?.includes("/v1/messages"),
+      `9.1 the model is verified before the first Messages request (order: ${seen.join(" → ")})`,
+    );
+
+    // Success may be cached for the instance: the answer cannot change
+    // mid-session, and a round trip per interview step buys nothing.
+    await provider.complete(REQUEST);
+    ok(
+      seen.filter((u) => u.includes("/v1/models")).length === 1,
+      "9.2 a successful verification is cached for the provider instance",
+    );
+  }
+
+  {
+    // The assertion that matters: verification fails, and the Messages endpoint
+    // is never reached — so no candidate material leaves the process.
+    const seen: string[] = [];
+    const provider = new AnthropicProvider({
+      apiKey: "test-key-not-a-real-credential",
+      model: "claude-retired-model",
+      sleep: noSleep,
+      fetchImpl: (async (url: string) => {
+        seen.push(String(url));
+        return String(url).includes("/v1/models")
+          ? jsonResponse({ error: "not_found" }, 404)
+          : jsonResponse(GOOD_BODY);
+      }) as unknown as typeof fetch,
+    });
+    await mustThrow(
+      () => provider.complete(REQUEST),
+      "nothing was sent to the model",
+      "9.3 a failed verification prevents the run",
+    );
+    ok(
+      seen.every((u) => u.includes("/v1/models")),
+      `9.4 the Messages endpoint was NEVER called (saw: ${seen.join(", ")})`,
+    );
+    ok(
+      seen.length === 1,
+      `9.5 and the failed verification is not retried into a loop (calls=${seen.length})`,
+    );
+
+    // A failure is deliberately NOT cached: the cause is usually a fixable
+    // credential or configuration fault, and a cached failure would keep
+    // failing after the fix until the process restarted.
+    await mustThrow(
+      () => provider.complete(REQUEST),
+      "nothing was sent to the model",
+      "9.6 a failed verification is re-attempted on the next run, not cached",
+    );
+    ok(seen.length === 2, "9.7 which means the model endpoint was asked again");
+  }
+
+  {
+    // And it never substitutes. There is exactly one model id in the body, and
+    // it is the configured one.
+    let sentModel: unknown = null;
+    const provider = new AnthropicProvider({
+      apiKey: "test-key-not-a-real-credential",
+      model: "claude-sonnet-5",
+      sleep: noSleep,
+      fetchImpl: withModelOk(async (_url, init) => {
+        sentModel = (JSON.parse(String(init.body)) as { model: string }).model;
+        // The provider answers naming a DIFFERENT model; the adapter must
+        // record what came back rather than what it asked for.
+        return jsonResponse({ ...GOOD_BODY, model: "claude-sonnet-5-20260101" });
+      }),
+    });
+    const res = await provider.complete(REQUEST);
+    ok(sentModel === "claude-sonnet-5", "9.8 the configured model is the one requested");
+    ok(
+      res.model === "claude-sonnet-5-20260101",
+      "9.9 the resolved model the provider returns is what gets recorded",
+    );
+  }
+
+  /* ---- 10. The price table matches Anthropic's published prices --------- */
+  //
+  // Source: Anthropic, "Pricing", model pricing table, read 2026-08-29.
+  // Sonnet 5's $2/$10 launch pricing is now the standard price; the scheduled
+  // rise to $3/$15 will not happen. The table carried $3/$15, which overstated
+  // every Sonnet 5 run by 50% — a cost ledger that is wrong in the provider's
+  // favour is still wrong.
+  {
+    const EXPECTED: Record<string, { in: number; out: number }> = {
+      "claude-opus-5": { in: 5_000_000, out: 25_000_000 },
+      "claude-sonnet-5": { in: 2_000_000, out: 10_000_000 },
+      "claude-haiku-4-5-20251001": { in: 1_000_000, out: 5_000_000 },
+    };
+    for (const [model, price] of Object.entries(EXPECTED)) {
+      const actual = MODEL_PRICING[model];
+      ok(
+        actual?.in === price.in && actual?.out === price.out,
+        `10.x ${model} is priced $${price.in / 1_000_000}/$${price.out / 1_000_000} per MTok (found ${
+          actual ? `$${actual.in / 1_000_000}/$${actual.out / 1_000_000}` : "nothing"
+        })`,
+      );
+    }
+
+    // And the cost actually computed from it. 1M in + 1M out on Sonnet 5 is
+    // $12.00, not the $18.00 the old table would have recorded.
+    let done = false;
+    const provider = new AnthropicProvider({
+      apiKey: "test-key-not-a-real-credential",
+      model: "claude-sonnet-5",
+      sleep: noSleep,
+      fetchImpl: withModelOk(async () => {
+        done = true;
+        return jsonResponse({
+          ...GOOD_BODY,
+          usage: { input_tokens: 1_000_000, output_tokens: 1_000_000 },
+        });
+      }),
+    });
+    const res = await provider.complete(REQUEST);
+    ok(
+      done && res.usage.costMicros === 12_000_000,
+      `10.4 1M+1M on Sonnet 5 costs $12.00 (recorded ${res.usage.costMicros})`,
     );
   }
 
