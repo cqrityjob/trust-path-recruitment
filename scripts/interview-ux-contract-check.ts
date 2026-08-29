@@ -586,9 +586,137 @@ for (const file of [
   const body = codeOnly(read(file));
   for (const field of ["anchorSv", "labelSv"]) {
     ok(
-      !new RegExp(`\\{\\s*[a-z]\\.${field}\\s*\\}`).test(body),
+      // `(?<!\$)` so a template interpolation such as `${c.labelSv}` -- which
+      // is BUILDING a bilingual pair, not rendering one -- is not mistaken for
+      // JSX that puts the Swedish column on screen.
+      !new RegExp(`(?<!\\$)\\{\\s*[a-z]\\.${field}\\s*\\}`).test(body),
       `${file} renders a.${field} directly — an English-reading interviewer sees the anchors in Swedish; pick the locale's column with a fallback`,
     );
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 11 · The TRUST conduct layer                                         */
+/* ------------------------------------------------------------------ */
+
+// The conduct sequence is governed rows rendered during Understand, a stage
+// that permits zero AI tasks. The failure mode is not that it renders badly;
+// it is that a future edit quietly makes the panel call something.
+{
+  const iv = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+  );
+  ok(
+    iv.includes("d.conductSteps") && iv.includes('t("iiu.cd.sequence")'),
+    "the live Copilot no longer renders the governed conduct sequence",
+  );
+  ok(
+    iv.includes("d.conductProhibitions") && iv.includes('t("iiu.cd.never")'),
+    "the live Copilot no longer renders the prohibited techniques",
+  );
+  const aside = iv.slice(iv.indexOf('aria-labelledby="s-copilot"'), iv.indexOf("</aside>"));
+  ok(
+    !/useMutation|useServerFn|\.mutate\(|fetch\(/.test(aside),
+    "the Copilot panel acquired a call — Understand permits no AI task at all",
+  );
+
+  const prep = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx",
+  );
+  for (const surface of [
+    "target_purpose",
+    "target_evidence_class",
+    "ready_plan",
+    "recall_prompt",
+  ]) {
+    ok(prep.includes(`"${surface}"`), `preparation no longer renders the ${surface} guidance`);
+  }
+
+  const rp = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx",
+  );
+  for (const surface of ["trace_self_review", "trace_closure"]) {
+    ok(rp.includes(`"${surface}"`), `the report route no longer renders the ${surface} guidance`);
+  }
+  ok(
+    rp.includes('t("iiu.cd.trace.selfreview.note")'),
+    "the self-review must say it is about the interviewer, not the candidate",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 12 · Prohibited technique vocabulary must not reach a model         */
+/* ------------------------------------------------------------------ */
+
+// The prohibitions name Scharff, Reid, minimization and the rest ON PURPOSE --
+// a named technique is a boundary a person can be held to, and "be fair" is
+// only advice. But they are shown to a HUMAN. An AI task instruction that
+// names an interrogation technique has described it to the model, so the
+// registry where those instructions live is checked for exactly the vocabulary
+// the conduct layer exists to forbid.
+{
+  const BANNED = [
+    "scharff",
+    "reid technique",
+    "minimization",
+    "maximization",
+    "strategic use of evidence",
+    "deception detection",
+    "credibility assessment",
+    "body language",
+    "micro-expression",
+    "confession",
+    "admission",
+    "interrogation",
+    "lie detection",
+    "personality profile",
+  ];
+  for (const file of [
+    "src/lib/interview-intelligence/ai/registry.ts",
+    "src/lib/interview-intelligence/ai/providers/anthropic.ts",
+    "src/lib/interview-intelligence/ai/orchestrator.ts",
+  ]) {
+    const body = codeOnly(read(file)).toLowerCase();
+    for (const term of BANNED) {
+      ok(
+        !body.includes(term),
+        `${file} contains "${term}" in code that reaches a model — the prohibitions are for humans to read, not for a prompt to describe`,
+      );
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 13 · TRUST is a hypothesis, and says so                             */
+/* ------------------------------------------------------------------ */
+
+// The owner's wording, exactly: a research-grounded design hypothesis under
+// controlled validation. Not "validated", not "evidence-based", not "proven".
+{
+  const dict = read("src/i18n/dictionaries.ts");
+  ok(
+    dict.includes("research-grounded design hypothesis under controlled validation"),
+    "the English copy no longer describes TRUST as a design hypothesis under controlled validation",
+  );
+  ok(
+    dict.includes("forskningsgrundad designhypotes under kontrollerad validering"),
+    "the Swedish copy no longer describes TRUST as a design hypothesis under controlled validation",
+  );
+  const CLAIMS = [
+    "scientifically validated",
+    "clinically validated",
+    "proven predictor",
+    "validated predictor of job performance",
+  ];
+  for (const claim of CLAIMS) {
+    const hits = [...dict.matchAll(new RegExp(claim, "gi"))];
+    // "not a validated predictor of job performance" is the disclaimer and is
+    // allowed; the bare claim is not.
+    const bare = hits.filter((h) => {
+      const before = dict.slice(Math.max(0, h.index! - 40), h.index!).toLowerCase();
+      return !/\b(not|inte|never|aldrig|is not)\b[^.]*$/.test(before);
+    });
+    ok(bare.length === 0, `the copy asserts "${claim}" without a negation`);
   }
 }
 

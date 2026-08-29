@@ -6881,6 +6881,108 @@ export type Database = {
           },
         ]
       }
+      scp_interview_conduct_guidance: {
+        Row: {
+          created_at: string
+          display_order: number
+          guidance_key: string
+          id: string
+          method_id: string
+          statement_en: string
+          statement_sv: string
+          surface: string
+          trust_stage: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          guidance_key: string
+          id?: string
+          method_id: string
+          statement_en: string
+          statement_sv: string
+          surface: string
+          trust_stage: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          guidance_key?: string
+          id?: string
+          method_id?: string
+          statement_en?: string
+          statement_sv?: string
+          surface?: string
+          trust_stage?: string
+        }
+        Relationships: []
+      }
+      scp_interview_conduct_prohibitions: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          method_id: string
+          prohibition_key: string
+          statement_en: string
+          statement_sv: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id: string
+          prohibition_key: string
+          statement_en: string
+          statement_sv: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          method_id?: string
+          prohibition_key?: string
+          statement_en?: string
+          statement_sv?: string
+        }
+        Relationships: []
+      }
+      scp_interview_conduct_steps: {
+        Row: {
+          created_at: string
+          guidance_en: string
+          guidance_sv: string
+          id: string
+          label_en: string
+          label_sv: string
+          method_id: string
+          ordinal: number
+          step_key: string
+        }
+        Insert: {
+          created_at?: string
+          guidance_en: string
+          guidance_sv: string
+          id?: string
+          label_en: string
+          label_sv: string
+          method_id: string
+          ordinal: number
+          step_key: string
+        }
+        Update: {
+          created_at?: string
+          guidance_en?: string
+          guidance_sv?: string
+          id?: string
+          label_en?: string
+          label_sv?: string
+          method_id?: string
+          ordinal?: number
+          step_key?: string
+        }
+        Relationships: []
+      }
       scp_interview_core_questions: {
         Row: {
           code: string

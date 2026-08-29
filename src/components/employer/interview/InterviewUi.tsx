@@ -819,3 +819,59 @@ export function FiveEPanel({
     </div>
   );
 }
+
+/** One governed guidance row, as the projection delivers it. */
+export type GuidanceRow = {
+  readonly id: string;
+  readonly surface: string;
+  readonly statementSv: string;
+  readonly statementEn: string;
+};
+
+/**
+ * Governed interviewer guidance, rendered as what it is.
+ *
+ * Every row on this panel is a database row pinned to the TRUST method
+ * version. Nothing here is generated, and in the Understand stage nothing
+ * could be: that stage permits zero AI tasks. The panel says so, because a
+ * recruiter reading advice mid-interview is entitled to know whether a model
+ * wrote it.
+ *
+ * `ordered` draws the list as a sequence. Use it only where the order is real
+ * -- the conduct steps are a sequence, the prohibitions are a set, and
+ * numbering a set implies a precedence that does not exist.
+ */
+export function GovernedGuidance({
+  title,
+  rows,
+  ordered = false,
+  note,
+}: {
+  title: string;
+  rows: readonly GuidanceRow[];
+  ordered?: boolean;
+  note?: string;
+}) {
+  const { lang } = useT();
+  if (rows.length === 0) return null;
+  const text = (r: GuidanceRow) => (lang === "en" ? r.statementEn : r.statementSv) || r.statementSv;
+  const items = rows.map((r) => (
+    <li key={r.id} className="text-sm leading-relaxed text-foreground">
+      {text(r)}
+    </li>
+  ));
+
+  return (
+    <div className="mt-4">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h4>
+      {ordered ? (
+        <ol className="mt-2 list-decimal space-y-1.5 pl-5">{items}</ol>
+      ) : (
+        <ul className="mt-2 list-disc space-y-1.5 pl-5">{items}</ul>
+      )}
+      {note && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{note}</p>}
+    </div>
+  );
+}

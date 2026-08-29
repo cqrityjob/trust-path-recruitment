@@ -33,6 +33,7 @@ import {
   PEACE_LABEL,
   State,
   TrustStageBanner,
+  GovernedGuidance,
   interviewErrorMessage,
   PRACTICE_KIND_LABEL,
   uiLabel,
@@ -769,6 +770,35 @@ function Page() {
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   {t("iiu.iv.copilot.noai")}
                 </p>
+
+                {/* The conduct sequence. Governed rows, in their pinned order,
+                    during a stage that permits zero model calls. */}
+                <GovernedGuidance
+                  title={t("iiu.cd.sequence")}
+                  rows={d.conductSteps.map((c) => ({
+                    id: c.id,
+                    surface: "conduct_step",
+                    statementSv: `${c.labelSv}: ${c.guidanceSv}`,
+                    statementEn: `${c.labelEn}: ${c.guidanceEn}`,
+                  }))}
+                  ordered
+                  note={t("iiu.cd.sequence.note")}
+                />
+
+                {/* Prohibited TECHNIQUES, which is a different list from the
+                    prohibited SUBJECTS below. Both are needed: a permitted
+                    subject asked with an interrogation technique is still the
+                    thing this product must not do. */}
+                <GovernedGuidance
+                  title={t("iiu.cd.never")}
+                  rows={d.conductProhibitions.map((c) => ({
+                    id: c.id,
+                    surface: "conduct_prohibition",
+                    statementSv: c.statementSv,
+                    statementEn: c.statementEn,
+                  }))}
+                  note={t("iiu.cd.never.note")}
+                />
 
                 <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("iiu.iv.copilot.listen")}

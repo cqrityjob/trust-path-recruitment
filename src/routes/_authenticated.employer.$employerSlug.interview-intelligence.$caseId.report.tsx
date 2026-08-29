@@ -23,6 +23,7 @@ import {
   State,
   blockerMessage,
   interviewErrorMessage,
+  GovernedGuidance,
   ProviderModeChip,
   ProviderModeNote,
   WithheldPanel,
@@ -153,6 +154,26 @@ function Page() {
         <CaseSteps current={d.status} />
         <NextStep status={d.status} />
       </div>
+
+      {/* ---- TRUST conduct, Trace ----
+           The interviewer reviews their OWN conduct before the record closes.
+           Nothing here is stored as an assessment of the candidate, and
+           nothing here is generated. */}
+      <section className="mt-8 max-w-4xl" aria-labelledby="s-selfreview">
+        <h2 id="s-selfreview" className="text-lg font-semibold text-foreground">
+          {t("iiu.cd.trace.selfreview")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+        <GovernedGuidance
+          title={t("iiu.cd.trace.selfreview")}
+          rows={d.conductGuidance.filter((g) => g.surface === "trace_self_review")}
+          note={t("iiu.cd.trace.selfreview.note")}
+        />
+        <GovernedGuidance
+          title={t("iiu.cd.trace.closure")}
+          rows={d.conductGuidance.filter((g) => g.surface === "trace_closure")}
+        />
+      </section>
 
       {/* ---- Blockers ---- */}
       {!isFinal && (

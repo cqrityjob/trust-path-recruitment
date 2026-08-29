@@ -143,8 +143,8 @@ BEGIN
   PERFORM pg_temp.assert(
     (SELECT count(*) FROM information_schema.tables
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-        AND table_name LIKE 'scp\_%') = 122,
-    'pre-rollback: 122 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST)');
+        AND table_name LIKE 'scp\_%') = 125,
+    'pre-rollback: 125 scp_ base tables exist (87 + 7 interview knowledge + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer)');
 END $$;
 
 -- The additive, permissive SELECT policies Phase 2 put on PHASE 1 tables. They
@@ -181,6 +181,10 @@ DROP TABLE IF EXISTS public.scp_interview_ai_runs                CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_source_passages        CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_case_sources           CASCADE;
 DROP TABLE IF EXISTS public.scp_interview_cases                  CASCADE;
+-- The TRUST conduct layer. Dropped before the stages it hangs off.
+DROP TABLE IF EXISTS public.scp_interview_conduct_guidance       CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_conduct_prohibitions   CASCADE;
+DROP TABLE IF EXISTS public.scp_interview_conduct_steps          CASCADE;
 DROP TABLE IF EXISTS public.scp_trust_stage_claims               CASCADE;
 DROP TABLE IF EXISTS public.scp_trust_stage_prohibitions         CASCADE;
 DROP TABLE IF EXISTS public.scp_trust_stage_ai_tasks             CASCADE;

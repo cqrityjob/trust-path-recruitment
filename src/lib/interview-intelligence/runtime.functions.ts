@@ -553,6 +553,41 @@ export interface CaseDetail {
     readonly hasResearchClaim: boolean;
   }[];
   readonly aiAvailable: boolean;
+  /**
+   * How the interviewer conducts the conversation, and what they must never
+   * attempt. Governed rows pinned to the TRUST method, not generated: the
+   * Understand stage permits zero AI tasks, and this is how the interviewer
+   * gets support there without a model being involved.
+   */
+  readonly conductSteps: readonly {
+    readonly id: string;
+    readonly stepKey: string;
+    readonly ordinal: number;
+    readonly labelSv: string;
+    readonly labelEn: string;
+    readonly guidanceSv: string;
+    readonly guidanceEn: string;
+  }[];
+  readonly conductProhibitions: readonly {
+    readonly id: string;
+    readonly prohibitionKey: string;
+    readonly statementSv: string;
+    readonly statementEn: string;
+  }[];
+  /**
+   * The same kind of governed rows for the stages either side of the live
+   * conversation, keyed by the surface that renders them: target_purpose,
+   * target_evidence_class, ready_plan, recall_prompt, trace_self_review,
+   * trace_closure.
+   */
+  readonly conductGuidance: readonly {
+    readonly id: string;
+    readonly trustStage: string;
+    readonly surface: string;
+    readonly guidanceKey: string;
+    readonly statementSv: string;
+    readonly statementEn: string;
+  }[];
 }
 
 /** CQrityjob's evidence-structuring model: the five things a usable behavioural
@@ -625,6 +660,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       eventsRes,
       practicesRes,
       configRes,
+      conductRes,
+      conductProhibitionsRes,
+      guidanceRes,
     ] = await Promise.all([
       db
         .from("scp_interview_case_sources")
@@ -713,6 +751,18 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
         .order("display_order"),
       db.from("scp_interview_ai_config").select("ai_enabled, transcript_enabled").maybeSingle(),
+      db
+        .from("scp_interview_conduct_steps")
+        .select("id, step_key, ordinal, label_sv, label_en, guidance_sv, guidance_en")
+        .order("ordinal"),
+      db
+        .from("scp_interview_conduct_prohibitions")
+        .select("id, prohibition_key, statement_sv, statement_en")
+        .order("display_order"),
+      db
+        .from("scp_interview_conduct_guidance")
+        .select("id, trust_stage, surface, guidance_key, statement_sv, statement_en")
+        .order("display_order"),
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
@@ -929,6 +979,43 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         reason: (e.reason as string) ?? null,
         at: e.at as string,
       })),
+      conductSteps: ((conductRes.data ?? []) as Array<Record<string, unknown>>)
+        .map((c) => ({
+          id: c.id as string,
+          stepKey: c.step_key as string,
+          ordinal: c.ordinal as number,
+          labelSv: c.label_sv as string,
+          labelEn: c.label_en as string,
+          guidanceSv: c.guidance_sv as string,
+          guidanceEn: c.guidance_en as string,
+        }))
+        // Several TRUST methods exist, one per pack lineage, and each carries
+        // the same six steps. The interviewer needs the sequence once.
+        .filter((c, i, all) => all.findIndex((x) => x.stepKey === c.stepKey) === i)
+        .sort((a2, b2) => a2.ordinal - b2.ordinal),
+      conductProhibitions: ((conductProhibitionsRes.data ?? []) as Array<Record<string, unknown>>)
+        .map((c) => ({
+          id: c.id as string,
+          prohibitionKey: c.prohibition_key as string,
+          statementSv: c.statement_sv as string,
+          statementEn: c.statement_en as string,
+        }))
+        .filter((c, i, all) => all.findIndex((x) => x.prohibitionKey === c.prohibitionKey) === i),
+      conductGuidance: ((guidanceRes.data ?? []) as Array<Record<string, unknown>>)
+        .map((g) => ({
+          id: g.id as string,
+          trustStage: g.trust_stage as string,
+          surface: g.surface as string,
+          guidanceKey: g.guidance_key as string,
+          statementSv: g.statement_sv as string,
+          statementEn: g.statement_en as string,
+        }))
+        // One row per surface+key: the same guidance is pinned to every TRUST
+        // method, and the interviewer needs to read it once.
+        .filter(
+          (g, i, all) =>
+            all.findIndex((x) => x.surface === g.surface && x.guidanceKey === g.guidanceKey) === i,
+        ),
       methodPractices: ((practicesRes.data ?? []) as Array<Record<string, unknown>>).map((p) => ({
         id: p.id as string,
         peaceStage: (p.peace_stage as string) ?? null,

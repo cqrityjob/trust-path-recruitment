@@ -24,6 +24,7 @@ import {
   State,
   TrustStageBanner,
   interviewErrorMessage,
+  GovernedGuidance,
   ProviderModeChip,
   ProviderModeNote,
   SOURCE_KIND_LABEL,
@@ -235,6 +236,40 @@ function Page() {
         <CaseSteps current={d.status} />
         <NextStep status={d.status} />
       </div>
+
+      {/* ---- TRUST conduct, as governed rows ----
+           Target says what the interview is for and what must not be conflated;
+           Ready says how it will be conducted. Both are database rows pinned to
+           the TRUST method version, shown before the conversation rather than
+           recalled during it. */}
+      <section className="mt-8 max-w-4xl" aria-labelledby="s-conduct">
+        <h2 id="s-conduct" className="text-lg font-semibold text-foreground">
+          {t("iiu.cd.ready.plan")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+
+        <GovernedGuidance
+          title={t("iiu.cd.target.purpose")}
+          rows={d.conductGuidance.filter((g) => g.surface === "target_purpose")}
+        />
+        <GovernedGuidance
+          title={t("iiu.cd.target.classes")}
+          rows={d.conductGuidance.filter((g) => g.surface === "target_evidence_class")}
+          note={t("iiu.cd.target.classes.note")}
+        />
+        <GovernedGuidance
+          title={t("iiu.cd.ready.plan")}
+          rows={d.conductGuidance.filter((g) => g.surface === "ready_plan")}
+        />
+        <GovernedGuidance
+          title={t("iiu.cd.ready.prompts")}
+          rows={d.conductGuidance.filter((g) => g.surface === "recall_prompt")}
+          note={t("iiu.cd.ready.prompts.note")}
+        />
+        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+          {t("iiu.cd.hypothesis")}
+        </p>
+      </section>
 
       {/* ---- 1. Sources ---- */}
       <section className="mt-8" aria-labelledby="s-sources">

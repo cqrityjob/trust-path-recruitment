@@ -4181,6 +4181,27 @@ export const dictionaries = {
     "iiu.rail.report": "Rapport",
     "iiu.rail.aria": "Processteg",
     "iiu.rp.candidatereport": "Kandidatrapport",
+    "iiu.cd.sequence": "Så för du samtalet",
+    "iiu.cd.sequence.note":
+      "Sex steg, i den här ordningen. Godkänt innehåll ur TRUST-metoden — ingenting här är genererat.",
+    "iiu.cd.never": "Så gör du aldrig",
+    "iiu.cd.never.note":
+      "Detta är förbjudna tekniker, oavsett ämne. De förbjudna ämnena står separat.",
+    "iiu.cd.target.purpose": "Vad intervjun ska ge",
+    "iiu.cd.target.classes": "Håll isär de här fem",
+    "iiu.cd.target.classes.note":
+      "Blandas de ihop blir en uppgift till ett faktum, och en tolkning till evidens.",
+    "iiu.cd.ready.plan": "Så genomförs samtalet",
+    "iiu.cd.ready.prompts": "Tillåtna neutrala följdfrågor",
+    "iiu.cd.ready.prompts.note":
+      "Använd inte minnespress, perspektivbyten eller upprepade frågor för att skapa motsägelse.",
+    "iiu.cd.trace.selfreview": "Granska ditt eget genomförande",
+    "iiu.cd.trace.selfreview.note":
+      "Frågorna handlar om dig, inte om kandidaten. De sparas inte som bedömning av någon.",
+    "iiu.cd.trace.closure": "Att avsluta ärligt",
+    "iiu.cd.governed": "Godkänt metodinnehåll. Ingen AI-modell anropas för att visa det.",
+    "iiu.cd.hypothesis":
+      "CQrity TRUST är en forskningsgrundad designhypotes under kontrollerad validering. Den är inte vetenskapligt validerad som helhet.",
     "iiu.iv.copilot.title": "CQrity Copilot",
     "iiu.iv.copilot.noai":
       "Panelen är ditt stöd under samtalet. Den lyssnar inte, spelar inte in och anropar ingen AI-modell. Under Förstå-steget är AI inte tillåtet alls — det du ser här är den godkända frågepaketstexten och metoden, inget genererat.",
@@ -8707,6 +8728,27 @@ export const dictionaries = {
     "iiu.rail.report": "Report",
     "iiu.rail.aria": "Process steps",
     "iiu.rp.candidatereport": "Candidate report",
+    "iiu.cd.sequence": "How to run the conversation",
+    "iiu.cd.sequence.note":
+      "Six steps, in this order. Approved content from the TRUST method — nothing here is generated.",
+    "iiu.cd.never": "What you never do",
+    "iiu.cd.never.note":
+      "These are prohibited techniques, whatever the subject. The prohibited subjects are listed separately.",
+    "iiu.cd.target.purpose": "What this interview is for",
+    "iiu.cd.target.classes": "Keep these five apart",
+    "iiu.cd.target.classes.note":
+      "Conflate them and a statement becomes a fact, and an interpretation becomes evidence.",
+    "iiu.cd.ready.plan": "How the conversation will be conducted",
+    "iiu.cd.ready.prompts": "Permitted neutral follow-up prompts",
+    "iiu.cd.ready.prompts.note":
+      "Do not use memory pressure, perspective changes or repeated questioning to create an inconsistency.",
+    "iiu.cd.trace.selfreview": "Review how you conducted it",
+    "iiu.cd.trace.selfreview.note":
+      "These questions are about you, not the candidate. They are not stored as an assessment of anyone.",
+    "iiu.cd.trace.closure": "Closing honestly",
+    "iiu.cd.governed": "Approved method content. No AI model is called to show it.",
+    "iiu.cd.hypothesis":
+      "CQrity TRUST is a research-grounded design hypothesis under controlled validation. It is not scientifically validated as a whole.",
     "iiu.iv.copilot.title": "CQrity Copilot",
     "iiu.iv.copilot.noai":
       "This panel supports you during the conversation. It does not listen, does not record, and calls no AI model. During the Understand stage no AI is permitted at all — what you see here is the approved pack text and the method, nothing generated.",
