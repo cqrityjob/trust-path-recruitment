@@ -150,6 +150,13 @@
       "note": "Governed interviewer guidance for the TRUST stages either side of the live conversation: Target purpose and the five evidence classes, the Ready conduct plan and permitted neutral recall prompts, and the Trace self-review and closure guidance. Deterministic bilingual rows; no new methodology, no new stage, no AI task permission change, and no research claim registered. Not applied hosted.",
       "verify": "SELECT count(DISTINCT surface) FROM public.scp_interview_conduct_guidance;",
       "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    },
+    {
+      "file": "20261004090000_cd_v31_funnel_events_career_center.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check with two additional allowed values, 'career_center_test_started' and 'career_filter_used', exactly as 20260816162000 did for 'result_downloaded'. Nothing renders differently before or after it runs -- trackV31FunnelEvent is fire-and-forget and never throws to its caller, so until this is applied those two events are rejected by the CHECK and logged, and no other event or surface is affected. Not applied hosted.",
+      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';"
     }
   ],
   "policyVersion": 2,
