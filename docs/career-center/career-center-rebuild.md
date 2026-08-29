@@ -149,7 +149,7 @@ placeholder content in full.
 
 **One migration**, additive, not required for rendering:
 
-`supabase/migrations/20260930090000_cd_v31_funnel_events_career_center.sql`
+`supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql`
 
 It drops and recreates `cd_v31_funnel_events_event_name_check` with two more
 allowed values — `career_center_test_started` and `career_filter_used` —

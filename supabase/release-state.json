@@ -8,7 +8,7 @@
   "frontier": [
     {
       "file": "20260926090000_scp_interview_startable_contract.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "object": "scp_iv_case_start_basis",
@@ -24,11 +24,12 @@
         }
       ],
       "note": "P0 from owner UAT: the new-interview selector and scp_iv_create_case answered different questions, so a pack could be offered and then refused. Introduces the single shared start contract both now call. Not applied hosted.",
-      "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('scp_iv_case_start_basis','scp_iv_startable_pack_versions','scp_iv_employer_can_start_interviews');"
+      "verify": "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND proname IN ('scp_iv_case_start_basis','scp_iv_startable_pack_versions','scp_iv_employer_can_start_interviews');",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
     },
     {
       "file": "20260927090000_scp_interview_ai_gate_and_provenance.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "table": "scp_interview_ai_runs",
@@ -49,11 +50,12 @@
         }
       ],
       "note": "Enforces scp_interview_ai_config.ai_enabled at the database boundary (run start, settlement and the table), separates the exact model id from the provider name in run provenance, and adds the manual preparation path so the structured interview stays reachable while AI is disabled. Does not enable AI. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';"
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_ai_runs' AND column_name='model_confirmed_by_provider';",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
     },
     {
       "file": "20260928090000_scp_trust_stage_english_copy.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "table": "scp_trust_stages",
@@ -67,11 +69,12 @@
         }
       ],
       "note": "Translation only: adds English columns for the TRUST stage responsibility and the stage prohibitions, fills them for TRUST v1, and widens scp_trust_stage_for_case to carry both languages. No stage, permission, ordinal or claim changes; Swedish remains authoritative. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';"
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
     },
     {
       "file": "20260929090000_scp_interview_english_guidance_copy.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "table": "scp_interview_prohibited_areas",
@@ -85,14 +88,76 @@
         }
       ],
       "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.",
-      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';"
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
     },
     {
-      "file": "20260930090000_cd_v31_funnel_events_career_center.sql",
-      "hostedState": "pending",
+      "file": "20260930090000_scp_interview_5e_evidence_structure.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "table": "scp_interview_evidence_proposals",
+          "object": "e1_situation",
+          "kind": "column"
+        },
+        {
+          "table": "scp_interview_evidence",
+          "object": "e1_situation",
+          "kind": "column"
+        }
+      ],
+      "note": "5E evidence structuring: ten nullable descriptive text columns (five on AI proposals, five on human-confirmed evidence) plus the two governed writers extended to carry them. No numeric completeness, score, total, weighting or threshold; a self-check enforces that every 5E column is nullable text and that nothing aggregates one. Not applied hosted.",
+      "verify": "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name ~ '^e[1-5]_';",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    },
+    {
+      "file": "20261001090000_scp_interview_rating_anchor_english_copy.sql",
+      "hostedState": "applied",
       "introduces": [],
-      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check with two additional allowed values, 'career_center_test_started' and 'career_filter_used', exactly as 20260816162000 did for 'result_downloaded'. Nothing renders differently before or after it runs -- trackV31FunnelEvent is fire-and-forget and never throws to its caller, so until this is applied those two events are rejected by the CHECK and logged, and no other event or surface is affected. Not applied hosted.",
-      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';"
+      "note": "Translation only, and introduces no object: label_en and anchor_en already existed on scp_interview_rating_anchors and were empty, so nothing read them. Found by walking the interview screen in English -- the behavioural anchors rendered in Swedish, including level 0's sentence that it is not the same thing as low competence. Fills 5 level labels and 33 anchor descriptions, matched on the Swedish text so a reworded anchor stays untranslated and visible. No level, aggregation flag, safety flag or pack version changes; a self-check re-asserts five levels and that level 0 never counts toward aggregation. Not applied hosted.",
+      "verify": "SELECT count(*) FILTER (WHERE anchor_en IS NULL) FROM public.scp_interview_rating_anchors;",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    },
+    {
+      "file": "20261002090000_scp_interview_conduct_layer.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "table": "scp_interview_conduct_steps",
+          "object": "scp_interview_conduct_steps",
+          "kind": "table"
+        },
+        {
+          "table": "scp_interview_conduct_prohibitions",
+          "object": "scp_interview_conduct_prohibitions",
+          "kind": "table"
+        }
+      ],
+      "note": "The TRUST conduct layer for the live interview: six ordered conduct steps (invite, listen, reflect, clarify, substantiate, confirm) and eight named prohibited techniques, both bilingual and pinned to the TRUST method. Deterministic rows only -- the Understand stage still permits zero AI tasks and no stage binding or task permission changes. RLS: active employer members read, nobody but service_role writes; anon has no grant. Not applied hosted.",
+      "verify": "SELECT count(*) FROM public.scp_interview_conduct_steps;",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    },
+    {
+      "file": "20261003090000_scp_interview_conduct_guidance.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "table": "scp_interview_conduct_guidance",
+          "object": "scp_interview_conduct_guidance",
+          "kind": "table"
+        }
+      ],
+      "note": "Governed interviewer guidance for the TRUST stages either side of the live conversation: Target purpose and the five evidence classes, the Ready conduct plan and permitted neutral recall prompts, and the Trace self-review and closure guidance. Deterministic bilingual rows; no new methodology, no new stage, no AI task permission change, and no research claim registered. Not applied hosted.",
+      "verify": "SELECT count(DISTINCT surface) FROM public.scp_interview_conduct_guidance;",
+      "evidenceSource": "Direct read-only verification of the owner project wrygicdfxwjnrugduxnt on 2026-08-29 via the session pooler, applied by the official Supabase GitHub integration on merge of PR #134 (Deploy to production enabled, production branch main). Observed: supabase_migrations.schema_migrations holds 233 rows, first 20260716153446, last 20261003090000 -- the 225-row baseline plus exactly these eight, all present, no duplicate above the baseline. Every object the application calls resolves (scp_iv_case_start_basis, scp_iv_ai_real_model_permitted, human_responsibility_en, statement_en, e1_situation on proposals and evidence, and the three conduct tables). Content arrived: 36 conduct steps, 48 conduct prohibitions, 180 guidance rows, 0 rating anchors missing English. scp_interview_ai_config reports ai_enabled=false and transcript_enabled=false, and anon holds no grant on any conduct table. NOTE: this is the SCHEMA TARGET, not the live runtime -- the deployed application still queries zrahptwsnjcdyzfywbeh, which does NOT have these objects."
+    },
+    {
+      "file": "20261004090000_cd_v31_funnel_events_career_center.sql",
+      "hostedState": "applied",
+      "introduces": [],
+      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() with two additional allowed values, 'career_center_test_started' and 'career_filter_used'. Nothing renders differently before or after it runs; trackV31FunnelEvent is fire-and-forget and never throws to its caller. Applied through the official Supabase GitHub integration.",
+      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';",
+      "evidenceSource": "Official Supabase GitHub integration check run 99141209788 completed successfully against owner project wrygicdfxwjnrugduxnt for main merge ecbe91b18dbf9d95f8847f5a98cc34d921ef79ea on 2026-08-29. The merged migration keeps cd_v31_funnel_events_event_name_check and cd_v31_funnel_event_names() aligned; clean replay, RLS, S2.16/S2.17 and rollback verification were green before merge."
     }
   ],
   "policyVersion": 2,

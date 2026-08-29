@@ -23,6 +23,10 @@ import {
   State,
   blockerMessage,
   interviewErrorMessage,
+  GovernedGuidance,
+  ProviderModeChip,
+  ProviderModeNote,
+  WithheldPanel,
   BUTTON,
   PRIMARY_BUTTON,
 } from "@/components/employer/interview/InterviewUi";
@@ -30,6 +34,7 @@ import {
   finaliseReport,
   getInterviewCase,
   getProcessQuality,
+  runReportDraft,
 } from "@/lib/interview-intelligence/runtime.functions";
 
 export const Route = createFileRoute(
@@ -45,6 +50,7 @@ function Page() {
   const getFn = useServerFn(getInterviewCase);
   const qualityFn = useServerFn(getProcessQuality);
   const finaliseFn = useServerFn(finaliseReport);
+  const draftFn = useServerFn(runReportDraft);
 
   const q = useQuery({
     queryKey: ["ii", "case", caseId],
@@ -56,8 +62,20 @@ function Page() {
     queryFn: () => qualityFn({ data: { caseId } }),
     retry: false,
   });
+  const draft = useMutation({
+    mutationFn: () => draftFn({ data: { caseId } }),
+  });
+  // The draft run travels with the finalisation as provenance. It contributes
+  // no text: what is published is assembled from confirmed evidence and the
+  // recorded human assessments, exactly as it is without a draft.
   const finalise = useMutation({
-    mutationFn: () => finaliseFn({ data: { caseId } }),
+    mutationFn: () =>
+      finaliseFn({
+        data: {
+          caseId,
+          draftRunId: draft.data?.status === "succeeded" ? draft.data.runId : null,
+        },
+      }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["ii"] });
     },
@@ -137,6 +155,26 @@ function Page() {
         <NextStep status={d.status} />
       </div>
 
+      {/* ---- TRUST conduct, Trace ----
+           The interviewer reviews their OWN conduct before the record closes.
+           Nothing here is stored as an assessment of the candidate, and
+           nothing here is generated. */}
+      <section className="mt-8 max-w-4xl" aria-labelledby="s-selfreview">
+        <h2 id="s-selfreview" className="text-lg font-semibold text-foreground">
+          {t("iiu.cd.trace.selfreview")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+        <GovernedGuidance
+          title={t("iiu.cd.trace.selfreview")}
+          rows={d.conductGuidance.filter((g) => g.surface === "trace_self_review")}
+          note={t("iiu.cd.trace.selfreview.note")}
+        />
+        <GovernedGuidance
+          title={t("iiu.cd.trace.closure")}
+          rows={d.conductGuidance.filter((g) => g.surface === "trace_closure")}
+        />
+      </section>
+
       {/* ---- Blockers ---- */}
       {!isFinal && (
         <section className="mt-8 max-w-4xl" aria-labelledby="s-block">
@@ -157,6 +195,75 @@ function Page() {
                   </Panel>
                 </div>
               )}
+              {d.aiAvailable && (
+                <div className="mt-3 rounded-lg border border-border p-4">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {t("iiu.rp.draft.title")}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.draft.body")}</p>
+                  <button
+                    type="button"
+                    className={`${BUTTON} mt-3`}
+                    onClick={() => draft.mutate()}
+                    disabled={draft.isPending}
+                  >
+                    {draft.isPending ? t("iiu.rp.draft.working") : t("iiu.rp.draft.run")}
+                  </button>
+
+                  {draft.isPending && (
+                    <div className="mt-3">
+                      <State kind="aiRunning" />
+                    </div>
+                  )}
+                  {draft.isError && (
+                    <div className="mt-3">
+                      <State kind="aiUnavailable" message={interviewErrorMessage(draft.error, t)} />
+                    </div>
+                  )}
+                  {draft.data && draft.data.status !== "succeeded" && (
+                    <div className="mt-3">
+                      <State
+                        kind={draft.data.status === "abstained" ? "aiAbstained" : "aiInvalid"}
+                        message={draft.data.message ?? undefined}
+                      />
+                    </div>
+                  )}
+                  {draft.data && draft.data.withheld.length > 0 && (
+                    <div className="mt-3">
+                      <WithheldPanel withheld={draft.data.withheld} />
+                    </div>
+                  )}
+                  {draft.data && draft.data.sections.length > 0 && (
+                    <div className="mt-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t("iiu.rp.draft.result")}
+                        </p>
+                        {draft.data.providerMode && (
+                          <ProviderModeChip mode={draft.data.providerMode} />
+                        )}
+                      </div>
+                      {draft.data.sections.map((sec) => (
+                        <article key={sec.heading} className="mt-3">
+                          <h4 className="text-sm font-medium text-foreground">{sec.heading}</h4>
+                          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                            {sec.body}
+                          </p>
+                        </article>
+                      ))}
+                      {draft.data.providerMode && (
+                        <div className="mt-3">
+                          <ProviderModeNote mode={draft.data.providerMode} />
+                        </div>
+                      )}
+                      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                        {t("iiu.rp.draft.nodecision")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-3 rounded-lg border border-amber-600/40 bg-amber-500/5 p-4">
                 <p className="text-sm font-semibold text-foreground">{t("iiu.rp.confirm")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{t("iiu.rp.confirm.body")}</p>
@@ -189,7 +296,7 @@ function Page() {
       {isFinal && payload && (
         <section className="mt-8 max-w-4xl" aria-labelledby="s-report">
           <h2 id="s-report" className="text-lg font-semibold text-foreground">
-            Kandidatrapport
+            {t("iiu.rp.candidatereport")}
           </h2>
 
           <div className="mt-3">

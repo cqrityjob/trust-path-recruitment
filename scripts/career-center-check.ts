@@ -787,7 +787,7 @@ expect(
 // The database CHECK constraint is the other half of the allowlist. If the
 // code and the migration disagree, every event the code adds is rejected at
 // the database with no visible symptom.
-const migration = read("supabase/migrations/20260930090000_cd_v31_funnel_events_career_center.sql");
+const migration = read("supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql");
 for (const name of FUNNEL_EVENT_NAMES) {
   expect(
     migration.includes(`'${name}'::text`),

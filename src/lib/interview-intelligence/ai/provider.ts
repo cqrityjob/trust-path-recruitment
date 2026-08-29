@@ -42,7 +42,9 @@ export interface UntrustedBlock {
 export interface AiUsage {
   readonly inputTokens: number;
   readonly outputTokens: number;
-  readonly costMicros: number;
+  /** null when the model is not in the price table: "not known", never a
+   *  false zero claiming the run was free. */
+  readonly costMicros: number | null;
 }
 
 export interface AiResponse {
