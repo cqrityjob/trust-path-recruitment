@@ -695,6 +695,13 @@ function Page() {
           {t("iiu.ev.s3.title")}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.s3.body")}</p>
+        {/* The badge that says whose judgement this is. The section title
+            says it too, but a recruiter scanning the page sees shapes before
+            they read sentences, and this is the one place where mistaking
+            the author would matter most. */}
+        <p className="mt-2">
+          <MaterialBadge state="assessment" />
+        </p>
         <div className="mt-2">
           <LevelZeroNote />
         </div>
@@ -707,9 +714,13 @@ function Page() {
               <li key={qq.id} className="rounded-lg border border-border p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <Chip tone="work">{qq.code}</Chip>
-                  <Chip tone={evidenceCount > 0 ? "confirmed" : "attention"}>
-                    {evidenceCount} {t("iiu.ev.confirmedcount")}
-                  </Chip>
+                  {evidenceCount > 0 ? (
+                    <Chip tone="confirmed">
+                      {evidenceCount} {t("iiu.ev.confirmedcount")}
+                    </Chip>
+                  ) : (
+                    <Chip tone="attention">{t("iiu.ev.noconfirmed")}</Chip>
+                  )}
                   {existing && (
                     <Chip
                       tone={existing.level === 0 ? "attention" : "confirmed"}
