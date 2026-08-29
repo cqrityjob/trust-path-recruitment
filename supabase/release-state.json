@@ -86,6 +86,13 @@
       ],
       "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';"
+    },
+    {
+      "file": "20260930090000_cd_v31_funnel_events_career_center.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Security Career Center measurement. Introduces no object: it drops and recreates cd_v31_funnel_events_event_name_check with two additional allowed values, 'career_center_test_started' and 'career_filter_used', exactly as 20260816162000 did for 'result_downloaded'. Nothing renders differently before or after it runs -- trackV31FunnelEvent is fire-and-forget and never throws to its caller, so until this is applied those two events are rejected by the CHECK and logged, and no other event or surface is affected. Not applied hosted.",
+      "verify": "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='cd_v31_funnel_events_event_name_check';"
     }
   ],
   "policyVersion": 2,

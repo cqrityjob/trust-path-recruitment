@@ -1,390 +1,395 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, BookOpen, Award, Info, Compass, Users, Building2 } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Building2, Compass, FileCheck2, MapPin, Users } from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { MVP_QUESTION_COUNT } from "@/lib/career-discovery/v31/personal-layer";
 import {
-  categories,
-  professions,
-  professionFamilies,
-  filterProfessions,
-  icon,
-  L,
-  type CategoryId,
+  ENTRY_LEVEL_SEARCH,
+  NEXT_LEVEL_SEARCH,
+  PUBLISHED_PROFESSION_COUNT,
+  applyExplorerSearch,
+  nearestNonEmpty,
+  parseExplorerSearch,
+  upcomingProfessions,
+  type ExplorerSearch,
 } from "@/lib/career-center";
+import { useCareerCenterTracking } from "@/lib/career-center/analytics";
 import { CareerHero } from "@/components/career-center/CareerHero";
-import { ProfessionCard } from "@/components/career-center/ProfessionCard";
-import { CategoryCard } from "@/components/career-center/CategoryCard";
-import { CareerRoadmap } from "@/components/career-center/CareerRoadmap";
-import { CareerSearch, type CareerSearchFilters } from "@/components/career-center/CareerSearch";
+import { CareerRoutes } from "@/components/career-center/CareerRoutes";
+import { ProfessionExplorer } from "@/components/career-center/ProfessionExplorer";
+
+// The Security Career Center hub — six sections, in this order:
+//
+//   1 hero · 2 var står du i dag · 3 karriärtest · 4 utforska yrken ·
+//   5 karriärvägar · 6 så bygger vi innehållet
+//
+// ── WHAT WAS REMOVED ───────────────────────────────────────────────────
+//
+// Eleven sections became six. Four of them ("Utvalda yrken", "Bläddra efter
+// kategori", "Hitta rätt roll", "Yrkesfamiljer") were four presentations of
+// the same twenty professions and are now one explorer. Four more were
+// advertisements for content that does not exist — an "Utbildning" panel
+// reading "Utbildningsinformation byggs upp löpande", the same for
+// "Certifikat", three dashed boxes under "Senaste artiklar", and a "Utvalda
+// jobb" panel for a job board that has its own product area at /jobs. None of
+// those were sections; they were promises. They are gone rather than
+// restyled.
+//
+// ── EVERY NUMBER ON THIS PAGE IS DERIVED ───────────────────────────────
+//
+// The hero used to claim "60+" professions against a catalogue of twenty, ten
+// of which were placeholders, and to print "Modell v1.0" — an internal
+// version string — as though it were a fact about the product. The guide
+// count now comes from `PUBLISHED_PROFESSION_COUNT` and the question count
+// from the instrument's own `MVP_QUESTION_COUNT`, so neither can drift from
+// what a visitor would find.
 
 export const Route = createFileRoute("/career-center/")({
-  head: () => ({
-    meta: [
-      { title: "Security Career Center — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Explore security professions, career paths, required competences, education and certifications — the knowledge hub for careers in the security industry.",
-      },
-      { property: "og:title", content: "Security Career Center — CQrityjob" },
-      {
-        property: "og:description",
-        content:
-          "Profession guides, career paths, skills and education across the security industry.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/career-center" }],
-  }),
-  component: CareerCenterIndex,
+  head: ({ match }) => {
+    // The site language lives in the client (localStorage, defaulting to sv),
+    // which SSR cannot read — so the indexed metadata is the Swedish one, the
+    // language this content is written for and the market it describes. The
+    // English half of the page is fully translated; only the <head> is
+    // single-language. Language-prefixed URLs and hreflang would fix that
+    // properly and are a routing-wide change, deliberately not made here.
+    void match;
+    return {
+      meta: [
+        { title: "Säkerhetskarriärcenter — yrken, krav och karriärvägar | CQrityjob" },
+        {
+          name: "description",
+          content:
+            "Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfritt karriärtest på cirka 5 minuter.",
+        },
+        {
+          property: "og:title",
+          content: "Säkerhetskarriärcenter — yrken, krav och karriärvägar",
+        },
+        {
+          property: "og:description",
+          content:
+            "Yrkesguider, karriärvägar och ett kostnadsfritt karriärtest för säkerhetsbranschen.",
+        },
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      links: [
+        { rel: "canonical", href: "https://trust-path-recruitment.lovable.app/career-center" },
+      ],
+    };
+  },
+  validateSearch: parseExplorerSearch,
+  component: CareerCenterHub,
 });
 
-function CareerCenterIndex() {
-  const { t, lang } = useT();
-  const [filters, setFilters] = useState<CareerSearchFilters>({
-    query: "",
-    family: "all",
-    category: "all",
-    level: "all",
-    regulated: "all",
-    sector: "all",
-    orientation: "all",
-    region: "all",
-  });
+const EXPLORER_ANCHOR = "utforska-yrken";
 
-  const filtered = useMemo(
-    () => filterProfessions(professions, filters, lang),
-    [filters, lang],
+function CareerCenterHub() {
+  const { t, lang } = useT();
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const track = useCareerCenterTracking();
+
+  const results = useMemo(() => applyExplorerSearch(search, lang), [search, lang]);
+  const relaxation = useMemo(
+    () => (results.length === 0 ? nearestNonEmpty(search, lang) : null),
+    [results.length, search, lang],
   );
 
-  const featured = professions.slice(0, 6);
-  const roadmap = [
-    lang === "sv" ? "Student" : "Student",
-    lang === "sv" ? "Väktare" : "Security Officer",
-    lang === "sv" ? "Gruppledare" : "Team Leader",
-    lang === "sv" ? "Säkerhetschef" : "Security Manager",
-    lang === "sv" ? "Head of Security" : "Head of Security",
-  ];
+  const onSearchChange = useCallback(
+    (next: ExplorerSearch) => {
+      // `replace` keeps the back button meaning "leave the Career Center"
+      // rather than "undo one chip", which is what a reader expects after
+      // clicking through half a dozen filters.
+      navigate({ search: () => next, replace: true });
+      track("career_filter_used", { surface: "hub_explorer" });
+    },
+    [navigate, track],
+  );
 
   return (
     <>
+      {/* ── 1. HERO ─────────────────────────────────────────────────── */}
       <CareerHero
         eyebrow={t("cc.hero.eyebrow")}
         title={t("cc.hero.title")}
         lead={t("cc.hero.lead")}
+        note={t("cc.hero.trust")}
         actions={
           <>
-            <PrimaryLink to="/security-career-assessment" variant="primary">
-              {t("cc.hero.cta.assessment")}
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <PrimaryLink
+              to="/security-career-assessment"
+              variant="primary"
+              onClick={() => track("career_center_test_started", { surface: "hub_hero" })}
+            >
+              {t("cc.hero.cta.test")}
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
             <a
-              href="#browse"
+              href={`#${EXPLORER_ANCHOR}`}
               className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-semibold text-foreground shadow-xs transition-all hover:border-accent/40 hover:bg-secondary hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              {t("cc.hero.cta.browse")}
+              {t("cc.hero.cta.explore")}
             </a>
           </>
         }
+        aside={<TrustRail />}
       />
 
-      {/* Three entry paths */}
-      <Section className="bg-background">
+      {/* ── 2. VAR STÅR DU I DAG? ───────────────────────────────────── */}
+      <Section className="bg-background py-16 md:py-20">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {t("cc.paths.title")}
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.where.title")}
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("cc.paths.subtitle")}</p>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.where.subtitle")}
+          </p>
         </div>
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+          {/* Each path lands somewhere genuinely different: a pre-filtered
+              explorer at entry level, the same explorer at mid+senior, and
+              the employer product. None of them is "Läs mer". */}
           <EntryPathCard
-            icon={<Compass className="h-5 w-5" strokeWidth={1.5} />}
-            eyebrow={t("cc.paths.explore.eyebrow")}
-            title={t("cc.paths.explore.title")}
-            body={t("cc.paths.explore.body")}
-            to="/career-center/start"
-            ctaLabel={t("cta.learn_more")}
+            icon={<Compass className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
+            title={t("cc.where.curious.title")}
+            body={t("cc.where.curious.body")}
+            cta={t("cc.where.curious.cta")}
+            to="/career-center"
+            search={{ ...ENTRY_LEVEL_SEARCH }}
+            hash={EXPLORER_ANCHOR}
           />
           <EntryPathCard
-            icon={<Users className="h-5 w-5" strokeWidth={1.5} />}
-            eyebrow={t("cc.paths.professional.eyebrow")}
-            title={t("cc.paths.professional.title")}
-            body={t("cc.paths.professional.body")}
-            to="/career-center#browse"
-            ctaLabel={t("cc.hero.cta.browse")}
+            icon={<Users className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
+            title={t("cc.where.working.title")}
+            body={t("cc.where.working.body")}
+            cta={t("cc.where.working.cta")}
+            to="/career-center"
+            search={{ ...NEXT_LEVEL_SEARCH }}
+            hash={EXPLORER_ANCHOR}
           />
           <EntryPathCard
-            icon={<Building2 className="h-5 w-5" strokeWidth={1.5} />}
-            eyebrow={t("cc.paths.employer.eyebrow")}
-            title={t("cc.paths.employer.title")}
-            body={t("cc.paths.employer.body")}
+            icon={<Building2 className="h-5 w-5" strokeWidth={1.5} aria-hidden />}
+            title={t("cc.where.org.title")}
+            body={t("cc.where.org.body")}
+            cta={t("cc.where.org.cta")}
             to="/employers"
-            ctaLabel={t("home.paths.orgs.cta")}
           />
         </div>
       </Section>
 
-      {/* Featured professions */}
-      <Section className="bg-secondary/50 border-t border-border">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {t("cc.featured.title")}
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("cc.featured.subtitle")}</p>
-          </div>
-        </div>
-        <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border shadow-sm sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((p) => (
-            <ProfessionCard
-              key={p.slug}
-              slug={p.slug}
-              title={lang === "sv" ? p.titleSv : p.titleEn}
-              description={L(p.description, lang)}
-              icon={icon(p.icon)}
-              tag={p.status === "placeholder" ? t("cc.status.developing") : undefined}
-            />
-          ))}
-        </div>
-      </Section>
-
-      {/* Categories */}
-      <Section bordered className="bg-background">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {t("cc.categories.title")}
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">{t("cc.categories.subtitle")}</p>
-        </div>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {categories.map((c) => (
-            <CategoryCard
-              key={c.id}
-              icon={icon(c.icon)}
-              name={L(c.name, lang)}
-              desc={L(c.desc, lang)}
-              active={filters.category === c.id}
-              onClick={() =>
-                setFilters((f) => ({
-                  ...f,
-                  category: f.category === c.id ? "all" : (c.id as CategoryId),
-                }))
-              }
-            />
-          ))}
-        </div>
-      </Section>
-
-      {/* Search + Browse */}
-      <div id="browse" />
-      <Section bordered className="bg-secondary/50">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {t("cc.search.title")}
-          </h2>
-          <p className="mt-3 text-muted-foreground">{t("cc.search.subtitle")}</p>
-        </div>
-        <div className="mt-8">
-          <CareerSearch
-            value={filters}
-            onChange={setFilters}
-          />
-        </div>
-        <div className="mt-10">
-          {filtered.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-background p-10 text-center text-sm text-muted-foreground">
-              {t("cc.search.empty")}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border shadow-sm sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
-                <ProfessionCard
-                  key={p.slug}
-                  slug={p.slug}
-                  title={lang === "sv" ? p.titleSv : p.titleEn}
-                  description={L(p.description, lang)}
-                  icon={icon(p.icon)}
-                  tag={p.status === "placeholder" ? t("cc.status.developing") : undefined}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </Section>
-
-      {/* Profession families */}
-      <Section bordered className="bg-background">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {t("start.families.title")}
-          </h2>
-          <p className="mt-3 text-muted-foreground">{t("start.families.subtitle")}</p>
-        </div>
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {professionFamilies
-            .filter((f) => !f.isEntryPath)
-            .map((f) => (
-              <div key={f.id} className="rounded-xl border border-border bg-card p-6 shadow-xs transition-shadow hover:shadow-sm">
-                <p className="text-sm font-semibold tracking-tight text-foreground">{L(f.name, lang)}</p>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{L(f.description, lang)}</p>
-              </div>
-            ))}
-        </div>
-      </Section>
-
-      {/* Pathways */}
-      <Section bordered className="bg-secondary/50">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {t("cc.pathways.title")}
-            </h2>
-            <p className="mt-3 text-muted-foreground">{t("cc.pathways.subtitle")}</p>
-            <p className="mt-6 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              {t("cc.pathways.example.title")}
+      {/* ── 3. KARRIÄRTEST ──────────────────────────────────────────── */}
+      <Section bordered className="bg-primary py-16 text-primary-foreground md:py-20">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:items-center">
+          <div className="lg:col-span-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-foreground/70">
+              {t("cc.test.eyebrow")}
             </p>
-          </div>
-          <div className="max-w-lg">
-            <CareerRoadmap steps={roadmap} />
-          </div>
-        </div>
-      </Section>
-
-      {/* Education & Certifications */}
-      <Section bordered>
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-            <BookOpen className="h-6 w-6 text-accent" strokeWidth={1.5} />
-            <h3 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
-              {t("cc.education.title")}
-            </h3>
-            <p className="mt-3 text-sm text-muted-foreground">{t("cc.education.subtitle")}</p>
-            <div className="mt-5 rounded-md border border-dashed border-border bg-muted/40 p-4 text-xs text-muted-foreground">
-              <Info className="mb-2 h-4 w-4 text-accent" strokeWidth={1.75} />
-              {t("cc.education.placeholder")}
-            </div>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-            <Award className="h-6 w-6 text-accent" strokeWidth={1.5} />
-            <h3 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
-              {t("cc.certs.title")}
-            </h3>
-            <p className="mt-3 text-sm text-muted-foreground">{t("cc.certs.subtitle")}</p>
-            <div className="mt-5 rounded-md border border-dashed border-border bg-muted/40 p-4 text-xs text-muted-foreground">
-              <Info className="mb-2 h-4 w-4 text-accent" strokeWidth={1.75} />
-              {t("cc.certs.placeholder")}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* Assessment CTA */}
-      <Section bordered className="bg-primary text-primary-foreground">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:items-center">
-          <div className="md:col-span-2">
+            {/* The explicit colour is required, not redundant: a base-layer
+                rule in styles.css sets `color: var(--color-foreground)` on
+                every h1-h6, which beats the `text-primary-foreground` this
+                dark section sets on its container. Without it the heading
+                renders near-black on near-black. */}
             <h2
-              className="text-3xl font-semibold tracking-tight md:text-4xl"
+              className="mt-3 text-2xl font-semibold tracking-tight text-primary-foreground md:text-4xl"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              {t("cc.assessment.title")}
+              {t("cc.test.title")}
             </h2>
-            <p className="mt-3 text-primary-foreground/80">{t("cc.assessment.body")}</p>
-          </div>
-          <div className="md:justify-self-end">
-            <PrimaryLink
-              to="/security-career-assessment"
-              variant="ghost"
-              className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-            >
-              {t("cta.assessment")}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </PrimaryLink>
-          </div>
-        </div>
-      </Section>
-
-      {/* Articles placeholder */}
-      <Section bordered>
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {t("cc.articles.title")}
-            </h2>
-            <p className="mt-3 text-muted-foreground">{t("cc.articles.subtitle")}</p>
-          </div>
-        </div>
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-dashed border-border bg-background p-6 text-sm text-muted-foreground"
-            >
-              <Info className="mb-3 h-4 w-4 text-accent" strokeWidth={1.75} />
-              {t("cc.articles.placeholder")}
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/80">
+              {t("cc.test.body")}
+            </p>
+            <div className="mt-8">
+              <PrimaryLink
+                to="/security-career-assessment"
+                variant="accent"
+                onClick={() => track("career_center_test_started", { surface: "hub_test_section" })}
+              >
+                {t("cc.test.cta")}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+              </PrimaryLink>
             </div>
-          ))}
+          </div>
+          <ul className="space-y-3 lg:col-span-2">
+            {/* The question count is the instrument's own constant, not a
+                number typed into copy. */}
+            <TestFact>
+              <span className="tabular-nums">{MVP_QUESTION_COUNT}</span>{" "}
+              {t("cc.test.fact.questions")}
+            </TestFact>
+            <TestFact>{t("cc.test.fact.time")}</TestFact>
+            <TestFact>{t("cc.test.fact.account")}</TestFact>
+            <TestFact>{t("cc.test.fact.noright")}</TestFact>
+          </ul>
         </div>
       </Section>
 
-      {/* Featured jobs placeholder */}
-      <Section bordered className="bg-secondary/50">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-              {t("cc.jobs.title")}
-            </h2>
-            <p className="mt-3 text-muted-foreground">{t("cc.jobs.subtitle")}</p>
-          </div>
-          <Link
-            to="/jobs"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-foreground"
-          >
-            {t("cc.cta.jobs")}
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
+      {/* ── 4. UTFORSKA YRKEN ───────────────────────────────────────── */}
+      <Section bordered id={EXPLORER_ANCHOR} className="bg-background py-16 md:py-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.explore.title")}
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.explore.subtitle")}
+          </p>
         </div>
-        <div className="mt-8 rounded-xl border border-dashed border-border bg-card p-8 text-sm text-muted-foreground">
-          <Info className="h-4 w-4 text-accent" strokeWidth={1.75} />
-          <p className="mt-3">{t("cc.jobs.placeholder")}</p>
+        <div className="mt-10">
+          <ProfessionExplorer
+            search={search}
+            onSearchChange={onSearchChange}
+            results={results}
+            relaxation={relaxation}
+            upcoming={upcomingProfessions}
+            onProfessionOpen={(slug) =>
+              track("career_profession_opened", { surface: "hub_explorer", subject: slug })
+            }
+          />
         </div>
+      </Section>
+
+      {/* ── 5. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
+      <Section bordered className="bg-secondary/40 py-16 md:py-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.routes.title")}
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.routes.subtitle")}
+          </p>
+        </div>
+        <div className="mt-10">
+          <CareerRoutes
+            onProfessionOpen={(slug) =>
+              track("career_profession_opened", { surface: "hub_routes", subject: slug })
+            }
+          />
+        </div>
+      </Section>
+
+      {/* ── 6. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
+      <Section bordered className="bg-background py-16 md:py-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.trust.title")}
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.trust.subtitle")}
+          </p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <TrustCard titleKey="cc.trust.sources.title" bodyKey="cc.trust.sources.body" />
+          <TrustCard titleKey="cc.trust.jurisdiction.title" bodyKey="cc.trust.jurisdiction.body" />
+          <TrustCard titleKey="cc.trust.reviewed.title" bodyKey="cc.trust.reviewed.body" />
+          <TrustCard titleKey="cc.trust.regulatory.title" bodyKey="cc.trust.regulatory.body" />
+        </div>
+        <p className="mt-8 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          {t("cc.trust.closing")}
+        </p>
       </Section>
     </>
   );
 }
 
+/** The hero's supporting panel. Three statements, one of them a number that
+ *  is counted rather than claimed. */
+function TrustRail() {
+  const { t } = useT();
+  return (
+    <div className="relative rounded-xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur">
+      <div
+        aria-hidden
+        className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-[color:var(--gold)]/50 to-transparent"
+      />
+      <p className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+        {PUBLISHED_PROFESSION_COUNT}
+      </p>
+      <p className="text-sm font-medium text-foreground">{t("cc.hero.fact.guides")}</p>
+      <ul className="mt-6 space-y-4 border-t border-border/70 pt-5">
+        <RailFact
+          icon={<FileCheck2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
+          title={t("cc.hero.fact.sources.title")}
+          body={t("cc.hero.fact.sources.body")}
+        />
+        <RailFact
+          icon={<MapPin className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
+          title={t("cc.hero.fact.market.title")}
+          body={t("cc.hero.fact.market.body")}
+        />
+      </ul>
+    </div>
+  );
+}
+
+function RailFact({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="mt-0.5 flex-shrink-0 text-accent">{icon}</span>
+      <span>
+        <span className="block text-sm font-semibold tracking-tight text-foreground">{title}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{body}</span>
+      </span>
+    </li>
+  );
+}
+
+function TestFact({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-3 rounded-md border border-primary-foreground/20 bg-primary-foreground/5 px-4 py-3 text-sm font-medium">
+      {children}
+    </li>
+  );
+}
+
+function TrustCard({ titleKey, bodyKey }: { titleKey: TranslationKey; bodyKey: TranslationKey }) {
+  const { t } = useT();
+  return (
+    <div className="rounded-lg border border-border bg-card p-6">
+      <h3 className="text-sm font-semibold tracking-tight text-foreground">{t(titleKey)}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
+    </div>
+  );
+}
+
 function EntryPathCard({
   icon,
-  eyebrow,
   title,
   body,
+  cta,
   to,
-  ctaLabel,
+  search,
+  hash,
 }: {
   icon: React.ReactNode;
-  eyebrow: string;
   title: string;
   body: string;
+  cta: string;
   to: string;
-  ctaLabel: string;
+  search?: ExplorerSearch;
+  hash?: string;
 }) {
   return (
     <Link
       to={to}
-      className="group flex flex-col rounded-xl border border-border bg-card p-7 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      search={search}
+      hash={hash}
+      className="group flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-secondary text-accent transition-colors group-hover:bg-accent/10">
         {icon}
       </span>
-      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p>
-      <h3 className="mt-2 text-lg font-semibold tracking-tight text-foreground">{title}</h3>
+      <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-colors group-hover:text-[color:var(--accent-hover)]">
-        {ctaLabel}
-        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+      <span className="mt-6 inline-flex items-start gap-1.5 text-sm font-semibold text-accent transition-colors group-hover:text-[color:var(--accent-hover)]">
+        {cta}
+        <ArrowRight
+          className="mt-0.5 h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
       </span>
     </Link>
   );

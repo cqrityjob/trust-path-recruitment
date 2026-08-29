@@ -53,6 +53,17 @@ export const FUNNEL_EVENT_NAMES = [
   // own download action (window.print()), tracked the same privacy-safe way
   // as every other funnel event here — event name only, no report content.
   "result_downloaded",
+  // Security Career Center measurement. `career_center_test_started` is the
+  // hub CTA click, which is deliberately NOT `assessment_started` (the first
+  // answered question): the gap between the two is the hub's conversion
+  // drop-off, and one name cannot carry both. `career_filter_used` has no
+  // existing analogue. Both are mirrored in the table's CHECK allowlist by
+  // 20260930090000_cd_v31_funnel_events_career_center.sql — see
+  // src/lib/career-center/analytics.ts for why the other two Career Center
+  // events reuse `profession_explored` and `assessment_completed` instead of
+  // adding names here.
+  "career_center_test_started",
+  "career_filter_used",
 ] as const;
 
 export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];

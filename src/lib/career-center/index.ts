@@ -12,6 +12,11 @@ export * from "./education";
 export * from "./certifications";
 export * from "./career-paths";
 export * from "./selectors";
+export * from "./publishability";
+export * from "./meta-groups";
+export * from "./explorer-state";
+export * from "./career-routes";
+export * from "./profession-fit";
 
 // Legacy compatibility for older consumers:
 import type { Lang } from "@/i18n/dictionaries";
