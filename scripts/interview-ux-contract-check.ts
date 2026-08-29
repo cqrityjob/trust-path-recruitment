@@ -414,6 +414,12 @@ for (const file of I18N_SURFACES) {
     "iiu.chip.status", //          likewise, as a screen-reader prefix
     "iiu.iv.sess.srprefix", //     "Session" — the same word in both
     "iiu.source.candidate_cv_short", // "CV" — the same abbreviation in both
+    "iiu.iv.copilot.title", //     "CQrity Copilot" — a product name, which is
+    //                             not translated in either locale. The panel's
+    //                             body copy beneath it IS translated, and is
+    //                             checked like everything else.
+    "iiu.ev.5e.1", //              "Situation" — the same word in both. The
+    //                             other four 5E labels differ and are checked.
   ]);
   const svPairs = new Map(
     [
@@ -472,6 +478,99 @@ for (const file of I18N_SURFACES) {
       `${file} renders ${map}[…] directly — that puts a translation key on screen; resolve it with uiLabel(${map}, value, t)`,
     );
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 10 · The Copilot vertical                                            */
+/* ------------------------------------------------------------------ */
+
+// The central product rule: what the recruiter wrote under a question must
+// follow that question into evidence review by itself. There is exactly one
+// way that fails silently -- the notes section quietly stops being rendered --
+// and the recruiter's only recourse would be to retype their own notes, which
+// is the outcome the whole vertical exists to prevent.
+{
+  const ev = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.evidence.tsx",
+  );
+  ok(
+    ev.includes('t("iiu.ev.notes.title")') && ev.includes("d.session?.notes"),
+    "evidence review no longer renders the saved interview notes — the recruiter would have to retype them",
+  );
+  ok(
+    ev.includes('t("iiu.ev.notes.none")'),
+    "evidence review must say when a question has no note, rather than leaving it blank",
+  );
+  ok(
+    ev.includes('t("iiu.ev.fromnote")') && ev.includes("n.id === p.noteId"),
+    "a proposal must be shown beside the note it was read out of, or it cannot be checked",
+  );
+  ok(
+    ev.includes("<FiveEPanel value={p.fiveE} />"),
+    "the 5E structure of a proposal is not rendered",
+  );
+  ok(
+    ev.includes("runInterviewAnalysis") && ev.includes('t("iiu.ev.analyse")'),
+    "the one analysis action is not wired to runInterviewAnalysis",
+  );
+  ok(
+    ev.includes("analyse.data.steps.map"),
+    "per-step results must be shown, so a later failure reads as partial completion, not total failure",
+  );
+}
+
+// 5E is a description, never a measurement. A count, a percentage or a
+// progress bar over these five fields would be read as a score the moment two
+// candidates were compared, which is exactly what this engine must not produce.
+{
+  const ui = read("src/components/employer/interview/InterviewUi.tsx");
+  const panel = ui.slice(ui.indexOf("export function FiveEPanel"));
+  ok(
+    !/(?:\bscore\b|\bpoäng\b|\bpercent\b|%|\bof 5\b|\bav 5\b|toFixed|Math\.round)/i.test(
+      panel.slice(0, panel.indexOf("\n}\n")),
+    ),
+    "FiveEPanel must not express 5E as a score, a count or a percentage",
+  );
+  ok(
+    panel.includes('t("iiu.ev.5e.note")'),
+    "FiveEPanel must carry the note saying 5E is not a prediction of job performance",
+  );
+}
+
+// Understand permits zero AI tasks. A panel called "Copilot" sitting beside a
+// live candidate must therefore say plainly that it is not listening, and must
+// not acquire a model call later without this failing.
+{
+  const iv = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+  );
+  ok(
+    iv.includes('t("iiu.iv.copilot.title")') && iv.includes('t("iiu.iv.copilot.noai")'),
+    "the interview Copilot panel must state that it calls no model during the interview",
+  );
+  const aside = iv.slice(iv.indexOf('aria-labelledby="s-copilot"'), iv.indexOf("</aside>"));
+  ok(
+    !/useMutation|useServerFn|\.mutate\(/.test(aside),
+    "the Copilot panel triggered an action — the Understand stage permits no AI task at all",
+  );
+}
+
+// The report draft is assistance. The published report is assembled by the
+// database from confirmed evidence and recorded human assessments; the draft
+// travels with it as provenance only.
+{
+  const rp = read(
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx",
+  );
+  ok(rp.includes("runReportDraft"), "the report route no longer offers an AI draft");
+  ok(
+    rp.includes("draftRunId:") && !/sections:\s*draft/.test(rp),
+    "the draft's TEXT must never be passed into finalisation — only its run id, as provenance",
+  );
+  ok(
+    rp.includes('t("iiu.rp.draft.nodecision")'),
+    "the draft must be shown with the reminder that it may not propose a hiring decision",
+  );
 }
 
 console.log(`\n  assertions passed: ${passes}`);

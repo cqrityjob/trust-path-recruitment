@@ -734,7 +734,7 @@ export function CaseSteps({ current }: { current: string }) {
   const currentIdx = order.indexOf(current);
 
   return (
-    <nav aria-label="Processteg" className="border-y border-border py-3">
+    <nav aria-label={t("iiu.rail.aria")} className="border-y border-border py-3">
       <ol className="flex flex-wrap gap-x-2 gap-y-1 text-sm">
         {steps.map((s, i) => {
           const reached = currentIdx >= order.indexOf(s.key);
@@ -770,3 +770,52 @@ export const PRIMARY_BUTTON =
 
 export const FIELD =
   "mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
+/** The 5E structure of one behavioural account.
+ *
+ *  Deliberately a DESCRIPTION, not a measurement. There is no count, no
+ *  percentage, no "3 of 5", no bar and no colour scale over these fields,
+ *  because every one of those would be read as a score the moment a recruiter
+ *  saw two candidates side by side. A part that is missing is shown as missing
+ *  and named as a gap to ask about — which is the only thing the absence
+ *  actually tells you. */
+export function FiveEPanel({
+  value,
+}: {
+  value: {
+    readonly e1Situation: string | null;
+    readonly e2OwnRole: string | null;
+    readonly e3ExactAction: string | null;
+    readonly e4Effect: string | null;
+    readonly e5Reflection: string | null;
+  };
+}) {
+  const { t } = useT();
+  const parts: ReadonlyArray<readonly [TranslationKey, string | null]> = [
+    ["iiu.ev.5e.1", value.e1Situation],
+    ["iiu.ev.5e.2", value.e2OwnRole],
+    ["iiu.ev.5e.3", value.e3ExactAction],
+    ["iiu.ev.5e.4", value.e4Effect],
+    ["iiu.ev.5e.5", value.e5Reflection],
+  ];
+  if (parts.every(([, v]) => v === null)) return null;
+
+  return (
+    <div className="mt-3 rounded-md border border-border/70 p-3">
+      <p className="text-xs font-semibold text-foreground">{t("iiu.ev.5e.title")}</p>
+      <dl className="mt-2 space-y-1.5">
+        {parts.map(([key, v]) => (
+          <div key={key} className="text-xs">
+            <dt className="font-medium text-foreground">{t(key)}</dt>
+            <dd className={v ? "text-muted-foreground" : "italic text-muted-foreground/70"}>
+              {v ?? t("iiu.ev.5e.missing")}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        {t("iiu.ev.5e.note")}
+      </p>
+    </div>
+  );
+}

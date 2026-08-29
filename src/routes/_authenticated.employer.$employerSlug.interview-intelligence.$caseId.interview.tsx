@@ -540,7 +540,7 @@ function Page() {
       )}
 
       {question && (
-        <section className="mt-6 max-w-4xl" aria-labelledby="s-current">
+        <section className="mt-6 max-w-6xl" aria-labelledby="s-current">
           <h3 id="s-current" className="sr-only">
             {t("iiu.iv.current")}
           </h3>
@@ -562,194 +562,248 @@ function Page() {
             {d.questions.length}
           </p>
 
-          <div className="rounded-lg border border-border p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip tone="work">{question.code}</Chip>
-              <Chip>
-                {question.questionType === "behavioural"
-                  ? t("iiu.iv.type.behavioural")
-                  : t("iiu.iv.type.situational")}
-              </Chip>
-              <Chip
-                tone={qState(question.id) === "answered" ? "confirmed" : "neutral"}
-                srPrefix={t("iiu.iv.questionstatus")}
-              >
-                {uiLabel(STATE_LABEL, qState(question.id), t)}
-              </Chip>
-            </div>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="work">{question.code}</Chip>
+                <Chip>
+                  {question.questionType === "behavioural"
+                    ? t("iiu.iv.type.behavioural")
+                    : t("iiu.iv.type.situational")}
+                </Chip>
+                <Chip
+                  tone={qState(question.id) === "answered" ? "confirmed" : "neutral"}
+                  srPrefix={t("iiu.iv.questionstatus")}
+                >
+                  {uiLabel(STATE_LABEL, qState(question.id), t)}
+                </Chip>
+              </div>
 
-            <blockquote className="mt-3 border-l-2 border-accent pl-3 text-base leading-relaxed text-foreground">
-              {question.promptSv}
-            </blockquote>
-            <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.verbatim")}</p>
+              <blockquote className="mt-3 border-l-2 border-accent pl-3 text-base leading-relaxed text-foreground">
+                {question.promptSv}
+              </blockquote>
+              <p className="mt-1 text-xs text-muted-foreground">{t("iiu.iv.verbatim")}</p>
 
-            {question.probes.length > 0 && (
-              <>
-                <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("iiu.iv.approvedprobes")}
-                </h4>
-                <ul className="mt-2 space-y-1">
-                  {question.probes.map((p) => (
-                    <li key={p.id} className="text-sm text-foreground">
-                      · {p.wordingSv}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {d.generalProbes.length > 0 && (
-              <>
-                <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("iiu.iv.generalprobes")}
-                </h4>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {d.generalProbes.map((p) => (
-                    <li key={p.id}>
-                      <Chip tone="work">{p.wordingSv}</Chip>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {question.dimensions.length > 0 && (
-              <>
-                <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("iiu.iv.evidencetoseek")}
-                </h4>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {question.dimensions.map((dim) => (
-                    <li key={dim.id}>
-                      <Chip>{(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}</Chip>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            {/* Notes. A SOURCE, and labelled as one. */}
-            <div className="mt-5">
-              <label htmlFor="note" className="text-sm font-medium text-foreground">
-                {t("iiu.iv.notes")}
-              </label>
-              <p id="note-hint" className="mt-0.5 text-xs text-muted-foreground">
-                {t("iiu.iv.notes.hint")}
-              </p>
-              {/* Owner UAT: the interviewer could not tell whether what they
-                  had typed was actually stored. The timestamp existed but sat
-                  far away in the header, so it read as page furniture rather
-                  than as an answer to "did that save?". */}
-              {/* A pending or failed save is never reported as saved. The
-                  three states are distinct on purpose: "saving", "not saved
-                  yet" and "saved at HH:MM" mean different things to somebody
-                  about to press Next. */}
-              <p
-                role="status"
-                aria-live="polite"
-                className={`mt-1 text-xs font-medium ${
-                  noteError ? "text-destructive" : "text-muted-foreground"
-                }`}
-              >
-                {saveNote.isPending
-                  ? t("iiu.iv.saving")
-                  : noteError
-                    ? t("iiu.iv.note.unsaved")
-                    : noteDirty
-                      ? t("iiu.iv.note.unsaved")
-                      : savedAt
-                        ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
-                        : "\u00a0"}
-              </p>
-
-              {noteError && (
-                <div className="mt-2">
-                  <Panel tone="governance" role="alert" title={t("iiu.iv.note.savefailed")}>
-                    {blockedNotice && <p>{t("iiu.iv.note.blocked")}</p>}
-                    <p className="mt-2">
-                      <button
-                        type="button"
-                        className={BUTTON}
-                        disabled={saveNote.isPending}
-                        onClick={() => void flushNote()}
-                      >
-                        {saveNote.isPending
-                          ? t("iiu.iv.note.savingbefore")
-                          : t("iiu.iv.note.retry")}
-                      </button>
-                    </p>
-                  </Panel>
-                </div>
+              {question.probes.length > 0 && (
+                <>
+                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("iiu.iv.approvedprobes")}
+                  </h4>
+                  <ul className="mt-2 space-y-1">
+                    {question.probes.map((p) => (
+                      <li key={p.id} className="text-sm text-foreground">
+                        · {p.wordingSv}
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
-              <textarea
-                id="note"
-                rows={8}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                aria-describedby="note-hint"
-                className={FIELD}
-              />
+
+              {d.generalProbes.length > 0 && (
+                <>
+                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("iiu.iv.generalprobes")}
+                  </h4>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {d.generalProbes.map((p) => (
+                      <li key={p.id}>
+                        <Chip tone="work">{p.wordingSv}</Chip>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {question.dimensions.length > 0 && (
+                <>
+                  <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t("iiu.iv.evidencetoseek")}
+                  </h4>
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {question.dimensions.map((dim) => (
+                      <li key={dim.id}>
+                        <Chip>{(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}</Chip>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {/* Notes. A SOURCE, and labelled as one. */}
+              <div className="mt-5">
+                <label htmlFor="note" className="text-sm font-medium text-foreground">
+                  {t("iiu.iv.notes")}
+                </label>
+                <p id="note-hint" className="mt-0.5 text-xs text-muted-foreground">
+                  {t("iiu.iv.notes.hint")}
+                </p>
+                {/* Owner UAT: the interviewer could not tell whether what they
+                    had typed was actually stored. The timestamp existed but sat
+                    far away in the header, so it read as page furniture rather
+                    than as an answer to "did that save?". */}
+                {/* A pending or failed save is never reported as saved. The
+                    three states are distinct on purpose: "saving", "not saved
+                    yet" and "saved at HH:MM" mean different things to somebody
+                    about to press Next. */}
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className={`mt-1 text-xs font-medium ${
+                    noteError ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {saveNote.isPending
+                    ? t("iiu.iv.saving")
+                    : noteError
+                      ? t("iiu.iv.note.unsaved")
+                      : noteDirty
+                        ? t("iiu.iv.note.unsaved")
+                        : savedAt
+                          ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
+                          : "\u00a0"}
+                </p>
+
+                {noteError && (
+                  <div className="mt-2">
+                    <Panel tone="governance" role="alert" title={t("iiu.iv.note.savefailed")}>
+                      {blockedNotice && <p>{t("iiu.iv.note.blocked")}</p>}
+                      <p className="mt-2">
+                        <button
+                          type="button"
+                          className={BUTTON}
+                          disabled={saveNote.isPending}
+                          onClick={() => void flushNote()}
+                        >
+                          {saveNote.isPending
+                            ? t("iiu.iv.note.savingbefore")
+                            : t("iiu.iv.note.retry")}
+                        </button>
+                      </p>
+                    </Panel>
+                  </div>
+                )}
+                <textarea
+                  id="note"
+                  rows={8}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  aria-describedby="note-hint"
+                  className={FIELD}
+                />
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={BUTTON}
+                  onClick={() =>
+                    setQState.mutate({
+                      sessionId: session.id,
+                      questionId: question.id,
+                      state: "answered",
+                    })
+                  }
+                >
+                  {t("iiu.iv.markanswered")}
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  onClick={() =>
+                    setQState.mutate({
+                      sessionId: session.id,
+                      questionId: question.id,
+                      state: "incomplete",
+                    })
+                  }
+                >
+                  {t("iiu.iv.state.incomplete")}
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  onClick={() =>
+                    setQState.mutate({
+                      sessionId: session.id,
+                      questionId: question.id,
+                      state: "revisit",
+                    })
+                  }
+                >
+                  {t("iiu.iv.state.revisit")}
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  disabled={active === 0}
+                  onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
+                >
+                  {t("iiu.iv.previous")}
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON}
+                  disabled={active >= d.questions.length - 1}
+                  onClick={() =>
+                    void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
+                  }
+                >
+                  {t("iiu.iv.next")}
+                </button>
+              </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={BUTTON}
-                onClick={() =>
-                  setQState.mutate({
-                    sessionId: session.id,
-                    questionId: question.id,
-                    state: "answered",
-                  })
-                }
-              >
-                {t("iiu.iv.markanswered")}
-              </button>
-              <button
-                type="button"
-                className={BUTTON}
-                onClick={() =>
-                  setQState.mutate({
-                    sessionId: session.id,
-                    questionId: question.id,
-                    state: "incomplete",
-                  })
-                }
-              >
-                {t("iiu.iv.state.incomplete")}
-              </button>
-              <button
-                type="button"
-                className={BUTTON}
-                onClick={() =>
-                  setQState.mutate({
-                    sessionId: session.id,
-                    questionId: question.id,
-                    state: "revisit",
-                  })
-                }
-              >
-                {t("iiu.iv.state.revisit")}
-              </button>
-              <button
-                type="button"
-                className={BUTTON}
-                disabled={active === 0}
-                onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
-              >
-                {t("iiu.iv.previous")}
-              </button>
-              <button
-                type="button"
-                className={BUTTON}
-                disabled={active >= d.questions.length - 1}
-                onClick={() =>
-                  void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
-                }
-              >
-                {t("iiu.iv.next")}
-              </button>
-            </div>
+            {/* ---- CQrity Copilot ----
+                Live support during the interview, and deliberately NOT a model.
+                TRUST permits zero AI tasks in Understand, so nothing on this
+                panel is generated: it is the approved pack content and the
+                method, arranged so the interviewer can use it without looking
+                away from the candidate. The panel says so in its own words,
+                because a surface called "copilot" that stayed silent about it
+                would be read as one that is listening. */}
+            <aside className="lg:sticky lg:top-4 lg:self-start" aria-labelledby="s-copilot">
+              <div className="rounded-lg border border-border p-4">
+                <h4 id="s-copilot" className="text-sm font-semibold text-foreground">
+                  {t("iiu.iv.copilot.title")}
+                </h4>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {t("iiu.iv.copilot.noai")}
+                </p>
+
+                <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("iiu.iv.copilot.listen")}
+                </h5>
+                <ol className="mt-2 space-y-1 text-xs text-foreground">
+                  <li>1. {t("iiu.ev.5e.1")}</li>
+                  <li>2. {t("iiu.ev.5e.2")}</li>
+                  <li>3. {t("iiu.ev.5e.3")}</li>
+                  <li>4. {t("iiu.ev.5e.4")}</li>
+                  <li>5. {t("iiu.ev.5e.5")}</li>
+                </ol>
+                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  {t("iiu.iv.copilot.5enote")}
+                </p>
+
+                {d.prohibitedAreas.length > 0 && (
+                  <>
+                    <h5 className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t("iiu.iv.copilot.donot")}
+                    </h5>
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {d.prohibitedAreas.slice(0, 4).map((a) => (
+                        <li key={a.id}>
+                          · {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
+                <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+                  {t("iiu.iv.copilot.notes")}
+                </p>
+              </div>
+            </aside>
           </div>
 
           {/* Anchors shown as behaviour to listen for — never as a control */}

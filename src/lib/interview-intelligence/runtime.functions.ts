@@ -499,6 +499,11 @@ export interface CaseDetail {
     readonly relevanceRationale: string;
     readonly uncertaintyNote: string | null;
     readonly prohibitedConclusionNote: string | null;
+    /** The saved interview note this passage was read out of. This is what
+     *  makes the proposal auditable: the recruiter sees their own words next
+     *  to what the model made of them, and never retypes anything. */
+    readonly noteId: string | null;
+    readonly fiveE: FiveE;
   }[];
   readonly evidence: readonly {
     readonly id: string;
@@ -506,6 +511,8 @@ export interface CaseDetail {
     readonly originalExcerpt: string | null;
     readonly questionId: string;
     readonly origin: string;
+    readonly noteId: string | null;
+    readonly fiveE: FiveE;
   }[];
   readonly findings: readonly {
     readonly id: string;
@@ -544,6 +551,33 @@ export interface CaseDetail {
     readonly hasResearchClaim: boolean;
   }[];
   readonly aiAvailable: boolean;
+}
+
+/** CQrityjob's evidence-structuring model: the five things a usable behavioural
+ *  example states. It is a SHAPE, not a measurement — there is no completeness
+ *  value, no total, no weighting and no threshold anywhere over these fields,
+ *  and a missing part is simply absent, never a deduction. It structures what a
+ *  human then reads; it is not a validated predictor of job performance. */
+export type FiveE = {
+  readonly e1Situation: string | null;
+  readonly e2OwnRole: string | null;
+  readonly e3ExactAction: string | null;
+  readonly e4Effect: string | null;
+  readonly e5Reflection: string | null;
+};
+
+function fiveE(row: Record<string, unknown>): FiveE {
+  const text = (v: unknown): string | null => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return s === "" ? null : s;
+  };
+  return {
+    e1Situation: text(row.e1_situation),
+    e2OwnRole: text(row.e2_own_role),
+    e3ExactAction: text(row.e3_exact_action),
+    e4Effect: text(row.e4_effect),
+    e5Reflection: text(row.e5_reflection),
+  };
 }
 
 const caseInput = z.object({ caseId: z.string().uuid() });
@@ -636,13 +670,15 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       db
         .from("scp_interview_evidence_proposals")
         .select(
-          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note",
+          "id, excerpt, question_id, review_state, extraction_confidence, relevance_rationale, uncertainty_note, prohibited_conclusion_note, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
         )
         .eq("case_id", caseId)
         .order("created_at"),
       db
         .from("scp_interview_evidence")
-        .select("id, excerpt, original_excerpt, question_id, origin")
+        .select(
+          "id, excerpt, original_excerpt, question_id, origin, note_id, e1_situation, e2_own_role, e3_exact_action, e4_effect, e5_reflection",
+        )
         .eq("case_id", caseId)
         .order("created_at"),
       db
@@ -843,6 +879,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         relevanceRationale: (p.relevance_rationale as string) ?? "",
         uncertaintyNote: (p.uncertainty_note as string) ?? null,
         prohibitedConclusionNote: (p.prohibited_conclusion_note as string) ?? null,
+        noteId: (p.note_id as string) ?? null,
+        fiveE: fiveE(p),
       })),
       evidence: ((evidenceRes.data ?? []) as Array<Record<string, unknown>>).map((e) => ({
         id: e.id as string,
@@ -850,6 +888,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         originalExcerpt: (e.original_excerpt as string) ?? null,
         questionId: e.question_id as string,
         origin: e.origin as string,
+        noteId: (e.note_id as string) ?? null,
+        fiveE: fiveE(e),
       })),
       findings: ((findingsRes.data ?? []) as Array<Record<string, unknown>>).map((f) => ({
         id: f.id as string,
@@ -1974,14 +2014,145 @@ export const markAssessed = createServerFn({ method: "POST" })
 
 export const finaliseReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => caseInput.parse(d))
+  .validator((d: unknown) =>
+    z.object({ caseId: z.string().uuid(), draftRunId: z.string().uuid().nullish() }).parse(d),
+  )
   .handler(async ({ context, data }): Promise<{ readonly reportId: string }> => {
+    // The draft run is recorded as PROVENANCE, not as content. What gets
+    // published is assembled by the database from confirmed evidence and
+    // recorded human assessments; the model's draft language is attached so a
+    // later reader can see that a draft existed and which run produced it.
     const { data: id, error } = await context.supabase.rpc("scp_iv_finalise_report", {
       _case_id: data.caseId,
+      _draft_run_id: data.draftRunId ?? undefined,
     });
     if (error) throw new Error(error.message);
     return { reportId: id as unknown as string };
   });
+
+/**
+ * The report draft — the last AI step in the vertical, and the one where the
+ * temptation to let the model decide is strongest.
+ *
+ * Three things keep it assistance rather than authorship:
+ *
+ *   - It reads only CONFIRMED evidence and RECORDED human assessments. The
+ *     proposals table is not in its context, so material a human rejected
+ *     cannot reappear as report prose.
+ *   - It returns sections to the screen. It writes nothing to the report. The
+ *     published report is still assembled by the database from the same
+ *     confirmed rows, and the draft is attached only as provenance.
+ *   - The task instruction forbids proposing, implying or phrasing a hiring
+ *     decision, and the registry schema has nowhere to put one.
+ *
+ * Trace permits this task, which is why it can run at all.
+ */
+export const runReportDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(
+    async ({
+      context,
+      data,
+    }): Promise<{
+      readonly status: string;
+      readonly runId: string;
+      readonly sections: readonly { readonly heading: string; readonly body: string }[];
+      readonly withheld: readonly WithheldPassage[];
+      readonly providerMode: string | null;
+      readonly message: string | null;
+    }> => {
+      const db = context.supabase;
+
+      const caseRes = await db
+        .from("scp_interview_cases")
+        .select("id, pack_version_id")
+        .eq("id", data.caseId)
+        .maybeSingle();
+      if (caseRes.error) throw new Error(caseRes.error.message);
+      if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
+      const ctx = await loadAiContext(db, data.caseId, caseRes.data.pack_version_id as string);
+
+      const [evidenceRes, assessRes] = await Promise.all([
+        db
+          .from("scp_interview_evidence")
+          .select("id, excerpt, question_id, origin")
+          .eq("case_id", data.caseId)
+          .order("created_at"),
+        db
+          .from("scp_interview_assessments")
+          .select("question_id, level, rationale, uncertainty_note")
+          .eq("case_id", data.caseId),
+      ]);
+      if (evidenceRes.error) throw new Error(evidenceRes.error.message);
+      if (assessRes.error) throw new Error(assessRes.error.message);
+
+      const codeOf = new Map(ctx.questions.map((q) => [q.id, q.code]));
+      const confirmedEvidence = (evidenceRes.data ?? []).map((e) => ({
+        id: e.id as string,
+        questionCode: codeOf.get(e.question_id as string) ?? null,
+        excerpt: e.excerpt as string,
+        origin: e.origin as string,
+      }));
+      const humanAssessments = (assessRes.data ?? []).map((a) => ({
+        questionCode: codeOf.get(a.question_id as string) ?? null,
+        level: a.level as number,
+        rationale: a.rationale as string,
+        uncertainty: (a.uncertainty_note as string | null) ?? null,
+      }));
+
+      const engine = chooseEngine();
+      const runRes = await db.rpc("scp_iv_ai_run_start", {
+        _case_id: data.caseId,
+        _task: "report_draft_generation",
+        _provider: engine.providerName,
+        _model: engine.modelName,
+        _provider_mode: engine.mode,
+      });
+      if (runRes.error) throw new Error(runRes.error.message);
+      const runId = runRes.data as unknown as string;
+
+      const result = await runAiTask({
+        taskKey: "report_draft_generation",
+        passages: ctx.passages,
+        governedContext: {
+          questions: ctx.questions,
+          competencies: ctx.competencies,
+          confirmedEvidence,
+          humanAssessments,
+        },
+      });
+
+      await db.rpc("scp_iv_ai_run_settle", {
+        _run_id: runId,
+        _status: result.status,
+        _failure_reason: result.failureReason ?? undefined,
+        _abstention_reason: result.abstentionReason ?? undefined,
+        _raw_response: (result.rawResponse ?? null) as never,
+        _input_tokens: result.usage.inputTokens,
+        _output_tokens: result.usage.outputTokens,
+        _latency_ms: result.latencyMs,
+        _cost_micros: result.usage.costMicros ?? undefined,
+        _withheld_passages: result.quarantinedPassages as never,
+        _provider_mode: result.providerMode,
+        _resolved_model: result.resolvedModel ?? undefined,
+      });
+
+      const out =
+        result.status === "succeeded" && result.output
+          ? (result.output as { sections: Array<{ heading: string; body: string }> })
+          : null;
+
+      return {
+        status: result.status,
+        runId,
+        sections: out?.sections ?? [],
+        withheld: result.quarantinedPassages,
+        providerMode: result.providerMode,
+        message: result.failureReason ?? result.abstentionReason ?? null,
+      };
+    },
+  );
 
 /* ------------------------------------------------------------------ */
 /* CQrity TRUST — which stage this case is in                          */

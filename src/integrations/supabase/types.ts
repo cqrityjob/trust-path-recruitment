@@ -6938,6 +6938,11 @@ export type Database = {
           confirmed_by: string
           correction_note: string | null
           created_at: string
+          e1_situation: string | null
+          e2_own_role: string | null
+          e3_exact_action: string | null
+          e4_effect: string | null
+          e5_reflection: string | null
           evidence_dimension_id: string | null
           excerpt: string
           id: string
@@ -6955,6 +6960,11 @@ export type Database = {
           confirmed_by: string
           correction_note?: string | null
           created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_exact_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
           evidence_dimension_id?: string | null
           excerpt: string
           id?: string
@@ -6972,6 +6982,11 @@ export type Database = {
           confirmed_by?: string
           correction_note?: string | null
           created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_exact_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
           evidence_dimension_id?: string | null
           excerpt?: string
           id?: string
@@ -7089,6 +7104,11 @@ export type Database = {
           case_id: string
           correction_class: string | null
           created_at: string
+          e1_situation: string | null
+          e2_own_role: string | null
+          e3_exact_action: string | null
+          e4_effect: string | null
+          e5_reflection: string | null
           evidence_dimension_id: string | null
           excerpt: string
           extraction_confidence: number | null
@@ -7110,6 +7130,11 @@ export type Database = {
           case_id: string
           correction_class?: string | null
           created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_exact_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
           evidence_dimension_id?: string | null
           excerpt: string
           extraction_confidence?: number | null
@@ -7131,6 +7156,11 @@ export type Database = {
           case_id?: string
           correction_class?: string | null
           created_at?: string
+          e1_situation?: string | null
+          e2_own_role?: string | null
+          e3_exact_action?: string | null
+          e4_effect?: string | null
+          e5_reflection?: string | null
           evidence_dimension_id?: string | null
           excerpt?: string
           extraction_confidence?: number | null
