@@ -432,7 +432,12 @@ export interface CaseDetail {
     readonly displayOrder: number;
     readonly questionType: string;
     readonly promptSv: string;
-    readonly dimensions: readonly { id: string; code: string; labelSv: string }[];
+    readonly dimensions: readonly {
+      id: string;
+      code: string;
+      labelSv: string;
+      labelEn: string | null;
+    }[];
     readonly anchors: readonly {
       id: string;
       level: number;
@@ -443,7 +448,12 @@ export interface CaseDetail {
     readonly probes: readonly { id: string; purpose: string; wordingSv: string }[];
   }[];
   readonly generalProbes: readonly { id: string; purpose: string; wordingSv: string }[];
-  readonly prohibitedAreas: readonly { id: string; statementSv: string; areaType: string }[];
+  readonly prohibitedAreas: readonly {
+    id: string;
+    statementSv: string;
+    statementEn: string | null;
+    areaType: string;
+  }[];
   readonly plan: {
     readonly id: string;
     readonly status: string;
@@ -454,6 +464,7 @@ export interface CaseDetail {
     readonly openingGuidance: string | null;
     readonly closingGuidance: string | null;
     readonly aiDisclosure: string;
+    readonly aiDisclosureEn: string | null;
     readonly items: readonly {
       readonly id: string;
       readonly itemKind: string;
@@ -528,6 +539,7 @@ export interface CaseDetail {
     readonly peaceStage: string | null;
     readonly practiceKind: string;
     readonly statementSv: string;
+    readonly statementEn: string | null;
     readonly rationale: string | null;
     readonly hasResearchClaim: boolean;
   }[];
@@ -591,7 +603,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order"),
       db
         .from("scp_interview_evidence_dimensions")
-        .select("id, question_id, code, label_sv")
+        .select("id, question_id, code, label_sv, label_en")
         .order("display_order"),
       db
         .from("scp_interview_rating_anchors")
@@ -604,13 +616,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order"),
       db
         .from("scp_interview_prohibited_areas")
-        .select("id, statement_sv, area_type")
+        .select("id, statement_sv, statement_en, area_type")
         .eq("pack_version_id", packVersionId)
         .order("display_order"),
       db
         .from("scp_interview_prep_plans")
         .select(
-          "id, status, version_number, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure",
+          "id, status, version_number, role_summary, candidate_summary, time_plan, opening_guidance, closing_guidance, ai_disclosure, ai_disclosure_en",
         )
         .eq("case_id", caseId)
         .order("version_number", { ascending: false })
@@ -658,7 +670,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .limit(200),
       db
         .from("scp_interview_method_practices")
-        .select("id, peace_stage, practice_kind, statement_sv, rationale, claim_id")
+        .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
         .order("display_order"),
       db.from("scp_interview_ai_config").select("ai_enabled, transcript_enabled").maybeSingle(),
     ]);
@@ -700,6 +712,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         openingGuidance: (planRow.opening_guidance as string) ?? null,
         closingGuidance: (planRow.closing_guidance as string) ?? null,
         aiDisclosure: planRow.ai_disclosure as string,
+        aiDisclosureEn: (planRow.ai_disclosure_en as string | null) ?? null,
         items: ((itemsRes.data ?? []) as Array<Record<string, unknown>>).map((i) => ({
           id: i.id as string,
           itemKind: i.item_kind as string,
@@ -787,6 +800,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
             id: d.id as string,
             code: d.code as string,
             labelSv: d.label_sv as string,
+            labelEn: (d.label_en as string | null) ?? null,
           })),
         anchors: anchors
           .filter((a) => a.question_id === q.id)
@@ -815,6 +829,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       prohibitedAreas: ((prohibitedRes.data ?? []) as Array<Record<string, unknown>>).map((a) => ({
         id: a.id as string,
         statementSv: a.statement_sv as string,
+        statementEn: (a.statement_en as string | null) ?? null,
         areaType: a.area_type as string,
       })),
       plan,
@@ -873,6 +888,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         peaceStage: (p.peace_stage as string) ?? null,
         practiceKind: p.practice_kind as string,
         statementSv: p.statement_sv as string,
+        statementEn: (p.statement_en as string | null) ?? null,
         rationale: (p.rationale as string) ?? null,
         // Whether this interviewer practice cites a registered research claim.
         // NULL is honest: plenty of good practice is craft, not literature.
@@ -1030,7 +1046,9 @@ async function loadAiContext(db: CallerDb, caseId: string, packVersionId: string
       .select("id, code, prompt_sv")
       .eq("pack_version_id", packVersionId)
       .order("display_order"),
-    db.from("scp_interview_evidence_dimensions").select("id, question_id, code, label_sv"),
+    db
+      .from("scp_interview_evidence_dimensions")
+      .select("id, question_id, code, label_sv, label_en"),
     db
       .from("scp_interview_approved_probes")
       .select("id, question_id, purpose, wording_sv")

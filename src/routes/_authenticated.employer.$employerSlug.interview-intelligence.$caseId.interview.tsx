@@ -28,6 +28,7 @@ import {
   CaseSteps,
   Chip,
   LevelZeroNote,
+  NextStep,
   Panel,
   PEACE_LABEL,
   State,
@@ -111,10 +112,14 @@ function Page() {
         },
       }),
     onSuccess: () => {
-      setSavedAt(new Date().toLocaleTimeString("sv-SE"));
+      setSavedAt(new Date().toLocaleTimeString(lang === "en" ? "en-GB" : "sv-SE"));
       void refresh();
     },
   });
+  // Optimistic question state. The chip used to wait for a refetch, so
+  // "Markera besvarad" looked like it had done nothing for a beat -- exactly
+  // the doubt the owner reported.
+  const [pendingState, setPendingState] = useState<Record<string, string>>({});
   const setQState = useMutation({
     mutationFn: (vars: {
       sessionId: string;
@@ -124,7 +129,17 @@ function Page() {
       qStateFn({
         data: { sessionId: vars.sessionId, questionId: vars.questionId, state: vars.state },
       }),
-    onSuccess: refresh,
+    onMutate: (vars) => {
+      setPendingState((st) => ({ ...st, [vars.questionId]: vars.state }));
+    },
+    onSuccess: async (_result, vars) => {
+      await refresh();
+      setPendingState((st) => {
+        const next = { ...st };
+        delete next[vars.questionId];
+        return next;
+      });
+    },
   });
   const setSState = useMutation({
     mutationFn: (vars: {
@@ -223,7 +238,7 @@ function Page() {
   }
 
   const qState = (id: string) =>
-    session.questions.find((s) => s.questionId === id)?.state ?? "not_started";
+    pendingState[id] ?? session.questions.find((s) => s.questionId === id)?.state ?? "not_started";
   const stagePractices = d.methodPractices.filter((p) => p.peaceStage === session.peaceStage);
 
   return shell(
@@ -270,6 +285,7 @@ function Page() {
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       {session.status === "paused" && (
@@ -286,6 +302,24 @@ function Page() {
           </Panel>
         </div>
       )}
+
+      {/* Owner UAT: the interview page worked but did not tell the
+          interviewer how to actually run it. Seven lines, collapsed by
+          default so it does not sit between them and the candidate. */}
+      <details className="mt-6 max-w-3xl rounded-lg border border-border p-4" open>
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">
+          {t("iiu.iv.howto.title")}
+        </summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-muted-foreground">
+          <li>{t("iiu.iv.howto.1")}</li>
+          <li>{t("iiu.iv.howto.2")}</li>
+          <li>{t("iiu.iv.howto.3")}</li>
+          <li>{t("iiu.iv.howto.4")}</li>
+          <li>{t("iiu.iv.howto.5")}</li>
+          <li>{t("iiu.iv.howto.6")}</li>
+          <li className="font-medium text-foreground">{t("iiu.iv.howto.7")}</li>
+        </ol>
+      </details>
 
       {/* PEACE stage control */}
       <section className="mt-6" aria-labelledby="s-peace">
@@ -316,7 +350,9 @@ function Page() {
                   <Chip tone={p.practiceKind === "warning" ? "attention" : "work"}>
                     {uiLabel(PRACTICE_KIND_LABEL, p.practiceKind, t)}
                   </Chip>
-                  <span className="text-foreground">{p.statementSv}</span>
+                  <span className="text-foreground">
+                    {(lang === "en" ? p.statementEn : p.statementSv) ?? p.statementSv}
+                  </span>
                 </div>
                 {/*
                   scp_interview_method_practices.rationale is NOT rendered.
@@ -451,7 +487,7 @@ function Page() {
                 <ul className="mt-2 flex flex-wrap gap-1.5">
                   {question.dimensions.map((dim) => (
                     <li key={dim.id}>
-                      <Chip>{dim.labelSv}</Chip>
+                      <Chip>{(lang === "en" ? dim.labelEn : dim.labelSv) ?? dim.labelSv}</Chip>
                     </li>
                   ))}
                 </ul>
@@ -465,6 +501,21 @@ function Page() {
               </label>
               <p id="note-hint" className="mt-0.5 text-xs text-muted-foreground">
                 {t("iiu.iv.notes.hint")}
+              </p>
+              {/* Owner UAT: the interviewer could not tell whether what they
+                  had typed was actually stored. The timestamp existed but sat
+                  far away in the header, so it read as page furniture rather
+                  than as an answer to "did that save?". */}
+              <p
+                role="status"
+                aria-live="polite"
+                className="mt-1 text-xs font-medium text-muted-foreground"
+              >
+                {saveNote.isPending
+                  ? t("iiu.iv.saving")
+                  : savedAt
+                    ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
+                    : "\u00a0"}
               </p>
               <textarea
                 id="note"
@@ -590,7 +641,7 @@ function Page() {
                 key={a.id}
                 className="rounded-md border border-border p-2.5 text-sm text-foreground"
               >
-                {a.statementSv}
+                {(lang === "en" ? a.statementEn : a.statementSv) ?? a.statementSv}
               </li>
             ))}
           </ul>

@@ -8125,6 +8125,7 @@ export type Database = {
       scp_interview_prep_plans: {
         Row: {
           ai_disclosure: string
+          ai_disclosure_en: string | null
           ai_run_id: string | null
           approval_note: string | null
           approved_at: string | null
@@ -8143,6 +8144,7 @@ export type Database = {
         }
         Insert: {
           ai_disclosure?: string
+          ai_disclosure_en?: string | null
           ai_run_id?: string | null
           approval_note?: string | null
           approved_at?: string | null
@@ -8161,6 +8163,7 @@ export type Database = {
         }
         Update: {
           ai_disclosure?: string
+          ai_disclosure_en?: string | null
           ai_run_id?: string | null
           approval_note?: string | null
           approved_at?: string | null
@@ -8265,6 +8268,7 @@ export type Database = {
           id: string
           pack_version_id: string
           rationale_sv: string
+          statement_en: string | null
           statement_sv: string
         }
         Insert: {
@@ -8275,6 +8279,7 @@ export type Database = {
           id?: string
           pack_version_id: string
           rationale_sv: string
+          statement_en: string | null
           statement_sv: string
         }
         Update: {
@@ -8285,6 +8290,7 @@ export type Database = {
           id?: string
           pack_version_id?: string
           rationale_sv?: string
+          statement_en?: string | null
           statement_sv?: string
         }
         Relationships: [

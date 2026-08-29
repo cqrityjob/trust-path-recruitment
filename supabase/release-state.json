@@ -68,6 +68,24 @@
       ],
       "note": "Translation only: adds English columns for the TRUST stage responsibility and the stage prohibitions, fills them for TRUST v1, and widens scp_trust_stage_for_case to carry both languages. No stage, permission, ordinal or claim changes; Swedish remains authoritative. Not applied hosted.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_trust_stages' AND column_name='human_responsibility_en';"
+    },
+    {
+      "file": "20260929090000_scp_interview_english_guidance_copy.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "table": "scp_interview_prohibited_areas",
+          "object": "statement_en",
+          "kind": "column"
+        },
+        {
+          "table": "scp_interview_prep_plans",
+          "object": "ai_disclosure_en",
+          "kind": "column"
+        }
+      ],
+      "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.",
+      "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';"
     }
   ],
   "policyVersion": 2,

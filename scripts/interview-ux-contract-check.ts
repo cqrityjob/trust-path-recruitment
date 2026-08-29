@@ -319,11 +319,34 @@ function codeLines(source: string): string[] {
 
 const SWEDISH_GLYPH = /[åäöÅÄÖ]/;
 
+// Owner UAT found "Motivering: " and "Ankare: " still hardcoded on two
+// screens. Neither contains å, ä or ö, so a glyph test walks straight past
+// them -- and plenty of Swedish does: Motivering, Ankare, Status, Intervju,
+// Rollpaket, Bedomning-without-o. This is the second line of defence: a small
+// lexicon of Swedish words that actually appear in this module's copy, tested
+// against JSX text and string literals only.
+const SWEDISH_WORDS =
+  /\b(Motivering|Ankare|Rollpaket|Intervju|Intervjuer|Underlag|Evidens|Bedomning|Rapport|Kandidat|Niva|Sparat|Anteckningar|Godkand|Avbryt|Skapa|Valj|Fraga|Fragor)\b/;
+
+/** Does this line put Swedish in front of a customer?
+ *
+ *  Import paths, translation KEYS and identifiers are not customer copy --
+ *  `t("iiu.rail.interview")` must not trip a rule about the word "Interview".
+ *  So the check looks at JSX text and quoted strings, with dictionary keys
+ *  and module paths removed first. */
+function customerFacingSwedish(line: string): boolean {
+  const stripped = line
+    .replace(/"(?:ii|iiu)\.[^"]*"/g, "") // translation keys
+    .replace(/from\s+"[^"]*"/g, "") // import paths
+    .replace(/\b[a-z]+[A-Z]\w*\b/g, ""); // camelCase identifiers
+  return SWEDISH_GLYPH.test(stripped) || SWEDISH_WORDS.test(stripped);
+}
+
 for (const file of I18N_SURFACES) {
   const lines = codeLines(read(file));
   const offenders: number[] = [];
   for (let i = 0; i < lines.length; i += 1) {
-    if (SWEDISH_GLYPH.test(lines[i])) offenders.push(i + 1);
+    if (customerFacingSwedish(lines[i])) offenders.push(i + 1);
   }
   ok(
     offenders.length === 0,

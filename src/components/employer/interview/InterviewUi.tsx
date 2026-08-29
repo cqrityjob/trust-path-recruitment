@@ -313,6 +313,13 @@ const ERROR_KEY: Record<string, TranslationKey> = {
   SCP_IV_ASSESSMENT_EDITED_IN_PLACE: "iiu.err.assessment_edited",
   SCP_IV_PACK_NOT_USABLE: "iiu.err.pack_not_usable",
   SCP_IV_EMPLOYER_NOT_ACTIVE: "iiu.err.employer_not_active",
+  // Owner UAT: these three reached the screen as raw ENGLISH sentences in
+  // Swedish mode, because they were never mapped. The rules they express are
+  // right; the way the interviewer met them was not.
+  SCP_IV_NO_CONFIRMED_EVIDENCE: "iiu.err.no_confirmed_evidence",
+  SCP_IV_RATIONALE_REQUIRED: "iiu.err.rationale_required",
+  SCP_IV_NO_ANCHOR: "iiu.err.no_anchor",
+  SCP_IV_SOURCES_NOT_READY: "iiu.err.sources_not_ready",
 };
 
 export function interviewErrorMessage(error: unknown, t: (key: TranslationKey) => string): string {
@@ -630,6 +637,75 @@ export function TrustStageBanner({
 
       <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
     </section>
+  );
+}
+
+/**
+ * A report blocker, in the reader's language.
+ *
+ * scp_iv_report_blockers() returns a CODE and a Swedish message. The report
+ * screen rendered the code in a monospace chip beside it, so the owner met
+ * "ASSESSMENT_NOT_COMPLETE" and "QUESTION_NOT_ASSESSED" on a customer screen.
+ * The code is an internal identifier; it belongs in a log, not on the page.
+ *
+ * QUESTION_NOT_ASSESSED carries the question code ("Q2 har ingen ...") which
+ * is real information, so it is rebuilt rather than discarded.
+ */
+export function blockerMessage(
+  code: string,
+  message: string,
+  t: (key: TranslationKey) => string,
+): string {
+  switch (code) {
+    case "ASSESSMENT_NOT_COMPLETE":
+      return t("iiu.rp.blk.assessment_not_complete");
+    case "QUESTION_NOT_ASSESSED": {
+      const q = /\b(Q\d+)\b/.exec(message)?.[1];
+      return q
+        ? `${q} ${t("iiu.rp.blk.question_not_assessed")}`
+        : t("iiu.rp.blk.question_not_assessed");
+    }
+    case "PROPOSALS_AWAITING_REVIEW":
+      return t("iiu.rp.blk.proposals_awaiting");
+    case "NOT_PERMITTED":
+      return t("iiu.rp.blk.not_permitted");
+    case "CASE_NOT_FOUND":
+      return t("iiu.rp.blk.case_not_found");
+    default:
+      // An unrecognised code keeps its server message rather than becoming a
+      // vague apology -- but the code itself still never reaches the screen.
+      return message || t("iiu.rp.blk.generic");
+  }
+}
+
+/**
+ * What happens next, said in one line.
+ *
+ * Owner UAT, finding F: each stage worked, but the product left the reader to
+ * infer what to do next from which buttons happened to be on the page. The
+ * journey rail shows WHERE you are; this says WHAT TO DO, which is the part a
+ * first-time pilot user actually needs.
+ */
+export function NextStep({ status }: { status: string }) {
+  const { t } = useT();
+  const KEY: Record<string, TranslationKey> = {
+    draft: "iiu.next.sources",
+    sources_ready: "iiu.next.prep",
+    prep_generated: "iiu.next.prep",
+    prep_approved: "iiu.next.interview",
+    interview_in_progress: "iiu.next.interview",
+    interview_complete: "iiu.next.evidence",
+    evidence_review: "iiu.next.evidence",
+    assessed: "iiu.next.assessed",
+    reported: "iiu.next.reported",
+  };
+  const key = KEY[status];
+  if (!key) return null;
+  return (
+    <p className="mt-3 text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">{t("iiu.next.title")}: </span>
+      {t(key)}
+    </p>
   );
 }
 

@@ -19,6 +19,7 @@ import {
   CaseStatusChip,
   CaseSteps,
   Chip,
+  NextStep,
   Panel,
   State,
   TrustStageBanner,
@@ -63,7 +64,7 @@ const ITEM_LABEL: Record<string, TranslationKey> = {
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -232,6 +233,7 @@ function Page() {
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       {/* ---- 1. Sources ---- */}
@@ -444,7 +446,7 @@ function Page() {
               onClick={() => generate.mutate()}
               disabled={generate.isPending}
             >
-              {generate.isPending ? "Arbetar …" : "Skapa intervjuunderlag"}
+              {generate.isPending ? t("iiu.pp.generate.working") : t("iiu.pp.generate")}
             </button>
           </div>
         )}
@@ -486,7 +488,10 @@ function Page() {
         {d.plan && (
           <div className="mt-4 max-w-4xl space-y-4">
             <Panel tone="ai" title={t("iiu.pp.airole")}>
-              <p>{d.plan.aiDisclosure}</p>
+              <p>
+                {(lang === "en" ? d.plan.aiDisclosureEn : d.plan.aiDisclosure) ??
+                  d.plan.aiDisclosure}
+              </p>
             </Panel>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -622,7 +627,7 @@ function Page() {
             params={{ employerSlug, caseId }}
             className={BUTTON}
           >
-            Rapport
+            {t("iiu.rp.heading")}
           </Link>
         </div>
       )}

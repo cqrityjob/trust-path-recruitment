@@ -24,6 +24,7 @@ import {
   CaseSteps,
   Chip,
   LevelZeroNote,
+  NextStep,
   Panel,
   State,
   TrustStageBanner,
@@ -95,6 +96,7 @@ function Page() {
   const [note, setNote] = useState("");
   const [levels, setLevels] = useState<Record<string, number>>({});
   const [rationales, setRationales] = useState<Record<string, string>>({});
+  const [assessHint, setAssessHint] = useState<Record<string, "level" | "rationale" | null>>({});
   // Writing evidence by hand. With AI off this is the ONLY way evidence
   // reaches the case — the extraction section cannot run — so the journey
   // dead-ended here before this existed.
@@ -209,6 +211,7 @@ function Page() {
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       {/* ---- Human evidence authoring ----
@@ -472,7 +475,7 @@ function Page() {
                                 className={BUTTON}
                                 onClick={() => setEditing(null)}
                               >
-                                Avbryt
+                                {t("iiu.ev.cancel")}
                               </button>
                             </div>
                           </div>
@@ -610,7 +613,7 @@ function Page() {
 
                 {existing ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium">Motivering: </span>
+                    <span className="font-medium">{t("iiu.ev.motivering")}</span>
                     {existing.rationale}
                   </p>
                 ) : (
@@ -620,10 +623,47 @@ function Page() {
                       e.preventDefault();
                       const lvl = levels[qq.id];
                       const rat = rationales[qq.id] ?? "";
-                      if (lvl === undefined || rat.trim() === "") return;
+                      // Silent returns taught the interviewer nothing about
+                      // why the button did nothing. Say it instead.
+                      if (lvl === undefined) {
+                        setAssessHint((st) => ({ ...st, [qq.id]: "level" }));
+                        return;
+                      }
+                      if (rat.trim() === "") {
+                        setAssessHint((st) => ({ ...st, [qq.id]: "rationale" }));
+                        return;
+                      }
+                      setAssessHint((st) => ({ ...st, [qq.id]: null }));
                       assess.mutate({ questionId: qq.id, level: lvl, rationale: rat });
                     }}
                   >
+                    {/* The database refuses a level above 0 without confirmed
+                        evidence, and rightly so. Saying that AFTER the save
+                        button is a bad way to teach a rule the interviewer
+                        could have been told up front — which is exactly how
+                        the owner met it in UAT. So the rule is shown here,
+                        in the same place the choice is made. */}
+                    {evidenceCount === 0 && (
+                      <Panel tone="attention" title={t("iiu.ev.needevidence.title")}>
+                        <p>{t("iiu.ev.needevidence.body")}</p>
+                        <p className="mt-2 flex flex-wrap gap-2">
+                          <a
+                            href="#s-author"
+                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          >
+                            {t("iiu.ev.needevidence.cta.evidence")}
+                          </a>
+                          <button
+                            type="button"
+                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                            onClick={() => setLevels((st) => ({ ...st, [qq.id]: 0 }))}
+                          >
+                            {t("iiu.ev.needevidence.cta.zero")}
+                          </button>
+                        </p>
+                      </Panel>
+                    )}
+
                     <fieldset>
                       <legend className="text-xs font-medium text-foreground">
                         {t("iiu.ev.level")}
@@ -631,26 +671,44 @@ function Page() {
                       <div className="mt-1 flex flex-wrap gap-2">
                         {[...qq.anchors]
                           .sort((a, b) => a.level - b.level)
-                          .map((a) => (
-                            <label
-                              key={a.id}
-                              className={`cursor-pointer rounded-md border px-3 py-1.5 text-xs ${
-                                levels[qq.id] === a.level
-                                  ? "border-accent font-semibold"
-                                  : "border-border"
-                              } ${a.level === 0 ? "bg-amber-500/5" : ""}`}
-                            >
-                              <input
-                                type="radio"
-                                name={`lvl-${qq.id}`}
-                                value={a.level}
-                                className="sr-only"
-                                checked={levels[qq.id] === a.level}
-                                onChange={() => setLevels((s) => ({ ...s, [qq.id]: a.level }))}
-                              />
-                              {a.level} — {a.labelSv}
-                            </label>
-                          ))}
+                          .map((a) => {
+                            // Levels 1-4 are unreachable until evidence exists.
+                            // Disabled rather than hidden: the interviewer
+                            // should see the scale they are working within.
+                            const locked = a.level > 0 && evidenceCount === 0;
+                            return (
+                              <label
+                                key={a.id}
+                                title={locked ? t("iiu.ev.needevidence.locked") : undefined}
+                                className={`rounded-md border px-3 py-1.5 text-xs ${
+                                  locked
+                                    ? "cursor-not-allowed border-border opacity-50"
+                                    : "cursor-pointer"
+                                } ${
+                                  levels[qq.id] === a.level
+                                    ? "border-accent font-semibold"
+                                    : "border-border"
+                                } ${a.level === 0 ? "bg-amber-500/5" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`lvl-${qq.id}`}
+                                  value={a.level}
+                                  className="sr-only"
+                                  disabled={locked}
+                                  checked={levels[qq.id] === a.level}
+                                  onChange={() => setLevels((st) => ({ ...st, [qq.id]: a.level }))}
+                                />
+                                {a.level} — {a.labelSv}
+                                {locked && (
+                                  <span className="sr-only">
+                                    {" "}
+                                    ({t("iiu.ev.needevidence.locked")})
+                                  </span>
+                                )}
+                              </label>
+                            );
+                          })}
                       </div>
                     </fieldset>
                     <div>
@@ -668,6 +726,16 @@ function Page() {
                         onChange={(e) => setRationales((s) => ({ ...s, [qq.id]: e.target.value }))}
                       />
                     </div>
+                    {assessHint[qq.id] === "level" && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {t("iiu.ev.needevidence.body")}
+                      </p>
+                    )}
+                    {assessHint[qq.id] === "rationale" && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {t("iiu.ev.rationale.missing")}
+                      </p>
+                    )}
                     <button type="submit" className={BUTTON} disabled={assess.isPending}>
                       {t("iiu.ev.save")}
                     </button>

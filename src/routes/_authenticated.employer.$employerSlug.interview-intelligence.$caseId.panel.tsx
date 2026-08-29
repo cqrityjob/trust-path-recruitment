@@ -47,6 +47,7 @@ import {
   FIELD,
   CaseSteps,
   CaseStatusChip,
+  NextStep,
   Chip,
   Panel as InfoPanel,
   State,
@@ -193,6 +194,7 @@ function Page() {
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       <h2 className="mt-8 text-lg font-semibold text-foreground">Panelgranskning</h2>

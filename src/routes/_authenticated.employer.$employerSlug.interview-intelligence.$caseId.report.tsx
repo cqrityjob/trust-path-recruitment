@@ -18,8 +18,10 @@ import {
   CaseSteps,
   Chip,
   LevelZeroNote,
+  NextStep,
   Panel,
   State,
+  blockerMessage,
   interviewErrorMessage,
   BUTTON,
   PRIMARY_BUTTON,
@@ -118,7 +120,7 @@ function Page() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
           {isFinal && (
-            <Chip tone="confirmed" srPrefix="Rapport">
+            <Chip tone="confirmed" srPrefix={t("iiu.rp.srprefix")}>
               {t("iiu.rp.final")}
             </Chip>
           )}
@@ -132,6 +134,7 @@ function Page() {
 
       <div className="mt-6">
         <CaseSteps current={d.status} />
+        <NextStep status={d.status} />
       </div>
 
       {/* ---- Blockers ---- */}
@@ -174,8 +177,7 @@ function Page() {
                   key={`${b.code}-${b.message}`}
                   className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3 text-sm"
                 >
-                  <span className="font-mono text-xs text-muted-foreground">{b.code}</span>
-                  <p className="mt-0.5 text-foreground">{b.message}</p>
+                  <p className="text-foreground">{blockerMessage(b.code, b.message, t)}</p>
                 </li>
               ))}
             </ul>
@@ -200,7 +202,7 @@ function Page() {
             <h3 className="text-sm font-semibold text-foreground">{t("iiu.rp.locked")}</h3>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs uppercase text-muted-foreground">Rollpaket</dt>
+                <dt className="text-xs uppercase text-muted-foreground">{t("iiu.rp.rollpaket")}</dt>
                 <dd className="text-foreground">{d.packName}</dd>
               </div>
               <div>
@@ -259,7 +261,7 @@ function Page() {
                     {assessment && (
                       <div className="mt-3 text-xs text-muted-foreground">
                         <p>
-                          <span className="font-medium">Motivering: </span>
+                          <span className="font-medium">{t("iiu.ev.motivering")}</span>
                           {String(assessment.rationale)}
                         </p>
                         {assessment.uncertainty ? (
@@ -269,7 +271,7 @@ function Page() {
                           </p>
                         ) : null}
                         <p className="mt-0.5">
-                          <span className="font-medium">Ankare: </span>
+                          <span className="font-medium">{t("iiu.ev.ankare")}</span>
                           {String(assessment.anchor)}
                         </p>
                         {level === 0 && (
@@ -362,6 +364,10 @@ function Page() {
         <h2 id="s-audit" className="text-lg font-semibold text-foreground">
           {t("iiu.rp.traceability")}
         </h2>
+        {/* The ledger is a record, not chrome. Rewriting a stored reason to
+            match the reader's current language would change what the audit
+            trail says happened, so the note explains it instead. */}
+        <p className="mt-1 max-w-[68ch] text-xs text-muted-foreground">{t("iiu.rp.trace.note")}</p>
         {d.events.length === 0 ? (
           <div className="mt-3">
             <State kind="empty">{t("iiu.rp.nohistory")}</State>
