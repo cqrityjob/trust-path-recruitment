@@ -216,7 +216,7 @@ export interface OrchestratorResult {
    * is known rather than assumed.
    */
   readonly resolvedModel: string | null;
-  readonly usage: { inputTokens: number; outputTokens: number; costMicros: number };
+  readonly usage: { inputTokens: number; outputTokens: number; costMicros: number | null };
   readonly latencyMs: number;
   readonly rawResponse: unknown;
   /**

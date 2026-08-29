@@ -29,6 +29,7 @@
 import { AiProviderError, type AiProvider, type AiRequest, type AiResponse } from "../provider";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
+const MODELS_URL = "https://api.anthropic.com/v1/models";
 const API_VERSION = "2023-06-01";
 
 /** Transport retries only. Four attempts total, then the run fails honestly. */
@@ -57,11 +58,36 @@ const PRICE_MICROS_PER_MTOK: Record<string, { in: number; out: number }> = {
   "claude-haiku-4-5-20251001": { in: 1_000_000, out: 5_000_000 },
 };
 
-function costMicros(model: string, inputTokens: number, outputTokens: number): number {
+/**
+ * Whether this model accepts a sampling parameter at all.
+ *
+ * Claude Sonnet 5 rejects non-default sampling parameters. Sending
+ * `temperature: 0` to it fails the request, so the parameter is omitted rather
+ * than guessed at. Listed by model rather than inferred from the name, because
+ * a wrong guess here is a 400 on the first real call.
+ */
+const REJECTS_SAMPLING_PARAMS = new Set<string>(["claude-sonnet-5"]);
+
+export function acceptsTemperature(model: string): boolean {
+  return !REJECTS_SAMPLING_PARAMS.has(model);
+}
+
+/**
+ * Cost, or an honest absence of it.
+ *
+ * An unpriced model returns null rather than 0: zero is a claim that the run
+ * was free, and a cost ledger that quietly reports 0 for every new model is
+ * worse than one that admits it does not know. The caller records null as
+ * "not known" instead of writing a false zero into the run.
+ */
+function costMicros(model: string, inputTokens: number, outputTokens: number): number | null {
   const price = PRICE_MICROS_PER_MTOK[model];
-  if (!price) return 0;
+  if (!price) return null;
   return Math.round((inputTokens * price.in + outputTokens * price.out) / 1_000_000);
 }
+
+/** Exported so the provider guard can check the table against the invoice. */
+export const MODEL_PRICING = PRICE_MICROS_PER_MTOK;
 
 /**
  * A stable key for one logical request.
@@ -157,14 +183,73 @@ export class AnthropicProvider implements AiProvider {
     this.sleep = options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
+  /**
+   * Ask the provider whether the configured model actually exists, before any
+   * candidate material is sent to it.
+   *
+   * A model id is a configuration value, and configuration drifts: a name that
+   * was valid when it was written can be retired. Discovering that on the
+   * first real interview means a recruiter meets the failure. This is called
+   * at activation instead, and it NEVER substitutes another model -- an
+   * unavailable id is an activation failure to be fixed by a human, not a
+   * reason to quietly interview a candidate with a different engine.
+   */
+  async verifyModelAvailable(): Promise<{ readonly available: boolean; readonly detail: string }> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(`${MODELS_URL}/${encodeURIComponent(this.model)}`, {
+        method: "GET",
+        headers: {
+          "x-api-key": this.apiKey,
+          "anthropic-version": API_VERSION,
+        },
+      });
+    } catch (error) {
+      return {
+        available: false,
+        detail: `Could not reach the provider to verify "${this.model}": ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+
+    if (response.status === 404) {
+      return {
+        available: false,
+        detail: `The provider does not offer a model called "${this.model}". Fix the configured model id; the adapter will not substitute a different model.`,
+      };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return {
+        available: false,
+        detail: `The credential was rejected when verifying "${this.model}" (HTTP ${response.status}).`,
+      };
+    }
+    if (!response.ok) {
+      return {
+        available: false,
+        detail: `Model verification for "${this.model}" failed with HTTP ${response.status}.`,
+      };
+    }
+    return { available: true, detail: `Provider confirms "${this.model}" is available.` };
+  }
+
   async complete(request: AiRequest): Promise<AiResponse> {
     const key = idempotencyKey(request);
 
     const body = {
       model: this.model,
       max_tokens: request.maxOutputTokens,
-      // Deterministic decoding. A creative interview engine is not a feature.
-      temperature: 0,
+      // Sampling parameters are sent ONLY to models that accept them.
+      //
+      // A creative interview engine is not a feature, so temperature 0 was the
+      // right intent -- but Claude Sonnet 5 rejects non-default sampling
+      // parameters outright, which would have turned the very first real-model
+      // call into a 400 that looked like a product bug. Models that still take
+      // temperature keep getting 0; the rest get the default and are relied on
+      // for the determinism that matters here, which is schema and citation
+      // validation, not decoding.
+      ...(acceptsTemperature(this.model) ? { temperature: 0 } : {}),
       system: request.system,
       messages: [
         {
@@ -241,8 +326,21 @@ export class AnthropicProvider implements AiProvider {
       const payload = (await response.json()) as {
         content?: Array<{ type: string; text?: string }>;
         model?: string;
+        stop_reason?: string;
         usage?: { input_tokens?: number; output_tokens?: number };
       };
+
+      // A refusal is a real answer, not a transport hiccup. Retrying it would
+      // be asking the same question until the model changes its mind, which is
+      // exactly the resampling this adapter refuses to do everywhere else. It
+      // is reported as a refusal so the run records why, and the recruiter is
+      // told the engine declined rather than that something broke.
+      if (payload.stop_reason === "refusal") {
+        throw new AiProviderError(
+          "The model declined to answer this request. The run is recorded as refused and is not retried: asking again until the answer changes is not a governed use of a model.",
+          "refused",
+        );
+      }
 
       const text = (payload.content ?? [])
         .filter((c) => c.type === "text" && typeof c.text === "string")

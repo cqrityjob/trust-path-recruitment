@@ -1198,7 +1198,7 @@ export const runPreparation = createServerFn({ method: "POST" })
         _input_tokens: result.usage.inputTokens,
         _output_tokens: result.usage.outputTokens,
         _latency_ms: result.latencyMs,
-        _cost_micros: result.usage.costMicros,
+        _cost_micros: result.usage.costMicros ?? undefined,
         _withheld_passages: result.quarantinedPassages as never,
         _provider_mode: result.providerMode,
         // The provider's own answer beats the start-time intent, and only
@@ -1388,7 +1388,365 @@ export const setSessionState = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+type ExtractionResult = {
+  readonly status: string;
+  readonly proposals: number;
+  readonly message: string | null;
+  readonly withheld: readonly WithheldPassage[];
+  readonly providerMode: string;
+};
+
+/**
+ * The evidence extraction run itself, callable from both the standalone
+ * server function and the orchestrated "analyse notes" action.
+ *
+ * Factored out rather than duplicated: two copies of a governed AI call is
+ * two places for the TRUST gate, the screening and the provenance to drift
+ * apart, which is exactly what a single governed engine exists to prevent.
+ */
+async function runEvidenceExtractionInner(db: CallerDb, caseId: string): Promise<ExtractionResult> {
+  const caseRes = await db
+    .from("scp_interview_cases")
+    .select("id, pack_version_id")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (caseRes.error) throw new Error(caseRes.error.message);
+  if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
+  const packVersionId = caseRes.data.pack_version_id as string;
+
+  const ctx = await loadAiContext(db, caseId, packVersionId);
+
+  const sessionRes = await db
+    .from("scp_interview_sessions")
+    .select("id")
+    .eq("case_id", caseId)
+    .order("started_at", { ascending: false })
+    .limit(1);
+  const sessionId = (sessionRes.data ?? [])[0]?.id as string | undefined;
+  if (!sessionId)
+    return {
+      status: "no_session",
+      proposals: 0,
+      message: "Ingen intervjusession finns.",
+      withheld: [],
+      // No session, so no run was attempted and no engine was chosen.
+      providerMode: "synthetic",
+    };
+
+  const notesRes = await db
+    .from("scp_interview_session_notes")
+    .select("id, question_id, body")
+    .eq("session_id", sessionId);
+
+  const noteRows = (notesRes.data ?? []) as Array<Record<string, unknown>>;
+  const allNotes = noteRows.map((n) => ({
+    ref: n.id as string,
+    questionCode: ctx.questions.find((q) => q.id === n.question_id)?.code ?? null,
+    body: n.body as string,
+  }));
+
+  // Interview notes are UNTRUSTED content, even though a recruiter typed
+  // them. They quote what a candidate said, and a recruiter working at
+  // speed pastes -- from an application, an email, a document the candidate
+  // supplied. Sending them through the governed context because they arrive
+  // by a trusted route would put attacker-controllable text into the one
+  // channel this product treats as authoritative, which is precisely the
+  // confusion the six-layer model exists to prevent.
+  //
+  // So they are screened on the same rules as any source passage, and a
+  // note that carries an instruction to the system is withheld and
+  // reported rather than quietly analysed.
+  const screenedNotes = screenPassages(
+    allNotes.map((n) => ({ passageId: n.ref, sourceKind: "interviewer_notes", text: n.body })),
+  );
+  const withheldNoteIds = new Set(screenedNotes.quarantined.map((q) => q.passageId));
+  const notes = allNotes.filter((n) => !withheldNoteIds.has(n.ref));
+
+  const engine = chooseEngine();
+  const runRes = await db.rpc("scp_iv_ai_run_start", {
+    _case_id: caseId,
+    _task: "evidence_extraction",
+    _provider: engine.providerName,
+    _model: engine.modelName,
+    // The gate lives in the database: a non-synthetic mode is refused
+    // outright while scp_interview_ai_config.ai_enabled is false.
+    _provider_mode: engine.mode,
+  });
+  if (runRes.error) throw new Error(runRes.error.message);
+  const runId = runRes.data as unknown as string;
+
+  const result = await runAiTask({
+    taskKey: "evidence_extraction",
+    passages: ctx.passages,
+    governedContext: {
+      questions: ctx.questions,
+      probes: ctx.probes,
+      competencies: ctx.competencies,
+      notes,
+    },
+    allowedProbeIds: ctx.probes.map((p) => p.id),
+    governedQuestions: new Map(ctx.questions.map((q) => [q.code, q.prompt])),
+    provider: engine.provider,
+    providerMode: engine.mode,
+  });
+
+  await db.rpc("scp_iv_ai_run_settle", {
+    _run_id: runId,
+    _status: result.status,
+    _failure_reason: result.failureReason ?? undefined,
+    _abstention_reason: result.abstentionReason ?? undefined,
+    _raw_response: (result.rawResponse ?? null) as never,
+    _input_tokens: result.usage.inputTokens,
+    _output_tokens: result.usage.outputTokens,
+    _latency_ms: result.latencyMs,
+    _cost_micros: result.usage.costMicros ?? undefined,
+    _withheld_passages: [...result.quarantinedPassages, ...screenedNotes.quarantined] as never,
+    _provider_mode: result.providerMode,
+    _resolved_model: result.resolvedModel ?? undefined,
+  });
+
+  // Carried to the caller on every path, including failure: a recruiter
+  // told only "the engine could not run" is missing the more important
+  // half of what happened.
+  const withheld: readonly WithheldPassage[] = [
+    ...result.quarantinedPassages,
+    ...screenedNotes.quarantined,
+  ].map((q) => ({
+    passageId: q.passageId,
+    reason: QUARANTINE_REASON_SV[q.reason],
+    excerpt: q.excerpt,
+  }));
+
+  if (result.status !== "succeeded" || !result.output) {
+    // Deliberately NO stage transition here. Moving the case to
+    // evidence_review would put it in Trace, where evidence_extraction is
+    // not permitted -- so a retry after a transient failure would be
+    // refused by TRUST rather than simply retried. The caller decides when
+    // Structure work is finished.
+    return {
+      status: result.status,
+      proposals: 0,
+      withheld,
+      providerMode: result.providerMode,
+      message: result.failureReason ?? result.abstentionReason,
+    };
+  }
+
+  const out = result.output as { proposals: Array<Record<string, unknown>> };
+  const qByCode = new Map(ctx.questions.map((q) => [q.code, q]));
+  const compByCode = new Map(ctx.competencies.map((c) => [c.code, c.id]));
+
+  const payload = out.proposals.map((p) => {
+    const q = qByCode.get(p.questionCode as string);
+    const dim = q?.dimensions.find((d) => d.code === p.evidenceDimensionCode);
+    return {
+      noteId: p.noteRef,
+      excerpt: p.excerpt,
+      questionId: q?.id ?? "",
+      evidenceDimensionId: dim?.id ?? "",
+      packCompetencyId: p.competencyCode ? (compByCode.get(p.competencyCode as string) ?? "") : "",
+      extractionConfidence: String(p.extractionConfidence ?? ""),
+      relevanceRationale: p.relevanceRationale ?? "",
+      uncertaintyNote: p.uncertaintyNote ?? null,
+      prohibitedConclusionNote: p.prohibitedConclusionNote ?? null,
+      // 5E, as the engine structured the account. Descriptive only; an
+      // absent field is a gap to ask about and is never counted.
+      e1Situation: p.e1Situation ?? null,
+      e2OwnRole: p.e2OwnRole ?? null,
+      e3Action: p.e3Action ?? null,
+      e4Effect: p.e4Effect ?? null,
+      e5Reflection: p.e5Reflection ?? null,
+    };
+  });
+
+  const recRes = await db.rpc("scp_iv_record_evidence_proposals", {
+    _run_id: runId,
+    _items: payload as never,
+  });
+  if (recRes.error) throw new Error(recRes.error.message);
+
+  return {
+    status: "succeeded",
+    proposals: (recRes.data as unknown as number) ?? 0,
+    message: null,
+    withheld,
+    providerMode: result.providerMode,
+  };
+}
+
 export const runEvidenceExtraction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => caseInput.parse(d))
+  .handler(
+    async ({ context, data }): Promise<ExtractionResult> =>
+      runEvidenceExtractionInner(context.supabase, data.caseId),
+  );
+
+/**
+ * Map existing proposals onto the pack's evidence dimensions.
+ *
+ * A second governed run in Structure, recorded separately so the provenance
+ * says which task produced which column. It re-reads the notes rather than
+ * the proposals, because the task's allowed source kinds are the notes and
+ * the governed context already carries the dimension vocabulary.
+ */
+async function runDimensionMappingInner(
+  db: CallerDb,
+  caseId: string,
+): Promise<{ readonly status: string; readonly message: string | null }> {
+  const caseRes = await db
+    .from("scp_interview_cases")
+    .select("id, pack_version_id")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (caseRes.error) throw new Error(caseRes.error.message);
+  if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
+  const ctx = await loadAiContext(db, caseId, caseRes.data.pack_version_id as string);
+
+  const engine = chooseEngine();
+  const runRes = await db.rpc("scp_iv_ai_run_start", {
+    _case_id: caseId,
+    _task: "evidence_dimension_mapping",
+    _provider: engine.providerName,
+    _model: engine.modelName,
+    _provider_mode: engine.mode,
+  });
+  if (runRes.error) throw new Error(runRes.error.message);
+  const runId = runRes.data as unknown as string;
+
+  const result = await runAiTask({
+    taskKey: "evidence_dimension_mapping",
+    passages: ctx.passages,
+    governedContext: {
+      questions: ctx.questions,
+      competencies: ctx.competencies,
+    },
+  });
+
+  await db.rpc("scp_iv_ai_run_settle", {
+    _run_id: runId,
+    _status: result.status,
+    _failure_reason: result.failureReason ?? undefined,
+    _abstention_reason: result.abstentionReason ?? undefined,
+    _raw_response: (result.rawResponse ?? null) as never,
+    _input_tokens: result.usage.inputTokens,
+    _output_tokens: result.usage.outputTokens,
+    _latency_ms: result.latencyMs,
+    _cost_micros: result.usage.costMicros ?? undefined,
+    _withheld_passages: result.quarantinedPassages as never,
+    _provider_mode: result.providerMode,
+    _resolved_model: result.resolvedModel ?? undefined,
+  });
+
+  return {
+    status: result.status,
+    message: result.failureReason ?? result.abstentionReason ?? null,
+  };
+}
+
+/**
+ * What is missing, unclear or contradictory in the confirmed material.
+ *
+ * A Trace-stage task, so it runs only after the case has entered evidence
+ * review. Findings are prompts for a human to follow up -- never conclusions
+ * about the candidate, and never anything that is scored.
+ */
+async function runFindingsInner(
+  db: CallerDb,
+  caseId: string,
+): Promise<{
+  readonly status: string;
+  readonly findings: number;
+  readonly message: string | null;
+}> {
+  const caseRes = await db
+    .from("scp_interview_cases")
+    .select("id, pack_version_id")
+    .eq("id", caseId)
+    .maybeSingle();
+  if (caseRes.error) throw new Error(caseRes.error.message);
+  if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
+  const ctx = await loadAiContext(db, caseId, caseRes.data.pack_version_id as string);
+
+  const engine = chooseEngine();
+  const runRes = await db.rpc("scp_iv_ai_run_start", {
+    _case_id: caseId,
+    _task: "gap_and_contradiction_detection",
+    _provider: engine.providerName,
+    _model: engine.modelName,
+    _provider_mode: engine.mode,
+  });
+  if (runRes.error) throw new Error(runRes.error.message);
+  const runId = runRes.data as unknown as string;
+
+  const result = await runAiTask({
+    taskKey: "gap_and_contradiction_detection",
+    passages: ctx.passages,
+    governedContext: { questions: ctx.questions, competencies: ctx.competencies },
+  });
+
+  await db.rpc("scp_iv_ai_run_settle", {
+    _run_id: runId,
+    _status: result.status,
+    _failure_reason: result.failureReason ?? undefined,
+    _abstention_reason: result.abstentionReason ?? undefined,
+    _raw_response: (result.rawResponse ?? null) as never,
+    _input_tokens: result.usage.inputTokens,
+    _output_tokens: result.usage.outputTokens,
+    _latency_ms: result.latencyMs,
+    _cost_micros: result.usage.costMicros ?? undefined,
+    _withheld_passages: result.quarantinedPassages as never,
+    _provider_mode: result.providerMode,
+    _resolved_model: result.resolvedModel ?? undefined,
+  });
+
+  if (result.status !== "succeeded" || !result.output) {
+    return {
+      status: result.status,
+      findings: 0,
+      message: result.failureReason ?? result.abstentionReason ?? null,
+    };
+  }
+
+  const out = result.output as { findings: Array<Record<string, unknown>> };
+  const qByCode = new Map(ctx.questions.map((q) => [q.code, q]));
+  const items = out.findings.map((f) => ({
+    findingKind: f.findingKind,
+    statement: f.statement,
+    rationale: f.rationale ?? null,
+    questionId: f.questionCode ? (qByCode.get(f.questionCode as string)?.id ?? "") : "",
+    claimClass: "ai_inference",
+    sourcePassageId: f.sourcePassageId ?? "",
+  }));
+
+  const rec = await db.rpc("scp_iv_record_findings", { _run_id: runId, _items: items as never });
+  if (rec.error) throw new Error(rec.error.message);
+
+  return { status: "succeeded", findings: (rec.data as unknown as number) ?? 0, message: null };
+}
+
+/**
+ * One recruiter action; several governed runs, each in the stage TRUST allows.
+ *
+ * "Analysera intervjuanteckningar" is a single button, but underneath it the
+ * work is split exactly the way CQrity TRUST binds it:
+ *
+ *   Structure   evidence_extraction        the notes become proposals
+ *   Structure   evidence_dimension_mapping the proposals get their dimensions
+ *   -- transition to evidence_review, which puts the case in Trace --
+ *   Trace       gap_and_contradiction_detection   what is missing or conflicts
+ *
+ * The allowlist is not bent to fit the button. Running the last task before
+ * the transition would be refused by the database, and moving it into
+ * Structure would be a change to the method rather than to the product.
+ *
+ * Each task is its own recorded run with its own stage provenance, and a
+ * failure in a later step never erases an earlier success: the result reports
+ * per-step outcomes so partial completion is stated honestly rather than
+ * collapsed into one red box. The manual path stays available throughout,
+ * because every note is still there and evidence can still be written by hand.
+ */
+export const runInterviewAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => caseInput.parse(d))
   .handler(
@@ -1396,174 +1754,114 @@ export const runEvidenceExtraction = createServerFn({ method: "POST" })
       context,
       data,
     }): Promise<{
-      readonly status: string;
+      readonly steps: readonly {
+        readonly task: string;
+        readonly trustStage: string;
+        readonly status: string;
+        readonly detail: string | null;
+      }[];
       readonly proposals: number;
-      readonly message: string | null;
+      readonly findings: number;
       readonly withheld: readonly WithheldPassage[];
-      readonly providerMode: string;
+      readonly providerMode: string | null;
+      readonly enteredReview: boolean;
     }> => {
       const db = context.supabase;
+      const steps: Array<{
+        task: string;
+        trustStage: string;
+        status: string;
+        detail: string | null;
+      }> = [];
+      let withheld: readonly WithheldPassage[] = [];
+      let providerMode: string | null = null;
+      let proposals = 0;
+      let findings = 0;
 
-      const caseRes = await db
-        .from("scp_interview_cases")
-        .select("id, pack_version_id")
-        .eq("id", data.caseId)
-        .maybeSingle();
-      if (caseRes.error) throw new Error(caseRes.error.message);
-      if (!caseRes.data) throw new Error("INTERVIEW_CASE_NOT_FOUND");
-      const packVersionId = caseRes.data.pack_version_id as string;
-
-      const ctx = await loadAiContext(db, data.caseId, packVersionId);
-
-      const sessionRes = await db
-        .from("scp_interview_sessions")
-        .select("id")
-        .eq("case_id", data.caseId)
-        .order("started_at", { ascending: false })
-        .limit(1);
-      const sessionId = (sessionRes.data ?? [])[0]?.id as string | undefined;
-      if (!sessionId)
-        return {
-          status: "no_session",
-          proposals: 0,
-          message: "Ingen intervjusession finns.",
-          withheld: [],
-          // No session, so no run was attempted and no engine was chosen.
-          providerMode: "synthetic",
-        };
-
-      const notesRes = await db
-        .from("scp_interview_session_notes")
-        .select("id, question_id, body")
-        .eq("session_id", sessionId);
-
-      const noteRows = (notesRes.data ?? []) as Array<Record<string, unknown>>;
-      const allNotes = noteRows.map((n) => ({
-        ref: n.id as string,
-        questionCode: ctx.questions.find((q) => q.id === n.question_id)?.code ?? null,
-        body: n.body as string,
-      }));
-
-      // Interview notes are UNTRUSTED content, even though a recruiter typed
-      // them. They quote what a candidate said, and a recruiter working at
-      // speed pastes -- from an application, an email, a document the candidate
-      // supplied. Sending them through the governed context because they arrive
-      // by a trusted route would put attacker-controllable text into the one
-      // channel this product treats as authoritative, which is precisely the
-      // confusion the six-layer model exists to prevent.
-      //
-      // So they are screened on the same rules as any source passage, and a
-      // note that carries an instruction to the system is withheld and
-      // reported rather than quietly analysed.
-      const screenedNotes = screenPassages(
-        allNotes.map((n) => ({ passageId: n.ref, sourceKind: "interviewer_notes", text: n.body })),
-      );
-      const withheldNoteIds = new Set(screenedNotes.quarantined.map((q) => q.passageId));
-      const notes = allNotes.filter((n) => !withheldNoteIds.has(n.ref));
-
-      const engine = chooseEngine();
-      const runRes = await db.rpc("scp_iv_ai_run_start", {
-        _case_id: data.caseId,
-        _task: "evidence_extraction",
-        _provider: engine.providerName,
-        _model: engine.modelName,
-        // The gate lives in the database: a non-synthetic mode is refused
-        // outright while scp_interview_ai_config.ai_enabled is false.
-        _provider_mode: engine.mode,
-      });
-      if (runRes.error) throw new Error(runRes.error.message);
-      const runId = runRes.data as unknown as string;
-
-      const result = await runAiTask({
-        taskKey: "evidence_extraction",
-        passages: ctx.passages,
-        governedContext: {
-          questions: ctx.questions,
-          probes: ctx.probes,
-          competencies: ctx.competencies,
-          notes,
-        },
-        allowedProbeIds: ctx.probes.map((p) => p.id),
-        governedQuestions: new Map(ctx.questions.map((q) => [q.code, q.prompt])),
-        provider: engine.provider,
-        providerMode: engine.mode,
-      });
-
-      await db.rpc("scp_iv_ai_run_settle", {
-        _run_id: runId,
-        _status: result.status,
-        _failure_reason: result.failureReason ?? undefined,
-        _abstention_reason: result.abstentionReason ?? undefined,
-        _raw_response: (result.rawResponse ?? null) as never,
-        _input_tokens: result.usage.inputTokens,
-        _output_tokens: result.usage.outputTokens,
-        _latency_ms: result.latencyMs,
-        _cost_micros: result.usage.costMicros,
-        _withheld_passages: [...result.quarantinedPassages, ...screenedNotes.quarantined] as never,
-        _provider_mode: result.providerMode,
-        _resolved_model: result.resolvedModel ?? undefined,
-      });
-
-      // Carried to the caller on every path, including failure: a recruiter
-      // told only "the engine could not run" is missing the more important
-      // half of what happened.
-      const withheld: readonly WithheldPassage[] = [
-        ...result.quarantinedPassages,
-        ...screenedNotes.quarantined,
-      ].map((q) => ({
-        passageId: q.passageId,
-        reason: QUARANTINE_REASON_SV[q.reason],
-        excerpt: q.excerpt,
-      }));
-
-      if (result.status !== "succeeded" || !result.output) {
-        await db.rpc("scp_iv_begin_evidence_review", { _case_id: data.caseId });
-        return {
-          status: result.status,
-          proposals: 0,
-          withheld,
-          providerMode: result.providerMode,
-          message: result.failureReason ?? result.abstentionReason,
-        };
+      // ---- Structure: notes -> proposals ---------------------------------
+      let extraction: Awaited<ReturnType<typeof runEvidenceExtractionInner>>;
+      try {
+        extraction = await runEvidenceExtractionInner(db, data.caseId);
+        proposals = extraction.proposals;
+        withheld = extraction.withheld;
+        providerMode = extraction.providerMode;
+        steps.push({
+          task: "evidence_extraction",
+          trustStage: "structure",
+          status: extraction.status,
+          detail: extraction.message,
+        });
+      } catch (error) {
+        steps.push({
+          task: "evidence_extraction",
+          trustStage: "structure",
+          status: "failed",
+          detail: error instanceof Error ? error.message : String(error),
+        });
+        // Nothing downstream can be attempted, and nothing has been lost: the
+        // notes are untouched and the manual path is unaffected.
+        return { steps, proposals, findings, withheld, providerMode, enteredReview: false };
       }
 
-      const out = result.output as { proposals: Array<Record<string, unknown>> };
-      const qByCode = new Map(ctx.questions.map((q) => [q.code, q]));
-      const compByCode = new Map(ctx.competencies.map((c) => [c.code, c.id]));
+      // ---- Structure: proposals -> dimensions ----------------------------
+      // Only worth attempting if extraction actually produced something.
+      if (extraction.status === "succeeded" && proposals > 0) {
+        try {
+          const mapped = await runDimensionMappingInner(db, data.caseId);
+          steps.push({
+            task: "evidence_dimension_mapping",
+            trustStage: "structure",
+            status: mapped.status,
+            detail: mapped.message,
+          });
+        } catch (error) {
+          // The proposals from the previous step survive. Say so.
+          steps.push({
+            task: "evidence_dimension_mapping",
+            trustStage: "structure",
+            status: "failed",
+            detail: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
 
-      const payload = out.proposals.map((p) => {
-        const q = qByCode.get(p.questionCode as string);
-        const dim = q?.dimensions.find((d) => d.code === p.evidenceDimensionCode);
-        return {
-          noteId: p.noteRef,
-          excerpt: p.excerpt,
-          questionId: q?.id ?? "",
-          evidenceDimensionId: dim?.id ?? "",
-          packCompetencyId: p.competencyCode
-            ? (compByCode.get(p.competencyCode as string) ?? "")
-            : "",
-          extractionConfidence: String(p.extractionConfidence ?? ""),
-          relevanceRationale: p.relevanceRationale ?? "",
-          uncertaintyNote: p.uncertaintyNote ?? null,
-          prohibitedConclusionNote: p.prohibitedConclusionNote ?? null,
-        };
-      });
+      // ---- the transition itself -----------------------------------------
+      // Structure work is over; the human review begins, which is Trace.
+      let enteredReview = false;
+      const beginRes = await db.rpc("scp_iv_begin_evidence_review", { _case_id: data.caseId });
+      if (!beginRes.error || /SCP_IV_ILLEGAL_TRANSITION/.test(beginRes.error.message)) {
+        enteredReview = true;
+      } else {
+        steps.push({
+          task: "enter_evidence_review",
+          trustStage: "structure",
+          status: "failed",
+          detail: beginRes.error.message,
+        });
+      }
 
-      const recRes = await db.rpc("scp_iv_record_evidence_proposals", {
-        _run_id: runId,
-        _items: payload as never,
-      });
-      if (recRes.error) throw new Error(recRes.error.message);
+      // ---- Trace: what is missing, unclear or contradictory ---------------
+      if (enteredReview) {
+        try {
+          const found = await runFindingsInner(db, data.caseId);
+          findings = found.findings;
+          steps.push({
+            task: "gap_and_contradiction_detection",
+            trustStage: "trace",
+            status: found.status,
+            detail: found.message,
+          });
+        } catch (error) {
+          steps.push({
+            task: "gap_and_contradiction_detection",
+            trustStage: "trace",
+            status: "failed",
+            detail: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
 
-      await db.rpc("scp_iv_begin_evidence_review", { _case_id: data.caseId });
-
-      return {
-        status: "succeeded",
-        proposals: (recRes.data as unknown as number) ?? 0,
-        message: null,
-        withheld,
-        providerMode: result.providerMode,
-      };
+      return { steps, proposals, findings, withheld, providerMode, enteredReview };
     },
   );
 

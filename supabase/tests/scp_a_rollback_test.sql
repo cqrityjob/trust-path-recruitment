@@ -205,6 +205,7 @@ DROP FUNCTION IF EXISTS public.scp_iv_record_assessment(uuid, uuid, integer, tex
 DROP FUNCTION IF EXISTS public.scp_iv_begin_evidence_review(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_record_findings(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_author_evidence(uuid, uuid, text, uuid, uuid, uuid);
+DROP FUNCTION IF EXISTS public.scp_iv_confirm_evidence_proposal(uuid, text, text, text, text, text, text, text, text, text);
 DROP FUNCTION IF EXISTS public.scp_iv_confirm_evidence_proposal(uuid, text, text, text, text);
 DROP FUNCTION IF EXISTS public.scp_iv_record_evidence_proposals(uuid, jsonb);
 DROP FUNCTION IF EXISTS public.scp_iv_set_session_state(uuid, text, text, text, text);

@@ -86,6 +86,24 @@
       ],
       "note": "Owner UAT finding B: translation only. Adds English for the 14 prohibited areas, 17 method practices, 39 evidence dimensions and the preparation plan's AI disclosure. Q1-Q8 and the approved probes are deliberately left untranslated and a self-check enforces that. Not applied hosted.",
       "verify": "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_interview_prohibited_areas' AND column_name='statement_en';"
+    },
+    {
+      "file": "20260930090000_scp_interview_5e_evidence_structure.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "table": "scp_interview_evidence_proposals",
+          "object": "e1_situation",
+          "kind": "column"
+        },
+        {
+          "table": "scp_interview_evidence",
+          "object": "e1_situation",
+          "kind": "column"
+        }
+      ],
+      "note": "5E evidence structuring: ten nullable descriptive text columns (five on AI proposals, five on human-confirmed evidence) plus the two governed writers extended to carry them. No numeric completeness, score, total, weighting or threshold; a self-check enforces that every 5E column is nullable text and that nothing aggregates one. Not applied hosted.",
+      "verify": "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name ~ '^e[1-5]_';"
     }
   ],
   "policyVersion": 2,

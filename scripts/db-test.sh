@@ -1279,6 +1279,40 @@ if [ "$AIG_PASSED" -lt 27 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5j. Interview Copilot -- the first real AI vertical
+#
+# An AI may read what a recruiter wrote, organise it and PROPOSE evidence, and
+# only in the TRUST stage that permits the task. Everything after that is a
+# human's. These assertions are the difference between that claim and a story:
+# every active task refused during the live interview, evidence tasks confined
+# to Structure, the original note byte-identical after extraction/edit/reject,
+# no proposal becoming evidence without a named human, and no scoring
+# vocabulary anywhere in the schema.
+# ---------------------------------------------------------------------------
+echo "==> Running Interview Copilot assertions"
+set +e
+CP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_copilot_test.sql 2>&1)"
+CP_RC=$?
+set -e
+
+echo "$CP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CP_PASSED="$(echo "$CP_OUT" | grep -c "ok  " || true)"
+
+if [ "$CP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the Interview Copilot suite exited with code ${CP_RC}." >&2
+  echo "$CP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "Interview Copilot"
+fi
+
+echo "    ok  ${CP_PASSED} Interview Copilot assertions passed"
+
+if [ "$CP_PASSED" -lt 63 ]; then
+  echo "FAIL: expected at least 63 Copilot assertions, only ${CP_PASSED} ran." >&2
+  suite_failed "Interview Copilot (assertion shortfall: floor 63)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"
