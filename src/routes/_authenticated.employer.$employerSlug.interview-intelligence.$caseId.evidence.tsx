@@ -533,7 +533,7 @@ function Page() {
 
           {review.isError && (
             <div className="mt-3">
-              <Panel tone="governance" role="alert" title="Granskningen kunde inte sparas">
+              <Panel tone="governance" role="alert" title={t("iiu.ev.reviewfailed")}>
                 <p>{interviewErrorMessage(review.error, t)}</p>
               </Panel>
             </div>
@@ -568,7 +568,7 @@ function Page() {
                   <p className="mt-2 text-foreground">{e.excerpt}</p>
                   {e.originalExcerpt && (
                     <p className="mt-1.5 text-xs text-muted-foreground">
-                      <span className="font-medium">AI:ts ursprungliga formulering: </span>
+                      <span className="font-medium">{t("iiu.ev.aioriginal")}: </span>
                       {e.originalExcerpt}
                     </p>
                   )}
@@ -726,9 +726,15 @@ function Page() {
                         onChange={(e) => setRationales((s) => ({ ...s, [qq.id]: e.target.value }))}
                       />
                     </div>
+                    {/* Three different situations, three different messages.
+                        Reusing the evidence guidance when a level simply had
+                        not been picked told the interviewer to go and find
+                        evidence they already had. */}
                     {assessHint[qq.id] === "level" && (
                       <p role="alert" className="text-xs text-destructive">
-                        {t("iiu.ev.needevidence.body")}
+                        {evidenceCount === 0
+                          ? t("iiu.ev.needevidence.body")
+                          : t("iiu.ev.hint.level")}
                       </p>
                     )}
                     {assessHint[qq.id] === "rationale" && (
@@ -776,7 +782,7 @@ function Page() {
         params={{ employerSlug, caseId }}
         className={`${BUTTON} mt-8 mr-2`}
       >
-        Panelgranskning
+        {t("iiu.pl.title")}
       </Link>
 
       {["assessed", "reported"].includes(d.status) && (

@@ -325,8 +325,27 @@ const SWEDISH_GLYPH = /[åäöÅÄÖ]/;
 // Rollpaket, Bedomning-without-o. This is the second line of defence: a small
 // lexicon of Swedish words that actually appear in this module's copy, tested
 // against JSX text and string literals only.
-const SWEDISH_WORDS =
-  /\b(Motivering|Ankare|Rollpaket|Intervju|Intervjuer|Underlag|Evidens|Bedomning|Rapport|Kandidat|Niva|Sparat|Anteckningar|Godkand|Avbryt|Skapa|Valj|Fraga|Fragor)\b/;
+//
+// The first lexicon was still too thin: an owner code review found nine more
+// ("Pausa", "Panelgranskning", "Panelens slutsats", "Beslutet", "AI:s roll",
+// "Inget hindrar rapporten", "AI:ts ursprungliga formulering",
+// "Intervjuarens egen reflektion", "Granskningen kunde inte sparas"). Rather
+// than keep chasing individual words, this now also matches Swedish MORPHOLOGY
+// -- the definite and possessive endings that English simply does not have --
+// which catches whole families of leaks at once.
+const SWEDISH_WORDS = new RegExp(
+  [
+    // literal words seen leaking, kept for precision
+    "\\b(Motivering|Ankare|Rollpaket|Intervju|Intervjuer|Underlag|Evidens|Rapport",
+    "|Kandidat|Sparat|Anteckningar|Avbryt|Skapa|Beslutet|Pausa|Panelgranskning",
+    "|Granskningen|Slutsats|Reflektion|Formulering|Bedomning|Godkand|Niva|Valj|Fraga|Fragor)\\b",
+    // Swedish definite/plural endings on a capitalised word: "Panelens",
+    // "Intervjuarens", "Beslutet", "Rapporten". English has no -ens/-arens.
+    "|\\b[A-ZÅÄÖ][a-zåäö]{3,}(ens|arens|erna|orna)\\b",
+    // "AI:s", "AI:ts" -- the Swedish genitive colon form
+    "|\\bAI:[a-zåäö]{1,2}\\b",
+  ].join(""),
+);
 
 /** Does this line put Swedish in front of a customer?
  *

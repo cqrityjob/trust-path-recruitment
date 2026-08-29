@@ -145,7 +145,7 @@ function Page() {
           </h2>
           {d.blockers.length === 0 ? (
             <div className="mt-3">
-              <Panel tone="confirmed" title="Inget hindrar rapporten">
+              <Panel tone="confirmed" title={t("iiu.rp.noblockers.title")}>
                 <p>{t(d.aiAvailable ? "iiu.rp.noblockers" : "iiu.rp.noblockers.manual")}</p>
               </Panel>
               {finalise.isError && (
@@ -305,10 +305,10 @@ function Page() {
           )}
 
           <div className="mt-4 space-y-3">
-            <Panel tone="ai" title="AI:s roll">
+            <Panel tone="ai" title={t("iiu.pp.airole.short")}>
               <p>{String((payload.ai_disclosure as Record<string, unknown>)?.statement ?? "")}</p>
             </Panel>
-            <Panel tone="work" title="Beslutet">
+            <Panel tone="work" title={t("iiu.rp.decision")}>
               <p>{String(payload.decision_boundary ?? "")}</p>
             </Panel>
           </div>

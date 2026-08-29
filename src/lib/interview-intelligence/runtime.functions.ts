@@ -1296,13 +1296,20 @@ export const saveInterviewNote = createServerFn({ method: "POST" })
         sessionId: z.string().uuid(),
         questionId: z.string().uuid().nullable(),
         noteKind: z.enum(["observation", "clarification", "process", "closing_summary"]),
-        body: z.string().min(1).max(20_000),
+        // An UPDATE may carry an empty body: clearing a note is a real thing
+        // an interviewer does, and silently keeping the old text would leave
+        // the record saying something they retracted. An INSERT still may
+        // not -- creating an empty note means nothing. Enforced below.
+        body: z.string().max(20_000),
         noteId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly noteId: string }> => {
     const db = context.supabase;
+    if (!data.noteId && data.body.trim() === "") {
+      throw new Error("SCP_IV_NOTE_EMPTY: an empty note is not created.");
+    }
     if (data.noteId) {
       const { error } = await db
         .from("scp_interview_session_notes")

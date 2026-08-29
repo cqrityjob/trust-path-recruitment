@@ -94,6 +94,14 @@ function Page() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [reflection, setReflection] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [noteError, setNoteError] = useState(false);
+  const [blockedNotice, setBlockedNotice] = useState(false);
+  // The draft and its target read through refs as well as state, because
+  // flushNote() is called from event handlers that must see the CURRENT value,
+  // not the one captured when the handler was created.
+  const draftRef = useRef("");
+  const storedRef = useRef<{ id: string | null; body: string; questionId: string } | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const saveNote = useMutation({
     mutationFn: (vars: {
@@ -113,13 +121,20 @@ function Page() {
       }),
     onSuccess: () => {
       setSavedAt(new Date().toLocaleTimeString(lang === "en" ? "en-GB" : "sv-SE"));
+      setNoteError(false);
       void refresh();
     },
+    onError: () => setNoteError(true),
   });
   // Optimistic question state. The chip used to wait for a refetch, so
   // "Markera besvarad" looked like it had done nothing for a beat -- exactly
   // the doubt the owner reported.
   const [pendingState, setPendingState] = useState<Record<string, string>>({});
+  const [qStateError, setQStateError] = useState<{
+    sessionId: string;
+    questionId: string;
+    state: "answered" | "incomplete" | "revisit" | "in_progress";
+  } | null>(null);
   const setQState = useMutation({
     mutationFn: (vars: {
       sessionId: string;
@@ -131,6 +146,7 @@ function Page() {
       }),
     onMutate: (vars) => {
       setPendingState((st) => ({ ...st, [vars.questionId]: vars.state }));
+      setQStateError(null);
     },
     onSuccess: async (_result, vars) => {
       await refresh();
@@ -139,6 +155,17 @@ function Page() {
         delete next[vars.questionId];
         return next;
       });
+    },
+    // Roll the chip BACK. An optimistic update with no failure path is a lie
+    // told confidently: the chip would keep saying "Besvarad" after the write
+    // had failed, which is worse than never showing it early at all.
+    onError: (_err, vars) => {
+      setPendingState((st) => {
+        const next = { ...st };
+        delete next[vars.questionId];
+        return next;
+      });
+      setQStateError(vars);
     },
   });
   const setSState = useMutation({
@@ -162,8 +189,69 @@ function Page() {
   useEffect(() => {
     setDraft(existingNote?.body ?? "");
     setSavedAt(null);
+    setNoteError(false);
+    setBlockedNotice(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
+
+  // Mirror into refs so flushNote() always sees the live values.
+  draftRef.current = draft;
+  storedRef.current = question
+    ? { id: existingNote?.id ?? null, body: existingNote?.body ?? "", questionId: question.id }
+    : null;
+  sessionIdRef.current = session?.id ?? null;
+
+  const noteDirty = storedRef.current !== null && draft !== storedRef.current.body;
+
+  /**
+   * Write the pending note NOW and report whether it landed.
+   *
+   * The debounce used to be cancelled by its own cleanup whenever the
+   * interviewer changed question, so a note typed in the last second before
+   * pressing Next was discarded without anybody being told. Every action that
+   * moves away from the current question awaits this first, and does not
+   * proceed unless it returns true.
+   *
+   * An empty draft over a stored note is a deliberate clearing, not a
+   * no-op: the stored body is overwritten so the record stops saying
+   * something the interviewer has retracted.
+   */
+  const flushNote = async (): Promise<boolean> => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const stored = storedRef.current;
+    const sessionId = sessionIdRef.current;
+    if (!stored || !sessionId) return true;
+    const body = draftRef.current;
+    if (body === stored.body) return true;
+    // Nothing stored and nothing typed: there is no note to write.
+    if (stored.id === null && body.trim() === "") return true;
+    try {
+      await saveNote.mutateAsync({
+        sessionId,
+        questionId: stored.questionId,
+        body,
+        noteId: stored.id,
+      });
+      return true;
+    } catch {
+      setNoteError(true);
+      return false;
+    }
+  };
+
+  /** Run an action only if the pending note is safely stored first. */
+  const guarded = async (action: () => void | Promise<void>) => {
+    const ok = await flushNote();
+    if (!ok) {
+      setBlockedNotice(true);
+      return;
+    }
+    setBlockedNotice(false);
+    await action();
+  };
 
   // Autosave. An interview is a live conversation; nobody should have to
   // remember to press save while a person is talking to them.
@@ -172,7 +260,9 @@ function Page() {
     if (draft === (existingNote?.body ?? "")) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      if (draft.trim() === "") return;
+      // An empty draft with no stored note is nothing to save; an empty draft
+      // OVER a stored note is a clearing, and does save.
+      if (draft.trim() === "" && !existingNote?.id) return;
       saveNote.mutate({
         sessionId: session.id,
         questionId: question.id,
@@ -185,6 +275,32 @@ function Page() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
+
+  // Leaving the route entirely -- a reload, a closed tab, a link elsewhere --
+  // is the one exit the guarded handlers cannot intercept.
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (draftRef.current !== (storedRef.current?.body ?? "")) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      // A best-effort write on unmount. It cannot be awaited, so it is a
+      // safety net rather than the mechanism -- the guarded handlers are.
+      const stored = storedRef.current;
+      const sessionId = sessionIdRef.current;
+      if (!stored || !sessionId) return;
+      if (draftRef.current === stored.body) return;
+      if (stored.id === null && draftRef.current.trim() === "") return;
+      saveNote.mutate({
+        sessionId,
+        questionId: stored.questionId,
+        body: draftRef.current,
+        noteId: stored.id,
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (ws.isLoading)
     return (
@@ -391,19 +507,37 @@ function Page() {
               <button
                 key={qq.id}
                 type="button"
-                onClick={() => setActive(i)}
+                onClick={() => void guarded(() => setActive(i))}
                 aria-current={i === active ? "true" : undefined}
                 className={`${BUTTON} ${i === active ? "border-accent font-semibold" : ""}`}
               >
                 {qq.code}
                 <span className="ml-1.5 text-xs text-muted-foreground">
                   {uiLabel(STATE_LABEL, st, t)}
+                  {pendingState[qq.id] !== undefined && ` · ${t("iiu.iv.qstate.pending")}`}
                 </span>
               </button>
             );
           })}
         </nav>
       </section>
+
+      {qStateError && (
+        <div className="mt-3 max-w-3xl">
+          <Panel tone="governance" role="alert" title={t("iiu.iv.qstate.failed")}>
+            <p>
+              <button
+                type="button"
+                className={BUTTON}
+                disabled={setQState.isPending}
+                onClick={() => setQState.mutate(qStateError)}
+              >
+                {t("iiu.iv.qstate.retry")}
+              </button>
+            </p>
+          </Panel>
+        </div>
+      )}
 
       {question && (
         <section className="mt-6 max-w-4xl" aria-labelledby="s-current">
@@ -506,17 +640,47 @@ function Page() {
                   had typed was actually stored. The timestamp existed but sat
                   far away in the header, so it read as page furniture rather
                   than as an answer to "did that save?". */}
+              {/* A pending or failed save is never reported as saved. The
+                  three states are distinct on purpose: "saving", "not saved
+                  yet" and "saved at HH:MM" mean different things to somebody
+                  about to press Next. */}
               <p
                 role="status"
                 aria-live="polite"
-                className="mt-1 text-xs font-medium text-muted-foreground"
+                className={`mt-1 text-xs font-medium ${
+                  noteError ? "text-destructive" : "text-muted-foreground"
+                }`}
               >
                 {saveNote.isPending
                   ? t("iiu.iv.saving")
-                  : savedAt
-                    ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
-                    : "\u00a0"}
+                  : noteError
+                    ? t("iiu.iv.note.unsaved")
+                    : noteDirty
+                      ? t("iiu.iv.note.unsaved")
+                      : savedAt
+                        ? `${t("iiu.iv.saved.notes")} · ${savedAt}`
+                        : "\u00a0"}
               </p>
+
+              {noteError && (
+                <div className="mt-2">
+                  <Panel tone="governance" role="alert" title={t("iiu.iv.note.savefailed")}>
+                    {blockedNotice && <p>{t("iiu.iv.note.blocked")}</p>}
+                    <p className="mt-2">
+                      <button
+                        type="button"
+                        className={BUTTON}
+                        disabled={saveNote.isPending}
+                        onClick={() => void flushNote()}
+                      >
+                        {saveNote.isPending
+                          ? t("iiu.iv.note.savingbefore")
+                          : t("iiu.iv.note.retry")}
+                      </button>
+                    </p>
+                  </Panel>
+                </div>
+              )}
               <textarea
                 id="note"
                 rows={8}
@@ -571,7 +735,7 @@ function Page() {
                 type="button"
                 className={BUTTON}
                 disabled={active === 0}
-                onClick={() => setActive((i) => Math.max(0, i - 1))}
+                onClick={() => void guarded(() => setActive((i) => Math.max(0, i - 1)))}
               >
                 {t("iiu.iv.previous")}
               </button>
@@ -579,7 +743,9 @@ function Page() {
                 type="button"
                 className={BUTTON}
                 disabled={active >= d.questions.length - 1}
-                onClick={() => setActive((i) => Math.min(d.questions.length - 1, i + 1))}
+                onClick={() =>
+                  void guarded(() => setActive((i) => Math.min(d.questions.length - 1, i + 1)))
+                }
               >
                 {t("iiu.iv.next")}
               </button>
@@ -656,7 +822,7 @@ function Page() {
         {session.status !== "completed" ? (
           <>
             <label htmlFor="reflect" className="mt-3 block text-sm font-medium text-foreground">
-              Intervjuarens egen reflektion (ORBIT)
+              {t("iiu.iv.reflection.title")}
             </label>
             <p id="reflect-hint" className="mt-0.5 text-xs text-muted-foreground">
               {t("iiu.iv.reflection.note")}
@@ -673,20 +839,24 @@ function Page() {
               <button
                 type="button"
                 className={BUTTON}
-                onClick={() => setSState.mutate({ sessionId: session.id, status: "paused" })}
+                onClick={() =>
+                  void guarded(() => setSState.mutate({ sessionId: session.id, status: "paused" }))
+                }
               >
-                Pausa
+                {t("iiu.iv.pause")}
               </button>
               <button
                 type="button"
                 className={PRIMARY_BUTTON}
                 onClick={() =>
-                  setSState.mutate({
-                    sessionId: session.id,
-                    status: "completed",
-                    peaceStage: "evaluation",
-                    processReflection: reflection || undefined,
-                  })
+                  void guarded(() =>
+                    setSState.mutate({
+                      sessionId: session.id,
+                      status: "completed",
+                      peaceStage: "evaluation",
+                      processReflection: reflection || undefined,
+                    }),
+                  )
                 }
               >
                 {t("iiu.iv.finish")}

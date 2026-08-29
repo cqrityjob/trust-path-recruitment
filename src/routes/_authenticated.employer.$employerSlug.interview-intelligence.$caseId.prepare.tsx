@@ -495,11 +495,11 @@ function Page() {
             </Panel>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Roll">{d.plan.roleSummary ?? "—"}</Field>
-              <Field label="Kandidatens underlag">{d.plan.candidateSummary ?? "—"}</Field>
-              <Field label="Tidsplan">{d.plan.timePlan ?? "—"}</Field>
-              <Field label="Introduktion">{d.plan.openingGuidance ?? "—"}</Field>
-              <Field label="Avslut">{d.plan.closingGuidance ?? "—"}</Field>
+              <Field label={t("iiu.pp.f.role")}>{d.plan.roleSummary ?? "—"}</Field>
+              <Field label={t("iiu.pp.f.candidate")}>{d.plan.candidateSummary ?? "—"}</Field>
+              <Field label={t("iiu.pp.f.timeplan")}>{d.plan.timePlan ?? "—"}</Field>
+              <Field label={t("iiu.pp.f.opening")}>{d.plan.openingGuidance ?? "—"}</Field>
+              <Field label={t("iiu.practice.closure")}>{d.plan.closingGuidance ?? "—"}</Field>
             </div>
 
             <h3 className="text-sm font-semibold text-foreground">Underlagets punkter</h3>

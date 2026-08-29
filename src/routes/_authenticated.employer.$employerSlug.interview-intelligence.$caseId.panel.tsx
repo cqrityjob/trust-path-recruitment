@@ -197,7 +197,7 @@ function Page() {
         <NextStep status={d.status} />
       </div>
 
-      <h2 className="mt-8 text-lg font-semibold text-foreground">Panelgranskning</h2>
+      <h2 className="mt-8 text-lg font-semibold text-foreground">{t("iiu.pl.title")}</h2>
       <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">{t("iiu.pl.intro")}</p>
 
       {!p?.exists ? (
@@ -332,7 +332,7 @@ function Page() {
             {p.state === "revealed" && (
               <div className="rounded-lg border border-border p-4">
                 <label htmlFor="panel-conclusion" className="text-sm font-semibold text-foreground">
-                  Panelens slutsats
+                  {t("iiu.pl.conclusion.title")}
                 </label>
                 <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pl.conclusion.hint")}</p>
                 <textarea
@@ -354,7 +354,9 @@ function Page() {
 
             {p.state === "concluded" && p.conclusion && (
               <div className="rounded-lg border border-teal-700/30 bg-teal-700/10 p-4">
-                <p className="text-sm font-semibold text-foreground">Panelens slutsats</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {t("iiu.pl.conclusion.title")}
+                </p>
                 <p className="mt-1 whitespace-pre-line text-sm text-foreground">{p.conclusion}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{t("iiu.pl.humanwritten")}</p>
               </div>
