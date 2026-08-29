@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -228,7 +228,7 @@ export type Database = {
           graph_version: string
           inputs_hash: string
           locale: string
-          profile_version: string | null
+          profile_version: string
           report: Json
           report_version: string
           run_id: string
@@ -240,10 +240,10 @@ export type Database = {
           engine_version: string
           graph_version: string
           inputs_hash: string
-          locale: string
-          profile_version?: string | null
+          locale?: string
+          profile_version: string
           report: Json
-          report_version?: string
+          report_version: string
           run_id: string
           user_id: string
         }
@@ -254,7 +254,7 @@ export type Database = {
           graph_version?: string
           inputs_hash?: string
           locale?: string
-          profile_version?: string | null
+          profile_version?: string
           report?: Json
           report_version?: string
           run_id?: string
@@ -3774,6 +3774,7 @@ export type Database = {
           application_email: string | null
           application_method: string
           application_url: string | null
+          archived_at: string | null
           benefits: Json | null
           canonical_url: string | null
           city: string | null
@@ -3843,6 +3844,7 @@ export type Database = {
           application_email?: string | null
           application_method: string
           application_url?: string | null
+          archived_at?: string | null
           benefits?: Json | null
           canonical_url?: string | null
           city?: string | null
@@ -3912,6 +3914,7 @@ export type Database = {
           application_email?: string | null
           application_method?: string
           application_url?: string | null
+          archived_at?: string | null
           benefits?: Json | null
           canonical_url?: string | null
           city?: string | null
@@ -6223,6 +6226,7 @@ export type Database = {
           input_tokens: number | null
           latency_ms: number | null
           model: string
+          model_confirmed_by_provider: boolean
           output_schema_version: string
           output_tokens: number | null
           policy_version: string
@@ -6253,6 +6257,7 @@ export type Database = {
           input_tokens?: number | null
           latency_ms?: number | null
           model: string
+          model_confirmed_by_provider?: boolean
           output_schema_version?: string
           output_tokens?: number | null
           policy_version?: string
@@ -6283,6 +6288,7 @@ export type Database = {
           input_tokens?: number | null
           latency_ms?: number | null
           model?: string
+          model_confirmed_by_provider?: boolean
           output_schema_version?: string
           output_tokens?: number | null
           policy_version?: string
@@ -6915,7 +6921,15 @@ export type Database = {
           surface?: string
           trust_stage?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_guidance_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_interview_conduct_prohibitions: {
         Row: {
@@ -6945,7 +6959,15 @@ export type Database = {
           statement_en?: string
           statement_sv?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_prohibitions_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_interview_conduct_steps: {
         Row: {
@@ -6981,7 +7003,15 @@ export type Database = {
           ordinal?: number
           step_key?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_conduct_steps_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scp_interview_core_questions: {
         Row: {
@@ -7042,7 +7072,7 @@ export type Database = {
           created_at: string
           e1_situation: string | null
           e2_own_role: string | null
-          e3_exact_action: string | null
+          e3_action: string | null
           e4_effect: string | null
           e5_reflection: string | null
           evidence_dimension_id: string | null
@@ -7064,7 +7094,7 @@ export type Database = {
           created_at?: string
           e1_situation?: string | null
           e2_own_role?: string | null
-          e3_exact_action?: string | null
+          e3_action?: string | null
           e4_effect?: string | null
           e5_reflection?: string | null
           evidence_dimension_id?: string | null
@@ -7086,7 +7116,7 @@ export type Database = {
           created_at?: string
           e1_situation?: string | null
           e2_own_role?: string | null
-          e3_exact_action?: string | null
+          e3_action?: string | null
           e4_effect?: string | null
           e5_reflection?: string | null
           evidence_dimension_id?: string | null
@@ -7208,7 +7238,7 @@ export type Database = {
           created_at: string
           e1_situation: string | null
           e2_own_role: string | null
-          e3_exact_action: string | null
+          e3_action: string | null
           e4_effect: string | null
           e5_reflection: string | null
           evidence_dimension_id: string | null
@@ -7234,7 +7264,7 @@ export type Database = {
           created_at?: string
           e1_situation?: string | null
           e2_own_role?: string | null
-          e3_exact_action?: string | null
+          e3_action?: string | null
           e4_effect?: string | null
           e5_reflection?: string | null
           evidence_dimension_id?: string | null
@@ -7260,7 +7290,7 @@ export type Database = {
           created_at?: string
           e1_situation?: string | null
           e2_own_role?: string | null
-          e3_exact_action?: string | null
+          e3_action?: string | null
           e4_effect?: string | null
           e5_reflection?: string | null
           evidence_dimension_id?: string | null
@@ -8411,7 +8441,7 @@ export type Database = {
           id?: string
           pack_version_id: string
           rationale_sv: string
-          statement_en: string | null
+          statement_en?: string | null
           statement_sv: string
         }
         Update: {
@@ -9211,14 +9241,11 @@ export type Database = {
           created_at: string
           depends_on_employer_instruction: boolean
           difficulty: string | null
-          difficulty_target: string | null
           evidence_source_type: string
           facet_id: string | null
           id: string
           information_available_sv: string | null
           information_withheld_sv: string | null
-          intended_forms: string[]
-          intended_professions: string[]
           is_safety_critical: boolean
           item_format: string
           item_id: string
@@ -9229,7 +9256,6 @@ export type Database = {
           legal_assumption_sv: string | null
           legal_basis_required: boolean
           legal_review_expires_at: string | null
-          legal_review_notes: string | null
           legal_review_status: string
           legal_reviewed_at: string | null
           legal_reviewed_by: string | null
@@ -9245,7 +9271,6 @@ export type Database = {
           requires_human_review: boolean
           response_process: string
           retired_at: string | null
-          scenario_type: string | null
           secondary_competency_id: string | null
           sme_review_notes: string | null
           sme_review_status: string
@@ -9270,14 +9295,11 @@ export type Database = {
           created_at?: string
           depends_on_employer_instruction?: boolean
           difficulty?: string | null
-          difficulty_target?: string | null
           evidence_source_type?: string
           facet_id?: string | null
           id?: string
           information_available_sv?: string | null
           information_withheld_sv?: string | null
-          intended_forms?: string[]
-          intended_professions?: string[]
           is_safety_critical?: boolean
           item_format: string
           item_id: string
@@ -9288,7 +9310,6 @@ export type Database = {
           legal_assumption_sv?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
-          legal_review_notes?: string | null
           legal_review_status?: string
           legal_reviewed_at?: string | null
           legal_reviewed_by?: string | null
@@ -9304,7 +9325,6 @@ export type Database = {
           requires_human_review?: boolean
           response_process: string
           retired_at?: string | null
-          scenario_type?: string | null
           secondary_competency_id?: string | null
           sme_review_notes?: string | null
           sme_review_status?: string
@@ -9329,14 +9349,11 @@ export type Database = {
           created_at?: string
           depends_on_employer_instruction?: boolean
           difficulty?: string | null
-          difficulty_target?: string | null
           evidence_source_type?: string
           facet_id?: string | null
           id?: string
           information_available_sv?: string | null
           information_withheld_sv?: string | null
-          intended_forms?: string[]
-          intended_professions?: string[]
           is_safety_critical?: boolean
           item_format?: string
           item_id?: string
@@ -9347,7 +9364,6 @@ export type Database = {
           legal_assumption_sv?: string | null
           legal_basis_required?: boolean
           legal_review_expires_at?: string | null
-          legal_review_notes?: string | null
           legal_review_status?: string
           legal_reviewed_at?: string | null
           legal_reviewed_by?: string | null
@@ -9363,7 +9379,6 @@ export type Database = {
           requires_human_review?: boolean
           response_process?: string
           retired_at?: string | null
-          scenario_type?: string | null
           secondary_competency_id?: string | null
           sme_review_notes?: string | null
           sme_review_status?: string
@@ -11326,6 +11341,7 @@ export type Database = {
           id: string
           rationale: string
           stage_id: string
+          statement_en: string | null
           statement_sv: string
         }
         Insert: {
@@ -11334,6 +11350,7 @@ export type Database = {
           id?: string
           rationale: string
           stage_id: string
+          statement_en?: string | null
           statement_sv: string
         }
         Update: {
@@ -11342,6 +11359,7 @@ export type Database = {
           id?: string
           rationale?: string
           stage_id?: string
+          statement_en?: string | null
           statement_sv?: string
         }
         Relationships: [
@@ -11357,6 +11375,7 @@ export type Database = {
       scp_trust_stages: {
         Row: {
           created_at: string
+          human_responsibility_en: string | null
           human_responsibility_sv: string
           id: string
           letter: string
@@ -11372,6 +11391,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          human_responsibility_en?: string | null
           human_responsibility_sv: string
           id?: string
           letter: string
@@ -11387,6 +11407,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          human_responsibility_en?: string | null
           human_responsibility_sv?: string
           id?: string
           letter?: string
@@ -13348,19 +13369,17 @@ export type Database = {
         }
         Returns: string
       }
-      cd_complete_session:
-        | { Args: { _session_id: string }; Returns: undefined }
-        | {
-            Args: {
-              _career_areas: Json
-              _confidence: Json
-              _contextual_tags: string[]
-              _coverage: Json
-              _dna_scores: Json
-              _session_id: string
-            }
-            Returns: string
-          }
+      cd_complete_session: {
+        Args: {
+          _career_areas: Json
+          _confidence: Json
+          _contextual_tags: string[]
+          _coverage: Json
+          _dna_scores: Json
+          _session_id: string
+        }
+        Returns: string
+      }
       cd_derive_adaptive_path: {
         Args: { _context_status: string }
         Returns: string
@@ -13475,7 +13494,6 @@ export type Database = {
           membership_id: string
         }[]
       }
-      dearmor: { Args: { "": string }; Returns: string }
       employer_accepts_operations: {
         Args: { _employer_id: string }
         Returns: boolean
@@ -13488,8 +13506,6 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: boolean
       }
-      gen_random_uuid: { Args: never; Returns: string }
-      gen_salt: { Args: { "": string }; Returns: string }
       has_employer_role: {
         Args: { _employer_id: string; _roles?: string[]; _user_id: string }
         Returns: boolean
@@ -13542,10 +13558,6 @@ export type Database = {
           note: string
           previous_status: string
         }[]
-      }
-      pgp_armor_headers: {
-        Args: { "": string }
-        Returns: Record<string, unknown>[]
       }
       reject_job: {
         Args: { _job_id: string; _note: string }
@@ -14275,6 +14287,7 @@ export type Database = {
         }
         Returns: string
       }
+      scp_iv_ai_real_model_permitted: { Args: never; Returns: boolean }
       scp_iv_ai_run_settle: {
         Args: {
           _abstention_reason?: string
@@ -14284,8 +14297,8 @@ export type Database = {
           _latency_ms?: number
           _output_tokens?: number
           _provider_mode?: string
-          _resolved_model?: string
           _raw_response?: Json
+          _resolved_model?: string
           _run_id: string
           _status: string
           _withheld_passages?: Json
@@ -14342,13 +14355,22 @@ export type Database = {
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
       scp_iv_case_start_basis: {
-        Args: { _employer_id: string; _pack_version_id: string; _user_id?: string }
+        Args: {
+          _employer_id: string
+          _pack_version_id: string
+          _user_id?: string
+        }
         Returns: string
       }
       scp_iv_confirm_evidence_proposal: {
         Args: {
           _correction_class?: string
           _decision: string
+          _e1?: string
+          _e2?: string
+          _e3?: string
+          _e4?: string
+          _e5?: string
           _edited_excerpt?: string
           _note?: string
           _proposal_id: string
@@ -14378,12 +14400,12 @@ export type Database = {
         }
         Returns: string
       }
-      scp_iv_employer_may_read_pack: {
-        Args: { _pack_version_id: string }
-        Returns: boolean
-      }
       scp_iv_employer_can_start_interviews: {
         Args: { _employer_id: string }
+        Returns: boolean
+      }
+      scp_iv_employer_may_read_pack: {
+        Args: { _pack_version_id: string }
         Returns: boolean
       }
       scp_iv_erase_source: {

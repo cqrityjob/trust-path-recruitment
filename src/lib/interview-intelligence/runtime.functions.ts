@@ -926,7 +926,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       })),
       plan,
       session,
-      proposals: ((proposalsRes.data ?? []) as Array<Record<string, unknown>>).map((p) => ({
+      // Cast via unknown: generated types.ts predates the 5E columns on this table.
+      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((p) => ({
         id: p.id as string,
         excerpt: p.excerpt as string,
         questionId: p.question_id as string,
@@ -938,7 +939,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         noteId: (p.note_id as string) ?? null,
         fiveE: fiveE(p),
       })),
-      evidence: ((evidenceRes.data ?? []) as Array<Record<string, unknown>>).map((e) => ({
+      evidence: ((evidenceRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((e) => ({
         id: e.id as string,
         excerpt: e.excerpt as string,
         originalExcerpt: (e.original_excerpt as string) ?? null,
