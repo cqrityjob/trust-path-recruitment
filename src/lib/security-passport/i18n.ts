@@ -521,6 +521,35 @@ const sv = {
   "workCountry.title": "Arbetsland",
   "workCountry.current": "Nuvarande",
   "workCountry.save": "Spara arbetsland",
+
+  // ── The six profile basics, as a permanent editor ────────────────────
+  // The questions themselves already have copy under `onboarding.*`, and it
+  // is reused verbatim: a holder must not be asked one thing in the wizard
+  // and a subtly different thing here. What is new below is only the frame
+  // around them -- the heading, the count, and the words for "this is what
+  // you told us, and nobody has checked it".
+  "basics.title": "Grunduppgifter för ditt Passport",
+  "basics.lead":
+    "De sex frågor som bygger ditt Passport. Du kan läsa och ändra dina svar när du vill — du behöver aldrig börja om.",
+  "basics.filled": "ifyllda",
+  "basics.question": "Fråga",
+  "basics.answered": "Ifylld",
+  "basics.missing": "Saknas",
+  "basics.noAnswerNeeded": "Ingen uppgift att fylla i — det här är information till dig.",
+  "basics.selfReported":
+    "Det här är uppgifter du själv har lämnat. Ingen har kontrollerat dem, och att spara dem gör dem inte verifierade. Dina behörigheter och kontroller påverkas inte.",
+  "basics.save": "Spara grunduppgifter",
+  "basics.savedNotice": "Dina grunduppgifter är sparade.",
+  "basics.editBelow": "Ändra längre ned på sidan",
+  "basics.editedBelow":
+    "Den här uppgiften ändras där den hör hemma, längre ned på sidan, så att den bara har ett ställe att ändras på.",
+  "basics.declaredOn": "Intygat",
+  "basics.declareAgain": "Intyga på nytt",
+  "basics.declarationNote":
+    "En försäkran kan inte tas tillbaka här. Har du ändrat något kan du intyga på nytt, och datumet uppdateras.",
+  "basics.qualificationsTitle": "Arbetsland och behörigheter",
+  "basics.qualificationsLead":
+    "Var du arbetar, och de reglerade behörigheter du kan registrera där.",
   "jurisdiction.confirmPrompt":
     "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
   "jurisdiction.confirmAction": "Ange var jag arbetar",
@@ -1876,6 +1905,30 @@ const en: Record<PassportCopyKey, string> = {
   "workCountry.title": "Work country",
   "workCountry.current": "Current",
   "workCountry.save": "Save work country",
+
+  // ── The six profile basics, as a permanent editor ────────────────────
+  "basics.title": "Your Passport profile basics",
+  "basics.lead":
+    "The six questions that build your Passport. You can read and change your answers whenever you like — you never have to start again.",
+  "basics.filled": "answered",
+  "basics.question": "Question",
+  "basics.answered": "Answered",
+  "basics.missing": "Missing",
+  "basics.noAnswerNeeded": "Nothing to fill in — this one is information for you.",
+  "basics.selfReported":
+    "This is information you have given about yourself. Nobody has checked it, and saving it does not make it verified. Your authorisations and reviews are unaffected.",
+  "basics.save": "Save profile basics",
+  "basics.savedNotice": "Your profile basics have been saved.",
+  "basics.editBelow": "Change it further down this page",
+  "basics.editedBelow":
+    "This answer is changed where it belongs, further down this page, so that it only has one place to be changed.",
+  "basics.declaredOn": "Declared",
+  "basics.declareAgain": "Declare again",
+  "basics.declarationNote":
+    "A declaration cannot be withdrawn here. If you have changed something you can declare again, and the date updates.",
+  "basics.qualificationsTitle": "Work country and authorisations",
+  "basics.qualificationsLead":
+    "Where you work, and the regulated authorisations you can record there.",
   "jurisdiction.confirmPrompt":
     "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
   "jurisdiction.confirmAction": "Tell us where I work",
