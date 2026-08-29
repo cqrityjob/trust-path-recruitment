@@ -584,31 +584,24 @@ export function TrustStageBanner({
   const prohibitions =
     lang === "en" && stage.prohibitionsEn.length > 0 ? stage.prohibitionsEn : stage.prohibitions;
 
+  // Hierarchy, deliberately: what the RECRUITER must do here, and whether AI
+  // is on, stay visible. The method's identity, its stage numbering, its
+  // purpose statement, its prohibitions and its validation disclaimer move
+  // inside a disclosure.
+  //
+  // None of it is removed or softened -- it is governed content and it still
+  // reads in both languages. But it used to occupy the first screenful of
+  // every work surface, so a recruiter opening a candidate met "CQrity TRUST
+  // v1 · step 5 of 5" and a note about scientific validation before they met
+  // their own next task. Operational first, methodology second, audit third.
   return (
     <section aria-labelledby="trust-stage" className="rounded-lg border border-border p-4">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span
-          aria-hidden="true"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-700/40 bg-sky-700/10 font-mono text-sm font-semibold text-sky-900 dark:text-sky-200"
-        >
-          {stage.letter}
-        </span>
-        <h2 id="trust-stage" className="text-sm font-semibold text-foreground">
-          <span className="sr-only">
-            {t("iiu.trust.srstage")} {stage.ordinal} {t("iiu.trust.of5")}:{" "}
-          </span>
-          {name}
-        </h2>
-        <span className="text-xs text-muted-foreground">
-          CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} ·{" "}
-          {t("iiu.trust.step")} {stage.ordinal} {t("iiu.trust.of5")}
-        </span>
-      </div>
-
-      {purpose && <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{purpose}</p>}
+      <h2 id="trust-stage" className="sr-only">
+        {t("iiu.trust.srstage")} {stage.ordinal} {t("iiu.trust.of5")}: {name}
+      </h2>
 
       {responsibility && (
-        <p className="mt-2 max-w-[68ch] text-sm text-foreground">
+        <p className="max-w-[68ch] text-sm text-foreground">
           <span className="font-medium">{t("iiu.trust.responsibility")}</span>
           {responsibility}
         </p>
@@ -622,20 +615,42 @@ export function TrustStageBanner({
             : t("iiu.trust.ai.disabled")}
       </p>
 
-      {prohibitions.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            {t("iiu.trust.prohibitions")}
-          </summary>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {prohibitions.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+          {t("iiu.trust.about")}
+        </summary>
 
-      <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span
+            aria-hidden="true"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-sky-700/40 bg-sky-700/10 font-mono text-sm font-semibold text-sky-900 dark:text-sky-200"
+          >
+            {stage.letter}
+          </span>
+          <span className="text-sm font-semibold text-foreground">{name}</span>
+          <span className="text-xs text-muted-foreground">
+            CQrity TRUST{stage.methodVersion ? ` v${stage.methodVersion}` : ""} ·{" "}
+            {t("iiu.trust.step")} {stage.ordinal} {t("iiu.trust.of5")}
+          </span>
+        </div>
+
+        {purpose && <p className="mt-2 max-w-[68ch] text-sm text-muted-foreground">{purpose}</p>}
+
+        {prohibitions.length > 0 && (
+          <>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {t("iiu.trust.prohibitions")}
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {prohibitions.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">{t("iiu.trust.disclaimer")}</p>
+      </details>
     </section>
   );
 }
