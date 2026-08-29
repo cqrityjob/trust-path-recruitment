@@ -926,7 +926,8 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       })),
       plan,
       session,
-      proposals: ((proposalsRes.data ?? []) as Array<Record<string, unknown>>).map((p) => ({
+      // Cast via unknown: generated types.ts predates the 5E columns on this table.
+      proposals: ((proposalsRes.data ?? []) as unknown as Array<Record<string, unknown>>).map((p) => ({
         id: p.id as string,
         excerpt: p.excerpt as string,
         questionId: p.question_id as string,
