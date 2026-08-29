@@ -53,7 +53,12 @@ const failures: string[] = [];
 
 const OWNER_LOCKED = {
   lovableProjectId: "9ec625ef-34a1-4b4b-8cbb-712cae168579",
-  currentLiveRef: "zrahptwsnjcdyzfywbeh",
+  // 2026-08-29 runtime cutover. Until this date the live runtime was the Lovable
+  // Cloud project zrahptwsnjcdyzfywbeh and the guard's whole job was to keep the
+  // runtime OFF the owner project. The owner then completed the data and Storage
+  // migration and permanently disconnected/deleted zrah, so the single canonical
+  // backend for both runtime and schema is now wrygicdfxwjnrugduxnt.
+  currentLiveRef: "wrygicdfxwjnrugduxnt",
   // The owner schema target. This was vcgwvtmzftmulmoxmufv until 2026-08-29.
   //
   // vcgw was the INTENDED target in the 2026-08-28 bootstrap runbook, and its
@@ -64,10 +69,12 @@ const OWNER_LOCKED = {
   // earlier plan, and this lock now names the project that actually holds the
   // canonical history rather than the one that was supposed to.
   candidateProductionRef: "wrygicdfxwjnrugduxnt",
-  // Named so it can never quietly return as a write target. A retired project
-  // is not the same as an excluded one: vcgw was legitimately attempted and
-  // failed, mlvz was never ours to write to at all.
+  // Named so they can never quietly return as targets. A retired project is not
+  // the same as an excluded one: vcgw was legitimately attempted and failed,
+  // zrah was the real former runtime and is now deleted, mlvz was never ours to
+  // write to at all.
   retiredSchemaTargetRef: "vcgwvtmzftmulmoxmufv",
+  retiredRuntimeRef: "zrahptwsnjcdyzfywbeh",
   permanentlyExcludedRef: "mlvzmiutmyyqeuvjglco",
 } as const;
 
