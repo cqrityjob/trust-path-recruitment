@@ -56,6 +56,31 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
   frontier: FrontierEntry[];
 };
 
+const targets = JSON.parse(
+  readFileSync(path.join(root, "supabase/deployment-targets.json"), "utf8"),
+) as {
+  writeTargetRef: string;
+  currentLive: { projectRef: string };
+};
+
+/* ------------------------------------------------------------------ */
+/* 0 · Which database does the RUNNING application actually talk to?   */
+/* ------------------------------------------------------------------ */
+
+// This is the question that matters, and it is not the same question as
+// "where do migrations go".
+//
+// release-state.json tracks the SCHEMA TARGET. Until the runtime cutover, the
+// deployed application talks to a DIFFERENT project. Migrations applied to the
+// schema target therefore do nothing for production, and a release-state full
+// of `applied` says nothing at all about whether the live site can serve the
+// code that is about to ship to it.
+//
+// Found the hard way on 2026-08-29: eight migrations were applied to the owner
+// project by the GitHub integration, main's code merged, and the live site --
+// still on the old backend -- had none of it.
+const SPLIT_BACKEND = targets.currentLive.projectRef !== targets.writeTargetRef;
+
 /* ------------------------------------------------------------------ */
 /* 1 · Which migrations are not proven to exist on the owner database  */
 /* ------------------------------------------------------------------ */
@@ -177,9 +202,27 @@ const isSchemaOnlyBranch = appChanges !== null && appChanges.length === 0 && cha
 
 console.log("schema-first release contract\n");
 
+if (SPLIT_BACKEND) {
+  console.log(`  Schema target : ${targets.writeTargetRef}`);
+  console.log(
+    `  LIVE runtime  : ${targets.currentLive.projectRef}   <-- what production actually queries`,
+  );
+  console.log("");
+  console.log("  These are different projects. release-state.json below describes the");
+  console.log("  SCHEMA TARGET only. It is NOT evidence that the live database can serve");
+  console.log("  this code, and it must not be read as though it were. Until the runtime");
+  console.log("  cutover, every migration this branch depends on has to reach BOTH, or");
+  console.log("  the application must tolerate its absence on the live one.");
+  console.log("");
+}
+
 if (blockers.length === 0) {
-  console.log("  OK: no application code depends on an unapplied migration.");
-  console.log("      This branch is application-release eligible.");
+  console.log("  OK: no application code depends on a migration unapplied on the schema target.");
+  if (SPLIT_BACKEND) {
+    console.log("      NOTE: that is not the live database. See the split-backend warning above.");
+  } else {
+    console.log("      This branch is application-release eligible.");
+  }
   process.exit(0);
 }
 
