@@ -29,6 +29,8 @@ import {
   State,
   TrustStageBanner,
   interviewErrorMessage,
+  MaterialBadge,
+  MaterialLegend,
   FiveEPanel,
   uiLabel,
   ProviderModeChip,
@@ -243,6 +245,10 @@ function Page() {
             {t("iiu.ev.notes.title")}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.notes.body")}</p>
+          {/* Stated once, where the six kinds of material first appear
+              together. The distinction is the product; leaving it to be
+              inferred from styling is how it gets lost. */}
+          <MaterialLegend />
           <ul className="mt-3 space-y-2">
             {d.questions.map((qq) => {
               const qNotes = (d.session?.notes ?? []).filter((n) => n.questionId === qq.id);
@@ -257,8 +263,8 @@ function Page() {
                       <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
                         {n.body}
                       </p>
-                      <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                        {t("iiu.ev.notes.source")}
+                      <p className="mt-1">
+                        <MaterialBadge state="note" />
                       </p>
                     </div>
                   ))}
@@ -439,9 +445,7 @@ function Page() {
                 return (
                   <li key={p.id} className="rounded-lg border border-border p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip tone="ai" srPrefix={t("iiu.ev.srprefix.origin")}>
-                        {t("iiu.ev.aiproposal")}
-                      </Chip>
+                      <MaterialBadge state="ai" />
                       {qq && <Chip>{qq.code}</Chip>}
                       <Chip
                         tone={
@@ -662,7 +666,8 @@ function Page() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     {qq && <Chip>{qq.code}</Chip>}
-                    <Chip tone="confirmed" srPrefix={t("iiu.ev.srprefix.origin")}>
+                    <MaterialBadge state="confirmed" />
+                    <Chip srPrefix={t("iiu.ev.srprefix.origin")}>
                       {e.origin === "human_authored"
                         ? t("iiu.ev.origin.human")
                         : e.origin === "ai_proposed_edited"

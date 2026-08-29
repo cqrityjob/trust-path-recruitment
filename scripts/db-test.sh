@@ -1345,6 +1345,35 @@ if [ "$CD_PASSED" -lt 62 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Tenant isolation, tested deliberately rather than observed by accident: two
+# employers, a candidate with a login and no seat, and every cross-boundary
+# read and write a multi-tenant product has to refuse -- case, notes,
+# proposals, confirmed material, assessments, report, AI provenance, audit.
+# ---------------------------------------------------------------------------
+echo "==> Running tenant isolation assertions"
+set +e
+TI_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_tenant_isolation_test.sql 2>&1)"
+TI_RC=$?
+set -e
+
+echo "$TI_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+TI_PASSED="$(echo "$TI_OUT" | grep -c "ok  " || true)"
+
+if [ "$TI_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the tenant isolation suite exited with code ${TI_RC}." >&2
+  echo "$TI_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "tenant isolation"
+fi
+
+echo "    ok  ${TI_PASSED} tenant isolation assertions passed"
+
+if [ "$TI_PASSED" -lt 24 ]; then
+  echo "FAIL: expected at least 24 tenant isolation assertions, only ${TI_PASSED} ran." >&2
+  suite_failed "tenant isolation (assertion shortfall: floor 24)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Rollback verification (destructive -- must run last)
 # ---------------------------------------------------------------------------
 echo "==> Verifying job lifecycle, Annat taxonomy and candidate notification"

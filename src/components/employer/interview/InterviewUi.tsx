@@ -890,3 +890,103 @@ export function GovernedGuidance({
     </div>
   );
 }
+
+/** The six kinds of material a recruiter handles, and the one thing that must
+ *  never happen: two of them looking alike.
+ *
+ *  A candidate's statement, a note, an AI proposal, confirmed material, a
+ *  verification item and a human assessment are six different claims about
+ *  the world. Conflating any two of them is how a product ends up presenting
+ *  something the candidate said as something the employer established.
+ *
+ *  Each therefore carries a GLYPH and a WORD, not a colour. Colour is used as
+ *  reinforcement and never as the signal: a recruiter reading this in
+ *  greyscale, with a screen reader, or with any of the common colour vision
+ *  deficiencies gets exactly the same six distinctions. */
+export type MaterialState = "candidate" | "note" | "ai" | "confirmed" | "verify" | "assessment";
+
+const MATERIAL: Record<
+  MaterialState,
+  { glyph: string; label: TranslationKey; help: TranslationKey; cls: string }
+> = {
+  candidate: {
+    glyph: "❝",
+    label: "iiu.st.candidate",
+    help: "iiu.st.candidate.help",
+    cls: "border-slate-500/40 text-slate-700 dark:text-slate-300",
+  },
+  note: {
+    glyph: "✎",
+    label: "iiu.st.note",
+    help: "iiu.st.note.help",
+    cls: "border-sky-700/40 text-sky-900 dark:text-sky-200",
+  },
+  ai: {
+    glyph: "◇",
+    label: "iiu.st.ai",
+    help: "iiu.st.ai.help",
+    cls: "border-violet-700/40 text-violet-900 dark:text-violet-200",
+  },
+  confirmed: {
+    glyph: "✓",
+    label: "iiu.st.confirmed",
+    help: "iiu.st.confirmed.help",
+    cls: "border-teal-700/40 text-teal-900 dark:text-teal-200",
+  },
+  verify: {
+    glyph: "!",
+    label: "iiu.st.verify",
+    help: "iiu.st.verify.help",
+    cls: "border-amber-600/50 text-amber-800 dark:text-amber-200",
+  },
+  assessment: {
+    glyph: "★",
+    label: "iiu.st.assessment",
+    help: "iiu.st.assessment.help",
+    cls: "border-indigo-700/40 text-indigo-900 dark:text-indigo-200",
+  },
+};
+
+export function MaterialBadge({ state }: { state: MaterialState }) {
+  const { t } = useT();
+  const m = MATERIAL[state];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+        m.cls,
+      )}
+    >
+      <span aria-hidden="true" className="font-mono">
+        {m.glyph}
+      </span>
+      {t(m.label)}
+    </span>
+  );
+}
+
+/** The legend, shown once where the six first appear together. A distinction
+ *  the product depends on is worth stating plainly rather than hoping it is
+ *  inferred from styling. */
+export function MaterialLegend() {
+  const { t } = useT();
+  const order: MaterialState[] = ["candidate", "note", "ai", "confirmed", "verify", "assessment"];
+  return (
+    <details className="mt-3 rounded-lg border border-border p-4">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">
+        {t("iiu.st.legend")}
+      </summary>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("iiu.st.legend.body")}</p>
+      <dl className="mt-3 space-y-2">
+        {order.map((k) => (
+          <div key={k} className="flex flex-wrap items-baseline gap-2">
+            <dt>
+              <MaterialBadge state={k} />
+            </dt>
+            <dd className="text-sm text-muted-foreground">{t(MATERIAL[k].help)}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
