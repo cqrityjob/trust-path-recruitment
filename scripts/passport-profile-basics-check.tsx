@@ -32,10 +32,15 @@ import { I18nProvider } from "../src/i18n/context";
 import { ProfileBasicsCard } from "../src/components/security-passport/ProfileBasicsCard";
 import { ONBOARDING_STEPS } from "../src/lib/security-passport/onboarding";
 import {
+  BASICS_DELEGATED_ACTIONS,
   BASICS_EDIT_MODE,
+  BASICS_STEP_KIND,
+  DATA_BEARING_COUNT,
+  DATA_BEARING_STEPS,
   PROFILE_BASICS_COUNT,
   PROFILE_BASICS_STEPS,
-  answeredCount,
+  answeredDataCount,
+  isDeclared,
   isStepAnswered,
 } from "../src/lib/security-passport/profile-basics";
 import { passportT, type PassportCopyKey } from "../src/lib/security-passport/i18n";
@@ -102,6 +107,34 @@ console.log("THE SIX -- recovered, not invented");
     "every step has an edit mode, so none can be listed and then be unreachable",
     PROFILE_BASICS_STEPS.every((s) => BASICS_EDIT_MODE[s.id] !== undefined),
   );
+  ck(
+    "and every step has a kind, so none can be counted in the wrong vocabulary",
+    PROFILE_BASICS_STEPS.every((s) => BASICS_STEP_KIND[s.id] !== undefined),
+  );
+  // One informational, four data-bearing, one declaration. The split is the
+  // whole correction: it is what makes an honest count possible at all.
+  ck(
+    "exactly one step is informational, and it is purpose",
+    PROFILE_BASICS_STEPS.filter((s) => BASICS_STEP_KIND[s.id] === "informational")
+      .map((s) => s.id)
+      .join(",") === "purpose",
+  );
+  ck(
+    "exactly one step is the declaration",
+    PROFILE_BASICS_STEPS.filter((s) => BASICS_STEP_KIND[s.id] === "declaration")
+      .map((s) => s.id)
+      .join(",") === "declaration",
+  );
+  ck(
+    "exactly four steps are data-bearing",
+    DATA_BEARING_COUNT === 4 &&
+      DATA_BEARING_STEPS.map((s) => s.id).join(",") ===
+        "identity,profession,jurisdiction,currentRole",
+  );
+  ck(
+    "the informational step is not in the data-bearing set",
+    !DATA_BEARING_STEPS.some((s) => s.id === "purpose"),
+  );
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -127,24 +160,47 @@ console.log("\nACCESS -- all six questions, with the holder's answers");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   3. COMPLETION IS COUNTED, AND COUNTED HONESTLY
+   3. COMPLETION IS STATED TRUTHFULLY, AND NEVER OVER-COUNTED
    ══════════════════════════════════════════════════════════════════════ */
-console.log("\nCOMPLETION -- a count of questions, never a measurement");
+console.log("\nCOMPLETION -- an honest count, in the right vocabulary");
 {
   const readerFor = (answers: Record<string, string>) => (stepId: string, fieldId: string) =>
     answers[`${stepId}.${fieldId}`] ?? "";
 
-  ck("a fully answered profile counts six of six", answeredCount(readerFor(FULL)) === 6);
+  /* ── THE DEFECT THIS SECTION EXISTS FOR ──────────────────────────────
+   *
+   * The count used to range over all six steps, computed generically as
+   * "every required field of the step has a value". `purpose` has NO fields,
+   * so it satisfied that vacuously, and a holder who had entered nothing was
+   * told "1 av 6 ifyllda" -- a statement that they had supplied one answer.
+   *
+   * The count now ranges over the four data-bearing steps only. An empty
+   * profile reads ZERO. */
+  ck("an empty profile has answered nothing at all", answeredDataCount(readerFor({})) === 0);
+  ck("and has not declared", !isDeclared(readerFor({})));
 
-  // `purpose` has no fields, so it is vacuously complete -- there is nothing
-  // for the holder to fill in, only something to read. The card says so in
-  // words so the count never looks like an off-by-one.
-  ck("an empty profile counts one of six", answeredCount(readerFor({})) === 1);
+  ck("a fully answered profile counts four of four", answeredDataCount(readerFor(FULL)) === 4);
+  ck("and has declared", isDeclared(readerFor(FULL)));
+
+  // The count may never reach the total number of steps: if it does,
+  // something uncountable has been counted again.
+  ck(
+    "the count's denominator is four, not the six canonical steps",
+    DATA_BEARING_COUNT === 4 && PROFILE_BASICS_COUNT === 6,
+  );
 
   const partial = { ...FULL };
   delete partial["profession.profession"];
-  delete partial["declaration.declared"];
-  ck("dropping two answers counts four of six", answeredCount(readerFor(partial)) === 4);
+  ck("dropping one data answer counts three of four", answeredDataCount(readerFor(partial)) === 3);
+
+  // The declaration is an act, not a fraction. Withdrawing it must not move
+  // the count of fields the holder filled in.
+  const undeclared = { ...FULL };
+  delete undeclared["declaration.declared"];
+  ck(
+    "the declaration is not part of the field count",
+    answeredDataCount(readerFor(undeclared)) === 4 && !isDeclared(readerFor(undeclared)),
+  );
 
   // Optional fields must not hold a step hostage: a holder who gives a name
   // but no headline has answered the identity question.
@@ -165,12 +221,73 @@ console.log("\nCOMPLETION -- a count of questions, never a measurement");
     ),
   );
 
+  /* ── AND WHAT THE HOLDER ACTUALLY READS ──────────────────────────── */
   const empty = card({ answers: {}, displayAnswers: {}, declaredAccurateAt: null });
-  ck("the count is rendered for the holder to read", empty.includes("av 6"));
+
+  ck("an empty profile is told it has filled in none of four", empty.includes("0 av 4"));
+  // The exact sentence the Product Owner rejected. Note that "Steg 1 av 6" is
+  // CORRECT and must survive -- the six-step model is still stated. What may
+  // never appear is a COUNT OF ANSWERS out of six, in either language.
+  ck('it never says "1 av 6 ifyllda"', !/\d+\s*av\s*6\s*(uppgifter\s*)?ifyllda/.test(empty));
   ck(
-    "an unanswered question is marked as missing",
-    empty.includes(passportT("basics.missing", "sv")),
+    "and never counts answers out of six in English either",
+    !/\d+\s*of\s*6\s*(fields\s*)?completed/.test(
+      html(
+        <ProfileBasicsCard
+          answers={{}}
+          declaredAccurateAt={null}
+          onSave={noopSave}
+          onEditWorkCountry={noop}
+          onEditCurrentRole={noop}
+        />,
+      ),
+    ),
   );
+  // The denominator the holder reads is the data-bearing count.
+  ck(
+    "the count it does render is out of four",
+    new RegExp(`0 av ${DATA_BEARING_COUNT} ${passportT("basics.filled", "sv")}`).test(empty),
+  );
+
+  ck(
+    "the informational step is labelled as something to read, not as filled in",
+    empty.includes(passportT("basics.readThrough", "sv")),
+  );
+  // Four data steps missing + the declaration not given. If the information
+  // page were still being counted, one of these would be an "Ifylld" instead.
+  ck(
+    "all four data steps are marked missing",
+    (empty.match(new RegExp(passportT("basics.missing", "sv"), "g")) ?? []).length === 4,
+  );
+  ck(
+    "an empty profile is shown as not declared",
+    empty.includes(passportT("basics.notDeclared", "sv")),
+  );
+  ck(
+    "nothing on an empty profile is marked as filled in",
+    !empty.includes(`>${passportT("basics.answered", "sv")}<`),
+  );
+
+  // The canonical six-step model is still stated, and stated on every step.
+  ck(
+    "the six-step model is stated on every step",
+    (empty.match(/av 6/g) ?? []).length === PROFILE_BASICS_COUNT,
+  );
+  ck(
+    "and the lead explains the six as one read, four filled in, and a declaration",
+    empty.includes(passportT("basics.lead", "sv")) &&
+      /sex steg/.test(passportT("basics.lead", "sv")),
+  );
+
+  // A holder who HAS declared reads that, in both places.
+  const declaredMarkup = card();
+  ck(
+    "a declared profile reads four of four and declared",
+    declaredMarkup.includes("4 av 4") &&
+      declaredMarkup.includes(passportT("basics.declaredOn", "sv")) &&
+      !declaredMarkup.includes(passportT("basics.notDeclared", "sv")),
+  );
+
   // Career Card's vocabulary. A Trust surface renders nothing a reader could
   // mistake for a measurement of the person.
   ck("the count is not a progress bar", !/role="progressbar"|<progress/.test(empty));
@@ -200,10 +317,32 @@ console.log("\nEDITING -- every one of the six has a way to be changed");
     "they are the work country and the current role -- the two that are domain rows",
     delegated.map((s) => s.id).join(",") === "jurisdiction,currentRole",
   );
+  /* ── EACH DELEGATED ANSWER NAMES ITSELF AND LINKS TO ITS EDITOR ─────
+   *
+   * The label used to read "Ändra längre ned på sidan" for both, which told
+   * the holder where the control was rather than what it changed -- and made
+   * the two indistinguishable. Each now names its own answer and carries a
+   * real in-page anchor to the control that owns it. */
   ck(
-    "each delegated question offers a way to reach its editor",
-    (empty.match(new RegExp(passportT("basics.editBelow", "sv"), "g")) ?? []).length === 2,
+    "the work country action names the work country",
+    empty.includes(passportT("basics.editWorkCountry", "sv")),
   );
+  ck(
+    "the current role action names the current role",
+    empty.includes(passportT("basics.editCurrentRole", "sv")),
+  );
+  ck(
+    "each delegated step declares a target",
+    Object.keys(BASICS_DELEGATED_ACTIONS).sort().join(",") === "currentRole,jurisdiction",
+  );
+  // A real anchor, not a bare button: it has a target a screen reader can
+  // announce and it works with no JavaScript.
+  for (const [stepId, action] of Object.entries(BASICS_DELEGATED_ACTIONS)) {
+    ck(
+      `the ${stepId} action is an anchor to #${action.anchorId}`,
+      new RegExp(`<a[^>]*href="#${action.anchorId}"`).test(empty),
+    );
+  }
   // A second employer field on this card is the regression, not the fix.
   ck(
     "the card holds no employer input of its own",
@@ -369,7 +508,10 @@ console.log("\nLANGUAGE -- both, and different from each other");
     "basics.selfReported",
     "basics.save",
     "basics.savedNotice",
-    "basics.editBelow",
+    "basics.readThrough",
+    "basics.notDeclared",
+    "basics.editWorkCountry",
+    "basics.editCurrentRole",
     "basics.editedBelow",
     "basics.declaredOn",
     "basics.declareAgain",

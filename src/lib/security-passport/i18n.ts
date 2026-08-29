@@ -530,19 +530,28 @@ const sv = {
   // you told us, and nobody has checked it".
   "basics.title": "Grunduppgifter för ditt Passport",
   "basics.lead":
-    "De sex frågor som bygger ditt Passport. Du kan läsa och ändra dina svar när du vill — du behöver aldrig börja om.",
-  "basics.filled": "ifyllda",
-  "basics.question": "Fråga",
+    "Ditt Passport byggs av sex steg: ett som du bara läser, fyra med uppgifter som du fyller i, och ett intygande. Du kan läsa och ändra dina svar när du vill — du behöver aldrig börja om.",
+  // "2 av 4 uppgifter ifyllda". The count ranges over the FOUR data-bearing
+  // steps and nothing else. It used to say "av 6", which counted the
+  // information page and the declaration as answers a holder had given, so a
+  // brand-new Passport claimed one answer had been supplied when none had.
+  "basics.filled": "uppgifter ifyllda",
+  "basics.question": "Steg",
   "basics.answered": "Ifylld",
   "basics.missing": "Saknas",
-  "basics.noAnswerNeeded": "Ingen uppgift att fylla i — det här är information till dig.",
+  "basics.readThrough": "Läs igenom",
+  "basics.notDeclared": "Inte intygat",
+  "basics.noAnswerNeeded":
+    "Det här steget innehåller ingen uppgift att fylla i — du läser det bara.",
   "basics.selfReported":
     "Det här är uppgifter du själv har lämnat. Ingen har kontrollerat dem, och att spara dem gör dem inte verifierade. Dina behörigheter och kontroller påverkas inte.",
   "basics.save": "Spara grunduppgifter",
   "basics.savedNotice": "Dina grunduppgifter är sparade.",
-  "basics.editBelow": "Ändra längre ned på sidan",
+  // Named after what they change, not after where the control happens to sit.
+  "basics.editWorkCountry": "Ändra arbetsland",
+  "basics.editCurrentRole": "Ändra nuvarande roll",
   "basics.editedBelow":
-    "Den här uppgiften ändras där den hör hemma, längre ned på sidan, så att den bara har ett ställe att ändras på.",
+    "Den här uppgiften ändras där den hör hemma, längre ned på den här sidan, så att den bara har ett ställe att ändras på. Knappen tar dig dit.",
   "basics.declaredOn": "Intygat",
   "basics.declareAgain": "Intyga på nytt",
   "basics.declarationNote":
@@ -1909,19 +1918,22 @@ const en: Record<PassportCopyKey, string> = {
   // ── The six profile basics, as a permanent editor ────────────────────
   "basics.title": "Your Passport profile basics",
   "basics.lead":
-    "The six questions that build your Passport. You can read and change your answers whenever you like — you never have to start again.",
-  "basics.filled": "answered",
-  "basics.question": "Question",
-  "basics.answered": "Answered",
+    "Your Passport is built from six steps: one you only read, four that hold information you fill in, and a declaration. You can read and change your answers whenever you like — you never have to start again.",
+  "basics.filled": "fields completed",
+  "basics.question": "Step",
+  "basics.answered": "Completed",
   "basics.missing": "Missing",
-  "basics.noAnswerNeeded": "Nothing to fill in — this one is information for you.",
+  "basics.readThrough": "Read through",
+  "basics.notDeclared": "Not declared",
+  "basics.noAnswerNeeded": "This step has nothing to fill in — you only read it.",
   "basics.selfReported":
     "This is information you have given about yourself. Nobody has checked it, and saving it does not make it verified. Your authorisations and reviews are unaffected.",
   "basics.save": "Save profile basics",
   "basics.savedNotice": "Your profile basics have been saved.",
-  "basics.editBelow": "Change it further down this page",
+  "basics.editWorkCountry": "Change work country",
+  "basics.editCurrentRole": "Change current role",
   "basics.editedBelow":
-    "This answer is changed where it belongs, further down this page, so that it only has one place to be changed.",
+    "This answer is changed where it belongs, further down this page, so that it only has one place to be changed. The button takes you there.",
   "basics.declaredOn": "Declared",
   "basics.declareAgain": "Declare again",
   "basics.declarationNote":

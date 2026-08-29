@@ -40,13 +40,18 @@ import { ClipboardList, Info, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  BASICS_DELEGATED_ACTIONS,
   BASICS_EDIT_MODE,
+  BASICS_STEP_KIND,
+  DATA_BEARING_COUNT,
   PROFILE_BASICS_COUNT,
   PROFILE_BASICS_STEPS,
-  answeredCount,
+  answeredDataCount,
+  isDeclared,
   isStepAnswered,
 } from "@/lib/security-passport/profile-basics";
 import type { OnboardingField, OnboardingStep } from "@/lib/security-passport/onboarding";
+import type { BasicsAnswerReader } from "@/lib/security-passport/profile-basics";
 
 /** What the holder can change from this card, in one save. The two delegated
  *  questions are deliberately absent: this shape is what makes it impossible
@@ -66,18 +71,45 @@ function keyOf(stepId: string, fieldId: string): string {
   return `${stepId}.${fieldId}`;
 }
 
-function StatusChip({ answered }: { readonly answered: boolean }) {
+/** The status of ONE step, stated in the vocabulary of what that step is.
+ *
+ *  A step is not answerable, answerable, or an act — and each gets its own
+ *  words. This is what stops the informational page from ever reading
+ *  "Ifylld", which is the specific untruth this component was corrected for:
+ *  a holder who had entered nothing was told one thing was filled in. */
+function StatusChip({
+  step,
+  read,
+}: {
+  readonly step: OnboardingStep;
+  readonly read: BasicsAnswerReader;
+}) {
   const { pt } = usePassportCopy();
+  const kind = BASICS_STEP_KIND[step.id];
+
+  const { label, filled } =
+    kind === "informational"
+      ? { label: pt("basics.readThrough"), filled: null }
+      : kind === "declaration"
+        ? isDeclared(read)
+          ? { label: pt("basics.declaredOn"), filled: true }
+          : { label: pt("basics.notDeclared"), filled: false }
+        : isStepAnswered(step, read)
+          ? { label: pt("basics.answered"), filled: true }
+          : { label: pt("basics.missing"), filled: false };
+
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest",
-        answered
-          ? "bg-secondary text-secondary-foreground"
-          : "border border-dashed border-border text-muted-foreground",
+        filled === null
+          ? "border border-border text-muted-foreground"
+          : filled
+            ? "bg-secondary text-secondary-foreground"
+            : "border border-dashed border-border text-muted-foreground",
       )}
     >
-      {answered ? pt("basics.answered") : pt("basics.missing")}
+      {label}
     </span>
   );
 }
@@ -135,7 +167,10 @@ export function ProfileBasicsCard({
     () => (stepId: string, fieldId: string) => draftAnswers[keyOf(stepId, fieldId)] ?? "",
     [draftAnswers],
   );
-  const filled = answeredCount(read);
+  const filled = answeredDataCount(read);
+  // Reads the DRAFT, so ticking the box updates the header immediately —
+  // distinct from `declared`, which is the checkbox's own state.
+  const declarationGiven = isDeclared(read);
 
   const dirty =
     displayName !== (answers[keyOf("identity", "displayName")] ?? "") ||
@@ -275,12 +310,32 @@ export function ProfileBasicsCard({
           <ClipboardList aria-hidden="true" className="h-5 w-5 text-primary" />
           {pt("basics.title")}
         </h2>
-        {/* A count of questions, in words and digits. Deliberately not a bar,
-            a meter or a percentage: the Trust product renders nothing a reader
-            could mistake for a measurement of the person. */}
-        <p className="text-sm tabular-nums text-muted-foreground" role="status">
-          {filled} {pt("onboarding.of")} {PROFILE_BASICS_COUNT} {pt("basics.filled")}
-        </p>
+        {/* ── WHAT THIS MAY AND MAY NOT COUNT ────────────────────────
+            Two separate facts, because they are two separate kinds of thing.
+
+            The count ranges over the FOUR data-bearing steps and nothing
+            else. It used to read "N av 6", which counted the information
+            page — a step with no fields, satisfying "all required fields
+            filled" vacuously — as an answer the holder had supplied. A brand
+            new Passport therefore announced "1 av 6 ifyllda" to somebody who
+            had entered nothing.
+
+            The declaration sits beside it rather than inside it: it is an act
+            with a date, so it is reported as given or not given and is never
+            a fraction. Neither is a bar, a meter or a percentage — the Trust
+            product renders nothing a reader could mistake for a measurement
+            of the person. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="status">
+          <p className="text-sm tabular-nums text-muted-foreground">
+            {filled} {pt("onboarding.of")} {DATA_BEARING_COUNT} {pt("basics.filled")}
+          </p>
+          <span aria-hidden="true" className="text-muted-foreground/50">
+            ·
+          </span>
+          <p className="text-sm text-muted-foreground">
+            {declarationGiven ? pt("basics.declaredOn") : pt("basics.notDeclared")}
+          </p>
+        </div>
       </header>
 
       <p className="mt-3 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
@@ -297,14 +352,17 @@ export function ProfileBasicsCard({
       <ol className="mt-5 space-y-5">
         {PROFILE_BASICS_STEPS.map((step, index) => {
           const mode = BASICS_EDIT_MODE[step.id] ?? "inline";
-          const answered = isStepAnswered(step, read);
+          const delegated = BASICS_DELEGATED_ACTIONS[step.id];
           return (
             <li key={step.id} className="border-t border-border pt-5 first:border-t-0 first:pt-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                  {pt("basics.question")} {index + 1}
+                  {/* "Steg 3 av 6". The canonical six-step model is stated
+                      on every step, so it is unmistakable that six exist even
+                      when a holder is looking at one of them. */}
+                  {pt("basics.question")} {index + 1} {pt("onboarding.of")} {PROFILE_BASICS_COUNT}
                 </span>
-                <StatusChip answered={answered} />
+                <StatusChip step={step} read={read} />
               </div>
 
               <h3 className="mt-1.5 text-base font-semibold tracking-tight text-foreground">
@@ -340,14 +398,32 @@ export function ProfileBasicsCard({
                   <p className="max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
                     {pt("basics.editedBelow")}
                   </p>
-                  <button
-                    type="button"
-                    onClick={step.id === "jurisdiction" ? onEditWorkCountry : onEditCurrentRole}
-                    className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <PenLine aria-hidden="true" className="h-4 w-4" />
-                    {pt("basics.editBelow")}
-                  </button>
+                  {/* ── A REAL ANCHOR, PLUS MANAGED FOCUS ───────────────
+                      An <a href="#id"> rather than a button, so the trip is a
+                      genuine in-page link: it has a target a screen reader can
+                      announce, it works from the keyboard, and it survives
+                      with no JavaScript at all. The handler then does the part
+                      a bare anchor does badly — smooth scrolling, and moving
+                      FOCUS onto the editor so a keyboard user arrives at the
+                      control rather than merely being scrolled past it.
+
+                      The label names the answer ("Ändra arbetsland"), not the
+                      control's location. A holder is looking for their work
+                      country, not for somewhere further down a page. */}
+                  {delegated ? (
+                    <a
+                      href={`#${delegated.anchorId}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (step.id === "jurisdiction") onEditWorkCountry();
+                        else onEditCurrentRole();
+                      }}
+                      className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground no-underline transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <PenLine aria-hidden="true" className="h-4 w-4" />
+                      {pt(delegated.labelKey)}
+                    </a>
+                  ) : null}
                 </div>
               ) : null}
             </li>
