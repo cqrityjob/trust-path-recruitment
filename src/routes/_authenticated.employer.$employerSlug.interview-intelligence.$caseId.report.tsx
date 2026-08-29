@@ -124,17 +124,22 @@ function Page() {
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
-          to="/employer/$employerSlug/interview-intelligence"
-          params={{ employerSlug }}
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
           className="text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
+        {/* The person, then the case. Every one of these screens led with
+            the case title -- internal bookkeeping -- and put the candidate
+            underneath it in muted grey. */}
+        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+          {d.candidateDisplayName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
           {isFinal && (

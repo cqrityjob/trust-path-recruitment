@@ -31,7 +31,6 @@ import {
   PURPOSE_LABEL,
   uiLabel,
   WithheldPanel,
-  ValidationChip,
   BUTTON,
   FIELD,
   PRIMARY_BUTTON,
@@ -205,26 +204,30 @@ function Page() {
     <>
       <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
         <Link
-          to="/employer/$employerSlug/interview-intelligence"
-          params={{ employerSlug }}
+          to="/employer/$employerSlug/interview-intelligence/$caseId"
+          params={{ employerSlug, caseId }}
           className="text-accent underline-offset-2 hover:underline"
         >
-          Interview Intelligence
+          {t("iiu.ov.backtocase")}
         </Link>
       </nav>
 
       <header className="mt-3">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{d.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{d.candidateDisplayName}</p>
+        {/* The person, then the case. Every one of these screens led with
+            the case title -- internal bookkeeping -- and put the candidate
+            underneath it in muted grey. */}
+        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+          {d.candidateDisplayName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{d.title}</p>
+        {/* Status and role. The pack's validation label and its content hash
+            used to sit here too: the first is governance metadata and the
+            second is a checksum, and neither is something a recruiter about
+            to meet a candidate can act on. Both remain available on the
+            overview, under the method disclosure, where an auditor looks. */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CaseStatusChip status={d.status} />
-          <ValidationChip label={d.validationLabel} />
           <Chip>{d.packName ?? "—"}</Chip>
-          {d.packContentHash && (
-            <Chip srPrefix={t("iiu.pp.contenthash")}>
-              <code className="font-mono text-[11px]">{d.packContentHash.slice(0, 10)}</code>
-            </Chip>
-          )}
         </div>
       </header>
 
@@ -242,33 +245,50 @@ function Page() {
            Ready says how it will be conducted. Both are database rows pinned to
            the TRUST method version, shown before the conversation rather than
            recalled during it. */}
-      <section className="mt-8 max-w-4xl" aria-labelledby="s-conduct">
-        <h2 id="s-conduct" className="text-lg font-semibold text-foreground">
-          {t("iiu.cd.ready.plan")}
+      {/* ---- The briefing ----
+           A recruiter opening this page is about to meet a person. What they
+           need first is what this conversation has to establish, and the
+           wording they are allowed to use to get there. Both are governed
+           rows; both are operationally useful, so both stay visible.
+
+           What moved into the disclosure below is the part that is about the
+           METHOD rather than about the conversation: how the five kinds of
+           information must be kept apart, and the conduct plan. Still there,
+           still governed, no longer the first thing on a briefing page. */}
+      <section className="mt-8 max-w-4xl" aria-labelledby="s-brief">
+        <h2 id="s-brief" className="text-lg font-semibold text-foreground">
+          {t("iiu.pp.brief.title")}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.pp.brief.body")}</p>
 
         <GovernedGuidance
           title={t("iiu.cd.target.purpose")}
           rows={d.conductGuidance.filter((g) => g.surface === "target_purpose")}
         />
         <GovernedGuidance
-          title={t("iiu.cd.target.classes")}
-          rows={d.conductGuidance.filter((g) => g.surface === "target_evidence_class")}
-          note={t("iiu.cd.target.classes.note")}
-        />
-        <GovernedGuidance
-          title={t("iiu.cd.ready.plan")}
-          rows={d.conductGuidance.filter((g) => g.surface === "ready_plan")}
-        />
-        <GovernedGuidance
           title={t("iiu.cd.ready.prompts")}
           rows={d.conductGuidance.filter((g) => g.surface === "recall_prompt")}
           note={t("iiu.cd.ready.prompts.note")}
         />
-        <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-          {t("iiu.cd.hypothesis")}
-        </p>
+
+        <details className="mt-5 rounded-lg border border-border p-4">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+            {t("iiu.pp.brief.method")}
+          </summary>
+          <p className="mt-2 text-sm text-muted-foreground">{t("iiu.cd.governed")}</p>
+          <GovernedGuidance
+            title={t("iiu.cd.target.classes")}
+            rows={d.conductGuidance.filter((g) => g.surface === "target_evidence_class")}
+            note={t("iiu.cd.target.classes.note")}
+          />
+          <GovernedGuidance
+            title={t("iiu.cd.ready.plan")}
+            rows={d.conductGuidance.filter((g) => g.surface === "ready_plan")}
+          />
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+            {t("iiu.cd.hypothesis")}
+          </p>
+        </details>
       </section>
 
       {/* ---- 1. Sources ---- */}

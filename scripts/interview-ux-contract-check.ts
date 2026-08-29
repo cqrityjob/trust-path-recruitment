@@ -773,6 +773,112 @@ for (const file of [
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* 15 · The negative product contract                                   */
+/* ------------------------------------------------------------------ */
+
+// The owner's list of things that mean the product has slid back into being
+// research presented as software. Each is cheap to reintroduce by accident and
+// expensive to notice, so each is asserted rather than remembered.
+{
+  const CASE_ROUTES = ["prepare", "interview", "evidence", "report"].map(
+    (r) =>
+      `src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.${r}.tsx`,
+  );
+  const OVERVIEW =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const LIST = "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx";
+
+  // A checksum is not information a recruiter can act on. It belongs where an
+  // auditor looks, not in the header above a candidate's name.
+  for (const file of [...CASE_ROUTES, LIST]) {
+    ok(
+      !read(file).includes("packContentHash"),
+      `${file} renders the pack content hash — a raw checksum has no place in the recruiter's working view`,
+    );
+  }
+
+  // Every one of these screens should open with the person being interviewed.
+  for (const file of [...CASE_ROUTES, OVERVIEW]) {
+    const body = read(file);
+    const h1 = body.indexOf("sm:text-3xl");
+    const cand = body.indexOf("{d.candidateDisplayName}");
+    ok(
+      cand > 0 && h1 > 0 && cand - h1 < 200 && cand > h1,
+      `${file} does not lead with the candidate — the case title is internal bookkeeping`,
+    );
+  }
+
+  // Navigation is by the recruiter's task, never by the method's stages.
+  {
+    const rail = read("src/components/employer/interview/InterviewUi.tsx");
+    const steps = rail.slice(rail.indexOf("export function CaseSteps"));
+    for (const stage of ["Target", "Ready", "Understand", "Structure", "Trace"]) {
+      ok(
+        !new RegExp(`label: t\\("[^"]*"\\).*${stage}`).test(steps) && !steps.includes(`"${stage}"`),
+        `the journey rail is labelled with the TRUST stage "${stage}" — navigate by task, not by method`,
+      );
+    }
+  }
+
+  // No score, no ranking, no recommendation, anywhere a recruiter reads.
+  for (const file of [...CASE_ROUTES, OVERVIEW, LIST]) {
+    const body = codeOnly(read(file)).toLowerCase();
+    for (const term of [
+      "suitability",
+      "lämplighet",
+      "rekommenderad kandidat",
+      "recommended candidate",
+      "overall score",
+      "totalpoäng",
+      "candidate score",
+    ]) {
+      ok(
+        !body.includes(term),
+        `${file} contains "${term}" — this engine produces no score, ranking or recommendation`,
+      );
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 16 · The lifecycle is navigable end to end                           */
+/* ------------------------------------------------------------------ */
+
+// Not "the components exist" but "the recruiter can get from one to the next".
+// Every case status must resolve to a real route and a real call to action, so
+// a status the backend can produce can never leave the recruiter on a page
+// with nowhere to go.
+{
+  const OVERVIEW =
+    "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.index.tsx";
+  const ov = read(OVERVIEW);
+  const STATUSES = [
+    "draft",
+    "sources_ready",
+    "prep_generated",
+    "prep_approved",
+    "interview_in_progress",
+    "interview_complete",
+    "evidence_review",
+    "assessed",
+    "reported",
+  ];
+  const nextBlock = ov.slice(ov.indexOf("const NEXT"), ov.indexOf("function Page"));
+  for (const st of STATUSES) {
+    ok(
+      new RegExp(`\\b${st}:`).test(nextBlock),
+      `case status "${st}" has no next action on the overview — the recruiter would be stranded`,
+    );
+  }
+  for (const seg of ["prepare", "interview", "evidence", "report"]) {
+    ok(
+      nextBlock.includes(`/${seg}\``),
+      `the overview never routes to /${seg} — the lifecycle is not navigable end to end`,
+    );
+  }
+}
+
 console.log(`\n  assertions passed: ${passes}`);
 if (failures > 0) {
   console.error(`\ninterview-ux-contract-check FAILED (${failures} issue(s))`);
