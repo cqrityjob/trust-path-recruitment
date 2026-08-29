@@ -29,6 +29,7 @@
 import { CREDENTIAL_CODE_MAX_LENGTH } from "./credentials";
 import { isCalendarDate } from "./dates";
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { derivePreviewIdentity } from "./identity/visibility";
 import type { TitleRule } from "./identity/types";
 import { z } from "zod";
@@ -365,35 +366,51 @@ export const getMyPassport = createServerFn({ method: "GET" })
 /* Writes                                                             */
 /* ------------------------------------------------------------------ */
 
+/** The caller's own RLS-scoped client. There is no service-role path in this
+ *  file, so the holder's row is reachable only because the holder asked. */
+type HolderDb = SupabaseClient<Database>;
+
+/** Creates the holder's profile row if it is missing, and records the
+ *  creation. Returns true when it created one.
+ *
+ *  Extracted from `ensureMyPassport` because the profile-basics editor needs
+ *  the same guarantee: an UPDATE against a row that does not exist affects
+ *  nothing and reports no error, so a holder who reached "Mina uppgifter"
+ *  before their Passport existed would have watched a save succeed and change
+ *  nothing. Creating the row is idempotent and takes every column default,
+ *  exactly as the overview's own create button does.
+ */
+async function ensureProfileRow(db: HolderDb, userId: string): Promise<boolean> {
+  const existing = await db
+    .from("sp_passport_profiles")
+    .select("holder_user_id")
+    .eq("holder_user_id", userId)
+    .maybeSingle();
+  if (existing.error) throw new Error(existing.error.message);
+  if (existing.data) return false;
+
+  const { error } = await db.from("sp_passport_profiles").insert({
+    holder_user_id: userId,
+    question_version: PASSPORT_QUESTION_VERSION,
+  });
+  if (error) throw new Error(error.message);
+
+  await db.from("sp_passport_events").insert({
+    holder_user_id: userId,
+    actor_user_id: userId,
+    event_type: "passport_created",
+    subject_type: "profile",
+    detail: { question_version: PASSPORT_QUESTION_VERSION },
+  });
+  return true;
+}
+
 /** Creates the Passport if the holder does not have one. Idempotent. */
 export const ensureMyPassport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ created: boolean }> => {
     const { supabase, userId } = context;
-    const db = supabase;
-
-    const existing = await db
-      .from("sp_passport_profiles")
-      .select("holder_user_id")
-      .eq("holder_user_id", userId)
-      .maybeSingle();
-    if (existing.data) return { created: false };
-
-    const { error } = await db.from("sp_passport_profiles").insert({
-      holder_user_id: userId,
-      question_version: PASSPORT_QUESTION_VERSION,
-    });
-    if (error) throw new Error(error.message);
-
-    await db.from("sp_passport_events").insert({
-      holder_user_id: userId,
-      actor_user_id: userId,
-      event_type: "passport_created",
-      subject_type: "profile",
-      detail: { question_version: PASSPORT_QUESTION_VERSION },
-    });
-
-    return { created: true };
+    return { created: await ensureProfileRow(supabase, userId) };
   });
 
 const onboardingInput = z.object({
@@ -607,6 +624,130 @@ export const setWorkCountry = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     return { savedAt: now };
+  });
+
+/** The editable half of the six profile basics.
+ *
+ *  Every field is optional and `undefined` means "not submitted", so a form
+ *  that renders three questions cannot blank a fourth it never showed. */
+const profileBasicsInput = z.object({
+  displayName: z.string().max(120).nullable().optional(),
+  headline: z.string().max(200).nullable().optional(),
+  professionSlug: z.string().max(80).nullable().optional(),
+  /** AFFIRM-ONLY, and `z.literal(true)` is how that is enforced rather than
+   *  left to the UI.
+   *
+   *  `sp_profile_completed_has_declaration` refuses a completed profile whose
+   *  `declared_accurate_at` is NULL, so a control that could clear the
+   *  declaration would either break that CHECK or require weakening it — and
+   *  the constraint is doing exactly the job it was written for. A holder can
+   *  re-affirm, and the date moves; nobody can un-say a declaration through
+   *  this function. */
+  declared: z.literal(true).optional(),
+});
+
+/**
+ * The six profile basics, edited from "Mina uppgifter" at any time.
+ *
+ * ── WHY THIS IS NOT `saveOnboardingProgress` ───────────────────────────
+ *
+ * The same reason `setWorkCountry` is not. The autosave writes
+ * `onboarding_step` and `onboarding_state = 'in_progress'`, so reusing it from
+ * a permanent editor would knock a holder who FINISHED onboarding back into
+ * the middle of it, months later, because they corrected a typo in their
+ * headline. Neither column appears in the patch below and no branch adds one.
+ *
+ * ── WHAT IT CANNOT REACH ───────────────────────────────────────────────
+ *
+ * `assertion_level`, `lifecycle_state`, `verified_by_user_id` and `verified_at`
+ * are absent, as everywhere else in this file — and so are `sp_claims` and
+ * `sp_experience_periods` entirely. Saving something a holder said about
+ * themselves must not touch a credential, an employment record or a
+ * verification state, so the two basics whose answers ARE domain rows — the
+ * work country and the current role — are written by `setWorkCountry` and by
+ * the entries functions, and this function is structurally unable to write
+ * either. Editing your headline cannot promote anything to verified, because
+ * there is no statement here that could.
+ */
+export const savePassportBasics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => profileBasicsInput.parse(data))
+  .handler(async ({ context, data }): Promise<{ savedAt: string; declaredAt: string | null }> => {
+    const { supabase, userId } = context;
+    const db = supabase;
+
+    // An UPDATE against a missing row affects nothing and reports no error.
+    // A holder who opened "Mina uppgifter" before their Passport existed
+    // would otherwise watch a save succeed and change nothing.
+    await ensureProfileRow(db, userId);
+
+    const current = await db
+      .from("sp_passport_profiles")
+      .select("onboarding_answers")
+      .eq("holder_user_id", userId)
+      .maybeSingle();
+    if (current.error) throw new Error(current.error.message);
+
+    // ── THE WIZARD AND THE EDITOR MUST AGREE ────────────────────────
+    //
+    // These are one fact with two doors. A holder who is still mid-wizard
+    // and also corrects their name here must not find the old name waiting
+    // for them on the next step, so the same answers are mirrored back into
+    // `onboarding_answers` under the wizard's own `stepId.fieldId` keys.
+    // MERGED, never replaced: the current-role answers live in this column
+    // too and are none of this function's business.
+    const previous = ((current.data as { onboarding_answers: Record<string, string> | null } | null)
+      ?.onboarding_answers ?? {}) as Record<string, string>;
+    const answers: Record<string, string> = { ...previous };
+
+    type ProfileUpdate = Database["public"]["Tables"]["sp_passport_profiles"]["Update"];
+    const patch: ProfileUpdate = {};
+
+    if (data.displayName !== undefined) {
+      patch.display_name = data.displayName;
+      answers["identity.displayName"] = data.displayName ?? "";
+    }
+    if (data.headline !== undefined) {
+      patch.headline = data.headline;
+      answers["identity.headline"] = data.headline ?? "";
+    }
+    if (data.professionSlug !== undefined) {
+      patch.cig_profession_slug = data.professionSlug;
+      answers["profession.profession"] = data.professionSlug ?? "";
+    }
+
+    const declaredAt = data.declared ? new Date().toISOString() : null;
+    if (declaredAt) {
+      patch.declared_accurate_at = declaredAt;
+      answers["declaration.declared"] = "true";
+    }
+
+    patch.onboarding_answers = answers;
+
+    const { data: row, error } = await db
+      .from("sp_passport_profiles")
+      .update(patch)
+      .eq("holder_user_id", userId)
+      .select("updated_at, declared_accurate_at")
+      .single();
+    if (error) throw new Error(error.message);
+
+    // A declaration is an act, not a field, so it is recorded as one. The
+    // same event type the wizard writes, from the same holder, about the
+    // same statement — a later reader should not have to know which screen
+    // it was given on to find it.
+    if (declaredAt) {
+      await db.from("sp_passport_events").insert({
+        holder_user_id: userId,
+        actor_user_id: userId,
+        event_type: "declaration_recorded",
+        subject_type: "profile",
+        detail: { declared_at: declaredAt, question_version: PASSPORT_QUESTION_VERSION },
+      });
+    }
+
+    const saved = row as { updated_at: string; declared_accurate_at: string | null };
+    return { savedAt: saved.updated_at, declaredAt: saved.declared_accurate_at };
   });
 
 const experienceInput = z.object({

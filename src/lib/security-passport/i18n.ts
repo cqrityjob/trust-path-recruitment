@@ -521,6 +521,44 @@ const sv = {
   "workCountry.title": "Arbetsland",
   "workCountry.current": "Nuvarande",
   "workCountry.save": "Spara arbetsland",
+
+  // ── The six profile basics, as a permanent editor ────────────────────
+  // The questions themselves already have copy under `onboarding.*`, and it
+  // is reused verbatim: a holder must not be asked one thing in the wizard
+  // and a subtly different thing here. What is new below is only the frame
+  // around them -- the heading, the count, and the words for "this is what
+  // you told us, and nobody has checked it".
+  "basics.title": "Grunduppgifter för ditt Passport",
+  "basics.lead":
+    "Ditt Passport byggs av sex steg: ett som du bara läser, fyra med uppgifter som du fyller i, och ett intygande. Du kan läsa och ändra dina svar när du vill — du behöver aldrig börja om.",
+  // "2 av 4 uppgifter ifyllda". The count ranges over the FOUR data-bearing
+  // steps and nothing else. It used to say "av 6", which counted the
+  // information page and the declaration as answers a holder had given, so a
+  // brand-new Passport claimed one answer had been supplied when none had.
+  "basics.filled": "uppgifter ifyllda",
+  "basics.question": "Steg",
+  "basics.answered": "Ifylld",
+  "basics.missing": "Saknas",
+  "basics.readThrough": "Läs igenom",
+  "basics.notDeclared": "Inte intygat",
+  "basics.noAnswerNeeded":
+    "Det här steget innehåller ingen uppgift att fylla i — du läser det bara.",
+  "basics.selfReported":
+    "Det här är uppgifter du själv har lämnat. Ingen har kontrollerat dem, och att spara dem gör dem inte verifierade. Dina behörigheter och kontroller påverkas inte.",
+  "basics.save": "Spara grunduppgifter",
+  "basics.savedNotice": "Dina grunduppgifter är sparade.",
+  // Named after what they change, not after where the control happens to sit.
+  "basics.editWorkCountry": "Ändra arbetsland",
+  "basics.editCurrentRole": "Ändra nuvarande roll",
+  "basics.editedBelow":
+    "Den här uppgiften ändras där den hör hemma, längre ned på den här sidan, så att den bara har ett ställe att ändras på. Knappen tar dig dit.",
+  "basics.declaredOn": "Intygat",
+  "basics.declareAgain": "Intyga på nytt",
+  "basics.declarationNote":
+    "En försäkran kan inte tas tillbaka här. Har du ändrat något kan du intyga på nytt, och datumet uppdateras.",
+  "basics.qualificationsTitle": "Arbetsland och behörigheter",
+  "basics.qualificationsLead":
+    "Var du arbetar, och de reglerade behörigheter du kan registrera där.",
   "jurisdiction.confirmPrompt":
     "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
   "jurisdiction.confirmAction": "Ange var jag arbetar",
@@ -1876,6 +1914,33 @@ const en: Record<PassportCopyKey, string> = {
   "workCountry.title": "Work country",
   "workCountry.current": "Current",
   "workCountry.save": "Save work country",
+
+  // ── The six profile basics, as a permanent editor ────────────────────
+  "basics.title": "Your Passport profile basics",
+  "basics.lead":
+    "Your Passport is built from six steps: one you only read, four that hold information you fill in, and a declaration. You can read and change your answers whenever you like — you never have to start again.",
+  "basics.filled": "fields completed",
+  "basics.question": "Step",
+  "basics.answered": "Completed",
+  "basics.missing": "Missing",
+  "basics.readThrough": "Read through",
+  "basics.notDeclared": "Not declared",
+  "basics.noAnswerNeeded": "This step has nothing to fill in — you only read it.",
+  "basics.selfReported":
+    "This is information you have given about yourself. Nobody has checked it, and saving it does not make it verified. Your authorisations and reviews are unaffected.",
+  "basics.save": "Save profile basics",
+  "basics.savedNotice": "Your profile basics have been saved.",
+  "basics.editWorkCountry": "Change work country",
+  "basics.editCurrentRole": "Change current role",
+  "basics.editedBelow":
+    "This answer is changed where it belongs, further down this page, so that it only has one place to be changed. The button takes you there.",
+  "basics.declaredOn": "Declared",
+  "basics.declareAgain": "Declare again",
+  "basics.declarationNote":
+    "A declaration cannot be withdrawn here. If you have changed something you can declare again, and the date updates.",
+  "basics.qualificationsTitle": "Work country and authorisations",
+  "basics.qualificationsLead":
+    "Where you work, and the regulated authorisations you can record there.",
   "jurisdiction.confirmPrompt":
     "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
   "jurisdiction.confirmAction": "Tell us where I work",

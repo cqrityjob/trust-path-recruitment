@@ -145,6 +145,17 @@ jobs:
       - name: Passport pilot bug fix #1 check
         run: bun run passport-pilot-bugfix:check
 
+      # The six questions that build a Passport. Removing the onboarding tab in
+      # 9a150a6 left them with no candidate-facing entry point at all once
+      # onboarding was finished -- the holder could not read, let alone correct,
+      # their own name, profession, country, current role or declaration. This
+      # renders the restored editor and asserts that all six are present and
+      # answerable, that the two which are domain rows keep exactly one writer,
+      # and that saving a self-reported answer cannot reach a credential, an
+      # employment record or a verification state.
+      - name: Passport profile basics check
+        run: bun run passport-profile-basics:check
+
       # One person, one Passport, several MARKET profiles. The entry page used
       # to render a literal ["VU1","VU2","OV","SV"] regardless of where the
       # holder said they work, so a Dubai holder was offered Swedish regulated

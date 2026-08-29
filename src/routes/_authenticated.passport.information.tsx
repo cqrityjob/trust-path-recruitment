@@ -42,7 +42,15 @@ import {
   currentMarket,
   otherMarkets,
 } from "@/lib/security-passport/market-profiles";
-import { getMyPassport, setWorkCountry } from "@/lib/security-passport/passport.functions";
+import {
+  getMyPassport,
+  savePassportBasics,
+  setWorkCountry,
+} from "@/lib/security-passport/passport.functions";
+import {
+  ProfileBasicsCard,
+  type ProfileBasicsPatch,
+} from "@/components/security-passport/ProfileBasicsCard";
 import {
   getRegulatedCredentialAvailability,
   type RegulatedCredentialAvailability,
@@ -64,7 +72,7 @@ import {
   type Jurisdiction,
   type SkillType,
 } from "@/lib/security-passport/entries.functions";
-import { formatPeriodRange } from "@/lib/security-passport/format";
+import { formatPeriodRange, formatWorkLocation } from "@/lib/security-passport/format";
 import { credentialPresentation } from "@/lib/security-passport/design/credential-symbols";
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { LifecycleChip } from "@/components/security-passport/LifecycleChip";
@@ -113,14 +121,26 @@ function SectionShell({
   title,
   lead,
   children,
+  /** An anchor, so the profile-basics card can send the holder to the section
+   *  that actually owns one of the six answers instead of duplicating its
+   *  editor. */
+  id,
 }: {
   icon: React.ReactNode;
   title: string;
   lead?: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
+    <section
+      id={id}
+      // Focusable only when it is an anchor target. Without this the basics
+      // card would scroll a keyboard user to the section and leave their
+      // focus on the button they just left.
+      tabIndex={id ? -1 : undefined}
+      className="rounded-xl border border-border bg-card p-5 outline-none"
+    >
       <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
         {icon}
         {title}
@@ -152,6 +172,17 @@ function PassportInformationRoute() {
     confirmed: boolean;
   } | null>(null);
   const [availability, setAvailability] = useState<RegulatedCredentialAvailability | null>(null);
+  // The profile-level half of the six basics. Read from the SAME profile
+  // fetch as the work country below, because they are one row: loading them
+  // separately is how a page ends up showing a stale name beside a fresh
+  // country for one render.
+  const [basics, setBasics] = useState<{
+    displayName: string;
+    headline: string;
+    professionSlug: string;
+    declaredAccurateAt: string | null;
+  } | null>(null);
+  const saveBasics = useServerFn(savePassportBasics);
 
   // ── ONE REFRESH FOR BOTH ──────────────────────────────────────────
   //
@@ -176,6 +207,12 @@ function PassportInformationRoute() {
         jurisdictionCode: snap.profile?.jurisdictionCode ?? null,
         subJurisdictionCode: snap.profile?.subJurisdictionCode ?? null,
         confirmed: Boolean(snap.profile?.workLocationConfirmedAt),
+      });
+      setBasics({
+        displayName: snap.profile?.displayName ?? "",
+        headline: snap.profile?.headline ?? "",
+        professionSlug: snap.profile?.cigProfessionSlug ?? "",
+        declaredAccurateAt: snap.profile?.declaredAccurateAt ?? null,
       });
     } catch (err) {
       // A failure here must not take the rest of the page down with it: the
@@ -441,6 +478,58 @@ function PassportInformationRoute() {
     void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId: id } });
   }
 
+  async function commitBasics(patch: ProfileBasicsPatch) {
+    beginOperation();
+    await saveBasics({ data: patch });
+    // Read-back before the card reports success. "Sparat" is a claim about
+    // persistence and is not made until the server has handed the row back —
+    // the same rule every other save on this page follows.
+    await refreshWorkCountry();
+    succeeded(pt("basics.savedNotice"));
+  }
+
+  /* ── THE SIX ANSWERS, RESOLVED FROM WHERE EACH ONE ACTUALLY LIVES ────
+   *
+   * Two profile columns, one confirmed country, one real employment row and
+   * one timestamp. The card is given the finished answers rather than any of
+   * these sources, so it never has to know — and cannot write back to the two
+   * that are domain rows.
+   *
+   * The current role is read from the holder's live employment, not from the
+   * onboarding answer that seeded it. Those two diverge the moment somebody
+   * edits their employment below, and the record is the truth; a stored
+   * wizard answer is only what they typed once. */
+  const currentPeriod = experience.find((e) => e.endedOn === null) ?? experience[0] ?? null;
+  const basicsAnswers: Record<string, string> = {
+    "identity.displayName": basics?.displayName ?? "",
+    "identity.headline": basics?.headline ?? "",
+    "profession.profession": basics?.professionSlug ?? "",
+    // Confirmed only. An unconfirmed legacy 'SE' is not an answer the holder
+    // gave, so the question reads as unanswered — exactly as it does
+    // everywhere else in the Passport.
+    "jurisdiction.jurisdiction": workCountry?.confirmed
+      ? (workCountry.subJurisdictionCode ?? workCountry.jurisdictionCode ?? "")
+      : "",
+    "currentRole.employer": currentPeriod?.employerName ?? "",
+    "currentRole.role": currentPeriod?.roleTitle ?? "",
+    "currentRole.startedOn": currentPeriod?.startedOn ?? "",
+    "declaration.declared": basics?.declaredAccurateAt ? "true" : "",
+  };
+  const basicsDisplay: Record<string, string> = {
+    // "AE-DU" is a code, not something a person reads. The holder's own
+    // location is formatted with the sub-jurisdiction intact, because
+    // flattening Dubai into "UAE" makes the country-wide claim.
+    "jurisdiction.jurisdiction": workCountry?.confirmed
+      ? formatWorkLocation(workCountry.jurisdictionCode, workCountry.subJurisdictionCode, lang)
+      : "",
+  };
+
+  function focusById(id: string) {
+    const el = document.getElementById(id);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus();
+  }
+
   if (!loaded) return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
 
   return (
@@ -466,86 +555,128 @@ function PassportInformationRoute() {
         </p>
       ) : null}
 
-      {/* ── Where the holder works ────────────────────────────────────── */}
-      {/* First, because every credential below is read in the context of a
-          country, and until this commit there was nowhere in the product to
-          see or change it. */}
-      {workCountry ? (
-        <WorkCountryCard
-          jurisdictionCode={workCountry.jurisdictionCode}
-          subJurisdictionCode={workCountry.subJurisdictionCode}
-          confirmed={workCountry.confirmed}
-          onSave={async (value) => {
-            await saveWorkCountry({ data: { workCountry: value } });
-            await refreshWorkCountry();
-          }}
+      {/* ── 1. THE SIX PROFILE BASICS ─────────────────────────────────── */}
+      {/* First on the page, because these are the questions that build the
+          Passport and, since the onboarding tab was removed in 9a150a6, there
+          was nowhere at all a holder could go back and read them. */}
+      {/* Gated on the profile having ARRIVED, not merely on the page having
+          loaded. The card seeds its own draft state from these answers on
+          mount and then owns them, so that a background refresh cannot wipe
+          out what the holder is halfway through typing — which means mounting
+          it before the profile resolves would leave every field empty and the
+          count reading "1 av 6" for a holder who had answered five. The
+          entries below load on their own clock and are unaffected. */}
+      {basics ? (
+        <ProfileBasicsCard
+          answers={basicsAnswers}
+          displayAnswers={basicsDisplay}
+          declaredAccurateAt={basics?.declaredAccurateAt ?? null}
+          onSave={commitBasics}
+          // The two answers that ARE domain rows are edited by the controls that
+          // own them, further down this same page. One fact, one writer.
+          onEditWorkCountry={() => focusById("sp-work-country")}
+          onEditCurrentRole={() => focusById("sp-employment")}
         />
       ) : null}
 
-      {/* ── The selected market, and only the selected market ────────── */}
-      {/* Was a literal ["VU1","VU2","OV","SV"] rendered unconditionally, which
+      {/* ── 2. WORK COUNTRY AND AUTHORISATIONS ────────────────────────── */}
+      <div className="space-y-5">
+        <header>
+          <h2
+            className="text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {pt("basics.qualificationsTitle")}
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+            {pt("basics.qualificationsLead")}
+          </p>
+        </header>
+
+        {/* ── Where the holder works ────────────────────────────────────── */}
+        {/* Every credential below is read in the context of a country, and this
+          is the one control that sets it. */}
+        {workCountry ? (
+          <WorkCountryCard
+            jurisdictionCode={workCountry.jurisdictionCode}
+            subJurisdictionCode={workCountry.subJurisdictionCode}
+            confirmed={workCountry.confirmed}
+            onSave={async (value) => {
+              await saveWorkCountry({ data: { workCountry: value } });
+              await refreshWorkCountry();
+            }}
+          />
+        ) : null}
+
+        {/* ── The selected market, and only the selected market ────────── */}
+        {/* Was a literal ["VU1","VU2","OV","SV"] rendered unconditionally, which
           offered Swedish regulated credentials to a holder who had told the
           product they work in Dubai. It is now the governed answer, and the
           three closed states each say which absence they are. */}
-      <MarketCredentialSection
-        state={availability?.state ?? "no_work_country"}
-        jurisdictionCode={availability?.jurisdictionCode ?? null}
-        subJurisdictionCode={availability?.subJurisdictionCode ?? null}
-        options={availability?.state === "open" ? availability.types : []}
-        onSelect={(code) => void navigate({ to: "/passport/credentials/new", search: { code } })}
-        onSetWorkCountry={() => {
-          document.getElementById("sp-work-country")?.focus();
-        }}
-      >
-        {hereClaims.length > 0 ? (
-          <ul className="space-y-2">
-            {hereClaims.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-              >
-                <span className="flex min-w-0 items-center gap-3">
-                  <CredentialSymbol
-                    code={c.credentialCode}
-                    state={credentialPresentation(
-                      c.assertionLevel as AssertionLevel,
-                      c.lifecycleState as LifecycleState,
-                    )}
-                    name={c.title}
-                    size={36}
-                    decorative
-                  />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-foreground">
-                      {c.title}
-                    </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-2">
-                      <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
-                      <LifecycleChip state={c.lifecycleState as LifecycleState} />
+        <MarketCredentialSection
+          state={availability?.state ?? "no_work_country"}
+          jurisdictionCode={availability?.jurisdictionCode ?? null}
+          subJurisdictionCode={availability?.subJurisdictionCode ?? null}
+          options={availability?.state === "open" ? availability.types : []}
+          onSelect={(code) => void navigate({ to: "/passport/credentials/new", search: { code } })}
+          onSetWorkCountry={() => {
+            document.getElementById("sp-work-country")?.focus();
+          }}
+        >
+          {hereClaims.length > 0 ? (
+            <ul className="space-y-2">
+              {hereClaims.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <CredentialSymbol
+                      code={c.credentialCode}
+                      state={credentialPresentation(
+                        c.assertionLevel as AssertionLevel,
+                        c.lifecycleState as LifecycleState,
+                      )}
+                      name={c.title}
+                      size={36}
+                      decorative
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {c.title}
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-2">
+                        <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                        <LifecycleChip state={c.lifecycleState as LifecycleState} />
+                      </span>
                     </span>
                   </span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => openEntry("claim", c.id)}
-                  className="inline-flex h-11 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  {pt("claim.openDetail")}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </MarketCredentialSection>
+                  <button
+                    type="button"
+                    onClick={() => openEntry("claim", c.id)}
+                    className="inline-flex h-11 shrink-0 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {pt("claim.openDetail")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </MarketCredentialSection>
 
-      {/* ── What the holder has earned somewhere else ─────────────────── */}
-      {/* Read-only, and rendered even when empty while the holder works
+        {/* ── What the holder has earned somewhere else ─────────────────── */}
+        {/* Read-only, and rendered even when empty while the holder works
           anywhere: "you have nothing in another market yet" is the answer to
           the question a country change provokes, and silence is not. */}
-      <OtherMarketsPanel profiles={elsewhereProfiles} />
+        <OtherMarketsPanel profiles={elsewhereProfiles} />
+      </div>
 
       {/* ── Employment ────────────────────────────────────────────────── */}
+      {/* The canonical editor for the "current role" basic. The card above
+          links here rather than carrying a second employer field, because a
+          period can hold evidence and a review and must have one writer. */}
       <SectionShell
+        id="sp-employment"
         icon={<Briefcase aria-hidden="true" className="h-4 w-4" />}
         title={pt("info.employment")}
         lead={pt("info.employmentLead")}

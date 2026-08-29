@@ -53,6 +53,7 @@
     "passport-credential-form:check": "bun run scripts/passport-credential-form-check.ts",
     "passport-date-validation:check": "bun run scripts/passport-date-validation-check.ts",
     "passport-pilot-bugfix:check": "bun run scripts/passport-pilot-bugfix-check.tsx",
+    "passport-profile-basics:check": "bun run scripts/passport-profile-basics-check.tsx",
     "passport-market-profiles:check": "bun run scripts/passport-market-profiles-check.tsx",
     "passport-schema-drift:check": "bun run scripts/passport-schema-drift-check.ts",
     "scripts:typecheck": "tsc -p tsconfig.scripts.json --noEmit",
