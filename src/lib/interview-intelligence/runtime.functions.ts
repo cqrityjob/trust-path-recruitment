@@ -442,7 +442,9 @@ export interface CaseDetail {
       id: string;
       level: number;
       labelSv: string;
+      labelEn: string | null;
       anchorSv: string;
+      anchorEn: string | null;
       countsTowardAggregation: boolean;
     }[];
     readonly probes: readonly { id: string; purpose: string; wordingSv: string }[];
@@ -641,7 +643,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .order("display_order"),
       db
         .from("scp_interview_rating_anchors")
-        .select("id, question_id, level, label_sv, anchor_sv, counts_toward_aggregation")
+        .select(
+          "id, question_id, level, label_sv, label_en, anchor_sv, anchor_en, counts_toward_aggregation",
+        )
         .order("level"),
       db
         .from("scp_interview_approved_probes")
@@ -844,7 +848,9 @@ export const getInterviewCase = createServerFn({ method: "GET" })
             id: a.id as string,
             level: a.level as number,
             labelSv: a.label_sv as string,
+            labelEn: (a.label_en as string | null) ?? null,
             anchorSv: a.anchor_sv as string,
+            anchorEn: (a.anchor_en as string | null) ?? null,
             countsTowardAggregation: a.counts_toward_aggregation as boolean,
           })),
         probes: probes

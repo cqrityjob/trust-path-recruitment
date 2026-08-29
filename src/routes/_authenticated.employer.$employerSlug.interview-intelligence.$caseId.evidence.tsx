@@ -74,7 +74,7 @@ const ANALYSIS_TASK_LABEL: Record<string, TranslationKey> = {
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
-  const { t } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
 
   const getFn = useServerFn(getInterviewCase);
@@ -799,7 +799,7 @@ function Page() {
                                   checked={levels[qq.id] === a.level}
                                   onChange={() => setLevels((st) => ({ ...st, [qq.id]: a.level }))}
                                 />
-                                {a.level} — {a.labelSv}
+                                {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
                                 {locked && (
                                   <span className="sr-only">
                                     {" "}

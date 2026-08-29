@@ -821,10 +821,10 @@ function Page() {
                     className="rounded-md border border-amber-600/40 bg-amber-500/5 p-3"
                   >
                     <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                      0 — {a.labelSv}
+                      0 — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {a.anchorSv}
+                      {(lang === "en" ? a.anchorEn : a.anchorSv) ?? a.anchorSv}
                     </p>
                     <div className="mt-1.5">
                       <LevelZeroNote />
@@ -837,10 +837,10 @@ function Page() {
                 .map((a) => (
                   <div key={a.id} className="rounded-md border border-border p-3">
                     <p className="text-sm font-semibold text-foreground">
-                      {a.level} — {a.labelSv}
+                      {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {a.anchorSv}
+                      {(lang === "en" ? a.anchorEn : a.anchorSv) ?? a.anchorSv}
                     </p>
                   </div>
                 ))}

@@ -104,6 +104,13 @@
       ],
       "note": "5E evidence structuring: ten nullable descriptive text columns (five on AI proposals, five on human-confirmed evidence) plus the two governed writers extended to carry them. No numeric completeness, score, total, weighting or threshold; a self-check enforces that every 5E column is nullable text and that nothing aggregates one. Not applied hosted.",
       "verify": "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name ~ '^e[1-5]_';"
+    },
+    {
+      "file": "20261001090000_scp_interview_rating_anchor_english_copy.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Translation only, and introduces no object: label_en and anchor_en already existed on scp_interview_rating_anchors and were empty, so nothing read them. Found by walking the interview screen in English -- the behavioural anchors rendered in Swedish, including level 0's sentence that it is not the same thing as low competence. Fills 5 level labels and 33 anchor descriptions, matched on the Swedish text so a reworded anchor stays untranslated and visible. No level, aggregation flag, safety flag or pack version changes; a self-check re-asserts five levels and that level 0 never counts toward aggregation. Not applied hosted.",
+      "verify": "SELECT count(*) FILTER (WHERE anchor_en IS NULL) FROM public.scp_interview_rating_anchors;"
     }
   ],
   "policyVersion": 2,

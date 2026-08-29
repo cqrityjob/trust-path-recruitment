@@ -573,6 +573,25 @@ for (const file of I18N_SURFACES) {
   );
 }
 
+// The behavioural anchors are the copy an interviewer holds an account
+// against, and level 0's anchor carries the sentence that stops a "0" being
+// read as a low score. Rendering `anchorSv` directly put all of it in Swedish
+// for an English-reading interviewer while everything around it translated --
+// found by walking the interview screen, not by any test. Q1-Q8 prompts stay
+// deliberately Swedish-locked; the anchors around them must not.
+for (const file of [
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx",
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.evidence.tsx",
+]) {
+  const body = codeOnly(read(file));
+  for (const field of ["anchorSv", "labelSv"]) {
+    ok(
+      !new RegExp(`\\{\\s*[a-z]\\.${field}\\s*\\}`).test(body),
+      `${file} renders a.${field} directly — an English-reading interviewer sees the anchors in Swedish; pick the locale's column with a fallback`,
+    );
+  }
+}
+
 console.log(`\n  assertions passed: ${passes}`);
 if (failures > 0) {
   console.error(`\ninterview-ux-contract-check FAILED (${failures} issue(s))`);
