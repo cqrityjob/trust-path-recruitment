@@ -26,7 +26,7 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   MaterialBadge,
   State,
@@ -129,7 +129,12 @@ function Page() {
       </header>
 
       <div className="mt-6">
-        <CaseSteps current={d.status} />
+        <WorkflowNav
+          status={d.status}
+          current="summary"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       <section className="mt-8 max-w-4xl" aria-labelledby="s-sum">

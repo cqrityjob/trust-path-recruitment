@@ -15,6 +15,7 @@
 //      verdicts. Confirmed evidence is teal, and it describes the EVIDENCE,
 //      not the person.
 
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -1023,5 +1024,138 @@ export function ShortDate({ iso }: { iso: string | null }) {
         year: "numeric",
       })}
     </time>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* The workflow shell                                                  */
+/* ------------------------------------------------------------------ */
+
+/** The seven steps of one interview, as the recruiter's own navigation.
+ *
+ *  This replaces a six-item read-only rail whose labels came from the case
+ *  status vocabulary. Two things changed. The steps are now LINKS, so the
+ *  workflow is something you move through rather than a progress indicator you
+ *  read; and they are named for the work, not for the record — Review, not
+ *  Evidence.
+ *
+ *  Workflow state only: done, current, not yet. Nothing here says anything
+ *  about the candidate, and a step is never "passed" or "failed". */
+const WORKFLOW = [
+  { seg: "", label: "iiu.wf.overview" },
+  { seg: "prepare", label: "iiu.wf.prepare" },
+  { seg: "interview", label: "iiu.wf.interview" },
+  { seg: "evidence", label: "iiu.wf.review" },
+  { seg: "evidence", label: "iiu.wf.assess" },
+  { seg: "summary", label: "iiu.wf.summary" },
+  { seg: "report", label: "iiu.wf.report" },
+] as const satisfies ReadonlyArray<{ seg: string; label: TranslationKey }>;
+
+/** How far the case has actually got, as an index into WORKFLOW. */
+const REACHED: Record<string, number> = {
+  draft: 1,
+  sources_ready: 1,
+  prep_generated: 1,
+  prep_approved: 2,
+  interview_in_progress: 2,
+  interview_complete: 3,
+  evidence_review: 3,
+  assessed: 5,
+  reported: 6,
+};
+
+export function WorkflowNav({
+  status,
+  current,
+  employerSlug,
+  caseId,
+}: {
+  status: string;
+  /** Which step this page IS, so it can mark itself rather than guess. */
+  current: "overview" | "prepare" | "interview" | "review" | "assess" | "summary" | "report";
+  employerSlug: string;
+  caseId: string;
+}) {
+  const { t } = useT();
+  const reached = REACHED[status] ?? 0;
+  const currentIdx = [
+    "overview",
+    "prepare",
+    "interview",
+    "review",
+    "assess",
+    "summary",
+    "report",
+  ].indexOf(current);
+
+  return (
+    <nav aria-label={t("iiu.wf.aria")} className="border-b border-border">
+      <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+        {WORKFLOW.map((step, i) => {
+          const isCurrent = i === currentIdx;
+          const isDone = i < reached;
+          return (
+            <li key={`${step.seg}-${step.label}`}>
+              <Link
+                to={
+                  step.seg === ""
+                    ? "/employer/$employerSlug/interview-intelligence/$caseId"
+                    : (`/employer/$employerSlug/interview-intelligence/$caseId/${step.seg}` as never)
+                }
+                params={{ employerSlug, caseId }}
+                aria-current={isCurrent ? "step" : undefined}
+                className={cn(
+                  "inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  isCurrent
+                    ? "border-accent font-semibold text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {/* A tick for a completed step, not a score. The word is there
+                    for anyone who cannot see the glyph. */}
+                {isDone && !isCurrent && (
+                  <span aria-hidden="true" className="text-xs">
+                    ✓
+                  </span>
+                )}
+                {t(step.label)}
+                {isCurrent && <span className="sr-only"> ({t("iiu.wf.current")})</span>}
+                {isDone && !isCurrent && <span className="sr-only"> ({t("iiu.wf.done")})</span>}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/** The header every case screen shares: who, for what, where, and the one
+ *  thing to do next. Composed once so the eight screens cannot drift apart. */
+export function CaseHeader({
+  candidate,
+  role,
+  status,
+  action,
+}: {
+  candidate: string;
+  role: string;
+  status: string;
+  /** The primary action for THIS screen, when it has one. */
+  action?: React.ReactNode;
+}) {
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {candidate}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{role}</p>
+        <div className="mt-2.5">
+          <CaseStatusChip status={status} />
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </header>
   );
 }

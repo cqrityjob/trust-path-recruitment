@@ -17,9 +17,8 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
-  NextStep,
   Panel,
   State,
   TrustStageBanner,
@@ -236,8 +235,12 @@ function Page() {
       </div>
 
       <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+        <WorkflowNav
+          status={d.status}
+          current="prepare"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       {/* ---- TRUST conduct, as governed rows ----

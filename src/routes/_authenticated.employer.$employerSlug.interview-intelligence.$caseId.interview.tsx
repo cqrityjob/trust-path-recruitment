@@ -25,10 +25,9 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   LevelZeroNote,
-  NextStep,
   Panel,
   PEACE_LABEL,
   State,
@@ -406,8 +405,12 @@ function Page() {
       </div>
 
       <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+        <WorkflowNav
+          status={d.status}
+          current="interview"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       {session.status === "paused" && (

@@ -29,7 +29,7 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   State,
   interviewErrorMessage,
@@ -213,7 +213,12 @@ function Page() {
           {t("iiu.ov.whereyouare")}
         </h2>
         <div className="mt-2">
-          <CaseSteps current={d.status} />
+          <WorkflowNav
+            status={d.status}
+            current="overview"
+            employerSlug={employerSlug}
+            caseId={caseId}
+          />
         </div>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

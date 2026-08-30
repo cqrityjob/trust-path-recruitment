@@ -21,10 +21,9 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
-  CaseSteps,
+  WorkflowNav,
   Chip,
   LevelZeroNote,
-  NextStep,
   Panel,
   State,
   TrustStageBanner,
@@ -230,8 +229,12 @@ function Page() {
       </div>
 
       <div className="mt-6">
-        <CaseSteps current={d.status} />
-        <NextStep status={d.status} />
+        <WorkflowNav
+          status={d.status}
+          current="review"
+          employerSlug={employerSlug}
+          caseId={caseId}
+        />
       </div>
 
       {/* ---- The interview notes, carried here automatically ----
