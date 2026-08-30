@@ -1046,7 +1046,7 @@ const WORKFLOW = [
   { seg: "prepare", label: "iiu.wf.prepare" },
   { seg: "interview", label: "iiu.wf.interview" },
   { seg: "evidence", label: "iiu.wf.review" },
-  { seg: "evidence", label: "iiu.wf.assess" },
+  { seg: "assessment", label: "iiu.wf.assess" },
   { seg: "summary", label: "iiu.wf.summary" },
   { seg: "report", label: "iiu.wf.report" },
 ] as const satisfies ReadonlyArray<{ seg: string; label: TranslationKey }>;

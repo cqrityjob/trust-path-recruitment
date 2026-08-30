@@ -57,6 +57,7 @@ const NEXT: Record<
       | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
       | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
       | "/employer/$employerSlug/interview-intelligence/$caseId/summary"
+      | "/employer/$employerSlug/interview-intelligence/$caseId/assessment"
       | "/employer/$employerSlug/interview-intelligence/$caseId/report";
     cta: TranslationKey;
     why: TranslationKey;

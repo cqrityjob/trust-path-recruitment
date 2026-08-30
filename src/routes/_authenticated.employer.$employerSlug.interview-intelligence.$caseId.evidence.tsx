@@ -692,209 +692,21 @@ function Page() {
         </section>
       )}
 
-      {/* ---- Human assessment ---- */}
-      <section className="mt-10 max-w-4xl" aria-labelledby="s-assess">
-        <h2 id="s-assess" className="text-lg font-semibold text-foreground">
-          {t("iiu.ev.s3.title")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("iiu.ev.s3.body")}</p>
-        {/* The badge that says whose judgement this is. The section title
-            says it too, but a recruiter scanning the page sees shapes before
-            they read sentences, and this is the one place where mistaking
-            the author would matter most. */}
-        <p className="mt-2">
-          <MaterialBadge state="assessment" />
-        </p>
-        <div className="mt-2">
-          <LevelZeroNote />
-        </div>
-
-        <ul className="mt-4 space-y-3">
-          {d.questions.map((qq) => {
-            const existing = d.assessments.find((a) => a.questionId === qq.id);
-            const evidenceCount = d.evidence.filter((e) => e.questionId === qq.id).length;
-            return (
-              <li key={qq.id} className="rounded-lg border border-border p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone="work">{qq.code}</Chip>
-                  {evidenceCount > 0 ? (
-                    <Chip tone="confirmed">
-                      {evidenceCount} {t("iiu.ev.confirmedcount")}
-                    </Chip>
-                  ) : (
-                    <Chip tone="attention">{t("iiu.ev.noconfirmed")}</Chip>
-                  )}
-                  {existing && (
-                    <Chip
-                      tone={existing.level === 0 ? "attention" : "confirmed"}
-                      srPrefix={t("iiu.ev.level.srprefix")}
-                    >
-                      {t("iiu.ev.level")} {existing.level}
-                    </Chip>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-foreground">{qq.promptSv}</p>
-
-                {existing ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    <span className="font-medium">{t("iiu.ev.motivering")}</span>
-                    {existing.rationale}
-                  </p>
-                ) : (
-                  <form
-                    className="mt-3 space-y-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const lvl = levels[qq.id];
-                      const rat = rationales[qq.id] ?? "";
-                      // Silent returns taught the interviewer nothing about
-                      // why the button did nothing. Say it instead.
-                      if (lvl === undefined) {
-                        setAssessHint((st) => ({ ...st, [qq.id]: "level" }));
-                        return;
-                      }
-                      if (rat.trim() === "") {
-                        setAssessHint((st) => ({ ...st, [qq.id]: "rationale" }));
-                        return;
-                      }
-                      setAssessHint((st) => ({ ...st, [qq.id]: null }));
-                      assess.mutate({ questionId: qq.id, level: lvl, rationale: rat });
-                    }}
-                  >
-                    {/* The database refuses a level above 0 without confirmed
-                        evidence, and rightly so. Saying that AFTER the save
-                        button is a bad way to teach a rule the interviewer
-                        could have been told up front — which is exactly how
-                        the owner met it in UAT. So the rule is shown here,
-                        in the same place the choice is made. */}
-                    {evidenceCount === 0 && (
-                      <Panel tone="attention" title={t("iiu.ev.needevidence.title")}>
-                        <p>{t("iiu.ev.needevidence.body")}</p>
-                        <p className="mt-2 flex flex-wrap gap-2">
-                          <a
-                            href="#s-author"
-                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                          >
-                            {t("iiu.ev.needevidence.cta.evidence")}
-                          </a>
-                          <button
-                            type="button"
-                            className="inline-flex items-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                            onClick={() => setLevels((st) => ({ ...st, [qq.id]: 0 }))}
-                          >
-                            {t("iiu.ev.needevidence.cta.zero")}
-                          </button>
-                        </p>
-                      </Panel>
-                    )}
-
-                    <fieldset>
-                      <legend className="text-xs font-medium text-foreground">
-                        {t("iiu.ev.level")}
-                      </legend>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {[...qq.anchors]
-                          .sort((a, b) => a.level - b.level)
-                          .map((a) => {
-                            // Levels 1-4 are unreachable until evidence exists.
-                            // Disabled rather than hidden: the interviewer
-                            // should see the scale they are working within.
-                            const locked = a.level > 0 && evidenceCount === 0;
-                            return (
-                              <label
-                                key={a.id}
-                                title={locked ? t("iiu.ev.needevidence.locked") : undefined}
-                                className={`rounded-md border px-3 py-1.5 text-xs ${
-                                  locked
-                                    ? "cursor-not-allowed border-border opacity-50"
-                                    : "cursor-pointer"
-                                } ${
-                                  levels[qq.id] === a.level
-                                    ? "border-accent font-semibold"
-                                    : "border-border"
-                                } ${a.level === 0 ? "bg-amber-500/5" : ""}`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`lvl-${qq.id}`}
-                                  value={a.level}
-                                  className="sr-only"
-                                  disabled={locked}
-                                  checked={levels[qq.id] === a.level}
-                                  onChange={() => setLevels((st) => ({ ...st, [qq.id]: a.level }))}
-                                />
-                                {a.level} — {(lang === "en" ? a.labelEn : a.labelSv) ?? a.labelSv}
-                                {locked && (
-                                  <span className="sr-only">
-                                    {" "}
-                                    ({t("iiu.ev.needevidence.locked")})
-                                  </span>
-                                )}
-                              </label>
-                            );
-                          })}
-                      </div>
-                    </fieldset>
-                    <div>
-                      <label
-                        htmlFor={`rat-${qq.id}`}
-                        className="text-xs font-medium text-foreground"
-                      >
-                        {t("iiu.ev.rationale")}
-                      </label>
-                      <textarea
-                        id={`rat-${qq.id}`}
-                        rows={2}
-                        className={FIELD}
-                        value={rationales[qq.id] ?? ""}
-                        onChange={(e) => setRationales((s) => ({ ...s, [qq.id]: e.target.value }))}
-                      />
-                    </div>
-                    {/* Three different situations, three different messages.
-                        Reusing the evidence guidance when a level simply had
-                        not been picked told the interviewer to go and find
-                        evidence they already had. */}
-                    {assessHint[qq.id] === "level" && (
-                      <p role="alert" className="text-xs text-destructive">
-                        {evidenceCount === 0
-                          ? t("iiu.ev.needevidence.body")
-                          : t("iiu.ev.hint.level")}
-                      </p>
-                    )}
-                    {assessHint[qq.id] === "rationale" && (
-                      <p role="alert" className="text-xs text-destructive">
-                        {t("iiu.ev.rationale.missing")}
-                      </p>
-                    )}
-                    <button type="submit" className={BUTTON} disabled={assess.isPending}>
-                      {t("iiu.ev.save")}
-                    </button>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {assess.isError && (
-          <div className="mt-3">
-            <Panel tone="governance" role="alert" title={t("iiu.ev.savefailed")}>
-              <p className="whitespace-pre-line">{interviewErrorMessage(assess.error, t)}</p>
-            </Panel>
-          </div>
-        )}
-
-        {d.status === "evidence_review" && d.assessments.length === d.questions.length && (
-          <button
-            type="button"
-            className={`${PRIMARY_BUTTON} mt-4`}
-            onClick={() => finishAssessing.mutate()}
-            disabled={finishAssessing.isPending}
-          >
-            {t("iiu.ev.done")}
-          </button>
-        )}
-      </section>
+      {/* ---- On to assessment ----
+           The assessment used to live below this point, which made Review and
+           Assess two names for one scroll. They are different jobs: this page
+           decides what counts as material, the next decides what the material
+           means. Keeping them apart is the point of the separation. */}
+      <div className="mt-10 max-w-4xl rounded-lg border border-border bg-muted/30 p-5">
+        <p className="text-sm text-muted-foreground">{t("iiu.ev.toassess.body")}</p>
+        <Link
+          to="/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+          params={{ employerSlug, caseId }}
+          className={`${PRIMARY_BUTTON} mt-3`}
+        >
+          {t("iiu.ev.toassess")}
+        </Link>
+      </div>
 
       {/* Panel Review sits between the individual assessments and the report:
           it is where several reviewers reconcile what they each concluded. Not
@@ -915,7 +727,7 @@ function Page() {
           params={{ employerSlug, caseId }}
           className={`${PRIMARY_BUTTON} mt-8`}
         >
-          Till rapporten
+          {t("iiu.sm.toreport")}
         </Link>
       )}
     </>,
