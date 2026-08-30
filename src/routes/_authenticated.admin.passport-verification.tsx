@@ -68,6 +68,7 @@ const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
   already_decided: "vq.decline.already_decided",
   not_found: "vq.decline.not_found",
   method_required: "vq.decline.method_required",
+  holder_message_required: "vq.decline.holder_message_required",
   invalid_validity: "vq.decline.invalid_validity",
   issuer_required: "vq.decline.issuer_required",
   entry_not_active: "vq.decline.entry_not_active",
@@ -148,6 +149,12 @@ function PassportVerificationQueue() {
   const [validFrom, setValidFrom] = useState("");
   const [validUntil, setValidUntil] = useState("");
 
+  /** Rejection and clarification are the two outcomes the holder has to act
+   *  on, so both must carry a candidate-facing reason. Approval does not:
+   *  what an approval owes the holder is the METHOD, which is required
+   *  separately and rendered as attribution. */
+  const holderMessageRequired = decision === "rejected" || decision === "clarification_requested";
+
   const refresh = useCallback(async () => {
     try {
       const rows = await loadQueue({ data: { status: filter } });
@@ -206,6 +213,17 @@ function PassportVerificationQueue() {
     if (!selected) return;
     if (decision === "approved" && !method) {
       setDecisionError(pt(DECLINE_KEY.method_required));
+      return;
+    }
+    // A refusal without a reason is not a decision the holder can act on.
+    // Checked here for an immediate answer, in the server function, and in
+    // `sp_verifier_decide` — which is the one that actually enforces it. A
+    // disabled button is not a control.
+    if (
+      (decision === "rejected" || decision === "clarification_requested") &&
+      holderMessage.trim() === ""
+    ) {
+      setDecisionError(pt(DECLINE_KEY.holder_message_required));
       return;
     }
 
@@ -583,23 +601,39 @@ function PassportVerificationQueue() {
                         </p>
                       </div>
 
+                      {/* The candidate-facing reason. Mandatory for a
+                          rejection and for a clarification, because those are
+                          the two outcomes the holder has to do something
+                          about. Said in the label rather than only enforced on
+                          submit, and marked with aria-required so the
+                          obligation reaches a screen reader before the
+                          refusal does. */}
                       <div>
                         <label
                           htmlFor="sp-holder-message"
                           className="block text-sm font-medium text-foreground"
                         >
                           {pt("vq.messageHolder")}
+                          {holderMessageRequired ? (
+                            <span className="ml-1 text-destructive">
+                              {pt("vq.messageHolderRequiredMark")}
+                            </span>
+                          ) : null}
                         </label>
                         <textarea
                           id="sp-holder-message"
                           rows={3}
                           value={holderMessage}
+                          required={holderMessageRequired}
+                          aria-required={holderMessageRequired}
                           aria-describedby="sp-holder-help"
                           onChange={(e) => setHolderMessage(e.target.value)}
                           className="mt-1 w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         />
                         <p id="sp-holder-help" className="mt-1 text-xs text-muted-foreground">
-                          {pt("vq.messageHolderHelp")}
+                          {holderMessageRequired
+                            ? pt("vq.messageHolderRequiredHelp")
+                            : pt("vq.messageHolderHelp")}
                         </p>
                       </div>
 

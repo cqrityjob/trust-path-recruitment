@@ -120,6 +120,11 @@ function PassportEntryRoute() {
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    // Cleared here, on the way in. Without it the read-failure branch is an
+    // early return and the retry button below it could never repaint the page
+    // — a control that runs the right query and then shows the stale error
+    // anyway, which is worse than no retry at all.
+    setError(null);
     try {
       const [snap, ev, reqs, emps, types] = await Promise.all([
         loadPassport({ data: undefined }),
@@ -138,8 +143,13 @@ function PassportEntryRoute() {
       setEmployers(emps);
       setCredentialTypes(types);
     } catch (err) {
+      // Same reachability change as the Passport index: getMyPassport and
+      // listMyVerificationRequests both fail loudly now instead of returning a
+      // plausible empty answer, so this branch is what a holder actually meets
+      // when a read is refused. It says which thing failed and that nothing of
+      // theirs moved, rather than "something went wrong".
       console.error("[passport] entry load failed", err);
-      setError(pt("common.error"));
+      setError(pt("live.readError"));
     }
   }, [loadPassport, loadEvidence, loadRequests, loadEmployers, loadCredentialTypes, pt]);
 
@@ -187,6 +197,28 @@ function PassportEntryRoute() {
     entryRequests.find((r) => r.status === "pending" || r.status === "clarification_requested") ??
     null;
 
+  // ── THE REJECTION THE PAGE USED TO SWALLOW ──────────────────────────
+  //
+  // `entryRequests` is newest-first (the server orders by `submitted_at`
+  // descending), so element zero is the CURRENT state of this entry's
+  // relationship with review. When that is a rejection, it is the outcome the
+  // holder is living with and the panel must say so.
+  //
+  // Deliberately the latest request and not "any rejection ever": a holder who
+  // was rejected in March, corrected the document and was approved in June has
+  // not been rejected — they have a rejection in their history, which is what
+  // the history list is for. Reading `find(status === "rejected")` over the
+  // whole list would resurrect a settled decision on top of a verified
+  // credential.
+  //
+  // An open request always wins, because a rejection followed by a fresh
+  // submission is a review in progress; that case cannot arise from index zero
+  // anyway, and the extra guard states the precedence rather than relying on
+  // ordering to imply it.
+  const latestRequest = entryRequests[0] ?? null;
+  const rejectedRequest =
+    openRequest === null && latestRequest?.status === "rejected" ? latestRequest : null;
+
   const entryDecisions = useMemo(() => {
     const ids = new Set(entryRequests.map((r) => r.id));
     return decisions.filter((d) => ids.has(d.requestId));
@@ -194,9 +226,23 @@ function PassportEntryRoute() {
 
   if (error) {
     return (
-      <p role="alert" className="text-sm text-destructive">
-        {error}
-      </p>
+      <div className="mx-auto max-w-2xl">
+        <p role="alert" className="text-sm font-medium text-foreground">
+          {error}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {pt("live.readErrorBody")}
+        </p>
+        {/* A real retry, not a decorative one: `refresh` re-runs every read
+            this page needs and clears the error on success. */}
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className="mt-4 inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {pt("live.retry")}
+        </button>
+      </div>
     );
   }
   if (!snapshot) return <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>;
@@ -417,7 +463,13 @@ function PassportEntryRoute() {
 
       <EvidencePanel
         evidence={entryEvidence}
-        canModify={openRequest === null}
+        // A clarification asks the holder for a document and then has to let
+        // them attach one. Adding is allowed whenever the database allows it,
+        // which is always; removing is barred while any request is open,
+        // because `sp_withdraw_evidence` refuses it and the reviewer is
+        // relying on what is there.
+        canAdd={true}
+        canRemove={openRequest === null}
         onUpload={async (file) => {
           await doUpload({
             data: {
@@ -484,6 +536,7 @@ function PassportEntryRoute() {
         assertionLevel={subject.assertionLevel}
         validity={validity}
         openRequest={openRequest}
+        rejectedRequest={rejectedRequest}
         requests={entryRequests}
         decisions={entryDecisions}
         hasEvidence={entryEvidence.length > 0}

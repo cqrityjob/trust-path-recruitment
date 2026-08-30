@@ -40,8 +40,26 @@ export interface EmployerOption {
 export interface VerificationPanelProps {
   readonly assertionLevel: string;
   readonly validity: Validity;
-  /** The open request for this entry, if any. */
+  /** The open request for this entry, if any — `pending` or
+   *  `clarification_requested`. */
   readonly openRequest: MyVerificationRequest | null;
+  /** The most recent request for this entry when it was REJECTED and nothing
+   *  has been asked since.
+   *
+   *  This prop exists because a rejection used to have nowhere to appear. A
+   *  rejected request is not open, the panel rendered its status block only
+   *  for an open one, and so the entire outcome — the state, the date, and
+   *  the reviewer's message to the holder — vanished the moment the decision
+   *  was made, leaving the holder looking at the same "Request verification"
+   *  button they had pressed. Nothing had happened, as far as the interface
+   *  was concerned.
+   *
+   *  Kept separate from `openRequest` rather than widening it: an open
+   *  request blocks submitting another one and blocks withdrawing evidence,
+   *  and a rejected request does neither. Folding a decided request into the
+   *  "open" concept would have changed the state machine to fix a rendering
+   *  problem. */
+  readonly rejectedRequest: MyVerificationRequest | null;
   /** Every request ever made about this entry, newest first. */
   readonly requests: readonly MyVerificationRequest[];
   readonly decisions: readonly VerificationDecisionRecord[];
@@ -76,6 +94,7 @@ export function VerificationPanel({
   assertionLevel,
   validity,
   openRequest,
+  rejectedRequest,
   requests,
   decisions,
   hasEvidence,
@@ -170,27 +189,110 @@ export function VerificationPanel({
         <p className="mt-3 text-sm font-medium text-foreground">{pt("ver.expiringSoon")}</p>
       ) : null}
 
+      {/* ── The rejection ────────────────────────────────────────────────
+          The outcome that had no home. Rendered as a `role="status"` region
+          with its own heading, so a screen reader reaches it as a landmark
+          rather than as an unannounced paragraph, and so the state is carried
+          by words rather than by the border colour alone.
+
+          The wording is about the EVIDENCE, never about the person: "we could
+          not verify this based on what was provided" is a statement about a
+          document a reviewer read. "Rejected", said of a candidate, is not the
+          decision that was made.
+
+          `decision_note` is not available to this component and could not be
+          rendered here if somebody tried: `listMyVerificationRequests` does
+          not select it. Only `holder_message` — the field that exists to be
+          read by the holder — appears. */}
+      {rejectedRequest ? (
+        <div
+          role="status"
+          className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+        >
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-destructive" />
+            {pt("ver.rejected.title")}
+          </h4>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">{pt("ver.rejected.body")}</p>
+
+          {rejectedRequest.decidedAt ? (
+            <p className="mt-2 text-xs tabular-nums text-muted-foreground">
+              {pt("ver.decidedAt")}: {rejectedRequest.decidedAt.slice(0, 10)}
+            </p>
+          ) : null}
+
+          {rejectedRequest.holderMessage ? (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {pt("ver.rejected.reason")}
+              </p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
+                {rejectedRequest.holderMessage}
+              </p>
+            </div>
+          ) : (
+            // A reason is mandatory as of this change, in the reviewer form and
+            // again in `sp_verifier_decide`. Rows decided before that exist and
+            // cannot be invented a reason for after the fact, so the absence is
+            // stated as an absence rather than papered over with a plausible
+            // sentence nobody wrote.
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {pt("ver.rejected.noReason")}
+            </p>
+          )}
+
+          <p className="mt-3 text-sm leading-relaxed text-foreground">{pt("ver.rejected.next")}</p>
+        </div>
+      ) : null}
+
       {/* ── The open request ─────────────────────────────────────────── */}
       {openRequest ? (
-        <div className="mt-4 rounded-lg border border-border p-4">
-          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Clock aria-hidden="true" className="h-4 w-4" />
-            {pt(STATUS_KEY[openRequest.status] ?? "ver.status.pending")}
-          </p>
+        <div
+          role={openRequest.status === "clarification_requested" ? "status" : undefined}
+          className={
+            openRequest.status === "clarification_requested"
+              ? "mt-4 rounded-lg border border-border bg-secondary/40 p-4"
+              : "mt-4 rounded-lg border border-border p-4"
+          }
+        >
+          {openRequest.status === "clarification_requested" ? (
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <MessageSquare aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {pt("ver.clarification.title")}
+            </h4>
+          ) : (
+            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Clock aria-hidden="true" className="h-4 w-4" />
+              {pt(STATUS_KEY[openRequest.status] ?? "ver.status.pending")}
+            </p>
+          )}
 
           {openRequest.holderMessage ? (
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {pt("ver.messageToYou")}
+                {openRequest.status === "clarification_requested"
+                  ? pt("ver.clarification.whatIsNeeded")
+                  : pt("ver.messageToYou")}
               </p>
               <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground">
                 {openRequest.holderMessage}
               </p>
             </div>
+          ) : openRequest.status === "clarification_requested" ? (
+            // "More information required" with nothing after it was the
+            // reported defect. Where the reviewer left no message — only
+            // possible for a request decided before this became mandatory —
+            // say that the detail is missing instead of showing the demand
+            // alone.
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {pt("ver.clarification.noMessage")}
+            </p>
           ) : null}
 
           {openRequest.status === "clarification_requested" ? (
-            <p className="mt-3 text-sm text-muted-foreground">{pt("ver.clarificationCta")}</p>
+            <p className="mt-3 text-sm leading-relaxed text-foreground">
+              {pt("ver.clarification.action")}
+            </p>
           ) : (
             <ol className="mt-3 space-y-1 text-sm text-muted-foreground">
               <li>1. {pt("ver.progress1")}</li>
@@ -213,7 +315,18 @@ export function VerificationPanel({
         </div>
       ) : null}
 
-      {/* ── Asking for verification ──────────────────────────────────── */}
+      {/* ── Asking for verification ──────────────────────────────────────
+          After a rejection this block is deliberately NOT the same block. The
+          bug being closed was not only that the rejection was invisible: it
+          was that the panel came back reading exactly as it had before the
+          holder ever submitted, which is an interface saying nothing happened.
+
+          The state machine is unchanged — `sp_submit_for_verification` refuses
+          only while a request is OPEN, so a new review after a rejection is a
+          request the database already permits, and no new workflow state was
+          invented to express it. What changes is the framing: the heading says
+          this is a NEW review of corrected evidence, and it sits underneath the
+          decision rather than in place of it. */}
       {!openRequest ? (
         <div className="mt-4 space-y-3">
           {renewable ? (
@@ -221,15 +334,25 @@ export function VerificationPanel({
           ) : null}
 
           <div className="rounded-lg border border-border p-4">
-            <p className="text-sm font-medium text-foreground">{pt("ver.requestCq")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{pt("ver.requestCqHelp")}</p>
+            <p className="text-sm font-medium text-foreground">
+              {rejectedRequest ? pt("ver.resubmit.title") : pt("ver.requestCq")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {rejectedRequest ? pt("ver.resubmit.help") : pt("ver.requestCqHelp")}
+            </p>
             <button
               type="button"
               disabled={busy || !hasEvidence}
               onClick={() => void run(() => onSubmit("cqrityjob_review", null))}
               className="mt-3 inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              {busy ? pt("ver.submitting") : renewable ? pt("ver.renew") : pt("ver.request")}
+              {busy
+                ? pt("ver.submitting")
+                : rejectedRequest
+                  ? pt("ver.resubmit.action")
+                  : renewable
+                    ? pt("ver.renew")
+                    : pt("ver.request")}
             </button>
             {/* A document review with no document is not a review. Saying so
                 is more useful than a disabled button with no explanation. */}

@@ -289,6 +289,17 @@ jobs:
       - name: Passport error-scope check
         run: bun run passport-error-scope:check
 
+      # Four defects with one shape: something happened -- a reviewer refused a
+      # credential, a claims query was rejected, a decision log could not be
+      # read -- and the interface presented the result as a well-formed
+      # nothing. A rejection that vanished, "0 verifierade" produced by a
+      # broken query, a verified credential with no decision behind it, and a
+      # refusal with no reason in it. This renders the candidate's panel and
+      # asserts on the markup, because every one of them is a property of what
+      # a person SEES.
+      - name: Passport decision truthfulness check
+        run: bun run passport-decision-truthfulness:check
+
       # ── THE EMPLOYER UAT GUARDS ──────────────────────────────────────────
       #
       # Twelve findings from one customer, closed across five subsystems. Each

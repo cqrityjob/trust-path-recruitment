@@ -104,8 +104,16 @@ function PassportOverviewRoute() {
     } catch (err) {
       // The message is logged, not shown: a raw PostgREST error reads as a
       // crash and can leak schema detail.
+      //
+      // `live.readError` rather than the generic `live.error` because this
+      // catch is now REACHABLE in a way it was not: getMyPassport used to
+      // swallow a failed claims or periods query and return an empty Passport,
+      // so a holder whose credentials could not be read saw "0 verifierade"
+      // instead of this. Now they see this, which makes the wording matter —
+      // and the wording a person needs at that moment is that nothing of
+      // theirs has changed.
       console.error("[passport] load failed", err);
-      setError(pt("live.error"));
+      setError(pt("live.readError"));
     }
   }, [load, loadRequests, loadAvailability, pt]);
 
@@ -129,8 +137,15 @@ function PassportOverviewRoute() {
   if (error) {
     return (
       <div className="mx-auto max-w-2xl">
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm font-medium text-foreground">
           {error}
+        </p>
+        {/* The reassurance is a separate sentence from the failure, and is not
+            destructive-red: "we could not read this" is not a warning about
+            the holder's data, and colouring it as one says the opposite of
+            what it means. */}
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {pt("live.readErrorBody")}
         </p>
         <button
           type="button"
