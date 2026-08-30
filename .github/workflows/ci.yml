@@ -442,6 +442,19 @@ jobs:
       - name: Security Career Center check
         run: bun run career-center:check
 
+      # ONE PERSON, ONE PROFESSIONAL IDENTITY. Four pure engines decide what
+      # somebody is told on their own home page and what a generated CV may
+      # say about them, and each is one edit from a silent regression: a
+      # completeness weight that moved without a version change, an action
+      # promoted above an employer's invitation, a readiness rule relaxed
+      # until somebody with no history gets a CV written for them, and the
+      # anti-fabrication sweep itself. The sweep is tested from BOTH
+      # directions on every run -- a validator that flags the product's own
+      # honest output is a validator somebody switches off.
+      - name: Professional identity and AI CV contract check
+        run: bun run professional-identity:check
+
+
       - name: Production build
         run: bun run build
 
