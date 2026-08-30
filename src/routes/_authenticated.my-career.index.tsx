@@ -40,6 +40,7 @@ import {
 import { useT } from "@/i18n/context";
 import { ProfessionalIdentityHeader } from "@/components/professional-identity/ProfessionalIdentityHeader";
 import { NextActions } from "@/components/professional-identity/NextActions";
+import { CareerJourney } from "@/components/professional-identity/CareerJourney";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import { listMyCvs } from "@/lib/professional-identity/cv/cv-store.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -464,7 +465,7 @@ function MyCareerPage() {
             this product might want for its own reasons; nothing here is a
             streak, a badge or a demand. */}
         {identityQ.data && (
-          <div className="mt-8">
+          <div className="mt-10">
             {/* The SAME gate answer the CTAs below already branch on. Without
                 it the ladder recommended "Take Career Discovery" to a
                 candidate outside the tester cohort, who would land on "the
@@ -479,6 +480,16 @@ function MyCareerPage() {
             />
           </div>
         )}
+
+        {/* ---------------- Where am I in the journey ----------------
+
+            Five stages, one sentence each, all of it derived from the
+            identity read model this page already has — no second query and
+            no progression backend. It sits BELOW the recommendation on
+            purpose: "what should I do next" is a more useful first answer
+            than "here is everything you have not done", and a journey strip
+            placed above the recommendation reads as the latter. */}
+        {identityQ.data && <CareerJourney identity={identityQ.data} className="mt-10" />}
 
         {/* ── Next step: an interview is waiting on this person ──
 
@@ -550,7 +561,14 @@ function MyCareerPage() {
           <DashboardCard
             className="lg:col-span-4"
             icon={<Briefcase className="h-5 w-5" />}
-            title={L(c("Jobb & ansökningar", "Jobs & applications"), lang)}
+            title={L(c("Möjligheter för dig", "Opportunities for you"), lang)}
+            lede={L(
+              c(
+                "Öppna roller inom säkerhet, och var dina ansökningar står.",
+                "Open roles across security, and where your applications stand.",
+              ),
+              lang,
+            )}
           >
             <dl className="space-y-2 text-sm">
               <div className="flex items-baseline justify-between gap-3">
@@ -686,7 +704,14 @@ function MyCareerPage() {
         >
           <DashboardCard
             icon={<Compass className="h-5 w-5" />}
-            title={L(c("Career Discovery", "Career Discovery"), lang)}
+            title={L(c("Din karriärinsikt", "Your career insight"), lang)}
+            lede={L(
+              c(
+                "Vad Career Discovery har kommit fram till om hur du arbetar och vart du passar.",
+                "What Career Discovery established about how you work and where you fit.",
+              ),
+              lang,
+            )}
           >
             {activeQ.isLoading && (
               <div className="space-y-3" role="status" aria-live="polite">
@@ -1079,6 +1104,7 @@ function DashboardCard({
   className,
   icon,
   title,
+  lede,
   action,
   children,
 }: {
@@ -1089,6 +1115,11 @@ function DashboardCard({
   className?: string;
   icon?: React.ReactNode;
   title: string;
+  /** One line saying what this card is FOR. A dashboard of bare nouns makes
+   *  the reader supply the meaning, which is how "Career Discovery" and
+   *  "Jobs & applications" ended up reading as filing cabinets rather than
+   *  as this person's career intelligence and their opportunities. */
+  lede?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -1100,12 +1131,15 @@ function DashboardCard({
         className,
       )}
     >
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {icon && <span className="text-primary">{icon}</span>}
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">
-            {title}
-          </h2>
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            {icon && <span className="text-primary">{icon}</span>}
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-foreground">
+              {title}
+            </h2>
+          </div>
+          {lede && <p className="mt-1.5 text-sm text-muted-foreground">{lede}</p>}
         </div>
         {action}
       </header>

@@ -71,6 +71,10 @@ import {
 // Same reason as the header: the work location belongs to the Passport, and
 // only its own formatter keeps the emirate attached to the country.
 import { formatWorkLocation } from "@/lib/security-passport/format";
+// The experience BAND is a stored enum -- "1-3", "10+", "<1". The catalogue
+// that owns those ids owns their labels too, and it is the same one the
+// editor on this page offers, so the row and the form can never disagree.
+import { yearsOfExperienceOptions } from "@/lib/security-career-profile/options";
 
 export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
@@ -88,6 +92,11 @@ const COPY = {
   failed: c("Din profil kunde inte hämtas just nu.", "Your profile could not be loaded right now."),
   retryLabel: c("Försök igen", "Try again"),
   sections: c("Din profil, avsnitt för avsnitt", "Your profile, section by section"),
+  editableHeading: c("Det du fyller i själv", "What you fill in yourself"),
+  editableLede: c(
+    "Den här delen skriver du, och du kan ändra den när som helst. Ingenting här är granskat av någon annan.",
+    "You write this part, and you can change it whenever you like. Nothing here has been reviewed by anybody else.",
+  ),
   ownedHere: c("Redigeras här", "Edited here"),
   ownedPassport: c("Tillhör Säkerhetspasset", "Belongs to the Security Passport"),
   ownedDiscovery: c("Tillhör karriärutforskningen", "Belongs to Career Discovery"),
@@ -178,8 +187,16 @@ function summarise(
       // Never the stored slug: `vaktare` is an identifier, and printing it
       // here told a person their current profession was a database key.
       return { text: professionLabel(identity, lang) ?? L(COPY.empty, lang), claims: [] };
-    case "experience":
-      return { text: identity.yearsOfExperience ?? L(COPY.empty, lang), claims: [] };
+    case "experience": {
+      // Never the bare id. This row printed "1-3", which is the value stored
+      // in `years_of_experience` rather than anything a person wrote or would
+      // recognise -- the same class of leak as rendering a profession slug.
+      const band = identity.yearsOfExperience;
+      const label = band
+        ? (yearsOfExperienceOptions.find((o) => o.id === band)?.label[lang] ?? null)
+        : null;
+      return { text: label ?? L(COPY.empty, lang), claims: [] };
+    }
     case "location":
       // Dubai, not "AE". The sub-jurisdiction travels with the country so a
       // holder in one emirate is never rendered as a UAE-wide claim.
@@ -250,8 +267,16 @@ function ProfilePage() {
 
         {identity && (
           <div className="space-y-8">
+            {/* `variant="profile"` is what makes this page announce itself.
+                It used to mount the dashboard's own hero unchanged, so the
+                first screen of /my-career/profile was the first screen of
+                /my-career with the cards removed — a person who clicked
+                "View profile" had no way to tell they had gone anywhere.
+                The hero owns the page's only <h1>, so naming the page has
+                to happen there rather than by adding a second heading. */}
             <ProfessionalIdentityHeader
               identity={identity}
+              variant="profile"
               showProfileLink={false}
               onRetry={retry}
             />
@@ -260,10 +285,27 @@ function ProfilePage() {
                 same draft shape, same save call as /my-career. It is
                 designed to sit in a dashboard grid cell, so it carries no
                 surface of its own -- given one here, it reads as loose text
-                between two cards. */}
-            <div className="rounded-xl border border-border bg-card p-6 md:p-8">
-              <SecurityCareerProfileCard />
-            </div>
+                between two cards.
+
+                Given a heading of its own, though. "Which of this can I
+                actually change" is the first question this page has to
+                answer, and the ownership labels in the index below answer it
+                one row at a time -- which is precise but is not a first
+                impression. */}
+            <section aria-labelledby="editable-heading">
+              <h2
+                id="editable-heading"
+                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+              >
+                {L(COPY.editableHeading, l)}
+              </h2>
+              <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+                {L(COPY.editableLede, l)}
+              </p>
+              <div className="mt-4 rounded-xl border border-border bg-card p-6 md:p-8">
+                <SecurityCareerProfileCard />
+              </div>
+            </section>
 
             <section aria-labelledby="sections-heading">
               <h2
