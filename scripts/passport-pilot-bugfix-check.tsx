@@ -240,7 +240,8 @@ console.log("\nDEFECT 3 -- the holder could not tell whether the document was sa
           uploadedAt: "2026-09-01T10:00:00Z",
         } as never,
       ]}
-      canModify
+      canAdd
+      canRemove
       onUpload={noopAsync}
       onOpen={noopAsync}
       onWithdraw={noopAsync}
@@ -283,7 +284,8 @@ console.log("\nDEFECT 3 -- the holder could not tell whether the document was sa
     !html(
       <EvidencePanel
         evidence={[]}
-        canModify
+        canAdd
+        canRemove
         onUpload={noopAsync}
         onOpen={noopAsync}
         onWithdraw={noopAsync}

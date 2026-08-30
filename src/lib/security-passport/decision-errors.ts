@@ -41,6 +41,19 @@ export const DECISION_ERROR_CODES = [
   "not_found",
   /** An approval was submitted without a verification method. */
   "method_required",
+  /** A rejection or a clarification request was submitted with no
+   *  candidate-facing reason.
+   *
+   *  A holder who is told "we could not verify this" and nothing else has
+   *  been given an outcome they can neither act on nor argue with, which is
+   *  the same as being told nothing. The reason is therefore mandatory in
+   *  the reviewer form, in the server function, and in `sp_verifier_decide`
+   *  itself — `SP_DECISION_REQUIRES_HOLDER_MESSAGE`.
+   *
+   *  Note that this is the CANDIDATE-facing `holder_message`. The internal
+   *  `decision_note` stays optional and stays private; requiring one has
+   *  nothing to do with the other. */
+  "holder_message_required",
   /** Validity dates missing, out of order, or short of what the credential needs. */
   "invalid_validity",
   /** The credential taxonomy needs an issuing authority named. */
@@ -67,6 +80,7 @@ const RULES: readonly { readonly needle: string; readonly code: DecisionErrorCod
   { needle: "SP_REQUEST_ALREADY_DECIDED", code: "already_decided" },
   { needle: "SP_REQUEST_NOT_FOUND", code: "not_found" },
   { needle: "SP_APPROVAL_REQUIRES_METHOD", code: "method_required" },
+  { needle: "SP_DECISION_REQUIRES_HOLDER_MESSAGE", code: "holder_message_required" },
   { needle: "SP_CREDENTIAL_REQUIRES_VALID_UNTIL", code: "invalid_validity" },
   { needle: "sp_claim_validity_ordered", code: "invalid_validity" },
   { needle: "SP_CREDENTIAL_REQUIRES_ISSUER", code: "issuer_required" },

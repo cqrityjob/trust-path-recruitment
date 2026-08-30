@@ -292,7 +292,35 @@ export const getMyPassport = createServerFn({ method: "GET" })
         .order("priority", { ascending: true }),
     ]);
 
+    // ── EVERY ESSENTIAL READ FAILS LOUDLY ──────────────────────────────
+    //
+    // Four of these five reads used to be treated as optional, and the two
+    // that mattered most were the two that were silent. `periodsRes.error`
+    // and `claimsRes.error` fell into `?? []`, and `eventsRes.count` fell
+    // into `?? 0`, so a Passport whose claims query had been REFUSED — an
+    // RLS change, a dropped column, an expired token mid-flight — rendered
+    // as a Passport with no credentials in it.
+    //
+    // "You have no verified credentials" and "we could not read your
+    // credentials" are different sentences said to a person about their own
+    // professional standing, and the first one, said falsely, is the exact
+    // failure this product exists not to commit. Every caller of this
+    // function already distinguishes a rejected promise from an empty
+    // snapshot — My Career renders `home.passport.unavailable`, the Passport
+    // routes render their own error state — so throwing is not merely more
+    // honest, it reaches copy that is already written and already correct.
+    //
+    // An empty ARRAY is still a perfectly good answer. A new holder has no
+    // claims and no periods, and that is not an error. What can no longer
+    // happen is emptiness manufactured out of a failure.
     if (profileRes.error) throw new Error(profileRes.error.message);
+    if (periodsRes.error) throw new Error(periodsRes.error.message);
+    if (claimsRes.error) throw new Error(claimsRes.error.message);
+    // The event count drives "what has happened to your Passport" on the
+    // holder's own history surface. A failed count coalescing to 0 says
+    // "nothing has ever happened here", which for a holder with a verified
+    // credential is false.
+    if (eventsRes.error) throw new Error(eventsRes.error.message);
 
     const profile = toProfile((profileRes.data as ProfileRow | null) ?? null);
     const periods = ((periodsRes.data ?? []) as PeriodRow[]).map(toPeriod);

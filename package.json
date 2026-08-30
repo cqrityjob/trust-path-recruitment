@@ -6,6 +6,7 @@
     "public-assessment-auth:check": "bun run scripts/public-assessment-auth-check.ts", 
     "build": "vite build", 
     "passport-error-scope:check": "bun run scripts/passport-error-scope-check.ts", 
+    "passport-decision-truthfulness:check": "bun run scripts/passport-decision-truthfulness-check.tsx",
     "passport-share-default:check": "bun run scripts/passport-share-default-check.ts", 
     "my-career-gate:check": "bun run scripts/my-career-assessment-gate-check.ts",
     "my-career-dashboard:check": "bun run scripts/my-career-dashboard-check.ts", 

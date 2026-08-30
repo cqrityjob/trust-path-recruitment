@@ -69,6 +69,14 @@ const sv = {
   "nav.privacy": "Integritet",
   "live.loading": "Hämtar ditt Security Passport …",
   "live.error": "Något gick fel. Försök igen.",
+  // The READ failure specifically, as distinct from a failed save. "Något gick
+  // fel" is true of both, and after F2 this is the sentence a holder sees when
+  // their Passport cannot be read at all — the state that used to render as an
+  // empty Passport. It says the two things a person needs at that moment:
+  // nothing of yours has changed, and this is worth trying again.
+  "live.readError": "Vi kunde inte hämta ditt Security Passport.",
+  "live.readErrorBody":
+    "Ingenting i ditt Passport har ändrats eller tagits bort. Försök igen om en stund.",
   "live.retry": "Försök igen",
   "live.startTitle": "Starta ditt Security Passport",
   "live.startBody":
@@ -705,6 +713,8 @@ const sv = {
   "ev.withdrawConfirm":
     "Dokumentet raderas. Uppgiften går tillbaka till egenrapporterad om det var det enda dokumentet.",
   "ev.underReview": "Går inte att ta bort under pågående granskning.",
+  "ev.addOnlyUnderReview":
+    "Du kan lägga till fler dokument under granskningen. Befintliga dokument kan inte tas bort förrän granskningen är klar.",
   "ev.count": "dokument",
   "ver.title": "Verifiering",
   "ver.lead":
@@ -745,6 +755,29 @@ const sv = {
   "ver.decidedAt": "Beslut fattat",
   "ver.noRequests": "Ingen verifiering är begärd ännu.",
   "ver.clarificationCta": "Komplettera och skicka in igen",
+  // ── Beslut som inte gick igenom ─────────────────────────────────────
+  // Formuleringen gäller UNDERLAGET, aldrig personen. "Avslagen kandidat"
+  // är inte det beslut som har fattats — någon har läst ett dokument och
+  // bedömt att det inte styrker uppgiften.
+  "ver.rejected.title": "Uppgiften kunde inte verifieras",
+  "ver.rejected.body":
+    "Vi kunde inte verifiera uppgiften utifrån det underlag som lämnades in. Uppgiften finns kvar i ditt Passport som egenrapporterad.",
+  "ver.rejected.reason": "Granskarens motivering till dig",
+  "ver.rejected.noReason":
+    "Ingen motivering registrerades för det här beslutet. Kontakta CQrityjob om du vill veta mer.",
+  "ver.rejected.next":
+    "Du kan lägga till eller byta ut dokumentationen och begära en ny granskning.",
+  "ver.resubmit.title": "Begär en ny granskning",
+  "ver.resubmit.help":
+    "Ladda upp den dokumentation som saknades och skicka in uppgiften igen. En granskare läser den på nytt.",
+  "ver.resubmit.action": "Begär ny granskning",
+  // ── Komplettering ───────────────────────────────────────────────────
+  "ver.clarification.title": "Mer information behövs innan uppgiften kan verifieras",
+  "ver.clarification.whatIsNeeded": "Det här behöver granskaren",
+  "ver.clarification.noMessage":
+    "Granskaren har begärt komplettering men ingen beskrivning registrerades. Kontakta CQrityjob så hjälper vi dig vidare.",
+  "ver.clarification.action":
+    "Lägg till dokumentationen under Dokumentation ovan. Granskningen fortsätter — du behöver inte skicka in uppgiften på nytt.",
   "ver.alreadyOpen": "Det finns redan en pågående begäran för den här uppgiften.",
   "ver.renew": "Begär förnyad verifiering",
   "ver.renewBody":
@@ -826,6 +859,9 @@ const sv = {
     "Syns bara internt. Kommer aldrig med i ett delat Passport, på ett kort eller i en bild.",
   "vq.messageHolder": "Meddelande till innehavaren",
   "vq.messageHolderHelp": "Det här är vad personen får läsa.",
+  "vq.messageHolderRequiredMark": "(obligatoriskt)",
+  "vq.messageHolderRequiredHelp":
+    "Obligatoriskt vid avslag och komplettering. Skriv vad som saknas eller varför underlaget inte räcker — det här är enda texten personen får läsa. Din interna anteckning visas aldrig.",
   "vq.validFrom": "Giltig från",
   "vq.validUntil": "Giltig till",
   "vq.confirmTitle": "Bekräfta beslutet",
@@ -1276,6 +1312,8 @@ const sv = {
   "vq.decline.already_decided": "Ärendet är redan avgjort. Ladda om sidan för att se beslutet.",
   "vq.decline.not_found": "Ärendet finns inte längre.",
   "vq.decline.method_required": "Ett godkännande måste ange en verifieringsmetod.",
+  "vq.decline.holder_message_required":
+    "Avslag och komplettering måste ha ett meddelande till innehavaren. Skriv vad som saknas eller varför underlaget inte räcker.",
   "vq.decline.invalid_validity":
     "Giltighetstiden går inte att spara. Kontrollera att slutdatum ligger efter startdatum, och att ett tidsbegränsat förordnande har ett slutdatum.",
   "vq.decline.issuer_required":
@@ -1529,6 +1567,9 @@ const en: Record<PassportCopyKey, string> = {
   "nav.privacy": "Privacy",
   "live.loading": "Loading your Security Passport …",
   "live.error": "Something went wrong. Please try again.",
+  "live.readError": "We couldn't load your Security Passport.",
+  "live.readErrorBody":
+    "Nothing in your Passport has been changed or removed. Please try again in a moment.",
   "live.retry": "Try again",
   "live.startTitle": "Start your Security Passport",
   "live.startBody":
@@ -2079,6 +2120,8 @@ const en: Record<PassportCopyKey, string> = {
   "ev.withdrawConfirm":
     "The document is deleted. The entry returns to self-declared if it was the only document.",
   "ev.underReview": "Cannot be removed while a review is open.",
+  "ev.addOnlyUnderReview":
+    "You can add more documents while the review is open. Existing documents cannot be removed until it is finished.",
   "ev.count": "documents",
   "ver.title": "Verification",
   "ver.lead":
@@ -2118,6 +2161,23 @@ const en: Record<PassportCopyKey, string> = {
   "ver.decidedAt": "Decided",
   "ver.noRequests": "No verification has been requested yet.",
   "ver.clarificationCta": "Add what is missing and resubmit",
+  "ver.rejected.title": "This could not be verified",
+  "ver.rejected.body":
+    "We could not verify this information based on the evidence provided. The entry stays in your Passport as self-reported.",
+  "ver.rejected.reason": "The reviewer's reason for you",
+  "ver.rejected.noReason":
+    "No reason was recorded for this decision. Contact CQrityjob if you would like to know more.",
+  "ver.rejected.next": "You can add or replace the documentation and request a new review.",
+  "ver.resubmit.title": "Request a new review",
+  "ver.resubmit.help":
+    "Upload the documentation that was missing and submit the entry again. A reviewer reads it afresh.",
+  "ver.resubmit.action": "Request a new review",
+  "ver.clarification.title": "More information is needed before this can be verified",
+  "ver.clarification.whatIsNeeded": "What the reviewer needs",
+  "ver.clarification.noMessage":
+    "The reviewer asked for more information but no description was recorded. Contact CQrityjob and we will help you from there.",
+  "ver.clarification.action":
+    "Add the documentation under Documentation above. The review continues — you do not need to submit the entry again.",
   "ver.alreadyOpen": "There is already an open request for this entry.",
   "ver.renew": "Request renewal",
   "ver.renewBody":
@@ -2190,6 +2250,9 @@ const en: Record<PassportCopyKey, string> = {
     "Internal only. Never appears in a shared Passport, on a card, or in an image.",
   "vq.messageHolder": "Message to the holder",
   "vq.messageHolderHelp": "This is what the person will read.",
+  "vq.messageHolderRequiredMark": "(required)",
+  "vq.messageHolderRequiredHelp":
+    "Required for a rejection and for a clarification. Write what is missing, or why the evidence is not enough — this is the only text the person gets to read. Your internal note is never shown to them.",
   "vq.validFrom": "Valid from",
   "vq.validUntil": "Valid until",
   "vq.confirmTitle": "Confirm the decision",
@@ -2580,6 +2643,8 @@ const en: Record<PassportCopyKey, string> = {
     "This review has already been decided. Reload the page to see the decision.",
   "vq.decline.not_found": "This review no longer exists.",
   "vq.decline.method_required": "An approval must state a verification method.",
+  "vq.decline.holder_message_required":
+    "A rejection or a clarification must include a message to the holder. Write what is missing, or why the evidence is not enough.",
   "vq.decline.invalid_validity":
     "That validity period cannot be saved. Check that the end date is after the start date, and that a time-limited appointment has an end date.",
   "vq.decline.issuer_required": "This credential must name the authority that issued it.",

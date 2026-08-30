@@ -38,7 +38,25 @@ const MAX_BYTES = 8 * 1024 * 1024;
 
 export interface EvidencePanelProps {
   readonly evidence: readonly EvidenceRecord[];
-  readonly canModify: boolean;
+  /** Whether the holder may ATTACH a document. Was one `canModify` flag with
+   *  the two below, and that conflation is what left a holder unable to
+   *  answer a clarification: a reviewer asked for the page showing the
+   *  certificate number, and the only surface that could supply it was
+   *  switched off for the whole duration of the open request.
+   *
+   *  Adding and removing are not the same permission and the database has
+   *  never treated them as one. `sp_evidence`'s holder policy accepts an
+   *  INSERT at any time; only `sp_withdraw_evidence` refuses while a review
+   *  is open, because pulling a file out from under a reviewer would leave a
+   *  decision resting on something nobody can look at again. The verifier's
+   *  storage read policy names `clarification_requested` explicitly, so a
+   *  document attached during a clarification is one the reviewer who asked
+   *  for it can actually open. */
+  readonly canAdd: boolean;
+  /** Whether the holder may WITHDRAW or REPLACE a document. False while any
+   *  request is open — the database refuses it, and offering a control that
+   *  cannot succeed is worse than not offering it. */
+  readonly canRemove: boolean;
   readonly onUpload: (file: {
     fileName: string;
     mimeType: string;
@@ -70,7 +88,8 @@ function formatSize(bytes: number): string {
 
 export function EvidencePanel({
   evidence,
-  canModify,
+  canAdd,
+  canRemove,
   onUpload,
   onOpen,
   onWithdraw,
@@ -161,7 +180,10 @@ export function EvidencePanel({
               >
                 {busy === item.id ? pt("ev.opening") : pt("ev.view")}
               </button>
-              {canModify ? (
+              {/* Replace is upload-then-withdraw, so it needs BOTH
+                  permissions: offering it while withdrawal is refused would
+                  leave the holder with two documents and an error. */}
+              {canAdd && canRemove ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -183,7 +205,7 @@ export function EvidencePanel({
                     : pt("ev.replace")}
                 </button>
               ) : null}
-              {canModify ? (
+              {canRemove ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -224,7 +246,7 @@ export function EvidencePanel({
         </p>
       ) : null}
 
-      {canModify ? (
+      {canAdd ? (
         <div className="mt-4">
           <label
             htmlFor="sp-evidence-file"
@@ -243,7 +265,16 @@ export function EvidencePanel({
               const file = e.target.files?.[0];
               if (file) void handleFile(file);
             }}
-            className="ml-3 text-sm text-muted-foreground file:hidden"
+            // `file:hidden` removes the browser's own button, so what is left
+            // is the filename text — and the input still sizes itself to its
+            // intrinsic ~291px whatever the container is. Beside the label at
+            // 375px that ran past the card and into horizontal page scroll.
+            //
+            // Sat on its own line and told to fill the width instead of
+            // sitting `ml-3` beside the label. Pre-existing, but this panel
+            // now renders during an open review too, so the state it happens
+            // in is no longer a rare one.
+            className="mt-2 block w-full max-w-full text-sm text-muted-foreground file:hidden"
           />
           <p id="sp-evidence-limits" className="mt-2 text-xs text-muted-foreground">
             {pt("ev.limits")}
@@ -252,6 +283,14 @@ export function EvidencePanel({
       ) : (
         <p className="mt-4 text-sm text-muted-foreground">{pt("ev.underReview")}</p>
       )}
+
+      {/* Said where the missing buttons were, rather than left as an absence
+          the holder has to interpret. Only while adding is still open — when
+          nothing can be changed at all, `ev.underReview` above has already
+          said so and repeating it would be noise. */}
+      {canAdd && !canRemove ? (
+        <p className="mt-2 text-xs text-muted-foreground">{pt("ev.addOnlyUnderReview")}</p>
+      ) : null}
 
       {error ? (
         <p role="alert" className="mt-3 text-sm text-destructive">

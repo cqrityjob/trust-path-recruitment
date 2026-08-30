@@ -1865,9 +1865,18 @@ else
   # This suite runs the real decision RPC and then reads the rows it left.
   # A short run means the atomicity and refusal groups did not execute, which
   # is exactly the gap that let the production decision defect through.
-  if [ "$SP10_PASSED" -lt 40 ]; then
-    echo "FAIL: expected at least 40 Phase 10 assertions, only ${SP10_PASSED} ran." >&2
-    suite_failed "Security Passport Phase 10 (assertion shortfall: floor 40)"
+  # Raised from 40 when GROUP 10 was added: the guard that refuses a rejection
+  # or a clarification request carrying no candidate-facing reason. Thirteen
+  # assertions, including the crafted direct-RPC calls that bypass every layer
+  # above the database.
+  #
+  # The floor is 60 against 67 actual, and deliberately above the 54 this suite
+  # ran before GROUP 10 existed. A floor of 53 would have left the whole new
+  # group deletable without the shortfall detector noticing, which is the one
+  # thing a floor is for.
+  if [ "$SP10_PASSED" -lt 60 ]; then
+    echo "FAIL: expected at least 60 Phase 10 assertions, only ${SP10_PASSED} ran." >&2
+    suite_failed "Security Passport Phase 10 (assertion shortfall: floor 60)"
   fi
 fi
 
@@ -2580,6 +2589,56 @@ fi
 # FIRST in the chain: 20260910090000 is the newest migration, and the chain runs
 # in reverse migration order so each rollback sees the schema its forward
 # migration left behind.
+# The holder-message guard's rollback runs FIRST in the chain: 20261012090000 is
+# the newest Security Passport migration, and the chain runs in reverse
+# migration order so each rollback sees the schema its forward migration left.
+# It only replaces one function body, so it depends on nothing and destroys
+# nothing -- but an unexecuted rollback is a rollback nobody knows works, which
+# is what this whole section exists to prevent.
+echo "==> Verifying the decision holder-message rollback"
+set +e
+SPHMRB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261012090000_sp_decision_requires_holder_message_rollback.sql 2>&1)"
+SPHMRB_RC=$?
+set -e
+
+if [ "$SPHMRB_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the decision holder-message rollback exited with code ${SPHMRB_RC}." >&2
+  echo "$SPHMRB_OUT" | grep -iE "ROLLBACK|ERROR:|FEL:" | head -10 >&2
+  suite_failed "decision holder-message rollback"
+else
+  # A reversal, not a demolition: the guard goes, the function stays, every
+  # other guard in it stays, and anon still cannot execute it.
+  set +e
+  SPHMRBQ="$(psql -tAq -d "$TEST_DB" -c "
+    SELECT
+      (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'sp_verifier_decide')
+      || '|' ||
+      (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'sp_verifier_decide'
+          AND p.prosrc LIKE '%SP_DECISION_REQUIRES_HOLDER_MESSAGE%')
+      || '|' ||
+      (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'sp_verifier_decide'
+          AND p.prosrc LIKE '%SP_SELF_VERIFICATION_FORBIDDEN%')
+      || '|' ||
+      (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'sp_verifier_decide'
+          AND array_to_string(coalesce(p.proacl, '{}'), ',') LIKE '%anon=%')
+  " 2>&1)"
+  set -e
+  if [ "$SPHMRBQ" = "1|0|1|0" ]; then
+    echo "    ok  the guard rolls back, the function and its other guards stay, anon gains nothing"
+  else
+    echo "FAIL: after the holder-message rollback expected '1|0|1|0'" >&2
+    echo "      (function present | guard gone | self-verification bar intact | no anon grant)," >&2
+    echo "      got '${SPHMRBQ}'." >&2
+    suite_failed "decision holder-message rollback (reversal, not demolition)"
+  fi
+fi
+
 echo "==> Verifying the pilot bug fix #1 rollback"
 set +e
 SPBF1RB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \

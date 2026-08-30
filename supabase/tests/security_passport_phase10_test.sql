@@ -514,6 +514,125 @@ END $$;
 
 
 -- =============================================================================
+\echo '    GROUP 10 -- a refusal must say why (candidate-facing reason)'
+-- =============================================================================
+-- The defect: `sp_verifier_decide` accepted 'rejected' and
+-- 'clarification_requested' with `_holder_message` NULL. The holder then read
+-- a state and nothing else — "Avslagen", or the worse "Komplettering begärd",
+-- which demands an action it does not describe. A person cannot correct a
+-- document nobody told them was wrong.
+--
+-- The reviewer form and the TypeScript server function refuse this too, and
+-- neither is the control: this function is EXECUTE-granted to `authenticated`,
+-- so a signed-in verifier can call it directly through PostgREST and never
+-- touch a line of application code. These assertions run the RPC the way such
+-- a crafted call would, and check the rows afterwards — a refusal that left a
+-- half-written decision behind would be no better than no refusal.
+DO $$
+DECLARE
+  _h uuid := 'da000000-0000-0000-0000-000000000001';
+  _v uuid := 'da000000-0000-0000-0000-000000000009';
+  _req uuid; _before text; _r record; _n int;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', _v::text, true);
+
+  -- ── rejection with NO message ────────────────────────────────────────
+  _req := pg_temp.new_claim_request(_h);
+  _before := pg_temp.trust_fingerprint(_h);
+
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_verifier_decide(%L,'rejected','document_review','internal only',NULL,NULL,NULL)$q$,
+    _req),
+    'SP_DECISION_REQUIRES_HOLDER_MESSAGE',
+    '10.1 a rejection with no candidate-facing reason is refused');
+
+  PERFORM pg_temp.ok(pg_temp.trust_fingerprint(_h) = _before,
+    '10.2 the refused rejection left the database byte-for-byte unchanged');
+
+  SELECT * INTO _r FROM public.sp_verification_requests WHERE id = _req;
+  PERFORM pg_temp.ok(_r.status = 'pending',
+    '10.3 the request is still pending, not half-decided');
+
+  -- ── rejection with a WHITESPACE message ──────────────────────────────
+  -- A space is not a reason. Without btrim this rule would be one a caller
+  -- passes by pressing the space bar.
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_verifier_decide(%L,'rejected','document_review',NULL,'   ',NULL,NULL)$q$,
+    _req),
+    'SP_DECISION_REQUIRES_HOLDER_MESSAGE',
+    '10.4 a rejection whose reason is only whitespace is refused');
+
+  -- ── clarification with NO message ────────────────────────────────────
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_verifier_decide(%L,'clarification_requested',NULL,'internal only',NULL,NULL,NULL)$q$,
+    _req),
+    'SP_DECISION_REQUIRES_HOLDER_MESSAGE',
+    '10.5 a clarification request with no explanation is refused');
+
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_verifier_decide(%L,'clarification_requested',NULL,NULL,E'\t\n ',NULL,NULL)$q$,
+    _req),
+    'SP_DECISION_REQUIRES_HOLDER_MESSAGE',
+    '10.6 a clarification request explained only by whitespace is refused');
+
+  -- ── the same decisions WITH a reason still go through ────────────────
+  -- The guard must refuse the reasonless call and nothing else. A rule that
+  -- also broke the legitimate path would be a regression wearing a fix.
+  PERFORM public.sp_verifier_decide(_req, 'rejected', 'document_review',
+    'internal: scan is illegible', 'The uploaded certificate does not show the required training level.',
+    NULL, NULL);
+
+  SELECT * INTO _r FROM public.sp_verification_requests WHERE id = _req;
+  PERFORM pg_temp.ok(_r.status = 'rejected',
+    '10.7 a rejection that carries a reason is still accepted');
+  PERFORM pg_temp.ok(
+    _r.holder_message = 'The uploaded certificate does not show the required training level.',
+    '10.8 the candidate-facing reason is what was stored');
+  PERFORM pg_temp.ok(_r.decision_note = 'internal: scan is illegible',
+    '10.9 the internal note is stored separately and is not the holder message');
+
+  -- ── the internal note stays OPTIONAL ─────────────────────────────────
+  -- Requiring a candidate-facing reason must say nothing about the reviewer's
+  -- private reasoning. Two fields, two rules.
+  _req := pg_temp.new_claim_request(_h);
+  PERFORM public.sp_verifier_decide(_req, 'clarification_requested', NULL,
+    NULL, 'Please upload the page showing the certificate number.', NULL, NULL);
+
+  SELECT * INTO _r FROM public.sp_verification_requests WHERE id = _req;
+  PERFORM pg_temp.ok(_r.status = 'clarification_requested' AND _r.decision_note IS NULL,
+    '10.10 decision_note is still optional — only the holder message is required');
+
+  -- ── approval behaviour is UNCHANGED ──────────────────────────────────
+  -- What an approval owes the holder is the METHOD, which is enforced in the
+  -- server function exactly as before. This migration did not touch it, and an
+  -- approval with no holder message is still a perfectly good approval.
+  _req := pg_temp.new_claim_request(_h);
+  PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review',
+    NULL, NULL, DATE '2026-02-01', DATE '2026-11-30');
+
+  SELECT * INTO _r FROM public.sp_verification_requests WHERE id = _req;
+  PERFORM pg_temp.ok(_r.status = 'approved' AND _r.holder_message IS NULL,
+    '10.11 an approval with no holder message is unaffected by the new rule');
+
+  SELECT count(*) INTO _n FROM public.sp_verification_decisions WHERE request_id = _req;
+  PERFORM pg_temp.ok(_n = 1, '10.12 the approval still wrote exactly one decision record');
+
+  -- ── the guard is not a way past the other guards ─────────────────────
+  -- Ordering matters: a holder deciding their own request must still be
+  -- refused for SELF-VERIFICATION, not told to write a nicer message. A guard
+  -- that fires first would tell an unauthorised caller which field to fix.
+  _req := pg_temp.new_claim_request(_h);
+  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+  PERFORM pg_temp.must_fail(format(
+    $q$SELECT public.sp_verifier_decide(%L,'rejected',NULL,NULL,NULL,NULL,NULL)$q$, _req),
+    'SP_SELF_VERIFICATION_FORBIDDEN',
+    '10.13 self-verification is still refused before the message rule is reached');
+
+  PERFORM set_config('request.jwt.claim.sub', _v::text, true);
+END $$;
+
+
+-- =============================================================================
 \echo '    GROUP 9 -- cleanup'
 -- =============================================================================
 -- The append-only guards permit deletion only once the holder no longer exists

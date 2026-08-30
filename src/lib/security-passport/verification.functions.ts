@@ -118,6 +118,26 @@ export const listMyVerificationRequests = createServerFn({ method: "GET" })
       ]);
 
       if (reqRes.error) throw new Error(reqRes.error.message);
+      // ── THE DECISIONS READ IS NOT OPTIONAL ────────────────────────
+      //
+      // This line used to be absent. The requests query was checked and the
+      // decisions query was not, so a refused or failed decisions read
+      // returned `{ requests, decisions: [] }` — a structurally valid,
+      // entirely believable payload in which every request had been decided
+      // and no decision existed.
+      //
+      // What the holder saw was a credential whose status said "Godkänd"
+      // above an attribution block that never rendered, because the panel
+      // draws "verified by whom, how, when, until when" from the DECISION
+      // record and had none. A verified credential that cannot say who
+      // verified it is precisely the unfalsifiable claim the two-field
+      // design exists to prevent, and it was being produced by a query
+      // failure nobody was told about.
+      //
+      // Both halves are one answer about one credential's history. Neither
+      // is meaningful without the other, so neither is returned without the
+      // other.
+      if (decRes.error) throw new Error(decRes.error.message);
 
       const requests = ((reqRes.data ?? []) as RequestRow[]).map((r) => ({
         id: r.id,
@@ -414,6 +434,33 @@ export const decideVerification = createServerFn({ method: "POST" })
     // exactly the unfalsifiable claim this product exists to avoid.
     if (data.decision === "approved" && !data.method) {
       throw new Error(`${DECISION_ERROR_PREFIX}method_required`);
+    }
+    // ── AND A REFUSAL MUST SAY WHY ────────────────────────────────────
+    //
+    // The mirror of the rule above, and it was missing. A rejection or a
+    // request for more information could be saved with `holder_message`
+    // null, and the holder then read "we could not verify this" — or, worse,
+    // "more information required" — with no sentence after it. There is
+    // nothing a person can do with that.
+    //
+    // Whitespace counts as absent. " " is not a reason, and treating it as
+    // one would make this check something a reviewer passes by pressing the
+    // space bar.
+    //
+    // Only the CANDIDATE-facing message is required. `decisionNote` is the
+    // reviewer's internal reasoning, stays optional, and stays out of every
+    // payload the holder can read. The two fields exist precisely so that
+    // requiring one says nothing about the other.
+    //
+    // This is the same rule `sp_verifier_decide` now enforces. It is
+    // repeated here so the reviewer gets an immediate, specific refusal
+    // instead of a round trip that comes back as a classified database
+    // error — not because this layer is the control. The database is.
+    if (
+      (data.decision === "rejected" || data.decision === "clarification_requested") &&
+      (data.holderMessage === null || data.holderMessage.trim() === "")
+    ) {
+      throw new Error(`${DECISION_ERROR_PREFIX}holder_message_required`);
     }
     const { error } = await context.supabase.rpc("sp_verifier_decide", {
       _request_id: data.requestId,
