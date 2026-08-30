@@ -1,1 +1,0 @@
-Release A is prepared for pull-request review. Merge remains Product Owner controlled.
