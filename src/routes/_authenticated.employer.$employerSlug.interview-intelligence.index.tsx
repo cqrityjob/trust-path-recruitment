@@ -14,6 +14,9 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import {
   CaseStatusChip,
+  NEXT_STEP_LABEL,
+  ShortDate,
+  uiLabel,
   Panel,
   State,
   interviewErrorMessage,
@@ -116,6 +119,12 @@ function Page() {
                     <th scope="col" className="px-4 py-3">
                       {t("iiu.ix.col.awaiting")}
                     </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t("iiu.ix.col.updated")}
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      {t("iiu.ix.col.next")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -149,6 +158,16 @@ function Page() {
                         {c.proposalsAwaitingReview > 0
                           ? `${c.proposalsAwaitingReview} ${t("iiu.ix.proposals")}`
                           : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <ShortDate iso={c.updatedAt ?? null} />
+                      </td>
+                      {/* The column that turns a list of records into a work
+                          queue. It is derived from the same NEXT_STEP_LABEL
+                          the overview's primary button uses, so a case cannot
+                          be told one thing here and another when it opens. */}
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {uiLabel(NEXT_STEP_LABEL, c.status, t)}
                       </td>
                     </tr>
                   ))}

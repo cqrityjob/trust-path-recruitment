@@ -4777,6 +4777,8 @@ export const dictionaries = {
     "iiu.ix.col.interview": "Kandidat",
     "iiu.ix.col.pack": "Roll",
     "iiu.ix.col.awaiting": "Att granska",
+    "iiu.ix.col.updated": "Senast ändrad",
+    "iiu.ix.col.next": "Nästa steg",
     "iiu.ix.proposals": "förslag",
     "iiu.ix.boundary.title": "Vad produkten inte gör",
     "iiu.ix.boundary.body":
@@ -9477,6 +9479,8 @@ export const dictionaries = {
     "iiu.ix.col.interview": "Candidate",
     "iiu.ix.col.pack": "Role",
     "iiu.ix.col.awaiting": "To review",
+    "iiu.ix.col.updated": "Last updated",
+    "iiu.ix.col.next": "Next step",
     "iiu.ix.proposals": "suggestions",
     "iiu.ix.boundary.title": "What this product does not do",
     "iiu.ix.boundary.body":

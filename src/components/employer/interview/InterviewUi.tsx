@@ -990,3 +990,38 @@ export function MaterialLegend() {
     </details>
   );
 }
+
+/** What the recruiter does next, given where the case is.
+ *
+ *  One source for the overview's primary button and the list's "Next step"
+ *  column. They were derived separately at first, which meant a status could
+ *  be told two different things about itself — the list saying review and the
+ *  overview saying assess — and nothing would have caught it. */
+export const NEXT_STEP_LABEL: Record<string, TranslationKey> = {
+  draft: "iiu.ov.cta.prepare",
+  sources_ready: "iiu.ov.cta.prepare",
+  prep_generated: "iiu.ov.cta.prepare",
+  prep_approved: "iiu.ov.cta.start",
+  interview_in_progress: "iiu.ov.cta.continue",
+  interview_complete: "iiu.ov.cta.review",
+  evidence_review: "iiu.ov.cta.review",
+  assessed: "iiu.ov.cta.summary",
+  reported: "iiu.ov.cta.openreport",
+};
+
+/** A date a recruiter reads at a glance, in their own locale. */
+export function ShortDate({ iso }: { iso: string | null }) {
+  const { lang } = useT();
+  if (!iso) return <span className="text-muted-foreground">—</span>;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return <span className="text-muted-foreground">—</span>;
+  return (
+    <time dateTime={iso} className="tabular-nums">
+      {d.toLocaleDateString(lang === "en" ? "en-GB" : "sv-SE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })}
+    </time>
+  );
+}
