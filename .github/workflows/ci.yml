@@ -159,6 +159,15 @@ jobs:
       - name: My Career dashboard check
         run: bun run my-career-dashboard:check
 
+      # The guided experience, asserted against rendered markup rather than
+      # source: exactly one recommendation is marked primary and it is the one
+      # the ranking engine returned, the rest stay reachable, no call to action
+      # falls back to "Continue", the Career Card is offered with one verb, no
+      # slug or jurisdiction code reaches the screen, and /my-career/profile
+      # names itself instead of mirroring the dashboard.
+      - name: My Career experience check
+        run: bun run my-career-experience:check
+
       # The professional identity engine. Every case is a mutation: hold one
       # credential, assert the title the product must NOT grant is absent. Two
       # are load-bearing — VU1 alone must never produce Väktare, and
