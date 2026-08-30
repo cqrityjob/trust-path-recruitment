@@ -423,6 +423,14 @@ jobs:
       - name: Backend deployment target lock
         run: bun run backend-target-lock:check
 
+      # The backend lock above proves the DATA plane names the owner project.
+      # This proves the same about the AUTH plane: Google sign-in broke in the
+      # 2026-08-29 cutover because it went through the Lovable Cloud OAuth
+      # broker rather than the project's own Supabase Auth, so it followed the
+      # disconnected backend while email/password followed VITE_SUPABASE_URL.
+      - name: Authentication provider target lock
+        run: bun run auth-provider-target:check
+
       - name: SQL security guard
         run: bun run sql-security:check
 

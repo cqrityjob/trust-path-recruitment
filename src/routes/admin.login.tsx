@@ -28,7 +28,6 @@ import { Section } from "@/components/site/Section";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { oauthErrorMessage } from "@/lib/auth/oauth-return";
 import { safeReturnPath } from "@/lib/auth/safe-redirect";
 import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
@@ -120,17 +119,24 @@ function AdminLoginPage() {
     setError(null);
     setBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/admin/login",
+      // Same project as email/password sign-in above. The Lovable Cloud OAuth
+      // broker this used to call is bound to the backend that was
+      // disconnected in the 2026-08-29 cutover and now rejects every Google
+      // request before Google opens.
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + "/admin/login" },
       });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-      await verifyAdminAndProceed();
+      if (oauthError) throw oauthError;
+      // Redirecting out to Google. The mount effect above completes the round
+      // trip: it reads the restored session and runs the same
+      // is_platform_admin() check, so Google never bypasses admin
+      // verification. Busy stays set while the page unloads.
+      return;
     } catch (err) {
-      // Never surface raw provider/Supabase/Lovable text to the screen.
+      // Never surface raw provider/Supabase text to the screen.
       console.error("[auth] admin Google sign-in failed", err);
       setError(oauthErrorMessage(lang === "sv" ? "sv" : "en"));
-    } finally {
       setBusy(false);
     }
   }

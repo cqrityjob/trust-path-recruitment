@@ -50,7 +50,6 @@ import { Container } from "@/components/site/Container";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { safeReturnPath, splitReturnPath } from "@/lib/auth/safe-redirect";
 import {
   clearOAuthReturn,
@@ -140,8 +139,10 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
         setSessionKnown(true);
         return;
       }
-      // Returning from OAuth onto the auth page means the broker ignored the
-      // path in redirect_uri. The stashed destination is the fallback.
+      // Returning from OAuth onto the auth page means the path in `redirectTo`
+      // was not honoured — with Supabase Auth that happens when the URL is not
+      // in the project's redirect allowlist and it falls back to the Site URL.
+      // The stashed destination is the fallback.
       const pending = consumeOAuthReturn();
       if (pending) {
         const { to, search } = splitReturnPath(pending);
@@ -236,28 +237,36 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
     setInfo(null);
     setBusy(true);
     // The browser is about to leave the app, so the destination has to
-    // survive outside React state. Stored AND carried in redirect_uri: a
-    // broker that normalises the path away is exactly the failure that was
-    // observed, so relying on redirect_uri alone would trust the thing that
+    // survive outside React state. Stored AND carried in redirectTo: a
+    // return that normalises the path away is exactly the failure that was
+    // observed, so relying on redirectTo alone would trust the thing that
     // broke.
     const destination = rememberOAuthReturn(resolveDestination(), DEFAULT_DESTINATION);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: oauthRedirectUri(destination),
+      // Google goes through this project's OWN Supabase Auth, not the Lovable
+      // Cloud OAuth broker. The broker resolved its provider configuration
+      // from the Lovable Cloud backend, which was disconnected in the
+      // 2026-08-29 cutover to the owner-controlled project; it answered every
+      // request with "provider 'google' is not supported" before Google ever
+      // opened. Using the shared client keeps Google on the same project, and
+      // the same unified identity, as email/password.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: oauthRedirectUri(destination) },
       });
-      if (result.error) throw result.error;
+      if (error) throw error;
       // Leaving for the provider. Do NOT clear busy — the page is unloading,
-      // and dropping it makes the button look clickable mid-redirect.
-      if (result.redirected) return;
-      goToDestination();
+      // and dropping it makes the button look clickable mid-redirect. The
+      // round trip is completed by the mount effect above, which reads the
+      // restored session and consumes the stashed destination.
+      return;
     } catch (err) {
-      // Raw provider, Supabase and Lovable errors are never shown: they leak
+      // Raw provider and Supabase errors are never shown: they leak
       // infrastructure detail and read as a crash. The real error still goes
       // to the console, which is where a developer will look.
       console.error("[auth] Google sign-in failed", err);
       clearOAuthReturn();
       reportErrors([oauthErrorMessage(lang === "sv" ? "sv" : "en")]);
-    } finally {
       setBusy(false);
     }
   }
