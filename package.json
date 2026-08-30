@@ -29,6 +29,7 @@
     "career-discovery-profession-differentiation:check": "bun run scripts/career-discovery-profession-differentiation-check.ts",
     "career-discovery-claim:check": "bun run scripts/career-discovery-claim-check.ts",
     "career-discovery-canonical-result:check": "bun run scripts/career-discovery-canonical-result-check.ts",
+    "career-journey:check": "bun run scripts/career-journey-check.ts",
     "career-discovery-career-card:check": "bun run scripts/career-discovery-career-card-check.ts",
     "prepilot-candidate-surface:check": "bun run scripts/prepilot-candidate-surface-check.tsx",
     "lint": "eslint .", 

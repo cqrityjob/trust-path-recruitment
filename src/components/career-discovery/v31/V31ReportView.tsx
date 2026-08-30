@@ -22,6 +22,8 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { CareerJourneySection } from "@/components/career-journey/CareerJourneySection";
+import type { CareerJourney } from "@/lib/career-journey/types";
 import { CareerCardCreator } from "@/components/career-discovery/v31/CareerCardCreator";
 import { FeedbackForm } from "@/components/career-discovery/v31/FeedbackForm";
 import { MoveForwardSection } from "@/components/career-discovery/v31/MoveForwardSection";
@@ -81,6 +83,24 @@ export function V31ReportView({
    *  "Set as career goal" is hidden without it rather than shown and
    *  failing against RLS. */
   sessionId,
+  /** The live Career Journey for this report, or null.
+   *
+   *  ── WHY IT IS A PROP AND NOT A FETCH ────────────────────────────────
+   *
+   *  Everything else this component renders is frozen. The journey is the
+   *  one part that is deliberately NOT — it is recomputed from whatever the
+   *  candidate's professional profile says today, so that changing jobs
+   *  updates where they stand without re-running the assessment. Fetching it
+   *  here would put a live, profile-dependent read inside the component
+   *  whose contract is "this is what the report said when it was generated",
+   *  and the next reader would have to work out which half was which.
+   *
+   *  It also keeps the Passport at arm's length: the journey is composed
+   *  server-side in src/lib/career-journey, which is the only place allowed
+   *  to read the Passport and Career Discovery in one breath. Career
+   *  Discovery components may not import Passport code at all -- see
+   *  scripts/passport-separation-check.ts. */
+  journey,
 }: {
   snapshot: ReportSnapshot;
   generatedAt: string;
@@ -91,6 +111,7 @@ export function V31ReportView({
    *  CareerCardCreator; the host decides how/whether to record them. */
   onCareerCardEvent?: (name: string, detail?: Record<string, unknown>) => void;
   sessionId?: string | null;
+  journey?: CareerJourney | null;
 }) {
   // Deliberately NOT `lang` from useT(): everything in this component is
   // either frozen report content (must render in the locale the candidate
@@ -323,6 +344,22 @@ export function V31ReportView({
           />
         </>
       )}
+
+      {/* 6 · YOUR CAREER JOURNEY — where the candidate stands TODAY, and
+          what is reachable from there.
+          
+          Placed after the profession recommendations and before the Career
+          DNA narrative, because that is the order of the two questions a
+          reader is actually holding: "what fits me" first, "and where does
+          that leave me" second. It is visibly its own section, with its own
+          heading and its own statement of what it is built from, so a
+          candidate can see that their background moved THIS and left the
+          Career DNA above it untouched. */}
+      <CareerJourneySection
+        journey={journey ?? null}
+        locale={snapshot.locale === "en" ? "en" : "sv"}
+        mode={mode}
+      />
 
       {/* 7 · YOUR WORKING STYLE — the deeper Career DNA narrative, moved
           here from the top of the report (§26 Section 7): still complete,

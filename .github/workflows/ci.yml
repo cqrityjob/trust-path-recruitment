@@ -117,6 +117,17 @@ jobs:
       - name: Career Discovery canonical result check
         run: bun run career-discovery-canonical-result:check
 
+      # ONE FACT, ONE WRITER, AND A JOURNEY THAT MAY CHANGE. Current
+      # profession used to be writable from both "Din karriärprofil" and the
+      # Passport's "Mina uppgifter", into two tables, with nothing keeping
+      # them in step. Asserts the second writer is gone, that the readiness
+      # engine stays pure and can never derive readiness from Career DNA,
+      # that an unknown situation can never produce a "possible next step",
+      # and that this application phase names no object its expand migration
+      # introduces -- which is what lets the two halves release separately.
+      - name: Career Journey and canonical profile check
+        run: bun run career-journey:check
+
       # The Career Card derives from that same canonical ranking (no profession
       # picker), and every format fits its canvas in both locales — the layout
       # collisions this replaces were all found by eye, after shipping.

@@ -20,6 +20,7 @@ import {
 } from "@/lib/security-passport/passport.functions";
 import type { PrototypeState } from "@/lib/security-passport/prototype-state";
 import { Onboarding, type OnboardingPersistence } from "@/components/security-passport/Onboarding";
+import { setMyCurrentProfession } from "@/lib/security-career-profile/profile.functions";
 
 export const Route = createFileRoute("/_authenticated/passport/onboarding")({
   ssr: false,
@@ -34,6 +35,7 @@ function LiveOnboardingRoute() {
   const load = useServerFn(getMyPassport);
   const save = useServerFn(saveOnboardingProgress);
   const complete = useServerFn(completeOnboarding);
+  const setProfession = useServerFn(setMyCurrentProfession);
 
   const [initial, setInitial] = useState<PrototypeState | null>(null);
   const [ready, setReady] = useState(false);
@@ -77,13 +79,34 @@ function LiveOnboardingRoute() {
       save: (state) => {
         if (timer.current !== null) window.clearTimeout(timer.current);
         timer.current = window.setTimeout(() => {
+          // ── THE PROFESSION GOES TO ITS CANONICAL HOME ──────────────
+          //
+          // Not to sp_passport_profiles. Current profession is one fact, and
+          // it used to have two writable homes — this wizard's column and
+          // the Professional Profile on /my-career — which is how a holder
+          // ended up with two different answers and no way to tell which the
+          // product believed. The wizard still asks the question; the answer
+          // now lands in the one row that owns it, and the Passport column
+          // follows by database mirror (20261007090000).
+          //
+          // Fire-and-forget alongside the autosave, and deliberately NOT
+          // awaited into it: a career-profile write failing must not lose the
+          // holder's Passport answers, which is what an await here would risk
+          // on every keystroke's worth of autosave.
+          const profession = state.answers["profession.profession"];
+          if (profession) {
+            void setProfession({ data: { currentProfessionSlug: profession } }).catch(
+              (err: unknown) => {
+                console.error("[passport] career-profile profession write failed", err);
+              },
+            );
+          }
           void save({
             data: {
               step: state.stepIndex,
               answers: state.answers,
               displayName: state.answers["identity.displayName"] ?? undefined,
               headline: state.answers["identity.headline"] ?? undefined,
-              professionSlug: state.answers["profession.profession"] ?? undefined,
               jurisdictionCode: state.answers["jurisdiction.jurisdiction"] || undefined,
             },
           }).catch((err: unknown) => {
@@ -96,7 +119,7 @@ function LiveOnboardingRoute() {
         }, AUTOSAVE_DELAY_MS);
       },
     }),
-    [initial, save, pt],
+    [initial, save, setProfession, pt],
   );
 
   const onFinish = useCallback(async () => {
