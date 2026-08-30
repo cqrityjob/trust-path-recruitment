@@ -215,7 +215,16 @@ ok(
 /* 5 · No ordinary-employer pilot-grant language survives               */
 /* ------------------------------------------------------------------ */
 
-const employerSurfaces = [...interviewRoutes, "src/components/employer/interview/InterviewUi.tsx"];
+/** Every file that can put words in front of a recruiter. The shared layout
+ *  module holds no copy by design -- every string is passed in, already
+ *  resolved -- and it is swept anyway, because "by design" is the part that
+ *  stops being true. */
+const INTERVIEW_COMPONENTS = [
+  "src/components/employer/interview/InterviewUi.tsx",
+  "src/components/employer/interview/InterviewLayout.tsx",
+];
+
+const employerSurfaces = [...interviewRoutes, ...INTERVIEW_COMPONENTS];
 
 for (const file of employerSurfaces) {
   const raw = read(file);
@@ -306,7 +315,7 @@ ok(
 // (dictionaries[lang][key] ?? dictionaries.sv[key] ?? key) and a missing
 // English entry therefore renders SILENTLY as Swedish.
 
-const I18N_SURFACES = [...interviewRoutes, "src/components/employer/interview/InterviewUi.tsx"];
+const I18N_SURFACES = [...interviewRoutes, ...INTERVIEW_COMPONENTS];
 
 /** Blank out block comments while PRESERVING line numbers, so a reported
  *  line points at the real one. */
@@ -993,7 +1002,7 @@ for (const file of [
     ),
     "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.index.tsx",
     "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.new.tsx",
-    "src/components/employer/interview/InterviewUi.tsx",
+    ...INTERVIEW_COMPONENTS,
   ];
   // A JSX text node, a string attribute or a braced literal containing a
   // Swedish glyph, that is not already a t(...) call.
@@ -1027,6 +1036,246 @@ for (const file of [
         .join(", ")} — customer copy belongs in the dictionary`,
     );
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* 19 · The information architecture of the six work surfaces          */
+/* ------------------------------------------------------------------ */
+
+// Not "these screens look nice" -- nothing here can tell. These are the
+// STRUCTURAL properties the visual work depends on, each of which would be
+// cheap to lose in a later edit and expensive to notice.
+
+const ASSESS =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.assessment.tsx";
+const REVIEW =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.evidence.tsx";
+const LIVE =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.interview.tsx";
+const PREPARE =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.prepare.tsx";
+const REPORT =
+  "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.report.tsx";
+
+{
+  const assess = read(ASSESS);
+
+  // Requirement, then material, then conclusion. The ORDER is the argument:
+  // you read what the role asks for before you read what the candidate said.
+  // A layout that led with the candidate's words would invite an impression
+  // looking for a requirement to attach itself to.
+  const req = assess.indexOf('t("iiu.as2.col.requirement")');
+  const mat = assess.indexOf('t("iiu.as2.col.material")');
+  const own = assess.indexOf('t("iiu.as2.col.assessment")');
+  ok(
+    req > 0 && mat > req && own > mat,
+    "the assessment zones are out of order — requirement, then material, then your assessment",
+  );
+
+  // The single most important sentence on that screen. An empty material
+  // column is the shape a low score takes when nobody says what it means.
+  ok(
+    assess.includes('t("iiu.as2.nomaterial.body")'),
+    "the empty-material state no longer says that missing information is not poor performance",
+  );
+  ok(
+    /"iiu\.as2\.nomaterial\.body":\s*\n?\s*"Det betyder att information saknas/.test(
+      dictionaryRaw,
+    ) &&
+      /"iiu\.as2\.nomaterial\.body":\s*\n?\s*"This means information is missing/.test(
+        dictionaryRaw,
+      ),
+    "that sentence must read the same in both locales",
+  );
+
+  // Progress is completion of the assessor's work, and says so.
+  ok(
+    assess.includes('t("iiu.as2.overview.note")'),
+    "the assessment overview must say the counts describe the assessment, not the candidate",
+  );
+  // A ring, a bar or a percentage over these counts would be read as a score.
+  ok(
+    !/(?:width|stroke-dasharray):\s*[`'"]?\$?\{?[^}]*%/.test(assess) &&
+      !/toFixed|Math\.round\([^)]*100/.test(assess),
+    "the assessment overview expresses progress as a percentage or a bar",
+  );
+
+  // The uncertainty note is a real column that recordAssessment has always
+  // accepted. It was unreachable from the UI for the life of the feature.
+  ok(
+    assess.includes("uncertaintyNote") && assess.includes('t("iiu.as2.unclear")'),
+    "the assessment form no longer offers the missing/still-unclear field",
+  );
+}
+
+{
+  const review = read(REVIEW);
+
+  // One question at a time. Reviewing eight in one scroll is how a reviewer
+  // starts forming a view of the candidate while still deciding what the
+  // material is.
+  ok(
+    /setActive\(/.test(review) && review.includes('t("iiu.rv.questions")'),
+    "review no longer selects one question at a time",
+  );
+
+  // The kinds of material must stay visually distinct, and the legend that
+  // states the distinction must stay on the page.
+  ok(review.includes("<MaterialLegend />"), "review no longer states how the material differs");
+  for (const state of ["note", "ai", "confirmed", "verify"]) {
+    ok(
+      review.includes(`<MaterialBadge state="${state}" />`),
+      `review no longer labels ${state} material with its own badge`,
+    );
+  }
+
+  // Confirm / edit / reject, and nothing that confirms by itself.
+  for (const key of ["iiu.ev.confirm", "iiu.rv.edit", "iiu.rv.reject"]) {
+    ok(review.includes(`t("${key}")`), `review no longer offers ${key}`);
+  }
+  ok(
+    !/decision:\s*"accept"[^}]*\}\s*\)\s*;?\s*\}\s*,\s*\[/.test(review) &&
+      !/useEffect\([^)]*decision:\s*"accept"/s.test(review),
+    "review confirms a proposal without a person clicking",
+  );
+
+  // Review hands off to assessment; it does not contain one. Two names for one
+  // scroll is exactly what splitting the steps was for.
+  ok(
+    review.includes('t("iiu.ev.toassess")'),
+    "review no longer hands off to the assessment step",
+  );
+  ok(
+    !review.includes("recordAssessment") && !review.includes("markAssessed"),
+    "the assessment workflow is back on the review screen — the two steps are one page again",
+  );
+}
+
+{
+  const live = read(LIVE);
+
+  // Bounded support only. Every one of these words describes something this
+  // product does not have, and each is exactly the kind of control a design
+  // reference makes look obligatory.
+  const body = codeOnly(live).toLowerCase();
+  for (const term of [
+    "transcript",
+    "getusermedia",
+    "mediarecorder",
+    "audio",
+    "recording",
+    "webrtc",
+    "chatcompletion",
+    "sendmessage",
+  ]) {
+    ok(
+      !body.includes(term),
+      `the live interview screen contains "${term}" — it has no transcript, no recording and no chat`,
+    );
+  }
+  for (const key of [
+    "iiu.lv.cat.tocover",
+    "iiu.lv.cat.followup",
+    "iiu.lv.cat.clarify",
+    "iiu.lv.cat.verify",
+  ]) {
+    ok(live.includes(`t("${key}")`), `the interview support column lost the ${key} category`);
+  }
+
+  // The save contract. Every one of these is the reason a note typed in the
+  // last second before Next is not silently discarded.
+  for (const [needle, why] of [
+    ["const flushNote = async", "the explicit flush before leaving a question"],
+    ["const guarded = async", "the guard that refuses to move on an unsaved note"],
+    ["beforeunload", "the warning for the exit the handlers cannot intercept"],
+    ["mutateAsync", "the awaited write flushNote depends on"],
+  ] as const) {
+    ok(live.includes(needle), `the live interview lost ${why}`);
+  }
+  // The optimistic question-state write must keep its rollback.
+  ok(
+    /onError:\s*\(_err,\s*vars\)/.test(live),
+    "the optimistic question-state update lost its rollback — the chip would keep claiming a failed write succeeded",
+  );
+
+  // No rating control during the conversation.
+  ok(
+    !live.includes("recordAssessment"),
+    "a rating control reached the live interview screen — the assessment happens after the account is complete",
+  );
+}
+
+{
+  const prepare = read(PREPARE);
+  // The briefing sections a recruiter is meant to arrive with.
+  for (const key of [
+    "iiu.pp.focus.title",
+    "iiu.pp.background.title",
+    "iiu.pp.areas.title",
+    "iiu.pp.clarify.title",
+    "iiu.pp.verify2.title",
+    "iiu.pp.plan.title",
+    "iiu.pp.reqs.title",
+  ]) {
+    ok(prepare.includes(`t("${key}")`), `the preparation briefing lost ${key}`);
+  }
+  // Candidate-supplied information must never be presented as established.
+  ok(
+    prepare.includes('<MaterialBadge state="candidate" />') &&
+      prepare.includes('t("iiu.pp.background.body")'),
+    "candidate background is no longer labelled as the candidate's own unchecked claim",
+  );
+}
+
+{
+  const report = read(REPORT);
+  // The employment decision is a stated boundary, never a control. There is no
+  // employment-decision data model in this domain, and a disabled button would
+  // promise one is coming.
+  ok(
+    report.includes('t("iiu.rp.s.decision")') && report.includes('t("iiu.rp.decision.boundary")'),
+    "the report no longer states that the employment decision is recorded elsewhere",
+  );
+  const decisionBlock = report.slice(
+    report.indexOf('aria-labelledby="d-decision"'),
+    report.indexOf('aria-labelledby="d-ai"'),
+  );
+  ok(
+    decisionBlock.length > 0 && !/<button|<input|<select|disabled/.test(decisionBlock),
+    "the employment-decision section acquired a control — this engine records no decision",
+  );
+  // The six document sections, in order.
+  const order = [
+    "iiu.rp.s.scope",
+    "iiu.rp.s.examples",
+    "iiu.rp.s.assessment",
+    "iiu.rp.s.followup",
+    "iiu.rp.s.verify",
+    "iiu.rp.s.comments",
+  ].map((k) => report.indexOf(`t("${k}")`));
+  ok(
+    order.every((i) => i > 0) && order.every((v, i) => i === 0 || v > order[i - 1]),
+    "the report's six sections are missing or out of order",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 20 · The 5E columns are read by the names the database uses         */
+/* ------------------------------------------------------------------ */
+
+// Both tables store e3_action. The reads asked for e3_exact_action, PostgREST
+// refused them, `data` came back null, and every screen rendered "no confirmed
+// material" -- which on this product reads as a candidate who said nothing
+// rather than as a broken query.
+{
+  ok(
+    !/e3_exact_action/.test(runtimeFns),
+    "a read asks for e3_exact_action; the column is e3_action on both evidence tables",
+  );
+  ok(
+    /INTERVIEW_READ_FAILED/.test(runtimeFns),
+    "the reads whose emptiness means 'the candidate said nothing' must raise, not return an empty list",
+  );
 }
 
 console.log(`\n  assertions passed: ${passes}`);
