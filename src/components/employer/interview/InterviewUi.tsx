@@ -1099,7 +1099,7 @@ export function WorkflowNav({
       {/* Which of the seven this is, said in words. On a narrow screen the row
           below scrolls, so the step a reader is on can be off-screen; this
           line never is. */}
-      <p className="pb-1.5 text-xs font-medium text-muted-foreground sm:hidden">
+      <p className="pb-1.5 text-xs font-medium text-muted-foreground xl:hidden">
         {t("iiu.wf.step")} {currentIdx + 1} {t("iiu.wf.of")} {WORKFLOW.length}
       </p>
       {/* One row, always. A seven-step workflow that wraps onto two lines

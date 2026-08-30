@@ -453,6 +453,17 @@ export interface CaseDetail {
      *  held once on `competencies` and can never disagree with itself. */
     readonly competencyCodes: readonly string[];
   }[];
+  /** What this role needs checked against a document rather than settled in a
+   *  conversation -- and, for each, what the interview may legitimately ask.
+   *  Governed pack rows that had no reader. */
+  readonly verificationRules: readonly {
+    readonly id: string;
+    readonly code: string;
+    readonly requirementSv: string;
+    readonly interviewActionSv: string | null;
+    readonly subsequentVerificationSv: string | null;
+    readonly passportBoundarySv: string | null;
+  }[];
   /** The role requirements the pack governs, in their pinned order. These are
    *  the pack's own rows -- what the role needs, written before anybody met
    *  this candidate -- which is what makes an assessment against them an
@@ -692,6 +703,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       guidanceRes,
       competencyRes,
       questionCompetencyRes,
+      verificationRuleRes,
     ] = await Promise.all([
       db
         .from("scp_interview_case_sources")
@@ -802,6 +814,13 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       db
         .from("scp_interview_question_competencies")
         .select("question_id, pack_competency_id, is_primary"),
+      db
+        .from("scp_interview_verification_rules")
+        .select(
+          "id, code, requirement_sv, interview_action_sv, subsequent_verification_sv, passport_boundary_sv",
+        )
+        .eq("pack_version_id", packVersionId)
+        .order("display_order"),
     ]);
 
     if (questionsRes.error) throw new Error(questionsRes.error.message);
@@ -965,6 +984,16 @@ export const getInterviewCase = createServerFn({ method: "GET" })
           .map((m) => competencyById.get(m.pack_competency_id as string)?.code as string)
           .filter((c): c is string => Boolean(c)),
       })),
+      verificationRules: ((verificationRuleRes.data ?? []) as Array<Record<string, unknown>>).map(
+        (v) => ({
+          id: v.id as string,
+          code: v.code as string,
+          requirementSv: v.requirement_sv as string,
+          interviewActionSv: (v.interview_action_sv as string | null) ?? null,
+          subsequentVerificationSv: (v.subsequent_verification_sv as string | null) ?? null,
+          passportBoundarySv: (v.passport_boundary_sv as string | null) ?? null,
+        }),
+      ),
       competencies: competencyRows.map((c) => ({
         id: c.id as string,
         code: c.code as string,
