@@ -1,4 +1,4 @@
--- Rollback for 20261007090000_scp_interview_assessment_supersede_order.sql.
+-- Rollback for 20261009090000_scp_interview_assessment_supersede_order.sql.
 --
 -- Restores the immediate foreign key and the original insert-then-update order.
 --

@@ -176,12 +176,29 @@
       "rollback": "supabase/rollback/20261006090000_cd_layer4_entry_gap_professions_rollback.sql"
     },
     {
-      "file": "20261007090000_scp_interview_assessment_supersede_order.sql",
+      "file": "20261007090000_canonical_professional_profile.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "security_career_profile_reconciliations",
+          "kind": "table"
+        },
+        {
+          "object": "career_profile_mirror_profession_to_passport",
+          "kind": "function"
+        }
+      ],
+      "note": "EXPAND half of a two-phase release; the application half is 20261008090000 + the Career Journey code, which must NOT merge before this is applied. Consolidates the self-reported current profession into ONE canonical home: before this, security_career_profiles.current_profession_slug and sp_passport_profiles.cig_profession_slug were both user-writable, from two surfaces, with nothing keeping them in step. Adds a reconciliation log with least-privilege grants: SELECT on the table, COLUMN-LEVEL UPDATE (resolved_at) only, no INSERT and no DELETE, and an explicit REVOKE first because Supabase default privileges would otherwise grant all of them including TRUNCATE. Column-level because RLS constrains rows, not columns: a table-wide UPDATE would let a holder rewrite the canonical/passport values, the resolution or created_at on their own audit row, reconciles the existing rows under a rule that never overwrites a user own answer, and installs three sync triggers: canonical -> Passport mirror, seed of a newly created Passport row, and a temporary COMPATIBILITY trigger carrying an old client Passport write back to the canonical row. BACKWARD COMPATIBLE BY CONSTRUCTION: no column is dropped, no constraint is added that an existing client could violate, and the current application keeps writing exactly what it writes today -- proven statement-for-statement in Group F of supabase/tests/canonical_professional_profile_test.sql (54 assertions, full replay green). Safe to merge and apply with current main still running.",
+      "verify": "SELECT s.user_id, s.current_profession_slug, p.cig_profession_slug FROM public.security_career_profiles s JOIN public.sp_passport_profiles p ON p.holder_user_id = s.user_id WHERE s.current_profession_slug IS DISTINCT FROM p.cig_profession_slug;",
+      "rollback": "supabase/rollback/20261007090000_canonical_professional_profile_rollback.sql"
+    },
+    {
+      "file": "20261009090000_scp_interview_assessment_supersede_order.sql",
       "hostedState": "pending",
       "introduces": [],
       "note": "Hosted owner UAT P0: a recruiter saved a rating and could not change it. Introduces no object. It makes scp_interview_assessments_superseded_by_fkey DEFERRABLE INITIALLY IMMEDIATE and replaces scp_iv_record_assessment so the original row is marked superseded BEFORE the replacement is inserted. The old order put two live rows in scp_interview_assessments_live_idx for the duration of the INSERT, so every attempt to supersede an assessment failed on a raw unique-violation -- the supersede path could never have worked, and had no test. Behaviour-only: no column, no table, no policy and no grant change; the unique index, the locked guard, the in-place-edit guard, the reattribution guard and the confirmed-evidence rule are all untouched, and the evidence rule is now asserted against the supersede path too (R2.17h). Order-independent with the UI: the server function has passed a supersede reason through since it was written, so this only makes a call that was already being made succeed. Verified locally against the 54322 stack -- full db-test.sh replay green, 85 Interview Intelligence runtime assertions including save -> reopen -> edit -> save.",
       "verify": "SELECT condeferrable FROM pg_constraint WHERE conname = 'scp_interview_assessments_superseded_by_fkey';  -- expect t",
-      "rollback": "supabase/rollback/20261007090000_scp_interview_assessment_supersede_order_rollback.sql"
+      "rollback": "supabase/rollback/20261009090000_scp_interview_assessment_supersede_order_rollback.sql"
     }
   ],
   "policyVersion": 2,

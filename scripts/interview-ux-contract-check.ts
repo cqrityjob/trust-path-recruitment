@@ -1442,7 +1442,7 @@ const REPORT =
   // being tidy would not save it.
   const runtimeSql = read("supabase/migrations/20260920090000_scp_interview_runtime.sql");
   const supersedeSql = read(
-    "supabase/migrations/20261007090000_scp_interview_assessment_supersede_order.sql",
+    "supabase/migrations/20261009090000_scp_interview_assessment_supersede_order.sql",
   );
   ok(
     /SCP_IV_NO_CONFIRMED_EVIDENCE:/.test(runtimeSql) &&
