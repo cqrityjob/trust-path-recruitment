@@ -36,7 +36,7 @@
 
 import { computeCvReadiness } from "./cv/readiness";
 import { computeProfileCompleteness } from "./completeness";
-import { isPendingClaim, type ProfessionalIdentityV1 } from "./types";
+import { isPendingClaim, isUnavailable, type ProfessionalIdentityV1 } from "./types";
 
 export const NEXT_BEST_ACTION_VERSION = "next-best-action-v1" as const;
 
@@ -104,6 +104,33 @@ export interface NextBestActionSignals {
   /** How many CVs this person has saved. Undefined means "not known here",
    *  which is what a release without CV persistence honestly reports. */
   readonly savedCvCount?: number;
+
+  /**
+   * Whether Career Discovery would actually admit THIS person.
+   *
+   * ── WHY THE LADDER HAS TO BE TOLD ──────────────────────────────────
+   *
+   * `hasCompletedReport === false` answers "have they done it", which is a
+   * fact about the person. Whether they MAY do it is a fact about the
+   * platform, and the two are independent: the content is `active` while
+   * only platform admins and `cd_internal_testers` rows may run it, because
+   * the recommendation layer on top of it is mid-build. That gate is a
+   * governance decision and this file does not touch it.
+   *
+   * What this file must not do is offer a door the product will refuse to
+   * open. The dashboard already asks the SAME two gates the assessment
+   * route asks and passes the answer down; without it the ladder happily
+   * recommended "Take Career Discovery" to somebody who would land on "the
+   * assessment isn't open yet".
+   *
+   * `false` withholds the action. `true` and `undefined` both allow it —
+   * undefined means "nobody asked", which is the state of every caller that
+   * does not gate, and silently hiding a legitimate action because a query
+   * has not answered yet would be its own defect. The dashboard resolves the
+   * gate before it renders, so the undefined case is the honest default and
+   * not a loophole.
+   */
+  readonly careerDiscoveryOpen?: boolean;
 }
 
 export function computeNextBestActions(
@@ -120,23 +147,47 @@ export function computeNextBestActions(
 
   const { workload, discovery, claims } = identity;
 
+  // A read that did not answer decides nothing. Every empty array in this
+  // model can mean "nothing yet" or "we could not tell", and only the first
+  // of those is grounds for asking somebody to do something — recommending
+  // "open your Security Passport" to a holder whose Passport merely failed
+  // to load is the read failure escalated into an instruction.
+  const known = (group: Parameters<typeof isUnavailable>[1]) => !isUnavailable(identity, group);
+
   /* ---- 1 · Blocking and invited -------------------------------------- */
 
   // An employer asked for this. It is the only thing on this list where
   // somebody else is waiting, so it is the only thing that can be first.
-  if (workload.assessmentAssignmentCount > 0) {
-    add(
-      "complete_assessment_assignment",
-      1,
-      "/academy",
-      workload.assessmentAssignmentCount,
-    );
+  if (known("assessments") && workload.assessmentAssignmentCount > 0) {
+    add("complete_assessment_assignment", 1, "/academy", workload.assessmentAssignmentCount);
   }
 
   // A report has been released TO this person. Not showing it would be
   // withholding something already decided to be theirs.
-  if (workload.releasedReportCount > 0) {
-    add("read_released_report", 1, "/my-career", workload.releasedReportCount);
+  //
+  // ── WHERE IT GOES ──────────────────────────────────────────────────
+  //
+  // It used to go to `/my-career`, which is the page the card is ON. A
+  // primary action that navigates to itself is not a small imprecision: it
+  // is the one suggestion on this list where somebody else has already
+  // decided the person may read something, and it spent that click on
+  // nothing.
+  //
+  // The report itself when the seam could name one — the same
+  // lifecycle-plus-snapshot condition the assessment history applies before
+  // IT offers the link, so this can never open a document that surface
+  // would refuse to. Otherwise the assessments area, which lists every
+  // released report with its own link. Never a self-link, and never a
+  // report id this product invented.
+  if (known("assessments") && workload.releasedReportCount > 0) {
+    add(
+      "read_released_report",
+      1,
+      workload.releasedReportAttemptId
+        ? `/academy/report/${workload.releasedReportAttemptId}`
+        : "/academy",
+      workload.releasedReportCount,
+    );
   }
 
   /* ---- 2 · Unfinished, high value ------------------------------------ */
@@ -144,18 +195,25 @@ export function computeNextBestActions(
   // The profile fields the rest of the product reads. Gated on the two
   // heavyweight sections rather than on the score, because a person can sit
   // at a respectable percentage with neither of them answered.
+  //
+  // Both gating sections are read from `profiles`, `sp_passport_profiles`
+  // and `security_career_profiles`, so a failure in any of the three makes
+  // "missing" unknowable rather than true.
   const completeness = computeProfileCompleteness(identity);
   const missingCore =
     completeness.missingSections.includes("identity") ||
     completeness.missingSections.includes("profession");
-  if (missingCore) {
+  if (known("account") && known("profile") && known("passport") && missingCore) {
     add("complete_profile_basics", 2, "/my-career/profile");
   }
 
   /* ---- 3 · Trust ----------------------------------------------------- */
 
   const pending = claims.filter(isPendingClaim).length;
-  if (!identity.hasPassport) {
+  if (!known("passport") || !known("claims")) {
+    // Neither branch below can be decided honestly: "you have no Passport"
+    // and "your claims did not load" are the same empty object here.
+  } else if (!identity.hasPassport) {
     add("start_passport", 3, "/passport");
   } else if (pending > 0) {
     // Only when there is something to submit. A holder with nothing pending
@@ -166,7 +224,13 @@ export function computeNextBestActions(
 
   /* ---- 4 · Career development ---------------------------------------- */
 
-  if (!discovery.hasCompletedReport) {
+  // Withheld when the gate has ANSWERED no. See `careerDiscoveryOpen`: this
+  // is the difference between a suggestion and a dead end.
+  if (
+    known("discovery") &&
+    !discovery.hasCompletedReport &&
+    signals.careerDiscoveryOpen !== false
+  ) {
     add("take_career_discovery", 4, "/security-career-assessment");
   }
 
@@ -175,7 +239,7 @@ export function computeNextBestActions(
   // The card exists only when the report NAMES careers — the same condition
   // the report view itself applies. Offering it otherwise is a door onto an
   // empty room.
-  if (discovery.hasCompletedReport && discovery.namesCareers) {
+  if (known("discovery") && discovery.hasCompletedReport && discovery.namesCareers) {
     add("create_career_card", 5, "/my-career/career-card");
   }
 
@@ -191,7 +255,7 @@ export function computeNextBestActions(
     else add("create_cv", 5, "/my-career/cv");
   }
 
-  if (workload.applicationCount === 0) {
+  if (known("applications") && workload.applicationCount === 0) {
     add("explore_jobs", 5, "/jobs");
   }
 

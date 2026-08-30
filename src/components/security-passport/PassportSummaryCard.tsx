@@ -24,13 +24,29 @@
 // number about a person's professional standing is the exact failure mode
 // this product exists to avoid. Counts are facts; a score would not be.
 //
-// ── JURISDICTION-FIRST ─────────────────────────────────────────────────
+// ── ONE LABEL, ONE NUMBER ──────────────────────────────────────────────
 //
-// The card leads with the credentials relevant to the holder's stated work
-// location and reports the rest as "other records", per
-// jurisdiction-relevance.ts. Nothing is hidden and nothing is deleted: a
-// holder who moves from Stockholm to Dubai keeps every Swedish credential,
-// and simply stops being told that Swedish credentials are what Dubai reads.
+// The counts here used to be jurisdiction-relevant while the professional
+// identity header two rems above counted the holder's whole Passport. Both
+// said "Verifierade". A holder with three verified Swedish credentials who
+// had stated Dubai as their work location therefore read "3 verifierade" and
+// "0 Verifierade" on one screen, under the same word.
+//
+// Neither number was wrong. The label was: they answer different questions.
+// So the headline figure is now what the holder HAS — every verified record,
+// which is the same thing the header counts and can never contradict it —
+// and relevance is stated as its own sentence, with the market named:
+//
+//     3 verifierade
+//     2 verifierade gäller för Dubai, Förenade Arabemiraten
+//
+// ── JURISDICTION-FIRST, STILL ──────────────────────────────────────────
+//
+// Relevance is not softened, only separated from the total. The split still
+// comes from jurisdiction-relevance.ts, the "other records" line still names
+// the countries, and nothing is hidden or deleted: a holder who moves from
+// Stockholm to Dubai keeps every Swedish credential, and simply stops being
+// told that Swedish credentials are what Dubai reads.
 
 import { Link } from "@tanstack/react-router";
 import { IdCard, Lock, ShieldCheck, Clock } from "lucide-react";
@@ -73,8 +89,18 @@ export function PassportSummaryCard({
   // does not stop at a border.
   const relevant = [...split.here, ...split.portable];
 
-  const verified = relevant.filter((c) => c.assertionLevel === "verified").length;
-  const pending = relevant.filter((c) => c.assertionLevel !== "verified").length;
+  // The headline figures count the whole Passport — what this person HAS.
+  // This is the same set the professional identity header counts, which is
+  // what makes the two numbers on one screen agree.
+  const verified = claims.filter((c) => c.assertionLevel === "verified").length;
+  const pending = claims.filter((c) => c.assertionLevel !== "verified").length;
+  // And relevance is its own, separately labelled statement.
+  const verifiedHere = relevant.filter((c) => c.assertionLevel === "verified").length;
+  // Only worth saying when there is a market to say it about AND something
+  // verified to be relevant or not. With no stated work location every claim
+  // is already "here" (see splitByWorkLocation), so the sentence would be the
+  // headline figure restated.
+  const showRelevance = Boolean(work.jurisdictionCode) && verified > 0;
   // Sharing sends the public_card package, which is verified content only.
   // Offering it to a holder with nothing verified is offering an empty envelope.
   const canShare = claims.some((c) => c.assertionLevel === "verified");
@@ -129,7 +155,7 @@ export function PassportSummaryCard({
           <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-primary-foreground/20 pt-4 sm:grid-cols-3">
             <div className="min-w-0">
               <dt className="text-[10px] uppercase tracking-[0.18em] text-primary-foreground/60">
-                {pt("home.passport.verified")}
+                {pt("home.passport.verifiedTotal")}
               </dt>
               <dd className="mt-1 flex items-center gap-1.5 text-2xl font-semibold tabular-nums text-primary-foreground">
                 <ShieldCheck aria-hidden="true" className="h-4 w-4 text-primary-foreground/70" />
@@ -154,6 +180,29 @@ export function PassportSummaryCard({
               </dd>
             </div>
           </dl>
+
+          {/* Relevance, said in words with the market named — never a second
+              number under the word the total already uses. "0 currently
+              relevant for Dubai" beside "3 verified" is two true facts; two
+              cells both labelled "Verified" reading 3 and 0 is not. */}
+          {showRelevance && (
+            <p className="mt-4 text-sm text-primary-foreground/80">
+              <span className="font-medium text-primary-foreground">
+                {verifiedHere === 0
+                  ? `${pt("home.passport.relevantVerifiedNone")} ${formatWorkLocation(
+                      work.jurisdictionCode,
+                      work.subJurisdictionCode,
+                      lang,
+                    )}.`
+                  : `${verifiedHere} ${pt("home.passport.relevantVerified")} ${formatWorkLocation(
+                      work.jurisdictionCode,
+                      work.subJurisdictionCode,
+                      lang,
+                    )}.`}
+              </span>{" "}
+              {pt("home.passport.relevantExplainer")}
+            </p>
+          )}
 
           {relevant.length === 0 && (
             <div className="mt-4 rounded-lg border border-primary-foreground/20 bg-primary-foreground/5 p-4">

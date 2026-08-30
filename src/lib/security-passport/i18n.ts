@@ -135,6 +135,11 @@ const sv = {
   "home.passport.addCredential": "Lägg till behörighet",
   "home.passport.share": "Dela Passport",
   "home.passport.relevantHere": "Uppgifter för vald jurisdiktion",
+  "home.passport.verifiedTotal": "Verifierade totalt",
+  "home.passport.relevantVerified": "verifierade gäller för",
+  "home.passport.relevantVerifiedNone": "Inga av dina verifierade uppgifter gäller för",
+  "home.passport.relevantExplainer":
+    "Uppgifterna finns kvar. Verifierat i ett land betyder inte behörighet i ett annat.",
   "home.passport.otherCredentials": "Övriga uppgifter",
   "home.passport.credentialsFrom": "uppgifter från",
   "home.passport.credentialFrom": "uppgift från",
@@ -1578,6 +1583,11 @@ const en: Record<PassportCopyKey, string> = {
   "home.passport.addCredential": "Add credential",
   "home.passport.share": "Share Passport",
   "home.passport.relevantHere": "Records for the selected jurisdiction",
+  "home.passport.verifiedTotal": "Verified in total",
+  "home.passport.relevantVerified": "verified apply in",
+  "home.passport.relevantVerifiedNone": "None of your verified records apply in",
+  "home.passport.relevantExplainer":
+    "The records remain. Verified in one country does not mean authorised in another.",
   "home.passport.otherCredentials": "Other records",
   "home.passport.credentialsFrom": "records from",
   "home.passport.credentialFrom": "record from",

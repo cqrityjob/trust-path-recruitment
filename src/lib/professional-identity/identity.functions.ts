@@ -33,6 +33,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type {
   IdentityClaim,
   IdentityEmployment,
+  IdentityFactGroup,
   ProfessionalIdentityV1,
 } from "./types";
 import type { CurrentStatus, YearsOfExperience } from "@/lib/security-career-profile/types";
@@ -51,70 +52,157 @@ type Row = Record<string, any>;
  * Every query is independent and every one of them has a safe empty
  * fallback. That is deliberate: this object drives the home screen, and a
  * single failing read must degrade one section rather than blank the page a
- * person just signed in to see. A missing Passport, a missing profile row
- * and a failed query are all legitimately "nothing here yet" as far as the
- * screen is concerned — and the sections that DID load still render.
+ * person just signed in to see.
+ *
+ * ── ABSENT AND UNREADABLE ARE NOT THE SAME ANSWER ──────────────────────
+ *
+ * What the fallbacks may NOT do is make those two look alike. A missing
+ * Passport and a failed `sp_claims` read both produce an empty array, and
+ * the screen printed "0 verifierade" for both — telling a holder with four
+ * verified credentials that they have none. So each read's failure is
+ * recorded in `unavailable`, the empty fallback stays, and the surfaces
+ * decide what to show instead of a number. One broken read still costs one
+ * section rather than the page.
+ *
+ * ── EVERY READ NAMES THE CALLER ────────────────────────────────────────
+ *
+ * RLS is the boundary and remains mandatory. It is not, however, the only
+ * thing standing between one person's dashboard and another person's rows:
+ * `job_applications` is SELECT-able by employer members for their own
+ * vacancies, so an unfiltered `count` returned the applications this person
+ * can SEE rather than the ones they SENT. For an employer's recruiter who is
+ * also a candidate those are different numbers, and the dashboard showed the
+ * larger one as their own job search. Every user-owned read below therefore
+ * carries its own `user = me` predicate, RLS underneath it.
  */
 export async function readProfessionalIdentity(
   supabase: ScopedClient,
   userId: string,
 ): Promise<ProfessionalIdentityV1> {
-  const [account, career, passport, experience, claims, snapshot, applications, assignments, history, memberships] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("display_name, country, locale")
-        .eq("id", userId)
-        .maybeSingle(),
-      supabase
-        .from("security_career_profiles")
-        .select(
-          "current_status, current_profession_slug, current_profession_other, years_of_experience",
-        )
-        .eq("user_id", userId)
-        .maybeSingle(),
-      supabase
-        .from("sp_passport_profiles")
-        .select("headline, jurisdiction_code")
-        .eq("holder_user_id", userId)
-        .maybeSingle(),
-      supabase
-        .from("sp_experience_periods")
-        .select(
-          "id, employer_name, role_title, started_on, ended_on, employment_type, jurisdiction_code, assertion_level",
-        )
-        .eq("holder_user_id", userId)
-        .eq("lifecycle_state", "active")
-        .order("started_on", { ascending: false }),
-      supabase
-        .from("sp_claims")
-        .select(
-          "id, claim_type, title, claimed_issuer_name, issued_on, valid_until, skill_level, assertion_level, lifecycle_state",
-        )
-        .eq("holder_user_id", userId)
-        .eq("lifecycle_state", "active"),
-      // Newest report only. The dashboard shows one; a history page reads
-      // its own list.
-      supabase
-        .from("cd_report_snapshots")
-        .select("id, generated_at, dna_scores")
-        .order("generated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("job_applications").select("id", { count: "exact", head: true }),
-      supabase.rpc("scp_my_academy_assignments"),
-      supabase.rpc("scp_my_assessment_history"),
-      supabase
-        .from("employer_memberships")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .is("removed_at", null),
-    ]);
+  const [
+    account,
+    career,
+    passport,
+    experience,
+    claims,
+    snapshot,
+    applications,
+    assignments,
+    history,
+    memberships,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, country, locale")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("security_career_profiles")
+      .select(
+        "current_status, current_profession_slug, current_profession_other, years_of_experience",
+      )
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("sp_passport_profiles")
+      .select("headline, jurisdiction_code, sub_jurisdiction_code")
+      .eq("holder_user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("sp_experience_periods")
+      .select(
+        "id, employer_name, role_title, started_on, ended_on, employment_type, jurisdiction_code, assertion_level",
+      )
+      .eq("holder_user_id", userId)
+      .eq("lifecycle_state", "active")
+      .order("started_on", { ascending: false }),
+    supabase
+      .from("sp_claims")
+      .select(
+        "id, claim_type, title, claimed_issuer_name, issued_on, valid_until, skill_level, assertion_level, lifecycle_state",
+      )
+      .eq("holder_user_id", userId)
+      .eq("lifecycle_state", "active"),
+    // Newest report only. The dashboard shows one; a history page reads
+    // its own list.
+    //
+    // The embedded session is not decoration and not a join for data: it
+    // is the RLS predicate written out. `cd own snapshots select` admits a
+    // snapshot whose `cd_sessions.user_id = auth.uid()`, and `!inner` plus
+    // the same equality states that here, so the read is correct on its own
+    // terms rather than only because the database refused the alternative.
+    supabase
+      .from("cd_report_snapshots")
+      .select("id, generated_at, dna_scores, cd_sessions!inner(user_id)")
+      .eq("cd_sessions.user_id", userId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // THE candidate-state read that RLS alone gets wrong. See the note on
+    // this function: employer members may SELECT applications to their own
+    // vacancies, so "how many applications are there" and "how many did I
+    // send" are different questions, and only the second one belongs on a
+    // person's own career page.
+    supabase
+      .from("job_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("applicant_user_id", userId),
+    supabase.rpc("scp_my_academy_assignments"),
+    supabase.rpc("scp_my_assessment_history"),
+    supabase
+      .from("employer_memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .is("removed_at", null),
+  ]);
 
   const accountRow = (account?.data ?? null) as Row | null;
   const careerRow = (career?.data ?? null) as Row | null;
   const passportRow = (passport?.data ?? null) as Row | null;
+
+  // Which reads did not answer. PostgREST reports failure in `error` rather
+  // than by throwing, so an unrecorded failure is indistinguishable from an
+  // empty table — which is the whole defect. A read that came back `undefined`
+  // (a rejected member of the Promise.all shape) counts as failed too.
+  const unavailable: IdentityFactGroup[] = [];
+  const note = (group: IdentityFactGroup, result: { error?: unknown } | undefined) => {
+    if ((!result || result.error) && !unavailable.includes(group)) unavailable.push(group);
+  };
+  note("account", account);
+  note("profile", career);
+  note("passport", passport);
+  note("employment", experience);
+  note("claims", claims);
+  note("discovery", snapshot);
+  note("applications", applications);
+  note("assessments", assignments);
+  note("assessments", history);
+  note("memberships", memberships);
+
+  // The profession's published title, from the SAME catalogue the picker
+  // offers. Sequential rather than part of the Promise.all above because it
+  // depends on the slug that read returns, and a second round trip is the
+  // honest cost of not keeping a second profession dictionary in the client.
+  //
+  // Its failure is deliberately NOT recorded as an unavailable group: the
+  // profile itself was read, and `professionLabel` already refuses to print a
+  // slug when no title resolved. A catalogue outage costs the word, not the
+  // section.
+  const professionSlug = (careerRow?.current_profession_slug as string | null) ?? null;
+  let professionTitleSv: string | null = null;
+  let professionTitleEn: string | null = null;
+  if (professionSlug) {
+    const cig = await supabase
+      .from("cig_professions")
+      .select("title_sv, title_en")
+      .eq("slug", professionSlug)
+      .eq("content_status", "published")
+      .maybeSingle();
+    const row = (cig?.data ?? null) as Row | null;
+    professionTitleSv = (row?.title_sv as string | null) ?? null;
+    professionTitleEn = (row?.title_en as string | null) ?? null;
+  }
 
   const employment: IdentityEmployment[] = ((experience?.data ?? []) as Row[]).map((r) => ({
     id: String(r.id),
@@ -152,9 +240,26 @@ export async function readProfessionalIdentity(
 
   // A report is "released" to this person when the platform recorded a
   // release date. Anything else is somebody else's work in progress.
-  const releasedReportCount = ((history?.data ?? []) as Row[]).filter((r) =>
-    Boolean(r.released_at),
-  ).length;
+  const historyRows = ((history?.data ?? []) as Row[]).filter((r) => Boolean(r.released_at));
+  const releasedReportCount = historyRows.length;
+
+  // WHICH released report to open, when the answer is unambiguous.
+  //
+  // The condition is copied from ParticipantAssessmentHistory, deliberately
+  // and exactly: a report is offered only when the lifecycle says the result
+  // is available AND a participant snapshot exists. That is the server
+  // deciding there is something to read — never this seam inferring a
+  // document from a date. Newest first, because a released report is read in
+  // the order it arrived.
+  //
+  // Null when nothing qualifies, which routes to the assessments area rather
+  // than to a document that may not render.
+  const readable = historyRows
+    .filter(
+      (r) => String(r.lifecycle_state) === "result_available" && Boolean(r.participant_snapshot_id),
+    )
+    .sort((a, b) => String(b.released_at ?? "").localeCompare(String(a.released_at ?? "")));
+  const releasedReportAttemptId = readable[0]?.attempt_id ? String(readable[0].attempt_id) : null;
 
   // Assessment work that is genuinely waiting for THIS person. A submitted
   // attempt awaiting review asks nothing of them, and counting it would put
@@ -172,13 +277,16 @@ export async function readProfessionalIdentity(
     locale: (accountRow?.locale as string | null) ?? "sv",
 
     currentStatus: (careerRow?.current_status as CurrentStatus | null) ?? null,
-    currentProfessionSlug: (careerRow?.current_profession_slug as string | null) ?? null,
+    currentProfessionSlug: professionSlug,
     currentProfessionOther: (careerRow?.current_profession_other as string | null) ?? null,
+    currentProfessionTitleSv: professionTitleSv,
+    currentProfessionTitleEn: professionTitleEn,
     yearsOfExperience: (careerRow?.years_of_experience as YearsOfExperience | null) ?? null,
 
     hasPassport: Boolean(passportRow),
     headline: (passportRow?.headline as string | null) ?? null,
     workCountry: (passportRow?.jurisdiction_code as string | null) ?? null,
+    workSubJurisdiction: (passportRow?.sub_jurisdiction_code as string | null) ?? null,
 
     employment,
     claims: claimList,
@@ -192,8 +300,10 @@ export async function readProfessionalIdentity(
       applicationCount: applications?.count ?? 0,
       assessmentAssignmentCount: openAssignments,
       releasedReportCount,
+      releasedReportAttemptId,
       employerWorkspaceCount: memberships?.count ?? 0,
     },
+    unavailable,
   };
 }
 

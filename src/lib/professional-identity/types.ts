@@ -111,6 +111,62 @@ export interface IdentityWorkload {
   readonly assessmentAssignmentCount: number;
   readonly releasedReportCount: number;
   readonly employerWorkspaceCount: number;
+  /** The attempt whose released report this person should be taken to, when
+   *  exactly one is safely identifiable. Null means "the area, not a
+   *  document" -- see next-best-action.ts. Never anybody else's attempt: it
+   *  comes from `scp_my_assessment_history`, which answers for the caller. */
+  readonly releasedReportAttemptId: string | null;
+}
+
+/* ------------------------------------------------------------------ */
+/* What could not be read                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A group of facts, named by the read that produces it.
+ *
+ * ── WHY THE READ MODEL CARRIES ITS OWN FAILURES ────────────────────────
+ *
+ * Every read in this seam has a safe empty fallback, and that is right for
+ * ABSENCE — a person with no Passport genuinely has no claims. It is wrong
+ * for FAILURE. A failed `sp_claims` read and a holder with nothing verified
+ * produce the same empty array, and the screen printed the same "0
+ * verifierade" for both. That tells a holder with four verified credentials
+ * that they have none, which is the single most damaging sentence this
+ * product could put on a person's own home page.
+ *
+ * So a failed read is recorded rather than smoothed away. The surfaces then
+ * have something to render instead of a number, and the rules below have
+ * something to decline to decide on. The empty fallbacks stay: a group that
+ * failed still yields an empty array, so one broken read never throws the
+ * whole object away and the sections that DID load still render.
+ */
+export type IdentityFactGroup =
+  /** `profiles` — display name, country, locale. */
+  | "account"
+  /** `security_career_profiles` — the canonical self-reported profile. */
+  | "profile"
+  /** `sp_passport_profiles` — headline and work location. */
+  | "passport"
+  /** `sp_claims` — credentials, education, languages, skills. */
+  | "claims"
+  /** `sp_experience_periods` — employment history. */
+  | "employment"
+  /** `cd_report_snapshots` — Career Discovery. */
+  | "discovery"
+  /** `job_applications` — this person's own applications. */
+  | "applications"
+  /** `scp_my_academy_assignments` / `scp_my_assessment_history`. */
+  | "assessments"
+  /** `employer_memberships`. */
+  | "memberships";
+
+/** True when the named group's read did not answer. */
+export function isUnavailable(
+  identity: Pick<ProfessionalIdentityV1, "unavailable">,
+  group: IdentityFactGroup,
+): boolean {
+  return identity.unavailable.includes(group);
 }
 
 /**
@@ -133,17 +189,78 @@ export interface ProfessionalIdentityV1 {
   readonly currentProfessionOther: string | null;
   readonly yearsOfExperience: YearsOfExperience | null;
 
+  /** The profession's published title, resolved once on the server against
+   *  the SAME catalogue the picker offers (`cig_professions`). A slug is an
+   *  identifier, not a word in anybody's language, and `vaktare` printed as
+   *  a person's professional identity is the product failing to know what it
+   *  already stores. Null when the slug names no published row — which is a
+   *  content problem, and `professionLabel` says so by refusing to guess. */
+  readonly currentProfessionTitleSv: string | null;
+  readonly currentProfessionTitleEn: string | null;
+
   /** Passport profile. `headline` is the Passport's own field; the work
    *  country is Passport-owned by design (20261007090000) and is NOT
    *  duplicated into the canonical profile. */
   readonly hasPassport: boolean;
   readonly headline: string | null;
   readonly workCountry: string | null;
+  /** The emirate/region inside `workCountry`, where the holder stated one.
+   *  Carried because a Dubai holder is not "a UAE holder": SIRA's writ does
+   *  not run in Abu Dhabi, and flattening the two makes the UAE-wide claim
+   *  the market pack exists to refuse. Rendered with `formatWorkLocation`,
+   *  never as a bare code. */
+  readonly workSubJurisdiction: string | null;
 
   readonly employment: readonly IdentityEmployment[];
   readonly claims: readonly IdentityClaim[];
   readonly discovery: IdentityDiscovery;
   readonly workload: IdentityWorkload;
+
+  /** The reads that did not answer. Empty on a healthy load. See
+   *  `IdentityFactGroup` for why a failure is carried rather than smoothed
+   *  into a zero. */
+  readonly unavailable: readonly IdentityFactGroup[];
+}
+
+/* ------------------------------------------------------------------ */
+/* Profession label                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The ONE place a profession becomes a word.
+ *
+ * ── WHY A FUNCTION AND NOT A `??` CHAIN ────────────────────────────────
+ *
+ * It was `currentProfessionOther ?? currentProfessionSlug`, written out on
+ * the personal home and again on the profile page. Both printed the raw
+ * slug — `vaktare` — as the person's professional identity whenever the
+ * profession came from the catalogue rather than from free text, which is
+ * the ordinary case: the picker WRITES the slug.
+ *
+ * The fix is not a second dictionary. `cig_professions` already holds the
+ * Swedish and English titles and is already the picker's source, so the
+ * seam resolves the title there once and every surface reads it here.
+ *
+ * ── WHY A SLUG IS NEVER THE FALLBACK ───────────────────────────────────
+ *
+ * A slug that resolves to no published row means the catalogue and the
+ * stored profile disagree. Printing the slug turns that into a sentence
+ * about the person; returning null lets the surface say "not filled in
+ * yet", which is at least not a claim about who they are.
+ */
+export function professionLabel(
+  identity: Pick<
+    ProfessionalIdentityV1,
+    "currentProfessionOther" | "currentProfessionTitleSv" | "currentProfessionTitleEn"
+  >,
+  lang: "sv" | "en",
+): string | null {
+  const title =
+    lang === "en" ? identity.currentProfessionTitleEn : identity.currentProfessionTitleSv;
+  const other = identity.currentProfessionOther?.trim();
+  // The catalogue title first: a person who picked "Väktare" and also typed
+  // something into the free-text box has a canonical answer, and it wins.
+  return title?.trim() || other || null;
 }
 
 /* ------------------------------------------------------------------ */
