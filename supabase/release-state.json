@@ -174,6 +174,23 @@
       "note": "Four DRAFT entry-level Career Discovery professions (SP015 Butikskontrollant, SP016 Larmoperator, SP017 Sakerhetsreceptionist, SP018 Larminstallator) and their 68 calibration rows. Introduces no object: rows only, into the existing cd_professions and cd_profession_profiles. Every row is approved_for_ranking = false and review_state = 'ai_researched', and the TypeScript catalogue mirror is deliberately NOT updated, so no application code path can reference them -- fetchApprovedProfessionCatalog filters on the same flag and the approved catalogue stays at exactly 14. Safe to apply before, after or independently of the code. Awaiting owner/SME review before approval. Verified locally against the 54322 stack: forward, rollback and re-apply all succeed; self-verification confirms 17 calibration rows per profession, nothing approved for ranking, and no work-style dimension marked central.",
       "verify": "SELECT profession_id, approved_for_ranking, review_state FROM cd_professions WHERE profession_id IN ('SP015','SP016','SP017','SP018');",
       "rollback": "supabase/rollback/20261006090000_cd_layer4_entry_gap_professions_rollback.sql"
+    },
+    {
+      "file": "20261007090000_canonical_professional_profile.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "object": "security_career_profile_reconciliations",
+          "kind": "table"
+        },
+        {
+          "object": "career_profile_mirror_profession_to_passport",
+          "kind": "function"
+        }
+      ],
+      "note": "EXPAND half of a two-phase release; the application half is 20261008090000 + the Career Journey code, which must NOT merge before this is applied. Consolidates the self-reported current profession into ONE canonical home: before this, security_career_profiles.current_profession_slug and sp_passport_profiles.cig_profession_slug were both user-writable, from two surfaces, with nothing keeping them in step. Adds a reconciliation log with least-privilege grants: SELECT on the table, COLUMN-LEVEL UPDATE (resolved_at) only, no INSERT and no DELETE, and an explicit REVOKE first because Supabase default privileges would otherwise grant all of them including TRUNCATE. Column-level because RLS constrains rows, not columns: a table-wide UPDATE would let a holder rewrite the canonical/passport values, the resolution or created_at on their own audit row, reconciles the existing rows under a rule that never overwrites a user own answer, and installs three sync triggers: canonical -> Passport mirror, seed of a newly created Passport row, and a temporary COMPATIBILITY trigger carrying an old client Passport write back to the canonical row. BACKWARD COMPATIBLE BY CONSTRUCTION: no column is dropped, no constraint is added that an existing client could violate, and the current application keeps writing exactly what it writes today -- proven statement-for-statement in Group F of supabase/tests/canonical_professional_profile_test.sql (54 assertions, full replay green). Safe to merge and apply with current main still running.",
+      "verify": "SELECT s.user_id, s.current_profession_slug, p.cig_profession_slug FROM public.security_career_profiles s JOIN public.sp_passport_profiles p ON p.holder_user_id = s.user_id WHERE s.current_profession_slug IS DISTINCT FROM p.cig_profession_slug;",
+      "rollback": "supabase/rollback/20261007090000_canonical_professional_profile_rollback.sql"
     }
   ],
   "policyVersion": 2,
