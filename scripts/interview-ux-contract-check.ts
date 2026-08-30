@@ -1141,10 +1141,7 @@ const REPORT =
 
   // Review hands off to assessment; it does not contain one. Two names for one
   // scroll is exactly what splitting the steps was for.
-  ok(
-    review.includes('t("iiu.ev.toassess")'),
-    "review no longer hands off to the assessment step",
-  );
+  ok(review.includes('t("iiu.ev.toassess")'), "review no longer hands off to the assessment step");
   ok(
     !review.includes("recordAssessment") && !review.includes("markAssessed"),
     "the assessment workflow is back on the review screen — the two steps are one page again",
