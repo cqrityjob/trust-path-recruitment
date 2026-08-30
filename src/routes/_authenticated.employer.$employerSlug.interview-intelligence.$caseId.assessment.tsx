@@ -171,17 +171,6 @@ function Page() {
             <h2 id="s-assess" className="sr-only">
               {t("iiu.ev.s3.title")}
             </h2>
-            {/* The badge that says whose judgement this is. The section title
-            says it too, but a recruiter scanning the page sees shapes before
-            they read sentences, and this is the one place where mistaking
-            the author would matter most. */}
-            <p className="mt-2">
-              <MaterialBadge state="assessment" />
-            </p>
-            <div className="mt-2">
-              <LevelZeroNote />
-            </div>
-
             <ul className="mt-4 space-y-3">
               {d.questions.map((qq) => {
                 const existing = d.assessments.find((a) => a.questionId === qq.id);
