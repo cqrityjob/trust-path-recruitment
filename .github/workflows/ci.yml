@@ -92,6 +92,21 @@ jobs:
       - name: v3.1 cd_evidence payload check
         run: bun run v31-evidence-payload:check
 
+      # ONE COMPLETED ATTEMPT = ONE CANONICAL RESULT. A candidate completed the
+      # assessment signed out, read their report, then signed in and found
+      # different career recommendations: the pre-login report was built in the
+      # browser, which cannot read cd_professions, so it had no ranking at all.
+      # Asserts there is exactly one builder and that both paths produce a
+      # byte-identical snapshot from the same run.
+      - name: Career Discovery canonical result check
+        run: bun run career-discovery-canonical-result:check
+
+      # The Career Card derives from that same canonical ranking (no profession
+      # picker), and every format fits its canvas in both locales — the layout
+      # collisions this replaces were all found by eye, after shipping.
+      - name: Career Card check
+        run: bun run career-discovery-career-card:check
+
       # The Security Passport guards. They ran on developer machines but not
       # here, which meant the invariants they encode were only ever checked by
       # whoever remembered to run them.

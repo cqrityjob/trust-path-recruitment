@@ -22,9 +22,12 @@
 // unchanged, not re-authored, and not replaced by the Career Intelligence
 // Excel's wording. The Excel is the engine that runs after the assessment.
 //
-// No scoring happens client-side: the server builds the report from the
-// replayed answers exactly as it does for a signed-in run, and it builds it
-// from the 22 Career DNA answers alone.
+// No scoring happens client-side, for anybody, at any point. The server
+// builds the report from the buffered answers — via previewPublicV31Run
+// before there is an account and persistPublicV31Run after — and both go
+// through the one canonical builder, from the 22 Career DNA answers alone.
+// See v31-public.functions.ts's "ONE COMPLETED ATTEMPT = ONE CANONICAL
+// RESULT" header for why that single builder is the whole point.
 //
 // ── AVAILABILITY IS CHECKED FIRST, NOT LAST ────────────────────────────
 //
@@ -43,6 +46,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowRight, Check, Download, Loader2, Share2 } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -83,14 +87,8 @@ import {
   isPersonalItemId,
   MVP_QUESTION_COUNT,
   personalItem,
-  reportTagsFor,
 } from "@/lib/career-discovery/v31/personal-layer";
-import type { Answer } from "@/lib/career-discovery/v31/scoring";
-import {
-  buildValidatedSnapshot,
-  SnapshotValidationError,
-  type ReportSnapshot,
-} from "@/lib/career-discovery/v31/snapshot";
+import type { ReportSnapshot } from "@/lib/career-discovery/v31/snapshot";
 import {
   clearBuffer,
   clearPendingClaim,
@@ -109,6 +107,7 @@ import {
   getV31Availability,
   getV31TesterStatus,
   persistPublicV31Run,
+  previewPublicV31Run,
 } from "@/lib/career-discovery/v31-public.functions";
 import {
   FUNNEL_EVENT_NAMES,
@@ -117,12 +116,12 @@ import {
 } from "@/lib/career-discovery/v31-feedback.functions";
 
 // "result" is the terminal state for BOTH an anonymous and a signed-in
-// visitor while they are still looking at it: the full report, computed
-// client-side from the buffer via the exact same pure buildValidatedSnapshot
-// the server calls, with NOTHING written to the database yet. See
-// clientSnapshot below and the file header — this is what actually restores
-// "no login wall before the result"; a signed-in visitor still moves straight
-// on to "persisting" via the effect below, same as before.
+// visitor while they are still looking at it: the full canonical report,
+// fetched from previewPublicV31Run, with NOTHING written to the database
+// yet. See canonicalSnapshot below — this is what restores "no login wall
+// before the result" WITHOUT the result changing when the wall is crossed;
+// a signed-in visitor still moves straight on to "persisting" via the
+// effect below, same as before.
 type Phase =
   | "checking"
   | "unavailable"
@@ -167,6 +166,7 @@ export function PublicAssessmentFlow() {
   const checkAvailability = useServerFn(getV31Availability);
   const checkTesterStatus = useServerFn(getV31TesterStatus);
   const persist = useServerFn(persistPublicV31Run);
+  const previewRun = useServerFn(previewPublicV31Run);
   const trackEventFn = useServerFn(trackV31FunnelEvent);
   // Fire-and-forget: a tracking failure must never block or degrade the
   // candidate's actual experience (see trackV31FunnelEvent's own doc).
@@ -423,7 +423,12 @@ export function PublicAssessmentFlow() {
         data: {
           locale: buffer.locale,
           answers: buffer.answers,
-          completedAt: buffer.completedAt,
+          // The instant the preview built the report FOR, echoed back, so the
+          // stored snapshot's completedAt matches the one the candidate
+          // already read rather than drifting to a second `now`. Falls back to
+          // the buffer's own frozen stamp when there is no preview in hand
+          // (a legacy buffer resumed in another tab).
+          completedAt: previewQuery.data?.completedAt ?? buffer.completedAt,
           // Contextual self-report, never scored — see career-context.ts.
           // Absent (undefined) when the step was never relevant/shown for
           // this candidate, distinct from an answered "prefer not to say".
@@ -512,88 +517,68 @@ export function PublicAssessmentFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, signedIn]);
 
-  // The full result, computed entirely client-side from the buffer — the
-  // exact same pure buildValidatedSnapshot the server calls at persist time,
-  // given the exact same answers. Nothing is written to the database to
-  // produce this: see v31-public-buffer.ts's header for why that is the
-  // whole security argument for the anonymous flow, and why this is safe to
-  // compute and render in the browser before any account exists.
-  const clientSnapshot = useMemo<ReportSnapshot | null>(() => {
+  // ── THE CANONICAL RESULT ────────────────────────────────────────────
+  //
+  // Built by the SERVER, for a signed-out visitor exactly as for a signed-in
+  // one: `previewPublicV31Run` runs the same `buildCanonicalSnapshot` the
+  // save path runs, with the same approved profession catalogue and the same
+  // published CIG edges, and writes nothing.
+  //
+  // This replaces a client-side `buildValidatedSnapshot` call that passed no
+  // `professionCatalog` and no `cigReachableSlugs` — the browser cannot read
+  // `cd_professions` — and therefore produced a report with NO career
+  // recommendations. Signing in rebuilt the same answers with the catalogue,
+  // and the Top 3 appeared out of nowhere. Same answers, same engine,
+  // different inputs, different result. See v31-public.functions.ts's header.
+  //
+  // There is deliberately no client-side fallback. A fallback IS the defect:
+  // it would silently serve a differently-ranked report whenever the call
+  // failed, which is the one thing this must never do. A failure shows a
+  // retry instead, with the buffer untouched.
+  const previewInput = useMemo(() => {
     if (!buffer || !isComplete(buffer)) return null;
-    const contextStatus = contextStatusOf(buffer);
-    if (!contextStatus) return null;
-
-    const answers: Answer[] = [];
-    const discoveryTags: string[] = [];
-    for (const a of buffer.answers) {
-      if (a.format === "scale") answers.push({ itemId: a.itemId, format: "scale", value: a.value });
-      else if (a.format === "single_choice") {
-        answers.push({ itemId: a.itemId, format: "single_choice", optionId: a.optionId });
-      } else if (a.format === "personal" && isAdaptiveItemId(a.itemId)) {
-        // Mandate item 6: Discovery Path tags — contextual self-report,
-        // never scored, feeding only Recommendation Priority's explanation
-        // layer (see professions.ts's contextCorroborated).
-        discoveryTags.push(...reportTagsFor(a.itemId, a.value));
-      }
-      // Context (C1/C2) "personal" answers carry no report tags — excluded
-      // exactly as the server's own byItem/personal split excludes all
-      // personal answers from scoring.
-    }
-
-    try {
-      return buildValidatedSnapshot({
-        answers,
-        locale: buffer.locale,
-        completedAt: buffer.completedAt ?? new Date().toISOString(),
-        contextStatus,
-        currentProfessionCigSlug: careerContext.currentProfessionSlug,
-        // Real-world defect fix: without this, ReportSnapshot.currentProfession
-        // is always null for the anonymous client-computed report (it
-        // requires BOTH a slug and a resolved title — see v31/snapshot.ts),
-        // so "YOU ARE HERE" could never render here no matter what the
-        // candidate picked. The title is captured client-side at selection
-        // time in CareerContextStep (already had it from the picker's own
-        // fetched list) — no extra query needed here.
-        currentProfessionTitle:
-          careerContext.currentProfessionTitleSv && careerContext.currentProfessionTitleEn
-            ? {
-                sv: careerContext.currentProfessionTitleSv,
-                en: careerContext.currentProfessionTitleEn,
-              }
-            : null,
-        // Same real-world fix, item 4: experience band now has real effect
-        // on stage/pathway interpretation (professions.ts's
-        // resolveStageBaseline) once a profession catalog is present.
-        experienceBand: careerContext.experienceBand,
-        discoveryTags,
-        // No professionCatalog: an anonymous browser session has no
-        // business reading cd_professions — RLS grants SELECT on it to
-        // `authenticated` only, `anon` holds nothing (see
-        // v31-public-buffer.ts's header). This is permanent, independent of
-        // approved_for_ranking: even now that professions are activated
-        // (Owner Approval & Production Activation), an anonymous candidate's
-        // client-computed report still always gets `available: false` here
-        // by construction — only a signed-in candidate's report (built
-        // server-side, with real RLS-scoped access) can ever include
-        // profession recommendations. Confirmed live: activating all 14
-        // professions had zero effect on the anonymous result page, exactly
-        // as this boundary predicts.
-      });
-    } catch (err) {
-      if (!(err instanceof SnapshotValidationError)) throw err;
-      // Should not happen: the flow already guarantees a well-formed,
-      // complete buffer before this runs. If it ever does, fail
-      // toward "let the candidate sign in and let the server try" rather
-      // than showing a broken page.
-      console.error("[v31] client-side result computation failed", err.failures);
-      return null;
-    }
+    if (!contextStatusOf(buffer)) return null;
+    return {
+      locale: buffer.locale,
+      answers: buffer.answers,
+      // Frozen at completion (markComplete), so a refresh re-requests the
+      // report for the SAME instant and gets the same snapshot back.
+      completedAt: buffer.completedAt ?? undefined,
+      // Contextual self-report, never scored — see career-context.ts. Absent
+      // (undefined) when the step was never relevant for this candidate,
+      // distinct from an answered "prefer not to say". The same value the
+      // save path sends, so the two builds agree.
+      careerContext: careerContext.currentProfessionStatus
+        ? {
+            currentProfessionStatus: careerContext.currentProfessionStatus,
+            currentProfessionSlug: careerContext.currentProfessionSlug,
+            currentProfessionOther: careerContext.currentProfessionOther,
+            experienceBand: careerContext.experienceBand,
+          }
+        : undefined,
+    };
   }, [buffer, careerContext]);
 
+  const previewQuery = useQuery({
+    queryKey: ["v31", "public-preview", previewInput],
+    queryFn: () => previewRun({ data: previewInput! }),
+    enabled: previewInput !== null,
+    // The result of a finished run is a fact about answers that cannot
+    // change while the candidate looks at it. Never refetch it in the
+    // background: a silent refetch is exactly how a report could change
+    // under the reader.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+  });
+
+  const canonicalSnapshot: ReportSnapshot | null = previewQuery.data?.snapshot ?? null;
+
   useEffect(() => {
-    if (phase === "result" && clientSnapshot) track("result_viewed");
+    if (phase === "result" && canonicalSnapshot) track("result_viewed");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, clientSnapshot !== null]);
+  }, [phase, canonicalSnapshot !== null]);
 
   if (phase === "checking") {
     return (
@@ -844,7 +829,7 @@ export function PublicAssessmentFlow() {
   }
 
   // phase === "result" — the full report, no account required. See
-  // clientSnapshot above: this is the actual fix for "no login wall before
+  // canonicalSnapshot above: this is the actual fix for "no login wall before
   // the result". Signed-in visitors pass through here for a moment before
   // the effect above hands off to the real, saved report.
   // DOWNLOAD / SHARE — section 5's intended order (complete -> see result ->
@@ -921,11 +906,36 @@ export function PublicAssessmentFlow() {
     </AssessmentPanel>
   );
 
-  if (!clientSnapshot) {
-    // The rare fallback: something about this browser's computed snapshot
-    // did not validate. The candidate has not lost anything — the buffer is
-    // untouched — so signing in and letting the server (which runs the same
-    // validation against the same answers) try is still a real path forward.
+  // The canonical report is still on its way. Explicitly a WAIT, not a
+  // degraded report: showing anything result-shaped here would mean showing
+  // a result that changes when the real one arrives, which is the exact
+  // defect this whole path exists to close.
+  if (previewQuery.isPending) {
+    return (
+      <AssessmentShell>
+        <AssessmentPanel className="text-center sm:p-10">
+          <Loader2
+            className="mx-auto h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+          <p role="status" className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
+            {t("cd.public.buildingResult")}
+          </p>
+        </AssessmentPanel>
+      </AssessmentShell>
+    );
+  }
+
+  if (!canonicalSnapshot) {
+    // The report could not be built. The candidate has lost NOTHING — the
+    // buffer is untouched and the run is still complete — so a retry is a
+    // real path forward, and so is signing in and letting the save path build
+    // the very same report.
+    //
+    // Deliberately no locally-computed stand-in. The browser cannot read the
+    // approved profession catalogue, so anything it produced here would rank
+    // differently from the report this candidate gets on every other screen.
+    // A visible retry is honest; a silently different Top 3 is not.
     return (
       <AssessmentShell>
         <AssessmentPanel className="text-center sm:p-10">
@@ -936,8 +946,23 @@ export function PublicAssessmentFlow() {
             {t("cd.public.doneTitle")}
           </h1>
           <p className="mx-auto mt-3 max-w-[52ch] text-[15px] leading-relaxed text-muted-foreground">
-            {t("cd.public.doneBody")}
+            {t("cd.public.resultUnavailable")}
           </p>
+          <button
+            type="button"
+            onClick={() => void previewQuery.refetch()}
+            disabled={previewQuery.isFetching}
+            className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-[10px] bg-accent px-7 text-sm font-semibold text-accent-foreground transition-colors hover:bg-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60 motion-reduce:transition-none"
+          >
+            {previewQuery.isFetching && (
+              <Loader2
+                className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            )}
+            {t("cd.public.retryResult")}
+          </button>
+          <p className="mt-4 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
         </AssessmentPanel>
         {saveCta}
       </AssessmentShell>
@@ -947,13 +972,13 @@ export function PublicAssessmentFlow() {
   return (
     <AssessmentShell wide>
       <V31ReportView
-        snapshot={clientSnapshot}
-        generatedAt={clientSnapshot.completedAt}
+        snapshot={canonicalSnapshot}
+        generatedAt={canonicalSnapshot.completedAt}
         versions={{
-          definition: clientSnapshot.versions.definitionVersion,
-          content: clientSnapshot.versions.contentVersion,
-          scoring: clientSnapshot.versions.scoringVersion,
-          taxonomy: clientSnapshot.versions.taxonomyVersion,
+          definition: canonicalSnapshot.versions.definitionVersion,
+          content: canonicalSnapshot.versions.contentVersion,
+          scoring: canonicalSnapshot.versions.scoringVersion,
+          taxonomy: canonicalSnapshot.versions.taxonomyVersion,
         }}
         mode="anonymous"
         onCareerCardEvent={(name) => {

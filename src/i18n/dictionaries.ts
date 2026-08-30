@@ -699,15 +699,19 @@ export const dictionaries = {
     "careerDiscovery.report.v31.showMoreDirections": "Visa fler riktningar",
     "careerDiscovery.report.v31.showFewerDirections": "Visa färre",
     "careerDiscovery.report.v31.strongestLead": "Starkaste riktningarna",
-    "careerDiscovery.report.v31.createCareerCardFor":
-      "Skapa mitt Career Card för den här riktningen",
     "careerDiscovery.report.v31.setAsGoal": "Sätt som karriärmål",
     "careerDiscovery.report.v31.goalSet": "Karriärmål ✓",
     "careerDiscovery.report.v31.card.title": "Skapa mitt Career Card",
-    "careerDiscovery.report.v31.card.chooseDirection": "Välj riktning",
+    // The card is the candidate's OWN result, not a direction they pick --
+    // the "Välj riktning" picker and the Career DNA toggle were removed
+    // 2026-08-29 (see CareerCardCreator.tsx). The lede says so plainly, so
+    // nobody opens the modal looking for the choice that used to be here.
+    "careerDiscovery.report.v31.card.lede":
+      "Ditt kort byggs direkt från din rapport — dina tre främsta matchningar, i din ordning.",
     "careerDiscovery.report.v31.card.firstNameLabel": "Förnamn (valfritt)",
     "careerDiscovery.report.v31.card.firstNamePlaceholder": "Visas inte om du lämnar det tomt",
-    "careerDiscovery.report.v31.card.showIndicators": "Visa Career DNA-indikatorer",
+    "careerDiscovery.report.v31.card.firstNameHint":
+      "Bara ditt förnamn hamnar på kortet. Inget annat från din profil delas.",
     "careerDiscovery.report.v31.card.format": "Format",
     "careerDiscovery.report.v31.card.format.story": "Story",
     "careerDiscovery.report.v31.card.format.square": "Kvadrat",
@@ -721,6 +725,33 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Delat.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Bilden är sparad. Lägg till den i din Instagram- eller TikTok-story.",
+    // The desktop share panel (2026-08-29). Every string here is written to
+    // be true on the platform it is shown on: we say what WE do (save, copy,
+    // open LinkedIn with the link) and we say plainly what we do not do
+    // (attach the image to a LinkedIn post, post to Instagram or TikTok).
+    // Nothing here may grow into a promise the browser cannot keep.
+    "careerDiscovery.report.v31.card.share.panel": "Dela ditt kort",
+    "careerDiscovery.report.v31.card.share.panelHint":
+      "Spara eller kopiera bilden och lägg upp den där du vill.",
+    "careerDiscovery.report.v31.card.copyImage": "Kopiera bild",
+    "careerDiscovery.report.v31.card.copyLink": "Kopiera länk",
+    "careerDiscovery.report.v31.card.linkHint":
+      "Länken går till det öppna karriärtestet — aldrig till din privata rapport.",
+    "careerDiscovery.report.v31.card.linkedInHint":
+      "LinkedIn öppnas med länken. Bilden bifogas inte automatiskt — spara den och lägg till den i inlägget.",
+    "careerDiscovery.report.v31.card.appGuidance":
+      "Instagram och TikTok: spara bilden och dela den från appen.",
+    "careerDiscovery.report.v31.card.imageCopied":
+      "Bilden är kopierad. Klistra in den där du vill dela den.",
+    "careerDiscovery.report.v31.card.imageCopyFailed":
+      "Webbläsaren tillät inte att bilden kopierades. Spara den i stället.",
+    "careerDiscovery.report.v31.card.linkCopied": "Länken är kopierad.",
+    "careerDiscovery.report.v31.card.linkCopyFailed":
+      "Kunde inte kopiera länken. Markera och kopiera den nedan.",
+    "careerDiscovery.report.v31.card.linkedInOpened":
+      "LinkedIn öppnades i en ny flik. Bilden är inte bifogad — lägg till den du sparade.",
+    "careerDiscovery.report.v31.card.linkedInBlocked":
+      "Webbläsaren blockerade den nya fliken. Tillåt popup-fönster, eller kopiera länken och klistra in den på LinkedIn.",
     "careerDiscovery.report.v31.feedback.title": "Hjälp oss förbättra vägledningen",
     "careerDiscovery.report.v31.feedback.relevant":
       "Hur relevanta kändes karriärrekommendationerna? (1–5)",
@@ -835,6 +866,13 @@ export const dictionaries = {
     "cd.public.saveNow": "Spara i din karriärresa",
     "cd.public.answersKept":
       "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
+    // The canonical result is built server-side for signed-out visitors too,
+    // so that it cannot differ from the one they get after signing in (see
+    // v31-public.functions.ts). These two cover the wait and the failure.
+    "cd.public.buildingResult": "Sammanställer ditt resultat…",
+    "cd.public.resultUnavailable":
+      "Vi kunde inte hämta ditt resultat just nu. Dina svar finns kvar — försök igen.",
+    "cd.public.retryResult": "Försök igen",
     "cd.public.downloadResult": "Ladda ner resultat",
     "cd.public.shareResult": "Dela resultat",
     "cd.public.shareTitle": "Min Security Career DNA",
@@ -5430,14 +5468,15 @@ export const dictionaries = {
     "careerDiscovery.report.v31.showMoreDirections": "Show more directions",
     "careerDiscovery.report.v31.showFewerDirections": "Show fewer",
     "careerDiscovery.report.v31.strongestLead": "Strongest directions",
-    "careerDiscovery.report.v31.createCareerCardFor": "Create my Career Card for this direction",
     "careerDiscovery.report.v31.setAsGoal": "Set as career goal",
     "careerDiscovery.report.v31.goalSet": "Career goal ✓",
     "careerDiscovery.report.v31.card.title": "Create my Career Card",
-    "careerDiscovery.report.v31.card.chooseDirection": "Choose a direction",
+    "careerDiscovery.report.v31.card.lede":
+      "Your card is built straight from your report — your top three matches, in your order.",
     "careerDiscovery.report.v31.card.firstNameLabel": "First name (optional)",
     "careerDiscovery.report.v31.card.firstNamePlaceholder": "Not shown if left blank",
-    "careerDiscovery.report.v31.card.showIndicators": "Show Career DNA indicators",
+    "careerDiscovery.report.v31.card.firstNameHint":
+      "Only your first name goes on the card. Nothing else from your profile is shared.",
     "careerDiscovery.report.v31.card.format": "Format",
     "careerDiscovery.report.v31.card.format.story": "Story",
     "careerDiscovery.report.v31.card.format.square": "Square",
@@ -5451,6 +5490,28 @@ export const dictionaries = {
     "careerDiscovery.report.v31.card.shared": "Shared.",
     "careerDiscovery.report.v31.card.savedFallback":
       "Image saved. Add it to your Instagram or TikTok story.",
+    "careerDiscovery.report.v31.card.share.panel": "Share your card",
+    "careerDiscovery.report.v31.card.share.panelHint":
+      "Save or copy the image and post it wherever you like.",
+    "careerDiscovery.report.v31.card.copyImage": "Copy image",
+    "careerDiscovery.report.v31.card.copyLink": "Copy link",
+    "careerDiscovery.report.v31.card.linkHint":
+      "The link goes to the open career test — never to your private report.",
+    "careerDiscovery.report.v31.card.linkedInHint":
+      "LinkedIn opens with the link. The image is not attached automatically — save it and add it to your post.",
+    "careerDiscovery.report.v31.card.appGuidance":
+      "Instagram and TikTok: save the image and share it from the app.",
+    "careerDiscovery.report.v31.card.imageCopied":
+      "Image copied. Paste it wherever you want to share it.",
+    "careerDiscovery.report.v31.card.imageCopyFailed":
+      "Your browser did not allow copying the image. Save it instead.",
+    "careerDiscovery.report.v31.card.linkCopied": "Link copied.",
+    "careerDiscovery.report.v31.card.linkCopyFailed":
+      "Couldn't copy the link. Select and copy it below.",
+    "careerDiscovery.report.v31.card.linkedInOpened":
+      "LinkedIn opened in a new tab. The image is not attached — add the one you saved.",
+    "careerDiscovery.report.v31.card.linkedInBlocked":
+      "Your browser blocked the new tab. Allow pop-ups, or copy the link and paste it into LinkedIn.",
     "careerDiscovery.report.v31.feedback.title": "Help us improve this guidance",
     "careerDiscovery.report.v31.feedback.relevant":
       "How relevant did the career recommendations feel? (1–5)",
@@ -5561,6 +5622,10 @@ export const dictionaries = {
     "cd.public.saveNow": "Save to your Career Journey",
     "cd.public.answersKept":
       "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
+    "cd.public.buildingResult": "Putting your result together…",
+    "cd.public.resultUnavailable":
+      "We couldn't load your result just now. Your answers are safe — please try again.",
+    "cd.public.retryResult": "Try again",
     "cd.public.downloadResult": "Download result",
     "cd.public.shareResult": "Share result",
     "cd.public.shareTitle": "My Security Career DNA",
