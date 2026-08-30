@@ -99,13 +99,16 @@ function draft(bundle: CvSourceBundle): string {
   const headlineBase =
     bundle.identity.headline ?? bundle.identity.currentProfession ?? p.summaryLead;
 
-  const summary = [
-    `${p.summaryLead}${bundle.identity.country ? ` (${bundle.identity.country})` : ""}.`,
-    employers.length > 0 ? `${p.summaryIn} ${employers.join(", ")}.` : "",
-    p.summaryClose,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  // One sentence assembled from clauses, not three fragments joined with
+  // full stops. Concatenating "…branschen." with "med erfarenhet från…"
+  // produced "Yrkesverksam inom säkerhetsbranschen (SE). med erfarenhet
+  // från Nordic Security AB." -- a sentence starting mid-clause, in the
+  // first line a person reads on their own CV.
+  const lead =
+    `${p.summaryLead}${bundle.identity.country ? ` (${bundle.identity.country})` : ""}` +
+    (employers.length > 0 ? ` ${p.summaryIn} ${employers.join(", ")}` : "") +
+    ".";
+  const summary = `${lead} ${p.summaryClose}`;
 
   return JSON.stringify({
     headline: headlineBase.slice(0, 160),

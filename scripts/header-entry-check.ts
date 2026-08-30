@@ -208,7 +208,17 @@ expect(
 // -----------------------------------------------------------------------
 // 7. Mobile carries the same entrance, not a desktop-only fix.
 // -----------------------------------------------------------------------
-const mobileMenu = header.slice(header.indexOf('md:hidden", open ? "block" : "hidden"'));
+// The compact menu covers everything below `lg`, not below `md`: six
+// Swedish nav items plus a language toggle plus two actions do not fit in
+// 768px, and at the md breakpoint the desktop bar used to switch on and
+// overflow the viewport by ~240px. The slice must find the real block, so
+// a breakpoint change that silently orphans this check fails here.
+const menuMarker = 'lg:hidden", open ? "block" : "hidden"';
+expect(
+  header.includes(menuMarker),
+  "the compact menu must cover every width below lg -- the desktop bar does not fit at 768px",
+);
+const mobileMenu = header.slice(header.indexOf(menuMarker));
 expect(mobileMenu.length > 0, "the mobile menu block must be present in SiteHeader");
 expect(
   mobileMenu.includes('to="/login"'),

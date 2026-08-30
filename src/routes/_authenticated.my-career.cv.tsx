@@ -128,6 +128,10 @@ const COPY = {
   regenerate: c("Skapa på nytt", "Create again"),
   print: c("Skriv ut / spara som PDF", "Print / save as PDF"),
 
+  awaiting: c(
+    "Ditt CV visas här när du har skapat det. Ingenting sparas och ingenting skickas någonstans — du väljer själv vad du gör med det.",
+    "Your CV appears here once you create it. Nothing is stored and nothing is sent anywhere — what you do with it is your choice.",
+  ),
   step5: c("Granska och använd", "Review and use"),
   reviewNote: c(
     "Läs igenom innan du använder det. Du äger det som står här.",
@@ -379,8 +383,12 @@ function CvPage() {
 
             {/* Steps 5–6 */}
             <div>
+              {/* An empty state that says what will happen, not a repeat of
+                  the column beside it. */}
               {!shown && !run.isPending && (
-                <p className="no-print text-sm text-muted-foreground">{L(COPY.step1Lede, l)}</p>
+                <p className="no-print max-w-md rounded-lg border border-dashed border-border p-5 text-sm leading-relaxed text-muted-foreground">
+                  {L(COPY.awaiting, l)}
+                </p>
               )}
 
               {outcome && outcome.status !== "succeeded" && outcome.status !== "not_ready" && (

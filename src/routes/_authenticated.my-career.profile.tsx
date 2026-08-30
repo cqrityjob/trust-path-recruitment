@@ -238,9 +238,14 @@ function ProfilePage() {
           <div className="space-y-8">
             <ProfessionalIdentityHeader identity={identity} showProfileLink={false} />
 
-            {/* The canonical row's own editor, unchanged. Same component,
-                same draft shape, same save call as /my-career. */}
-            <SecurityCareerProfileCard />
+            {/* The canonical row's own editor, unchanged: same component,
+                same draft shape, same save call as /my-career. It is
+                designed to sit in a dashboard grid cell, so it carries no
+                surface of its own -- given one here, it reads as loose text
+                between two cards. */}
+            <div className="rounded-xl border border-border bg-card p-6 md:p-8">
+              <SecurityCareerProfileCard />
+            </div>
 
             <section aria-labelledby="sections-heading">
               <h2

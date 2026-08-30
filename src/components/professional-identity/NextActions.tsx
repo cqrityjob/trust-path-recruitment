@@ -26,7 +26,7 @@ import {
   type ActionKind,
 } from "@/lib/professional-identity/next-best-action";
 import type { ProfessionalIdentityV1 } from "@/lib/professional-identity/types";
-import { c, L, Lf, type Copy, type Lang } from "./copy";
+import { c, cp, L, Lp, type Copy, type Lang, type PluralCopy } from "./copy";
 
 const TITLE: Readonly<Record<ActionKind, Copy>> = {
   complete_assessment_assignment: c("Slutför din bedömning", "Complete your assessment"),
@@ -40,7 +40,38 @@ const TITLE: Readonly<Record<ActionKind, Copy>> = {
   explore_jobs: c("Utforska jobb inom säkerhet", "Explore security jobs"),
 };
 
+/** Copy for the actions that carry a count. Swedish inflects the noun and
+ *  the participles, so both forms are authored rather than templated. */
+const COUNTED: Readonly<Partial<Record<ActionKind, PluralCopy>>> = {
+  complete_assessment_assignment: cp(
+    c(
+      "{0} bedömning väntar på dig från en arbetsgivare.",
+      "{0} assessment is waiting for you from an employer.",
+    ),
+    c(
+      "{0} bedömningar väntar på dig från arbetsgivare.",
+      "{0} assessments are waiting for you from employers.",
+    ),
+  ),
+  read_released_report: cp(
+    c("{0} rapport har släppts till dig.", "{0} report has been released to you."),
+    c("{0} rapporter har släppts till dig.", "{0} reports have been released to you."),
+  ),
+  submit_passport_verification: cp(
+    c(
+      "{0} uppgift är inlagd men ännu inte granskad.",
+      "{0} entry is recorded but not yet reviewed.",
+    ),
+    c(
+      "{0} uppgifter är inlagda men ännu inte granskade.",
+      "{0} entries are recorded but not yet reviewed.",
+    ),
+  ),
+};
+
 const DETAIL: Readonly<Record<ActionKind, Copy>> = {
+  // The three counted kinds fall back to their singular form here and are
+  // never read: COUNTED covers them, and the renderer prefers it.
   complete_assessment_assignment: c(
     "{0} bedömning väntar på dig från en arbetsgivare.",
     "{0} assessment is waiting for you from an employer.",
@@ -115,7 +146,7 @@ export function NextActions({ identity }: { identity: ProfessionalIdentityV1 }) 
                 <span className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground">
                   {action.count === null
                     ? L(DETAIL[action.kind], l)
-                    : Lf(DETAIL[action.kind], l, action.count)}
+                    : Lp(COUNTED[action.kind] ?? cp(DETAIL[action.kind], DETAIL[action.kind]), l, action.count)}
                 </span>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent">
                   {L(c("Fortsätt", "Continue"), l)}

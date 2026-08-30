@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useLocation } from "@tanstack/react-router";
-import { Menu, X, ShieldCheck, Building2, LogOut } from "lucide-react";
+import { Menu, X, ShieldCheck, Building2, LogOut, Settings } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
@@ -181,10 +181,23 @@ export function SiteHeader() {
     roleLinks.push({ to: "/reviews", label: t("nav.reviews"), count: reviewCount });
   }
 
+  // ── WHY THE DESKTOP BAR STARTS AT lg AND NOT md ─────────────────────
+  //
+  // Six primary-nav items in Swedish ("Säkerhetskarriärcenter" alone is 22
+  // characters), a language toggle and two actions do not fit in 768px.
+  // They never did: at exactly the md breakpoint the desktop layout
+  // switched on and overflowed the viewport by ~240px in Swedish and ~150px
+  // in English, which put the sign-in control off-screen behind a
+  // horizontal scroll on every tablet.
+  //
+  // Measured, not guessed -- a Playwright sweep at 375/768/1280/1440 in
+  // both locales found it, which is exactly the width nobody resizes to by
+  // hand. The mobile menu already handles this range correctly, so the
+  // breakpoint moves rather than the content.
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
       {/* Slim utility bar — desktop only. Small trust signals + secondary access. */}
-      <div className="hidden bg-primary text-primary-foreground/85 md:block">
+      <div className="hidden bg-primary text-primary-foreground/85 lg:block">
         <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
@@ -221,7 +234,7 @@ export function SiteHeader() {
             <span className="text-base">{t("brand.name")}</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
             {nav.map((item) => (
               <Link
                 key={item.to}
@@ -237,7 +250,7 @@ export function SiteHeader() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-2.5 lg:flex xl:gap-3">
             <LanguageSwitcher />
             {roleLinks.map((r) => (
               <Link
@@ -295,7 +308,7 @@ export function SiteHeader() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-foreground md:hidden"
+            className="inline-flex items-center justify-center rounded-md p-2 text-foreground lg:hidden"
             aria-label="Menu"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
@@ -305,7 +318,7 @@ export function SiteHeader() {
         </Container>
       </div>
 
-      <div className={cn("border-t border-border md:hidden", open ? "block" : "hidden")}>
+      <div className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {nav.map((item) => (
             <Link
@@ -409,6 +422,18 @@ export function SiteHeader() {
                   ))}
                 </>
               )}
+
+              {/* Parity with the desktop menu. Account settings existed
+                  there and not here, so the one control that lets somebody
+                  correct their own professional identity was desktop-only. */}
+              <Link
+                to="/my-career/profile"
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                {t("account.settings")}
+              </Link>
 
               <button
                 type="button"

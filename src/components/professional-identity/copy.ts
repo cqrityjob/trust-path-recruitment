@@ -30,3 +30,22 @@ export function L(value: Copy, lang: Lang): string {
 export function Lf(value: Copy, lang: Lang, arg: string | number): string {
   return value[lang].replace("{0}", String(arg));
 }
+
+/**
+ * A count-bearing sentence, in both forms.
+ *
+ * "1 uppgift är inlagd men ännu inte granskad" and "5 uppgifter är inlagda
+ * men ännu inte granskade" are not one string with a number in front of
+ * them -- Swedish inflects the noun AND both participles. A single template
+ * produces "5 uppgift är inlagd", which is the kind of thing a Swedish
+ * reader notices immediately and quietly reads as "this was not built for
+ * me". The dictionary already has `tp` for exactly this; `Lp` is the same
+ * idea for copy authored beside its screen.
+ */
+export type PluralCopy = { readonly one: Copy; readonly other: Copy };
+
+export const cp = (one: Copy, other: Copy): PluralCopy => ({ one, other });
+
+export function Lp(value: PluralCopy, lang: Lang, count: number): string {
+  return Lf(count === 1 ? value.one : value.other, lang, count);
+}

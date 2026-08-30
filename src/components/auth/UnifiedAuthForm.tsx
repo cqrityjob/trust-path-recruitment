@@ -557,8 +557,12 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
                     )}
                   </div>
 
+                  {/* Consent belongs to the moment it is given. Somebody
+                      signing in accepted the policy when they registered, and
+                      telling them that logging in constitutes acceptance is a
+                      small untruth a trust product cannot afford. */}
                   <p className="mt-6 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-                    {t("auth.privacy_note")}
+                    {t(isSignup ? "auth.privacy_note" : "auth.privacy_note.signin")}
                   </p>
                 </>
               )}

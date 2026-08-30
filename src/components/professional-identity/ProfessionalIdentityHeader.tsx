@@ -185,7 +185,15 @@ export function ProfessionalIdentityHeader({
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2.5">
+      {/* Rendered only when there is something in it. On the profile page
+          the profile link is suppressed, and a person with no Career
+          Discovery report has no card either -- which left an empty row
+          holding open five rems of nothing. */}
+      <div
+        className={
+          showProfileLink || cardReady ? "mt-5 flex flex-wrap gap-2.5" : "hidden"
+        }
+      >
         {showProfileLink && (
           <Link
             to="/my-career/profile"

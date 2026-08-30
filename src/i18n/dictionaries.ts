@@ -510,6 +510,12 @@ export const dictionaries = {
     "footer.betaFeedback": "Betafeedback",
     "auth.privacy_note":
       "Genom att skapa ett konto godkänner du vår integritetspolicy. Du kan när som helst begära export eller radering av dina uppgifter.",
+    // The sign-in page is not the moment anyone accepts anything -- they
+    // accepted it when they registered. Telling somebody who is logging in
+    // that doing so constitutes consent is both wrong and the kind of small
+    // untruth that costs a trust product more than it saves.
+    "auth.privacy_note.signin":
+      "Du kan när som helst begära export eller radering av dina uppgifter.",
     "auth.signout": "Logga ut",
     "auth.redirecting": "Omdirigerar…",
 
@@ -5692,6 +5698,8 @@ export const dictionaries = {
     "footer.betaFeedback": "Beta feedback",
     "auth.privacy_note":
       "By creating an account you accept our privacy policy. You may request export or deletion of your data at any time.",
+    "auth.privacy_note.signin":
+      "You may request export or deletion of your data at any time.",
     "auth.signout": "Sign out",
     "auth.redirecting": "Redirecting…",
 
