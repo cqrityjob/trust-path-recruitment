@@ -24,6 +24,7 @@ import { useT } from "@/i18n/context";
 import {
   computeNextBestActions,
   type ActionKind,
+  type NextBestActionSignals,
 } from "@/lib/professional-identity/next-best-action";
 import type { ProfessionalIdentityV1 } from "@/lib/professional-identity/types";
 import { c, cp, L, Lp, type Copy, type Lang, type PluralCopy } from "./copy";
@@ -37,6 +38,7 @@ const TITLE: Readonly<Record<ActionKind, Copy>> = {
   take_career_discovery: c("Gör karriärutforskningen", "Take Career Discovery"),
   create_career_card: c("Skapa ditt karriärkort", "Create your Career Card"),
   create_cv: c("Skapa ditt CV", "Create your CV"),
+  open_cv: c("Ditt CV", "Your CV"),
   explore_jobs: c("Utforska jobb inom säkerhet", "Explore security jobs"),
 };
 
@@ -104,6 +106,10 @@ const DETAIL: Readonly<Record<ActionKind, Copy>> = {
     "Byggt av det du redan har registrerat. Inget hittas på.",
     "Built from what you have already recorded. Nothing is invented.",
   ),
+  open_cv: c(
+    "Öppna, redigera eller exportera det du har sparat.",
+    "Open, edit or export what you have saved.",
+  ),
   explore_jobs: c(
     "Se lediga tjänster inom säkerhetsbranschen.",
     "See open roles across the security sector.",
@@ -116,10 +122,18 @@ const EMPTY = c(
   "Nothing is waiting for you right now.",
 );
 
-export function NextActions({ identity }: { identity: ProfessionalIdentityV1 }) {
+export function NextActions({
+  identity,
+  signals,
+}: {
+  identity: ProfessionalIdentityV1;
+  /** Extra state the identity read model deliberately does not carry --
+   *  see NextBestActionSignals. Omitted, everything behaves as before. */
+  signals?: NextBestActionSignals;
+}) {
   const { lang } = useT();
   const l = lang as Lang;
-  const { primary } = computeNextBestActions(identity);
+  const { primary } = computeNextBestActions(identity, signals);
 
   return (
     <section aria-labelledby="next-actions-heading">

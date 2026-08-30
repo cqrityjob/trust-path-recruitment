@@ -41,6 +41,7 @@ import { useT } from "@/i18n/context";
 import { ProfessionalIdentityHeader } from "@/components/professional-identity/ProfessionalIdentityHeader";
 import { NextActions } from "@/components/professional-identity/NextActions";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
+import { listMyCvs } from "@/lib/professional-identity/cv/cv-store.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
 import {
@@ -168,6 +169,19 @@ function MyCareerPage() {
   const identityQ = useQuery({
     queryKey: ["professional-identity"],
     queryFn: () => loadIdentity(),
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  // Saved CVs, as a SIGNAL rather than part of the identity read model --
+  // see NextBestActionSignals for why the seam deliberately does not carry
+  // this. Its own query, its own failure: if it does not answer, the
+  // suggestion falls back to "create your CV", which is the honest thing to
+  // say when we do not know whether one exists.
+  const loadCvs = useServerFn(listMyCvs);
+  const cvsQ = useQuery({
+    queryKey: ["cv", "list"],
+    queryFn: () => loadCvs(),
     staleTime: 60_000,
     retry: 1,
   });
@@ -414,7 +428,10 @@ function MyCareerPage() {
             streak, a badge or a demand. */}
         {identityQ.data && (
           <div className="mt-8">
-            <NextActions identity={identityQ.data} />
+            <NextActions
+              identity={identityQ.data}
+              signals={{ savedCvCount: cvsQ.data?.length }}
+            />
           </div>
         )}
 

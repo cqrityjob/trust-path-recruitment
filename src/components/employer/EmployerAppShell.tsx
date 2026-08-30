@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   BadgeCheck,
   BarChart3,
   Briefcase,
   Building2,
+  Check,
   ClipboardCheck,
   FileCheck2,
   GraduationCap,
@@ -39,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { cn } from "@/lib/utils";
 
 // Employer OS Phase 1 — the employer workspace's own application shell:
@@ -287,7 +291,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
         </nav>
         <SidebarFooter
           email={email}
-          hasMultipleWorkspaces={hasMultipleWorkspaces}
+          currentSlug={employerSlug}
           onSignOut={onSignOut}
           t={t}
         />
@@ -324,7 +328,7 @@ export function EmployerAppShell(props: EmployerAppShellProps) {
                 </nav>
                 <SidebarFooter
                   email={email}
-                  hasMultipleWorkspaces={hasMultipleWorkspaces}
+                  currentSlug={employerSlug}
                   onSignOut={onSignOut}
                   t={t}
                 />
@@ -462,17 +466,51 @@ function NavLink({
   );
 }
 
+/** The account menu inside a workspace.
+ *
+ *  -- WHY IT LISTS ORGANISATIONS BY NAME --------------------------------
+ *
+ *  It used to offer "Min karriar" and, for somebody in more than one
+ *  organisation, a generic "switch organisation" link back to /employer --
+ *  a router page, not a destination. Meanwhile the personal shell's account
+ *  menu listed every organisation by name with a tick on the current one.
+ *  Two menus, one account, two different stories about what a context is.
+ *
+ *  So this reads the same list, from the same query key, and shows the same
+ *  three things: Personal, each organisation by name, sign out. Same
+ *  contexts, same words, whichever side of the product you are standing on.
+ *
+ *  -- WHY IT FETCHES RATHER THAN TAKES A PROP ---------------------------
+ *
+ *  Threading the list through ~30 call sites to reach one dropdown would be
+ *  a large diff for a small control, and every one of those sites already
+ *  computes `hasMultipleWorkspaces` from this exact query. Reusing the key
+ *  makes this a cache hit rather than a request.
+ *
+ *  It grants nothing. The list is what row-level security returned;
+ *  selecting an entry changes the route, and /employer/$employerSlug
+ *  re-verifies membership itself exactly as it did before.
+ */
 function SidebarFooter({
   email,
-  hasMultipleWorkspaces,
+  currentSlug,
   onSignOut,
   t,
 }: {
   email: string | null;
-  hasMultipleWorkspaces: boolean;
+  currentSlug: string;
   onSignOut: () => void;
   t: (key: TranslationKey) => string;
 }) {
+  const fetchWorkspaces = useServerFn(listMyEmployerWorkspaces);
+  const workspaces = useQuery({
+    queryKey: ["employer", "my-workspaces"],
+    queryFn: () => fetchWorkspaces(),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  const mine = workspaces.data ?? [];
+
   return (
     <div className="border-t border-border p-3">
       <DropdownMenu>
@@ -495,13 +533,34 @@ function SidebarFooter({
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link to="/my-career">{t("employer.accountMenu.myCareer")}</Link>
+            <Link to="/my-career">
+              <UserIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t("account.context.personal")}
+            </Link>
           </DropdownMenuItem>
-          {hasMultipleWorkspaces && (
-            <DropdownMenuItem asChild>
-              <Link to="/employer">{t("employer.switchOrg")}</Link>
-            </DropdownMenuItem>
+
+          {mine.length > 0 && (
+            <>
+              <DropdownMenuLabel className="pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("account.context.switchTo")}
+              </DropdownMenuLabel>
+              {mine.map((workspace) => (
+                <DropdownMenuItem key={workspace.employerSlug} asChild>
+                  <Link
+                    to="/employer/$employerSlug"
+                    params={{ employerSlug: workspace.employerSlug }}
+                  >
+                    <Building2 className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="flex-1 truncate">{workspace.employerName}</span>
+                    {workspace.employerSlug === currentSlug && (
+                      <Check className="ml-2 h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                    )}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </>
           )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onSignOut} className="text-destructive focus:text-destructive">
             <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />

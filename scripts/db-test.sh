@@ -1521,8 +1521,8 @@ if [ "$CVP_RC" -ne 0 ]; then
   suite_failed "CV documents privacy"
 else
   echo "    ok  ${CVP_PASSED} CV documents privacy assertions passed"
-  if [ "$CVP_PASSED" -lt 24 ]; then
-    echo "FAIL: expected at least 24 CV privacy assertions, only ${CVP_PASSED} ran." >&2
+  if [ "$CVP_PASSED" -lt 35 ]; then
+    echo "FAIL: expected at least 35 CV privacy assertions, only ${CVP_PASSED} ran." >&2
     echo "      A suite that silently stops running assertions is worse than one that fails." >&2
     suite_failed "CV documents privacy (assertion shortfall: floor 24)"
   fi

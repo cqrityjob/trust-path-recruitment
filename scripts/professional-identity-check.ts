@@ -27,7 +27,7 @@
 // Plain TS run with Bun, matching this repository's scripts/*-check.ts
 // convention. Deterministic, credential-free, network-free.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import {
   COMPLETENESS_SECTION_ORDER,
@@ -49,6 +49,16 @@ import {
   buildFactualCvDocument,
 } from "../src/lib/professional-identity/cv/document";
 import { validateCvPresentation } from "../src/lib/professional-identity/cv/validation";
+import { diffCvSourceBundles } from "../src/lib/professional-identity/cv/bundle-diff";
+import {
+  applyCvEdit,
+  buildSavedCvDocument,
+  cvEditSchema,
+  factualStoredPresentation,
+  reconcileStoredPresentation,
+  storedFromAiPresentation,
+  storedPresentationSchema,
+} from "../src/lib/professional-identity/cv/stored";
 import { generateCvPresentation } from "../src/lib/professional-identity/cv/generation";
 import { DeterministicCvProvider } from "../src/lib/professional-identity/cv/providers/deterministic";
 import { cvPresentationOutput, type CvPresentation } from "../src/lib/professional-identity/cv/schema";
@@ -63,6 +73,21 @@ function ck(name: string, ok: boolean): void {
 
 const root = path.resolve(import.meta.dir, "..");
 const read = (p: string) => readFileSync(path.join(root, p), "utf8");
+
+/** Every .ts/.tsx under a directory, as repo-relative paths. Used to check a
+ *  property of the WHOLE source tree rather than of a hand-listed set --
+ *  a hand-listed set is exactly what a new file escapes. */
+function sourceFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...sourceFilesUnder(full));
+    else if (/\.(ts|tsx)$/.test(entry) && !entry.endsWith(".gen.ts")) {
+      out.push(path.relative(root, full));
+    }
+  }
+  return out;
+}
 
 console.log("professional-identity-check\n");
 
@@ -757,15 +782,366 @@ console.log("\n8 · boundaries");
   // The schema-first release contract: this release must not name the
   // object its own migration introduces.
   //
+  // THE DEPENDENCY SURFACE OF THE GATED RELEASE.
+  //
+  // `cv_documents` is introduced by a migration that is not yet applied, so
+  // every file naming it is blocked from merging until it is. That is the
+  // schema-first release contract and it is not worked around -- but it IS
+  // worth keeping the blocked surface to exactly one file, because that is
+  // what makes the split reviewable: a reviewer can see the whole gated
+  // dependency in one place instead of hunting it across the codebase.
+  //
   // Comment lines are excluded with the SAME rule schema-first-release-check
-  // applies, so this agrees with the gate it stands in for: that gate skips
-  // lines beginning with //, * or /*, and a header explaining why the table
-  // is not used yet must not read as using it.
-  const codeLines = dir
-    .flatMap((f) => read(f).split("\n"))
-    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
-    .join("\n");
-  ck("no application code names the cv_documents table", !/cv_documents/.test(codeLines));
+  // applies -- it skips lines beginning with //, * or /* -- so a header
+  // explaining the gate does not read as tripping it.
+  const codeOf = (f: string) =>
+    read(f)
+      .split("\n")
+      .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+      .join("\n");
+
+  ck(
+    "the identity layer and the CV generator name no persisted table",
+    !/cv_documents/.test(dir.map(codeOf).join("\n")),
+  );
+
+  const allSources = sourceFilesUnder(path.join(root, "src"));
+  const namingIt = allSources.filter((f) => /cv_documents/.test(codeOf(f)));
+  ck(
+    `exactly one file names cv_documents directly (found ${namingIt.length}: ${namingIt
+      .map((f) => path.basename(f))
+      .join(", ")})`,
+    namingIt.length === 1 && namingIt[0]!.endsWith("cv/cv-store.functions.ts"),
+  );
+
+  // ── THE TRANSITIVE SURFACE, WHICH THE REPOSITORY'S GATE CANNOT SEE ──
+  //
+  // scripts/schema-first-release-check.ts scans for the IDENTIFIER. A file
+  // that calls `listMyCvs()` never contains the string "cv_documents", so
+  // the gate does not flag it -- yet at runtime it fails in exactly the way
+  // the gate exists to prevent: the query errors because the table is not
+  // there.
+  //
+  // That is a real limitation of a text-based gate, not a loophole to lean
+  // on. So the transitive surface is pinned HERE instead: the files that
+  // import the CV store are listed, and adding one is a visible diff on
+  // this line rather than a silent widening of what a release depends on.
+  const importers = allSources.filter((f) => /cv-store\.functions/.test(codeOf(f)));
+  const expected = [
+    "src/lib/professional-identity/cv/cv-store.functions.ts",
+    "src/routes/_authenticated.my-career.cv.index.tsx",
+    "src/routes/_authenticated.my-career.cv.new.tsx",
+    "src/routes/_authenticated.my-career.cv.$cvId.tsx",
+    "src/routes/_authenticated.my-career.index.tsx",
+  ].sort();
+  const actual = [...new Set([...importers, ...namingIt])].sort();
+  ck(
+    `the gated surface is exactly the five expected files (found ${actual.length})`,
+    JSON.stringify(actual) === JSON.stringify(expected),
+  );
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    console.log("      expected: " + expected.join(", "));
+    console.log("      actual:   " + actual.join(", "));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 9 . Persistence: the editing contract                               */
+/* ------------------------------------------------------------------ */
+
+console.log("\n9 . saved CV documents");
+{
+  const bundle = buildCvSourceBundle({
+    identity: ESTABLISHED,
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+
+  // -- The boundary, stated as a schema ------------------------------
+  //
+  // This is the whole editing contract. A CV editor that can write an
+  // employer name is a second employment database, and the way to make
+  // that impossible is to give it nowhere to put one.
+  const editFields = Object.keys(cvEditSchema.shape);
+  for (const forbidden of [
+    "employerName",
+    "roleTitle",
+    "startedOn",
+    "endedOn",
+    "employmentType",
+    "issuerName",
+    "issuedOn",
+    "validUntil",
+    "verified",
+    "sourceBundle",
+    "employment",
+  ]) {
+    ck(`the edit payload has no ${forbidden} field`, !editFields.includes(forbidden));
+  }
+
+  const aiPresentation: CvPresentation = {
+    headline: "Säkerhetschef",
+    summary:
+      "Erfaren säkerhetsprofil med operativ bakgrund inom bevakning, rapportering och ledning i publik miljö.",
+    experience: [
+      { sourceId: "e1", bullets: ["Ansvarade för bevakningsuppdrag."] },
+      { sourceId: "e2", bullets: ["Arbetade som ordningsvakt."] },
+    ],
+    emphasisedClaimIds: ["c4"],
+    tailoringRationale: "Ordnad kronologiskt.",
+  };
+
+  const stored = storedFromAiPresentation(aiPresentation);
+  ck("a drafted document is attributed to the engine", stored.authorship.headline === "ai");
+  ck(
+    "including its bullets, per employment",
+    stored.authorship.bullets["e1"] === "ai" && stored.authorship.bullets["e2"] === "ai",
+  );
+
+  // -- A person's edit takes authorship of what they touched ---------
+  const edited = applyCvEdit(
+    stored,
+    { cvId: "00000000-0000-0000-0000-000000000000", summary: "Min egen sammanfattning." },
+    bundle,
+  );
+  ck("an edited field becomes the person's", edited.authorship.summary === "person");
+  ck("an untouched field keeps its authorship", edited.authorship.headline === "ai");
+  ck("the edit is stored", edited.summary === "Min egen sammanfattning.");
+
+  const reSaved = applyCvEdit(stored, { cvId: "00000000-0000-0000-0000-000000000000", summary: stored.summary }, bundle);
+  ck(
+    "re-submitting identical text does not claim authorship",
+    reSaved.authorship.summary === "ai",
+  );
+
+  const bulletEdit = applyCvEdit(
+    stored,
+    {
+      cvId: "00000000-0000-0000-0000-000000000000",
+      bullets: [{ sourceId: "e1", bullets: ["Ledde bevakningsuppdrag."] }],
+    },
+    bundle,
+  );
+  ck("an edited bullet becomes the person's", bulletEdit.authorship.bullets["e1"] === "person");
+  ck("the other employment keeps its authorship", bulletEdit.authorship.bullets["e2"] === "ai");
+
+  // -- A client cannot introduce a reference we never supplied -------
+  const injected = applyCvEdit(
+    stored,
+    {
+      cvId: "00000000-0000-0000-0000-000000000000",
+      bullets: [{ sourceId: "not-this-person's-employment", bullets: ["Arbetade där."] }],
+    },
+    bundle,
+  );
+  ck(
+    "an edit naming an employment this person does not have is ignored",
+    injected.experience.every((e) => e.sourceId !== "not-this-person's-employment"),
+  );
+
+  // -- Ordering is presentation; membership is not -------------------
+  const reordered = applyCvEdit(
+    stored,
+    { cvId: "00000000-0000-0000-0000-000000000000", experienceOrder: ["e2", "e1"] },
+    bundle,
+  );
+  ck("experience order is editable", reordered.experience[0]?.sourceId === "e2");
+  ck("and reordering removes nothing", reordered.experience.length === 2);
+
+  // -- Rendering a saved row -----------------------------------------
+  const doc = buildSavedCvDocument(bundle, stored);
+  ck(
+    "a saved document renders its facts from the bundle",
+    doc.experience[0]?.fact.employerName === "Nordic Security AB",
+  );
+  ck("and marks drafted prose as drafted", doc.summaryIsAiWritten);
+
+  const ownWords = applyCvEdit(
+    applyCvEdit(stored, { cvId: "00000000-0000-0000-0000-000000000000", summary: "Mina ord." }, bundle),
+    { cvId: "00000000-0000-0000-0000-000000000000", headline: "Min titel" },
+    bundle,
+  );
+  const ownDoc = buildSavedCvDocument(bundle, {
+    ...ownWords,
+    authorship: { headline: "person", summary: "person", bullets: {} },
+  });
+  ck(
+    "a document whose drafted prose was all rewritten stops claiming AI authorship",
+    ownDoc.origin === "factual" && !ownDoc.summaryIsAiWritten,
+  );
+
+  // -- The factual document is savable too ---------------------------
+  const factual = factualStoredPresentation(bundle);
+  ck("a factual saved document writes no summary", factual.summary === "");
+  ck(
+    "and claims no AI authorship",
+    buildSavedCvDocument(bundle, factual).origin === "factual",
+  );
+
+  // -- The stored schema must not impose the model's floors on a person
+  const shortByHuman = storedPresentationSchema.safeParse({
+    headline: "",
+    summary: "Kort.",
+    experience: [],
+    emphasisedClaimIds: [],
+    tailoringRationale: "",
+  });
+  ck(
+    "a person may write a short summary, or none",
+    shortByHuman.success,
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 10 . Snapshot semantics                                             */
+/* ------------------------------------------------------------------ */
+
+console.log("\n10 . a saved CV is a snapshot");
+{
+  const savedBundle = buildCvSourceBundle({
+    identity: ESTABLISHED,
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+
+  ck(
+    "an unchanged profile produces no drift",
+    !diffCvSourceBundles(savedBundle, savedBundle).hasChanges,
+  );
+
+  // An employment removed from the Passport since the CV was saved.
+  const withoutE1 = buildCvSourceBundle({
+    identity: identity({ ...ESTABLISHED, employment: ESTABLISHED.employment.slice(1) }),
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+  const removed = diffCvSourceBundles(savedBundle, withoutE1);
+  ck("a removed employment is detected", removed.changes.some((c) => c.kind === "removed"));
+  ck("and its id is reported for reconciliation", removed.removedIds.includes("e1"));
+
+  // A corrected employer name.
+  const renamed = buildCvSourceBundle({
+    identity: identity({
+      ...ESTABLISHED,
+      employment: [
+        { ...ESTABLISHED.employment[0]!, employerName: "Nordic Security Group AB" },
+        ESTABLISHED.employment[1]!,
+      ],
+    }),
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+  ck(
+    "a corrected employer name is detected as a change",
+    diffCvSourceBundles(savedBundle, renamed).changes.some(
+      (c) => c.kind === "changed" && c.sourceId === "e1",
+    ),
+  );
+
+  const newHeadline = buildCvSourceBundle({
+    identity: identity({ ...ESTABLISHED, headline: "Head of Security" }),
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+  });
+  ck(
+    "a changed headline is detected",
+    diffCvSourceBundles(savedBundle, newHeadline).changes.some((c) => c.section === "identity"),
+  );
+
+  // Reconciliation drops what is gone, keeps what survives, adds what is
+  // new -- and never invents a bullet.
+  const stored = storedFromAiPresentation({
+    headline: "Säkerhetschef",
+    summary: "En sammanfattning som är tillräckligt lång för schemat att acceptera den utan problem.",
+    experience: [
+      { sourceId: "e1", bullets: ["Punkt ett."] },
+      { sourceId: "e2", bullets: ["Punkt två."] },
+    ],
+    emphasisedClaimIds: ["c4"],
+    tailoringRationale: "Kronologisk.",
+  });
+  const reconciled = reconcileStoredPresentation(stored, withoutE1);
+  ck("reconciliation drops a vanished employment", reconciled.droppedIds.includes("e1"));
+  ck(
+    "and reports it rather than silently deleting the person's writing",
+    reconciled.droppedIds.length === 1,
+  );
+  ck(
+    "the surviving employment keeps its bullets",
+    reconciled.presentation.experience.find((e) => e.sourceId === "e2")?.bullets[0] === "Punkt två.",
+  );
+  ck(
+    "reconciliation never invents a bullet",
+    reconciled.presentation.experience.every(
+      (e) => e.bullets.length === 0 || e.sourceId === "e2",
+    ),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 11 . Persistence boundaries                                         */
+/* ------------------------------------------------------------------ */
+
+console.log("\n11 . persistence boundaries");
+{
+  const store = read("src/lib/professional-identity/cv/cv-store.functions.ts");
+  const storeCode = store.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
+
+  // The CV must never become a second employment database. Every one of
+  // these is a table that owns a fact, and nothing in the CV store may
+  // write to one.
+  for (const table of [
+    "security_career_profiles",
+    "sp_experience_periods",
+    "sp_claims",
+    "sp_passport_profiles",
+    "profiles",
+  ]) {
+    ck(
+      `the CV store never writes ${table}`,
+      !new RegExp(`from\\("${table}"\\)[\\s\\S]{0,200}?\\.(insert|update|upsert|delete)`).test(
+        storeCode,
+      ),
+    );
+  }
+  ck(
+    "the CV store writes exactly one table",
+    [...storeCode.matchAll(/\.from\("([a-z_]+)"\)/g)].every((m) => m[1] === "cv_documents"),
+  );
+
+  // A draft that has been to a browser and back is not a trusted input.
+  ck(
+    "an accepted draft is re-validated before it is stored",
+    storeCode.includes("validateCvPresentation"),
+  );
+  ck(
+    "and the bundle it is checked against is rebuilt on the server",
+    storeCode.includes("readProfessionalIdentity") && storeCode.includes("buildCvSourceBundle"),
+  );
+  ck(
+    "readiness is re-checked on the save path",
+    storeCode.includes("computeCvReadiness"),
+  );
+
+  // A saved CV must not acquire a sharing mechanism by accident.
+  for (const forbidden of ["share_token", "is_public", "public_token", "expires_at"]) {
+    ck(`the CV store names no ${forbidden}`, !storeCode.includes(forbidden));
+  }
+
+  // Update-from-profile must be an explicit action, never a read.
+  const readHandlers = storeCode.slice(
+    storeCode.indexOf("export const listMyCvs"),
+    storeCode.indexOf("export const saveCvDraft"),
+  );
+  ck(
+    "reading a CV writes nothing",
+    !/\.(insert|update|upsert|delete)\s*\(/.test(readHandlers),
+  );
 }
 
 /* ------------------------------------------------------------------ */

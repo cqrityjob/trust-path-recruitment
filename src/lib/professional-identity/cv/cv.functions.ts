@@ -38,6 +38,7 @@ import { buildCvSourceBundle, type CvSourceBundle } from "./source-bundle";
 import { computeCvReadiness, type CvReadiness } from "./readiness";
 import { applyCvPresentation, buildFactualCvDocument, type CvDocument } from "./document";
 import { generateCvPresentation, type CvGenerationStatus } from "./generation";
+import type { CvPresentation } from "./schema";
 import type { QuarantinedPassage } from "@/lib/interview-intelligence/ai/injection";
 import type { ProviderMode } from "@/lib/interview-intelligence/ai/orchestrator";
 
@@ -75,6 +76,18 @@ export interface CvPreparation {
 export interface CvGenerationOutcome {
   readonly status: CvGenerationStatus | "not_ready";
   readonly readiness: CvReadiness;
+  /**
+   * The validated draft itself, so the person can ACCEPT it and the caller
+   * can send it back to be saved.
+   *
+   * Round-tripping it through the browser is what the "generate -> preview
+   * -> accept" contract requires, and it opens exactly one hole: a client
+   * could return something other than what was generated. `saveCvDraft`
+   * closes it by re-running the same schema check and the same
+   * anti-fabrication sweep against a server-rebuilt bundle before writing.
+   * Null on every path that produced no usable draft.
+   */
+  readonly presentation: CvPresentation | null;
   /** The document to render. On every failure path this is the FACTUAL
    *  document rather than null — the person still has a CV. */
   readonly document: CvDocument | null;
@@ -145,6 +158,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
       return {
         status: "not_ready",
         readiness,
+        presentation: null,
         document: null,
         providerMode: null,
         model: null,
@@ -161,6 +175,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
       return {
         status: result.status,
         readiness,
+        presentation: null,
         // The fallback is not an error state. It is the CV.
         document: factual,
         providerMode: result.providerMode,
@@ -174,6 +189,7 @@ export const generateMyCv = createServerFn({ method: "POST" })
     return {
       status: "succeeded",
       readiness,
+      presentation: result.presentation,
       document: applyCvPresentation(bundle, result.presentation),
       providerMode: result.providerMode,
       model: result.model,
