@@ -40,10 +40,7 @@ import {
   MAX_PRIMARY_ACTIONS,
 } from "../src/lib/professional-identity/next-best-action";
 import { computeCvReadiness } from "../src/lib/professional-identity/cv/readiness";
-import {
-  buildCvSourceBundle,
-  citableIds,
-} from "../src/lib/professional-identity/cv/source-bundle";
+import { buildCvSourceBundle, citableIds } from "../src/lib/professional-identity/cv/source-bundle";
 import {
   applyCvPresentation,
   buildFactualCvDocument,
@@ -61,8 +58,19 @@ import {
 } from "../src/lib/professional-identity/cv/stored";
 import { generateCvPresentation } from "../src/lib/professional-identity/cv/generation";
 import { DeterministicCvProvider } from "../src/lib/professional-identity/cv/providers/deterministic";
-import { cvPresentationOutput, type CvPresentation } from "../src/lib/professional-identity/cv/schema";
-import type { ProfessionalIdentityV1 } from "../src/lib/professional-identity/types";
+import {
+  cvPresentationOutput,
+  type CvPresentation,
+} from "../src/lib/professional-identity/cv/schema";
+import {
+  professionLabel,
+  type ProfessionalIdentityV1,
+} from "../src/lib/professional-identity/types";
+import { readProfessionalIdentity } from "../src/lib/professional-identity/identity.functions";
+// The Passport owns how a jurisdiction is written. Asserting the seam's
+// output against the real formatter is what proves "AE-DU" survives as Dubai
+// rather than proving this script can concatenate strings.
+import { formatWorkLocation } from "../src/lib/security-passport/format";
 import type { AiProvider, AiResponse } from "../src/lib/interview-intelligence/ai/provider";
 
 const fails: string[] = [];
@@ -103,10 +111,13 @@ const EMPTY: ProfessionalIdentityV1 = {
   currentStatus: null,
   currentProfessionSlug: null,
   currentProfessionOther: null,
+  currentProfessionTitleSv: null,
+  currentProfessionTitleEn: null,
   yearsOfExperience: null,
   hasPassport: false,
   headline: null,
   workCountry: null,
+  workSubJurisdiction: null,
   employment: [],
   claims: [],
   discovery: {
@@ -119,8 +130,10 @@ const EMPTY: ProfessionalIdentityV1 = {
     applicationCount: 0,
     assessmentAssignmentCount: 0,
     releasedReportCount: 0,
+    releasedReportAttemptId: null,
     employerWorkspaceCount: 0,
   },
+  unavailable: [],
 };
 
 function identity(over: Partial<ProfessionalIdentityV1> = {}): ProfessionalIdentityV1 {
@@ -164,6 +177,8 @@ const ESTABLISHED = identity({
   workCountry: "SE",
   hasPassport: true,
   currentProfessionSlug: "sakerhetschef",
+  currentProfessionTitleSv: "Säkerhetschef",
+  currentProfessionTitleEn: "Head of Security",
   yearsOfExperience: "10+",
   employment: [
     employment(),
@@ -178,7 +193,13 @@ const ESTABLISHED = identity({
   claims: [
     claim(),
     claim({ id: "c2", claimType: "education", title: "Gymnasieexamen", issuedOn: "2015-06-01" }),
-    claim({ id: "c3", claimType: "language", title: "Svenska", skillLevel: "native", issuedOn: null }),
+    claim({
+      id: "c3",
+      claimType: "language",
+      title: "Svenska",
+      skillLevel: "native",
+      issuedOn: null,
+    }),
     claim({ id: "c4", claimType: "practical_skill", title: "Rapportskrivning", issuedOn: null }),
   ],
   discovery: {
@@ -242,7 +263,10 @@ console.log("1 · profile completeness");
 console.log("\n2 · next best action");
 {
   const brandNew = computeNextBestActions(EMPTY);
-  ck("a new account is offered at most three actions", brandNew.primary.length <= MAX_PRIMARY_ACTIONS);
+  ck(
+    "a new account is offered at most three actions",
+    brandNew.primary.length <= MAX_PRIMARY_ACTIONS,
+  );
   ck(
     "a new account is asked to complete the profile first",
     brandNew.primary[0]?.kind === "complete_profile_basics",
@@ -266,6 +290,109 @@ console.log("\n2 · next best action");
   ck(
     "a released report is priority 1",
     withReport.all.find((a) => a.kind === "read_released_report")?.priority === 1,
+  );
+
+  // ── B1 · the released report goes somewhere ────────────────────────
+  //
+  // It pointed at /my-career, which IS the page the action is rendered on.
+  // The one suggestion on this list where somebody else has already decided
+  // the person may read something spent its click going nowhere.
+  const reportAction = (a: ReturnType<typeof computeNextBestActions>) =>
+    a.all.find((x) => x.kind === "read_released_report");
+  ck(
+    "the released-report action never links back to the page it is on",
+    reportAction(withReport)?.href !== "/my-career" &&
+      !reportAction(withReport)!.href.startsWith("/my-career"),
+  );
+  ck(
+    "with no identifiable report it opens the area that lists them",
+    reportAction(withReport)?.href === "/academy",
+  );
+  const namedReport = computeNextBestActions(
+    identity({
+      workload: {
+        ...EMPTY.workload,
+        releasedReportCount: 1,
+        releasedReportAttemptId: "att-42",
+      },
+    }),
+  );
+  ck(
+    "and opens the report itself when the seam could name one",
+    reportAction(namedReport)?.href === "/academy/report/att-42",
+  );
+
+  // ── B5 · a closed gate cannot become an actionable CTA ─────────────
+  //
+  // Career Discovery is open only to platform admins and cd_internal_testers
+  // rows while the recommendation layer is built. The ladder offered
+  // "Take Career Discovery" to everybody else, who landed on a refusal.
+  const gateClosed = computeNextBestActions(EMPTY, { careerDiscoveryOpen: false });
+  ck(
+    "a candidate outside the cohort is not offered Career Discovery",
+    !gateClosed.all.some((a) => a.kind === "take_career_discovery"),
+  );
+  ck(
+    "and the rest of the ladder is unaffected by the gate",
+    gateClosed.all.some((a) => a.kind === "complete_profile_basics"),
+  );
+  ck(
+    "an authorised tester still is offered it",
+    computeNextBestActions(EMPTY, { careerDiscoveryOpen: true }).all.some(
+      (a) => a.kind === "take_career_discovery",
+    ),
+  );
+  // Undefined is "nobody asked", not "refused": every caller that does not
+  // gate must behave exactly as it did before this signal existed.
+  ck(
+    "an ungated caller behaves as before",
+    computeNextBestActions(EMPTY).all.some((a) => a.kind === "take_career_discovery"),
+  );
+
+  // ── M2 · a read that did not answer decides nothing ────────────────
+  //
+  // Every empty array in this model means either "nothing yet" or "we could
+  // not tell". Only the first is grounds for asking somebody to do
+  // something — "open your Security Passport" to a holder whose Passport
+  // merely failed to load is a read failure escalated into an instruction.
+  const passportUnread = computeNextBestActions(
+    identity({ ...ESTABLISHED, unavailable: ["passport", "claims"] }),
+  );
+  ck(
+    "a failed Passport read does not become 'open your Passport'",
+    !passportUnread.all.some((a) => a.kind === "start_passport"),
+  );
+  ck(
+    "nor 'submit for verification'",
+    !passportUnread.all.some((a) => a.kind === "submit_passport_verification"),
+  );
+  const discoveryUnread = computeNextBestActions(identity({ unavailable: ["discovery"] }));
+  ck(
+    "a failed Career Discovery read does not become 'take the assessment'",
+    !discoveryUnread.all.some((a) => a.kind === "take_career_discovery"),
+  );
+  const applicationsUnread = computeNextBestActions(identity({ unavailable: ["applications"] }));
+  ck(
+    "a failed applications read does not assert 'you have applied to nothing'",
+    !applicationsUnread.all.some((a) => a.kind === "explore_jobs"),
+  );
+  const assessmentsUnread = computeNextBestActions(
+    identity({
+      unavailable: ["assessments"],
+      workload: { ...EMPTY.workload, assessmentAssignmentCount: 3, releasedReportCount: 2 },
+    }),
+  );
+  ck(
+    "a failed assessment read invents neither an invitation nor a report",
+    !assessmentsUnread.all.some(
+      (a) => a.kind === "complete_assessment_assignment" || a.kind === "read_released_report",
+    ),
+  );
+  // The whole point of recording failures rather than throwing: one broken
+  // read costs its own rules, not the list.
+  ck(
+    "and the rules that CAN be decided still are",
+    assessmentsUnread.all.some((a) => a.kind === "complete_profile_basics"),
   );
 
   // A door onto an empty room.
@@ -325,6 +452,392 @@ console.log("\n2 · next best action");
     "actions are returned in priority order",
     priorities.every((p, i) => i === 0 || priorities[i - 1] <= p),
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* 2b · The identity seam: scoping, provenance and honest absence      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A stub PostgREST client that RECORDS the predicates it is given.
+ *
+ * ── WHY A STUB AND NOT A SOURCE SCAN ───────────────────────────────────
+ *
+ * The defect being defended is a missing WHERE clause, and a grep for
+ * `.eq("applicant_user_id"` proves only that the string exists somewhere in
+ * the file. This drives the real `readProfessionalIdentity` and answers each
+ * table differently depending on what it was actually asked, so a read that
+ * quietly stops filtering produces a wrong NUMBER rather than a passing
+ * regex.
+ *
+ * It is deliberately thenable: a `head: true` count query is awaited with no
+ * terminal method, exactly as the seam writes it.
+ */
+type Answer = { data?: unknown; count?: number; error?: unknown };
+function stubClient(
+  tables: Record<string, (filters: Record<string, unknown>) => Answer>,
+  rpcs: Record<string, Answer> = {},
+) {
+  const seen: Record<string, Record<string, unknown>> = {};
+  const from = (table: string) => {
+    const filters: Record<string, unknown> = {};
+    seen[table] = filters;
+    const answer = () => {
+      const fn = tables[table];
+      return fn ? fn(filters) : { data: null };
+    };
+    const b: Record<string, unknown> = {
+      select: () => b,
+      eq: (col: string, val: unknown) => {
+        filters[col] = val;
+        return b;
+      },
+      is: (col: string, val: unknown) => {
+        filters[col] = val;
+        return b;
+      },
+      order: () => b,
+      limit: () => b,
+      maybeSingle: () => Promise.resolve(answer()),
+      then: (res: (v: Answer) => unknown, rej?: (e: unknown) => unknown) =>
+        Promise.resolve(answer()).then(res, rej),
+    };
+    return b;
+  };
+  return {
+    client: { from, rpc: (name: string) => Promise.resolve(rpcs[name] ?? { data: [] }) },
+    seen,
+  };
+}
+
+const ME = "user-me";
+
+console.log("\n2b · the identity seam");
+{
+  // ── M1 · a dual-role account's candidate state is THEIRS ───────────
+  //
+  // This person is simultaneously a candidate who has applied to nothing and
+  // an employer member who may SELECT the applications sent to their own
+  // vacancies. RLS therefore lets seven rows through, and an unfiltered
+  // `count` reported those seven as their own job search. The stub encodes
+  // exactly that: unfiltered → 7, filtered to them → 0.
+  const dualRole = stubClient(
+    {
+      profiles: () => ({ data: { display_name: "Mostafa Alshawi", country: "SE", locale: "sv" } }),
+      security_career_profiles: () => ({ data: null }),
+      sp_passport_profiles: () => ({ data: null }),
+      sp_experience_periods: () => ({ data: [] }),
+      sp_claims: () => ({ data: [] }),
+      cd_report_snapshots: () => ({ data: null }),
+      job_applications: (f) => ({ count: f.applicant_user_id === ME ? 0 : 7 }),
+      employer_memberships: () => ({ count: 1 }),
+    },
+    { scp_my_academy_assignments: { data: [] }, scp_my_assessment_history: { data: [] } },
+  );
+  const dual = await readProfessionalIdentity(dualRole.client, ME);
+  ck(
+    "a dual-role account's application query names the applicant",
+    dualRole.seen.job_applications?.applicant_user_id === ME,
+  );
+  ck(
+    "so a recruiter who has applied to nothing is told they have applied to nothing",
+    dual.workload.applicationCount === 0,
+  );
+  ck("and their employer workspace is still counted", dual.workload.employerWorkspaceCount === 1);
+  // Defence in depth on the audited Career Discovery read: the same predicate
+  // the RLS policy applies, written out rather than merely relied upon.
+  ck(
+    "the Career Discovery snapshot read names the caller through its session",
+    dualRole.seen.cd_report_snapshots?.["cd_sessions.user_id"] === ME,
+  );
+  ck(
+    "every user-owned read carries a caller predicate",
+    dualRole.seen.profiles?.id === ME &&
+      dualRole.seen.security_career_profiles?.user_id === ME &&
+      dualRole.seen.sp_passport_profiles?.holder_user_id === ME &&
+      dualRole.seen.sp_claims?.holder_user_id === ME &&
+      dualRole.seen.sp_experience_periods?.holder_user_id === ME &&
+      dualRole.seen.employer_memberships?.user_id === ME,
+  );
+
+  // ── M2 · a failed read is not a zero ───────────────────────────────
+  //
+  // A holder with four verified credentials whose sp_claims read fails, and
+  // an empty Passport, produced the same empty array — and the screen said
+  // "0 verifierade" to both.
+  const broken = stubClient(
+    {
+      profiles: () => ({ data: { display_name: "Mostafa", country: "SE", locale: "sv" } }),
+      security_career_profiles: () => ({ data: null }),
+      sp_passport_profiles: () => ({ data: { headline: "Väktare", jurisdiction_code: "SE" } }),
+      sp_experience_periods: () => ({ data: [] }),
+      sp_claims: () => ({ error: { message: "connection reset" } }),
+      cd_report_snapshots: () => ({ data: null }),
+      job_applications: () => ({ count: 0 }),
+      employer_memberships: () => ({ count: 0 }),
+    },
+    { scp_my_academy_assignments: { data: [] }, scp_my_assessment_history: { data: [] } },
+  );
+  const degraded = await readProfessionalIdentity(broken.client, ME);
+  ck("a failed read is reported as unavailable", degraded.unavailable.includes("claims"));
+  ck(
+    "and only that read — the ones that answered are not condemned with it",
+    !degraded.unavailable.includes("passport") && !degraded.unavailable.includes("account"),
+  );
+  ck(
+    "the empty fallback stays, so one broken read never blanks the object",
+    degraded.claims.length === 0 && degraded.displayName === "Mostafa",
+  );
+  ck("a healthy load reports nothing unavailable", dual.unavailable.length === 0);
+
+  // ── B1 · WHICH released report, decided by the server ──────────────
+  //
+  // The same lifecycle-plus-snapshot condition the assessment history
+  // applies before IT offers a link. A released date alone is not a document.
+  const withReports = stubClient(
+    {
+      profiles: () => ({ data: null }),
+      security_career_profiles: () => ({ data: null }),
+      sp_passport_profiles: () => ({ data: null }),
+      sp_experience_periods: () => ({ data: [] }),
+      sp_claims: () => ({ data: [] }),
+      cd_report_snapshots: () => ({ data: null }),
+      job_applications: () => ({ count: 0 }),
+      employer_memberships: () => ({ count: 0 }),
+    },
+    {
+      scp_my_academy_assignments: { data: [] },
+      scp_my_assessment_history: {
+        data: [
+          {
+            attempt_id: "old",
+            released_at: "2026-01-01",
+            lifecycle_state: "result_available",
+            participant_snapshot_id: "s-old",
+          },
+          {
+            attempt_id: "newest",
+            released_at: "2026-08-01",
+            lifecycle_state: "result_available",
+            participant_snapshot_id: "s-new",
+          },
+          {
+            attempt_id: "no-snapshot",
+            released_at: "2026-09-01",
+            lifecycle_state: "result_available",
+            participant_snapshot_id: null,
+          },
+        ],
+      },
+    },
+  );
+  const reported = await readProfessionalIdentity(withReports.client, ME);
+  ck("every released report is counted", reported.workload.releasedReportCount === 3);
+  ck(
+    "but only a readable one is named, newest first",
+    reported.workload.releasedReportAttemptId === "newest",
+  );
+
+  const noneReadable = stubClient(
+    {
+      profiles: () => ({ data: null }),
+      security_career_profiles: () => ({ data: null }),
+      sp_passport_profiles: () => ({ data: null }),
+      sp_experience_periods: () => ({ data: [] }),
+      sp_claims: () => ({ data: [] }),
+      cd_report_snapshots: () => ({ data: null }),
+      job_applications: () => ({ count: 0 }),
+      employer_memberships: () => ({ count: 0 }),
+    },
+    {
+      scp_my_academy_assignments: { data: [] },
+      scp_my_assessment_history: {
+        data: [
+          {
+            attempt_id: "pending",
+            released_at: "2026-09-01",
+            lifecycle_state: "submitted",
+            participant_snapshot_id: "s1",
+          },
+        ],
+      },
+    },
+  );
+  const unnamed = await readProfessionalIdentity(noneReadable.client, ME);
+  ck(
+    "a report with no readable snapshot is never named",
+    unnamed.workload.releasedReportAttemptId === null,
+  );
+
+  // ── B3 / M5 · the Dubai holder, end to end ─────────────────────────
+  const dubai = stubClient(
+    {
+      profiles: () => ({ data: { display_name: "Amina Khalid", country: "SE", locale: "en" } }),
+      security_career_profiles: () => ({
+        data: {
+          current_status: "employed",
+          current_profession_slug: "vaktare",
+          current_profession_other: null,
+          years_of_experience: "3-5",
+        },
+      }),
+      cig_professions: (f) =>
+        f.slug === "vaktare"
+          ? { data: { title_sv: "Väktare", title_en: "Security Officer" } }
+          : { data: null },
+      sp_passport_profiles: () => ({
+        data: { headline: null, jurisdiction_code: "AE", sub_jurisdiction_code: "AE-DU" },
+      }),
+      sp_experience_periods: () => ({ data: [] }),
+      sp_claims: () => ({ data: [] }),
+      cd_report_snapshots: () => ({ data: null }),
+      job_applications: () => ({ count: 0 }),
+      employer_memberships: () => ({ count: 0 }),
+    },
+    { scp_my_academy_assignments: { data: [] }, scp_my_assessment_history: { data: [] } },
+  );
+  const holder = await readProfessionalIdentity(dubai.client, ME);
+  ck(
+    "the profession is resolved against the published catalogue",
+    dubai.seen.cig_professions?.slug === "vaktare" &&
+      dubai.seen.cig_professions?.content_status === "published",
+  );
+  ck(
+    "and reaches the surfaces as a word in both languages, never as a slug",
+    professionLabel(holder, "sv") === "Väktare" &&
+      professionLabel(holder, "en") === "Security Officer",
+  );
+  ck(
+    "a slug is never the fallback when the catalogue names no title",
+    professionLabel(
+      { ...holder, currentProfessionTitleSv: null, currentProfessionTitleEn: null },
+      "sv",
+    ) === null,
+  );
+  ck(
+    "free text still answers when there is no catalogue row",
+    professionLabel(
+      {
+        currentProfessionOther: "Hundförare",
+        currentProfessionTitleSv: null,
+        currentProfessionTitleEn: null,
+      },
+      "sv",
+    ) === "Hundförare",
+  );
+  ck(
+    "the emirate survives the seam",
+    holder.workCountry === "AE" && holder.workSubJurisdiction === "AE-DU",
+  );
+  // The flattening this refuses: "AE" alone is the UAE-wide claim the market
+  // pack exists to prevent, and a bare code is not a place name in either
+  // language.
+  ck(
+    "and renders as Dubai, not as AE, in both languages",
+    formatWorkLocation(holder.workCountry, holder.workSubJurisdiction, "sv").includes("Dubai") &&
+      formatWorkLocation(holder.workCountry, holder.workSubJurisdiction, "en").includes("Dubai") &&
+      formatWorkLocation(holder.workCountry, holder.workSubJurisdiction, "sv") !== "AE",
+  );
+  ck(
+    "a country-level holder is not given an emirate they did not state",
+    formatWorkLocation("AE", null, "en") !== formatWorkLocation("AE", "AE-DU", "en"),
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* 2c · The surfaces that render the seam                              */
+/* ------------------------------------------------------------------ */
+
+console.log("\n2c · the /my-career surfaces");
+{
+  const header = read("src/components/professional-identity/ProfessionalIdentityHeader.tsx");
+  const profilePage = read("src/routes/_authenticated.my-career.profile.tsx");
+  const dashboard = read("src/routes/_authenticated.my-career.index.tsx");
+  const profileCard = read("src/components/assessment/SecurityCareerProfileCard.tsx");
+  const passportCard = read("src/components/security-passport/PassportSummaryCard.tsx");
+  const seam = read("src/lib/professional-identity/identity.functions.ts");
+
+  // ── B3 · no audited heading may fall back to the stored slug ───────
+  for (const [name, src] of [
+    ["the identity header", header],
+    ["/my-career/profile", profilePage],
+  ] as const) {
+    ck(`${name} resolves the profession through professionLabel`, src.includes("professionLabel("));
+    ck(`${name} never renders currentProfessionSlug`, !src.includes("currentProfessionSlug"));
+  }
+  ck(
+    "the profile card's summary does not fall back to the slug either",
+    !/\?\?\s*draft\.currentProfessionSlug|:\s*draft\.currentProfessionSlug\)/.test(profileCard),
+  );
+
+  // ── M5 · the sub-jurisdiction reaches the formatter ────────────────
+  for (const [name, src] of [
+    ["the identity header", header],
+    ["/my-career/profile", profilePage],
+  ] as const) {
+    ck(
+      `${name} formats the work location with its sub-jurisdiction`,
+      /formatWorkLocation\(\s*identity\.workCountry,\s*identity\.workSubJurisdiction/.test(src),
+    );
+  }
+
+  // ── B2 · one label, one number ─────────────────────────────────────
+  //
+  // The card's headline figures must count the whole Passport, which is what
+  // the identity header counts. Two cells reading 3 and 0 under the same word
+  // "Verifierade" was the contradiction; the jurisdiction split stays, said
+  // in its own separately labelled sentence.
+  ck(
+    "the Passport card's verified total counts every claim",
+    /const verified = claims\.filter/.test(passportCard),
+  );
+  ck(
+    "and jurisdiction relevance is stated separately, not under the same label",
+    passportCard.includes("verifiedHere") &&
+      passportCard.includes("home.passport.relevantVerified") &&
+      passportCard.includes("home.passport.verifiedTotal"),
+  );
+  ck("the relevance split itself is unchanged", passportCard.includes("splitByWorkLocation"));
+
+  // ── B4 · a save refreshes what reads it ────────────────────────────
+  ck(
+    "saving the career profile invalidates the identity read model",
+    /invalidateQueries/.test(profileCard) && profileCard.includes('"professional-identity"'),
+  );
+  ck(
+    "and the job-matching profile that also derives from it",
+    profileCard.includes('"career-profile-for-jobs"'),
+  );
+  ck("without reloading the page", !/window\.location\.reload/.test(profileCard));
+
+  // ── B5 · the gate reaches the ladder ───────────────────────────────
+  ck(
+    "the dashboard hands the Career Discovery gate to the next best actions",
+    /careerDiscoveryOpen:\s*assessmentOpen/.test(dashboard),
+  );
+
+  // ── M2 · the block does not silently disappear ─────────────────────
+  ck(
+    "a failed identity read is stated rather than replaced by a plain greeting",
+    /identityQ\.isError \?/.test(dashboard),
+  );
+  ck(
+    "and offers a retry rather than asking for a page reload",
+    /identityQ\.refetch\(\)/.test(dashboard) && !/window\.location\.reload/.test(dashboard),
+  );
+  ck("the profile page offers one too", /query\.refetch\(\)/.test(profilePage));
+  ck(
+    "the header refuses to print a count whose source did not answer",
+    header.includes("passportKnown") && header.includes("COPY.unreadable"),
+  );
+  ck(
+    "and withholds the completeness percentage rather than computing it from a partial read",
+    /degraded \?/.test(header),
+  );
+
+  // ── The seam stays a read, and stays scoped ────────────────────────
+  ck("the seam still writes nothing", !/\.(insert|update|upsert|delete)\s*\(/.test(seam));
+  ck("and holds no service-role client", !/service_role|SERVICE_ROLE/.test(seam));
 }
 
 /* ------------------------------------------------------------------ */
@@ -390,7 +903,10 @@ console.log("\n4 · CV source bundle");
 
   ck("employment is newest first", bundle.employment[0]?.id === "e1");
   ck("education is separated from credentials", bundle.education.length === 1);
-  ck("languages are separated from skills", bundle.languages.length === 1 && bundle.skills.length === 1);
+  ck(
+    "languages are separated from skills",
+    bundle.languages.length === 1 && bundle.skills.length === 1,
+  );
   ck(
     "a self-declared claim is not marked verified",
     bundle.credentials.every((c) => c.verified === false),
@@ -402,10 +918,7 @@ console.log("\n4 · CV source bundle");
     includeCareerInsight: false,
     targetJobText: null,
   });
-  ck(
-    "a verified claim IS marked verified",
-    verifiedBundle.credentials[0]?.verified === true,
-  );
+  ck("a verified claim IS marked verified", verifiedBundle.credentials[0]?.verified === true);
 
   // "evidenced" is the holder attaching a document to their own claim. A
   // holder cannot verify themselves.
@@ -415,12 +928,12 @@ console.log("\n4 · CV source bundle");
     includeCareerInsight: false,
     targetJobText: null,
   });
-  ck("attaching evidence does not make a claim verified", evidenced.credentials[0]?.verified === false);
-
   ck(
-    "the career insight is opt-in and absent by default",
-    bundle.careerInsight === null,
+    "attaching evidence does not make a claim verified",
+    evidenced.credentials[0]?.verified === false,
   );
+
+  ck("the career insight is opt-in and absent by default", bundle.careerInsight === null);
   const optedIn = buildCvSourceBundle({
     identity: ESTABLISHED,
     locale: "sv",
@@ -540,7 +1053,10 @@ console.log("\n5 · anti-fabrication validation");
 
   for (const c of hostile) {
     const v = validateCvPresentation(c.p, bundle);
-    ck(`rejected: ${c.name}`, v.some((x) => x.kind === c.kind));
+    ck(
+      `rejected: ${c.name}`,
+      v.some((x) => x.kind === c.kind),
+    );
   }
 
   // The schema is the first defence, and it is the one that makes an
@@ -584,7 +1100,10 @@ console.log("\n6 · CV document");
     "an omitted employment is reported rather than dropped",
     assisted.omittedEmployment.length === 1 && assisted.omittedEmployment[0]?.id === "e1",
   );
-  ck("AI-written text is labelled as such", assisted.summaryIsAiWritten && assisted.headlineIsAiWritten);
+  ck(
+    "AI-written text is labelled as such",
+    assisted.summaryIsAiWritten && assisted.headlineIsAiWritten,
+  );
   ck(
     "the facts on an assisted document still come from the bundle",
     assisted.experience[0]?.fact.employerName === "Stockholm Bevakning",
@@ -714,10 +1233,7 @@ await (async () => {
     "an instruction planted in a job advert is quarantined",
     screened.quarantinedPassages.length === 1,
   );
-  ck(
-    "the rest of the advert survives the quarantine",
-    screened.status === "succeeded",
-  );
+  ck("the rest of the advert survives the quarantine", screened.status === "succeeded");
 })();
 
 /* ------------------------------------------------------------------ */
@@ -742,10 +1258,7 @@ console.log("\n8 · boundaries");
   for (const file of dir) {
     const body = read(file);
     const code = body.replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
-    ck(
-      `${path.basename(file)} writes nothing`,
-      !/\.(insert|update|upsert|delete)\s*\(/.test(code),
-    );
+    ck(`${path.basename(file)} writes nothing`, !/\.(insert|update|upsert|delete)\s*\(/.test(code));
   }
 
   // The identity seam is the ONLY file here that touches a table at all,
@@ -755,10 +1268,7 @@ console.log("\n8 · boundaries");
     "the seam uses no service role or admin client",
     !/service_role|supabaseAdmin|SERVICE_ROLE/.test(seam),
   );
-  ck(
-    "the seam takes no caller-supplied identifier",
-    !/\.validator\(/.test(seam),
-  );
+  ck("the seam takes no caller-supplied identifier", !/\.validator\(/.test(seam));
 
   // The credential must not be reachable from a page.
   for (const file of [
@@ -808,9 +1318,7 @@ console.log("\n8 · boundaries");
   const allSources = sourceFilesUnder(path.join(root, "src"));
   // Generated Supabase schema types describe hosted schema; they are not a runtime dependency.
   // Keep this aligned with release-parity-check, which excludes the same generated file.
-  const runtimeSources = allSources.filter(
-    (f) => f !== "src/integrations/supabase/types.ts",
-  );
+  const runtimeSources = allSources.filter((f) => f !== "src/integrations/supabase/types.ts");
   const namingIt = runtimeSources.filter((f) => /cv_documents/.test(codeOf(f)));
   ck(
     `exactly one file names cv_documents directly (found ${namingIt.length}: ${namingIt
@@ -914,11 +1422,12 @@ console.log("\n9 . saved CV documents");
   ck("an untouched field keeps its authorship", edited.authorship.headline === "ai");
   ck("the edit is stored", edited.summary === "Min egen sammanfattning.");
 
-  const reSaved = applyCvEdit(stored, { cvId: "00000000-0000-0000-0000-000000000000", summary: stored.summary }, bundle);
-  ck(
-    "re-submitting identical text does not claim authorship",
-    reSaved.authorship.summary === "ai",
+  const reSaved = applyCvEdit(
+    stored,
+    { cvId: "00000000-0000-0000-0000-000000000000", summary: stored.summary },
+    bundle,
   );
+  ck("re-submitting identical text does not claim authorship", reSaved.authorship.summary === "ai");
 
   const bulletEdit = applyCvEdit(
     stored,
@@ -963,7 +1472,11 @@ console.log("\n9 . saved CV documents");
   ck("and marks drafted prose as drafted", doc.summaryIsAiWritten);
 
   const ownWords = applyCvEdit(
-    applyCvEdit(stored, { cvId: "00000000-0000-0000-0000-000000000000", summary: "Mina ord." }, bundle),
+    applyCvEdit(
+      stored,
+      { cvId: "00000000-0000-0000-0000-000000000000", summary: "Mina ord." },
+      bundle,
+    ),
     { cvId: "00000000-0000-0000-0000-000000000000", headline: "Min titel" },
     bundle,
   );
@@ -979,10 +1492,7 @@ console.log("\n9 . saved CV documents");
   // -- The factual document is savable too ---------------------------
   const factual = factualStoredPresentation(bundle);
   ck("a factual saved document writes no summary", factual.summary === "");
-  ck(
-    "and claims no AI authorship",
-    buildSavedCvDocument(bundle, factual).origin === "factual",
-  );
+  ck("and claims no AI authorship", buildSavedCvDocument(bundle, factual).origin === "factual");
 
   // -- The stored schema must not impose the model's floors on a person
   const shortByHuman = storedPresentationSchema.safeParse({
@@ -992,10 +1502,7 @@ console.log("\n9 . saved CV documents");
     emphasisedClaimIds: [],
     tailoringRationale: "",
   });
-  ck(
-    "a person may write a short summary, or none",
-    shortByHuman.success,
-  );
+  ck("a person may write a short summary, or none", shortByHuman.success);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1024,7 +1531,10 @@ console.log("\n10 . a saved CV is a snapshot");
     targetJobText: null,
   });
   const removed = diffCvSourceBundles(savedBundle, withoutE1);
-  ck("a removed employment is detected", removed.changes.some((c) => c.kind === "removed"));
+  ck(
+    "a removed employment is detected",
+    removed.changes.some((c) => c.kind === "removed"),
+  );
   ck("and its id is reported for reconciliation", removed.removedIds.includes("e1"));
 
   // A corrected employer name.
@@ -1062,7 +1572,8 @@ console.log("\n10 . a saved CV is a snapshot");
   // new -- and never invents a bullet.
   const stored = storedFromAiPresentation({
     headline: "Säkerhetschef",
-    summary: "En sammanfattning som är tillräckligt lång för schemat att acceptera den utan problem.",
+    summary:
+      "En sammanfattning som är tillräckligt lång för schemat att acceptera den utan problem.",
     experience: [
       { sourceId: "e1", bullets: ["Punkt ett."] },
       { sourceId: "e2", bullets: ["Punkt två."] },
@@ -1078,13 +1589,12 @@ console.log("\n10 . a saved CV is a snapshot");
   );
   ck(
     "the surviving employment keeps its bullets",
-    reconciled.presentation.experience.find((e) => e.sourceId === "e2")?.bullets[0] === "Punkt två.",
+    reconciled.presentation.experience.find((e) => e.sourceId === "e2")?.bullets[0] ===
+      "Punkt två.",
   );
   ck(
     "reconciliation never invents a bullet",
-    reconciled.presentation.experience.every(
-      (e) => e.bullets.length === 0 || e.sourceId === "e2",
-    ),
+    reconciled.presentation.experience.every((e) => e.bullets.length === 0 || e.sourceId === "e2"),
   );
 }
 
@@ -1128,10 +1638,7 @@ console.log("\n11 . persistence boundaries");
     "and the bundle it is checked against is rebuilt on the server",
     storeCode.includes("readProfessionalIdentity") && storeCode.includes("buildCvSourceBundle"),
   );
-  ck(
-    "readiness is re-checked on the save path",
-    storeCode.includes("computeCvReadiness"),
-  );
+  ck("readiness is re-checked on the save path", storeCode.includes("computeCvReadiness"));
 
   // A saved CV must not acquire a sharing mechanism by accident.
   for (const forbidden of ["share_token", "is_public", "public_token", "expires_at"]) {
@@ -1143,10 +1650,7 @@ console.log("\n11 . persistence boundaries");
     storeCode.indexOf("export const listMyCvs"),
     storeCode.indexOf("export const saveCvDraft"),
   );
-  ck(
-    "reading a CV writes nothing",
-    !/\.(insert|update|upsert|delete)\s*\(/.test(readHandlers),
-  );
+  ck("reading a CV writes nothing", !/\.(insert|update|upsert|delete)\s*\(/.test(readHandlers));
 }
 
 /* ------------------------------------------------------------------ */

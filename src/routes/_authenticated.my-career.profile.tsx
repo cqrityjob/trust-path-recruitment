@@ -64,9 +64,13 @@ import {
   SKILL_CLAIM_TYPES,
   claimsOfType,
   isVerifiedClaim,
+  professionLabel,
   type IdentityClaim,
   type ProfessionalIdentityV1,
 } from "@/lib/professional-identity/types";
+// Same reason as the header: the work location belongs to the Passport, and
+// only its own formatter keeps the emirate attached to the country.
+import { formatWorkLocation } from "@/lib/security-passport/format";
 
 export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
@@ -81,10 +85,8 @@ export const Route = createFileRoute("/_authenticated/my-career/profile")({
 
 const COPY = {
   loading: c("Hämtar din profil…", "Loading your profile…"),
-  failed: c(
-    "Din profil kunde inte hämtas just nu. Ladda om sidan för att försöka igen.",
-    "Your profile could not be loaded right now. Reload the page to try again.",
-  ),
+  failed: c("Din profil kunde inte hämtas just nu.", "Your profile could not be loaded right now."),
+  retryLabel: c("Försök igen", "Try again"),
   sections: c("Din profil, avsnitt för avsnitt", "Your profile, section by section"),
   ownedHere: c("Redigeras här", "Edited here"),
   ownedPassport: c("Tillhör Säkerhetspasset", "Belongs to the Security Passport"),
@@ -173,18 +175,20 @@ function summarise(
     case "identity":
       return { text: identity.headline ?? L(COPY.empty, lang), claims: [] };
     case "profession":
-      return {
-        text:
-          identity.currentProfessionOther ??
-          identity.currentProfessionSlug ??
-          L(COPY.empty, lang),
-        claims: [],
-      };
+      // Never the stored slug: `vaktare` is an identifier, and printing it
+      // here told a person their current profession was a database key.
+      return { text: professionLabel(identity, lang) ?? L(COPY.empty, lang), claims: [] };
     case "experience":
       return { text: identity.yearsOfExperience ?? L(COPY.empty, lang), claims: [] };
     case "location":
+      // Dubai, not "AE". The sub-jurisdiction travels with the country so a
+      // holder in one emirate is never rendered as a UAE-wide claim.
       return {
-        text: identity.workCountry ?? identity.accountCountry ?? L(COPY.empty, lang),
+        text: identity.workCountry
+          ? formatWorkLocation(identity.workCountry, identity.workSubJurisdiction, lang)
+          : identity.accountCountry
+            ? formatWorkLocation(identity.accountCountry, null, lang)
+            : L(COPY.empty, lang),
         claims: [],
       };
     case "employment":
@@ -220,6 +224,9 @@ function ProfilePage() {
     queryFn: () => load(),
     staleTime: 60_000,
   });
+  // Reloading the page is not a retry a person should have to think of, and
+  // this page's own error copy used to ask for exactly that.
+  const retry = () => void query.refetch();
 
   const identity = query.data;
 
@@ -229,14 +236,25 @@ function ProfilePage() {
         {query.isPending && <p className="text-sm text-muted-foreground">{L(COPY.loading, l)}</p>}
 
         {query.isError && (
-          <p role="alert" className="text-sm text-destructive">
-            {L(COPY.failed, l)}
-          </p>
+          <div role="alert" className="max-w-2xl rounded-xl border border-border bg-card p-6">
+            <p className="text-sm text-destructive">{L(COPY.failed, l)}</p>
+            <button
+              type="button"
+              onClick={retry}
+              className="mt-3 inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color:var(--primary-hover)]"
+            >
+              {L(COPY.retryLabel, l)}
+            </button>
+          </div>
         )}
 
         {identity && (
           <div className="space-y-8">
-            <ProfessionalIdentityHeader identity={identity} showProfileLink={false} />
+            <ProfessionalIdentityHeader
+              identity={identity}
+              showProfileLink={false}
+              onRetry={retry}
+            />
 
             {/* The canonical row's own editor, unchanged: same component,
                 same draft shape, same save call as /my-career. It is

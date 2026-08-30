@@ -401,7 +401,44 @@ function MyCareerPage() {
             showed rather than a spinner-shaped hole, and if it fails that is
             what stays. Nothing below depends on it. */}
         {identityQ.data ? (
-          <ProfessionalIdentityHeader identity={identityQ.data} />
+          <ProfessionalIdentityHeader
+            identity={identityQ.data}
+            onRetry={() => void identityQ.refetch()}
+          />
+        ) : identityQ.isError ? (
+          /* The read failed. It used to fall back to the plain greeting, which
+             silently removed the identity summary AND the guidance below it —
+             a person whose Passport and report were intact simply stopped
+             being shown them, with nothing to act on. Stated instead, with a
+             retry, and scoped to this block: the Passport, Career Discovery,
+             jobs and assessment sections all still render from their own
+             queries. */
+          <header className="max-w-3xl rounded-xl border border-border bg-card p-6 md:p-8">
+            <h1
+              className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {greeting}
+              {firstName ? `, ${firstName}` : ""}
+            </h1>
+            <p role="alert" className="mt-2 text-sm text-destructive">
+              {L(
+                c(
+                  "Din yrkesidentitet kunde inte hämtas just nu. Ingenting har tagits bort.",
+                  "Your professional identity could not be loaded right now. Nothing has been removed.",
+                ),
+                lang,
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => void identityQ.refetch()}
+              className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-md border border-border px-3.5 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              {L(c("Försök igen", "Try again"), lang)}
+            </button>
+          </header>
         ) : (
           <header className="max-w-3xl">
             <h1
@@ -428,9 +465,17 @@ function MyCareerPage() {
             streak, a badge or a demand. */}
         {identityQ.data && (
           <div className="mt-8">
+            {/* The SAME gate answer the CTAs below already branch on. Without
+                it the ladder recommended "Take Career Discovery" to a
+                candidate outside the tester cohort, who would land on "the
+                assessment isn't open yet" — the dead end this page fixed
+                everywhere except in its own primary actions. */}
             <NextActions
               identity={identityQ.data}
-              signals={{ savedCvCount: cvsQ.data?.length }}
+              signals={{
+                savedCvCount: cvsQ.data?.length,
+                careerDiscoveryOpen: assessmentOpen,
+              }}
             />
           </div>
         )}

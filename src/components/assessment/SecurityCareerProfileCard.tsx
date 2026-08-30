@@ -1,8 +1,25 @@
 // The Security Career Profile on /my-career — a summary with its canonical
 // editor behind it. Passport may deep-link here to edit profession, but the
 // Passport never receives a second profession writer.
+//
+// ── WHAT A SAVE HAS TO REACH ───────────────────────────────────────────
+//
+// This card owns the canonical row, and it used to be the only thing on the
+// page that knew the row had changed: it updated its own `draft` and stopped
+// there. Everything else on /my-career reads the SAME fact through a
+// different query — the professional identity header prints the profession
+// as a heading, the completeness meter counts it as a section, the next best
+// actions decide "complete your professional profile" from it, and the job
+// matches key off the profile-for-jobs read model.
+//
+// So a person who changed their profession from Ordningsvakt to Väktare saw
+// the summary two inches away update and the heading above it keep the old
+// answer until they reloaded. The fix is to invalidate the queries that
+// derive from this row rather than to reload the page: a full reload throws
+// away every other in-flight read on this dashboard to refresh one fact.
 
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Pencil } from "lucide-react";
 import {
@@ -55,6 +72,7 @@ export function SecurityCareerProfileCard() {
   const autoOpened = useRef(false);
   const getProfile = useServerFn(getMySecurityCareerProfile);
   const upsertProfile = useServerFn(upsertMySecurityCareerProfile);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     getProfile()
@@ -128,6 +146,21 @@ export function SecurityCareerProfileCard() {
     try {
       await upsertProfile({ data: editDraft });
       setDraft(editDraft);
+
+      // Every read model derived from the row this just wrote. Listed
+      // explicitly rather than invalidated wholesale: a blanket
+      // `invalidateQueries()` would also re-run the Passport, the report and
+      // the interview reads, none of which this save can have changed.
+      //
+      //   professional-identity   the heading, the completeness meter and
+      //                           the next best actions, all from one seam
+      //   career-profile-for-jobs the profile the job matches are scored
+      //                           against — and the family the job list keys
+      //                           on, so it must not keep the old profession
+      for (const queryKey of [["professional-identity"], ["career-profile-for-jobs"]]) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
+
       setStatus("saved");
       setOpen(false);
     } catch (err) {
@@ -149,8 +182,14 @@ export function SecurityCareerProfileCard() {
   const statusLabel = draft.currentStatus
     ? pickText(currentStatusOptions.find((o) => o.id === draft.currentStatus)!.label, lang)
     : null;
+  // The catalogue title, or nothing. The fallback used to be the stored slug,
+  // so this summary printed `vaktare` as a person's profession for as long as
+  // the catalogue read was in flight — and permanently if it failed. A row
+  // with no value is simply omitted below, which is the honest answer to "we
+  // have not resolved this yet".
   const professionLabel = draft.currentProfessionSlug
-    ? ((p) => (p ? (lang === "sv" ? p.title_sv : p.title_en) : draft.currentProfessionSlug))(
+    ? ((p) =>
+        p ? (lang === "sv" ? p.title_sv : p.title_en) : (draft.currentProfessionOther ?? null))(
         professions.find((p) => p.slug === draft.currentProfessionSlug),
       )
     : (draft.currentProfessionOther ?? null);

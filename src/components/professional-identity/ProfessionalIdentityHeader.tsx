@@ -30,15 +30,21 @@
 // never appears next to anything on the self-reported side.
 
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Clock3, MapPin } from "lucide-react";
+import { AlertTriangle, ArrowRight, BadgeCheck, Clock3, MapPin, RefreshCcw } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { computeProfileCompleteness } from "@/lib/professional-identity/completeness";
 import { computeCvReadiness } from "@/lib/professional-identity/cv/readiness";
 import {
   isPendingClaim,
+  isUnavailable,
   isVerifiedClaim,
+  professionLabel,
   type ProfessionalIdentityV1,
 } from "@/lib/professional-identity/types";
+// The work location is Passport-owned, and so is the only correct way to
+// render it. `formatWorkLocation` keeps the emirate: a Dubai holder is not
+// "a UAE holder", and this header printed the bare code `AE` for both.
+import { formatWorkLocation } from "@/lib/security-passport/format";
 import { c, L, Lf, type Lang } from "./copy";
 
 const COPY = {
@@ -71,6 +77,21 @@ const COPY = {
   statusCv: c("CV", "CV"),
   statusCvReady: c("Klart att skapa", "Ready to create"),
   statusCvBlocked: c("Behöver mer information", "Needs more information"),
+
+  // ── When a read did not answer ────────────────────────────────────────
+  // "0 verifierade" and "vi kunde inte läsa dina uppgifter" are different
+  // sentences about a person's professional standing, and printing the first
+  // when the second is true is the failure this copy exists to prevent.
+  unreadable: c("Kunde inte läsas", "Could not be read"),
+  degradedTitle: c(
+    "Delar av din profil kunde inte läsas",
+    "Parts of your profile could not be read",
+  ),
+  degradedBody: c(
+    "Siffrorna nedan är inte fullständiga. Ingenting har tagits bort — försök igen om en stund.",
+    "The figures below are incomplete. Nothing has been removed — try again in a moment.",
+  ),
+  retry: c("Försök igen", "Try again"),
 } as const;
 
 /** One state, stated as a fact. Never a score and never a colour on its own —
@@ -100,12 +121,26 @@ export function ProfessionalIdentityHeader({
   /** The profile page shows the same summary without offering itself as a
    *  destination. */
   showProfileLink = true,
+  /** Re-run the identity read. Given one, the degraded notice offers it; the
+   *  requirement is that a person who was told something failed can act on
+   *  it without reloading the page. */
+  onRetry,
 }: {
   identity: ProfessionalIdentityV1;
   showProfileLink?: boolean;
+  onRetry?: () => void;
 }) {
   const { lang } = useT();
   const l = lang as Lang;
+
+  // Which facts this render is entitled to state. See IdentityFactGroup.
+  const passportKnown = !isUnavailable(identity, "passport") && !isUnavailable(identity, "claims");
+  const discoveryKnown = !isUnavailable(identity, "discovery");
+  const cvKnown =
+    !isUnavailable(identity, "employment") &&
+    !isUnavailable(identity, "claims") &&
+    !isUnavailable(identity, "profile");
+  const degraded = identity.unavailable.length > 0;
 
   const completeness = computeProfileCompleteness(identity);
   const cv = computeCvReadiness(identity);
@@ -114,11 +149,19 @@ export function ProfessionalIdentityHeader({
   const pending = identity.claims.filter(isPendingClaim).length;
 
   const firstName = (identity.displayName ?? "").trim().split(/\s+/)[0] ?? "";
-  const profession =
-    identity.currentProfessionOther ?? identity.currentProfessionSlug ?? null;
-  const country = identity.workCountry ?? identity.accountCountry;
+  // Resolved through the canonical catalogue, never the stored slug. See
+  // `professionLabel` — a slug is an identifier, not a person's job title.
+  const profession = professionLabel(identity, l);
+  // The Passport's stated work location wins over the account country, and
+  // carries its sub-jurisdiction so an emirate is not flattened to a country.
+  const location = identity.workCountry
+    ? formatWorkLocation(identity.workCountry, identity.workSubJurisdiction, l)
+    : identity.accountCountry
+      ? formatWorkLocation(identity.accountCountry, null, l)
+      : null;
 
-  const cardReady = identity.discovery.hasCompletedReport && identity.discovery.namesCareers;
+  const cardReady =
+    discoveryKnown && identity.discovery.hasCompletedReport && identity.discovery.namesCareers;
 
   return (
     <section className="rounded-xl border border-border bg-card p-6 shadow-sm md:p-8">
@@ -140,7 +183,7 @@ export function ProfessionalIdentityHeader({
       {/* Experience and country, as separate facts rather than a single
           "10+ years · Sweden" string — one of them is routinely absent, and
           a joined string with a dangling separator is how that reads. */}
-      {(identity.yearsOfExperience || country) && (
+      {(identity.yearsOfExperience || location) && (
         <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {identity.yearsOfExperience && (
             <span className="inline-flex items-center gap-1.5">
@@ -148,10 +191,10 @@ export function ProfessionalIdentityHeader({
               {Lf(COPY.experienceYears, l, identity.yearsOfExperience)}
             </span>
           )}
-          {country && (
+          {location && (
             <span className="inline-flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              {country}
+              {location}
             </span>
           )}
         </p>
@@ -164,26 +207,54 @@ export function ProfessionalIdentityHeader({
       {/* ── Completeness ──────────────────────────────────────────────
           A progress bar plus the sentence. The bar alone would be a number
           without a caption, and this number needs its caption. */}
-      <div className="mt-6 max-w-md">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-sm font-medium text-foreground">
-            {Lf(COPY.completeness, l, completeness.score)}
-          </span>
-        </div>
+      {/* Withheld outright when a read failed. The score is computed over
+          nine sections, an unreadable one scores as missing, and "Profil
+          komplett till 34 %" is a claim about how much of themselves this
+          person has filled in — not something to derive from a request that
+          did not answer. The notice below says so instead. */}
+      {degraded ? (
         <div
-          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary"
-          role="progressbar"
-          aria-valuenow={completeness.score}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={Lf(COPY.completeness, l, completeness.score)}
+          role="alert"
+          className="mt-6 max-w-2xl rounded-lg border border-border bg-secondary/50 p-4"
         >
-          <div
-            className="h-full rounded-full bg-accent transition-[width] duration-500"
-            style={{ width: `${completeness.score}%` }}
-          />
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            {L(COPY.degradedTitle, l)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{L(COPY.degradedBody, l)}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+            >
+              <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              {L(COPY.retry, l)}
+            </button>
+          )}
         </div>
-      </div>
+      ) : (
+        <div className="mt-6 max-w-md">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-medium text-foreground">
+              {Lf(COPY.completeness, l, completeness.score)}
+            </span>
+          </div>
+          <div
+            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary"
+            role="progressbar"
+            aria-valuenow={completeness.score}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={Lf(COPY.completeness, l, completeness.score)}
+          >
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-500"
+              style={{ width: `${completeness.score}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Rendered only when there is something in it. On the profile page
           the profile link is suppressed, and a person with no Career
@@ -215,36 +286,58 @@ export function ProfessionalIdentityHeader({
 
       {/* ── What do I have ───────────────────────────────────────────── */}
       <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-border pt-6 lg:grid-cols-4">
+        {/* Every cell below states a fact about this person. A cell whose
+            source did not answer says exactly that instead — "0 verifierade"
+            on a failed claims read tells a holder their credentials are
+            gone. */}
         <StatusCell
           label={L(COPY.statusPassport, l)}
           value={
-            identity.hasPassport
-              ? Lf(COPY.statusPassportCounts, l, verified)
-              : L(COPY.statusPassportNone, l)
+            !passportKnown
+              ? L(COPY.unreadable, l)
+              : identity.hasPassport
+                ? Lf(COPY.statusPassportCounts, l, verified)
+                : L(COPY.statusPassportNone, l)
           }
           detail={
-            identity.hasPassport && pending > 0 ? Lf(COPY.statusPassportPending, l, pending) : null
+            passportKnown && identity.hasPassport && pending > 0
+              ? Lf(COPY.statusPassportPending, l, pending)
+              : null
           }
         />
         <StatusCell
           label={L(COPY.statusDiscovery, l)}
           value={
-            identity.discovery.hasCompletedReport
-              ? L(COPY.statusDiscoveryDone, l)
-              : L(COPY.statusDiscoveryNone, l)
+            !discoveryKnown
+              ? L(COPY.unreadable, l)
+              : identity.discovery.hasCompletedReport
+                ? L(COPY.statusDiscoveryDone, l)
+                : L(COPY.statusDiscoveryNone, l)
           }
         />
         <StatusCell
           label={L(COPY.statusCard, l)}
-          value={cardReady ? L(COPY.statusCardReady, l) : L(COPY.statusCardBlocked, l)}
+          value={
+            !discoveryKnown
+              ? L(COPY.unreadable, l)
+              : cardReady
+                ? L(COPY.statusCardReady, l)
+                : L(COPY.statusCardBlocked, l)
+          }
         />
         <StatusCell
           label={L(COPY.statusCv, l)}
-          value={cv.state === "ready" ? L(COPY.statusCvReady, l) : L(COPY.statusCvBlocked, l)}
+          value={
+            !cvKnown
+              ? L(COPY.unreadable, l)
+              : cv.state === "ready"
+                ? L(COPY.statusCvReady, l)
+                : L(COPY.statusCvBlocked, l)
+          }
         />
       </dl>
 
-      {verified > 0 && (
+      {passportKnown && verified > 0 && (
         <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <BadgeCheck className="h-3.5 w-3.5 text-[color:var(--gold)]" aria-hidden="true" />
           {L(
