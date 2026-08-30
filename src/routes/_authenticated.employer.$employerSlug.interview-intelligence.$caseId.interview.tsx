@@ -790,6 +790,7 @@ function Page() {
                     statementEn: `${c.labelEn}: ${c.guidanceEn}`,
                   }))}
                   ordered
+                  level={5}
                   note={t("iiu.cd.sequence.note")}
                 />
 
@@ -805,6 +806,7 @@ function Page() {
                     statementSv: c.statementSv,
                     statementEn: c.statementEn,
                   }))}
+                  level={5}
                   note={t("iiu.cd.never.note")}
                 />
 

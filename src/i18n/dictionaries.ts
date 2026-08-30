@@ -4260,6 +4260,47 @@ export const dictionaries = {
     "iiu.wf.done": "klart",
     "iiu.wf.step": "Steg",
     "iiu.wf.of": "av",
+    "iiu.rp.doc.title": "Intervjurapport",
+    "iiu.rp.doc.lead":
+      "Dokumentation av ett strukturerat rekryteringssamtal. Rapporten innehåller bekräftat material och registrerade mänskliga bedömningar — ingen poäng, ingen rangordning och ingen rekommendation.",
+    "iiu.rp.doc.candidate": "Kandidat",
+    "iiu.rp.doc.role": "Roll",
+    "iiu.rp.doc.date": "Intervjudatum",
+    "iiu.rp.doc.status": "Rapportstatus",
+    "iiu.rp.doc.version": "Utgåva",
+    "iiu.rp.doc.locked.wording": "Ordagrant ur den låsta rapporten",
+    "iiu.rp.s.scope": "Intervjuns omfattning",
+    "iiu.rp.s.scope.body": "Vad samtalet omfattade och vilket underlag det vilade på.",
+    "iiu.rp.s.examples": "Relevant erfarenhet och exempel ur samtalet",
+    "iiu.rp.s.examples.body":
+      "Ordagranna avsnitt som en människa har bekräftat. Ingenting är omskrivet.",
+    "iiu.rp.s.assessment": "Bedömning mot rollens krav",
+    "iiu.rp.s.assessment.body":
+      "Varje bedömning är gjord av en människa mot en förutbestämd nivåbeskrivning.",
+    "iiu.rp.s.followup": "Behöver följas upp",
+    "iiu.rp.s.followup.none": "Ingenting är öppet för uppföljning.",
+    "iiu.rp.s.verify": "Punkter för kontroll",
+    "iiu.rp.s.verify.none": "Ingenting är öppet för kontroll.",
+    "iiu.rp.s.comments": "Intervjuarens kommentarer",
+    "iiu.rp.s.comments.body": "Intervjuarens egna noteringar från samtalet.",
+    "iiu.rp.s.comments.none": "Inga kommentarer är noterade.",
+    "iiu.rp.s.decision": "Anställningsbeslut",
+    "iiu.rp.decision.boundary":
+      "Anställningsbeslutet dokumenteras separat av arbetsgivaren. Den här rapporten registrerar inget beslut och lämnar ingen rekommendation.",
+    "iiu.rp.doc.sources": "Underlag i ärendet",
+    "iiu.rp.doc.questions": "Frågor i paketet",
+    "iiu.rp.doc.noexamples": "Inget bekräftat exempel för den här frågan.",
+    "iiu.rp.doc.nomaterial":
+      "Att ett exempel saknas betyder att frågan inte gav underlag, inte att förmågan saknas.",
+    "iiu.rp.audit.title": "Spårbarhet och granskning",
+    "iiu.rp.audit.body":
+      "Teknisk proveniens: kontrollsummor, körningar, versioner, processmått och händelsehistorik. Ingenting här är avsett för den som läser rapporten som beslutsunderlag.",
+    "iiu.rp.notfinal.lead":
+      "Rapporten är inte låst ännu. Det här är vad som återstår innan den kan bli ett slutligt dokument.",
+    "iiu.rp.selfreview.lead":
+      "Innan dokumentet stängs: granska ditt eget genomförande. Ingenting här sparas som ett omdöme om kandidaten.",
+    "iiu.rp.tolist": "Alla samtal",
+    "iiu.rp.toreview2": "Tillbaka till granskningen",
     "iiu.rp.quality.title": "Processkvalitet",
     "iiu.rp.m.verifications": "Verifieringar kvar",
     "iiu.rp.m.reflected": "Intervjuaren reflekterade",
@@ -4818,6 +4859,7 @@ export const dictionaries = {
     "iiu.rp.blk.assessment_not_complete":
       "Bedömningen är inte klar ännu. Gå till Evidens och välj „Klar med bedömningen” när varje fråga har en bedömning.",
     "iiu.rp.blk.question_not_assessed": "saknar registrerad bedömning.",
+    "iiu.rp.blk.question_not_assessed.many": "frågor saknar registrerad bedömning:",
     "iiu.rp.blk.proposals_awaiting": "AI-förslag väntar fortfarande på mänsklig granskning.",
     "iiu.rp.blk.not_permitted": "Du saknar behörighet till den här intervjun.",
     "iiu.rp.blk.case_not_found": "Intervjun finns inte.",
@@ -9017,6 +9059,47 @@ export const dictionaries = {
     "iiu.wf.done": "done",
     "iiu.wf.step": "Step",
     "iiu.wf.of": "of",
+    "iiu.rp.doc.title": "Interview report",
+    "iiu.rp.doc.lead":
+      "Documentation of a structured recruitment interview. The report holds confirmed material and recorded human assessments — no score, no ranking and no recommendation.",
+    "iiu.rp.doc.candidate": "Candidate",
+    "iiu.rp.doc.role": "Role",
+    "iiu.rp.doc.date": "Interview date",
+    "iiu.rp.doc.status": "Report status",
+    "iiu.rp.doc.version": "Version",
+    "iiu.rp.doc.locked.wording": "Verbatim from the locked report",
+    "iiu.rp.s.scope": "Interview scope",
+    "iiu.rp.s.scope.body": "What the conversation covered and which material it rested on.",
+    "iiu.rp.s.examples": "Relevant experience and interview examples",
+    "iiu.rp.s.examples.body":
+      "Verbatim extracts a person has confirmed. Nothing has been rewritten.",
+    "iiu.rp.s.assessment": "Assessment against role requirements",
+    "iiu.rp.s.assessment.body":
+      "Every assessment was made by a person against a predefined level description.",
+    "iiu.rp.s.followup": "Follow-up required",
+    "iiu.rp.s.followup.none": "Nothing is open for follow-up.",
+    "iiu.rp.s.verify": "Verification items",
+    "iiu.rp.s.verify.none": "Nothing is open for checking.",
+    "iiu.rp.s.comments": "Interviewer comments",
+    "iiu.rp.s.comments.body": "The interviewer's own notes from the conversation.",
+    "iiu.rp.s.comments.none": "No comments were recorded.",
+    "iiu.rp.s.decision": "Employment decision",
+    "iiu.rp.decision.boundary":
+      "The employment decision is recorded separately by the employer. This report registers no decision and offers no recommendation.",
+    "iiu.rp.doc.sources": "Material on file",
+    "iiu.rp.doc.questions": "Questions in the package",
+    "iiu.rp.doc.noexamples": "No confirmed example for this question.",
+    "iiu.rp.doc.nomaterial":
+      "A missing example means the question produced no material, not that the ability is missing.",
+    "iiu.rp.audit.title": "Audit and traceability",
+    "iiu.rp.audit.body":
+      "Technical provenance: checksums, runs, versions, process measures and the event history. None of it is meant for whoever reads the report as decision support.",
+    "iiu.rp.notfinal.lead":
+      "The report is not locked yet. This is what remains before it can become a final document.",
+    "iiu.rp.selfreview.lead":
+      "Before the document closes: review how you conducted the interview. Nothing here is stored as a judgement about the candidate.",
+    "iiu.rp.tolist": "All conversations",
+    "iiu.rp.toreview2": "Back to review",
     "iiu.rp.quality.title": "Process quality",
     "iiu.rp.m.verifications": "Verifications outstanding",
     "iiu.rp.m.reflected": "Interviewer reflected",
@@ -9583,6 +9666,7 @@ export const dictionaries = {
     "iiu.rp.blk.assessment_not_complete":
       "The assessment is not finished yet. Go to Evidence and choose “Finished assessing” once every question has an assessment.",
     "iiu.rp.blk.question_not_assessed": "has no recorded assessment.",
+    "iiu.rp.blk.question_not_assessed.many": "questions have no recorded assessment:",
     "iiu.rp.blk.proposals_awaiting": "AI suggestions are still waiting for human review.",
     "iiu.rp.blk.not_permitted": "You do not have access to this interview.",
     "iiu.rp.blk.case_not_found": "This interview does not exist.",

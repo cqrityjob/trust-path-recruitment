@@ -862,13 +862,19 @@ export function GovernedGuidance({
   rows,
   ordered = false,
   note,
+  level = 3,
 }: {
   title: string;
   rows: readonly GuidanceRow[];
   ordered?: boolean;
   note?: string;
+  /** Where this sits in the page's heading order. It was a fixed h4, which
+   *  meant every panel that introduced it with an h2 produced an h2 → h4 jump
+   *  for anybody navigating by headings. */
+  level?: 3 | 4 | 5;
 }) {
   const { lang } = useT();
+  const Heading = `h${level}` as const satisfies "h3" | "h4" | "h5";
   if (rows.length === 0) return null;
   const text = (r: GuidanceRow) => (lang === "en" ? r.statementEn : r.statementSv) || r.statementSv;
   const items = rows.map((r) => (
@@ -879,9 +885,9 @@ export function GovernedGuidance({
 
   return (
     <div className="mt-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <Heading className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
-      </h4>
+      </Heading>
       {ordered ? (
         <ol className="mt-2 list-decimal space-y-1.5 pl-5">{items}</ol>
       ) : (
@@ -1115,7 +1121,14 @@ export function WorkflowNav({
                 params={{ employerSlug, caseId }}
                 aria-current={isCurrent ? "step" : undefined}
                 className={cn(
-                  "inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+                  // `relative` is load-bearing. The sr-only spans below are
+                  // position:absolute, and without a positioned ancestor their
+                  // containing block is the page itself -- so a step scrolled
+                  // out of this row parked an invisible 1px box hundreds of
+                  // pixels past the viewport and the whole document scrolled
+                  // sideways at 375px. Nothing was visible; the page was just
+                  // 694px wide.
+                  "relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
                   isCurrent
                     ? "border-accent font-semibold text-foreground"
                     : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
