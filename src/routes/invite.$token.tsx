@@ -377,13 +377,13 @@ function InvitedAssessmentPage() {
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
               <Link
-                to="/candidate/register"
+                to="/signup"
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
               >
                 {t("assignment.recipient.saveResult.createAccount")}
               </Link>
               <Link
-                to="/candidate/login"
+                to="/login"
                 className="inline-flex h-10 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/40"
               >
                 {t("assignment.recipient.saveResult.signIn")}

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Menu, X, ShieldCheck, Building2, LogOut } from "lucide-react";
+import { useLocation } from "@tanstack/react-router";
+import { Menu, X, ShieldCheck, Building2, LogOut, Settings } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
@@ -16,6 +17,7 @@ import { AccountMenu, type AccountIdentity } from "./AccountMenu";
 
 export function SiteHeader() {
   const { t } = useT();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Read off the SAME session this component already subscribes to — no extra
@@ -133,12 +135,27 @@ export function SiteHeader() {
   // Strictly "the database returned a workspace". Pending and failed both read
   // as no access, so the switch is hidden rather than offering a door that may
   // not open -- it appears when the answer arrives.
-  const hasEmployerWorkspace = (workspaces.data?.length ?? 0) > 0;
+  const myWorkspaces = (workspaces.data ?? []).map((w) => ({
+    employerSlug: w.employerSlug,
+    employerName: w.employerName,
+  }));
+  const hasEmployerWorkspace = myWorkspaces.length > 0;
+
+  /** Which context the CURRENT ROUTE is in.
+   *
+   *  Presentation only. It decides which entry in the switcher wears a tick;
+   *  it grants nothing and is never read as permission. The slug is taken
+   *  from the path this browser is already on -- the route it names
+   *  re-verifies membership itself. */
+  const employerMatch = /^\/employer\/([^/]+)/.exec(location.pathname);
+  const currentContext: AccountIdentity["currentContext"] =
+    employerMatch && employerMatch[1] ? { employerSlug: employerMatch[1] } : "personal";
 
   const identity: AccountIdentity = {
     name: account.name,
     email: account.email,
-    hasEmployerWorkspace,
+    workspaces: myWorkspaces,
+    currentContext,
   };
 
   async function onSignOut() {
@@ -164,10 +181,23 @@ export function SiteHeader() {
     roleLinks.push({ to: "/reviews", label: t("nav.reviews"), count: reviewCount });
   }
 
+  // ── WHY THE DESKTOP BAR STARTS AT lg AND NOT md ─────────────────────
+  //
+  // Six primary-nav items in Swedish ("Säkerhetskarriärcenter" alone is 22
+  // characters), a language toggle and two actions do not fit in 768px.
+  // They never did: at exactly the md breakpoint the desktop layout
+  // switched on and overflowed the viewport by ~240px in Swedish and ~150px
+  // in English, which put the sign-in control off-screen behind a
+  // horizontal scroll on every tablet.
+  //
+  // Measured, not guessed -- a Playwright sweep at 375/768/1280/1440 in
+  // both locales found it, which is exactly the width nobody resizes to by
+  // hand. The mobile menu already handles this range correctly, so the
+  // breakpoint moves rather than the content.
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
       {/* Slim utility bar — desktop only. Small trust signals + secondary access. */}
-      <div className="hidden bg-primary text-primary-foreground/85 md:block">
+      <div className="hidden bg-primary text-primary-foreground/85 lg:block">
         <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
@@ -180,21 +210,15 @@ export function SiteHeader() {
             >
               {t("nav.contact")}
             </Link>
-            {/* Signed in, the right-hand action group offers the person their
-                own workspace and nothing employer-shaped, so this quiet link
-                is the only way back into the portal and has to stay. Signed
-                out it would be an exact duplicate of the "Arbetsgivarportal"
-                action button below -- same label, same route -- which is the
-                ambiguity this header is being fixed for, so it is not
-                rendered at all. */}
-            {signedIn === true && (
-              <Link
-                to="/employer"
-                className="text-primary-foreground/75 transition-colors hover:text-primary-foreground"
-              >
-                {t("nav.employerPortal")}
-              </Link>
-            )}
+            {/* The employer door used to live here, ungated, for everybody.
+                It is gone: an organisation context is reached from the
+                account menu, which lists only the organisations the database
+                actually returned for this person and names each one. An
+                ungated "Arbetsgivarportal" offered a door to people who hold
+                no membership, and told somebody who holds two nothing about
+                which one it would open. /employers -- the information page --
+                remains in the primary nav for anybody deciding whether
+                CQrityjob is for their company. */}
           </div>
         </Container>
       </div>
@@ -210,7 +234,7 @@ export function SiteHeader() {
             <span className="text-base">{t("brand.name")}</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
             {nav.map((item) => (
               <Link
                 key={item.to}
@@ -226,7 +250,7 @@ export function SiteHeader() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-2.5 lg:flex xl:gap-3">
             <LanguageSwitcher />
             {roleLinks.map((r) => (
               <Link
@@ -258,25 +282,25 @@ export function SiteHeader() {
                 <AccountMenu identity={identity} onSignOut={onSignOut} />
               </>
             ) : (
-              // Two entries, two audiences, two destinations. "Logga in" is
-              // the candidate/general door (/candidate/login); the primary
-              // button is the employer door (/employer/login). Neither is
-              // "Arbetsgivare" -- that word belongs to the marketing page in
-              // the primary nav, and reusing it here for an action is what
-              // made the header unreadable. Both routes are the existing
-              // PortalAuthForm entries; no new auth surface is introduced.
+              // ONE door in, one door to create an account. The header used
+              // to carry two audience-specific logins, which asked a visitor
+              // to classify themselves before the product had told them that
+              // one account covers both. "Arbetsgivare" still belongs to the
+              // marketing page in the primary nav and to nothing else --
+              // reusing that word for an action is what made this header
+              // unreadable in the first place, and that fix is preserved.
               <>
                 <Link
-                  to="/candidate/login"
+                  to="/login"
                   className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
                 >
                   {t("nav.signin")}
                 </Link>
                 <Link
-                  to="/employer/login"
+                  to="/signup"
                   className="inline-flex items-center rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-[color:var(--primary-hover)] hover:shadow-md"
                 >
-                  {t("nav.employerPortal")}
+                  {t("nav.createAccount")}
                 </Link>
               </>
             )}
@@ -284,7 +308,7 @@ export function SiteHeader() {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center rounded-md p-2 text-foreground md:hidden"
+            className="inline-flex items-center justify-center rounded-md p-2 text-foreground lg:hidden"
             aria-label="Menu"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
@@ -294,7 +318,7 @@ export function SiteHeader() {
         </Container>
       </div>
 
-      <div className={cn("border-t border-border md:hidden", open ? "block" : "hidden")}>
+      <div className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {nav.map((item) => (
             <Link
@@ -336,7 +360,7 @@ export function SiteHeader() {
                 </Link>
               ) : (
                 <Link
-                  to="/candidate/login"
+                  to="/login"
                   onClick={() => setOpen(false)}
                   className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground"
                 >
@@ -344,23 +368,20 @@ export function SiteHeader() {
                 </Link>
               )}
             </div>
-            {/* Mobile carries the same two-door distinction as desktop: the
-                pill above is the candidate/general door, this is the employer
-                one. Signed out it is the primary action and is styled like
-                the desktop button; signed in it drops back to a quiet link,
-                matching the utility bar it stands in for at this width. */}
-            <Link
-              to={signedIn ? "/employer" : "/employer/login"}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "flex min-h-[44px] items-center justify-center rounded-md px-2 py-2 text-sm font-semibold transition-colors",
-                signedIn
-                  ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  : "bg-primary text-primary-foreground shadow-sm hover:bg-[color:var(--primary-hover)]",
-              )}
-            >
-              {t("nav.employerPortal")}
-            </Link>
+            {/* Mobile carries the same single entrance as desktop, and the
+                same primary action. There is no employer door here either:
+                an organisation context is reached from the account section
+                below, by name, and only for organisations the database
+                returned. */}
+            {signedIn !== true && (
+              <Link
+                to="/signup"
+                onClick={() => setOpen(false)}
+                className="flex min-h-[44px] items-center justify-center rounded-md bg-primary px-2 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[color:var(--primary-hover)]"
+              >
+                {t("nav.createAccount")}
+              </Link>
+            )}
           </div>
 
           {/* ── Account, at this width ──────────────────────────────────
@@ -382,16 +403,37 @@ export function SiteHeader() {
                 <p className="truncate px-2 text-xs text-muted-foreground">{identity.email}</p>
               )}
 
-              {identity.hasEmployerWorkspace && (
-                <Link
-                  to="/employer"
-                  onClick={() => setOpen(false)}
-                  className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                >
-                  <Building2 className="h-4 w-4" aria-hidden="true" />
-                  {t("employer.workspace.label")}
-                </Link>
+              {hasEmployerWorkspace && (
+                <>
+                  <p className="mt-3 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    {t("account.context.switchTo")}
+                  </p>
+                  {myWorkspaces.map((workspace) => (
+                    <Link
+                      key={workspace.employerSlug}
+                      to="/employer/$employerSlug"
+                      params={{ employerSlug: workspace.employerSlug }}
+                      onClick={() => setOpen(false)}
+                      className="mt-1 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                    >
+                      <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{workspace.employerName}</span>
+                    </Link>
+                  ))}
+                </>
               )}
+
+              {/* Parity with the desktop menu. Account settings existed
+                  there and not here, so the one control that lets somebody
+                  correct their own professional identity was desktop-only. */}
+              <Link
+                to="/my-career/profile"
+                onClick={() => setOpen(false)}
+                className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                {t("account.settings")}
+              </Link>
 
               <button
                 type="button"

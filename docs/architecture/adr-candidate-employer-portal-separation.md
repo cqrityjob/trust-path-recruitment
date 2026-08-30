@@ -1,6 +1,8 @@
 # ADR: Candidate Portal and Employer Portal Separation
 
-**Status:** Accepted (product/UX decision — no code, migration, or environment change accompanies this ADR)
+**Status:** PARTIALLY SUPERSEDED (2026-08-30) by `adr-unified-account-and-professional-identity.md`, which replaces decisions 1-3 (separate experiences, separate public auth routes, separate dashboards/navigation) with a single account, a single public login/registration entrance and one signed-in shell. **Decisions 4-8 and the extensibility corollary below remain in force, unamended** -- they are what make the unified presentation safe, in particular decision 7: intent was never a role, so collapsing the doors removes a routing hint and touches no authorisation surface. Read this document for 4-8; read the superseding ADR for 1-3.
+
+**Original status:** Accepted (product/UX decision — no code, migration, or environment change accompanies this ADR)
 **Date:** 2026-07-19
 **Related:** `docs/auth/candidate-employer-portal-spec-v1.md` (full specification), `docs/job-intelligence/jobs-mvp-v1-spec.md` / `jobs-mvp-v1-data-model.md` (jobs/application layer this sits beneath)
 

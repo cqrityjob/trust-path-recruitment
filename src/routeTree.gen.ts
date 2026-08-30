@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SecurityCareerAssessmentRouteImport } from './routes/security-career-assessment'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as EmployersRouteImport } from './routes/employers'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
@@ -63,6 +65,9 @@ import { Route as AuthenticatedPassportPrivacyRouteImport } from './routes/_auth
 import { Route as AuthenticatedPassportOnboardingRouteImport } from './routes/_authenticated.passport.onboarding'
 import { Route as AuthenticatedPassportInformationRouteImport } from './routes/_authenticated.passport.information'
 import { Route as AuthenticatedPassportCardRouteImport } from './routes/_authenticated.passport.card'
+import { Route as AuthenticatedMyCareerProfileRouteImport } from './routes/_authenticated.my-career.profile'
+import { Route as AuthenticatedMyCareerCvRouteImport } from './routes/_authenticated.my-career.cv'
+import { Route as AuthenticatedMyCareerCareerCardRouteImport } from './routes/_authenticated.my-career.career-card'
 import { Route as AuthenticatedMyCareerApplicationsRouteImport } from './routes/_authenticated.my-career.applications'
 import { Route as AuthenticatedJourneyTargetIdRouteImport } from './routes/_authenticated.journey.$targetId'
 import { Route as AuthenticatedEmployerPendingRouteImport } from './routes/_authenticated.employer.pending'
@@ -164,6 +169,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SecurityCareerAssessmentRoute =
   SecurityCareerAssessmentRouteImport.update({
     id: '/security-career-assessment',
@@ -178,6 +188,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsRoute = JobsRouteImport.update({
@@ -445,6 +460,23 @@ const AuthenticatedPassportCardRoute =
     id: '/card',
     path: '/card',
     getParentRoute: () => AuthenticatedPassportRoute,
+  } as any)
+const AuthenticatedMyCareerProfileRoute =
+  AuthenticatedMyCareerProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedMyCareerRoute,
+  } as any)
+const AuthenticatedMyCareerCvRoute = AuthenticatedMyCareerCvRouteImport.update({
+  id: '/cv',
+  path: '/cv',
+  getParentRoute: () => AuthenticatedMyCareerRoute,
+} as any)
+const AuthenticatedMyCareerCareerCardRoute =
+  AuthenticatedMyCareerCareerCardRouteImport.update({
+    id: '/career-card',
+    path: '/career-card',
+    getParentRoute: () => AuthenticatedMyCareerRoute,
   } as any)
 const AuthenticatedMyCareerApplicationsRoute =
   AuthenticatedMyCareerApplicationsRouteImport.update({
@@ -1062,9 +1094,11 @@ export interface FileRoutesByFullPath {
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1115,6 +1149,9 @@ export interface FileRoutesByFullPath {
   '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
+  '/my-career/cv': typeof AuthenticatedMyCareerCvRoute
+  '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
@@ -1210,9 +1247,11 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1249,6 +1288,9 @@ export interface FileRoutesByTo {
   '/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
+  '/my-career/cv': typeof AuthenticatedMyCareerCvRoute
+  '/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/passport/card': typeof AuthenticatedPassportCardRoute
   '/passport/information': typeof AuthenticatedPassportInformationRoute
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
@@ -1346,9 +1388,11 @@ export interface FileRoutesById {
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
   '/jobs': typeof JobsRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1399,6 +1443,9 @@ export interface FileRoutesById {
   '/_authenticated/employer/pending': typeof AuthenticatedEmployerPendingRoute
   '/_authenticated/journey/$targetId': typeof AuthenticatedJourneyTargetIdRoute
   '/_authenticated/my-career/applications': typeof AuthenticatedMyCareerApplicationsRoute
+  '/_authenticated/my-career/career-card': typeof AuthenticatedMyCareerCareerCardRoute
+  '/_authenticated/my-career/cv': typeof AuthenticatedMyCareerCvRoute
+  '/_authenticated/my-career/profile': typeof AuthenticatedMyCareerProfileRoute
   '/_authenticated/passport/card': typeof AuthenticatedPassportCardRoute
   '/_authenticated/passport/information': typeof AuthenticatedPassportInformationRoute
   '/_authenticated/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
@@ -1498,9 +1545,11 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/employers'
     | '/jobs'
+    | '/login'
     | '/mcp'
     | '/reset-password'
     | '/security-career-assessment'
+    | '/signup'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1551,6 +1600,9 @@ export interface FileRouteTypes {
     | '/employer/pending'
     | '/journey/$targetId'
     | '/my-career/applications'
+    | '/my-career/career-card'
+    | '/my-career/cv'
+    | '/my-career/profile'
     | '/passport/card'
     | '/passport/information'
     | '/passport/onboarding'
@@ -1646,9 +1698,11 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discovery'
     | '/employers'
+    | '/login'
     | '/mcp'
     | '/reset-password'
     | '/security-career-assessment'
+    | '/signup'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1685,6 +1739,9 @@ export interface FileRouteTypes {
     | '/employer/pending'
     | '/journey/$targetId'
     | '/my-career/applications'
+    | '/my-career/career-card'
+    | '/my-career/cv'
+    | '/my-career/profile'
     | '/passport/card'
     | '/passport/information'
     | '/passport/onboarding'
@@ -1781,9 +1838,11 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/employers'
     | '/jobs'
+    | '/login'
     | '/mcp'
     | '/reset-password'
     | '/security-career-assessment'
+    | '/signup'
     | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1834,6 +1893,9 @@ export interface FileRouteTypes {
     | '/_authenticated/employer/pending'
     | '/_authenticated/journey/$targetId'
     | '/_authenticated/my-career/applications'
+    | '/_authenticated/my-career/career-card'
+    | '/_authenticated/my-career/cv'
+    | '/_authenticated/my-career/profile'
     | '/_authenticated/passport/card'
     | '/_authenticated/passport/information'
     | '/_authenticated/passport/onboarding'
@@ -1933,9 +1995,11 @@ export interface RootRouteChildren {
   DiscoveryRoute: typeof DiscoveryRoute
   EmployersRoute: typeof EmployersRoute
   JobsRoute: typeof JobsRouteWithChildren
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
+  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1961,6 +2025,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/security-career-assessment': {
       id: '/security-career-assessment'
       path: '/security-career-assessment'
@@ -1980,6 +2051,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs': {
@@ -2331,6 +2409,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/passport/card'
       preLoaderRoute: typeof AuthenticatedPassportCardRouteImport
       parentRoute: typeof AuthenticatedPassportRoute
+    }
+    '/_authenticated/my-career/profile': {
+      id: '/_authenticated/my-career/profile'
+      path: '/profile'
+      fullPath: '/my-career/profile'
+      preLoaderRoute: typeof AuthenticatedMyCareerProfileRouteImport
+      parentRoute: typeof AuthenticatedMyCareerRoute
+    }
+    '/_authenticated/my-career/cv': {
+      id: '/_authenticated/my-career/cv'
+      path: '/cv'
+      fullPath: '/my-career/cv'
+      preLoaderRoute: typeof AuthenticatedMyCareerCvRouteImport
+      parentRoute: typeof AuthenticatedMyCareerRoute
+    }
+    '/_authenticated/my-career/career-card': {
+      id: '/_authenticated/my-career/career-card'
+      path: '/career-card'
+      fullPath: '/my-career/career-card'
+      preLoaderRoute: typeof AuthenticatedMyCareerCareerCardRouteImport
+      parentRoute: typeof AuthenticatedMyCareerRoute
     }
     '/_authenticated/my-career/applications': {
       id: '/_authenticated/my-career/applications'
@@ -3404,6 +3503,9 @@ const AuthenticatedJourneyRouteWithChildren =
 
 interface AuthenticatedMyCareerRouteChildren {
   AuthenticatedMyCareerApplicationsRoute: typeof AuthenticatedMyCareerApplicationsRoute
+  AuthenticatedMyCareerCareerCardRoute: typeof AuthenticatedMyCareerCareerCardRoute
+  AuthenticatedMyCareerCvRoute: typeof AuthenticatedMyCareerCvRoute
+  AuthenticatedMyCareerProfileRoute: typeof AuthenticatedMyCareerProfileRoute
   AuthenticatedMyCareerIndexRoute: typeof AuthenticatedMyCareerIndexRoute
   AuthenticatedMyCareerInterviewsCaseIdRoute: typeof AuthenticatedMyCareerInterviewsCaseIdRoute
   AuthenticatedMyCareerReportsRunIdRoute: typeof AuthenticatedMyCareerReportsRunIdRoute
@@ -3412,6 +3514,9 @@ interface AuthenticatedMyCareerRouteChildren {
 const AuthenticatedMyCareerRouteChildren: AuthenticatedMyCareerRouteChildren = {
   AuthenticatedMyCareerApplicationsRoute:
     AuthenticatedMyCareerApplicationsRoute,
+  AuthenticatedMyCareerCareerCardRoute: AuthenticatedMyCareerCareerCardRoute,
+  AuthenticatedMyCareerCvRoute: AuthenticatedMyCareerCvRoute,
+  AuthenticatedMyCareerProfileRoute: AuthenticatedMyCareerProfileRoute,
   AuthenticatedMyCareerIndexRoute: AuthenticatedMyCareerIndexRoute,
   AuthenticatedMyCareerInterviewsCaseIdRoute:
     AuthenticatedMyCareerInterviewsCaseIdRoute,
@@ -3556,9 +3661,11 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoveryRoute: DiscoveryRoute,
   EmployersRoute: EmployersRoute,
   JobsRoute: JobsRouteWithChildren,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,
+  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:

@@ -38,6 +38,9 @@ import {
   getV31TesterStatus,
 } from "@/lib/career-discovery/v31-public.functions";
 import { useT } from "@/i18n/context";
+import { ProfessionalIdentityHeader } from "@/components/professional-identity/ProfessionalIdentityHeader";
+import { NextActions } from "@/components/professional-identity/NextActions";
+import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
 import {
@@ -148,6 +151,26 @@ function confidenceBand(level: ConfidenceLevel, lang: "sv" | "en") {
 function MyCareerPage() {
   const { lang, t } = useT();
   const [displayName, setDisplayName] = useState<string>("");
+
+  // ── WHO AM I, WHAT DO I HAVE, WHAT NEXT ───────────────────────────────
+  //
+  // One read across the five products, assembled server-side by the
+  // Professional Identity seam and handed to two pure functions. It answers
+  // the three questions this page opens with; everything below it is the
+  // existing per-product detail, unchanged.
+  //
+  // Deliberately NOT gating the rest of the page: a failed read here costs
+  // the summary and the suggestions, and the Passport, Career Discovery,
+  // jobs and assessment sections still render from their own queries. A
+  // dashboard that blanks because one of six reads failed is worse than a
+  // dashboard missing its header.
+  const loadIdentity = useServerFn(getMyProfessionalIdentity);
+  const identityQ = useQuery({
+    queryKey: ["professional-identity"],
+    queryFn: () => loadIdentity(),
+    staleTime: 60_000,
+    retry: 1,
+  });
 
   useEffect(() => {
     let alive = true;
@@ -351,31 +374,49 @@ function MyCareerPage() {
           first real card most of the way down the opening screen. Tightened
           here rather than in Section, which the public pages still want. */}
       <Section className="py-10 md:py-12">
-        {/* ---------------- Hero ---------------- */}
-        <header className="max-w-3xl">
-          <h1
-            className="text-3xl font-semibold tracking-tight text-balance text-foreground md:text-4xl"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {greeting}
-            {firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span>
-          </h1>
-          {/* One sentence, unconditional.
-              The lede used to branch three ways on assessment state, so the
-              first thing a candidate read was a status report about a test.
-              This page is no longer a test centre, and its opening line no
-              longer changes depending on whether somebody has taken one. */}
-          {/* One short line. The longer version listed the Passport, jobs and
-              the profile — the three cards immediately below it, each with its
-              own heading — so it spent two lines of the opening screen
-              describing what the reader could already see. */}
-          <p className="mt-2 text-muted-foreground">
-            {L(
-              c("Din säkerhetskarriär på ett ställe.", "Your security career in one place."),
-              lang,
-            )}
-          </p>
-        </header>
+        {/* ---------------- Who am I / what do I have ----------------
+
+            This used to be a greeting and one line of copy, above seven
+            equally weighted cards. Equal weight is a refusal to decide, and
+            it left "where do I stand" below the fold behind six things that
+            were not the answer. The summary states it in the first screen:
+            professional identity, experience, country, and one row of
+            product states each of which is a fact rather than a score.
+
+            While the read is in flight the page shows the greeting it always
+            showed rather than a spinner-shaped hole, and if it fails that is
+            what stays. Nothing below depends on it. */}
+        {identityQ.data ? (
+          <ProfessionalIdentityHeader identity={identityQ.data} />
+        ) : (
+          <header className="max-w-3xl">
+            <h1
+              className="text-3xl font-semibold tracking-tight text-balance text-foreground md:text-4xl"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {greeting}
+              {firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span>
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              {L(
+                c("Din säkerhetskarriär på ett ställe.", "Your security career in one place."),
+                lang,
+              )}
+            </p>
+          </header>
+        )}
+
+        {/* ---------------- What should I do next ----------------
+
+            At most three, from the deterministic ladder in
+            next-best-action.ts. An employer's invitation outranks everything
+            this product might want for its own reasons; nothing here is a
+            streak, a badge or a demand. */}
+        {identityQ.data && (
+          <div className="mt-8">
+            <NextActions identity={identityQ.data} />
+          </div>
+        )}
 
         {/* ── Next step: an interview is waiting on this person ──
 

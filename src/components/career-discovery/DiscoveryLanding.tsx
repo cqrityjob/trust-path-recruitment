@@ -73,7 +73,7 @@ export function DiscoveryLanding({ sessionPath, returnPath, historyPath }: Disco
     };
   }, [access]);
 
-  const goToLogin = () => navigate({ to: "/auth", search: { redirect: "/discovery" } as never });
+  const goToLogin = () => navigate({ to: "/login", search: { redirect: "/discovery" } as never });
 
   const beginOrResume = async () => {
     setBusy(true);

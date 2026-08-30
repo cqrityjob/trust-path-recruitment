@@ -1,11 +1,10 @@
-// H3.4B — secure password-reset landing page, using Supabase Auth's
-// built-in recovery flow (supabase.auth.resetPasswordForEmail /
-// supabase.auth.updateUser). This closes a real gap: PortalAuthForm
-// already sent a reset email, but its redirectTo previously pointed at
-// /auth?intent=<portal>, which -- once the recovery link established a
-// session -- would immediately bounce the user straight to their portal
-// home without ever giving them a chance to set a new password.
-// PortalAuthForm's redirectTo now points here instead.
+// Secure password-reset landing page, using Supabase Auth's built-in
+// recovery flow (supabase.auth.resetPasswordForEmail /
+// supabase.auth.updateUser). This closes a real gap: the sign-in form
+// already sent a reset email, but its redirectTo previously pointed at the
+// login page, which -- once the recovery link established a session --
+// would immediately bounce the user to their home page without ever giving
+// them a chance to set a new password. The reset link points here instead.
 //
 // Public route (no `_authenticated` prefix): the user arrives with no
 // "normal" prior session. Supabase's client SDK auto-detects the recovery
@@ -16,9 +15,13 @@
 // supabase.auth.updateUser(), Supabase Auth's own API -- no custom
 // server-side password-handling code is introduced here.
 //
-// After a successful reset, redirects through /auth?intent=<intent> (the
-// existing compatibility-redirect route, reused rather than duplicated),
-// which sends the now-genuinely-signed-in user to the correct portal home.
+// After a successful reset the person is genuinely signed in, so they are
+// sent to their home rather than back through a door they have just walked
+// through. `intent` survives for the ONE case where the destination really
+// does differ -- a platform administrator belongs on /admin, which
+// re-verifies is_platform_admin() itself regardless of how anyone arrived.
+// For everybody else the unified entrance is the destination, and it
+// forwards an already-signed-in visitor onward without rendering a form.
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -89,7 +92,7 @@ function ResetPasswordPage() {
       const params = new URLSearchParams(window.location.search);
       const intent = allowedIntent(params.get("intent"));
       window.setTimeout(() => {
-        navigate({ to: "/auth", search: { intent } as any, replace: true });
+        navigate({ to: intent === "admin" ? "/admin" : "/login", replace: true });
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -116,7 +119,7 @@ function ResetPasswordPage() {
           {sessionState === "invalid" && (
             <div className="mt-6 space-y-3">
               <p className="text-sm text-destructive">{t("auth.reset.new.invalidLink")}</p>
-              <a href="/auth" className="text-sm font-medium text-accent hover:underline">
+              <a href="/login" className="text-sm font-medium text-accent hover:underline">
                 {t("auth.reset.new.backToSignIn")}
               </a>
             </div>

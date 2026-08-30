@@ -455,7 +455,7 @@ export function PublicAssessmentFlow() {
       // just finished the assessment does not have an account — offering
       // "log in" as the primary route asks them to do the one thing they
       // cannot. The register page links to login for everybody else.
-      navigate({ to: "/candidate/register", search: { redirect: back } as never });
+      navigate({ to: "/signup", search: { redirect: back } as never });
       return;
     }
     persistingRef.current = true;
@@ -515,7 +515,7 @@ export function PublicAssessmentFlow() {
     const back = token
       ? `/security-career-assessment?claim=${encodeURIComponent(token)}`
       : "/security-career-assessment";
-    navigate({ to: "/candidate/login", search: { redirect: back } as never });
+    navigate({ to: "/login", search: { redirect: back } as never });
   }
 
   /** DOWNLOAD — Final Candidate Result Delivery & Save Flow Fix, section 2.

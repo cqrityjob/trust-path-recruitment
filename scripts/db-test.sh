@@ -1490,6 +1490,45 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# CV documents + Professional Identity privacy and isolation.
+#
+# Registered BEFORE the rollback step deliberately: the rollback suite drops
+# tables this one reads, so a suite placed after it fails on "does not exist"
+# for a reason that has nothing to do with what it asserts.
+#
+# It proves the two things a source-level guard structurally cannot. First,
+# that a caller using the Professional Identity seam learns nothing about
+# anybody else -- the seam is one read across five products, which is exactly
+# where a boundary quietly stops holding. Second, that the Supabase
+# default-privilege trap did not ship on cv_documents: a new table arrives
+# already granted to anon, TRUNCATE included, and TRUNCATE is not something
+# RLS constrains, so the suite executes the statements rather than reading
+# the policies.
+# ---------------------------------------------------------------------------
+echo "==> Running CV documents and Professional Identity privacy assertions"
+set +e
+CVP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cv_documents_privacy_test.sql 2>&1)"
+CVP_RC=$?
+set -e
+
+echo "$CVP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CVP_PASSED="$(echo "$CVP_OUT" | grep -c "ok  " || true)"
+
+if [ "$CVP_RC" -ne 0 ]; then
+  echo ""
+  echo "FAIL: the CV documents privacy suite exited with code ${CVP_RC}." >&2
+  echo "$CVP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  suite_failed "CV documents privacy"
+else
+  echo "    ok  ${CVP_PASSED} CV documents privacy assertions passed"
+  if [ "$CVP_PASSED" -lt 24 ]; then
+    echo "FAIL: expected at least 24 CV privacy assertions, only ${CVP_PASSED} ran." >&2
+    echo "      A suite that silently stops running assertions is worse than one that fails." >&2
+    suite_failed "CV documents privacy (assertion shortfall: floor 24)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 echo "==> Verifying the documented rollback procedure"
 set +e
 ROLLBACK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_a_rollback_test.sql 2>&1)"

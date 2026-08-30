@@ -1,11 +1,26 @@
-// Phase H3.1 — return-URL (redirect/next) allow-list.
+// Return-URL (redirect/next) allow-list.
 //
-// Used by every route that accepts a post-auth redirect destination
-// (/candidate/login, /candidate/register, /employer/login,
-// /employer/register, and the /auth compatibility route). Never trust a
-// browser-supplied redirect value beyond what this function allows through
-// — this is the concrete mitigation for open-redirect and
-// external-navigation abuse, per docs/auth/candidate-employer-portal-spec-v1.md §11.
+// Used by every route that accepts a post-auth redirect destination: the
+// unified entrance (/login, /signup), the four compatibility redirects that
+// preceded it (/candidate/login, /candidate/register, /employer/login,
+// /employer/register) and /auth. Never trust a browser-supplied redirect
+// value beyond what this function allows through — this is the concrete
+// mitigation for open-redirect and external-navigation abuse, per
+// docs/auth/candidate-employer-portal-spec-v1.md §11.
+
+/** Every path that renders or redirects to an authentication surface.
+ *  Returning to one after signing in is a loop, never a destination. */
+export const AUTH_SURFACES: readonly string[] = [
+  "/login",
+  "/signup",
+  "/auth",
+  "/candidate/login",
+  "/candidate/register",
+  "/employer/login",
+  "/employer/register",
+  "/admin/login",
+  "/reset-password",
+];
 
 export function safeReturnPath(raw: string | null | undefined, fallback: string): string {
   if (!raw) return fallback;
@@ -22,8 +37,22 @@ export function safeReturnPath(raw: string | null | undefined, fallback: string)
   // Rejects "javascript:", "https://", embedded scheme markers anywhere in
   // the string (defence in depth beyond the leading-character check above).
   if (raw.includes("://")) return fallback;
-  // Never redirect back into /auth itself — loop prevention.
-  if (raw === "/auth" || raw.startsWith("/auth?") || raw.startsWith("/auth/")) return fallback;
+  // Never redirect back into an auth surface — loop prevention.
+  //
+  // The list grew when the four portal doors collapsed into one. It is
+  // written as a prefix sweep rather than four equality checks because the
+  // dangerous forms are the ones with a query string on them: a
+  // "/login?redirect=/login?redirect=..." chain is what actually produces
+  // the loop, and an equality check does not see it.
+  //
+  // /candidate/* and /employer/register are themselves redirects ONTO
+  // /login now, so returning to one of them is a two-hop loop rather than a
+  // one-hop one. Same defect, so the same refusal.
+  for (const surface of AUTH_SURFACES) {
+    if (raw === surface || raw.startsWith(`${surface}?`) || raw.startsWith(`${surface}/`)) {
+      return fallback;
+    }
+  }
   return raw;
 }
 

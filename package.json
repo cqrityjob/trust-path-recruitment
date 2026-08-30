@@ -91,7 +91,8 @@
   "interview-ai-provider:check": "bun run scripts/interview-ai-provider-check.ts",
   "interview-gold-independence:check": "bun run scripts/interview-gold-independence-check.ts",
     "recruitment-assessment-ux:check": "bun run scripts/recruitment-assessment-ux-check.ts",
-    "career-center:check": "bun run scripts/career-center-check.ts"
+    "career-center:check": "bun run scripts/career-center-check.ts",
+    "professional-identity:check": "bun run scripts/professional-identity-check.ts"
   }, 
   "dependencies": {
     "embla-carousel-react": "^8.6.0", 

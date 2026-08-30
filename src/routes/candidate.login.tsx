@@ -1,31 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PortalAuthForm } from "@/components/auth/PortalAuthForm";
+// COMPATIBILITY REDIRECT — superseded by the unified entrance.
+//
+// /candidate/login was a public route for ten months and is bookmarked, indexed and
+// linked from mail already sent, so it keeps working. It renders nothing and
+// resolves in `beforeLoad`, so there is no form to flash and no second
+// authentication implementation living on behind a redirect.
+//
+// The validated `redirect` parameter travels with it; `intent` does not,
+// because there is one door now and intent was never a permission. See
+// docs/architecture/adr-unified-account-and-professional-identity.md and
+// src/lib/auth/legacy-entry.ts.
 
-// Phase H3.1 — candidate-specific login entry point.
-// docs/auth/candidate-employer-portal-spec-v1.md §4.1.
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/candidate/login")({
   ssr: false,
-  head: () => ({
-    meta: [
-      { title: "Log in as a candidate — CQrityjob" },
-      {
-        name: "description",
-        content: "Log in to continue to your career profile, tests, saved jobs, and applications.",
-      },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
-  }),
-  component: () => (
-    <PortalAuthForm
-      portal="candidate"
-      mode="signin"
-      headingKey="candidate.auth.signin.title"
-      introKey="candidate.auth.signin.intro"
-      defaultDestination="/my-career"
-      swapModeTo="/candidate/register"
-      otherPortalHref="/employer/login"
-      otherPortalLabelKey="candidate.auth.signin.employerLink"
-    />
-  ),
+  beforeLoad: ({ location }) => {
+    throw redirect({ href: unifiedAuthHref("signin", location.searchStr ?? ""), replace: true });
+  },
 });
