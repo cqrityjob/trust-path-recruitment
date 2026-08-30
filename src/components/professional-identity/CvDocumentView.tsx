@@ -40,7 +40,7 @@ const COPY = {
   aiDrafted: c("Utkast skrivet av AI — granska innan du använder det", "Drafted by AI — review before you use it"),
   verified: c("Verifierad", "Verified"),
   insightNote: c(
-    "Karriärutforskningen beskriver riktning och preferenser. Den är inte en kompetens och inte en kvalifikation.",
+    "Career Discovery beskriver riktning och preferenser. Det är inte en kompetens och inte en kvalifikation.",
     "Career Discovery describes direction and preferences. It is not a competency and not a qualification.",
   ),
 } as const;

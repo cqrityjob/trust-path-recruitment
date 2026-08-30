@@ -425,8 +425,8 @@ function MyCareerPage() {
             <p role="alert" className="mt-2 text-sm text-destructive">
               {L(
                 c(
-                  "Din yrkesidentitet kunde inte hämtas just nu. Ingenting har tagits bort.",
-                  "Your professional identity could not be loaded right now. Nothing has been removed.",
+                  "Din profil kunde inte hämtas just nu. Ingenting har tagits bort.",
+                  "Your profile could not be loaded right now. Nothing has been removed.",
                 ),
                 lang,
               )}
@@ -677,7 +677,7 @@ function MyCareerPage() {
             id="career-profile"
             className="lg:col-span-3"
             icon={<UserIcon className="h-5 w-5" />}
-            title={L(c("Din karriärprofil", "Your career profile"), lang)}
+            title={L(c("Min profil", "My Profile"), lang)}
           >
             {/* The boundary is stated ONCE, by the card itself. It used to be
                 stated here as well, in slightly different words, so the
@@ -704,7 +704,7 @@ function MyCareerPage() {
         >
           <DashboardCard
             icon={<Compass className="h-5 w-5" />}
-            title={L(c("Din karriärinsikt", "Your career insight"), lang)}
+            title={L(c("Karriäranalys", "Career Analysis"), lang)}
             lede={L(
               c(
                 "Vad Career Discovery har kommit fram till om hur du arbetar och vart du passar.",
@@ -800,7 +800,7 @@ function MyCareerPage() {
                     to="/security-career-assessment"
                     className="mt-4 inline-flex h-10 items-center rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                   >
-                    {L(c("Starta testet", "Start the assessment"), lang)}
+                    {L(c("Starta Career Discovery", "Start Career Discovery"), lang)}
                     <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                   </Link>
                 )}
@@ -836,7 +836,10 @@ function MyCareerPage() {
                   to="/security-career-assessment"
                   className="inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:underline"
                 >
-                  {L(c("Gör om testet (valfritt)", "Retake the assessment (optional)"), lang)}
+                  {L(
+                    c("Gör om Career Discovery (valfritt)", "Retake Career Discovery (optional)"),
+                    lang,
+                  )}
                 </Link>
               </p>
             )}
@@ -977,7 +980,7 @@ function AssessmentSummary({
           icon={<ClipboardCheck className="h-3.5 w-3.5" />}
         />
         <Field
-          label={L(c("Karriärprofil", "Career profile"), lang)}
+          label={L(c("Arbetsstil", "Working style"), lang)}
           value={style ?? L(c("Ej tillgänglig", "Not available"), lang)}
           icon={<UserIcon className="h-3.5 w-3.5" />}
         />
@@ -1028,7 +1031,7 @@ function AssessmentSummary({
           className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3 text-xs font-medium text-foreground hover:bg-accent"
         >
           <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
-          {L(c("Gör om bedömningen", "Retake assessment"), lang)}
+          {L(c("Gör om Career Discovery", "Retake Career Discovery"), lang)}
         </Link>
       </div>
     </div>

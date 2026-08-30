@@ -11,10 +11,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
-import {
-  AssessmentShell,
-  AssessmentPanel,
-} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { ReportContextPanel } from "@/components/academy/ReportContextPanel";
 import {
   EvidenceCoverage,
@@ -61,24 +59,24 @@ function ParticipantReport() {
 
   if (report.isLoading) {
     return (
-      <AssessmentShell>
+      <AssessmentLayout>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.loading")}</p>
         </AssessmentPanel>
-      </AssessmentShell>
+      </AssessmentLayout>
     );
   }
 
   if (!report.data) {
     return (
-      <AssessmentShell>
+      <AssessmentLayout>
         <AssessmentPanel>
           <NoEvidenceState
             title={t("academy.report.notReadyTitle")}
             body={t("academy.report.notReadyBody")}
           />
         </AssessmentPanel>
-      </AssessmentShell>
+      </AssessmentLayout>
     );
   }
 
@@ -87,7 +85,7 @@ function ParticipantReport() {
   const releaseDates = Array.from(new Set((progress.data ?? []).map((p) => p.releasedAt)));
 
   return (
-    <AssessmentShell wide>
+    <AssessmentLayout>
       <Link
         to="/academy"
         className="no-print mb-4 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -306,6 +304,6 @@ function ParticipantReport() {
       </section>
 
       <ReportLimitations items={limitations} />
-    </AssessmentShell>
+    </AssessmentLayout>
   );
 }

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation, useMatches } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useLocation } from "@tanstack/react-router";
-import { Menu, X, ShieldCheck, Building2, LogOut, Settings } from "lucide-react";
+import { Menu, X, ShieldCheck, Building2, LogOut, UserPen } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
+import { CandidateAppNav } from "./CandidateAppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
 import { countMyReviewQueue } from "@/lib/security-competency/academy-employer.functions";
@@ -69,6 +70,19 @@ export function SiteHeader() {
     };
   }, []);
 
+  // ── MARKETING CHROME vs APPLICATION CHROME ──────────────────────────
+  //
+  // These six links are the WEBSITE's navigation and they stay exactly as
+  // they are for anybody reading the website. What changed is that they
+  // are no longer also served to somebody who is signed in and standing
+  // inside their own workspace — where "Arbetsgivare", "Om oss" and
+  // "Kontakt" were outranking the candidate's own career, and where
+  // "Kontakt" appeared twice on every page (once here, once in the
+  // utility bar above).
+  //
+  // Nothing is removed from the site: the public pages keep their routes,
+  // their nav on public pages, and their place in the footer. See
+  // candidate-app-nav.ts for the four destinations that replace them.
   const nav = [
     { to: "/career-center", label: t("nav.career_center") },
     { to: "/jobs", label: t("nav.jobs") },
@@ -80,11 +94,18 @@ export function SiteHeader() {
 
   // ── The two role entries ────────────────────────────────────────────
   //
-  // /academy and /reviews both run in AssessmentShell, which deliberately has
-  // no site navigation: neither surface should compete with finishing the work
-  // in front of you. That makes this header the only place either role can be
-  // offered a way in, and until now neither was — both were reachable only
-  // from a card on /my-career, or by typing the URL.
+  // /reviews runs in AssessmentShell, which deliberately has no site
+  // navigation: it should not compete with finishing the work in front of
+  // you. That makes this header the only place a reviewer is offered a way
+  // in, and until it was added there was none — the queue was reachable
+  // only from a card on /my-career, or by typing the URL.
+  //
+  // /academy used to be offered the same way and no longer is: inside the
+  // candidate workspace it is "Bedömningar" in the primary nav, and its
+  // list and released reports now carry the app chrome so somebody who
+  // opens one is not stranded on a page with no way back. Only the RUN
+  // itself keeps the distraction-free shell, which is where that rule was
+  // always earning its keep.
   //
   // Each entry is gated by whether the person actually has that kind of work,
   // and the gate is the data rather than a client-side role check. The review
@@ -141,6 +162,27 @@ export function SiteHeader() {
   }));
   const hasEmployerWorkspace = myWorkspaces.length > 0;
 
+  // ── WHICH CHROME THIS ROUTE GETS ────────────────────────────────────
+  //
+  // Asked of the ROUTER, not of the pathname: `useMatches()` hands back
+  // the routes it actually resolved, so a prefix naming no real route
+  // matches nothing rather than silently matching a lookalike path. The
+  // decision itself is a pure function so it can be proven exhaustively
+  // without standing up a router — see candidate-app-nav.ts.
+  //
+  // PRESENTATION ONLY, and this is the load-bearing sentence: being in
+  // the candidate chrome grants nothing and withholds nothing. Every one
+  // of these destinations re-verifies its own access server-side, exactly
+  // as it does when the URL is typed. An employer member reading /jobs in
+  // their personal context gets the candidate chrome and still cannot see
+  // one row their memberships do not entitle them to; their workspace
+  // keeps EmployerAppShell and is reached, by name, from the account menu.
+  const matches = useMatches();
+  const { inCandidateApp, activeKey } = resolveCandidateNav(
+    matches.map((m) => m.routeId as string),
+  );
+  const appMode = signedIn === true && inCandidateApp;
+
   /** Which context the CURRENT ROUTE is in.
    *
    *  Presentation only. It decides which entry in the switcher wears a tick;
@@ -169,8 +211,20 @@ export function SiteHeader() {
   // A count is shown only when it means "this is waiting for you". A person
   // whose only run is submitted and awaiting review is not being asked for
   // anything, and a badge would say otherwise.
+  //
+  // In the candidate workspace /academy is no longer a pill at all: it is
+  // "Bedömningar", a standing primary-nav destination, present whether or
+  // not anything is waiting. A destination that appears only once work
+  // arrives is a destination nobody can learn. The COUNT still behaves
+  // exactly as before — it rides on the nav item instead of the pill, and
+  // still only when something is genuinely being asked of somebody.
+  //
+  // /reviews stays a pill in both chromes on purpose. Reviewing responses
+  // is a separate authorised capability, not part of the candidate's four
+  // products, and giving it equal billing in the primary nav would say
+  // otherwise. It remains gated on the queue itself.
   const roleLinks: { to: "/academy" | "/reviews"; label: string; count: number | null }[] = [];
-  if (academyTotal > 0) {
+  if (!appMode && academyTotal > 0) {
     roleLinks.push({
       to: "/academy",
       label: t("nav.myAssessments"),
@@ -180,6 +234,11 @@ export function SiteHeader() {
   if (reviewCount > 0) {
     roleLinks.push({ to: "/reviews", label: t("nav.reviews"), count: reviewCount });
   }
+
+  /** The badge for one app-nav item, or null. Only "this is waiting for
+   *  you" earns a number — the same rule the pill used. */
+  const appNavCount = (key: CandidateNavKey): number | null =>
+    key === "assessments" && academyActionable > 0 ? academyActionable : null;
 
   // ── WHY THE DESKTOP BAR STARTS AT lg AND NOT md ─────────────────────
   //
@@ -196,8 +255,14 @@ export function SiteHeader() {
   // breakpoint moves rather than the content.
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
-      {/* Slim utility bar — desktop only. Small trust signals + secondary access. */}
-      <div className="hidden bg-primary text-primary-foreground/85 lg:block">
+      {/* Slim utility bar — the WEBSITE's, desktop only. Small trust
+          signals + secondary access.
+
+          It does not follow anybody into the workspace. Its "Kontakt" link
+          was the second Kontakt on every signed-in page, and a marketing
+          tagline strip above an application is the single loudest way to
+          tell somebody they are still on a website. */}
+      <div className={cn("hidden bg-primary text-primary-foreground/85", !appMode && "lg:block")}>
         <Container className="flex h-8 items-center justify-between text-[11px] font-medium tracking-wide">
           <span className="inline-flex items-center gap-2">
             <ShieldCheck className="h-3 w-3 text-[color:var(--gold)]" strokeWidth={2} />
@@ -224,8 +289,12 @@ export function SiteHeader() {
       </div>
       <div className="border-b border-border bg-background/95 shadow-[0_1px_0_0_var(--color-border)]">
         <Container className="flex h-16 items-center justify-between gap-6">
+          {/* In the workspace the brand mark is the way HOME — to the
+              candidate's own home, /my-career, the way it is in every
+              application. It used to drop somebody out onto the marketing
+              landing page, which is an exit, not a home. */}
           <Link
-            to="/"
+            to={appMode ? "/my-career" : "/"}
             className="flex items-center gap-2 font-semibold tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display)" }}
             onClick={() => setOpen(false)}
@@ -234,21 +303,25 @@ export function SiteHeader() {
             <span className="text-base">{t("brand.name")}</span>
           </Link>
 
-          <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
-            {nav.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                activeProps={{
-                  className:
-                    "text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent",
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          {appMode ? (
+            <CandidateAppNav variant="desktop" activeKey={activeKey} badgeFor={appNavCount} />
+          ) : (
+            <nav className="hidden items-center gap-6 lg:flex xl:gap-8" aria-label="Primary">
+              {nav.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="relative py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  activeProps={{
+                    className:
+                      "text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent",
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          )}
 
           <div className="hidden items-center gap-2.5 lg:flex xl:gap-3">
             <LanguageSwitcher />
@@ -269,13 +342,19 @@ export function SiteHeader() {
             ))}
             {signedIn ? (
               <>
-                <Link
-                  to="/my-career"
-                  className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
-                  activeProps={{ className: "border-accent/50 bg-secondary" }}
-                >
-                  {t("nav.my_career")}
-                </Link>
+                {/* The way into the workspace, for somebody who is signed
+                    in but reading the public site. Inside the workspace it
+                    would be a SECOND "Min karriär" beside the primary nav
+                    item, which is the duplicate this PR exists to remove. */}
+                {!appMode && (
+                  <Link
+                    to="/my-career"
+                    className="rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary"
+                    activeProps={{ className: "border-accent/50 bg-secondary" }}
+                  >
+                    {t("nav.my_career")}
+                  </Link>
+                )}
                 {/* Account concerns — identity, workspace switch, sign out —
                     in the chrome, on every page. Before this they existed
                     only as a row at the bottom of the /my-career dashboard. */}
@@ -309,8 +388,11 @@ export function SiteHeader() {
           <button
             type="button"
             className="inline-flex items-center justify-center rounded-md p-2 text-foreground lg:hidden"
-            aria-label="Menu"
+            /* Was a hardcoded English "Menu" on a Swedish-first product,
+               and said nothing about state beyond aria-expanded. */
+            aria-label={open ? t("nav.menu.close") : t("nav.menu.open")}
             aria-expanded={open}
+            aria-controls="site-menu"
             onClick={() => setOpen((o) => !o)}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -318,19 +400,36 @@ export function SiteHeader() {
         </Container>
       </div>
 
-      <div className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}>
+      <div
+        id="site-menu"
+        className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}
+      >
         <Container className="flex flex-col gap-1 py-4">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={() => setOpen(false)}
-              className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {/* ── Mobile is the same product, not a collapsed website ──────
+              The four destinations come from the SAME array the desktop
+              bar renders, so the two cannot drift; they come FIRST, before
+              anything else in the sheet; and each is a 44px target with
+              the same three-signal current-location treatment. */}
+          {appMode ? (
+            <CandidateAppNav
+              variant="mobile"
+              activeKey={activeKey}
+              badgeFor={appNavCount}
+              onNavigate={() => setOpen(false)}
+            />
+          ) : (
+            nav.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setOpen(false)}
+                className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                activeProps={{ className: "text-foreground" }}
+              >
+                {item.label}
+              </Link>
+            ))
+          )}
           {roleLinks.map((r) => (
             <Link
               key={r.to}
@@ -350,7 +449,9 @@ export function SiteHeader() {
           <div className="mt-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <LanguageSwitcher />
-              {signedIn ? (
+              {/* Same rule as desktop: inside the workspace this would be
+                  a second "Min karriär" a few rows under the first. */}
+              {signedIn && !appMode ? (
                 <Link
                   to="/my-career"
                   onClick={() => setOpen(false)}
@@ -358,7 +459,7 @@ export function SiteHeader() {
                 >
                   {t("nav.my_career")}
                 </Link>
-              ) : (
+              ) : signedIn ? null : (
                 <Link
                   to="/login"
                   onClick={() => setOpen(false)}
@@ -425,13 +526,17 @@ export function SiteHeader() {
 
               {/* Parity with the desktop menu. Account settings existed
                   there and not here, so the one control that lets somebody
-                  correct their own professional identity was desktop-only. */}
+                  correct their own professional identity was desktop-only.
+
+                  It is labelled "Min profil" now, which is what the page it
+                  opens has always called itself. "Konto och profil" was a
+                  third name for the same screen. */}
               <Link
                 to="/my-career/profile"
                 onClick={() => setOpen(false)}
                 className="mt-2 flex min-h-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
-                <Settings className="h-4 w-4" aria-hidden="true" />
+                <UserPen className="h-4 w-4" aria-hidden="true" />
                 {t("account.settings")}
               </Link>
 

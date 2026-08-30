@@ -39,7 +39,7 @@
 // rather than offering a door that may not open.
 
 import { Link } from "@tanstack/react-router";
-import { Building2, Check, ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
+import { Building2, Check, ChevronDown, LogOut, UserPen, UserRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,7 +155,7 @@ export function AccountMenu({
 
         <DropdownMenuItem asChild>
           <Link to="/my-career/profile" className="cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+            <UserPen className="mr-2 h-4 w-4" aria-hidden="true" />
             {t("account.settings")}
           </Link>
         </DropdownMenuItem>

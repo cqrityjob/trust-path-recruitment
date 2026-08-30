@@ -50,15 +50,15 @@ import { c, cp, L, Lp, type Copy, type Lang, type PluralCopy } from "./copy";
 const TITLE: Readonly<Record<ActionKind, Copy>> = {
   complete_assessment_assignment: c("Slutför din bedömning", "Complete your assessment"),
   read_released_report: c("Din rapport är tillgänglig", "Your report is available"),
-  complete_profile_basics: c("Fyll i din yrkesprofil", "Fill in your professional profile"),
-  start_passport: c("Öppna ditt Säkerhetspass", "Open your Security Passport"),
+  complete_profile_basics: c("Fyll i din profil", "Fill in your profile"),
+  start_passport: c("Öppna ditt Security Passport", "Open your Security Passport"),
   submit_passport_verification: c("Skicka in för verifiering", "Submit for verification"),
-  take_career_discovery: c("Gör karriärutforskningen", "Take Career Discovery"),
+  take_career_discovery: c("Gör Career Discovery", "Take Career Discovery"),
   // "Visa", not "Skapa". The card is rendered from the report on arrival and
   // this action fires only when the report NAMES careers, so the card already
   // exists in every sense the holder cares about. It said "Create" here while
   // the hero two rems above said "View", about the same one destination.
-  create_career_card: c("Ditt karriärkort", "Your Career Card"),
+  create_career_card: c("Ditt Career Card", "Your Career Card"),
   create_cv: c("Skapa ditt CV", "Create your CV"),
   open_cv: c("Ditt CV", "Your CV"),
   explore_jobs: c("Utforska jobb inom säkerhet", "Explore security jobs"),
@@ -86,13 +86,16 @@ const WHY: Readonly<Record<ActionKind, Copy>> = {
     "Din yrkestitel eller ditt yrke saknas.",
     "Your professional title or profession is missing.",
   ),
-  start_passport: c("Du har inget Säkerhetspass ännu.", "You do not have a Security Passport yet."),
+  start_passport: c(
+    "Du har inget Security Passport ännu.",
+    "You do not have a Security Passport yet.",
+  ),
   submit_passport_verification: c(
     "Du har uppgifter som ingen har granskat.",
     "You have entries nobody has reviewed.",
   ),
   take_career_discovery: c(
-    "Du har inte gjort karriärutforskningen.",
+    "Du har inte gjort Career Discovery.",
     "You have not taken Career Discovery.",
   ),
   create_career_card: c(
@@ -160,12 +163,12 @@ const OUTCOME: Readonly<Record<ActionKind, Copy>> = {
     "An authorised reviewer decides, and what passes becomes verified.",
   ),
   take_career_discovery: c(
-    "Cirka 15 minuter. Ger dig en karriärriktning och underlaget till ditt karriärkort.",
+    "Cirka 15 minuter. Ger dig en karriärriktning och underlaget till ditt Career Card.",
     "About 15 minutes. Gives you a career direction and the basis for your Career Card.",
   ),
   create_career_card: c(
-    "Din yrkesidentitet som ett kort du kan dela.",
-    "Your professional identity as a card you can share.",
+    "Din profil som ett kort du kan dela.",
+    "Your profile as a card you can share.",
   ),
   create_cv: c(
     "Byggt av det du redan har registrerat. Inget hittas på.",
@@ -187,10 +190,10 @@ const VERB: Readonly<Record<ActionKind, Copy>> = {
   complete_assessment_assignment: c("Öppna bedömningen", "Open the assessment"),
   read_released_report: c("Läs rapporten", "Read the report"),
   complete_profile_basics: c("Fyll i profilen", "Complete your profile"),
-  start_passport: c("Öppna Säkerhetspasset", "Open the Security Passport"),
+  start_passport: c("Öppna Security Passport", "Open the Security Passport"),
   submit_passport_verification: c("Skicka in för granskning", "Submit for review"),
-  take_career_discovery: c("Starta karriärutforskningen", "Start Career Discovery"),
-  create_career_card: c("Visa karriärkortet", "View Career Card"),
+  take_career_discovery: c("Starta Career Discovery", "Start Career Discovery"),
+  create_career_card: c("Visa Career Card", "View Career Card"),
   create_cv: c("Skapa CV", "Create CV"),
   open_cv: c("Öppna ditt CV", "Open your CV"),
   explore_jobs: c("Utforska jobb", "Browse jobs"),
@@ -201,7 +204,7 @@ const RECOMMENDED = c("Rekommenderat", "Recommended");
 const ALSO = c("Också möjligt nu", "Also available now");
 const EMPTY_TITLE = c("Inget väntar på dig just nu.", "Nothing is waiting for you right now.");
 const EMPTY_BODY = c(
-  "Du är i fas. Utforska jobb eller titta på ditt Säkerhetspass när du vill.",
+  "Du är i fas. Utforska jobb eller titta på ditt Security Passport när du vill.",
   "You are up to date. Browse jobs or look at your Security Passport whenever you like.",
 );
 

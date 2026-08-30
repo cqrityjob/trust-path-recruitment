@@ -14,16 +14,29 @@
 // professional judgement is entitled to know who asked and why, at the moment
 // they decide whether to begin.
 
+// ── WHY THIS DESTINATION LEFT THE DISTRACTION-FREE SHELL ───────────────
+//
+// AssessmentShell exists so that a RUN in progress is not competing with
+// site navigation, and for a run that is exactly right. This page is not a
+// run. It is the list, and as of the candidate app navigation it is also a
+// primary destination ("Bedömningar") that somebody arrives at by clicking
+// a nav item — and arrived at a page whose only link was the CQrityjob
+// logo, pointing back out to the marketing landing page. Browser Back was
+// the way home.
+//
+// So the list and the released report carry the workspace chrome, and the
+// assessment run, the learning form and the training module keep
+// AssessmentShell. The rule did not change; it is applied to the surfaces
+// it was written for.
+
 import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
-import {
-  AssessmentShell,
-  AssessmentPanel,
-} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { AcademyQueryState } from "@/components/academy/AcademyQueryState";
 import { getLearningFormForModule } from "@/lib/security-competency/academy-learning.functions";
 import { ParticipantAssessmentHistory } from "@/components/academy/ParticipantAssessmentHistory";
@@ -94,7 +107,7 @@ function AcademyHome() {
   const recruitmentOnly = rows.length > 0 && workforceWork.length === 0;
 
   return (
-    <AssessmentShell wide>
+    <AssessmentLayout>
       <h1
         className="text-[1.75rem] font-semibold leading-tight tracking-tight text-foreground"
         style={{ fontFamily: "var(--font-display)" }}
@@ -186,7 +199,7 @@ function AcademyHome() {
           </Link>
         </section>
       )}
-    </AssessmentShell>
+    </AssessmentLayout>
   );
 }
 

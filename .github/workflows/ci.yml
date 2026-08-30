@@ -471,6 +471,32 @@ jobs:
       - name: Professional identity and AI CV contract check
         run: bun run professional-identity:check
 
+      # THE SIGNED-IN CANDIDATE'S CHROME AND VOCABULARY. Until PR 3 the
+      # product had one navigation -- the marketing site's -- and served it
+      # to people inside their own workspace: six items, none of them the
+      # candidate's career, "Kontakt" twice on every page, and Security
+      # Passport absent from the chrome at every width. The fix is a
+      # four-item application navigation rendered from one array, and every
+      # property that makes it work is invisible to the type checker: one
+      # link per product on BOTH viewports, no marketing item following
+      # anybody in, current location surviving nested routes,
+      # /passport-attestations (an employer surface) staying out of the
+      # holder's Passport tab, a current-item treatment that is never
+      # colour alone, and one name per product across the workspace.
+      # Asserted against rendered markup and against the generated route
+      # table, so a nav item pointing at a route that does not exist fails
+      # here rather than in somebody's browser.
+      - name: Candidate app navigation and terminology check
+        run: bun run candidate-app-navigation:check
+
+      # The public header's entry points -- one door in, one way to create
+      # an account, "Arbetsgivare" as information and never as an action.
+      # This guard has existed since the unified-account work and was never
+      # wired into CI, so the file it protects has been changing unguarded.
+      # It guards the same component as the check above.
+      - name: Public header entry-point check
+        run: bun run header-entry:check
+
 
       - name: Production build
         run: bun run build

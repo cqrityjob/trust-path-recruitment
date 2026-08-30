@@ -80,7 +80,7 @@ export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Yrkesprofil — CQrityjob" },
+      { title: "Min profil — CQrityjob" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -98,10 +98,10 @@ const COPY = {
     "You write this part, and you can change it whenever you like. Nothing here has been reviewed by anybody else.",
   ),
   ownedHere: c("Redigeras här", "Edited here"),
-  ownedPassport: c("Tillhör Säkerhetspasset", "Belongs to the Security Passport"),
-  ownedDiscovery: c("Tillhör karriärutforskningen", "Belongs to Career Discovery"),
-  openPassport: c("Öppna Säkerhetspasset", "Open the Security Passport"),
-  openDiscovery: c("Gör karriärutforskningen", "Take Career Discovery"),
+  ownedPassport: c("Tillhör Security Passport", "Belongs to the Security Passport"),
+  ownedDiscovery: c("Tillhör Career Discovery", "Belongs to Career Discovery"),
+  openPassport: c("Öppna Security Passport", "Open the Security Passport"),
+  openDiscovery: c("Gör Career Discovery", "Take Career Discovery"),
   empty: c("Inte ifyllt ännu", "Not filled in yet"),
   itemCount: c("{0} registrerade", "{0} recorded"),
   verifiedNote: c(
@@ -113,7 +113,7 @@ const COPY = {
     "Self-reported. Nobody has reviewed it.",
   ),
   whySplit: c(
-    "Anställningar, utbildningar, intyg och språk bor i Säkerhetspasset. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.",
+    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.",
     "Employment, education, credentials and languages live in the Security Passport. There they can be reviewed and verified — which a profile field never can.",
   ),
 } as const;

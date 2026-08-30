@@ -50,7 +50,7 @@ export const Route = createFileRoute("/_authenticated/my-career/career-card")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Karriärkort — CQrityjob" },
+      { title: "Career Card — CQrityjob" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -59,10 +59,10 @@ export const Route = createFileRoute("/_authenticated/my-career/career-card")({
 
 const COPY = {
   back: c("Min karriär", "My Career"),
-  title: c("Ditt karriärkort", "Your Career Card"),
+  title: c("Ditt Career Card", "Your Career Card"),
   lede: c(
-    "Din yrkesidentitet som ett kort du kan dela. Det byggs av din senaste karriärutforskning — du väljer format och om ditt förnamn ska stå med, inget annat.",
-    "Your professional identity as a card you can share. It is built from your latest Career Discovery — you choose the format and whether your first name appears, nothing else.",
+    "Din profil som ett kort du kan dela. Det byggs av din senaste Karriäranalys — du väljer format och om ditt förnamn ska stå med, inget annat.",
+    "Your profile as a card you can share. It is built from your latest Career Analysis — you choose the format and whether your first name appears, nothing else.",
   ),
   loading: c("Hämtar ditt kort…", "Loading your card…"),
   failed: c(
@@ -71,19 +71,22 @@ const COPY = {
   ),
   open: c("Öppna kortet", "Open the card"),
 
-  noReportTitle: c("Du har inte gjort karriärutforskningen ännu", "You have not taken Career Discovery yet"),
+  noReportTitle: c(
+    "Du har inte gjort Career Discovery ännu",
+    "You have not taken Career Discovery yet",
+  ),
   noReportBody: c(
-    "Kortet bygger på resultatet från karriärutforskningen. Den tar ungefär 15 minuter.",
+    "Kortet bygger på din Karriäranalys från Career Discovery. Den tar ungefär 15 minuter.",
     "The card is built on the Career Discovery result. It takes about 15 minutes.",
   ),
-  startDiscovery: c("Gör karriärutforskningen", "Take Career Discovery"),
+  startDiscovery: c("Gör Career Discovery", "Take Career Discovery"),
 
   noRankingTitle: c(
     "Din rapport namnger inga yrken ännu",
     "Your report does not name any professions yet",
   ),
   noRankingBody: c(
-    "Ett karriärkort presenterar dina tre främsta yrkesmatchningar. Din senaste rapport innehåller ingen sådan rangordning, så det finns inget att sätta på kortet.",
+    "Ett Career Card presenterar dina tre främsta yrkesmatchningar. Din senaste rapport innehåller ingen sådan rangordning, så det finns inget att sätta på kortet.",
     "A Career Card presents your top three profession matches. Your latest report contains no such ranking, so there is nothing to put on the card.",
   ),
   openReport: c("Öppna rapporten", "Open the report"),

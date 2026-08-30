@@ -53,7 +53,7 @@ const COPY = {
   unreadable: c("Kunde inte läsas", "Could not be read"),
 
   discover: c("Utforska", "Discover"),
-  discoverDone: c("Karriärutforskning genomförd", "Career Discovery completed"),
+  discoverDone: c("Career Discovery genomförd", "Career Discovery completed"),
   discoverNone: c("Inte genomförd ännu", "Not taken yet"),
 
   profile: c("Profil", "Profile"),

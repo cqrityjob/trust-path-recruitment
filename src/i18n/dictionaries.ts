@@ -12,9 +12,24 @@ export const dictionaries = {
     "nav.signin": "Logga in",
     "nav.createAccount": "Skapa konto",
     "nav.signin.tooltip": "Kommer snart",
+    // ── THE SIGNED-IN CANDIDATE'S FOUR DESTINATIONS ──────────────────
+    // Rendered from CANDIDATE_APP_NAV (components/site/candidate-app-nav.ts),
+    // desktop and mobile, from these keys and no others. One product, one
+    // name, one link.
+    //
+    // "nav.myAssessments" was "Mina bedömningar" while the marketing nav
+    // carried "Bedömningar" for a different destination -- a candidate
+    // could see both at once and had no way to tell which one held the
+    // task an employer had actually asked them to do. It is the product
+    // name now, and the marketing item no longer follows anybody into
+    // their workspace.
     "nav.my_career": "Min karriär",
-    "nav.myAssessments": "Mina bedömningar",
+    "nav.passport": "Security Passport",
+    "nav.myAssessments": "Bedömningar",
     "nav.reviews": "Granskningar",
+    "appnav.aria": "Primär navigering",
+    "nav.menu.open": "Öppna menyn",
+    "nav.menu.close": "Stäng menyn",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
@@ -266,7 +281,7 @@ export const dictionaries = {
     "jobs.relevance.panel.transitions.title": "Möjliga karriärsteg",
     "jobs.relevance.panel.career_center.cta": "Läs mer om yrket i Karriärcentret",
     "jobs.relevance.panel.disclaimer":
-      "Vägledningen är baserad på din Career Profile. Kontrollera alltid arbetsgivarens formella krav innan du ansöker.",
+      "Vägledningen bygger på din Karriäranalys från Career Discovery — inte på verifierade uppgifter. Kontrollera alltid arbetsgivarens formella krav innan du ansöker.",
     "jobs.relevance.panel.family_only.body":
       "Den här rollen ligger inom ett yrkesområde som ligger nära din profil. Vi har ingen specifik yrkesguide att jämföra mot ännu — läs annonsen och arbetsgivarens formella krav noggrant.",
     "jobs.relevance.panel.no_match.body":
@@ -1131,10 +1146,10 @@ export const dictionaries = {
     "sca.scp.summary.profession": "Nuvarande yrke",
     "sca.scp.summary.experience": "Erfarenhet",
     "sca.scp.summary.empty":
-      "Du har inte fyllt i din karriärprofil ännu. Den hjälper oss visa jobb och yrken som passar dig bättre.",
-    "sca.scp.summary.edit": "Redigera karriärprofil",
-    "sca.scp.summary.fillIn": "Fyll i din karriärprofil",
-    "sca.scp.summary.dialogTitle": "Din karriärprofil",
+      "Du har inte fyllt i din profil ännu. Den hjälper oss visa jobb och yrken som passar dig bättre.",
+    "sca.scp.summary.edit": "Redigera profil",
+    "sca.scp.summary.fillIn": "Fyll i din profil",
+    "sca.scp.summary.dialogTitle": "Min profil",
     "sca.scp.summary.cancel": "Avbryt",
     "sca.report.loading": "Laddar din rapport…",
     "sca.report.notFound": "Rapporten kunde inte hittas.",
@@ -1151,7 +1166,9 @@ export const dictionaries = {
     "account.menu.label": "Konto och inställningar",
     "account.signOut": "Logga ut",
     "account.section": "Konto",
-    "account.settings": "Konto och profil",
+    // The page this opens has always headed itself "Min profil".
+    // "Konto och profil" was a third name for one screen.
+    "account.settings": "Min profil",
     // The account menu is the context switcher. "Personligt" names the
     // context a person is in, not a kind of account: the same login is
     // also the recruiter's.
@@ -5205,9 +5222,13 @@ export const dictionaries = {
     "nav.signin": "Sign in",
     "nav.createAccount": "Create account",
     "nav.signin.tooltip": "Coming soon",
-    "nav.my_career": "My career",
-    "nav.myAssessments": "My assessments",
+    "nav.my_career": "My Career",
+    "nav.passport": "Security Passport",
+    "nav.myAssessments": "Assessments",
     "nav.reviews": "Reviews",
+    "appnav.aria": "Primary navigation",
+    "nav.menu.open": "Open menu",
+    "nav.menu.close": "Close menu",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -5457,7 +5478,7 @@ export const dictionaries = {
     "jobs.relevance.panel.transitions.title": "Possible career steps",
     "jobs.relevance.panel.career_center.cta": "Learn more about this role in the Career Center",
     "jobs.relevance.panel.disclaimer":
-      "This guidance is based on your Career Profile. Always review the employer's formal requirements before applying.",
+      "This guidance is based on your Career Analysis from Career Discovery — not on verified credentials. Always review the employer's formal requirements before applying.",
     "jobs.relevance.panel.family_only.body":
       "This role sits in a career area that is close to your profile. We do not yet have a specific profession guide to compare against — read the advert and the employer's formal requirements carefully.",
     "jobs.relevance.panel.no_match.body":
@@ -6270,10 +6291,10 @@ export const dictionaries = {
     "sca.scp.summary.profession": "Current profession",
     "sca.scp.summary.experience": "Experience",
     "sca.scp.summary.empty":
-      "You haven't filled in your career profile yet. It helps us show jobs and professions that suit you better.",
-    "sca.scp.summary.edit": "Edit career profile",
-    "sca.scp.summary.fillIn": "Fill in your career profile",
-    "sca.scp.summary.dialogTitle": "Your career profile",
+      "You haven't filled in your profile yet. It helps us show jobs and professions that suit you better.",
+    "sca.scp.summary.edit": "Edit profile",
+    "sca.scp.summary.fillIn": "Fill in your profile",
+    "sca.scp.summary.dialogTitle": "My Profile",
     "sca.scp.summary.cancel": "Cancel",
     "sca.report.loading": "Loading your report…",
     "sca.report.notFound": "That report could not be found.",
@@ -6288,7 +6309,7 @@ export const dictionaries = {
     "account.menu.label": "Account and settings",
     "account.signOut": "Sign out",
     "account.section": "Account",
-    "account.settings": "Account and profile",
+    "account.settings": "My Profile",
     "account.context.personal": "Personal",
     "account.context.switchTo": "Switch to",
     "employer.loading": "Loading…",

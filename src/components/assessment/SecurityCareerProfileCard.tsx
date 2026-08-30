@@ -226,8 +226,8 @@ export function SecurityCareerProfileCard() {
         <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
           <p role="status" className="text-sm text-foreground">
             {lang === "sv"
-              ? "Ditt yrke är sparat i din karriärprofil."
-              : "Your profession is saved in your Career Profile."}
+              ? "Ditt yrke är sparat i din profil."
+              : "Your profession is saved in your profile."}
           </p>
           <a
             id="scp-return-passport"
