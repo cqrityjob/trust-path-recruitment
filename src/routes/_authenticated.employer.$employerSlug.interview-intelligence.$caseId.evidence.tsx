@@ -216,8 +216,7 @@ function Page() {
   /* ------------------------------------------------------------------ */
   const navigator = (
     <nav aria-label={t("iiu.rv.questions")}>
-      <Eyebrow>{t("iiu.rv.questions")}</Eyebrow>
-      <ol className="mt-2 space-y-1">
+      <ol className="space-y-1">
         {d.questions.map((qq, i) => {
           const confirmed = evidenceFor(qq.id).length;
           const pending = pendingFor(qq.id);
@@ -485,7 +484,10 @@ function Page() {
               truncation means white-space:nowrap, and a nowrap child in an
               auto-sized grid track sets the track's min-content width to the
               whole sentence. Without it the document was 1447px wide at 375. */}
-          <div className="hidden min-w-0 xl:block">{navigator}</div>
+          <div className="hidden min-w-0 xl:block">
+            <Eyebrow>{t("iiu.rv.questions")}</Eyebrow>
+            <div className="mt-2">{navigator}</div>
+          </div>
           <div className="min-w-0 xl:hidden">
             <Disclosure summary={t("iiu.rv.questions")} defaultOpen>
               {navigator}
