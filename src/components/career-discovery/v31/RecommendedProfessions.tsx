@@ -29,8 +29,9 @@ import { translateFor } from "@/i18n/context";
 import {
   explainMatch,
   RECOMMENDATION_CONFIDENCE_LABEL,
+  STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
-import type { RankedProfession } from "@/lib/career-discovery/v31/professions";
+import type { ProfessionStage, RankedProfession } from "@/lib/career-discovery/v31/professions";
 
 type Locale = "sv" | "en";
 
@@ -50,6 +51,44 @@ function RankBadge({ rank, locale }: { rank: number; locale: Locale }) {
       }
     >
       {label}
+    </span>
+  );
+}
+
+/** How realistic this profession is FROM WHERE THE CANDIDATE IS TODAY.
+ *
+ *  ── WHY THE RECOMMENDATION NEEDS THIS AND DID NOT HAVE IT ────────────
+ *
+ *  This section answers "which professions are closest to these answers".
+ *  That is a statement about AFFINITY and says nothing about timing — and
+ *  affinity is deliberately computed with no knowledge of career stage, so
+ *  a senior profession can and does rank highly for someone just starting
+ *  out. Rendering rank and confidence alone therefore let a beginner's
+ *  report present, say, Risk Manager as headline recommendation #2 with
+ *  nothing anywhere on the card saying it is years away — the exact
+ *  "senior role as a direct next step" presentation Owner Approval Gate
+ *  §6/§8 forbid, arriving through an omission rather than a wrong label.
+ *
+ *  The stage was always in the data (ProfessionMatch.stage, the same field
+ *  the tier cards render through their own StageBadge); this section simply
+ *  never showed it. Reusing STAGE_LABEL rather than writing new copy is
+ *  deliberate: the two surfaces must say the SAME word about the same
+ *  profession, which is also why professions.ts now runs the ranking pass
+ *  through the identical career-pivot classification the tier buckets use. */
+function StageBadge({ stage, locale }: { stage: ProfessionStage; locale: Locale }) {
+  const tone =
+    stage === "explore_now"
+      ? "border-accent/40 bg-accent/10 text-accent"
+      : stage === "possible_next_step"
+        ? "border-border bg-muted/60 text-foreground"
+        : stage === "career_pivot"
+          ? "border-dashed border-border bg-muted/20 text-muted-foreground"
+          : "border-border bg-muted/30 text-muted-foreground";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tone}`}
+    >
+      {STAGE_LABEL[stage][locale]}
     </span>
   );
 }
@@ -84,6 +123,7 @@ function RecommendationCard({
         <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
           {RECOMMENDATION_CONFIDENCE_LABEL[entry.confidence][locale]}
         </span>
+        <StageBadge stage={entry.match.stage} locale={locale} />
       </div>
 
       <h3

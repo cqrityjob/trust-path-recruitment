@@ -26,6 +26,7 @@
     "career-discovery-v31-professions:check": "bun run scripts/career-discovery-v31-professions-check.ts", 
     "career-discovery-v31-golden-personas:check": "bun run scripts/career-discovery-v31-golden-personas.ts", 
     "career-discovery-recommendation:check": "bun run scripts/career-discovery-recommendation-check.ts",
+    "career-discovery-profession-differentiation:check": "bun run scripts/career-discovery-profession-differentiation-check.ts",
     "career-discovery-claim:check": "bun run scripts/career-discovery-claim-check.ts",
     "career-discovery-canonical-result:check": "bun run scripts/career-discovery-canonical-result-check.ts",
     "career-discovery-career-card:check": "bun run scripts/career-discovery-career-card-check.ts",

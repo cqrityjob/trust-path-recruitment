@@ -78,8 +78,30 @@ export const CONTENT_VERSION = "v3.1-draft-5" as const;
  *  differ from it): CID17 added as a 17th matchable dimension (CQ21/CQ22
  *  evidence); CID06 and CID11's evidence weights shift accordingly (see
  *  EXPECTED_WEIGHTS in scripts/career-discovery-v31-check.ts for the exact
- *  deltas). */
-export const SCORING_VERSION = "v3.1-draft-3" as const;
+ *  deltas).
+ *
+ *  Bumped to draft-4 (Profession Recommendation Validation mandate): the
+ *  answer -> dimension arithmetic is BYTE-IDENTICAL -- no item, loading,
+ *  role weight, aggregation rule or confidence threshold moved, and the
+ *  frozen golden personas confirm every dimension score is unchanged. What
+ *  moved is how scored dimensions become a RANKED recommendation, which is
+ *  scoring behaviour a stored report must be reproducible against:
+ *
+ *    - Recommendation Priority now orders on `centralExpressionZ` (see
+ *      professions.ts) instead of the floor-only `fitScore`, which
+ *      saturated near 100 once neutral-baseline-z gating landed and was
+ *      therefore deciding every ranking on differences as small as 0.2
+ *      points.
+ *    - The context/CIG priority bonuses moved onto that same z scale
+ *      (0.1 SD each, was +6 on the 0-100 fitScore scale, where they were
+ *      worth up to 8x the entire observable affinity spread).
+ *    - The always-present top-3 ranking now runs through the same
+ *      career-pivot stage classification the tier buckets do, so the two
+ *      candidate-facing surfaces of one result can no longer disagree.
+ *
+ *  Historical snapshots keep their own frozen scoring_version and are not
+ *  re-scored; this string is what makes that distinction legible. */
+export const SCORING_VERSION = "v3.1-draft-4" as const;
 
 /** Which option loadings the matrix table holds. Kept as its own string so
  *  the matrix can be re-seeded independently of the aggregation rules.

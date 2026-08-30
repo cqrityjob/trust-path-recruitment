@@ -629,10 +629,30 @@ const FROZEN: Record<string, string> = {
   // Mandate: CID17 + CQ21/CQ22, CP06's central set swapped CID09 -> CID17):
   //   CP01 a4bd2d5eca8df52f · CP05 a03c8fa82f6ee383
   //   CP10 38257685f6e4d28d · balanced 1df068a88a4af70a
-  CP01: "8d0af056239ef3d7",
-  CP05: "675bf0eeba27d21e",
-  CP10: "7abd375d851f47e7",
-  balanced: "28295d6985dba563",
+  //
+  // Re-frozen for SCORING_VERSION v3.1-draft-4 (Profession Recommendation
+  // Validation mandate). Same situation as the draft-4 content re-freeze
+  // above, with the versions swapped: these hashes cover the whole
+  // CareerIntelligence object INCLUDING its version tuple, and
+  // computeCareerIntelligence does not perform profession matching at all --
+  // so the ranking changes this mandate made cannot reach these numbers, and
+  // the entire delta is the SCORING_VERSION string.
+  //
+  // Proven, not assumed, by the same isolation method this file already
+  // documents: with every engine change in place and SCORING_VERSION
+  // temporarily held at 'v3.1-draft-3', this entire script passed on the
+  // PREVIOUS hashes -- all 601 checks. The profession-matching changes are
+  // covered separately and directly by
+  // scripts/career-discovery-profession-differentiation-check.ts and by the
+  // re-frozen v3.2 equivalence baseline.
+  //
+  // Previous, for v3.1-draft-3 (Question Refinement v3.2 content re-freeze):
+  //   CP01 8d0af056239ef3d7 · CP05 675bf0eeba27d21e
+  //   CP10 7abd375d851f47e7 · balanced 28295d6985dba563
+  CP01: "c7e915416928c1ef",
+  CP05: "67e9b10618928723",
+  CP10: "10aecb2e2201daf6",
+  balanced: "f9f71bec98ad8594",
 };
 
 const fixtureHashes: Record<string, string> = {
@@ -658,7 +678,7 @@ if (process.env.FREEZE_FIXTURES === "1") {
 
 // The version strings the fixtures are pinned to.
 eq(CONTENT_VERSION, "v3.1-draft-5", "9.4 content version is pinned");
-eq(SCORING_VERSION, "v3.1-draft-3", "9.5 scoring version is pinned");
+eq(SCORING_VERSION, "v3.1-draft-4", "9.5 scoring version is pinned");
 eq(OPTION_MATRIX_VERSION, "v3.1-draft-2", "9.6 option matrix version is pinned");
 eq(PATTERN_DEFINITION_VERSION, "v3.1-draft-3", "9.7 pattern definition version is pinned");
 eq(STORY_TEMPLATE_VERSION, "v3.1-draft-2", "9.7b story template version is pinned");
@@ -855,12 +875,28 @@ const contentV2MigrationPath = path.join(
 );
 const contentV2Migration = readFileSync(contentV2MigrationPath, "utf8");
 
-// SCORING_VERSION is still the one content-v2 set -- and that is the point:
-// the v3.2 refinement moved content only, so this assertion pinning scoring
-// to the OLDER migration is what proves scoring did not travel with it.
+// SCORING_VERSION has since moved to draft-4 in its own migration
+// (Profession Recommendation Validation: the ranking metric, tier metric and
+// priority-bonus scale changed; the answer -> dimension arithmetic did not).
+// Like OPTION_MATRIX_VERSION and CONTENT_VERSION above, this assertion
+// follows the version to whichever migration currently SETS it -- what must
+// hold is that the constant and the database stamp agree, since
+// cd_guard_snapshot_derive_versions() copies the database's value onto every
+// new snapshot while the payload carries the constant.
+const scoringV4MigrationPath = path.join(
+  process.cwd(),
+  "supabase/migrations/20261005090000_cd_v31_scoring_version_draft4_ranking.sql",
+);
+const scoringV4Migration = readFileSync(scoringV4MigrationPath, "utf8");
 ok(
-  contentV2Migration.includes(`'${SCORING_VERSION}'`),
-  "11.8b the content-v2 migration carries the same scoring version",
+  scoringV4Migration.includes(`SET scoring_version = '${SCORING_VERSION}'`),
+  "11.8b a migration sets cd_definition_versions to the current scoring version",
+);
+// The content-v2 migration is still read above and still pins CONTENT's own
+// lineage; scoring simply no longer lives there.
+ok(
+  contentV2Migration.includes("'v3.1-draft-3'"),
+  "11.8c the content-v2 migration still carries the scoring version it originally set",
 );
 
 // CONTENT_VERSION has since moved on to draft-4 in its own migration
@@ -930,25 +966,31 @@ ok(
 // with an option-format answer. This check asserts the invariant offline,
 // before it can reach production again: SOME migration must seed exactly
 // FLAT_LOADINGS.length rows tagged with the CURRENT SCORING_VERSION.
-const scoringVersionSyncMigrationPath = path.join(
-  process.cwd(),
-  "supabase/migrations/20260816160000_cd_v31_option_matrix_v3_scoring_version_sync.sql",
-);
-const scoringVersionSyncMigration = readFileSync(scoringVersionSyncMigrationPath, "utf8");
+// The re-tag must exist for whichever SCORING_VERSION is current, in
+// whichever migration performs it -- scanning every migration rather than
+// one hardcoded path is the point: the invariant is "some migration seeds
+// cd_option_loadings under the active scoring_version", and pinning it to a
+// single file would silently stop guarding the next bump.
+const migrationsDir = path.join(process.cwd(), "supabase/migrations");
+const allMigrations = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith(".sql"))
+  .map((f) => readFileSync(path.join(migrationsDir, f), "utf8"));
+
 ok(
-  scoringVersionSyncMigration.includes(`'${SCORING_VERSION}'`),
-  "11.11 a migration seeds cd_option_loadings under the current SCORING_VERSION",
-);
-const syncedCount = [
-  ...scoringVersionSyncMigration.matchAll(
-    new RegExp(
-      `count\\(\\*\\) INTO _count FROM public\\.cd_option_loadings WHERE scoring_version = '${SCORING_VERSION}'`,
-      "g",
+  allMigrations.some((m) =>
+    m.includes(
+      `SELECT '${SCORING_VERSION}', question_id, option_id, dimension_id, role, role_weight, value, rationale`,
     ),
   ),
-].length;
+  "11.11 a migration seeds cd_option_loadings under the current SCORING_VERSION",
+);
+const selfVerifying = allMigrations.filter((m) =>
+  new RegExp(
+    `count\\(\\*\\) INTO _loadings\\s+FROM public\\.cd_option_loadings\\s+WHERE scoring_version = '${SCORING_VERSION}'|count\\(\\*\\) INTO _count FROM public\\.cd_option_loadings WHERE scoring_version = '${SCORING_VERSION}'`,
+  ).test(m),
+);
 ok(
-  syncedCount === 1,
+  selfVerifying.length === 1 && selfVerifying[0].includes(`${FLAT_LOADINGS.length}`),
   "11.12 the sync migration self-verifies exactly FLAT_LOADINGS.length rows under the current SCORING_VERSION",
 );
 

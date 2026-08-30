@@ -410,15 +410,76 @@ const CENTRAL_DIMENSION_MAX_MISS = 0.18;
  *  itself, no invented margin. */
 const PROFESSION_MIN_CENTRAL_Z = 0;
 
-/** Central z-score threshold for fitTier "strong" (replaces the old
- *  fitScore >= 80 rule, which a floor-only fitScore made nearly universal).
- *  Calibrated empirically against all 16 golden personas plus the owner's
- *  real Säkerhetschef report: 1.0 SD above the neutral baseline cleanly
- *  separates a persona's genuinely-central professions (e.g. vaktare
- *  persona's Väktare/Ordningsvakt/Skyddsvakt cluster at 0.93-1.33) from its
- *  deliberately-mismatched ones (same persona's Head of Security/SOC/Cyber
- *  cluster at -1.04 to -0.33) — see the Release Completion mandate §89
- *  decision record for the full before/after sweep. */
+/** Z threshold for fitTier "strong": one standard deviation above the
+ *  neutral baseline, unchanged in value and in meaning.
+ *
+ *  ── WHICH Z IT IS APPLIED TO CHANGED (defect D8) ───────────────────────
+ *
+ *  It was applied to `centralZ`, the CLIPPED-shortfall statistic. That
+ *  statistic's maximum attainable value is a property of the profession's
+ *  own calibration rather than of any candidate — a profession's ceiling is
+ *  reached by everyone who simply clears its floors. For most of the
+ *  catalogue that ceiling sits comfortably above 1.0, so the threshold
+ *  behaved. For one profession it did not:
+ *
+ *    Security Coordinator (SP006) has a single central band (CID02,
+ *    bandLow 0.55, weight 0.7). Its maximum attainable centralZ is 0.84.
+ *    It could therefore NEVER reach "strong" — not for a perfectly matched
+ *    candidate, not for anyone, ever.
+ *
+ *  Because the comparator sorts by tier before priority, that permanently
+ *  suppressed Security Coordinator beneath every "strong" profession even
+ *  when it was the candidate's single best-expressed match. Observed on the
+ *  Beginner Service/Coordination persona, whose highest Recommendation
+ *  Priority of the whole catalogue was Security Coordinator, and whose
+ *  delivered recommendation was front-line policing and guarding — the
+ *  coordination direction its answers actually pointed at could not be
+ *  shown. That is a scoring defect masquerading as a catalogue gap.
+ *
+ *  Applying the same threshold to `centralExpressionZ` removes the
+ *  structural cap: that statistic's ceiling is
+ *  `0.5 * Σw / sqrt(Σw²/12)`, which for a single band is 0.5*sqrt(12) =
+ *  1.73 regardless of weight, and only grows with more bands. No profession
+ *  can be locked out of "strong" by its band count again, and the tier now
+ *  reflects how strongly the candidate expresses the profession's defining
+ *  dimensions rather than merely that they cleared its floors.
+ *
+ *  `centralZ` is untouched and still gates INCLUSION
+ *  (PROFESSION_MIN_CENTRAL_Z) — clearing the calibrated floors remains a
+ *  precondition, and no profession reaches a tier without it.
+ *
+ *  —— PROVISIONAL PILOT VALUE. DO NOT TUNE AGAINST FIXTURES. ——
+ *
+ *  Owner decision (Profession Recommendation Validation approval):
+ *  centralExpressionZ is approved as the PILOT ranking method, not as
+ *  permanently validated psychometrics, and this threshold is the most
+ *  provisional part of it.
+ *
+ *  1.0 was calibrated against the CLIPPED `centralZ` in an earlier cycle
+ *  and carried across to a different statistic unchanged. It has never
+ *  been fitted to anything. It is retained deliberately — inheriting a
+ *  stated value is more honest than inventing a fresh one from the same
+ *  synthetic personas that would then be used to validate it — but it is
+ *  a placeholder standing in for a number only real data can supply.
+ *
+ *  It MUST be recalibrated from real pilot response distributions before
+ *  the tier is treated as a validated claim. Two known symptoms it will
+ *  have to answer for, both measured and pinned in section 11 of
+ *  scripts/career-discovery-profession-differentiation-check.ts:
+ *
+ *    - An acquiescent respondent (high on nearly every scale item)
+ *      currently clears "strong" on ALL 14 professions in the catalogue.
+ *    - Flat, unremarkable profiles get 0 "strong" matches while
+ *      pronounced ones get 3-5. That direction is right; the cut point
+ *      is not evidence-based.
+ *
+ *  It must NOT be tuned against the golden personas, the answer-level
+ *  regression personas, or the acquiescent diagnostic fixture. Those
+ *  exist to DETECT changes in this threshold's behaviour; fitting the
+ *  threshold to them would destroy the only signal they carry and
+ *  reproduce, one level up, exactly the mistake the golden fixtures made
+ *  when they were hand-shaped until CENTRAL_DIMENSION_MAX_MISS fired
+ *  (see the file header). */
 const FIT_TIER_STRONG_Z = 1.0;
 
 export type ProfessionFitTier = "strong" | "moderate";
@@ -605,8 +666,17 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function fitTierFor(centralZ: number | null): ProfessionFitTier {
-  return centralZ !== null && centralZ >= FIT_TIER_STRONG_Z ? "strong" : "moderate";
+/** Mirrors scoring.ts's own round4, and for the same reason: floating-point
+ *  addition is not associative, so a z-score plus a bonus can differ in the
+ *  last bits depending on evaluation order. Rounding at the boundary keeps
+ *  the ranking byte-identical across runs, which the frozen fixtures and the
+ *  immutable stored reports both depend on. */
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
+}
+
+function fitTierFor(expressionZ: number | null): ProfessionFitTier {
+  return expressionZ !== null && expressionZ >= FIT_TIER_STRONG_Z ? "strong" : "moderate";
 }
 
 /** Raw stage-rank distance (profession minus candidate baseline). Positive
@@ -640,12 +710,22 @@ interface ScoredMatch {
    *  (FIT_TIER_STRONG_Z). Null only when the profession has no central bands
    *  at all (should not occur given first-wave authoring). */
   readonly centralZ: number | null;
+  /** The RANKING half of Profession Affinity — see centralExpressionZ.
+   *  `centralZ` decides whether a profession qualifies; this decides where
+   *  it sits among the ones that did. Null under the same conditions. */
+  readonly centralExpressionZ: number | null;
   /** Recommendation Priority (Mandate items 1/4/5) — starts equal to
-   *  fitScore (pure Profession Affinity) and gets the bounded context/CIG
-   *  bonuses added by withPriorityScore below, once cigReachableSlugs is
-   *  known. Never used inside scoreProfession itself — Affinity is computed
-   *  with zero knowledge of context, by construction. */
-  readonly priorityScore: number;
+   *  `centralExpressionZ` (pure Profession Affinity, in standard deviations above the
+   *  neutral baseline) and gets the bounded context/CIG bonuses added by
+   *  withPriorityScore below, once cigReachableSlugs is known. Never used
+   *  inside scoreProfession itself — Affinity is computed with zero
+   *  knowledge of context, by construction.
+   *
+   *  Null exactly when `centralZ` is null (a profession with no central
+   *  bands at all): there is no differentiated affinity to prioritise, so
+   *  comparePriority orders such a profession below every profession that
+   *  has one rather than inventing a number for it. */
+  readonly priorityZ: number | null;
 }
 
 /** Attaches the bounded Recommendation Priority bonus on top of a already-
@@ -655,12 +735,13 @@ interface ScoredMatch {
  *  change which professions cleared the fit gate, only how the survivors
  *  are ordered against each other. */
 function withPriorityScore(m: ScoredMatch, cigReachableSlugs: ReadonlySet<string>): ScoredMatch {
-  const contextBonus = m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS : 0;
+  if (m.centralExpressionZ === null) return { ...m, priorityZ: null };
+  const contextBonus = m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS_Z : 0;
   const cigBonus =
     m.match.cigProfessionSlug !== null && cigReachableSlugs.has(m.match.cigProfessionSlug)
-      ? CIG_PATHWAY_PRIORITY_BONUS
+      ? CIG_PATHWAY_PRIORITY_BONUS_Z
       : 0;
-  return { ...m, priorityScore: m.fitScore + contextBonus + cigBonus };
+  return { ...m, priorityZ: round4(m.centralExpressionZ + contextBonus + cigBonus) };
 }
 
 interface BandFit {
@@ -761,6 +842,85 @@ function neutralBaselineCentralZ(
 }
 
 /**
+ * Central EXPRESSION strength, standardised under the same neutral H0 that
+ * neutralBaselineCentralZ uses — the ranking statistic (Profession
+ * Recommendation Validation mandate, defect D5).
+ *
+ * ── WHY A SECOND STATISTIC WAS UNAVOIDABLE ─────────────────────────────
+ *
+ * `neutralBaselineCentralZ` is built on the CLIPPED shortfall
+ * `max(0, bandLow - score)`. That is exactly right for deciding
+ * ELIGIBILITY: it asks "did the candidate fail this profession's defining
+ * floors, and by more than chance would explain?". It is structurally
+ * incapable of deciding ORDER, because every candidate who clears all of a
+ * profession's central floors has shortfall 0 and therefore receives that
+ * profession's maximum possible z — a constant of the profession's own
+ * calibration, not a fact about the candidate.
+ *
+ * Measured on the locked first-wave catalogue, that ceiling is essentially
+ * the number of central bands the calibration author happened to write:
+ * 3 bands -> 1.46-1.65, 2 bands -> 1.17-1.33, 1 band -> 0.84. So whenever
+ * two professions both clear (the common case — the floors cluster at
+ * 0.5-0.65), ranking on centralZ ranks them by band COUNT and by nothing
+ * about the candidate at all. Verified directly: the Beginner Technical
+ * persona sits at the exact ceiling for both SOC Analyst (1.59) and
+ * Security Technician (1.17), so their relative order carried zero fit
+ * information.
+ *
+ * ── THE STATISTIC ──────────────────────────────────────────────────────
+ *
+ * Rather than invent a gradation for the shortfall, this asks the question
+ * the ranking actually needs and the floors cannot answer: how strongly
+ * does this candidate express THIS profession's defining dimensions,
+ * compared with an uninformative candidate? For weighted central bands and
+ * the same maximum-entropy H0 (each central dimension independently
+ * Uniform(0,1)):
+ *
+ *   A        = Σ w · score                     (weighted expression)
+ *   E[A]     = Σ w / 2
+ *   Var[A]   = Σ w² / 12
+ *   z_expr   = (A - Σw/2) / sqrt(Σw²/12)
+ *
+ * Full gradation above the floor, so exceeding a band keeps earning credit
+ * — and it reads only `weight` and the candidate's own scores, both locked
+ * data. It deliberately does NOT read `bandHigh`: that column is a
+ * mechanical bandLow + 0.3..0.4 offset with no calibrated semantics (see
+ * the file header's rejected-alternatives note), and nothing here gives it
+ * new authority it was never calibrated to carry.
+ *
+ * ── THE DIVISION OF LABOUR THIS CREATES ────────────────────────────────
+ *
+ * Floors decide ELIGIBILITY (PROFESSION_MIN_CENTRAL_FIT,
+ * CENTRAL_DIMENSION_MAX_MISS, PROFESSION_MIN_CENTRAL_Z, and fitTier — all
+ * unchanged, all still on the clipped statistic). Expression decides ORDER.
+ * A profession whose defining dimensions the candidate has not actually
+ * engaged with is still excluded outright before this function's value is
+ * ever consulted, so a high expression score can never rescue poor
+ * affinity — it only ever orders professions that already qualified.
+ */
+function centralExpressionZ(
+  bands: readonly ProfessionDimensionBand[],
+  dims: DimensionResult,
+): number | null {
+  let a = 0;
+  let sumW = 0;
+  let sumW2 = 0;
+  let anyObserved = false;
+
+  for (const band of bands) {
+    const score = dims.dimensions[band.dimensionId]?.score;
+    if (score === null || score === undefined) continue;
+    anyObserved = true;
+    a += band.weight * score;
+    sumW += band.weight;
+    sumW2 += band.weight * band.weight;
+  }
+
+  if (!anyObserved || sumW2 <= 0) return null;
+  return (a - sumW / 2) / Math.sqrt(sumW2 / 12);
+}
+
+/**
  * Score one profession against a candidate's dimensions. Returns null when
  * coverage is too thin, central fit cannot be honestly assessed, or the
  * candidate's central neutral-baseline z-score does not clear
@@ -809,6 +969,7 @@ function scoreProfession(
   if (gate && coverage < PROFESSION_MIN_COVERAGE) return null;
 
   let centralZ: number | null = null;
+  let expressionZ: number | null = null;
   // A profession's central (defining) dimensions must themselves be both
   // sufficiently observed AND genuinely, differentially matched — generic
   // supporting evidence cannot buy a profession's way past this gate. See
@@ -825,6 +986,7 @@ function scoreProfession(
     }
     centralZ = neutralBaselineCentralZ(centralBands, dims);
     if (gate && centralZ !== null && centralZ <= PROFESSION_MIN_CENTRAL_Z) return null;
+    expressionZ = centralExpressionZ(centralBands, dims);
   }
 
   // Combine central-dominant. A profession with no central dimensions at
@@ -855,7 +1017,7 @@ function scoreProfession(
       careerAreaId: entry.careerAreaId,
       titleSv: entry.titleSv,
       titleEn: entry.titleEn,
-      fitTier: fitTierFor(centralZ),
+      fitTier: fitTierFor(expressionZ),
       stage: stageFor(distance),
       regulated: entry.regulated,
       inclusionRationaleSv: entry.inclusionRationaleSv,
@@ -890,43 +1052,102 @@ function scoreProfession(
     supportingFitScore: supporting.fitScore,
     centralCoverage: central.totalWeight > 0 ? central.observedWeight / central.totalWeight : null,
     centralZ,
+    centralExpressionZ: expressionZ,
     // Pure Profession Affinity, no context bonus yet — withPriorityScore
     // adds that afterward, once cigReachableSlugs is known. Affinity itself
     // is computed with zero knowledge of context, by construction.
-    priorityScore: fitScore,
+    priorityZ: expressionZ,
   };
 }
 
 /**
  * Recommendation Priority (Master Completion Mandate items 1/4/5): a
  * bounded, deterministic reordering signal layered ON TOP of Profession
- * Affinity (fitScore) — never a replacement for it, and never able to
- * rescue a profession that did not clear the fit gate in scoreProfession
- * (this function only ever runs on matches that already survived it).
+ * Affinity — never a replacement for it, and never able to rescue a
+ * profession that did not clear the fit gate in scoreProfession (this
+ * function only ever runs on matches that already survived it).
  *
- * The combined ceiling (CONTEXT_PRIORITY_BONUS + CIG_PATHWAY_PRIORITY_BONUS
- * = 12) is kept well under the 18-point gap between PROFESSION_MIN_FIT (62)
- * and FIT_TIER_STRONG (80) specifically so context/pathway evidence can
- * only ever reorder professions that are already close in Affinity — it
- * cannot let a barely-qualifying profession leapfrog a clearly stronger
- * one two fit tiers away. This is the deterministic, documented
- * reinterpretation of the historical "60% DNA / 25% context / 15% stage"
- * hypothesis: not a blind weighted sum, but Affinity remaining dominant by
- * construction, with context/pathway only nudging order among near-peers.
+ * ── WHY THIS IS EXPRESSED IN Z UNITS (Profession Recommendation Validation
+ *    mandate, defect D2) ────────────────────────────────────────────────
+ *
+ * The previous constants were +6 and +6 on the 0-100 `fitScore` scale, and
+ * their doc comment justified that ceiling against "the 18-point gap between
+ * PROFESSION_MIN_FIT (62) and FIT_TIER_STRONG (80)". That reasoning was
+ * sound when it was written and was silently invalidated by the later
+ * neutral-baseline-z change (see the file header): once `centralZ` became
+ * the inclusion gate, everything that survives scoring has already cleared
+ * its band floors, so `fitScore` — which is floor-only, and never reads
+ * `bandHigh` — saturates near the top of its range. The gap the bonus was
+ * measured against stopped existing.
+ *
+ * Measured on the eight answer-level regression personas (see
+ * scripts/fixtures/career-dna-personas.ts): the fitScore spread across a
+ * persona's entire STRONG tier is 0.7-3.9 points, so a flat +6 was worth
+ * between 1.5x and 8x the whole observable affinity range. It could not
+ * "only nudge near-peers"; it decided the order outright. Demonstrated: the
+ * Beginner Technical persona, identical Career DNA, returns Säkerhetstekniker
+ * #1 with an SCA03 Discovery-Path tag and SOC Analyst #1 with an SCA09 one —
+ * a single unscored contextual self-report answer moving the headline
+ * recommendation, which is exactly what "context must not fabricate
+ * affinity" forbids.
+ *
+ * The fix is not a smaller number on the wrong scale — it is to express the
+ * bonus in the SAME UNITS as the discriminator it is nudging. `centralZ` is
+ * in standard deviations above the neutral baseline, and its spread across a
+ * persona's strong tier is 0.16-0.60 SD. A combined ceiling of 0.20 SD is
+ * therefore comparable to the gap between genuine near-peers (typically
+ * 0.02-0.15 SD) and structurally incapable of bridging the 0.4 SD-plus gaps
+ * that separate real affinity levels. "Reorders close matches, cannot
+ * overwhelm poor affinity" is now a property of the arithmetic rather than a
+ * claim in a comment — and it is asserted directly by the mandate's
+ * context-dominance regression check.
  */
-const CONTEXT_PRIORITY_BONUS = 6;
-const CIG_PATHWAY_PRIORITY_BONUS = 6;
+export const CONTEXT_PRIORITY_BONUS_Z = 0.1;
+export const CIG_PATHWAY_PRIORITY_BONUS_Z = 0.1;
 
-/** Sorts by fit tier first, then Recommendation Priority (Affinity +
- *  the bounded context/pathway bonus above) — so when several professions
- *  all clear "strong", the one with the strongest COMBINED case leads,
- *  never one whose only edge is a generic tie-break. */
-function sortScore(m: ScoredMatch): number {
-  return (
-    (m.match.fitTier === "strong" ? 1 : 0) * 100000 +
-    m.priorityScore * 10 +
-    m.match.alignedDimensions.length
-  );
+/**
+ * The recommendation comparator. Most significant criterion first.
+ *
+ * ── WHY THIS IS NOT `fitScore` ANY MORE (defect D1) ────────────────────
+ *
+ * The previous `sortScore` packed everything into one number, with
+ * `priorityScore` (= `fitScore` + bonuses) as the dominant continuous term.
+ * That made the floor-only closeness percentage the thing that actually
+ * decided every ranking, while `centralZ` — the metric the file header
+ * introduces specifically BECAUSE fitScore cannot discriminate — was reduced
+ * to setting a binary tier. Across all eight answer-level regression
+ * personas the delivered order differed from the centralZ order in 8 of 8
+ * cases, on fitScore differences as small as 0.2 points: an experienced
+ * Security Technician's #1 recommendation came out as Security Investigator
+ * (99.6 vs 99.4), and a Head of Security with 8+ years was recommended
+ * Police Officer at #2 — the same false-progression presentation Owner
+ * Approval Gate §6/§8 forbid, arriving through the ranking layer this time
+ * rather than through the fit layer the header had already fixed.
+ *
+ * So the order now runs on `priorityZ` (centralZ plus the bounded bonuses
+ * above). `fitScore` keeps its exact original meaning and formula and stays
+ * in the diagnostics, but is demoted to a tie-break — which is all a
+ * saturating metric can honestly support.
+ */
+function comparePriority(a: ScoredMatch, b: ScoredMatch): number {
+  const aStrong = a.match.fitTier === "strong" ? 1 : 0;
+  const bStrong = b.match.fitTier === "strong" ? 1 : 0;
+  if (aStrong !== bStrong) return bStrong - aStrong;
+
+  // A profession with no central bands at all has no differentiated
+  // affinity to prioritise. It orders below every profession that has one
+  // rather than being given an invented number — same honesty rule the
+  // rest of this module applies to unobserved evidence.
+  if (a.priorityZ === null || b.priorityZ === null) {
+    if (a.priorityZ !== b.priorityZ) return a.priorityZ === null ? 1 : -1;
+  } else if (a.priorityZ !== b.priorityZ) {
+    return b.priorityZ - a.priorityZ;
+  }
+
+  if (a.fitScore !== b.fitScore) return b.fitScore - a.fitScore;
+  const breadth = b.match.alignedDimensions.length - a.match.alignedDimensions.length;
+  if (breadth !== 0) return breadth;
+  return a.match.professionId.localeCompare(b.match.professionId);
 }
 
 const STRONGEST_DIRECTIONS_MAX = 3;
@@ -1057,10 +1278,7 @@ export function matchProfessions(
     .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
     .map((m) => withPriorityScore(m, reachable))
-    .sort(
-      (a, b) =>
-        sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
-    );
+    .sort(comparePriority);
 
   // ── THE ALWAYS-PRESENT RANKING ──────────────────────────────────────
   //
@@ -1074,13 +1292,19 @@ export function matchProfessions(
     .map((entry) => scoreProfession(entry, dims, baseline, tags, false))
     .filter((m): m is ScoredMatch => m !== null)
     .map((m) => withPriorityScore(m, reachable))
-    .sort(
-      (a, b) =>
-        sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
-    );
+    .sort(comparePriority);
 
   const currentProfessionAreaId = currentProfessionEntry?.careerAreaId ?? null;
   const classified = classifyStagesWithPivots(scored, currentProfessionAreaId, reachable);
+  // Defect D3 (Profession Recommendation Validation mandate): the ranking
+  // pass has to run through the SAME stage classification the tier buckets
+  // do. It previously did not, so `ranked[].match.stage` carried the raw
+  // stage-distance value while `matches` carried the pivot-corrected one,
+  // and the two candidate-facing surfaces of one result disagreed — a Head
+  // of Security's own report called Police Officer "explore now" in the
+  // recommendation and "career pivot" in the tier list, from the same run.
+  // Five such mismatches across the eight regression personas.
+  const rankedClassified = classifyStagesWithPivots(rankedAll, currentProfessionAreaId, reachable);
 
   // Item 8: the candidate's own current profession is never a "discovery" —
   // pull it out of the recommendation pool entirely before building buckets,
@@ -1124,14 +1348,14 @@ export function matchProfessions(
   // `confidence` is read off the gated pass, not recomputed: a profession
   // that cleared every gate keeps the exact fitTier it earned there, and one
   // that did not is "indicative" no matter how high it ordered.
-  const ranked: readonly RankedProfession[] = rankedAll
-    .filter((m) => m.match.cigProfessionSlug !== (currentProfessionCigSlug ?? null))
+  const ranked: readonly RankedProfession[] = rankedClassified
+    .filter((m) => m.cigProfessionSlug !== (currentProfessionCigSlug ?? null))
     .slice(0, RANKED_RECOMMENDATION_MAX)
     .map((m, i) => ({
       rank: i + 1,
-      match: m.match,
-      confidence: gatedIds.has(m.match.professionId)
-        ? (m.match.fitTier satisfies "strong" | "moderate")
+      match: m,
+      confidence: gatedIds.has(m.professionId)
+        ? (m.fitTier satisfies "strong" | "moderate")
         : ("indicative" as const),
     }));
 
@@ -1188,9 +1412,16 @@ export interface ProfessionAffinityDiagnostic {
   readonly centralZ: number | null;
   readonly overallCoverage: number;
   // --- Recommendation Priority (context-aware interpretation) ---
+  //
+  // All three are in `centralZ`'s units (standard deviations above the
+  // neutral baseline), not on fitScore's 0-100 scale — see
+  // CONTEXT_PRIORITY_BONUS_Z for why the bonus had to move onto the same
+  // scale as the quantity it nudges.
   readonly contextPriorityBonus: number;
   readonly cigPathwayBonus: number;
-  readonly priorityScore: number;
+  /** centralZ + the two bounded bonuses. Null exactly when centralZ is
+   *  null (a profession with no central bands at all). */
+  readonly priorityScore: number | null;
   readonly stageDistance: number;
   readonly stageBeforePivotCheck: Exclude<ProfessionStage, "career_pivot">;
   readonly finalStage: ProfessionStage;
@@ -1253,10 +1484,7 @@ export function matchProfessionsDiagnostics(
     .map((entry) => scoreProfession(entry, dims, baseline, tags))
     .filter((m): m is ScoredMatch => m !== null)
     .map((m) => withPriorityScore(m, reachable))
-    .sort(
-      (a, b) =>
-        sortScore(b) - sortScore(a) || a.match.professionId.localeCompare(b.match.professionId),
-    );
+    .sort(comparePriority);
 
   const currentProfessionAreaId = currentProfessionEntry?.careerAreaId ?? null;
   const pivotPrimaryAreaId = currentProfessionAreaId;
@@ -1278,12 +1506,12 @@ export function matchProfessionsDiagnostics(
       centralCoverage: m.centralCoverage,
       centralZ: m.centralZ,
       overallCoverage: m.match.coverage,
-      contextPriorityBonus: m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS : 0,
+      contextPriorityBonus: m.match.contextCorroborated ? CONTEXT_PRIORITY_BONUS_Z : 0,
       cigPathwayBonus:
         m.match.cigProfessionSlug !== null && reachable.has(m.match.cigProfessionSlug)
-          ? CIG_PATHWAY_PRIORITY_BONUS
+          ? CIG_PATHWAY_PRIORITY_BONUS_Z
           : 0,
-      priorityScore: m.priorityScore,
+      priorityScore: m.priorityZ,
       stageDistance: m.distance,
       stageBeforePivotCheck,
       finalStage,

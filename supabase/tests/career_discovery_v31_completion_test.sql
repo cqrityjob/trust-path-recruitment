@@ -455,11 +455,29 @@ SELECT pg_temp.must_fail(format(
 
 UPDATE public.cd_professions SET approved_for_ranking = true WHERE profession_id = 'SP004';
 
--- G — the catalogue was left exactly as found by the checks above.
+-- G — the live ranking set is left exactly as found by the checks above. Draft
+-- catalogue candidates may coexist in cd_professions, but they must stay out of
+-- candidate-facing ranking until separately reviewed and approved.
 SELECT pg_temp.ok(
-  (SELECT bool_and(approved_for_ranking) AND NOT bool_or(COALESCE(derived_from_area,false))
-     FROM public.cd_professions),
-  'C8.5e all 14 professions remain approved and non-derived after the checks');
+  (SELECT count(*) FROM public.cd_professions WHERE approved_for_ranking) = 14
+  AND NOT EXISTS (
+    SELECT 1 FROM public.cd_professions
+     WHERE approved_for_ranking AND COALESCE(derived_from_area,false)
+  ),
+  'C8.5e exactly 14 professions remain approved for ranking and none is derived');
+
+-- The four entry-gap rows introduced for owner/SME review are intentionally
+-- present but inert. This makes the old test stronger rather than weakening it:
+-- coexistence is allowed; accidental publication is not.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.cd_professions
+    WHERE profession_id IN ('SP015','SP016','SP017','SP018')) = 4
+  AND NOT EXISTS (
+    SELECT 1 FROM public.cd_professions
+     WHERE profession_id IN ('SP015','SP016','SP017','SP018')
+       AND approved_for_ranking
+  ),
+  'C8.5h all four drafted entry-gap professions exist and remain unapproved');
 
 SELECT pg_temp.ok(
   (SELECT status FROM public.cd_sessions WHERE id = (SELECT sess FROM t_s2)) = 'in_progress',
